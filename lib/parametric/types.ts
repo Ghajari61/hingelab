@@ -57,7 +57,28 @@ export type SourceSpec =
       units: ModelUnits;
       upAxis: "Y" | "Z";
     }
+  | ImageSource
   | FormulaSpec;
+
+/** Photo to relief: the depth map comes from Depth-Anything-V2-Small in the browser. */
+export interface ImageSource {
+  kind: "image";
+  fileName: string;
+  fileId?: string;
+  depthModel: "depth-anything-v2-small";
+  invert: boolean;
+  /** mm, height of the nearest point above the base. */
+  maxReliefDepth: number;
+  /** Gaussian sigma, depth-map px. */
+  blur: number;
+  gamma: number;
+  subjectMask: "auto" | "none";
+  baseThickness: number;
+  /** Grid cells along the long side (max 256). */
+  resolution: number;
+  /** Relief width, mm. */
+  width: number;
+}
 
 export interface SourceSettings {
   transform: Transform;
@@ -285,6 +306,20 @@ export interface Stats {
   partArea: number;
   /** Part area over the area of the sheets used, 0..1. */
   materialUsage: number;
+  /** Distance from points on the model's surface to the nearest assembled part, mm. */
+  maxDeviation?: number;
+  meanDeviation?: number;
+  /** clamp(1 − mean / (2 · spacing), 0, 1). */
+  fidelity?: number;
+}
+
+/** The deviation samples behind the stats, for the heat map. */
+export interface Deviation {
+  /** xyz per sample, model mm. */
+  points: Float32Array;
+  values: Float32Array;
+  /** The method's spacing used for the fidelity score, mm. */
+  spacing: number;
 }
 
 export interface SliceResult {
@@ -306,6 +341,7 @@ export interface SliceResult {
   engine: "manifold" | "fallback";
   /** False when the parts come straight from formulas and the source model is not used. */
   usesModel: boolean;
+  deviation?: Deviation;
 }
 
 export interface SliceError {

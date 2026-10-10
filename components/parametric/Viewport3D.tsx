@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { MeshData, SliceResult } from "@/lib/parametric";
-import { disposeTree, modelObject, partsObject, planesObject } from "./scene";
+import { deviationObject, disposeTree, modelObject, partsObject, planesObject } from "./scene";
 
 export type ViewToggles = { model: boolean; planes: boolean; parts: boolean };
 
@@ -14,19 +14,21 @@ const SELECT_COLOR = 0x3b8ff0;
  * three.js view of the source model, the slicing planes and the assembled parts. `explode` (mm)
  * pushes the parts apart along their plane normals; clicking a part reports its id.
  */
-export default function Viewport3D({ mesh, result, T, show, explode = 0, selected = [], onSelect, className = "pdbg-view" }: {
+export default function Viewport3D({ mesh, result, T, show, explode = 0, heat = false, selected = [], onSelect, className = "pdbg-view" }: {
   mesh: MeshData | null;
   result: SliceResult | null;
   T: number;
   show: ViewToggles;
   explode?: number;
+  /** Show the deviation samples as a heat map. */
+  heat?: boolean;
   selected?: string[];
   onSelect?: (id: string | null) => void;
   className?: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const ctx = useRef<{ renderer: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; controls: OrbitControls; render: () => void } | null>(null);
-  const layers = useRef<{ model?: THREE.Object3D; planes?: THREE.Object3D; parts?: THREE.Object3D }>({});
+  const layers = useRef<{ model?: THREE.Object3D; planes?: THREE.Object3D; parts?: THREE.Object3D; heat?: THREE.Object3D }>({});
   const framed = useRef("");
   const hl = useRef<THREE.MeshStandardMaterial | null>(null);
   const onSelectRef = useRef(onSelect);
@@ -93,14 +95,24 @@ export default function Viewport3D({ mesh, result, T, show, explode = 0, selecte
     };
   }, []);
 
-  const swap = (k: "model" | "planes" | "parts", o: THREE.Object3D | undefined) => {
+  const swap = (k: "model" | "planes" | "parts" | "heat", o: THREE.Object3D | undefined) => {
     const c = ctx.current;
     if (!c) return;
     const old = layers.current[k];
     if (old) { c.scene.remove(old); disposeTree(old); }
     layers.current[k] = o;
-    if (o) { o.visible = show[k]; c.scene.add(o); }
+    if (o) { o.visible = k === "heat" ? heat : show[k]; c.scene.add(o); }
   };
+
+  useEffect(() => {
+    swap("heat", result ? deviationObject(result) : undefined);
+    ctx.current?.render();
+  }, [result]);
+
+  useEffect(() => {
+    if (layers.current.heat) layers.current.heat.visible = heat;
+    ctx.current?.render();
+  }, [heat]);
 
   useEffect(() => {
     swap("model", mesh ? modelObject(mesh) : undefined);

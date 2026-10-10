@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { MATERIALS, polyD, r3, type LayerKey } from "@/lib/hinge";
 import {
-  CLOCK_INSERTS, FORMULA_DEFAULTS, LEAF_CLOCK, LIBRARY, finSpacingOf,
+  CLOCK_INSERTS, FORMULA_DEFAULTS, IMAGE_DEFAULTS, LEAF_CLOCK, LIBRARY, finSpacingOf,
   type CurveNormalParams, type FormulaSpec, type LibraryId, type ModelUnits, type ParametricParams, type Part, type SliceResult, type WarningCode,
 } from "@/lib/parametric";
 import { NumberField } from "@/components/editor/NumberField";
@@ -11,6 +11,7 @@ import { LayersPanel } from "@/components/editor/LayersPanel";
 import { Sec } from "@/components/editor/PanelDock";
 import { fmtLen, type Units } from "@/components/editor/format";
 import { PARAM_FIELDS, type ParamField, type ParamSection } from "./fields";
+import type { StoredModel } from "./modelStore";
 
 type Edit = (f: (q: ParametricParams) => void, record: boolean) => void;
 
@@ -95,6 +96,22 @@ const FORMULA_NOTES: Record<FormulaSpec["type"], string> = {
   "radial-profile": "Use theta (radians round the centre) and s (mm out from the inner radius)",
 };
 
+type Ring = readonly (readonly [number, number])[];
+const ringArea = (c: Ring) => {
+  let a = 0;
+  for (let i = 0, j = c.length - 1; i < c.length; j = i++) a += c[j][0] * c[i][1] - c[i][0] * c[j][1];
+  return Math.abs(a) / 2;
+};
+const ringLength = (c: Ring) => {
+  let l = 0;
+  for (let i = 0, j = c.length - 1; i < c.length; j = i++) l += Math.hypot(c[i][0] - c[j][0], c[i][1] - c[j][1]);
+  return l;
+};
+/** Material area, mm²: the outline less its holes and inner cuts. */
+const partArea = (q: Part) => ringArea(q.shape.outer) - [...q.shape.holes, ...q.innerCuts].reduce((s, c) => s + ringArea(c), 0);
+/** Everything the laser cuts on this part, mm. */
+const partCut = (q: Part) => [q.shape.outer, ...q.shape.holes, ...q.innerCuts].reduce((s, c) => s + ringLength(c), 0);
+
 /** The part as it will be cut (sheet orientation), with its inner cuts and engraving. */
 function PartDrawing({ part }: { part: Part }) {
   const { x0, y0, x1, y1 } = part.shape.bbox;
@@ -109,7 +126,7 @@ function PartDrawing({ part }: { part: Part }) {
 }
 
 export function ParametricDock({
-  params, result, error, busy, units, selected, fileName, askUnits, onEdit, onSelect, onImport, onExportSheet, onExportZip, onGuide,
+  params, result, error, busy, units, selected, fileName, photo, depthBusy, askUnits, onEdit, onSelect, onImport, onImportPhoto, onExportSheet, onExportZip, onGuide,
 }: {
   params: ParametricParams;
   result: SliceResult | null;
@@ -118,16 +135,21 @@ export function ParametricDock({
   units: Units;
   selected: string[];
   fileName: string | null;
+  /** The photo on this device, with its depth map. */
+  photo: StoredModel | null;
+  depthBusy: boolean;
   /** The imported model's size looks wrong in millimetres. */
   askUnits: boolean;
   onEdit: Edit;
   onSelect: (ids: string[]) => void;
   onImport: (f: File) => void;
+  onImportPhoto: (f: File) => void;
   onExportSheet: () => void;
   onExportZip: () => void;
   onGuide: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
   const field = (f: ParamField) => (
     <NumberField
       key={f.id}
@@ -149,6 +171,12 @@ export function ParametricDock({
   const selIdx = Math.max(0, parts.findIndex((q) => q.id === selected[0]));
   const part = parts.length ? parts[Math.min(selIdx, parts.length - 1)] : null;
   const partWarnings = part ? (result?.warnings ?? []).filter((w) => w.partIds?.includes(part.id)) : [];
+  const sheetOf = part && result ? result.sheets.findIndex((s) => s.items.some((it) => it.partId === part.id)) : -1;
+  const step = (d: number) => {
+    if (!parts.length) return;
+    const i = Math.min(parts.length - 1, Math.max(0, d === -Infinity ? 0 : d === Infinity ? parts.length - 1 : selIdx + d));
+    onSelect([parts[i].id]);
+  };
 
   const groups = new Map<WarningCode, { messages: string[]; ids: string[] }>();
   for (const w of result?.warnings ?? []) {
@@ -160,7 +188,7 @@ export function ParametricDock({
   const serious = [...groups.keys()].some((c) => SERIOUS.includes(c));
   const layerVis = (key: LayerKey) => onEdit((q) => { q.layers[key].vis = !q.layers[key].vis; }, true);
   const layerExp = (key: LayerKey, exp: boolean) => onEdit((q) => { q.layers[key].exp = exp; }, true);
-  const sourceMeta = kind === "library" ? LIBRARY.find((l) => l.id === src.id)?.name : kind === "mesh" ? src.fileName : formula?.type === "revolution" ? "Turned formula" : formula?.type === "radial-profile" ? "Radial profile formula" : "Surface formula";
+  const sourceMeta = kind === "library" ? LIBRARY.find((l) => l.id === src.id)?.name : kind === "mesh" || kind === "image" ? src.fileName : formula?.type === "revolution" ? "Turned formula" : formula?.type === "radial-profile" ? "Radial profile formula" : "Surface formula";
   const hubCrowd = result?.warnings.find((w) => w.code === "FINS_COLLIDE_AT_HUB")?.data;
   const cn = params.curveNormal;
   const editCurve = (f: (c: CurveNormalParams) => void, record: boolean) => onEdit((q) => f(q.curveNormal), record);
@@ -171,12 +199,38 @@ export function ParametricDock({
         {params.method === "curveNormal" && <p className="note">Along a curve builds the fins from the formulas in Method; the model below is not used.</p>}
         <Choice label="Model from" value={kind} onPick={(v) => {
           if (v === "mesh") { if (fileName) onEdit((q) => { q.source = { kind: "mesh", fileName, units: "auto", upAxis: "Y" }; }, true); else fileRef.current?.click(); return; }
+          if (v === "image") { if (photo) onEdit((q) => { q.source = { ...structuredClone(IMAGE_DEFAULTS), fileName: photo.name }; }, true); else photoRef.current?.click(); return; }
           onEdit((q) => { q.source = v === "library" ? { kind: "library", id: "abstract-head-cc0" } : structuredClone(FORMULA_DEFAULTS.heightfield); }, true);
         }} options={[
           { v: "library", text: "Library" },
           { v: "mesh", text: "3D file", title: "Import an STL, OBJ or GLB model" },
+          { v: "image", text: "Photo", title: "Turn a photo into a relief using estimated depth" },
           { v: "formula", text: "Formula", title: "A surface z = f(x, y) or a turned shape r = f(h)" },
         ]} />
+        {depthBusy && <p className="note" role="status">Reading depth from the photo. The first time downloads the 27 MB depth model.</p>}
+        {kind === "image" && (
+          <>
+            <div className="pe-file">
+              <span title={src.fileName}>{src.fileName}</span>
+              <button type="button" className="btn-auto" disabled={depthBusy} onClick={() => photoRef.current?.click()}>Replace…</button>
+            </div>
+            {photo?.preview && (
+              <div className="pe-photos">
+                <figure><img src={photo.preview} alt="The photo" /><figcaption>Photo</figcaption></figure>
+                {photo.depthPreview && <figure><img src={photo.depthPreview} alt="Estimated depth, lighter is nearer" /><figcaption>Depth (light = near)</figcaption></figure>}
+              </div>
+            )}
+            <div className="grid2">{fields("photo")}</div>
+            <Choice label="Background" value={src.subjectMask} onPick={(m) => onEdit((q) => { if (q.source.kind === "image") q.source.subjectMask = m; }, true)} options={[
+              { v: "auto", text: "Cut away", title: "Keep only the nearest subject; the background is left out" },
+              { v: "none", text: "Keep", title: "Use the whole photo as a rectangular relief" },
+            ]} />
+            <label className="chk">
+              <input type="checkbox" checked={src.invert} onChange={(e) => onEdit((q) => { if (q.source.kind === "image") q.source.invert = e.target.checked; }, true)} /> Invert depth
+            </label>
+            <p className="note">Depth from a single photo is an estimate: shapes read well, but faces come out softer than a 3D scan or model.</p>
+          </>
+        )}
         {kind === "library" && (
           <select className="sel" aria-label="Library model" value={src.id} onChange={(e) => onEdit((q) => { q.source = { kind: "library", id: e.target.value as LibraryId }; }, true)}>
             {LIBRARY.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
@@ -250,6 +304,7 @@ export function ParametricDock({
           <p className="note">Model {fmtLen(result.bounds.max[0] - result.bounds.min[0], units, true)} wide × {fmtLen(result.bounds.max[1] - result.bounds.min[1], units, true)} high × {fmtLen(result.bounds.max[2] - Math.max(0, result.bounds.min[2]), units, true)} off the wall.</p>
         )}
         <input ref={fileRef} type="file" accept=".stl,.obj,.glb" hidden aria-label="Import model" onChange={(e) => { const f = e.target.files?.[0]; if (f) onImport(f); e.target.value = ""; }} />
+        <input ref={photoRef} type="file" accept="image/jpeg,image/png,image/webp" hidden aria-label="Load photo" onChange={(e) => { const f = e.target.files?.[0]; if (f) onImportPhoto(f); e.target.value = ""; }} />
       </Sec>
 
       <Sec title="Method" meta={methodMeta(params, units, result)} startOpen>
@@ -405,15 +460,25 @@ export function ParametricDock({
 
       <Sec title="Slice Inspector" meta={part ? part.id : undefined} startOpen>
         {part ? (
-          <>
-            <label className="pe-scrub">
+          <div className="pe-inspect" tabIndex={0} aria-label="Slice Inspector, use the arrow keys to step through the parts" onKeyDown={(e) => {
+            const d = e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "Home" ? -Infinity : e.key === "End" ? Infinity : 0;
+            if (!d) return;
+            e.preventDefault();
+            step(d);
+          }}>
+            <div className="pe-inspect-nav">
+              <button type="button" className="btn-auto" aria-label="Previous part" disabled={selIdx <= 0} onClick={() => step(-1)}>‹</button>
               <span>{part.id} · {selIdx + 1} of {parts.length}</span>
-              <input type="range" min={0} max={parts.length - 1} value={Math.min(selIdx, parts.length - 1)} aria-label="Part" onChange={(e) => onSelect([parts[Number(e.target.value)].id])} />
-            </label>
+              <button type="button" className="btn-auto" aria-label="Next part" disabled={selIdx >= parts.length - 1} onClick={() => step(1)}>›</button>
+            </div>
+            <input className="pe-scrub-range" type="range" min={0} max={parts.length - 1} value={Math.min(selIdx, parts.length - 1)} aria-label="Part" onChange={(e) => onSelect([parts[Number(e.target.value)].id])} />
             <PartDrawing part={part} />
             <dl className="stats">
               <dt>Kind</dt><dd>{KIND_NAMES[part.kind] ?? part.kind}</dd>
               <dt>Size</dt><dd>{fmtLen(part.shape.bbox.x1 - part.shape.bbox.x0, units, true)} × {fmtLen(part.shape.bbox.y1 - part.shape.bbox.y0, units, true)}</dd>
+              <dt>Area</dt><dd>{units === "in" ? `${(partArea(part) / 645.16).toFixed(1)} in²` : `${(partArea(part) / 100).toFixed(1)} cm²`}</dd>
+              <dt>Cut length</dt><dd>{units === "in" ? `${(partCut(part) / 25.4).toFixed(1)} in` : `${(partCut(part) / 1000).toFixed(2)} m`}</dd>
+              {sheetOf >= 0 && <><dt>Sheet</dt><dd>{sheetOf + 1}</dd></>}
               {part.tabs && <><dt>Tabs</dt><dd>{part.tabs.length}</dd></>}
               {(part.kind === "backboard" || part.kind === "hub") && <><dt>Slots</dt><dd>{part.innerCuts.length}</dd></>}
               {part.kind === "layer" && part.innerCuts.length > 0 && <><dt>Dowels</dt><dd>{part.innerCuts.length}</dd></>}
@@ -421,7 +486,7 @@ export function ParametricDock({
               <dt>Next to</dt><dd>{part.neighbors.join(", ") || "—"}</dd>
             </dl>
             {partWarnings.length > 0 && <ul className="issues warn">{partWarnings.map((w, k) => <li key={k}>{w.message}</li>)}</ul>}
-          </>
+          </div>
         ) : <p className="note">{busy ? "Slicing…" : "No parts yet."}</p>}
       </Sec>
 
@@ -442,7 +507,15 @@ export function ParametricDock({
               <dt>Engrave length</dt><dd>{(result.stats.engraveLength / 1000).toFixed(2)} m</dd>
               <dt>Material used</dt><dd>{Math.round(result.stats.materialUsage * 100)}%</dd>
               <dt>Section method</dt><dd>{result.engine === "manifold" ? "Exact (closed solid)" : "Fallback (open mesh)"}</dd>
+              {result.stats.fidelity !== undefined && (
+                <>
+                  <dt title="How closely the parts follow the model: 100% when every surface point lies on a part">Fidelity</dt><dd data-testid="fidelity">{Math.round(result.stats.fidelity * 100)}%</dd>
+                  <dt title="Average distance from the model's surface to the nearest part">Mean deviation</dt><dd>{fmtLen(result.stats.meanDeviation ?? NaN, units)}</dd>
+                  <dt title="Largest distance from the model's surface to the nearest part">Max deviation</dt><dd>{fmtLen(result.stats.maxDeviation ?? NaN, units)}</dd>
+                </>
+              )}
             </dl>
+            {result.stats.fidelity !== undefined && result.deviation && <p className="note">Fidelity compares the model with the parts at {result.deviation.values.length} surface points; turn on Deviation in the 3D view to see where they differ.</p>}
             {groups.size > 0 && (
               <>
                 <p className="issues-title">To check</p>

@@ -1,5 +1,5 @@
 import { DEFAULTS as HINGE, MATERIALS, clone } from "@/lib/hinge";
-import type { FormulaSpec, ParametricParams } from "./types";
+import type { FormulaSpec, ImageSource, ParametricParams } from "./types";
 
 export const PARAMETRIC_DEFAULTS: ParametricParams = {
   name: "Untitled sculpture",
@@ -43,6 +43,12 @@ export const FORMULA_DEFAULTS: Record<FormulaSpec["type"], FormulaSpec> = {
   },
 };
 
+/** Photo to relief settings for a newly loaded photo. */
+export const IMAGE_DEFAULTS: Omit<ImageSource, "fileName"> = {
+  kind: "image", depthModel: "depth-anything-v2-small", invert: false, maxReliefDepth: 60, blur: 2, gamma: 1,
+  subjectMask: "auto", baseThickness: 0, resolution: 192, width: 200,
+};
+
 /** Standard clock insert diameters, mm. */
 export const CLOCK_INSERTS = [30, 37, 50, 60] as const;
 
@@ -82,6 +88,7 @@ export function mergeParametricParams(partial?: Partial<ParametricParams> | null
   out.layers = { ...base.layers, ...(partial.layers ?? {}) };
   out.source = (partial.source as ParametricParams["source"]) ?? base.source;
   if (out.source.kind === "formula") out.source = { ...FORMULA_DEFAULTS[out.source.type], ...out.source };
+  if (out.source.kind === "image") out.source = { ...IMAGE_DEFAULTS, ...out.source };
   return out;
 }
 

@@ -44,7 +44,7 @@ await withBrowser(async (page) => {
   assert(/Layers along Z/.test(meta), "method meta names the stacked layers");
   await page.locator('input[aria-label="Part"]').fill("0");
   await page.waitForTimeout(400);
-  const insp = await page.locator(".pe-scrub span").textContent();
+  const insp = await page.locator(".pe-inspect-nav span").textContent();
   assert(/^L\d+/.test(insp), `slice inspector shows a layer: ${insp}`);
   const dock = await page.locator(".dock").textContent();
   assert(/Dowels\d/.test(dock.replace(/\s+/g, "")), "the layer has dowel holes");

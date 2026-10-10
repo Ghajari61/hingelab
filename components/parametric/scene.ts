@@ -102,6 +102,31 @@ export function partsObject(r: SliceResult, T: number, explode = 0): THREE.Group
   return grp;
 }
 
+const HEAT_STOPS = [new THREE.Color(0x2f6bff), new THREE.Color(0x2fd0c0), new THREE.Color(0xf5d33a), new THREE.Color(0xff3b2f)];
+
+/** Blue (on a part) to red (a full spacing away); matches the `.pe-legend-bar` gradient. */
+export function heatColor(t: number, out = new THREE.Color()): THREE.Color {
+  const x = Math.min(1, Math.max(0, t)) * (HEAT_STOPS.length - 1);
+  const i = Math.min(HEAT_STOPS.length - 2, Math.floor(x));
+  return out.copy(HEAT_STOPS[i]).lerp(HEAT_STOPS[i + 1], x - i);
+}
+
+/** The deviation samples as coloured points, drawn over the model and parts. */
+export function deviationObject(r: SliceResult): THREE.Points | undefined {
+  const d = r.deviation;
+  if (!d) return undefined;
+  const n = d.values.length;
+  const col = new Float32Array(n * 3);
+  const c = new THREE.Color();
+  for (let i = 0; i < n; i++) heatColor(d.values[i] / d.spacing, c).toArray(col, i * 3);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(d.points), 3));
+  g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 4, sizeAttenuation: false, vertexColors: true }));
+  pts.renderOrder = 10;
+  return pts;
+}
+
 export function disposeTree(o: THREE.Object3D) {
   o.traverse(c => {
     const m = c as THREE.Mesh;

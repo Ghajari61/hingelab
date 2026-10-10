@@ -263,6 +263,18 @@ select.sel { width: 100%; background: var(--field); border: 1px solid var(--line
 .pe-hud { position: absolute; left: 12px; bottom: 12px; display: flex; align-items: center; gap: 14px; background: rgba(38,38,38,.92); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 12px; }
 .pe-explode { display: flex; align-items: center; gap: 8px; color: var(--fg-dim); }
 .pe-explode input { width: 120px; accent-color: var(--accent); }
+.pe-legend { position: absolute; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 8px; background: rgba(38,38,38,.92); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 12px; color: var(--fg-dim); }
+.pe-legend-bar { width: 120px; height: 10px; border-radius: 3px; background: linear-gradient(90deg, #2f6bff, #2fd0c0, #f5d33a, #ff3b2f); }
+.pe-legend-note { font-size: 11px; }
+.pe-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pe-photos img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--field); border: 1px solid var(--line); border-radius: 5px; }
+.pe-photos figcaption { font-size: 11px; color: var(--fg-dim); text-align: center; margin-top: 2px; }
+.pe-photos figure { margin: 0; }
+.pe-inspect { display: grid; gap: 6px; border-radius: 5px; outline: none; }
+.pe-inspect:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+.pe-scrub-range { width: 100%; accent-color: var(--accent); }
+.pe-inspect-nav { display: flex; align-items: center; gap: 6px; }
+.pe-inspect-nav span { flex: 1; text-align: center; font-size: 12px; color: var(--fg-dim); }
 .pe-part { display: block; width: 100%; max-height: 180px; background: #EFE6D6; border: 1px solid var(--line); border-radius: 5px; }
 .pe-scrub { display: grid; gap: 4px; font-size: 12px; color: var(--fg-dim); }
 .pe-scrub input { accent-color: var(--accent); }

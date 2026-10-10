@@ -10,6 +10,13 @@ Supabase CLI stack and (once you add test keys) Stripe test mode. Variable names
 2. `npx supabase start` (first run downloads the images). HingeLab uses ports 55421–55429 so it does not clash with your other local Supabase project.
 3. `npx supabase status` shows the local URL and keys. Put `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` into `.env.local` (already done on this machine).
 4. `npm run dev`, then open http://localhost:3000. Emails sent by the local stack (confirmations, password resets) appear in Mailpit at http://127.0.0.1:55424, never in a real inbox.
+5. Photo to relief (Parametric → Source → Photo): `npm run fetch:depth-model` downloads Depth-Anything-V2-Small (27 MB, Apache-2.0) into `public/models/` (already done on this machine; the file is git-ignored). Without it, the browser loads the same file from Hugging Face.
+
+## Depth model in production (optional)
+
+1. The `.onnx` file is not committed, so a Vercel deployment loads it from Hugging Face on first use. To serve it yourself, upload `public/models/depth-anything-v2-small/model_quantized.onnx` to a public bucket (Supabase Storage or Vercel Blob) with CORS allowed for your domain.
+2. Set `NEXT_PUBLIC_DEPTH_MODEL_URL` to that file's public URL in Vercel and redeploy.
+3. Use only the **Small** model: Depth-Anything-V2 Base and Large are CC-BY-NC (non-commercial) and must not be used in a paid product. See `public/models/LICENSES.md`.
 
 ## Supabase (hosted)
 
@@ -44,6 +51,7 @@ Set these in Vercel → Project → Settings → Environment Variables (Producti
 6. `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY` — from `scripts/stripe-setup.mjs`.
 7. `STRIPE_ALLOW_LIVE` — leave unset or `false` until you switch to live keys.
 8. `NEXT_PUBLIC_CONTACT_EMAIL` — the address shown on the Terms and Privacy pages.
+9. `NEXT_PUBLIC_DEPTH_MODEL_URL` — optional, see "Depth model in production".
 
 ## Before launch
 

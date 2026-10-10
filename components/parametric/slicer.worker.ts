@@ -37,7 +37,7 @@ self.onmessage = async (e: MessageEvent<SlicerRequest>) => {
       post({ id: req.id, type: "progress", stage: `Model ready (${Math.round(performance.now() - t0)} ms)` });
     }
     const t0 = performance.now();
-    const result = computeParametric(req.params, cache.src, w);
+    const result = computeParametric(req.params, cache.src, w, { deviation: true });
     const mesh = req.wantMesh ? { positions: cache.src.mesh.positions.slice(), indices: cache.src.mesh.indices.slice() } : undefined;
     post({ id: req.id, type: "result", result, mesh, ms: performance.now() - t0, askUnits: cache.src.askUnits }, mesh ? [mesh.positions.buffer, mesh.indices.buffer] : []);
   } catch (err) {

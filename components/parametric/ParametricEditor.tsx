@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { r3, type LayerContent } from "@/lib/hinge";
 import {
-  PARAMETRIC_DEFAULTS, assemblyGuideSVG, exportZip, formatOf, mergeParametricParams, sheetFileName, sheetLayerContent, sheetSVG, toSheet,
+  IMAGE_DEFAULTS, PARAMETRIC_DEFAULTS, assemblyGuideSVG, exportZip, formatOf, mergeParametricParams, packDepth, sheetFileName, sheetLayerContent, sheetSVG, toSheet,
   type MeshData, type ParametricParams, type Sheet, type SliceResult,
 } from "@/lib/parametric";
 import { clone } from "@/lib/hinge";
@@ -20,12 +20,14 @@ import { StatusBar } from "@/components/editor/StatusBar";
 import { Dialogs, type ModalState } from "@/components/editor/dialogs";
 import { ParametricControlBar } from "./ParametricControlBar";
 import { ParametricDock } from "./ParametricDock";
-import { getStoredModel, putStoredModel, type StoredModel } from "./modelStore";
+import { estimateDepth } from "./depthProtocol";
+import { getStoredModel, getStoredPhoto, putStoredModel, putStoredPhoto, type StoredModel } from "./modelStore";
 import { Slicer } from "./slicerProtocol";
 import Viewport3D, { type ViewToggles } from "./Viewport3D";
 
 const KEY = "hingelab-parametric-v1";
 const MAX_MODEL_BYTES = 100 * 1024 * 1024;
+const MAX_PHOTO_BYTES = 30 * 1024 * 1024;
 const SHEET_GAP = 40;
 
 function loadInitial() {
@@ -70,6 +72,9 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
   const [toast, setToast] = useState<string | null>(null);
   const [model, setModel] = useState<StoredModel | null>(null);
   const [modelChecked, setModelChecked] = useState(false);
+  const [photo, setPhoto] = useState<StoredModel | null>(null);
+  const [depthBusy, setDepthBusy] = useState(false);
+  const [showHeat, setShowHeat] = useState(false);
   const [res, setRes] = useState<{ result: SliceResult; ms: number } | null>(null);
   const [mesh, setMesh] = useState<MeshData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -97,32 +102,42 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
 
   useEffect(() => {
     slicer.current = new Slicer((s) => setStage(s));
-    getStoredModel().then((m) => setModel(m ?? null), () => {}).finally(() => setModelChecked(true));
+    Promise.all([
+      getStoredModel().then((m) => setModel(m ?? null), () => {}),
+      getStoredPhoto().then((m) => setPhoto(m ?? null), () => {}),
+    ]).finally(() => setModelChecked(true));
     return () => slicer.current?.dispose();
   }, []);
 
-  // A saved project that points at an imported model this browser no longer has falls back to the library.
+  // A saved project that points at a model or photo this browser no longer has falls back to the library.
   useEffect(() => {
-    if (!modelChecked || params.source.kind !== "mesh") return;
-    if (!model || model.name !== params.source.fileName) {
+    if (!modelChecked || depthBusy) return;
+    const src = params.source;
+    if (src.kind === "mesh" && (!model || model.name !== src.fileName)) {
       replace({ ...params, source: clone(PARAMETRIC_DEFAULTS.source) }, false);
       toastMsg("The imported model is not on this device. Import it again.");
     }
-  }, [modelChecked, model, params, replace]);
+    if (src.kind === "image" && (!photo || photo.name !== src.fileName)) {
+      replace({ ...params, source: clone(PARAMETRIC_DEFAULTS.source) }, false);
+      toastMsg("The photo is not on this device. Load it again.");
+    }
+  }, [modelChecked, model, photo, depthBusy, params, replace]);
 
-  const sourceReady = modelChecked && (params.source.kind !== "mesh" || (!!model && model.name === params.source.fileName));
+  const fileOf = (p: ParametricParams) => (p.source.kind === "mesh" ? model : p.source.kind === "image" ? photo : null);
+  const srcFile = fileOf(params);
+  const sourceReady = modelChecked && ((params.source.kind !== "mesh" && params.source.kind !== "image") || (!!srcFile && srcFile.name === params.source.fileName));
 
   // Re-slice in the worker 250 ms after the last change; the previous result stays on screen meanwhile.
   useEffect(() => {
     const s = slicer.current;
     if (!s || !sourceReady) return;
-    const fileKey = params.source.kind === "mesh" ? model?.key ?? "" : "";
+    const fileKey = srcFile?.key ?? "";
     const key = JSON.stringify([params.source, params.sourceSettings, fileKey]);
     const wantMesh = key !== meshKey.current;
     let live = true;
     setBusy(true);
     const t = window.setTimeout(() => {
-      s.run({ params, file: params.source.kind === "mesh" ? model?.bytes.slice(0) : undefined, fileKey, wantMesh })
+      s.run({ params, file: srcFile?.bytes.slice(0), fileKey, wantMesh })
         .then((r) => {
           if (!live) return;
           if (r.mesh) { setMesh(r.mesh); meshKey.current = key; }
@@ -134,7 +149,7 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
         .finally(() => { if (live) { setBusy(false); setStage(null); } });
     }, 250);
     return () => { live = false; window.clearTimeout(t); };
-  }, [params, model, sourceReady]);
+  }, [params, srcFile, sourceReady]);
 
   const result = res?.result ?? null;
   const partsById = useMemo(() => new Map((result?.parts ?? []).map((q) => [q.id, q])), [result]);
@@ -217,6 +232,28 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
     replace({ ...params, source: { kind: "mesh", fileName: f.name, units: "auto", upAxis: "Y" } }, true);
     setSelected([]);
     toastMsg(`Imported ${f.name}`);
+  }
+
+  async function importPhoto(f: File) {
+    if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { toastMsg("Use a JPEG, PNG or WebP photo"); return; }
+    if (f.size > MAX_PHOTO_BYTES) { toastMsg("That photo is larger than 30 MB"); return; }
+    setDepthBusy(true);
+    setStage("Reading depth from the photo");
+    try {
+      const r = await estimateDepth(f, (s) => setStage(s));
+      const m: StoredModel = { name: f.name, key: `${f.name}:${f.size}:${f.lastModified}`, bytes: packDepth(r.depth), preview: r.preview, depthPreview: r.depthPreview };
+      setPhoto(m);
+      putStoredPhoto(m).catch(() => toastMsg("The photo is loaded but could not be kept on this device"));
+      const keep = params.source.kind === "image" ? params.source : IMAGE_DEFAULTS;
+      replace({ ...params, source: { ...keep, kind: "image", fileName: f.name } }, true);
+      setSelected([]);
+      toastMsg(`Depth read in ${(r.ms / 1000).toFixed(1)} s (${r.ep})`);
+    } catch (e) {
+      toastMsg(e instanceof Error ? e.message : "The photo could not be read");
+    } finally {
+      setDepthBusy(false);
+      setStage(null);
+    }
   }
 
   function doUndo() { if (undo()) toastMsg("Undo"); }
@@ -331,18 +368,29 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
           <div className="pe-tabs" role="tablist" aria-label="View">
             <button type="button" role="tab" aria-selected={tab === "3d"} onClick={() => setTab("3d")}>3D</button>
             <button type="button" role="tab" aria-selected={tab === "sheets"} onClick={() => setTab("sheets")}>Sheets{result ? ` (${result.sheets.length})` : ""}</button>
-            <span className="pe-stage">{busy ? (stage ?? "Slicing…") : res ? `${result!.stats.partCount} parts · ${Math.round(res.ms)} ms` : ""}</span>
-            {busy && <span className="pe-progress" aria-hidden />}
+            <span className="pe-stage">{busy || depthBusy ? (stage ?? "Slicing…") : res ? `${result!.stats.partCount} parts · ${Math.round(res.ms)} ms` : ""}</span>
+            {(busy || depthBusy) && <span className="pe-progress" aria-hidden />}
           </div>
           {tab === "3d" ? (
             <div className="pe-3d">
-              <Viewport3D className="pe-view" mesh={result && !result.usesModel ? null : mesh} result={result} T={params.material.T} show={show} explode={exploded} selected={selected} onSelect={(id) => setSelected(id ? [id] : [])} />
+              <Viewport3D className="pe-view" mesh={result && !result.usesModel ? null : mesh} result={result} T={params.material.T} show={show} explode={exploded} selected={selected} onSelect={(id) => setSelected(id ? [id] : [])} heat={showHeat && !!result?.deviation} />
               <div className="pe-hud">
                 {(["model", "planes", "parts"] as const).map((k) => (
                   <label key={k} className="chk"><input type="checkbox" checked={show[k]} onChange={(e) => setShow((s) => ({ ...s, [k]: e.target.checked }))} /> {k === "model" ? "Model" : k === "planes" ? "Planes" : "Parts"}</label>
                 ))}
+                {result?.deviation && (
+                  <label className="chk" title="How far the model's surface lies from the nearest part"><input type="checkbox" checked={showHeat} onChange={(e) => setShowHeat(e.target.checked)} /> Deviation</label>
+                )}
                 <label className="pe-explode">Explode <input type="range" min={0} max={1} step={0.01} value={explode} aria-label="Explode" onChange={(e) => setExplode(parseFloat(e.target.value))} /></label>
               </div>
+              {showHeat && result?.deviation && (
+                <div className="pe-legend" data-testid="deviation-legend">
+                  <span>0</span>
+                  <span className="pe-legend-bar" aria-hidden />
+                  <span>{fmtLen(result.deviation.spacing, units)}</span>
+                  <span className="pe-legend-note">distance from surface to nearest part</span>
+                </div>
+              )}
               {error && <div className="canvas-error">{error}</div>}
             </div>
           ) : (
@@ -386,10 +434,13 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
           units={units}
           selected={selected}
           fileName={model?.name ?? null}
+          photo={photo}
+          depthBusy={depthBusy}
           askUnits={askUnits}
           onEdit={edit}
           onSelect={select}
           onImport={importModel}
+          onImportPhoto={importPhoto}
           onExportSheet={exportSheetNow}
           onExportZip={exportZipNow}
           onGuide={guideNow}

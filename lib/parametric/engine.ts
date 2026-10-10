@@ -15,6 +15,8 @@ import { sliceWaffle } from "./methods/waffle";
 import { nestParts } from "./nest";
 import { formulaHeightfield, formulaRadialProfile, formulaRevolution, radialProfileFn } from "./source/formula";
 import { libraryMesh } from "./source/library";
+import { reliefFromDepth, unpackDepth } from "./source/relief";
+import { measureDeviation } from "./quality";
 import { bounds, formatOf, parseMeshFile, prepareMesh, type PreparedMesh } from "./source/mesh";
 import { fallbackSections, manifoldSections, tryManifold, type SectionSource } from "./slice/section";
 import type { Contour, LibraryId, ParametricParams, Plane, Shape, SliceResult, Stats, Warning } from "./types";
@@ -36,6 +38,10 @@ export async function loadSource(p: ParametricParams, file?: ArrayBuffer): Promi
     }
     if (s.type === "radial-profile") return prepareMesh(formulaRadialProfile(s), p.sourceSettings, { units: "mm", upAxis: "Y", anchor: "wall" });
     return prepareMesh(formulaRevolution(s), p.sourceSettings, { units: "mm", upAxis: "Y", anchor: "centre" });
+  }
+  if (s.kind === "image") {
+    if (!file) throw new Error("The photo's depth map is missing. Load the photo again.");
+    return prepareMesh(reliefFromDepth(unpackDepth(file), s), p.sourceSettings, { units: "mm", upAxis: "Y", anchor: "wall" });
   }
   const fmt = formatOf(s.fileName);
   if (!fmt) throw new Error("Use an STL, OBJ or GLB file.");
@@ -59,7 +65,8 @@ function manifoldProjection(solid: ManifoldT): Contour[] {
   }
 }
 
-export function computeParametric(p: ParametricParams, src: PreparedMesh, wasm: ManifoldToplevel): SliceResult {
+/** `deviation`: also measure how closely the parts follow the model (2,000 surface samples). */
+export function computeParametric(p: ParametricParams, src: PreparedMesh, wasm: ManifoldToplevel, opts: { deviation?: boolean } = {}): SliceResult {
   const b = bounds(src.mesh);
   const ext = Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]);
   if (!(ext > 0)) throw new Error("The model is empty.");
@@ -104,7 +111,15 @@ export function computeParametric(p: ParametricParams, src: PreparedMesh, wasm: 
       partArea,
       materialUsage: nest.sheets.length ? partArea / nest.sheets.reduce((a, s) => a + s.width * s.height, 0) : 0,
     };
-    return { method: p.method, planes: out.planes, sections: out.sections, parts: out.parts, sheets: nest.sheets, warnings, stats, guide: out.guide, crossings: out.crossings, bounds: out.bounds ?? b, engine, usesModel };
+    const result: SliceResult = { method: p.method, planes: out.planes, sections: out.sections, parts: out.parts, sheets: nest.sheets, warnings, stats, guide: out.guide, crossings: out.crossings, bounds: out.bounds ?? b, engine, usesModel };
+    const dev = opts.deviation && usesModel ? measureDeviation(result, src.mesh, p) : null;
+    if (dev) {
+      result.deviation = dev.deviation;
+      stats.maxDeviation = dev.max;
+      stats.meanDeviation = dev.mean;
+      stats.fidelity = dev.fidelity;
+    }
+    return result;
   } finally {
     solid?.delete();
   }

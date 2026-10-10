@@ -41,7 +41,7 @@ await withBrowser(async (page) => {
 
   await page.locator('input[aria-label="Part"]').fill("8");
   await page.waitForTimeout(400);
-  const inspected = await page.locator(".pe-scrub span").textContent();
+  const inspected = await page.locator(".pe-inspect-nav span").textContent();
   assert(/^F\d+/.test(inspected), `slice inspector shows a fin: ${inspected}`);
 
   await page.getByRole("tab", { name: /Sheets/ }).click();

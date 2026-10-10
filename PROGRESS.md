@@ -1,6 +1,6 @@
 # Progress
 
-**Next step:** Parametric P5 - photo to relief: depth estimation in the browser with Depth-Anything-V2-Small (Apache-2.0; licence noted in `public/models/LICENSES.md`, model not committed if too large: download step in SETUP.md), the depth map as a heightfield source, then the deviation heat map (parts re-assembled vs. the source surface) and a fidelity score in Analysis; tests and the "stop_and_show" screenshots from P5 in `CURSOR_PARAMETRIC_PROMPT.json`. Then P6 (Supabase save of parametric projects, plan limits, cut-time estimate).
+**Next step:** Parametric P6 (the last phase): save parametric projects to Supabase (params in `projects` with product = 'parametric', imported model files and photo depth maps in Storage), plan limits (Free = library shapes and the parallel method with ≤ 30 parts, watermarked exports; Pro = everything), a cut-time estimate from material speed presets, tests, and the "stop_and_show" screenshots of the pricing gates in Stripe test mode. Then the final PROGRESS summary.
 
 Order of the run: main brief Phases 1–5 (Phase 6 Tauri is out of scope) → Letters L2, L4, L5 (L1 and L3 were done earlier) → Parametric P1–P6.
 
@@ -23,7 +23,36 @@ How to check a phase: `npx supabase start` (local stack, see SETUP.md), `npm tes
 | Parametric P2 — parallel fins complete | done | 640 / 640 |
 | Parametric P3 — stacked + waffle | done | 645 / 645 |
 | Parametric P4 — radial + along a curve | done | 652 / 652 |
-| Parametric P5–P6 | | |
+| Parametric P5 — photo to relief + quality | done | 658 / 658 |
+| Parametric P6 | | |
+
+---
+
+## Parametric P5 — Photo to relief + quality
+
+**Built**
+- Photo source (Source → Photo): the photo is resized to 518 px on its long side and run through Depth-Anything-V2-Small (Apache-2.0, int8 ONNX, 27 MB) in a browser worker with onnxruntime-web, on WebGPU when available, otherwise WASM (D50). The status line shows the model download and inference; the Source panel shows the photo and its depth map side by side.
+- `lib/parametric/source/relief.ts` (D51): depth map → relief solid. A watertight heightfield over a grid (Detail 8–256 cells), flat back on the wall, an automatic subject mask ("Cut away") or the whole rectangle ("Keep"), and controls for width, max depth, base, smoothing, contrast and invert. The relief goes through the same preparation as an imported model, so all five methods can slice it.
+- Deviation and fidelity (`lib/parametric/quality.ts`, D52): 2000 seeded surface samples, exact distance to the nearest part solid, max and mean deviation and a fidelity score in Analysis, computed in the slicer worker after each slice. "Deviation" in the 3D view shows the samples as a heat map (blue on a part → red one spacing away) with a legend.
+- Slice Inspector polish (D53): previous/next buttons, arrow keys, Home/End, and the part's area, cut length and sheet number.
+- The depth map and two previews are kept in IndexedDB, so the photo source survives a reload; a project whose photo is not on this device falls back to the library model with a message.
+- Setup: `npm run fetch:depth-model`, optional `NEXT_PUBLIC_DEPTH_MODEL_URL` (SETUP.md, `.env.example`), licences in `public/models/LICENSES.md`.
+
+**Tests:** 658 / 658, including the Hinge Box golden test. New `relief-quality.test.ts` (6 cases): the relief mesh is watertight (manifold, genus 0) for three option sets, and sampling its top surface matches the depth map within one grid step; a ragged mask and the automatic mask stay watertight; depth-map pack/unpack round trip and damaged-file error; photo → parallel fins end-to-end with deviation stats; exact point-to-prism distances, and on a sphere every in-gap sample is within the gap (s − T) with a mean under half a gap, the same on every run. `tsc` clean, `next build` OK.
+
+**Browser run** `scripts/shots/parametric-p5.mjs`: the test portrait (`scripts/shots/fixtures/portrait.jpg`, an AI-generated image, no rights issue) → depth on WASM → 42 fins on 2 sheets in about 4 s; fidelity 94 %; heat map and legend; inspector buttons and keys; max depth change re-slices; the photo source survives a reload. `parametric-p2.mjs`, `parametric-p3.mjs` and `parametric-p4.mjs` still pass.
+
+**Screenshots (stop_and_show: "A portrait photo turned into a fin sculpture")**
+- `docs/screenshots/parametric-5-portrait-fins-3d.png` — the portrait as parallel fins on a backboard, with the photo and depth map in the Source panel.
+- `docs/screenshots/parametric-5-portrait-fins-exploded.png` — the fins pulled apart.
+- `docs/screenshots/parametric-5-deviation-heatmap.png` — the deviation heat map and legend.
+- `docs/screenshots/parametric-5-portrait-sheets.png` — the cut sheets.
+
+**Known limitations**
+- Depth from one photo is relative and approximate: faces come out softer than from a 3D scan, and hair or dark clothing can read as far away (the back of the hair in the test portrait becomes a few thin fins).
+- No hand-painted mask brush (the brief's optional "brush"); "Cut away" and "Keep" only.
+- The model file is not in git; deployments load it from Hugging Face unless `NEXT_PUBLIC_DEPTH_MODEL_URL` is set.
+- The first photo downloads 27 MB; later photos on the same page reuse the loaded model.
 
 ---
 
