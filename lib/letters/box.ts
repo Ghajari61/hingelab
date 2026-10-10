@@ -5,7 +5,7 @@
 import { bendAnalysis, cutWidth } from "@/lib/hinge";
 import { concaveRadiusOf, cornerRadiusOf, hingeParamsOf, wallHeightOf } from "./defaults";
 import { facetContour, facetedWall } from "./facets";
-import { fillet, smoothShapes } from "./fillet";
+import { filletByContour, smoothShapes } from "./fillet";
 import { MIN_PIECE_AREA, differenceShapes, dropSpecks, makeShape, offsetShapes, pointInContour, pointInShape, shapeContours, signedArea, unionShapes } from "./polygon";
 import { labelPoint } from "./solid";
 import { hingeWall } from "./strips";
@@ -130,7 +130,7 @@ export function letterBoxes(letters: BoxLetter[], p: LetterParams): BoxResult {
   };
 
   for (const L of letters) {
-    const fr = fillet([L.shape], rCorner, hinge ? 2 * p.T : 0, concaveRadiusOf(p));
+    const fr = filletByContour([L.shape], rCorner, hinge ? 2 * p.T : 0, concaveRadiusOf(p));
     if (!fr.shapes.length) {
       issues.push({ lvl: "warn", msg: `“${L.name}” has strokes narrower than twice the corner radius (R ${r1(rCorner)} mm), so a wall cannot follow it and it was left out. Use a larger size, Thicken, a longer slit for a smaller radius, or Flat panels.` });
       continue;

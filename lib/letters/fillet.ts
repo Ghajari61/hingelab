@@ -6,7 +6,7 @@
  * closing (grow by ρ, shrink by ρ) rounds concave corners and fills gaps narrower than 2ρ.
  * The letter is opened, then closed.
  */
-import { cleanContour, differenceShapes, dropSpecks, intersectShapes, makeShape, MIN_PIECE_AREA, offsetShapes, totalArea, shapeContours } from "./polygon";
+import { cleanContour, differenceShapes, dropSpecks, intersectShapes, makeShape, MIN_PIECE_AREA, offsetShapes, totalArea, shapeContours, unionShapes } from "./polygon";
 import { turnAt } from "./path";
 import type { Contour, Shape } from "./types";
 
@@ -105,15 +105,51 @@ export function fillet(shapes: Shape[], rMin: number, minWeb = 0, rConcave = rMi
     closed = closeWithWebs(opened, rho, minWeb);
     if (rho >= r || !losesNeck(closed)) break;
   }
-  const before = shapeContours(shapes), after = shapeContours(closed);
+  return result(shapes, closed, r);
+}
+
+/** The rounded shapes, and how much they differ from the originals. */
+function result(shapes: Shape[], rounded: Shape[], r: number): FilletResult {
+  const before = shapeContours(shapes), after = shapeContours(rounded);
   const lost = dropSpecks(differenceShapes(before, after), MIN_PIECE_AREA);
   const gained = dropSpecks(differenceShapes(after, before), MIN_PIECE_AREA);
   const big = (s: Shape) => s.area > r * r;
   const area = totalArea(shapes);
   const delta = totalArea(lost) + totalArea(gained);
   return {
-    shapes: closed,
+    shapes: rounded,
     changed: lost.some(big) || gained.some(big) || delta > 0.05 * area,
     delta,
   };
+}
+
+/**
+ * Round every contour on its own: each outline, filled, with fillet(); each counter, filled, the
+ * other way round (closing with r rounds the material's convex corners, opening with the concave
+ * radius its concave ones). Rounding the letter as one solid would remove every stroke thinner than
+ * 2r, also a stroke between a counter and the outline, such as the apex of an "A", where both walls
+ * run straight. Here such a stroke only has to hold the two walls: a counter that comes closer
+ * than `minWeb` to the outline or to a larger counter is filled.
+ */
+export function filletByContour(shapes: Shape[], rMin: number, minWeb = 0, rConcave = rMin): FilletResult {
+  if (rMin <= 0) return { shapes, changed: false, delta: 0 };
+  const r = rMin * FILLET_MARGIN;
+  const rc = Math.min(r, Math.max(0, rConcave) * FILLET_MARGIN);
+  const rounded: Shape[] = [];
+  for (const s of shapes) {
+    const outer = fillet([makeShape(s.outer, [], s.group)], rMin, minWeb, rConcave).shapes;
+    if (!outer.length) continue;
+    const inner = shapeContours(dropSpecks(offsetShapes(outer, -minWeb), MIN_PIECE_AREA));
+    const counters = s.holes
+      .flatMap(h => despike(smoothShapes(dropSpecks(offsetShapes(offsetShapes(close(unionShapes([h]), r), -rc), rc), MIN_PIECE_AREA))))
+      .sort((a, b) => b.area - a.area);
+    const kept: Shape[] = [];
+    for (const c of counters) {
+      const inside = inner.length > 0 && !dropSpecks(differenceShapes([c.outer], inner), MIN_PIECE_AREA).length;
+      const apart = !kept.length || !dropSpecks(intersectShapes(shapeContours(offsetShapes([c], minWeb)), kept.map(k => k.outer)), MIN_PIECE_AREA).length;
+      if (inside && apart) kept.push(c);
+    }
+    rounded.push(...dropSpecks(differenceShapes(shapeContours(outer), kept.map(k => k.outer)), MIN_PIECE_AREA).map(x => ({ ...x, group: s.group })));
+  }
+  return result(shapes, rounded, r);
 }

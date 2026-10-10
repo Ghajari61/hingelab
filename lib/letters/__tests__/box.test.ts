@@ -351,6 +351,21 @@ describe("letter box counters (living-hinge walls)", () => {
     }
   });
 
+  it("the stroke between a counter and the outline stays, so the letter keeps its shape", () => {
+    const p = { ...params("A"), fontId: "vazirmatn", size: 100 };
+    const solid = computeLetterModel({ ...p, mode: "solid" }, vazir, hb);
+    const box = computeLetterModel(p, vazir, hb);
+    if ("error" in solid || "error" in box) throw new Error("model error");
+    const area = (s: { area: number }[]) => s.reduce((a, x) => a + x.area, 0);
+    const outline = box.box!.filleted.map(s => makeShape(s.outer, []));
+    // R 11.7 corners on a 100 mm letter round off about a fifth; rounding it as one solid lost 45 %
+    expect(area(outline)).toBeGreaterThan(0.75 * area(solid.shapes.map(s => makeShape(s.outer, []))));
+    // an "A" is symmetric: the rounded outline's centroid stays on the glyph's axis
+    const { x0, x1 } = solid.shapes[0].bbox;
+    const c = centroid(box.box!.filleted[0].outer);
+    expect(Math.abs(c[0] - (x0 + x1) / 2)).toBeLessThan(1);
+  });
+
   // A: the counter is too small; e: the bar is too thin to keep and the eye too small to bend around
   for (const text of ["A", "e"]) it(`${text}: a counter too small to bend around gets flat panels and stays a hole in the base`, () => {
     const m = boxModel(params(text));
