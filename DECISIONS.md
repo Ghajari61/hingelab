@@ -177,3 +177,44 @@ Decisions taken without the owner during the autopilot run. Each entry: what, wh
 ### D34. Parametric P1: simplification and units
 - Meshes over 300,000 triangles are simplified with meshoptimizer after normalising, so the reported error is in mm (target error 5 % of the diagonal as the cap; the triangle budget is the real target).
 - Units "auto" with a diagonal outside 5-5000 sets `askUnits` in the worker result; the editor will show the one-line prompt in P2. GLB import is wired through `GLTFLoader.parseAsync` but has no automated test (building a GLB in Node needs browser APIs); STL and OBJ are tested.
+
+### D35. Parametric P2: slat backboard
+- **What:** "Slats" makes the backboard a plain rectangle (the plate outline's bounding box), and every fin row is extended across the whole board by a strip `slatDepth` mm high (new parameter, default 10 mm), so each row reads as one slat with the model's profile rising out of it. With "Fill the whole board with slats" on, planes outside the model become plain slats S01, S02, ... at the same spacing. `slatWidth` stays in the data model but is always T: slats are cut on edge from the sheet.
+- **Why:** the brief names a slat mode but does not define it; this is the usual parametric-wall look and it reuses the fin, tab and slot code unchanged.
+- **Alternatives:** separate horizontal slats on the board face (needs a second joint type), or slats as wide boards cut flat (thicker material than the fins).
+
+### D36. Parametric P2: tabs, slots and the backboard
+- Tabs are T wide in depth (tab depth defaults to the backboard thickness, which is T, since the board is cut from the same sheet), `tabWidth` long, about every 60 mm along each wall edge: two or more per edge, one when the edge is shorter than 2.5 tab widths, none when even one does not fit. Pieces without a tab get the new warning code NO_TAB and are listed for gluing in the assembly guide.
+- Slots are drawn at nominal size (T + slot play) x (tab width + slot play); kerf is applied once, on the cut paths (outline +K/2, inner cuts -K/2), so a slot measures T + play - K after compensation. Tests check this on a 100 x 100 plate and in the exported SVG.
+- The plate is the model's footprint on the wall (manifold `trimByPlane` + `project`; a staircase of the fins for open meshes) grown by the margin, plus a 4 mm border round every slot. Several separate footprints are joined by their convex hull so the board stays one part, B1.
+- With backboard "None", fins get no tabs and no warning.
+
+### D37. Parametric P2: island bridges
+- A piece that does not touch the wall gets a vertical strip (width max(min feature, 4 mm)) from its lowest point straight down to the wall, clipped to the convex hull of the section plus the island's own shadow on the wall. Including the shadow means a section that floats entirely (for example a fin through the brim of a hat) still reaches the wall. Pieces a bridge cannot connect stay FLOATING_PIECE.
+
+### D38. Parametric P2: labels and the engrave layer
+- Labels are drawn with a small built-in single-stroke font (0-9, A-Z, "-", "." and space) at 4, 3 or 2.5 mm, whichever fits inside the part, with an arrow pointing to the wall edge. A label that fits at none of the sizes is skipped and counted under the new code LABEL_SKIPPED; the assembly guide still lists every part. The backboard is engraved with each fin id beside its first slot and "B1 TOP" with an arrow.
+- Engrave paths go into the shared labels layer (C00, the Hinge Box labels colour) in the SVG, cut after the inner cuts and before the outline. "Score" style uses the same layer for now: the difference is a power setting in LightBurn.
+- On the editor canvas engrave paths are drawn through the existing hairline channel of `Canvas` so no new layer type was needed.
+- **Hidden face:** engraving is on the face the laser sees. For "auto-hidden-face" the label is placed near the wall edge, where the neighbouring fins hide it; true back-face engraving would need flipping parts on the sheet, which would mirror the outlines for the user.
+
+### D39. Parametric P2: nesting v1
+- Bounding-box MaxRects (best short side fit) over as many sheets as needed. Parts may turn 0 or 90 degrees, or to the angle that shrinks their box by more than 10 % (slim diagonal parts); grain "along width" allows only 0, "along height" only 90.
+- Parts are packed in id order (so F01-F12 end up together) unless packing by size saves more than 5 % of the material. A part larger than the sheet goes alone on an oversize sheet marked in the SVG comment and on the canvas, with PART_TOO_BIG. More than 40 sheets adds TOO_MANY_SHEETS.
+- **Alternatives:** true-shape nesting (better yield on fins with large empty areas); the API takes outlines and returns placements, so it can be swapped in later.
+
+### D40. Parametric P2: formula sources
+- Formulas are parsed with mathjs and compiled by walking the parse tree into closures over an allow-list (arithmetic, comparisons, the ternary, and sin ... clamp, noise2/noise3, smoothstep). Assignments, function definitions, property access, strings, matrices and unknown names are rejected with a message for the panel; nothing from mathjs runs when the formula is evaluated.
+- A surface z = f(x, y) is sampled on the domain (centred on the origin) and lifted so its lowest point is `base` mm off the wall (default 5 mm), so negative values never cut into the backboard. The lift is reported to the test, which checks the fin tops follow 10 sin(x/20) + lift within chord tolerance + 0.05 mm.
+- A turned shape r = f(h) is centred like the solid library shapes (D29).
+
+### D41. Parametric P2: the editor
+- Same shell as Hinge Box and Letters: menu bar, control bar (Method: Parallel fins; the other methods are shown as "soon"), tool rail, a centre area with "3D" and "Sheets" tabs, the dock, and the status bar. The "Export" button in the menu bar exports the ZIP; single sheets and the assembly guide are in the File menu and in Layers & Export.
+- The worker re-slices 250 ms after the last change and the previous result stays on screen, with a progress strip under the tabs. Clicking a part in 3D, moving the Slice Inspector slider, or "Show" on a warning selects parts: they turn blue in 3D and get a blue outline on the sheets.
+- Guest autosave key `hingelab-parametric-v1`. The imported model file is kept in IndexedDB (one model, the last imported); a saved project that points to a model this browser does not have falls back to the library head with a toast.
+- Imported models whose size in "auto" units is implausible for millimetres show a one-line "It was made in mm / cm / m / inches" prompt in the Source panel (promised in D34).
+- **Cloud projects:** Parametric is not saved to the cloud until P6, so choosing Parametric inside a cloud project opens the guest editor (`/app/editor/local`) with Parametric selected.
+
+### D42. Parametric P2: export files
+- One SVG per sheet (`sheet-01.svg` ...), width and height in mm, Inkscape layer groups in cut order slots (C03) then labels (C00) then outline (C02), each respecting the layer's export switch. The ZIP holds every sheet, `assembly-guide.svg` and `project.hingelab.json`; the imported mesh file is not included (it can be large and the user already has it).
+- The assembly guide has an exploded isometric line drawing (drawn from the part placements, not a WebGL screenshot, so it also works on the server later), the backboard at full size with the part id in every slot, and numbered steps generated from the result (insertion order and direction, slats, parts to glue, fixing to the wall).

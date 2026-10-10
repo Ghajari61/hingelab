@@ -2,6 +2,7 @@
  * Parametric slicer types. Lengths in mm. 3D is right-handed, Y up, Z toward the viewer; the
  * backboard (wall) is the plane z = 0. 2D part drawings are in part-local mm (SVG, y down).
  */
+import type { Layers } from "@/lib/hinge";
 import type { Contour, Point, Shape } from "@/lib/letters/types";
 
 export type { Contour, Point, Shape };
@@ -24,6 +25,28 @@ export interface Transform {
   uniformScale: number;
 }
 
+export interface FormulaVariable {
+  min: number;
+  max: number;
+  value: number;
+}
+
+export interface FormulaSpec {
+  kind: "formula";
+  type: "heightfield" | "revolution";
+  /** heightfield: z = f(x, y); revolution: r = f(h). */
+  expression: string;
+  /** heightfield domain in mm. */
+  domain: { x: [number, number]; y: [number, number] };
+  /** revolution height H, mm (h runs 0..H). */
+  height: number;
+  variables: Record<string, FormulaVariable>;
+  /** Grid samples per axis. */
+  resolution: number;
+  /** heightfield: the surface is lifted so its lowest point is this far off the wall, mm. */
+  base: number;
+}
+
 export type SourceSpec =
   | { kind: "library"; id: LibraryId; /** Icosphere subdivision for the sphere. */ detail?: number }
   | {
@@ -33,7 +56,8 @@ export type SourceSpec =
       fileId?: string;
       units: ModelUnits;
       upAxis: "Y" | "Z";
-    };
+    }
+  | FormulaSpec;
 
 export interface SourceSettings {
   transform: Transform;
@@ -52,6 +76,17 @@ export interface ParallelParams {
   phase: number;
   /** Fins lower than this are left out (reported), mm. */
   minFinHeight: number;
+  backboard: "none" | "plate" | "slats";
+  /** Border of the backboard around the model, mm. */
+  backboardMargin: number;
+  /** Visible width of a slat; slats are cut on edge from the sheet, so this is T (kept for the brief's data model). */
+  slatWidth: number | null;
+  /** How far plain slats stand out of the wall, mm. */
+  slatDepth: number;
+  /** Planes outside the model continue as plain slats across the whole board. */
+  fillEmptySlots: boolean;
+  /** Tab depth into the backboard, mm (null = backboard thickness). */
+  finDepthBehind: number | null;
 }
 
 export interface MaterialSettings {
@@ -92,6 +127,8 @@ export interface ParametricParams {
   joints: JointSettings;
   quality: QualitySettings;
   labels: { enabled: boolean; style: "engrave" | "score"; position: "auto-hidden-face" | "center"; prefix: string };
+  /** Export layer switches (the hinge layer is unused here). */
+  layers: Layers;
 }
 
 /** A slicing plane n·p = offset with an in-plane frame: part-local x along u, y along w. */
@@ -118,12 +155,36 @@ export interface Part {
   /** Index of the plane the part was cut from (-1 for plates). */
   plane: number;
   neighbors: string[];
+  /** Tabs along the wall edge: part-local x ranges; they reach from y = 0 down to y = -tabDepth. */
+  tabs?: [number, number][];
+  tabDepth?: number;
+  /** Kerf-compensated cut paths in part-local mm: outline contours (outer + holes) and inner cuts. */
+  cut?: { outline: Contour[]; inner: Contour[] };
+}
+
+export interface SheetItem {
+  partId: string;
+  /** Sheet point = rotate(angle) · part-local point + (x, y). Degrees. */
+  angle: number;
+  x: number;
+  y: number;
+}
+
+export interface Sheet {
+  index: number;
+  width: number;
+  height: number;
+  items: SheetItem[];
+  /** Part area / sheet area. */
+  usage: number;
+  /** A part larger than the sheet, placed alone on an oversized sheet. */
+  oversize?: boolean;
 }
 
 export type WarningCode =
   | "NON_MANIFOLD" | "NON_MANIFOLD_SECTION" | "MIN_FEATURE_REMOVED" | "ISLAND_DROPPED" | "BRIDGE_ADDED" | "SHORT_FIN_DROPPED"
   | "DOWEL_CHAIN_SPLIT" | "CROSSING_TOO_SHORT" | "FINS_COLLIDE_AT_HUB" | "FINS_COLLIDE" | "PART_TOO_BIG" | "TOO_MANY_PARTS"
-  | "SIMPLIFIED" | "METHOD_NOT_READY" | "FLOATING_PIECE";
+  | "SIMPLIFIED" | "METHOD_NOT_READY" | "FLOATING_PIECE" | "LABEL_SKIPPED" | "TOO_MANY_SHEETS" | "NO_TAB";
 
 export interface Warning {
   code: WarningCode;
@@ -134,10 +195,14 @@ export interface Warning {
 export interface Stats {
   partCount: number;
   planeCount: number;
-  /** Total cut length of all part outlines and inner cuts, mm. */
+  sheetCount: number;
+  /** Total cut length of all kerf-compensated outlines and inner cuts, mm. */
   cutLength: number;
+  engraveLength: number;
   /** Area of all parts, mm². */
   partArea: number;
+  /** Part area over the area of the sheets used, 0..1. */
+  materialUsage: number;
 }
 
 export interface SliceResult {
@@ -145,6 +210,7 @@ export interface SliceResult {
   /** Cleaned section per plane (before splitting into parts), part-local mm. For the debug view. */
   sections: Shape[][];
   parts: Part[];
+  sheets: Sheet[];
   warnings: Warning[];
   stats: Stats;
   /** Model bounds after normalising, mm. */

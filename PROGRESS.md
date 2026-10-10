@@ -1,6 +1,6 @@
 ﻿# Progress
 
-**Next step:** Parametric P2 (tabs, backboard plate and slats, island bridges, labels, nesting v1, per-sheet export + ZIP, the Parametric editor UI with 3D and Sheets tabs, Parametric in the product tabs), per `CURSOR_PARAMETRIC_PROMPT.json` (then P3–P6).
+**Next step:** Parametric P3 — `lib/parametric/methods/stacked.ts` (layers along an axis, dowel holes through every layer of a chain, registration marks, hollowing) and `methods/waffle.ts` (two rib sets with half-lap joints), wired into `engine.ts` and the Method control (remove "soon" from Stacked layers and Waffle); tests "sphere stacked" and "box waffle" from `CURSOR_PARAMETRIC_PROMPT.json`; screenshots of a stacked mountain and a waffle vase. Then P4–P6.
 
 Order of the run: main brief Phases 1–5 (Phase 6 Tauri is out of scope) → Letters L2, L4, L5 (L1 and L3 were done earlier) → Parametric P1–P6.
 
@@ -20,7 +20,23 @@ How to check a phase: `npx supabase start` (local stack, see SETUP.md), `npm tes
 | Letters L4 — polish | done | 611 / 611 |
 | Letters L5 — plan limits | done | 619 / 619 |
 | Parametric P1 — core slicing | done | 632 / 632 |
-| Parametric P2–P6 | | |
+| Parametric P2 — parallel fins complete | done | 640 / 640 |
+| Parametric P3–P6 | | |
+
+---
+
+## Parametric P2 — Parallel fins complete
+
+**Built**
+- Tabs and slots (`joints.ts`), the backboard as a plate or a slat board (`backboard.ts`; D35, D36), bridges for floating pieces (D37), stroke-font labels with a wall arrow and the backboard's fin ids (`label.ts`; D38), kerf applied once at the end, bounding-box nesting over several sheets with grain and oversize handling (`nest.ts`; D39), formula sources z = f(x, y) and r = f(h) with a safe expression compiler (`source/formula.ts`; D40).
+- Export (`export.ts`; D42): one layered SVG per sheet, the assembly guide (exploded isometric drawing, the backboard at full size with every slot labelled, numbered steps), and a ZIP with all sheets, the guide and the project file.
+- The Parametric editor (`components/parametric/ParametricEditor.tsx`, `ParametricDock.tsx`, `ParametricControlBar.tsx`, `Viewport3D.tsx`; D41): Parametric is the third product tab. "3D" tab with model / planes / parts toggles, explode slider and click-to-select; "Sheets" tab with all sheets on the shared canvas (rulers, pan, zoom, layers). Dock: Source (library, 3D file with units and up axis, formula; size and rotation), Method, Material and sheet, Joints & Fit, Quality, Slice Inspector, Analysis (stats and warnings grouped by code with "Show"), Layers & Export. Undo/redo, autosave, open/save project, the imported model kept in IndexedDB, the units prompt for implausible sizes.
+
+**Tests:** 640 / 640, including the Hinge Box golden test. New `fins.test.ts` (8 cases): "formula heightfield" (z = 10·sin(x/20) on 200 × 100 mm, fins along Y follow it within chord tolerance + 0.05 mm), invariant 3 (every tab maps through the placements to exactly one centred slot of nominal size, plate and slats), invariant 4 (parts inside the sheet margins, at least the part gap apart, oversize parts reported), invariant 5 (kerf once: a 100 × 100 plate with a hole and a slot, and the slots in the exported sheet SVG measure T + play − K), invariant 6 (SVG in mm, finite, layer groups in cut order, unique ids; the ZIP holds every file), bridges, formula rejection, grain. The P1 tests now run through tabs, backboard, kerf and nesting too. `tsc` clean, `next build` OK. Browser run `scripts/shots/parametric-p2.mjs`: head with slats 26 parts on 2 sheets, inspector, ZIP and guide downloads, formula surface 31 parts, a broken formula reported, a model in metres asks for units and scales to 300 mm.
+
+**Screenshots:** `parametric-2-face-slats-3d.png`, `parametric-2-sheets.png`, `parametric-2-assembly-guide.png`.
+
+**Known limitations:** nesting is by bounding box (fins with large empty areas waste material). Engraving is on the visible face; "hidden face" places labels near the wall edge (D38). Parametric projects are guest-only (browser storage) until P6. No transform gizmo in 3D (numbers in the Source panel instead) and no "Lay flat on face" or photo source yet (P5). GLB import still has no automated test.
 
 ---
 

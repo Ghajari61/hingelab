@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { pointInContour, signedArea } from "@/lib/letters/polygon";
-import { mergeParametricParams, minFeatureOf } from "../defaults";
+import { mergeParametricParams, minFeatureOf, tabDepthOf } from "../defaults";
 import { computeParametric, loadSource } from "../engine";
 import { icosphere, signedVolume } from "../source/library";
 import { prepareMesh } from "../source/mesh";
@@ -10,6 +10,7 @@ import { crossings, manifold, rasterComponents } from "./helpers";
 const sphereParams = (): ParametricParams => {
   const p = mergeParametricParams({ source: { kind: "library", id: "sphere", detail: 6 } });
   p.parallel.spacing = 10;
+  p.parallel.backboard = "none";
   p.material.K = 0;
   p.quality.smoothing = 0;
   return p;
@@ -63,7 +64,7 @@ describe("parametric parallel fins", () => {
     expect(r.engine).toBe("manifold");
     expect(r.planes.map(pl => pl.offset)[0]).toBeCloseTo(-95, 1);
     checkSphereFins(p, r);
-    expect(r.warnings.filter(w => w.code !== "MIN_FEATURE_REMOVED")).toEqual([]);
+    expect(r.warnings.filter(w => w.code !== "MIN_FEATURE_REMOVED" && w.code !== "LABEL_SKIPPED")).toEqual([]);
   });
 
   it("the fallback section method gives the same sphere fins", async () => {
@@ -84,7 +85,8 @@ describe("parametric parallel fins", () => {
     expect(r.engine).toBe("manifold");
     expect(r.parts.length).toBeGreaterThan(15);
     checkInvariants(r);
-    for (const part of r.parts) expect(part.shape.bbox.y0).toBeGreaterThanOrEqual(-1e-6);
+    expect(r.parts.at(-1)?.kind).toBe("backboard");
+    for (const part of r.parts) if (part.kind === "fin") expect(part.shape.bbox.y0).toBeGreaterThanOrEqual(-tabDepthOf(head) - 1e-6);
   });
 
   it("an open mesh is sliced with the fallback and reported as NON_MANIFOLD", async () => {

@@ -8,12 +8,13 @@ export type MenuAction = { label: string; kbd: string; run: () => void; disabled
 export type MenuEntry = MenuAction | "-";
 
 export function MenuBar({
-  title, kind, menus, onExport,
+  title, kind, menus, onExport, exportLabel = "Export SVG",
 }: {
   title: string;
   kind: string;
   menus: Record<"file" | "edit" | "view" | "help", MenuEntry[]>;
   onExport: () => void;
+  exportLabel?: string;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const [shift, setShift] = useState(0);
@@ -79,7 +80,7 @@ export function MenuBar({
         ))}
       </nav>
       <div className="doc-title">{title ? <><b>{title}</b> · {kind}</> : null}</div>
-      <button className="btn-export" type="button" onClick={onExport}>Export SVG</button>
+      <button className="btn-export" type="button" onClick={onExport}>{exportLabel}</button>
       <UserMenu />
     </header>
   );

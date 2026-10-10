@@ -208,6 +208,8 @@ export interface PreparedMesh {
   openEdges: number;
   warnings: Warning[];
   askUnits: boolean;
+  /** Formula heightfields: how far the surface was lifted off the wall, mm. */
+  lift?: number;
 }
 
 /** Weld, validate, simplify and normalise. */

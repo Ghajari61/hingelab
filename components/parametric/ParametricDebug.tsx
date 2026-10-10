@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { polyD, r3 } from "@/lib/hinge";
 import {
   LIBRARY, formatOf, finSpacingOf, mergeParametricParams,
   type LibraryId, type MeshData, type ParametricParams, type Shape, type SliceResult,
 } from "@/lib/parametric";
-import { disposeTree, modelObject, partsObject, planesObject } from "./scene";
+import Viewport from "./Viewport3D";
 import { Slicer } from "./slicerProtocol";
 
 const shapeD = (s: Shape) => [s.outer, ...s.holes].map(c => polyD(c, 0, 0)).join(" ");
@@ -156,85 +154,4 @@ export default function ParametricDebug() {
       )}
     </div>
   );
-}
-
-function Viewport({ mesh, result, T, show }: { mesh: MeshData | null; result: SliceResult | null; T: number; show: { model: boolean; planes: boolean; parts: boolean } }) {
-  const host = useRef<HTMLDivElement>(null);
-  const ctx = useRef<{ renderer: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; controls: OrbitControls; render: () => void } | null>(null);
-  const layers = useRef<{ model?: THREE.Object3D; planes?: THREE.Object3D; parts?: THREE.Object3D }>({});
-  const framed = useRef("");
-
-  useEffect(() => {
-    const el = host.current!;
-    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
-    renderer.setClearColor(0x1b1e23);
-    el.appendChild(renderer.domElement);
-    const scene = new THREE.Scene();
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x404040, 1.6));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.8);
-    sun.position.set(-1, 1.5, 2);
-    scene.add(sun);
-    const wall = new THREE.GridHelper(600, 30, 0x3a4048, 0x2a2f36);
-    wall.rotation.x = Math.PI / 2;
-    scene.add(wall);
-    const camera = new THREE.PerspectiveCamera(35, 1, 1, 20000);
-    camera.position.set(-260, 120, 420);
-    const controls = new OrbitControls(camera, renderer.domElement);
-    const render = () => renderer.render(scene, camera);
-    controls.addEventListener("change", render);
-    const ro = new ResizeObserver(() => {
-      const w = el.clientWidth, h = el.clientHeight;
-      renderer.setSize(w, h);
-      camera.aspect = w / Math.max(1, h);
-      camera.updateProjectionMatrix();
-      render();
-    });
-    ro.observe(el);
-    ctx.current = { renderer, scene, camera, controls, render };
-    return () => {
-      ro.disconnect();
-      controls.dispose();
-      for (const o of Object.values(layers.current)) if (o) disposeTree(o);
-      renderer.dispose();
-      el.removeChild(renderer.domElement);
-      ctx.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    const c = ctx.current;
-    if (!c) return;
-    const swap = (k: "model" | "planes" | "parts", o: THREE.Object3D | undefined) => {
-      const old = layers.current[k];
-      if (old) { c.scene.remove(old); disposeTree(old); }
-      layers.current[k] = o;
-      if (o) c.scene.add(o);
-    };
-    swap("model", mesh ? modelObject(mesh) : undefined);
-    swap("planes", result ? planesObject(result) : undefined);
-    swap("parts", result ? partsObject(result, T) : undefined);
-    if (result) {
-      const { min, max } = result.bounds;
-      const key = [...min, ...max].map(v => Math.round(v)).join(",");
-      if (key !== framed.current) {
-        framed.current = key;
-        const centre = new THREE.Vector3((min[0] + max[0]) / 2, (min[1] + max[1]) / 2, Math.max(0, (min[2] + max[2]) / 2));
-        const r = Math.hypot(max[0] - min[0], max[1] - min[1], max[2] - min[2]) / 2;
-        c.controls.target.copy(centre);
-        c.camera.position.copy(centre).add(new THREE.Vector3(-0.9, 0.45, 1.5).normalize().multiplyScalar(r * 3.2));
-        c.controls.update();
-      }
-    }
-    c.render();
-  }, [mesh, result, T]);
-
-  useEffect(() => {
-    const c = ctx.current;
-    if (!c) return;
-    for (const k of ["model", "planes", "parts"] as const) if (layers.current[k]) layers.current[k]!.visible = show[k];
-    c.render();
-  }, [show, mesh, result]);
-
-  return <div ref={host} className="pdbg-view" data-testid="parametric-view" />;
 }

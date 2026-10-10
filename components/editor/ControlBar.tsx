@@ -28,7 +28,7 @@ export function Seg({ label, name, value, options }: {
   );
 }
 
-export type Product = "hinge" | "letters";
+export type Product = "hinge" | "letters" | "parametric";
 
 /** Product switcher shown at the right end of every control bar. */
 export function ProductTabs({ product, onProduct }: { product: Product; onProduct: (p: Product) => void }) {
@@ -38,6 +38,7 @@ export function ProductTabs({ product, onProduct }: { product: Product; onProduc
       <div className="iconseg" role="group" aria-label="Product">
         <button type="button" aria-pressed={product === "hinge"} onClick={() => onProduct("hinge")}>Hinge Box</button>
         <button type="button" aria-pressed={product === "letters"} onClick={() => onProduct("letters")}>Letters</button>
+        <button type="button" aria-pressed={product === "parametric"} onClick={() => onProduct("parametric")}>Parametric</button>
       </div>
     </div>
   );

@@ -7,7 +7,7 @@ import { fmtLen, type Units } from "./format";
 
 /** The laser bed with the laid-out parts. Products pass ready-made layer content. */
 export function Canvas({
-  canvasRef, view, viewRef, bedW, bedH, content, layers, labels, pitch = 0, overlay, error, notice, showGrid, tool, spaceDown, units,
+  canvasRef, view, viewRef, bedW, bedH, sheets, content, layers, labels, pitch = 0, overlay, error, notice, showGrid, tool, spaceDown, units,
   onCursor, zoomAt, panBy, onZoomCenter, onActual, onFit,
 }: {
   canvasRef: React.RefObject<HTMLDivElement | null>;
@@ -15,6 +15,8 @@ export function Canvas({
   viewRef: React.RefObject<View>;
   bedW: number;
   bedH: number;
+  /** Several sheets laid out side by side, drawn instead of the single bed. */
+  sheets?: { x: number; y: number; w: number; h: number; label: string; warn?: boolean }[] | null;
   content: LayerContent | null;
   layers: Layers;
   labels: boolean;
@@ -62,8 +64,10 @@ export function Canvas({
   let grid = "";
   if (showGrid && content) {
     const step = 10;
-    for (let x = step; x < bedW; x += step) grid += `M${x},0V${bedH}`;
-    for (let y = step; y < bedH; y += step) grid += `M0,${y}H${bedW}`;
+    for (const s of sheets ?? [{ x: 0, y: 0, w: bedW, h: bedH }]) {
+      for (let x = step; x < s.w; x += step) grid += `M${s.x + x},${s.y}V${s.y + s.h}`;
+      for (let y = step; y < s.h; y += step) grid += `M${s.x},${s.y + y}H${s.x + s.w}`;
+    }
   }
   const vis = (k: LayerKey) => layers[k].vis;
 
@@ -104,11 +108,20 @@ export function Canvas({
         <g id="world" transform={`translate(${view.tx},${view.ty}) scale(${view.z})`}>
           {content && (
             <>
-              <rect x={0} y={0} width={bedW} height={bedH} fill="var(--sheet)" stroke="var(--sheet-edge)" strokeWidth={sw} />
+              {sheets ? sheets.map((s, i) => (
+                <g key={`s${i}`}>
+                  <rect x={s.x} y={s.y} width={s.w} height={s.h} fill="var(--sheet)" stroke={s.warn ? "var(--warn, #E8A33D)" : "var(--sheet-edge)"} strokeWidth={sw} />
+                  <text x={s.x} y={s.y - 6 / view.z} fontFamily="Source Sans 3, sans-serif" fontSize={11 / view.z} fill={s.warn ? "var(--warn, #E8A33D)" : "var(--fg-faint)"}>{s.label}</text>
+                </g>
+              )) : (
+                <>
+                  <rect x={0} y={0} width={bedW} height={bedH} fill="var(--sheet)" stroke="var(--sheet-edge)" strokeWidth={sw} />
+                  <text x={0} y={-6 / view.z} fontFamily="Source Sans 3, sans-serif" fontSize={11 / view.z} fill="var(--fg-faint)">
+                    {`Laser bed ${fmtLen(bedW, units)} × ${fmtLen(bedH, units)}`}
+                  </text>
+                </>
+              )}
               {showGrid && <path d={grid} stroke="#2A2724" strokeWidth={sw * 0.8} fill="none" />}
-              <text x={0} y={-6 / view.z} fontFamily="Source Sans 3, sans-serif" fontSize={11 / view.z} fill="var(--fg-faint)">
-                {`Laser bed ${fmtLen(bedW, units)} × ${fmtLen(bedH, units)}`}
-              </text>
               {content.fills.map((d, i) => <path key={`f${i}`} d={d} fill="var(--wood)" fillOpacity={0.13} fillRule="evenodd" stroke="none" />)}
               {/* hairline hinge: thin enough that individual cuts stay readable when zoomed out */}
               {vis("hinge") && content.hinge.length > 0 && (
