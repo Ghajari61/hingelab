@@ -1,5 +1,6 @@
 export { MATERIALS, DEFAULTS, clone } from "./defaults";
 export { migrate } from "./migrate";
+export { mergeParams } from "./merge";
 export { buildCore, roundedPath, plateExtent } from "./core";
 export { simplify, offsetRect, polyD, bboxOf } from "./polygon";
 export {

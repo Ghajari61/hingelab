@@ -62,6 +62,23 @@ describe("SaveScheduler (1.5 s debounced cloud save)", () => {
     expect(statuses.at(-1)).toBe("Saved to cloud");
   });
 
+  it("shows a plan refusal as not saved and does not retry until the next edit", async () => {
+    let calls = 0;
+    const { s, statuses } = setup(async (p) => {
+      calls++;
+      if (p === 1) throw Object.assign(new Error("Pro feature"), { permanent: true });
+    });
+    s.change(1);
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(statuses.at(-1)).toBe("Not saved — Pro feature");
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(calls).toBe(1);
+    s.change(2);
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(calls).toBe(2);
+    expect(statuses.at(-1)).toBe("Saved to cloud");
+  });
+
   it("retries by itself after 30 s", async () => {
     let calls = 0;
     const { s, statuses } = setup(async () => {

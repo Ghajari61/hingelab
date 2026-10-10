@@ -21,13 +21,28 @@ Supabase CLI stack and (once you add test keys) Stripe test mode. Variable names
 6. Optional, local Google sign-in: put the same id/secret in `.env.local` as `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` / `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`, set `enabled = true` under `[auth.external.google]` in `supabase/config.toml`, add `http://127.0.0.1:55421/auth/v1/callback` to the Google client, and restart the stack.
 7. Authentication → Emails → SMTP: connect a sending service (Resend, Postmark, …) before launch; the built-in sender is rate limited.
 
+## Stripe (test mode)
+
+1. Create a Stripe account at https://dashboard.stripe.com and stay in **Test mode** (toggle top right).
+2. Developers → API keys: copy the **Secret key** (`sk_test_…`) into `.env.local` as `STRIPE_SECRET_KEY`.
+3. Run `node scripts/stripe-setup.mjs`. It creates the "HingeLab Pro" product with a $9/month and a $79/year price (test mode only) and prints `STRIPE_PRICE_PRO_MONTHLY=…` and `STRIPE_PRICE_PRO_YEARLY=…`. Paste both lines into `.env.local`. Running it again reuses the same prices.
+4. Local webhooks: install the Stripe CLI (`winget install Stripe.StripeCLI`), run `stripe login`, then `stripe listen --forward-to localhost:3000/api/stripe/webhook`. Copy the `whsec_…` it prints into `.env.local` as `STRIPE_WEBHOOK_SECRET`, and restart `npm run dev`.
+5. Try it: sign in, Billing → Upgrade, pay with card `4242 4242 4242 4242`, any future date, any CVC. The plan turns Pro within seconds. Manage billing opens the customer portal.
+6. Settings → Billing → Customer portal: turn on "Cancel subscriptions", "Update payment methods" and "Switch plans" (add both Pro prices to the plan switcher), then save.
+7. Production webhook (when you deploy): Developers → Webhooks → Add endpoint `https://<your-domain>/api/stripe/webhook` with these events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`. Copy its signing secret for Vercel (below).
+8. Going live later: repeat steps 2, 3, 6 and 7 in Live mode, and set `STRIPE_ALLOW_LIVE=true` in Vercel. Until that variable is `true` the server refuses live keys.
+
 ## Vercel environment variables
 
 Set these in Vercel → Project → Settings → Environment Variables (Production and Preview):
 
-1. `NEXT_PUBLIC_SITE_URL` — e.g. `https://hingelab.vercel.app` or your domain.
+1. `NEXT_PUBLIC_SITE_URL` — e.g. `https://hingelab.vercel.app` or your domain. Used for Stripe return links.
 2. `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase → Settings → API.
 3. `SUPABASE_SERVICE_ROLE_KEY` — Supabase → Settings → API (secret; server only).
+4. `STRIPE_SECRET_KEY` — `sk_test_…` until launch (secret).
+5. `STRIPE_WEBHOOK_SECRET` — the signing secret of the webhook endpoint from Stripe step 7 (secret).
+6. `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY` — from `scripts/stripe-setup.mjs`.
+7. `STRIPE_ALLOW_LIVE` — leave unset or `false` until you switch to live keys.
 
 ## Publish the work
 

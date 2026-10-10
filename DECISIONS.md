@@ -66,6 +66,34 @@ Decisions taken without the owner during the autopilot run. Each entry: what, wh
 ### D13. File → Open project in a cloud project imports the file as a new cloud project
 - As the brief says. Old project files without a `product` field are Hinge Box projects.
 
+### D14. Free users can preview Pro shapes and patterns; export and cloud save are what is locked
+- **What:** locked options show a lock icon but still switch the design, so the 3D preview and analysis work. Export (and Copy SVG) opens the "Upgrade to Pro" dialog; the cloud save is refused by the database and the status bar says "Not saved — Pro feature" (no retry loop until the next edit).
+- **Why:** the plan table gives Free "Generator + preview"; trying a feature is the best argument for buying it. The limits that matter are enforced on the server (D15), so preview cannot leak a file.
+- **Alternatives:** block the click entirely (simpler, but users never see what they would buy).
+
+### D15. Where the limits are enforced
+- **Projects / shapes / patterns:** a `before insert or update` trigger on `projects` (`20261010000300_plan_limits.sql`) reads the owner's plan. Free: at most 3 projects; a hinge-box row must be `rect` + `straight` (checked when params change, so renaming an old project still works); parametric rows are refused (to be relaxed in Parametric P6). Errors surface as readable messages.
+- **Export:** when accounts exist, the editor asks `POST /api/export` for the SVG. The server reads the plan, refuses Pro shapes/patterns for Free (403) and adds the mark. The geometry and the Pro output are byte-identical to `exportSVG` (tested against the golden output).
+- **Why:** the brief requires server-side enforcement; client-only locks can be bypassed from DevTools.
+- **Limitation:** the Free export is built on the server, but the Free user still sees the full drawing on the canvas, so a determined user could screenshot or rebuild it. That is accepted for a laser-cutting tool.
+
+### D16. The Free mark is a separate engrave layer in an 8 mm strip below the parts
+- **What:** `addWatermark` grows the document by 8 mm and adds `<g id="watermark">` (black, C00, engrave) with the text "Made with HingeLab", right-aligned under the parts. Parts and their layers are untouched.
+- **Why:** "a small engrave mark" must never cut or overlap a part; an engrave-only layer costs a few seconds of laser time and is easy to see in LightBurn.
+- **Alternatives:** text inside a part (could land on a hinge or slot); a cut line (wastes material).
+
+### D17. Without Supabase every feature is open
+- **What:** `usePlan()` and `currentPlan()` return Pro when Supabase is not configured (guest mode, D4).
+- **Why:** with no accounts there is nothing to buy, and the live site must keep exporting exactly what it does today until the owner sets up accounts and billing.
+
+### D18. Billing details
+- **Plan from status:** `active`, `trialing` and `past_due` keep Pro (Stripe retries the card during `past_due`); anything else is Free. `invoice.payment_failed` only sets `plan_status = past_due`.
+- **Out-of-order events:** for `customer.subscription.created/updated` the handler re-reads the subscription from Stripe instead of trusting the event snapshot, so a late older event cannot undo a newer change.
+- **Webhook errors** return 500 so Stripe retries; bad signatures return 400.
+- **Live keys refused:** `getStripe()` throws on `sk_live_…` unless `STRIPE_ALLOW_LIVE=true`; `scripts/stripe-setup.mjs` runs only with test keys.
+- **Checkout:** the Stripe customer is created on first checkout and saved with the service-role key; `client_reference_id` links the session to the user. Promotion codes are allowed.
+- **Period end:** Stripe API 2026-09-30 moved `current_period_end` to subscription items; the handler reads the latest item end.
+
 ## Letters
 
 ## Parametric

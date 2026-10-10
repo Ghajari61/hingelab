@@ -10,7 +10,12 @@ type DB = SupabaseClient<Database>;
 
 export type ProjectSummary = Pick<ProjectRow, "id" | "name" | "product" | "thumbnail_svg" | "updated_at">;
 
-export class ProjectError extends Error {}
+/** `permanent` = refused by a database rule (plan limit), not a network problem. */
+export class ProjectError extends Error {
+  constructor(message: string, readonly permanent = false) {
+    super(message);
+  }
+}
 
 function checkParams(params: unknown): asserts params is Record<string, unknown> {
   if (!params || typeof params !== "object" || Array.isArray(params)) throw new ProjectError("That is not a project.");
@@ -19,7 +24,7 @@ function checkParams(params: unknown): asserts params is Record<string, unknown>
 
 /** Database errors raised by our own triggers carry a readable message (plan limits, Phase 4). */
 function fail(error: { message: string; code?: string } | null, fallback: string): never {
-  if (error?.code === "P0001") throw new ProjectError(error.message);
+  if (error?.code === "P0001") throw new ProjectError(error.message, true);
   throw new ProjectError(fallback);
 }
 

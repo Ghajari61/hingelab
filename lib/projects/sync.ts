@@ -9,7 +9,12 @@
 export const CLOUD_SAVE_DELAY = 1500;
 export const RETRY_DELAY = 30000;
 
-export type SaveStatus = "Saved to cloud" | "Saving…" | "Offline — saved locally";
+export type SaveStatus = "Saved to cloud" | "Saving…" | "Offline — saved locally" | "Not saved — Pro feature";
+
+/** A save the server refused for good (plan limit). Retrying will not help until the edit changes. */
+export function isPermanent(e: unknown): boolean {
+  return !!e && typeof e === "object" && (e as { permanent?: unknown }).permanent === true;
+}
 
 /** The browser's copy of a cloud project. `dirty` = edited since the last confirmed cloud save. */
 export type LocalCopy<P> = { params: P; editedAt: string; dirty: boolean };
@@ -114,9 +119,13 @@ export class SaveScheduler<P> {
       } else {
         this.setStatus("Saved to cloud");
       }
-    } catch {
+    } catch (e) {
       this.inFlight = false;
       if (this.pending === null) this.pending = params;
+      if (isPermanent(e)) {
+        this.setStatus("Not saved — Pro feature");
+        return;
+      }
       this.setStatus("Offline — saved locally");
       this.schedule(RETRY_DELAY);
     }

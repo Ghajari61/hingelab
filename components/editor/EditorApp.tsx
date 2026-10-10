@@ -2,13 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  autoFit, clone, computeModel, DEFAULTS, exportSVG, layerContent, layoutParts, MATERIALS, migrate,
+  autoFit, clone, computeModel, DEFAULTS, exportSVG, layerContent, layoutParts, MATERIALS, mergeParams,
   type CutStyle, type Params,
 } from "@/lib/hinge";
 import { useHistory } from "@/hooks/useHistory";
 import { readStored, readUnits, useAutosave } from "@/hooks/useAutosave";
 import { useCloudAutosave, type CloudDoc } from "@/hooks/useCloudAutosave";
 import { thumbnailSVG } from "@/lib/projects/thumbnail";
+import { hingeLocks } from "@/lib/plans";
+import { usePlan } from "@/components/billing/usePlan";
+import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 import { importIntoCloud, openNewCloudProject } from "./cloud";
 import { PX_PER_MM, useCanvasView } from "@/hooks/useCanvasView";
 import { fmtLen, type Units } from "./format";
@@ -21,16 +24,6 @@ import { rulerSvg } from "./Rulers";
 import { PanelDock } from "./PanelDock";
 import { StatusBar } from "./StatusBar";
 import { Dialogs, type ModalState } from "./dialogs";
-
-/** Saved settings over DEFAULTS. Migrating first keeps old projects on single-line cuts. */
-function mergeParams(partial?: Partial<Params>): Params {
-  const base = clone(DEFAULTS);
-  if (!partial) return base;
-  const saved = migrate({ ...partial } as Record<string, unknown>) as Partial<Params>;
-  return Object.assign(base, saved, {
-    layers: Object.assign(clone(DEFAULTS.layers), saved.layers || {}),
-  });
-}
 
 function loadInitial(cloud: CloudDoc | null) {
   if (cloud) return { params: mergeParams(cloud.params as Partial<Params>), units: readUnits() };
@@ -61,6 +54,9 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
   const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [upgrade, setUpgrade] = useState<string | null>(null);
+  const account = usePlan();
+  const locks = hingeLocks(account.plan, params);
   const fileRef = useRef<HTMLInputElement>(null);
   const toastT = useRef<number>(0);
   const onStatus = useCallback((s: string) => setSaved(s), []);
@@ -140,16 +136,46 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
     const next: Params = { ...params, [key]: value };
     if (key === "shape" && value === "pill") next.R = Math.min(next.W, next.D) / 2;
     patch(next, true);
+    if ((key === "shape" || key === "pattern") && hingeLocks(account.plan, next).length > locks.length) {
+      toastMsg("Pro feature: preview it freely. Export and cloud save need Pro.");
+    }
   }
 
-  function exportNow() {
-    if (!model || !lay) { toastMsg("Fix the settings before exporting"); return; }
-    offerFile(baseName(params) + ".svg", exportSVG(model, lay, params), "image/svg+xml");
+  function lockedReason() {
+    const what = locks.join(" and ");
+    return `${what} ${locks.length > 1 ? "are" : "is a"} Pro feature${locks.length > 1 ? "s" : ""}. Keep designing with it here; exporting and saving it to the cloud need Pro.`;
   }
 
-  function copySVG() {
-    if (!model || !lay) return;
-    const svg = exportSVG(model, lay, params);
+  /**
+   * The file to export. With accounts the server builds it, so the plan (and the Free mark) is
+   * applied where it can't be bypassed. Without accounts everything is open and it is built here.
+   */
+  async function exportedSVG(): Promise<string | null> {
+    if (!model || !lay) { toastMsg("Fix the settings before exporting"); return null; }
+    if (locks.length) { setUpgrade(lockedReason()); return null; }
+    if (!account.configured) return exportSVG(model, lay, params);
+    try {
+      const res = await fetch("/api/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ params }) });
+      if (res.ok) return await res.text();
+      const err = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Export failed. Try again.";
+      if (res.status === 403) setUpgrade(err);
+      else toastMsg(err);
+    } catch {
+      toastMsg("Export needs a connection. Check your network and try again.");
+    }
+    return null;
+  }
+
+  async function exportNow() {
+    const svg = await exportedSVG();
+    if (!svg) return;
+    offerFile(baseName(params) + ".svg", svg, "image/svg+xml");
+    if (svg.includes('id="watermark"')) toastMsg("Exported with the small “Made with HingeLab” mark (Free plan)");
+  }
+
+  async function copySVG() {
+    const svg = await exportedSVG();
+    if (!svg) return;
     const name = baseName(params) + ".svg";
     try {
       navigator.clipboard.writeText(svg).then(() => toastMsg("SVG copied to clipboard"), () => setModal({ type: "code", name, data: svg }));
@@ -203,7 +229,7 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
     const down = (e: KeyboardEvent) => {
       const inField = !!document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
       const mod = e.ctrlKey || e.metaKey;
-      if (e.key === "Escape") setModal(null);
+      if (e.key === "Escape") { setModal(null); setUpgrade(null); }
       if (mod) {
         const k = e.key.toLowerCase();
         const va = api.current;
@@ -279,7 +305,7 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
   return (
     <div className="app">
       <MenuBar title={meta.current.title} kind={meta.current.kind} menus={menus} onExport={exportNow} />
-      <ControlBar params={params} onShape={(v) => setChoice("shape", v)} onLid={(v) => setChoice("lid", v)} onPattern={(v) => setChoice("pattern", v)} onProduct={onProduct} />
+      <ControlBar params={params} plan={account.plan} onShape={(v) => setChoice("shape", v)} onLid={(v) => setChoice("lid", v)} onPattern={(v) => setChoice("pattern", v)} onProduct={onProduct} />
       <div className="main">
         <ToolRail
           tool={tool}
@@ -367,6 +393,7 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
           setModal(null);
         }}
       />
+      {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
       <input
         ref={fileRef}

@@ -20,7 +20,12 @@ function ago(iso: string | null) {
 type Dialog = { type: "rename"; p: ProjectSummary; name: string } | { type: "delete"; p: ProjectSummary } | null;
 
 /** "My boxes": the user's cloud projects with Open / Duplicate / Rename / Delete. */
-export function ProjectsHome({ projects, products }: { projects: ProjectSummary[]; products: ProductId[] }) {
+export function ProjectsHome({ projects, products, limit = Infinity }: {
+  projects: ProjectSummary[];
+  products: ProductId[];
+  /** Cloud projects the plan keeps (Infinity on Pro). */
+  limit?: number;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +55,12 @@ export function ProjectsHome({ projects, products }: { projects: ProjectSummary[
           ))}
         </div>
       </div>
+      {Number.isFinite(limit) && (
+        <p className="limit-note">
+          <span>{projects.length} of {limit} cloud projects on the Free plan{projects.length >= limit ? ". Delete one or upgrade to start another." : "."}</span>
+          <Link href="/app/billing">Upgrade to Pro for unlimited projects</Link>
+        </p>
+      )}
       {error && <p className="auth-msg err" role="alert">{error}</p>}
       {projects.length === 0 ? (
         <div className="boxes-empty">
