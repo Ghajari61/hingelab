@@ -1,6 +1,6 @@
 ﻿# Progress
 
-**Next step:** Letters L5 — plan limits (Letters is Pro; Free users can preview and export only a single-letter box with the watermark), per `CURSOR_LETTERS_PROMPT.md` (then Parametric P1–P6).
+**Next step:** Parametric P1, per `CURSOR_PARAMETRIC_PROMPT.json` (then P2–P6).
 
 Order of the run: main brief Phases 1–5 (Phase 6 Tauri is out of scope) → Letters L2, L4, L5 (L1 and L3 were done earlier) → Parametric P1–P6.
 
@@ -18,10 +18,25 @@ How to check a phase: `npx supabase start` (local stack, see SETUP.md), `npm tes
 | Letters L2 — stencil | done | 597 / 597 |
 | Letters L3 — letter box | done (earlier sessions) | |
 | Letters L4 — polish | done | 611 / 611 |
-| Letters L5 — plan limits | | |
+| Letters L5 — plan limits | done | 619 / 619 |
 | Parametric P1–P6 | | |
 
 ---
+
+## Letters L4 — Polish
+
+**Built**
+- Marquee light holes (`lib/letters/marquee.ts`): round bulb holes along each letter's strokes, clear of the walls by the margin, at least the spacing apart, through the lid and lid lip (or the base of an open tray). Settings in the Box panel: hole diameter, spacing, margin (D23).
+- Small pieces: "Stack to full height" cuts each flat dot or accent `round(depth / T)` times to glue into a stack (D24). Cut flat / Leave out were already there.
+- Wall splitting at the maximum wall length (seams on flats, or a 10 mm glued splice on a curve) was already built in L3; unchanged.
+- 3D preview with three.js (`lib/letters/scene3d.ts`, `components/letters/LetterPreview3D.tsx`): plates, walls with the hinge zones tinted green / amber / red, light holes, small pieces; drag to orbit, scroll to zoom, "Lift lid" slider; Solid and Stencil show as flat sheets. Loaded lazily (D25).
+- Analysis: tightest radius against the hinge limit per letter, light holes, longest strip, warnings and notes in separate lists (D26).
+
+**Tests:** 611 / 611, including the Hinge Box golden test. New: `marquee.test.ts` (9 cases: holes in lid and lip only, clear of walls and counters by T + margin + r, spacing kept, open tray uses the base, flat panels, turned-off settings change nothing byte-for-byte, warning when no hole fits, stacked dots count and naming) and `scene3d.test.ts` (5 cases: closed box is exactly `depth` tall, open tray T + wall height, lifted lid, zone tinting, light holes in the lid mesh, flat Solid/Stencil). `tsc` clean, `next build` OK. Browser run `scripts/shots/letters-l4.mjs` passes (WebGL canvas present, Analysis reports the holes).
+
+**Screenshots:** `letters-4-box-3d.png`, `letters-4-preview-sam.png`, `letters-4-preview-lid-lifted.png`, `letters-4-preview-marquee.png`, `letters-4-marquee-sheet.png`, `letters-4-analysis.png`, `letters-4-preview-persian.png`.
+
+**Known limitations:** the 3D walls are drawn on the wall centerline without the hinge slits themselves (they are tinted instead), and tabs and slots are not modelled. Marquee holes are not placed around engraved labels; turn Labels off or move them if they overlap.
 
 ## Letters L2 — Stencil
 

@@ -4,8 +4,10 @@ import type { Lid } from "@/lib/hinge";
 import type { LetterMode, WallStyle } from "@/lib/letters";
 import { ProductTabs, Seg, type Opt, type Product } from "@/components/editor/ControlBar";
 
-export function LettersControlBar({ mode, wallStyle, lid, onMode, onWallStyle, onLid, onProduct }: {
+export function LettersControlBar({ mode, wallStyle, lid, pro = true, onMode, onWallStyle, onLid, onProduct }: {
   mode: LetterMode;
+  /** Free plan: only a single-letter box exports, so Solid and Stencil show a lock. */
+  pro?: boolean;
   wallStyle: WallStyle;
   lid: Lid;
   onMode: (m: LetterMode) => void;
@@ -20,7 +22,7 @@ export function LettersControlBar({ mode, wallStyle, lid, onMode, onWallStyle, o
       icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6.6 2h2.8l4.4 12h-2.9l-.9-2.6H6l-.9 2.6H2.2zM8 5.4L6.7 9.2h2.6z" /></svg> },
     { v: "stencil", text: "Stencil", title: "Letters cut out of a sheet, with bridges that hold the letter centres", onClick: () => onMode("stencil"),
       icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="1.5" y="1.5" width="13" height="13" rx="1.5" /><path d="M5 12l3-8 3 8M6.2 9h3.6" /></svg> },
-  ];
+  ].map((o) => ({ ...o, locked: !pro && o.v !== "box" }));
   const walls: Opt[] = [
     { v: "hinge", text: "Living hinge", title: "One bendable strip per outline, with hinge cuts where the letter curves", onClick: () => onWallStyle("hinge"),
       icon: <svg width="18" height="14" viewBox="0 0 18 14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><path d="M3 1v5M3 8v5M7 1v12M11 1v5M11 8v5M15 1v12" /></svg> },

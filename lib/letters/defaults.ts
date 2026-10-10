@@ -1,4 +1,4 @@
-import { DEFAULTS as HINGE, bendAnalysis } from "@/lib/hinge";
+import { DEFAULTS as HINGE, bendAnalysis, clone } from "@/lib/hinge";
 import type { Params } from "@/lib/hinge";
 import type { LetterParams } from "./types";
 
@@ -59,6 +59,16 @@ export const LETTER_DEFAULTS: LetterParams = {
     labels: { vis: true, exp: true },
   },
 };
+
+/** Saved or sent settings over the defaults; nested groups merge key by key. */
+export function mergeLetterParams(partial?: Partial<LetterParams> | null): LetterParams {
+  const base = clone(LETTER_DEFAULTS);
+  if (!partial) return base;
+  return Object.assign(base, partial, {
+    layers: Object.assign(clone(LETTER_DEFAULTS.layers), partial.layers || {}),
+    marquee: Object.assign(clone(LETTER_DEFAULTS.marquee), partial.marquee || {}),
+  });
+}
 
 /** Feature size below which strokes get a warning. */
 export const minFeatureOf = (p: LetterParams) => p.minFeature ?? (p.mode === "box" ? 2 * p.T + 6 : 2);

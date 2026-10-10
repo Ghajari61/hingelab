@@ -10,7 +10,7 @@ export default function PrivacyPage() {
       <p>HingeLab collects as little as it needs to run the editor, your account and your subscription.</p>
 
       <h2>Without an account</h2>
-      <p>The editor stores your current box and settings in your browser’s local storage. When you export, your box settings are sent to our server, which builds the file and does not keep it.</p>
+      <p>The editor stores your current box and settings in your browser’s local storage. When you export, your box settings are sent to our server, which builds the file and does not keep it. Fonts you upload in Letters stay in your browser; if you export with one, it is sent along with the settings only to build that file and is not kept.</p>
 
       <h2>With an account</h2>
       <ul>

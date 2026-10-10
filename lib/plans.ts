@@ -24,7 +24,7 @@ export const PLAN_ROWS: { feature: string; free: string; pro: string }[] = [
   { feature: "SVG export", free: "With a small “Made with HingeLab” mark", pro: "Clean" },
   { feature: "Cloud projects", free: `Up to ${FREE_PROJECT_LIMIT}`, pro: "Unlimited" },
   { feature: "Shapes and patterns", free: "Rounded + Straight", pro: "All" },
-  { feature: "Letters and future tools", free: "Preview", pro: "✓" },
+  { feature: "Letters and future tools", free: "Preview, and one-letter boxes", pro: "✓" },
 ];
 
 export const PRO_BENEFITS = [
@@ -53,6 +53,23 @@ export function hingeLocks(plan: Plan, p: Pick<Params, "shape" | "pattern">): st
   if (!canUseShape(plan, p.shape)) out.push(`${SHAPE_NAMES[p.shape]} shape`);
   if (!canUsePattern(plan, p.pattern)) out.push(`${PATTERN_NAMES[p.pattern]} pattern`);
   return out;
+}
+
+/** Visible characters (grapheme clusters) of a text, spaces ignored. */
+export function letterCount(text: string): number {
+  const t = text.replace(/\s+/gu, "");
+  return [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(t)].length;
+}
+
+/** The one Letters design the Free plan can export: a Letter Box of a single letter. */
+export function isSingleLetterBox(p: { mode: string; text: string }): boolean {
+  return p.mode === "box" && letterCount(p.text) === 1;
+}
+
+/** Why a Letters design cannot be exported on this plan (null = allowed). */
+export function lettersLock(plan: Plan, p: { mode: string; text: string }): string | null {
+  if (plan === "pro" || isSingleLetterBox(p)) return null;
+  return "Letters is a Pro feature. Design anything here; on the Free plan you can export a Letter Box of a single letter, with the small HingeLab mark.";
 }
 
 export function needsWatermark(plan: Plan): boolean {

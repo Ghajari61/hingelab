@@ -4,7 +4,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { autoFit, clone, MATERIALS } from "@/lib/hinge";
 import {
   baseOffset, computeLetterModel, exportLetterSVG, fontFamilyName, hingeParamsOf, LETTER_DEFAULTS, layoutLetters,
-  letterLayerContent, loadFont, wallHeightOf, zoneOverlay,
+  letterLayerContent, loadFont, mergeLetterParams, wallHeightOf, zoneOverlay,
   type HarfBuzz, type LetterParams, type LoadedFont,
 } from "@/lib/letters";
 import { useHistory } from "@/hooks/useHistory";
@@ -24,8 +24,12 @@ import { Dialogs, type ModalState } from "@/components/editor/dialogs";
 import { LettersControlBar } from "./LettersControlBar";
 import { LettersDock } from "./LettersDock";
 import { MARQUEE_KEYS, isMarqueeKey, type LetterNumKey } from "./fields";
-import { deleteStoredFont, listStoredFonts, putStoredFont, type StoredFontMeta } from "./fontStore";
-import { forgetFont, getLoadedFont, loadHarfBuzz, UPLOAD_PREFIX } from "./runtime";
+import { deleteStoredFont, getStoredFont, listStoredFonts, putStoredFont, type StoredFontMeta } from "./fontStore";
+import { forgetFont, getLoadedFont, isUploadId, loadHarfBuzz, UPLOAD_PREFIX } from "./runtime";
+import { lettersLock } from "@/lib/plans";
+import { MAX_UPLOAD_FONT_BYTES } from "@/lib/billing/exportLetters";
+import { usePlan } from "@/components/billing/usePlan";
+import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 
 const KEY = "hingelab-letters-v2";
 /** Saved before Letter Box: its hinge settings were never chosen in Letters, so the letter defaults replace them. */
@@ -34,15 +38,7 @@ const MAX_FONT_BYTES = 20 * 1024 * 1024;
 
 const PRE_BOX_KEYS = ["slit", "bridge", "pitch", "overrun", "stretch", "pattern", "cutStyle", "slotW", "tabW", "slotClr", "lidGap", "lid", "wallStyle"] as const;
 
-/** Saved settings over the defaults. */
-function mergeParams(partial?: Partial<LetterParams>): LetterParams {
-  const base = clone(LETTER_DEFAULTS);
-  if (!partial) return base;
-  return Object.assign(base, partial, {
-    layers: Object.assign(clone(LETTER_DEFAULTS.layers), partial.layers || {}),
-    marquee: Object.assign(clone(LETTER_DEFAULTS.marquee), partial.marquee || {}),
-  });
-}
+const mergeParams = mergeLetterParams;
 
 function loadInitial(cloud: CloudDoc | null) {
   if (cloud) return { params: mergeParams(cloud.params as Partial<LetterParams>), units: readUnits() };
@@ -73,6 +69,8 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
   const [showGrid, setShowGrid] = useState(true);
   const [showZones, setShowZones] = useState(true);
   const [explode, setExplode] = useState(0);
+  const [upgrade, setUpgrade] = useState<string | null>(null);
+  const account = usePlan();
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
   const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
@@ -155,16 +153,58 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
     }
   }
 
-  const svgNow = () => (model && lay ? exportLetterSVG(lay, deferred, font?.name) : null);
-
-  function exportNow() {
-    const svg = svgNow();
-    if (!svg) { toastMsg(error ? "Fix the settings before exporting" : "Still loading the font"); return; }
-    offerFile(baseName(params) + ".svg", svg, "image/svg+xml");
+  /** The uploaded font for an export request, or an error message. */
+  async function uploadForExport(): Promise<{ name: string; data: string } | { error: string } | null> {
+    if (!isUploadId(deferred.fontId)) return null;
+    const f = await getStoredFont(deferred.fontId);
+    if (!f) return { error: "The uploaded font is not on this device. Upload it again, then export." };
+    if (f.bytes.byteLength > MAX_UPLOAD_FONT_BYTES) return { error: "Fonts over 3 MB cannot be exported through the server yet. Use a smaller font file." };
+    const bytes = new Uint8Array(f.bytes);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return { name: f.name, data: btoa(bin) };
   }
 
-  function copySVG() {
-    const svg = svgNow();
+  /**
+   * The file to export. With accounts the server builds it, so the Letters plan rule and the Free
+   * mark are applied where they can't be bypassed (D27). Without accounts it is built here.
+   */
+  async function exportedSVG(): Promise<string | null> {
+    if (!model || !lay) { toastMsg(error ? "Fix the settings before exporting" : "Still loading the font"); return null; }
+    const lock = lettersLock(account.plan, deferred);
+    if (lock) { setUpgrade(lock); return null; }
+    if (!account.configured) return exportLetterSVG(lay, deferred, font?.name);
+    try {
+      const upload = await uploadForExport();
+      if (upload && "error" in upload) {
+        if (account.plan === "pro") return exportLetterSVG(lay, deferred, font?.name);
+        toastMsg(upload.error);
+        return null;
+      }
+      const res = await fetch("/api/export", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ product: "letters", params: deferred, ...(upload ? { font: upload } : {}) }),
+      });
+      if (res.ok) return await res.text();
+      const err = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Export failed. Try again.";
+      if (res.status === 403) setUpgrade(err);
+      else toastMsg(err);
+    } catch {
+      toastMsg("Export needs a connection. Check your network and try again.");
+    }
+    return null;
+  }
+
+  async function exportNow() {
+    const svg = await exportedSVG();
+    if (!svg) return;
+    offerFile(baseName(params) + ".svg", svg, "image/svg+xml");
+    if (svg.includes('id="watermark"')) toastMsg("Exported with the small “Made with HingeLab” mark (Free plan)");
+  }
+
+  async function copySVG() {
+    const svg = await exportedSVG();
     if (!svg) return;
     const name = baseName(params) + ".svg";
     try {
@@ -325,6 +365,7 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
       <MenuBar title={params.name} kind={`Letters · ${font?.name ?? "…"} · ${sizeLabel}`} menus={menus} onExport={exportNow} />
       <LettersControlBar
         mode={params.mode}
+        pro={account.plan === "pro"}
         wallStyle={params.wallStyle}
         lid={params.lid}
         onMode={(m) => patch({ mode: m }, true)}
@@ -414,6 +455,7 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
           setModal(null);
         }}
       />
+      {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
       <input
         ref={fileRef}

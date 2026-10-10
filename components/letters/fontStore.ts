@@ -1,6 +1,6 @@
 /**
- * Uploaded fonts, kept in IndexedDB in this browser only. They are never uploaded or shared.
- * (Cloud storage per user arrives with accounts in Phase 3.)
+ * Uploaded fonts, kept in IndexedDB in this browser only. With accounts, an export request carries
+ * the font so the server can build the file (D27); it is not stored there.
  */
 
 export interface StoredFontMeta {

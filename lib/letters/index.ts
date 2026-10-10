@@ -1,4 +1,4 @@
-export { LETTER_DEFAULTS, minFeatureOf, bridgeWidthOf, hingeParamsOf, wallHeightOf, wallMaxLengthOf, cornerRadiusOf, concaveRadiusOf, stackLayersOf } from "./defaults";
+export { LETTER_DEFAULTS, minFeatureOf, bridgeWidthOf, hingeParamsOf, wallHeightOf, wallMaxLengthOf, cornerRadiusOf, concaveRadiusOf, stackLayersOf, mergeLetterParams } from "./defaults";
 export { marqueeCenters, marqueeHoles, marqueeSpacingOf, circleHole } from "./marquee";
 export { stencilSheet } from "./stencil";
 export { BUNDLED_FONTS, fontInfo, loadFont, missingChars, fontFamilyName } from "./fonts";

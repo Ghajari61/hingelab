@@ -134,4 +134,11 @@ Decisions taken without the owner during the autopilot run. Each entry: what, wh
 ### D26. Analysis panel polish
 - Each letter shows its tightest radius next to the hinge limit and its light-hole count; the box lists the longest strip or panel and the total light holes. Warnings ("To check") and notes are separate lists. Stencil counts are labelled as letter cut-outs and stencil bridges.
 
+### D27. Letters on the Free plan, and where it is enforced
+- **Rule:** Free users can use every Letters mode and setting with the live canvas and 3D preview. Export works only for a **Letter Box of one letter** (one visible character after removing spaces, counted as grapheme clusters so "é" or a Persian letter with marks is one), and carries the "Made with HingeLab" mark. Everything else opens "Upgrade to Pro". Solid and Stencil show a lock for Free users.
+- **Server:** with accounts, Letters export goes through `POST /api/export` with `product: "letters"`. The server reads the plan, applies the rule (403 otherwise), builds the SVG itself with HarfBuzz and the bundled font from `public/fonts` (traced into the function via `outputFileTracingIncludes`; `harfbuzzjs` is a server-external package), and adds the mark. The output is byte-identical to the editor's own export (tested for Latin, Persian, box, solid and stencil).
+- **Uploaded fonts:** the request carries the font as base64 (up to 3 MB, so the request stays under Vercel's 4.5 MB body limit). The server uses it for that one file and does not store it; the font picker note and the privacy page now say so. For a Pro user with a larger font, the editor exports locally (accepted: the same limitation as D15, the client already has the geometry); a Free user gets a message to use a smaller file.
+- **Cloud save is not limited** for Letters (unlike Pro Hinge Box shapes, D14): the brief limits only export, and a new Letters project starts as "Sam" in Solid, so refusing saves would stop Free users from opening Letters in the cloud at all. Letters projects still count toward the 3-project limit.
+- **Alternatives:** building the file in the browser and only stamping it on the server (bypassable), or refusing uploaded fonts on the server (Pro users would lose their own fonts).
+
 ## Parametric
