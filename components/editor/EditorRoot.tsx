@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import type { CloudDoc } from "@/hooks/useCloudAutosave";
 
 const Workspace = dynamic(() => import("./Workspace"), {
   ssr: false,
@@ -8,6 +9,6 @@ const Workspace = dynamic(() => import("./Workspace"), {
 });
 
 /** The editor reads localStorage and the window size, so it mounts only in the browser. */
-export default function EditorRoot() {
-  return <Workspace />;
+export default function EditorRoot({ cloud }: { cloud?: CloudDoc }) {
+  return <Workspace cloud={cloud ?? null} />;
 }

@@ -8,7 +8,10 @@ import {
   type HarfBuzz, type LetterParams, type LoadedFont,
 } from "@/lib/letters";
 import { useHistory } from "@/hooks/useHistory";
-import { readStored, useAutosave } from "@/hooks/useAutosave";
+import { readStored, readUnits, useAutosave } from "@/hooks/useAutosave";
+import { useCloudAutosave, type CloudDoc } from "@/hooks/useCloudAutosave";
+import { thumbnailSVG } from "@/lib/projects/thumbnail";
+import { importIntoCloud, openNewCloudProject } from "@/components/editor/cloud";
 import { PX_PER_MM, useCanvasView } from "@/hooks/useCanvasView";
 import { fmtLen, type Units } from "@/components/editor/format";
 import { MenuBar, type MenuEntry } from "@/components/editor/MenuBar";
@@ -41,7 +44,8 @@ function mergeParams(partial?: Partial<LetterParams>): LetterParams {
   });
 }
 
-function loadInitial() {
+function loadInitial(cloud: CloudDoc | null) {
+  if (cloud) return { params: mergeParams(cloud.params as Partial<LetterParams>), units: readUnits() };
   let stored = readStored<LetterParams>(KEY);
   if (!stored) {
     stored = readStored<LetterParams>(KEY_V1);
@@ -60,8 +64,8 @@ function baseName(p: LetterParams) {
   return `letters-${slug}-${p.mode}-${Math.round(p.size)}mm`;
 }
 
-export default function LettersEditor({ onProduct }: { onProduct: (p: Product) => void }) {
-  const boot = useState(loadInitial)[0];
+export default function LettersEditor({ onProduct, cloud = null }: { onProduct: (p: Product) => void; cloud?: CloudDoc | null }) {
+  const boot = useState(() => loadInitial(cloud))[0];
   const { params, replace, undo, redo, canUndo, canRedo } = useHistory(boot.params);
   const [units, setUnits] = useState<Units>(boot.units);
   const [tool, setTool] = useState<"hand" | "zoom">("hand");
@@ -69,7 +73,7 @@ export default function LettersEditor({ onProduct }: { onProduct: (p: Product) =
   const [showGrid, setShowGrid] = useState(true);
   const [showZones, setShowZones] = useState(true);
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
-  const [saved, setSaved] = useState("Autosaved locally");
+  const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [uploads, setUploads] = useState<StoredFontMeta[]>([]);
@@ -79,7 +83,9 @@ export default function LettersEditor({ onProduct }: { onProduct: (p: Product) =
   const fileRef = useRef<HTMLInputElement>(null);
   const toastT = useRef<number>(0);
   const onStatus = useCallback((s: string) => setSaved(s), []);
-  useAutosave(params, units, onStatus, KEY);
+  useAutosave(params, units, onStatus, KEY, !cloud);
+  const thumbSrc = useRef<{ content: ReturnType<typeof letterLayerContent> | null; w: number; h: number }>({ content: null, w: 0, h: 0 });
+  useCloudAutosave(cloud, params, () => (thumbSrc.current.content ? thumbnailSVG(thumbSrc.current.content, thumbSrc.current.w, thumbSrc.current.h) : null), onStatus);
 
   function toastMsg(msg: string) {
     setToast(msg);
@@ -111,6 +117,7 @@ export default function LettersEditor({ onProduct }: { onProduct: (p: Product) =
   const error = loadError ?? (result && "error" in result ? result.error : null);
   const lay = useMemo(() => (model ? layoutLetters(model, deferred) : null), [model, deferred]);
   const content = useMemo(() => (lay ? letterLayerContent(lay, deferred) : null), [lay, deferred]);
+  thumbSrc.current = { content, w: lay?.width ?? 0, h: lay?.height ?? 0 };
   const overlay = useMemo(
     () => (showZones && model?.box && lay ? zoneOverlay(model.box, (letter) => baseOffset(lay, letter)) : null),
     [showZones, model, lay],
@@ -174,6 +181,11 @@ export default function LettersEditor({ onProduct }: { onProduct: (p: Product) =
   }
 
   function newProject() {
+    if (cloud) {
+      toastMsg("Creating new letters…");
+      void openNewCloudProject("letters").then((err) => { if (err) toastMsg(err); });
+      return;
+    }
     patch(clone(LETTER_DEFAULTS), true);
     window.setTimeout(() => viewApi.fit(), 50);
     toastMsg("New letters");
@@ -409,6 +421,11 @@ export default function LettersEditor({ onProduct }: { onProduct: (p: Product) =
           if (!f) return;
           const rd = new FileReader();
           rd.onload = () => {
+            if (cloud) {
+              toastMsg(`Opening ${f.name}…`);
+              void importIntoCloud(String(rd.result)).then((err) => { if (err) toastMsg(err); });
+              return;
+            }
             try {
               const j = JSON.parse(String(rd.result)) as { product?: string; params?: Partial<LetterParams> };
               if (j.product !== "letters" || !j.params) {

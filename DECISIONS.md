@@ -50,6 +50,22 @@ Decisions taken without the owner during the autopilot run. Each entry: what, wh
 - Sign-out is a POST route so link prefetching cannot sign users out.
 - The "Continue with Google" button is always shown; if the provider is not enabled the form says "Google sign-in is not set up yet".
 
+### D10. Cloud autosave: local copy first, cloud after 1.5 s, server clock for `updated_at`
+- **What:** every edit writes `hingelab-project-<id>` in localStorage (`{params, editedAt, dirty}`) at once; the cloud save runs 1.5 s after the last change (`SaveScheduler`), retries every 30 s and on the `online` event. On open, the local copy wins only if it is `dirty` and edited after the cloud row's `updated_at` (set by a trigger with the server clock).
+- **Why:** the brief's "newer copy wins (compare updated_at)" without trusting two client clocks for the cloud side.
+- **Alternatives:** version counters (needs conflict UI), realtime sync (out of scope).
+
+### D11. Switching product inside a cloud project starts a new cloud project
+- **What:** in `/app/editor/<id>` the product switch (Hinge Box ↔ Letters) creates a new project of the other product and opens it. In the guest editor it switches as before.
+- **Why:** each project row has one `product`; changing it in place would lose the other product's settings.
+
+### D12. Thumbnails are shown as `<img src="data:…">`
+- **What:** `thumbnail_svg` (outline + inner cuts of the laid-out sheet, coordinates rounded, ≤ 60 kB) is rendered through an image tag, never injected as markup.
+- **Why:** the column is user-writable through the API; an `<img>` cannot run script, so a crafted SVG cannot attack the page.
+
+### D13. File → Open project in a cloud project imports the file as a new cloud project
+- As the brief says. Old project files without a `product` field are Hinge Box projects.
+
 ## Letters
 
 ## Parametric

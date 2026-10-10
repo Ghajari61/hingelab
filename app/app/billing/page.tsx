@@ -1,21 +1,21 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
+import { AppHeader } from "@/components/site/AppHeader";
 
 export const metadata: Metadata = { title: "Billing · HingeLab" };
 
 export default async function BillingPage() {
   const session = await getUser();
-  const profile = session
-    ? (await session.supabase.from("profiles").select("plan").eq("id", session.user.id).maybeSingle()).data
-    : null;
+  if (!session) redirect("/login?next=%2Fapp%2Fbilling");
+  const { data: profile } = await session.supabase.from("profiles").select("plan").eq("id", session.user.id).maybeSingle();
   return (
-    <div className="page auth-page">
-      <div className="auth-card">
+    <div className="page site-page">
+      <AppHeader current="billing" />
+      <main className="boxes">
         <h1>Billing</h1>
-        <p className="auth-lead">You are on the {profile?.plan === "pro" ? "Pro" : "Free"} plan.</p>
-        <Link className="btn-ghost" href="/app">Back to My boxes</Link>
-      </div>
+        <p>You are on the {profile?.plan === "pro" ? "Pro" : "Free"} plan.</p>
+      </main>
     </div>
   );
 }

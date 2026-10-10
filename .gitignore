@@ -9,3 +9,4 @@ public/hb
 *.zip
 .vitest-*.json
 .next-build
+next-env.d.ts

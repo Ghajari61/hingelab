@@ -1,6 +1,6 @@
 # Progress
 
-**Next step:** Main brief Phase 3 — Cloud projects (projects table, My boxes page, cloud autosave).
+**Next step:** Main brief Phase 4 — Subscriptions (lib/plans.ts, Stripe checkout/portal/webhook, server-side limits).
 
 Order of the run: main brief Phases 1–5 (Phase 6 Tauri is out of scope) → Letters L2, L4, L5 (L1 and L3 were done earlier) → Parametric P1–P6.
 
@@ -10,7 +10,7 @@ How to check a phase: `npx supabase start` (local stack, see SETUP.md), `npm tes
 |---|---|---|
 | Main 1 — Port the generator | done (earlier sessions) | 552 / 552 |
 | Main 2 — Accounts | done | 561 / 561 |
-| Main 3 — Cloud projects | next | |
+| Main 3 — Cloud projects | done | 573 / 573 |
 | Main 4 — Subscriptions | | |
 | Main 5 — Landing page | | |
 | Main 6 — Desktop app | out of scope for this run | |

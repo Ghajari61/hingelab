@@ -5,6 +5,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Plan = "free" | "pro";
+export type ProductId = "hinge-box" | "letters" | "parametric";
 
 export type ProfileRow = {
   id: string;
@@ -16,6 +17,18 @@ export type ProfileRow = {
   created_at: string | null;
 };
 
+export type ProjectRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  product: ProductId;
+  params: Json;
+  thumbnail_svg: string | null;
+  engine_version: number;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -23,6 +36,12 @@ export type Database = {
         Row: ProfileRow;
         Insert: Partial<ProfileRow> & { id: string };
         Update: Partial<ProfileRow>;
+        Relationships: [];
+      };
+      projects: {
+        Row: ProjectRow;
+        Insert: Partial<ProjectRow> & { params: Json };
+        Update: Partial<ProjectRow>;
         Relationships: [];
       };
     };

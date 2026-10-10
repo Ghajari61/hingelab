@@ -6,7 +6,10 @@ import {
   type CutStyle, type Params,
 } from "@/lib/hinge";
 import { useHistory } from "@/hooks/useHistory";
-import { readStored, useAutosave } from "@/hooks/useAutosave";
+import { readStored, readUnits, useAutosave } from "@/hooks/useAutosave";
+import { useCloudAutosave, type CloudDoc } from "@/hooks/useCloudAutosave";
+import { thumbnailSVG } from "@/lib/projects/thumbnail";
+import { importIntoCloud, openNewCloudProject } from "./cloud";
 import { PX_PER_MM, useCanvasView } from "@/hooks/useCanvasView";
 import { fmtLen, type Units } from "./format";
 import type { NumericKey } from "./fields";
@@ -29,7 +32,8 @@ function mergeParams(partial?: Partial<Params>): Params {
   });
 }
 
-function loadInitial() {
+function loadInitial(cloud: CloudDoc | null) {
+  if (cloud) return { params: mergeParams(cloud.params as Partial<Params>), units: readUnits() };
   const stored = readStored<Params>();
   const units: Units = stored?.units === "in" ? "in" : "mm";
   return { params: mergeParams(stored?.params), units };
@@ -44,8 +48,8 @@ function shapeKind(p: Params) {
   return ({ rect: "Rounded box", pill: "Pill box", poly: `${p.sides}-sided box`, cyl: "Cylinder" })[p.shape];
 }
 
-export default function EditorApp({ onProduct }: { onProduct: (p: Product) => void }) {
-  const boot = useState(loadInitial)[0];
+export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: Product) => void; cloud?: CloudDoc | null }) {
+  const boot = useState(() => loadInitial(cloud))[0];
   const history = useHistory(boot.params);
   const { params, replace, undo, redo, canUndo, canRedo } = history;
   const [units, setUnits] = useState<Units>(boot.units);
@@ -54,13 +58,12 @@ export default function EditorApp({ onProduct }: { onProduct: (p: Product) => vo
   const [showGrid, setShowGrid] = useState(true);
   const [explode, setExplode] = useState(0.35);
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
-  const [saved, setSaved] = useState("Autosaved locally");
+  const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
   const [toast, setToast] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const toastT = useRef<number>(0);
   const onStatus = useCallback((s: string) => setSaved(s), []);
-  useAutosave(params, units, onStatus);
 
   const result = useMemo(() => computeModel(params), [params]);
   const model = "error" in result ? null : result;
@@ -70,6 +73,9 @@ export default function EditorApp({ onProduct }: { onProduct: (p: Product) => vo
     [model, params.bedW, params.gap],
   );
   const content = useMemo(() => (model && lay ? layerContent(model, lay, params) : null), [model, lay, params]);
+
+  useAutosave(params, units, onStatus, undefined, !cloud);
+  useCloudAutosave(cloud, params, () => (content && lay ? thumbnailSVG(content, lay.width, lay.height) : null), onStatus);
 
   const viewApi = useCanvasView();
   viewApi.fitArgs.current = {
@@ -161,6 +167,11 @@ export default function EditorApp({ onProduct }: { onProduct: (p: Product) => vo
   }
 
   function newProject() {
+    if (cloud) {
+      toastMsg("Creating a new box…");
+      void openNewCloudProject("hinge-box").then((err) => { if (err) toastMsg(err); });
+      return;
+    }
     const next = clone(DEFAULTS);
     patch(next, true);
     applyFit(next);
@@ -367,6 +378,11 @@ export default function EditorApp({ onProduct }: { onProduct: (p: Product) => vo
           if (!f) return;
           const rd = new FileReader();
           rd.onload = () => {
+            if (cloud) {
+              toastMsg(`Opening ${f.name}…`);
+              void importIntoCloud(String(rd.result)).then((err) => { if (err) toastMsg(err); });
+              return;
+            }
             try {
               const j = JSON.parse(String(rd.result)) as { product?: string; params?: Partial<Params> };
               if (j.product === "letters") { toastMsg("That is a Letters project. Switch to Letters to open it."); return; }
