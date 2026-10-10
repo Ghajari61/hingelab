@@ -18,7 +18,7 @@ export function LettersControlBar({ mode, wallStyle, lid, onMode, onWallStyle, o
       icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"><path d="M3 13.5L8 2.5l5 11M5 9.5h6" /><path d="M2.5 13.5h3M10.5 13.5h3" strokeDasharray="1 1.2" /></svg> },
     { v: "solid", text: "Solid", title: "Flat cut-out letters", onClick: () => onMode("solid"),
       icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6.6 2h2.8l4.4 12h-2.9l-.9-2.6H6l-.9 2.6H2.2zM8 5.4L6.7 9.2h2.6z" /></svg> },
-    { v: "stencil", text: "Stencil", title: "Letters cut out of a sheet, with bridges (coming next)", disabled: true, soon: "soon", onClick: () => onMode("stencil"),
+    { v: "stencil", text: "Stencil", title: "Letters cut out of a sheet, with bridges that hold the letter centres", onClick: () => onMode("stencil"),
       icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="1.5" y="1.5" width="13" height="13" rx="1.5" /><path d="M5 12l3-8 3 8M6.2 9h3.6" /></svg> },
   ];
   const walls: Opt[] = [

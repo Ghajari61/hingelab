@@ -109,9 +109,8 @@ describe("1. solid letters: every text produces parts", () => {
     expect(r.parts.length).toBe(1);
   });
 
-  it("empty text and unavailable modes return errors", () => {
+  it("empty text returns an error", () => {
     expect(computeLetterModel(params("  "), fredoka, hb)).toEqual({ error: "Type some text to start." });
-    expect("error" in computeLetterModel(params("A", { mode: "stencil" }), fredoka, hb)).toBe(true);
   });
 });
 

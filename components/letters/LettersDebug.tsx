@@ -70,6 +70,7 @@ export default function LettersDebug() {
         </select>
         <select value={p.mode} onChange={(e) => set({ mode: e.target.value as LetterParams["mode"] })} aria-label="Mode">
           <option value="solid">Solid</option>
+          <option value="stencil">Stencil</option>
           <option value="box">Letter Box</option>
         </select>
         {p.mode === "box" && (

@@ -2,7 +2,7 @@ import type { LetterParams } from "@/lib/letters";
 import type { BaseField } from "@/components/editor/fields";
 
 export type LetterNumKey =
-  | "size" | "letterSpacing" | "thicken" | "stencilBridge" | "T" | "K" | "bedW" | "bedH" | "gap"
+  | "size" | "letterSpacing" | "thicken" | "stencilBridge" | "sheetMargin" | "T" | "K" | "bedW" | "bedH" | "gap"
   | "depth" | "minCornerRadius" | "wallMaxLength" | "islandArea" | "facetTol" | "panelMin"
   | "slotW" | "slit" | "bridge" | "pitch" | "overrun" | "stretch" | "tabW" | "slotClr" | "lidGap";
 
@@ -19,7 +19,8 @@ export const LETTER_FIELDS: LetterField[] = [
   { id: "size", label: "Size", sec: "text", len: true, step: 1, min: 5, max: 2000 },
   { id: "letterSpacing", label: "Spacing", sec: "text", len: true, step: 0.5, min: -50, max: 500 },
   { id: "thicken", label: "Thicken", sec: "text", len: true, step: 0.1, min: 0, max: 20 },
-  { id: "stencilBridge", label: "Bridge", sec: "solid", len: true, step: 0.25, min: 0.5, max: 50, show: p => p.weldDots },
+  { id: "stencilBridge", label: "Bridge", sec: "solid", len: true, step: 0.25, min: 0.5, max: 50, show: p => p.mode === "stencil" || p.weldDots },
+  { id: "sheetMargin", label: "Margin", sec: "solid", len: true, step: 1, min: 0, max: 500, show: p => p.mode === "stencil" },
   { id: "depth", label: "Depth", sec: "box", len: true, step: 1, min: 10, max: 600 },
   { id: "minCornerRadius", label: "Corner R", sec: "box", len: true, step: 0.5, min: 0, max: 200, show: hinge },
   { id: "facetTol", label: "Tolerance", sec: "box", len: true, step: 0.1, min: 0.1, max: 20, show: faceted },

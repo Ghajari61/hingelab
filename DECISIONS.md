@@ -106,4 +106,14 @@ Decisions taken without the owner during the autopilot run. Each entry: what, wh
 
 ## Letters
 
+### D21. Stencil bridges: where they go and what counts as a counter
+- **What:** the text is welded into one outline, then each counter (hole) of each letter gets bridges. A bridge runs from a deep point inside the counter (pole of a 24 × 24 grid) along one of 16 rays to the outer edge of the stroke, choosing the shortest crossing that exits into the sheet (not into another counter). With 2 bridges per counter, the second must be at least 120° from the first. Each bridge is a rectangle `bridge width` wide, overshooting 0.3 mm on both ends so it overlaps cleanly.
+- **Scrap threshold:** counters smaller than (2 × bridge width)² mm² are treated as scrap and left as holes. Fonts have tiny sliver counters (e.g. at the waist of Fredoka's "8") that cannot hold a bridge and would leave loose pixels.
+- **Retry:** after cutting, the sheet must be a single piece. If more pieces remain (a bridge that did not fully sever a slanted stroke), every bridge is lengthened by one bridge width at both ends, up to 4 attempts; anything still loose produces a warning in Analysis instead of failing silently. The test also proves it independently by rasterising and flood-filling the sheet.
+- **Bridge width default:** `max(2, material thickness)`, editable in the Stencil panel together with the sheet margin (default 20 mm).
+- **Alternatives:** medial-axis bridges (more accurate but heavy for a browser), horizontal-only bridges like classic stencils (fail on rotated or Persian shapes).
+
+### D22. Removed an obsolete test assertion
+- **What:** `letters.test.ts` checked that `mode: "stencil"` returns "not available yet". L2 makes stencil available, so that assertion was removed; the test now checks only that empty text returns an error. This is a change of behaviour, not a weakened test: stencil is covered by the new test 9 (`stencil.test.ts`, 9 cases, including a raster flood-fill check that no part of the sheet is floating).
+
 ## Parametric

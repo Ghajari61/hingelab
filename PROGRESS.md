@@ -1,6 +1,6 @@
-# Progress
+﻿# Progress
 
-**Next step:** Letters L2 — stencil mode and its test 9, per `CURSOR_LETTERS_PROMPT.md` (then L4, L5, then Parametric P1–P6).
+**Next step:** Letters L4 — polish (marquee holes, small islands, wall splitting, three.js preview, Analysis), per `CURSOR_LETTERS_PROMPT.md` (then L5, then Parametric P1–P6).
 
 Order of the run: main brief Phases 1–5 (Phase 6 Tauri is out of scope) → Letters L2, L4, L5 (L1 and L3 were done earlier) → Parametric P1–P6.
 
@@ -15,13 +15,39 @@ How to check a phase: `npx supabase start` (local stack, see SETUP.md), `npm tes
 | Main 5 — Landing page | done (not deployed) | 588 / 588 |
 | Main 6 — Desktop app | out of scope for this run | |
 | Letters L1 — solid | done (earlier sessions) | |
-| Letters L2 — stencil | | |
+| Letters L2 — stencil | done | 597 / 597 |
 | Letters L3 — letter box | done (earlier sessions) | |
 | Letters L4 — polish | | |
 | Letters L5 — plan limits | | |
 | Parametric P1–P6 | | |
 
 ---
+
+## Letters L2 — Stencil
+
+**Built**
+- Stencil mode in `lib/letters/stencil.ts`: the text is cut out of one sheet (text bounds + margin). Every counter (A, B, O, P, Q, R, 8, Persian ف, ه …) gets 1 or 2 bridges across its thinnest stroke so the centre stays attached (D21). Kerf, label and export work like Solid.
+- UI: the Stencil mode button is enabled; the Stencil panel has bridges per centre (One / Two), bridge width and sheet margin. Analysis reports how many bridges hold how many centres, and warns if a centre could not be bridged. The debug page has a Stencil option.
+
+**Tests:** 597 / 597, including the Hinge Box golden test. New test 9 (`stencil.test.ts`, 9 cases): "ABOPQR8" with defaults, two bridges, small size + kerf, welded with negative spacing, and Persian "هشت ۸ ۰ ف"; each sheet is rasterised and flood-filled from the border to prove nothing floats. It also checks the bridge count, the 120° spread, a sheet with no counters ("HI"), and the export paths. `tsc` clean, `next build` OK. Browser run `scripts/shots/letters-l2.mjs` passes.
+
+**Screenshots:** `letters-2-stencil-abopqr8.png`, `letters-2-stencil-two-bridges.png`, `letters-2-stencil-persian.png`, `letters-2-stencil-debug.png`.
+
+**Known limitations:** bridges are straight and placed by a ray search, not by a medial axis, so on very irregular display fonts a bridge can sit a little off the visually thinnest point. Very small counters (under (2 × bridge width)²) are left as plain holes.
+
+## Main 5 — Landing page
+
+**Built**
+- `/`: hero with a live mini generator (shape, width, height → 3D box and the real cut sheet on a laser bed, traced once in cut order; D19), How it works (3 steps and the layer colors), a gallery of four engine-built boxes, pricing table from `lib/plans.ts`, FAQ (kerf, materials, LightBurn, account, Pro, cancelling), footer with Terms and Privacy.
+- `/terms` and `/privacy`: plain-language drafts matching what the app does (D20).
+- SEO: title template, description, canonical URLs, Open Graph and Twitter tags, generated Open Graph image (`app/opengraph-image.tsx`), favicon (`app/icon.svg`), `robots.txt`, `sitemap.xml`. Site URL from `NEXT_PUBLIC_SITE_URL`.
+- Not deployed (run rule 5). SETUP.md "Before launch" lists the domain, legal review and preview check.
+
+**Tests:** 588 / 588 (new: gallery boxes build, and the hero generator builds for every shape across the whole slider range — 4 × 23 × 13 combinations). Browser run `scripts/shots/phase5.mjs`: headline, live update after changing shape and height, gallery, pricing, FAQ, SEO tags, OG image renders as PNG, robots and sitemap, no horizontal scroll on a 390 px phone; all passing. `tsc` clean, `next build` OK (landing, terms, privacy, robots, sitemap, OG image all static).
+
+**Screenshots:** `main-5-hero-cutting.png` (laser trace mid-way), `main-5-hero.png`, `main-5-hero-cylinder.png`, `main-5-landing-full.png`, `main-5-landing-mobile.png`, `main-5-terms.png`, `main-5-og-image.png`.
+
+**Known limitations:** the gallery shows engine renders, not photos of real cut boxes; replace or add photos once you have them. The Open Graph image uses the default sans font (no network fetch at build time).
 
 ## Main 4 — Subscriptions (Stripe)
 

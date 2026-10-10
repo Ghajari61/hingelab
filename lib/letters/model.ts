@@ -7,13 +7,11 @@ import { bridgeWidthOf, minFeatureOf } from "./defaults";
 import { MIN_PIECE_AREA, bboxOfContours, dropSpecks, offsetShapes, shapeContours, unionShapes } from "./polygon";
 import { shapeText } from "./shape";
 import { groupOutlines, shapeLabels, solidParts, thinFeatures, weldPieces } from "./solid";
+import { stencilSheet } from "./stencil";
 import type { BoxInfo, Bridge, LetterIssue, LetterParams, LetterPart, LetterResult, Shape } from "./types";
-
-const MODE_NAMES = { box: "Letter Box", solid: "Solid", stencil: "Stencil" } as const;
 
 export function computeLetterModel(p: LetterParams, font: LoadedFont, hb: HarfBuzz): LetterResult {
   if (!p.text.trim()) return { error: "Type some text to start." };
-  if (p.mode === "stencil") return { error: `${MODE_NAMES[p.mode]} mode is not available yet.` };
   if (!(p.size >= 5)) return { error: "The letter size must be at least 5 mm." };
   if (!(p.K >= 0) || !(p.T > 0)) return { error: "Check the material thickness and kerf." };
   const box = p.mode === "box";
@@ -53,7 +51,7 @@ export function computeLetterModel(p: LetterParams, font: LoadedFont, hb: HarfBu
     }
 
     let names = shapeLabels(gs, src);
-    if (!box && p.weldDots && gs.length > 1) {
+    if (p.mode === "solid" && p.weldDots && gs.length > 1) {
       const wd = weldPieces(gs, w);
       bridges.push(...wd.bridges);
       if (wd.shapes.length > 1) issues.push({ lvl: "warn", msg: `Weld dots could not join every piece of “${src.text}”.` });
@@ -82,6 +80,11 @@ export function computeLetterModel(p: LetterParams, font: LoadedFont, hb: HarfBu
     } else if (small.length) {
       issues.push({ lvl: "info", msg: `${small.length} small piece${small.length > 1 ? "s" : ""} (dots or accents) ${small.length > 1 ? "were" : "was"} left out.` });
     }
+  } else if (p.mode === "stencil") {
+    const st = stencilSheet(named.map(n => n.shape), p, w);
+    bridges.push(...st.bridges);
+    issues.push(...st.issues);
+    parts = [st.part];
   } else {
     parts = solidParts(named.map(n => n.shape), named.map(n => n.name), p.K);
     if (!p.weldDots && islands.length) {

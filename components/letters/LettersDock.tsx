@@ -128,6 +128,16 @@ export function LettersDock({
             {" "}Pieces smaller than the island size are not boxed.
           </p>
         </Sec>
+      ) : params.mode === "stencil" ? (
+        <Sec title="Stencil" meta={`${params.bridgesPerIsland} bridge${params.bridgesPerIsland > 1 ? "s" : ""} per centre`} startOpen>
+          <p className="note">The letters are cut out of one sheet. Bridges hold the centres of letters such as A, O and 8 so they don&apos;t fall out.</p>
+          <Choice label="Bridges per centre" value={String(params.bridgesPerIsland) as "1" | "2"} onPick={(v) => onPatch({ bridgesPerIsland: v === "2" ? 2 : 1 }, true)} options={[
+            { v: "1", text: "One", title: "One bridge across the thinnest stroke" },
+            { v: "2", text: "Two", title: "A second bridge at least 120° from the first, for large or flexible stencils" },
+          ]} />
+          <div className="grid2">{fields("solid")}</div>
+          <p className="note">Margin is the border of sheet around the text.</p>
+        </Sec>
       ) : (
         <Sec title="Mode" meta="Solid" startOpen>
           <p className="note">Solid cuts each letter shape out as a flat piece, with counters as inner cuts.</p>
