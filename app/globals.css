@@ -201,10 +201,7 @@ select.sel { width: 100%; background: var(--field); border: 1px solid var(--line
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
-.home { height: 100%; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 24px; text-align: center; }
-.home p { margin: 0; color: var(--fg-dim); max-width: 36em; }
 .boot { height: 100%; display: grid; place-items: center; color: var(--fg-dim); }
-a.btn-export { text-decoration: none; }
 .modal .rename-row { display: flex; justify-content: flex-end; gap: 8px; }
 .canvas-error.notice { background: var(--panel-2); border-color: var(--line); color: var(--fg-dim); }
 .iconseg button:disabled { cursor: default; opacity: .55; }
