@@ -28,6 +28,8 @@ await withBrowser(async (page, context) => {
   ];
   // Cold loads with the CPU slowed 4× (a mid-range laptop rather than the build machine).
   for (const [name, path, sel] of pages) {
+    // Warm the server (a fresh deployment's first hit includes cold starts); the browser cache stays cold.
+    await context.request.get(`${BASE}${path}`);
     const p = await context.newPage();
     const cdp = await context.newCDPSession(p);
     await cdp.send("Network.enable");
@@ -52,7 +54,9 @@ await withBrowser(async (page, context) => {
   console.log("   first slice:", s);
   check(!requested.some((u) => u.includes("/hb/") || u.includes("/fonts/")), "HarfBuzz and fonts are not loaded for the default model source");
 
+  const fontReq = page.waitForRequest((r) => r.url().includes("/fonts/"), { timeout: 30000 });
   await page.getByRole("group", { name: "Model from" }).getByRole("button", { name: "Text" }).click();
+  await fontReq;
   const t = await waitSliced(page);
   check(requested.some((u) => u.includes("/hb/")) && requested.some((u) => u.includes("/fonts/")), "picking Text loads HarfBuzz and the font");
   check(/\d+ parts/.test(t), `the text is shaped and sliced (${t})`);
