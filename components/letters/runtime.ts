@@ -10,7 +10,7 @@ export const isUploadId = (id: string) => id.startsWith(UPLOAD_PREFIX);
 
 let hbPromise: Promise<HarfBuzz> | null = null;
 
-/** HarfBuzz is copied to /hb by scripts/copy-harfbuzz.js and loaded as a native ES module. */
+/** HarfBuzz is copied to /hb by scripts/copy-wasm.js and loaded as a native ES module. */
 export function loadHarfBuzz(): Promise<HarfBuzz> {
   const url = "/hb/index.mjs";
   hbPromise ??= import(/* webpackIgnore: true */ url) as Promise<HarfBuzz>;

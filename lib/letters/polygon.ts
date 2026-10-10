@@ -151,18 +151,22 @@ function treeToShapes(tree: ClipperLib.PolyTree): Shape[] {
   return out;
 }
 
-function clip(type: ClipperLib.ClipType, subject: Contour[], clipPaths: Contour[]): Shape[] {
+function clip(type: ClipperLib.ClipType, subject: Contour[], clipPaths: Contour[], evenOdd = false): Shape[] {
   const c = new ClipperLib.Clipper();
   c.AddPaths(toPaths(subject), ClipperLib.PolyType.ptSubject, true);
   if (clipPaths.length) c.AddPaths(toPaths(clipPaths), ClipperLib.PolyType.ptClip, true);
   const tree = new ClipperLib.PolyTree();
-  c.Execute(type, tree, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+  const fill = evenOdd ? ClipperLib.PolyFillType.pftEvenOdd : ClipperLib.PolyFillType.pftNonZero;
+  c.Execute(type, tree, fill, fill);
   return treeToShapes(tree);
 }
 
-/** Union with the nonzero fill rule. Overlapping contours must share an orientation to merge. */
-export function unionShapes(contours: Contour[], clips: Contour[] = []): Shape[] {
-  return clip(ClipperLib.ClipType.ctUnion, contours, clips);
+/**
+ * Union with the nonzero fill rule (overlapping contours must share an orientation to merge),
+ * or even-odd for loops of unknown orientation.
+ */
+export function unionShapes(contours: Contour[], clips: Contour[] = [], evenOdd = false): Shape[] {
+  return clip(ClipperLib.ClipType.ctUnion, contours, clips, evenOdd);
 }
 
 /** Subject minus clip, both filled with the nonzero rule. */

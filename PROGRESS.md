@@ -1,6 +1,6 @@
 ﻿# Progress
 
-**Next step:** Parametric P1, per `CURSOR_PARAMETRIC_PROMPT.json` (then P2–P6).
+**Next step:** Parametric P2 (tabs, backboard plate and slats, island bridges, labels, nesting v1, per-sheet export + ZIP, the Parametric editor UI with 3D and Sheets tabs, Parametric in the product tabs), per `CURSOR_PARAMETRIC_PROMPT.json` (then P3–P6).
 
 Order of the run: main brief Phases 1–5 (Phase 6 Tauri is out of scope) → Letters L2, L4, L5 (L1 and L3 were done earlier) → Parametric P1–P6.
 
@@ -19,9 +19,37 @@ How to check a phase: `npx supabase start` (local stack, see SETUP.md), `npm tes
 | Letters L3 — letter box | done (earlier sessions) | |
 | Letters L4 — polish | done | 611 / 611 |
 | Letters L5 — plan limits | done | 619 / 619 |
-| Parametric P1–P6 | | |
+| Parametric P1 — core slicing | done | 632 / 632 |
+| Parametric P2–P6 | | |
 
 ---
+
+## Parametric P1 — Core slicing
+
+**Built**
+- `lib/parametric/`: types and defaults; `source/library.ts` (six procedural shapes, including the abstract head, D28); `source/mesh.ts` (STL/OBJ/GLB parsing with the three loaders, vertex welding at 1e-4 of the diagonal, degenerate-triangle removal, open-edge count, units incl. "auto", Z-up to Y-up, centring (D29), rotation, scale, target size, meshoptimizer simplification over 300k triangles); `slice/planes.ts`, `slice/section.ts` (manifold-3d slicing, plus a fallback triangle–plane stitcher for open meshes), `slice/clean.ts` (union, wall cut in 2D (D30), RDP + Chaikin with the wall points pinned, minimum-feature opening, small islands; D31); `methods/parallel.ts` (fins F01…Fn, short fins and floating pieces reported; D32); `engine.ts` (`loadSource`, `computeParametric` with manifold injected).
+- Slicing worker `components/parametric/slicer.worker.ts` with a small client (`slicerProtocol.ts`); manifold-3d is copied to `public/manifold` by `scripts/copy-wasm.js` (renamed from `copy-harfbuzz.js`; D33).
+- Hidden debug page `/app/parametric-debug`: three.js view of the model, the planes and the fins extruded to T at their placement; source picker, STL/OBJ/GLB import, axis, spacing, phase, smoothing, scale; the selected plane's section; every fin outline; the warning report.
+
+**Tests:** 632 / 632, including the Hinge Box golden test. New `parallel.test.ts` (6 cases): "sphere parallel" (radius 100, subdivision 6, spacing 10, K 0, smoothing 0: 20 half-disc fins, every vertex on radius √(100² − d²) within 0.15 mm, wall edge exactly at 0), the same with the fallback section method, invariants 1–2 (simple polygons, holes inside outers, exactly one connected component at 10 px/mm) for the sphere and the head, an open mesh reported as NON_MANIFOLD and sliced with the fallback, short fins reported, every library mesh closed and outward. New `mesh.test.ts` (7 cases): binary STL, OBJ, welding, auto units, normalising, open-edge warning, simplification. `tsc` clean, `next build` OK. Browser run `scripts/shots/parametric-p1.mjs`: head 21 fins (manifold, 79 ms), sphere 20 fins at spacing 10 (35 ms), an imported STL box sliced and centred.
+
+**Screenshots:** `parametric-1-head-fins.png`, `parametric-1-head-fin-outlines.png`, `parametric-1-sphere-fins.png`.
+
+**Known limitations:** no backboard, tabs, bridges, labels or sheet layout yet (P2). Only the parallel method; other methods fall back to it with METHOD_NOT_READY. The "ask for units" prompt and GLB import have no UI test yet (D34).
+
+
+## Letters L5 — Plan limits
+
+**Built**
+- Free plan: every Letters mode can be previewed (canvas, 3D, Analysis); export works only for a Letter Box of a single letter, with the "Made with HingeLab" mark. Exporting anything else opens Upgrade to Pro; Solid and Stencil show a lock (D27).
+- Enforced on the server: `/api/export` now builds Letters SVGs too (`lib/billing/exportLetters.ts`, `lib/billing/letterFonts.ts`), with HarfBuzz and the bundled fonts on the server, uploaded fonts sent with the request (up to 3 MB, not stored).
+- Pricing table row: Letters for Free is "Preview, and one-letter boxes". The font upload note and the privacy page mention that an export sends the uploaded font to build the file.
+
+**Tests:** 619 / 619, including the Hinge Box golden test. New `exportLetters.test.ts` (8 cases: character counting incl. Persian, combining marks and emoji; the Free/Pro rule; Free single-letter export = editor export + mark; Pro export byte-identical to the editor for box, solid, stencil and Persian; 403/422 cases; request parsing; server font loading from `public/fonts` and from a base64 upload, with oversize/empty/not-a-font refused). `tsc` clean, `next build` OK; the export function's trace includes the fonts and the HarfBuzz WASM. Browser run `scripts/shots/letters-l5.mjs` against local Supabase: Free locks, upgrade dialog, server 403 for a word and for Solid, single-letter box download with the mark, then Pro exports the word cleanly and the server builds a stencil. A production `next start` returned the same results.
+
+**Screenshots:** `letters-5-free-preview.png`, `letters-5-upgrade-dialog.png`, `letters-5-free-single-letter.png`.
+
+**Known limitations:** a Free user still sees the full drawing on the canvas (same as D15). Pro users with an uploaded font over 3 MB export in the browser instead of on the server.
 
 ## Letters L4 — Polish
 

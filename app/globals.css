@@ -240,3 +240,9 @@ select.sel { width: 100%; background: var(--field); border: 1px solid var(--line
 .dbg-card svg { width: 100%; height: auto; background: var(--sheet); border-radius: 4px; }
 .dbg-wide { margin-top: 12px; }
 .dbg pre { margin: 0; font: 11.5px/1.45 var(--font-num); color: var(--fg-dim); white-space: pre-wrap; }
+.dbg-status { color: var(--fg-dim); font: 12px var(--font-num); }
+.pdbg { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); gap: 12px; }
+.pdbg-view { height: 560px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.pdbg-side { display: grid; gap: 12px; align-content: start; }
+.pdbg-pick { display: grid; gap: 4px; font-size: 12px; color: var(--fg-dim); }
+.pdbg-fins { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }

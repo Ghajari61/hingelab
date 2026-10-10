@@ -142,3 +142,38 @@ Decisions taken without the owner during the autopilot run. Each entry: what, wh
 - **Alternatives:** building the file in the browser and only stamping it on the server (bypassable), or refusing uploaded fonts on the server (Pro users would lose their own fonts).
 
 ## Parametric
+
+### D28. Parametric P1: library shapes are generated, not downloaded
+- **What:** the six library shapes (sphere, torus, wave panel, ripple, vase, and "abstract-head-cc0") are built by code in `lib/parametric/source/library.ts`. The head is a face relief over a 160 x 220 mm oval with a 3 mm flat back: a dome plus smooth bumps for brows, eye sockets, nose, cheeks, lips and chin. `public/library/LICENSES.md` records it as procedurally generated and released under CC0.
+- **Why:** no network downloads during the run, no licence risk, tiny bundle, and the meshes are closed by construction.
+- **Alternatives:** shipping a CC0 head scan (needs a vetted source and several MB).
+
+### D29. Parametric P1: where each model sits relative to the wall
+- **What:** imported meshes and the solid library shapes (sphere, torus, vase) are centred on the origin, as the brief says, so the wall plane z = 0 cuts them in half. The relief library shapes (head, wave panel, ripple) are centred in X and Y only and keep their flat back on z = 0.
+- **Why:** the "sphere parallel" test expects half-discs from a centred sphere, while a relief centred in Z would lose half its depth behind the wall.
+- **Alternatives:** centring everything (the head would be cut through the cheeks), or pushing everything to z >= 0 (breaks the sphere test).
+
+### D30. Parametric P1: the wall cut is done per section in 2D
+- **What:** instead of `trimByPlane` on the 3D solid, each section is intersected with the half-plane w >= 0 in Clipper.
+- **Why:** it gives the same result for parallel fins (the section of the trimmed solid equals the trimmed section) and works the same way for the fallback sections of open meshes, which manifold cannot trim.
+
+### D31. Parametric P1: section clean-up details
+- **Pinned wall points:** Ramer-Douglas-Peucker and Chaikin keep every point on the wall line (w = 0) fixed and work on the runs between them. Otherwise RDP drops the corner where the profile meets the wall, which tilted the wall edge by up to 0.08 mm.
+- **Opening (minimum feature):** erode by minFeature/2, grow back by minFeature/2 + 0.01 mm, then clip to the input, so straight edges come back exactly; Clipper's integer rounding otherwise left the wall edge 0.002 mm off.
+- **Union rule:** nonzero for manifold sections (oriented), even-odd for fallback loops.
+- **Fallback sections:** segment endpoints are joined on a 1e-4 mm grid; open chains shorter than 1 mm are dropped; longer ones are closed with a straight edge and reported as NON_MANIFOLD_SECTION.
+- **Sphere test:** checks every fin vertex higher than minFeature/2 + 0.5 mm above the wall. The opening rounds the two corners where the disc meets the wall with radius minFeature/2, so those few vertices are not on the circle by design. The test also checks area (at least 97 % of the half-disc) and that the wall edge is exactly at 0.
+
+### D32. Parametric P1: parts, short fins and floating pieces
+- **Ids:** fins are F01..Fn by plane; a plane whose section has several pieces gives F07-a, F07-b, ... (largest first).
+- **Short fins:** pieces lower than `minFinHeight` are left out and reported with a new warning code SHORT_FIN_DROPPED (the brief has no code for this).
+- **Floating pieces:** P1 has no bridges (they come in P2), so pieces that do not touch the wall are kept as their own parts and reported with a new code FLOATING_PIECE, rather than misusing BRIDGE_ADDED.
+- **Part-local frame:** x along the wall (U), y out of the wall (W); outers are counter-clockwise in that frame, which is our positive orientation. The placement matrix has columns U, W, N, offset x N.
+
+### D33. Parametric P1: loading manifold-3d in the browser
+- **What:** `scripts/copy-harfbuzz.js` became `scripts/copy-wasm.js` and also copies `manifold.js` and `manifold.wasm` to `public/manifold` (git-ignored). The slicing worker (`components/parametric/slicer.worker.ts`, a module worker) imports it with `webpackIgnore` and keeps the prepared mesh between runs.
+- **Why:** same reason as HarfBuzz: the Emscripten module finds its .wasm next to itself, which webpack would rewrite.
+
+### D34. Parametric P1: simplification and units
+- Meshes over 300,000 triangles are simplified with meshoptimizer after normalising, so the reported error is in mm (target error 5 % of the diagonal as the cap; the triangle budget is the real target).
+- Units "auto" with a diagonal outside 5-5000 sets `askUnits` in the worker result; the editor will show the one-line prompt in P2. GLB import is wired through `GLTFLoader.parseAsync` but has no automated test (building a GLB in Node needs browser APIs); STL and OBJ are tested.
