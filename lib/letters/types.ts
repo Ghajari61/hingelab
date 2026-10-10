@@ -216,7 +216,9 @@ export interface Wall {
 export interface BoxLetterStat {
   letter: string;
   perimeter: number;
-  pieces: number;
+  /** Hinge strips and flat panels (hinge letters use panels for counters too small to bend around). */
+  strips: number;
+  panels: number;
   zones: number;
   rTight: number;
   verdict: "ok" | "tight" | "crack" | null;

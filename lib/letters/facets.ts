@@ -113,7 +113,7 @@ export function facetedWall(poly: Contour, o: FacetOptions): FacetResult {
   const ys = Array.from({ length: nf + 1 }, (_, k) => (hBody * k) / nf);
   const butt = (i: number, l: number) => Math.min((T / 2) * Math.tan((Math.abs(turns[i]) * Math.PI) / 360), Math.max(0, l / 2 - 1));
   if (turns.some((t, i) => !finger[i] && Math.abs(t) > SHARP_TURN)) {
-    issues.push({ lvl: "warn", msg: `“${o.letter}” (${o.contour}) has corners sharper than ${180 - SHARP_TURN}°, where flat panels leave a gap. Fill it with glue, or use living-hinge walls.` });
+    issues.push({ lvl: "warn", msg: `“${o.letter}” (${o.contour}) has corners sharper than ${180 - SHARP_TURN}°, where flat panels leave a gap. Fill it with glue${p.wallStyle === "hinge" ? "" : ", or use living-hinge walls"}.` });
   }
 
   const parts: PanelPart[] = [];

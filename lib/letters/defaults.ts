@@ -90,3 +90,10 @@ export function cornerRadiusOf(p: LetterParams) {
   if (p.wallStyle === "faceted") return 0;
   return bendAnalysis(hingeParamsOf(p), wallHeightOf(p), 1).rMin * 1.3 + p.T / 2;
 }
+
+/**
+ * Radius for concave corners and counters. The wall stands on the material side, so its centerline
+ * runs T/2 outside a concave edge and bends T/2 wider than the edge, where a convex edge bends T/2
+ * tighter. A concave edge therefore needs T less than cornerRadiusOf.
+ */
+export const concaveRadiusOf = (p: LetterParams) => Math.max(0, cornerRadiusOf(p) - p.T);

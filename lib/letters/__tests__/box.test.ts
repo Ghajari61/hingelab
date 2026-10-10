@@ -4,7 +4,7 @@ import * as hb from "harfbuzzjs";
 import { describe, expect, it } from "vitest";
 import { colSegments, cutWidth, hingeSegments, mergesEdgeCuts } from "@/lib/hinge";
 import {
-  LETTER_DEFAULTS, Loop, computeLetterModel, cornerRadiusOf, curvatureZones, exportLetterSVG, facetContour, facetedWall,
+  LETTER_DEFAULTS, Loop, computeLetterModel, concaveRadiusOf, cornerRadiusOf, curvatureZones, exportLetterSVG, facetContour, facetedWall,
   hingeParamsOf, layoutLetters, loadFont, makeShape, pointInShape, signedArea, windowRadius,
 } from "@/lib/letters";
 import type { Contour, LetterModel, LetterParams, LoadedFont, PanelPart, PlatePart, Point, StripPart, Wall } from "@/lib/letters";
@@ -158,14 +158,18 @@ const circumradius = (a: Point, b: Point, c: Point) => {
 function minVertexRadius(c: Contour, SPAN = 5) {
   const n = c.length;
   const seg = c.map((q, i) => Math.hypot(c[(i + 1) % n][0] - q[0], c[(i + 1) % n][1] - q[1]));
-  if (seg.reduce((s, l) => s + l, 0) < 4 * SPAN) return Infinity;
-  let best = Infinity;
+  const best = { convex: Infinity, concave: Infinity };
+  if (seg.reduce((s, l) => s + l, 0) < 4 * SPAN) return best;
   for (let i = 0; i < n; i++) {
     let j = i, back = 0;
     while (back < SPAN) { j = (j - 1 + n) % n; back += seg[j]; }
     let k = i, fwd = 0;
     while (fwd < SPAN) { fwd += seg[k]; k = (k + 1) % n; }
-    best = Math.min(best, circumradius(c[j], c[i], c[k]));
+    const a = c[j], b = c[i], d = c[k];
+    // material is on the left of outers and holes alike, so a left turn is a convex corner
+    const cross = (b[0] - a[0]) * (d[1] - b[1]) - (b[1] - a[1]) * (d[0] - b[0]);
+    const key = cross > 0 ? "convex" : "concave";
+    best[key] = Math.min(best[key], circumradius(a, b, d));
   }
   return best;
 }
@@ -211,6 +215,12 @@ describe("letter box (living-hinge walls): tests 1-7", () => {
       expect(box.walls.length).toBeGreaterThanOrEqual(1);
 
       for (const w of box.walls) {
+        if (w.style === "faceted") {
+          // a counter too small to bend around: flat panels, one per side
+          expect(w.contour).toMatch(/^hole/);
+          expect(w.pieceLengths.length).toBe(w.centerline.length);
+          continue;
+        }
         // 1. every contour produces at least one strip
         const strips = stripsOf(m, w);
         expect(strips.length, `${w.letter} · ${w.contour}`).toBe(w.pieceLengths.length);
@@ -241,9 +251,16 @@ describe("letter box (living-hinge walls): tests 1-7", () => {
         }
       }
 
-      // 5. the rounded letters have no local radius below the corner radius
-      const r = cornerRadiusOf(p);
-      for (const s of box.filleted) for (const c of [s.outer, ...s.holes]) expect(minVertexRadius(c)).toBeGreaterThanOrEqual(r - 0.05);
+      // 5. the rounded letters have no convex radius below the corner radius and no concave
+      //    radius below the concave radius (counters with flat panels are polygons)
+      const r = cornerRadiusOf(p), rc = concaveRadiusOf(p);
+      const panelHoles = box.walls.filter(w => w.style === "faceted").map(w => w.centerline);
+      for (const s of box.filleted) for (const c of [s.outer, ...s.holes]) {
+        if (c !== s.outer && panelHoles.some(ph => pointInShape(centroid(ph), makeShape(c, [])))) continue;
+        const m = minVertexRadius(c);
+        expect(m.convex).toBeGreaterThanOrEqual(r - 0.05);
+        expect(m.concave).toBeGreaterThanOrEqual(rc - 0.05);
+      }
 
       // 7. plates are simple, holes inside the outer contour, slots inside the material
       const plates = m.parts.filter((pt): pt is PlatePart => pt.kind === "plate");
@@ -320,6 +337,36 @@ describe("letter box (flat-panel walls)", () => {
     // merging panels shorter than the minimum stretches the tolerance a little: chords up to about 24 mm
     // on R 60 sag 1.2 mm
     for (const v of circle) expect(distToPolyline(v, q)).toBeLessThanOrEqual(1.5);
+  });
+});
+
+describe("letter box counters (living-hinge walls)", () => {
+  const holesOf = (m: LetterModel) => m.box!.filleted.reduce((n, s) => n + s.holes.length, 0);
+
+  it("counters wide enough for the concave radius keep a hinge wall", () => {
+    for (const text of ["6", "9", "ه", "م", "و"]) {
+      const m = boxModel(params(text));
+      expect(holesOf(m), text).toBe(1);
+      expect(m.box!.walls.filter(w => w.contour.startsWith("hole")).every(w => w.style === "hinge"), text).toBe(true);
+    }
+  });
+
+  // A: the counter is too small; e: the bar is too thin to keep and the eye too small to bend around
+  for (const text of ["A", "e"]) it(`${text}: a counter too small to bend around gets flat panels and stays a hole in the base`, () => {
+    const m = boxModel(params(text));
+    const panelWalls = m.box!.walls.filter(w => w.style === "faceted");
+    expect(panelWalls.length).toBe(1);
+    expect(panelWalls[0].contour).toBe("hole 1");
+    const panels = m.parts.filter((pt): pt is PanelPart => pt.kind === "panel");
+    expect(panels.length).toBe(panelWalls[0].pieceLengths.length);
+    // seams and panels never share an engraved number
+    const seamNames = m.parts.filter((pt): pt is StripPart => pt.kind === "strip").flatMap(st => st.marks.map(mk => mk.text));
+    expect(seamNames.length).toBeGreaterThan(0);
+    for (const pt of panels) expect(seamNames).not.toContain(pt.name);
+    const base = m.parts.find((pt): pt is PlatePart => pt.kind === "plate" && pt.name === `${text} · base`)!;
+    expect(base.holes.length).toBe(1);
+    expect(m.box!.letters[0].panels).toBe(panels.length);
+    expect(m.issues.some(i => i.lvl === "info" && i.msg.includes("flat panels"))).toBe(true);
   });
 });
 

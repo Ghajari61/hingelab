@@ -5,6 +5,10 @@ import { fmtLen, type Units } from "@/components/editor/format";
 
 const VERDICT = { ok: "bends safely", tight: "close to the limit", crack: "too tight" } as const;
 
+/** "2 strips and 3 panels", leaving out a kind there are none of. */
+const count = (a: number, aName: string, b: number, bName: string) =>
+  [[a, aName], [b, bName]].filter(([n]) => n).map(([n, w]) => `${n} ${w}${n === 1 ? "" : "s"}`).join(" and ") || "no walls";
+
 function BoxStats({ box, units }: { box: BoxInfo; units: Units }) {
   const hinge = box.style === "hinge";
   return (
@@ -19,7 +23,7 @@ function BoxStats({ box, units }: { box: BoxInfo; units: Units }) {
           <li key={s.letter} className={s.verdict ?? "flat"}>
             <strong>{s.letter}</strong>
             <span>
-              {fmtLen(s.perimeter, units, true)} of wall, {s.pieces} {hinge ? (s.pieces === 1 ? "strip" : "strips") : (s.pieces === 1 ? "panel" : "panels")}
+              {fmtLen(s.perimeter, units, true)} of wall, {count(s.strips, "strip", s.panels, "panel")}
               {hinge && (s.zones ? `, ${s.zones} curve${s.zones === 1 ? "" : "s"}, tightest R ${fmtLen(s.rTight, units, true)}` : ", no curves")}
               {hinge && s.verdict && ` · ${VERDICT[s.verdict]}`}
             </span>
@@ -74,6 +78,12 @@ export function LettersAnalysis({ model, error, units, showZones, onShowZones }:
                   <li><span style={{ background: ZONE_COLORS.tight }} />Curve close to the limit</li>
                   <li><span style={{ background: ZONE_COLORS.crack }} />Curve too tight for this hinge</li>
                   <li><span className="ring" style={{ borderColor: ZONE_COLORS.seam }} />Seam where a strip starts</li>
+                  {model.box.walls.some((w) => w.style === "faceted") && (
+                    <>
+                      <li><span className="ring" style={{ borderColor: ZONE_COLORS.ok }} />Panel corner, finger joint</li>
+                      <li><span className="ring" style={{ borderColor: ZONE_COLORS.tight }} />Panel corner, butt joint to glue</li>
+                    </>
+                  )}
                 </>
               ) : (
                 <>

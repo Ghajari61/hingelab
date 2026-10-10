@@ -170,6 +170,11 @@ export function differenceShapes(subject: Contour[], clipPaths: Contour[]): Shap
   return clip(ClipperLib.ClipType.ctDifference, subject, clipPaths);
 }
 
+/** Subject and clip overlap, both filled with the nonzero rule. */
+export function intersectShapes(subject: Contour[], clipPaths: Contour[]): Shape[] {
+  return clip(ClipperLib.ClipType.ctIntersection, subject, clipPaths);
+}
+
 /**
  * Offset of filled shapes by `delta` mm: outers grow and holes shrink for a positive delta.
  * Round joins by default; miter joins keep sharp corners (limit 4 × delta, then squared off).

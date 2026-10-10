@@ -3,10 +3,10 @@
  * by walls along every outline and counter. Walls are living-hinge strips or flat panels.
  */
 import { bendAnalysis, cutWidth } from "@/lib/hinge";
-import { cornerRadiusOf, hingeParamsOf, wallHeightOf } from "./defaults";
+import { concaveRadiusOf, cornerRadiusOf, hingeParamsOf, wallHeightOf } from "./defaults";
 import { facetContour, facetedWall } from "./facets";
 import { fillet, smoothShapes } from "./fillet";
-import { MIN_PIECE_AREA, dropSpecks, makeShape, offsetShapes, pointInShape, shapeContours, unionShapes } from "./polygon";
+import { MIN_PIECE_AREA, differenceShapes, dropSpecks, makeShape, offsetShapes, pointInContour, pointInShape, shapeContours, signedArea, unionShapes } from "./polygon";
 import { labelPoint } from "./solid";
 import { hingeWall } from "./strips";
 import type { BoxInfo, BoxLetterStat, Contour, LetterIssue, LetterParams, LetterPart, PanelPart, PartMark, PlatePart, Shape, StripPart, Wall } from "./types";
@@ -75,6 +75,38 @@ function boxPlates(shapes: Shape[], name: string, p: LetterParams, slots: Contou
   return out;
 }
 
+/**
+ * Counters the rounding filled, because they are too small to bend a hinge wall around, get a
+ * flat-panel wall instead: each is cut back into the rounded shape as a faceted hole, the same
+ * way Flat panels shape every counter. Returns the shape and those counters' panel centerlines.
+ */
+function panelCounters(F: Shape, original: Shape, p: LetterParams, name: string, issues: LetterIssue[]) {
+  let shape = F;
+  const panelHoles: Contour[] = [];
+  for (const h of original.holes) {
+    const region = unionShapes([h]);
+    if (!region.length || !pointInShape(labelPoint(region[0]), shape)) continue;
+    const center = smoothShapes(offsetShapes(region, p.T / 2))[0];
+    const poly = center ? facetContour(center.outer, p.facetTol, p.panelMin) : [];
+    const cut = poly.length >= 3 ? offsetShapes([makeShape(poly, [])], -p.T / 2, "miter") : [];
+    const shortSide = poly.some((q, i) => Math.hypot(poly[(i + 1) % poly.length][0] - q[0], poly[(i + 1) % poly.length][1] - q[1]) < 3 * p.T);
+    const next = cut.length ? dropSpecks(differenceShapes(shapeContours([shape]), shapeContours(cut)), MIN_PIECE_AREA) : [];
+    const holes = (s: Shape[]) => s.reduce((n, x) => n + x.holes.length, 0);
+    // two walls back to back need 2T of material between the counter and every other edge
+    const webs = dropSpecks(offsetShapes(next, -p.T), MIN_PIECE_AREA);
+    if (shortSide || next.length !== 1 || holes(next) !== shape.holes.length + 1 || webs.length !== 1 || holes(webs) !== holes(next)) {
+      issues.push({ lvl: "warn", msg: `A counter of “${name}” is too small for a wall, so it was filled. Use a larger size or Flat panels.` });
+      continue;
+    }
+    shape = next[0];
+    panelHoles.push(poly);
+  }
+  if (panelHoles.length) {
+    issues.push({ lvl: "info", msg: `${panelHoles.length === 1 ? "A counter" : `${panelHoles.length} counters`} of “${name}” ${panelHoles.length === 1 ? "is" : "are"} too small to bend the hinge around, so ${panelHoles.length === 1 ? "it gets" : "they get"} flat panels.` });
+  }
+  return { shape, panelHoles };
+}
+
 export function letterBoxes(letters: BoxLetter[], p: LetterParams): BoxResult {
   const issues: LetterIssue[] = [];
   const hp = hingeParamsOf(p);
@@ -98,14 +130,15 @@ export function letterBoxes(letters: BoxLetter[], p: LetterParams): BoxResult {
   };
 
   for (const L of letters) {
-    const fr = fillet([L.shape], rCorner, hinge ? 2 * p.T : 0);
+    const fr = fillet([L.shape], rCorner, hinge ? 2 * p.T : 0, concaveRadiusOf(p));
     if (!fr.shapes.length) {
       issues.push({ lvl: "warn", msg: `“${L.name}” has strokes narrower than twice the corner radius (R ${r1(rCorner)} mm), so a wall cannot follow it and it was left out. Use a larger size, Thicken, a longer slit for a smaller radius, or Flat panels.` });
       continue;
     }
     if (fr.changed) issues.push({ lvl: "warn", msg: `Part of “${L.name}” is too thin or too sharp for a hinge wall with R ${r1(rCorner)} mm corners, so it was rounded off. Use a bolder font, a larger size, Thicken, or a smaller corner radius.` });
-    fr.shapes.forEach(F => {
+    fr.shapes.forEach(rounded => {
       const name = unique(L.name);
+      const { shape: F, panelHoles } = hinge ? panelCounters(rounded, L.shape, p, name, issues) : { shape: rounded, panelHoles: [] };
       const centers = smoothShapes(dropSpecks(offsetShapes([F], -p.T / 2), MIN_PIECE_AREA));
       if (!centers.length) {
         issues.push({ lvl: "warn", msg: `“${name}” is too thin for box walls and was left out. Use a larger size or a bolder font.` });
@@ -114,11 +147,11 @@ export function letterBoxes(letters: BoxLetter[], p: LetterParams): BoxResult {
       if (centers.length > 1 || centers.reduce((n, c) => n + c.holes.length, 0) !== F.holes.length) {
         issues.push({ lvl: "warn", msg: `Some strokes of “${name}” are too thin for box walls, so the walls do not follow the whole letter.` });
       }
-      const contours: { c: Contour; label: string }[] = [];
+      const contours: { c: Contour; label: string; hole: boolean }[] = [];
       let holeNo = 0;
       centers.forEach((c, ci) => {
-        contours.push({ c: c.outer, label: centers.length > 1 ? `outer ${ci + 1}` : "outer" });
-        for (const h of c.holes) contours.push({ c: h, label: `hole ${++holeNo}` });
+        contours.push({ c: c.outer, label: centers.length > 1 ? `outer ${ci + 1}` : "outer", hole: false });
+        for (const h of c.holes) contours.push({ c: h, label: `hole ${++holeNo}`, hole: true });
       });
 
       const before = walls.length;
@@ -126,8 +159,20 @@ export function letterBoxes(letters: BoxLetter[], p: LetterParams): BoxResult {
       const marks: PartMark[] = [];
       let plateShapes: Shape[];
       if (hinge) {
+        // seams and panels share one numbering per letter, so every engraved number is unique
         let seamNo = 1;
-        for (const { c, label } of contours) {
+        for (const { c, label, hole } of contours) {
+          const poly = hole ? panelHoles.find(q => pointInContour(labelPoint(makeShape(q, [])), c)) : undefined;
+          if (poly) {
+            const fw = facetedWall(Math.sign(signedArea(poly)) === Math.sign(signedArea(c)) ? poly : poly.slice().reverse(), { letter: name, contour: label, p, hBody, topTabs, panelNo: seamNo });
+            seamNo += fw.parts.length;
+            wallParts.push(...fw.parts);
+            walls.push(fw.wall);
+            slots.push(...fw.wall.slots);
+            marks.push(...fw.marks);
+            issues.push(...fw.issues);
+            continue;
+          }
           const w = hingeWall(c, { letter: name, contour: label, p, hp, hBody, topTabs, rMin, seamNo });
           seamNo += w.seamCount;
           wallParts.push(...w.parts);
@@ -162,7 +207,8 @@ export function letterBoxes(letters: BoxLetter[], p: LetterParams): BoxResult {
       stats.push({
         letter: name,
         perimeter: mine.reduce((s, w) => s + w.length, 0),
-        pieces: mine.reduce((s, w) => s + w.pieceLengths.length, 0),
+        strips: mine.reduce((s, w) => s + (w.style === "hinge" ? w.pieceLengths.length : 0), 0),
+        panels: mine.reduce((s, w) => s + (w.style === "faceted" ? w.pieceLengths.length : 0), 0),
         zones: curves.length,
         rTight: curves.reduce((r, z) => Math.min(r, z.rTight), Infinity),
         verdict: worst,
