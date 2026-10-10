@@ -28,7 +28,7 @@ Supabase CLI stack and (once you add test keys) Stripe test mode. Variable names
 3. Run `node scripts/stripe-setup.mjs`. It creates the "HingeLab Pro" product with a $9/month and a $79/year price (test mode only) and prints `STRIPE_PRICE_PRO_MONTHLY=…` and `STRIPE_PRICE_PRO_YEARLY=…`. Paste both lines into `.env.local`. Running it again reuses the same prices.
 4. Local webhooks: install the Stripe CLI (`winget install Stripe.StripeCLI`), run `stripe login`, then `stripe listen --forward-to localhost:3000/api/stripe/webhook`. Copy the `whsec_…` it prints into `.env.local` as `STRIPE_WEBHOOK_SECRET`, and restart `npm run dev`.
 5. Try it: sign in, Billing → Upgrade, pay with card `4242 4242 4242 4242`, any future date, any CVC. The plan turns Pro within seconds. Manage billing opens the customer portal.
-6. Settings → Billing → Customer portal: turn on "Cancel subscriptions", "Update payment methods" and "Switch plans" (add both Pro prices to the plan switcher), then save.
+6. Settings → Billing → Customer portal: turn on "Cancel subscriptions" (mode: **at end of billing period**, as the Terms promise), "Update payment methods" and "Switch plans" (add both Pro prices to the plan switcher), then save.
 7. Production webhook (when you deploy): Developers → Webhooks → Add endpoint `https://<your-domain>/api/stripe/webhook` with these events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`. Copy its signing secret for Vercel (below).
 8. Going live later: repeat steps 2, 3, 6 and 7 in Live mode, and set `STRIPE_ALLOW_LIVE=true` in Vercel. Until that variable is `true` the server refuses live keys.
 
@@ -43,6 +43,13 @@ Set these in Vercel → Project → Settings → Environment Variables (Producti
 5. `STRIPE_WEBHOOK_SECRET` — the signing secret of the webhook endpoint from Stripe step 7 (secret).
 6. `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY` — from `scripts/stripe-setup.mjs`.
 7. `STRIPE_ALLOW_LIVE` — leave unset or `false` until you switch to live keys.
+8. `NEXT_PUBLIC_CONTACT_EMAIL` — the address shown on the Terms and Privacy pages.
+
+## Before launch
+
+1. Read `/terms` and `/privacy` (app/terms/page.tsx, app/privacy/page.tsx). They are plain-language drafts written for this app, not legal advice; have them checked for your country and add your business name if required.
+2. Custom domain: Vercel → Project → Settings → Domains → add your domain and follow the DNS instructions. Then set `NEXT_PUBLIC_SITE_URL` to it, add it to Supabase Redirect URLs, and update the Stripe webhook endpoint.
+3. Check the social preview: after deploying, paste the URL into https://www.opengraph.xyz.
 
 ## Publish the work
 

@@ -94,6 +94,16 @@ Decisions taken without the owner during the autopilot run. Each entry: what, wh
 - **Checkout:** the Stripe customer is created on first checkout and saved with the service-role key; `client_reference_id` links the session to the user. Promotion codes are allowed.
 - **Period end:** Stripe API 2026-09-30 moved `current_period_end` to subscription items; the handler reads the latest item end.
 
+### D19. Landing page design: the real output on a laser bed
+- **What:** the hero is a live mini generator (shape, width, height) showing the assembled 3D box and the actual cut sheet on a dark honeycomb "laser bed". On first load the lines are traced once in cut order (slots, hinge, outline). The gallery shows four boxes built by the engine (`lib/site/samples.ts`), with a Pro tag on Pro shapes/patterns. Display type is Archivo (wide), body stays Source Sans 3 like the editor.
+- **Why:** the brief offers "a live mini version of the generator (or an animated 3D box)"; the generator is the product's most specific thing, and drawing the true LightBurn colors shows exactly what users get. One motion moment only, disabled under reduced motion.
+- **Alternatives:** stock photos of boxes (none exist yet; would be invented), a static illustration.
+
+### D20. `/` is the landing page; the guest editor stays at `/app/editor/local`
+- **What:** `/` no longer redirects to the editor. Every "Open the editor" button links to `/app/editor/local`. The public pages use normal document scrolling (the editor keeps its fixed shell).
+- **Legal pages:** `/terms` and `/privacy` are plain-language drafts that describe what the code actually does (local storage, Supabase, Stripe, Vercel, no tracking). The contact address comes from `NEXT_PUBLIC_CONTACT_EMAIL`; no company details were invented. SETUP.md asks the owner to review them.
+- **SEO:** metadata with `metadataBase` from `NEXT_PUBLIC_SITE_URL`, canonical URLs, Open Graph/Twitter tags, a generated OG image (real cut sheet), `icon.svg`, `robots.txt` (private app areas disallowed) and `sitemap.xml`.
+
 ## Letters
 
 ## Parametric

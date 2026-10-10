@@ -1,6 +1,6 @@
 # Progress
 
-**Next step:** Main brief Phase 5 — Landing page at `/` (hero with animated box, How it works, gallery, pricing from `lib/plans.ts`, FAQ, footer with Terms/Privacy pages), SEO metadata, Open Graph image, favicon. No deploy.
+**Next step:** Letters L2 — stencil mode and its test 9, per `CURSOR_LETTERS_PROMPT.md` (then L4, L5, then Parametric P1–P6).
 
 Order of the run: main brief Phases 1–5 (Phase 6 Tauri is out of scope) → Letters L2, L4, L5 (L1 and L3 were done earlier) → Parametric P1–P6.
 
@@ -12,7 +12,7 @@ How to check a phase: `npx supabase start` (local stack, see SETUP.md), `npm tes
 | Main 2 — Accounts | done | 561 / 561 |
 | Main 3 — Cloud projects | done | 573 / 573 |
 | Main 4 — Subscriptions | done (Stripe test mode, no keys yet) | 586 / 586 |
-| Main 5 — Landing page | | |
+| Main 5 — Landing page | done (not deployed) | 588 / 588 |
 | Main 6 — Desktop app | out of scope for this run | |
 | Letters L1 — solid | done (earlier sessions) | |
 | Letters L2 — stencil | | |

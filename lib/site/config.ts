@@ -1,0 +1,9 @@
+/** Public site settings. The contact address appears on the legal pages; set it before launch. */
+export const SITE_NAME = "HingeLab";
+export const SITE_DESCRIPTION =
+  "Design living-hinge wooden boxes in your browser and download a layered SVG, kerf-compensated and ready for LightBurn.";
+export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || "";
+
+export function siteOrigin(): string {
+  return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+}
