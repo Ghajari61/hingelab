@@ -20,9 +20,11 @@ function ago(iso: string | null) {
 type Dialog = { type: "rename"; p: ProjectSummary; name: string } | { type: "delete"; p: ProjectSummary } | null;
 
 /** "My boxes": the user's cloud projects with Open / Duplicate / Rename / Delete. */
-export function ProjectsHome({ projects, products, limit = Infinity }: {
+export function ProjectsHome({ projects, products, localOnly = [], limit = Infinity }: {
   projects: ProjectSummary[];
   products: ProductId[];
+  /** Products this plan designs in the browser instead of the cloud (Parametric on Free). */
+  localOnly?: ProductId[];
   /** Cloud projects the plan keeps (Infinity on Pro). */
   limit?: number;
 }) {
@@ -49,7 +51,18 @@ export function ProjectsHome({ projects, products, limit = Infinity }: {
         <div className="boxes-actions">
           <button type="button" className="btn-ghost" onClick={() => fileRef.current?.click()} disabled={pending}>Open project file…</button>
           {products.map((pr, i) => (
-            <button key={pr} type="button" className={i === 0 ? "btn-primary" : "btn-ghost"} disabled={pending} onClick={() => act(() => createProjectAction(pr), true)}>
+            <button
+              key={pr}
+              type="button"
+              className={i === 0 ? "btn-primary" : "btn-ghost"}
+              disabled={pending}
+              title={localOnly.includes(pr) ? "Designed in your browser on the Free plan; cloud saving needs Pro" : undefined}
+              onClick={() => {
+                if (!localOnly.includes(pr)) { act(() => createProjectAction(pr), true); return; }
+                try { localStorage.setItem("hingelab-product", pr === "hinge-box" ? "hinge" : pr); } catch { /* private mode */ }
+                router.push("/app/editor/local");
+              }}
+            >
               + {NEW_LABEL[pr]}
             </button>
           ))}

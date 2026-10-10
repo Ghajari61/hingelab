@@ -288,3 +288,35 @@ Decisions taken without the owner during the autopilot run. Each entry: what, wh
 
 ### D53. Parametric P5: Slice Inspector polish
 - Previous/next buttons, arrow keys, Home and End step through the parts (the inspector is focusable); the part's material area, its own cut length and its sheet number are listed. The browser scripts for P2 and P3 now read the part label from the new navigation row (`.pe-inspect-nav span`); what they check is unchanged.
+
+### D54. Parametric P6: what Free can do
+- **Rule.** Free = a library model sliced as parallel fins, at most 30 parts (`FREE_PARAMETRIC_PARTS`), exported with the HingeLab mark. Everything else (3D file, photo, formula sources; stacked, waffle, radial, along-a-curve methods; more than 30 parts) needs Pro. One function, `parametricLocks(plan, params, partCount?)` in `lib/plans.ts`, lists what is locked, and the control bar, the dock, the export buttons and the server all use it, so they cannot disagree.
+- **Preview is free.** A Free user can pick a locked method or source and see the result in 3D and on the sheets; a "Pro:" note in the Analysis panel names what is locked, and exporting opens Upgrade to Pro. Alternative: disable the locked buttons (rejected: seeing your own design as a waffle is the best reason to upgrade, and the hinge box and letters products already work this way).
+- "Along a curve" builds its fins from formulas, so its source is not checked separately; the method itself is the Pro lock.
+- **Where the 30-part limit is enforced.** At export (in the browser and again on the server), not in the database: the count is only known after slicing, and Free sculptures are not saved in the cloud anyway (D55).
+
+### D55. Parametric P6: cloud projects are Pro
+- The Phase 4 trigger `enforce_plan_limits` already refuses parametric projects on the Free plan, and `limits.integration.test.ts` asserts it ("Parametric projects are a Pro feature"). Tests are not changed in this run, so the rule stays: **saving sculptures in the cloud is a Pro feature.** A first draft of the P6 migration loosened the trigger for Free parametric projects; it was dropped, and the migration only adds Storage.
+- Free users still design and export: "+ New sculpture" on the projects page opens the browser editor (`/app/editor/local`, autosaved on the device), via the `localOnly` list passed to `ProjectsHome`. Switching to Parametric inside a Free cloud project does the same if creating a cloud sculpture is refused.
+- Pro: a sculpture is a row in `projects` with `product = 'parametric'` and its params as JSON; it autosaves to the cloud with a thumbnail of the first sheet, like the other products.
+
+### D56. Parametric P6: exports and the mark
+- **Free exports are built on the server.** The browser sends the params to `/api/export` (`product: "parametric"`, `what: zip | guide | sheet`); the route reads the plan from the session, checks the locks, slices again with manifold on the server, checks the part count, and adds the mark. The plan rules cannot be bypassed by editing the page. Pro exports are built in the browser (no round trip, works with 3D files and photos that only exist on the device).
+- A 3D-file or photo source is refused on the server (422, "exported in the browser"): the model is not sent with the request. Free can never export those sources, so no Free user reaches this.
+- **The mark** is the same as the other products: an 8 mm strip below each sheet with "Made with HingeLab" (`addWatermark`), so it never overlaps a part. A first draft drew it inside the sheet and could cover a fin. The assembly guide is not marked: it is instructions, not a cut file.
+- manifold-3d runs in the Node route as a server external package (`serverExternalPackages` and file tracing in `next.config.ts`), loaded once per server process.
+
+### D57. Parametric P6: model files in Storage
+- Private bucket `models` (100 MB per file, the same limit as the 3D-file import). Path `{userId}/{projectId}/{uuid}-{name}`. Policies: users read and delete only their own folder; uploading needs the profile's plan to be `pro` (the Storage policy checks `profiles.plan`), so a Free user cannot store files even by calling the API directly.
+- The project params keep the file path in `source.fileId`; the device cache (IndexedDB) is still used first, and the file is downloaded from Storage only when it is missing on this device.
+- Photos: the packed depth map is uploaded (it is what the relief is built from), not the original photo; the small depth preview is rebuilt from it after download, and the photo preview is not stored.
+- Duplicate copies the file into the new project's folder; delete removes the project's files.
+- `supabase/config.toml` sets the local file size limit to 100 MiB; on hosted Supabase the same value must be set in the dashboard (SETUP.md).
+
+### D58. Parametric P6: cut-time estimate
+- minutes = (cut length × passes / cut speed + score length / score speed + contours × 0.4 s × passes) / 60. The 0.4 s per contour stands for the pierce and the move to the next start point, which dominate on sculptures with many small parts.
+- Presets per material for a typical 40–60 W CO2 laser (mm/s): birch 3 mm 12, birch 18 mm 11, poplar 3 mm 15, MDF 3 mm 10, card 2 mm 30, acrylic 3 mm 8; scoring 150 (card 200, acrylic 120). A custom material uses 36 / T mm/s and two passes above 6 mm.
+- Shown as "about N min" in Analysis (the tooltip gives the speeds used) and in step 1 of the assembly guide. It is labelled an estimate because it does not know the user's machine. Alternative: let the user enter their own speeds (not built in this run).
+
+### D59. Parametric P6: browser scripts
+- The P2–P5 scripts export waffles, radial and curve guides, photos and 3D files, which are Pro features once Supabase is configured. They now sign in as a fresh Pro user from the local stack (`signInAsPro` in `scripts/shots/lib.mjs`) and delete it at the end; what they check is unchanged. `parametric-p6.mjs` checks the Free and Pro gates and a cancel through a signed test-mode webhook.

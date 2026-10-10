@@ -11,6 +11,9 @@ export const PRICES = { monthly: 9, yearly: 79, currency: "USD" } as const;
 
 export const FREE_PROJECT_LIMIT = 3;
 
+/** Parametric on the Free plan: library shapes, parallel fins, at most this many parts. */
+export const FREE_PARAMETRIC_PARTS = 30;
+
 /** Hinge Box options open to the Free plan. Everything else is Pro. */
 export const FREE_SHAPES: readonly Params["shape"][] = ["rect"];
 export const FREE_PATTERNS: readonly Params["pattern"][] = ["straight"];
@@ -25,6 +28,7 @@ export const PLAN_ROWS: { feature: string; free: string; pro: string }[] = [
   { feature: "Cloud projects", free: `Up to ${FREE_PROJECT_LIMIT}`, pro: "Unlimited" },
   { feature: "Shapes and patterns", free: "Rounded + Straight", pro: "All" },
   { feature: "Letters and future tools", free: "Preview, and one-letter boxes", pro: "✓" },
+  { feature: "Parametric sculptures", free: `Library shapes as parallel fins, up to ${FREE_PARAMETRIC_PARTS} parts`, pro: "Your 3D files, photos and formulas, every method" },
 ];
 
 export const PRO_BENEFITS = [
@@ -33,6 +37,7 @@ export const PRO_BENEFITS = [
   "Pill, polygon and cylinder boxes",
   "Wave, relief and serpentine hinges",
   "Letters and every future tool",
+  "Parametric sculptures from your own 3D files and photos",
 ];
 
 export function planOf(value: unknown): Plan {
@@ -70,6 +75,31 @@ export function isSingleLetterBox(p: { mode: string; text: string }): boolean {
 export function lettersLock(plan: Plan, p: { mode: string; text: string }): string | null {
   if (plan === "pro" || isSingleLetterBox(p)) return null;
   return "Letters is a Pro feature. Design anything here; on the Free plan you can export a Letter Box of a single letter, with the small HingeLab mark.";
+}
+
+const SOURCE_NAMES: Record<string, string> = { mesh: "Importing a 3D file", image: "Photo relief", formula: "Formula shapes" };
+const METHOD_NAMES: Record<string, string> = { stacked: "Stacked layers", waffle: "Waffle", radial: "Radial fins", curveNormal: "Fins along a curve" };
+
+/**
+ * Pro features a Parametric design uses that the plan does not include (empty = allowed).
+ * `partCount` is checked only when known (after slicing). "Along a curve" builds from formulas,
+ * so it is locked by its method alone.
+ */
+export function parametricLocks(plan: Plan, p: { source: { kind: string }; method: string }, partCount?: number): string[] {
+  if (plan === "pro") return [];
+  const out: string[] = [];
+  if (p.method !== "curveNormal" && p.source.kind !== "library") out.push(SOURCE_NAMES[p.source.kind] ?? "This source");
+  if (p.method !== "parallel") out.push(METHOD_NAMES[p.method] ?? "This method");
+  if (partCount !== undefined && partCount > FREE_PARAMETRIC_PARTS) out.push(`More than ${FREE_PARAMETRIC_PARTS} parts (this design has ${partCount})`);
+  return out;
+}
+
+/** One sentence for the upgrade dialog, or null when the design is allowed. */
+export function parametricLock(plan: Plan, p: { source: { kind: string }; method: string }, partCount?: number): string | null {
+  const locks = parametricLocks(plan, p, partCount);
+  if (!locks.length) return null;
+  const what = locks.length > 1 ? `${locks.slice(0, -1).join(", ")} and ${locks[locks.length - 1]}` : locks[0];
+  return `${what} ${locks.length > 1 ? "need" : "needs"} Pro. On the Free plan you can export library shapes as parallel fins with up to ${FREE_PARAMETRIC_PARTS} parts, with the small HingeLab mark.`;
 }
 
 export function needsWatermark(plan: Plan): boolean {

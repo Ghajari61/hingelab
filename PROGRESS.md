@@ -1,6 +1,8 @@
 # Progress
 
-**Next step:** Parametric P6 (the last phase): save parametric projects to Supabase (params in `projects` with product = 'parametric', imported model files and photo depth maps in Storage), plan limits (Free = library shapes and the parallel method with ≤ 30 parts, watermarked exports; Pro = everything), a cut-time estimate from material speed presets, tests, and the "stop_and_show" screenshots of the pricing gates in Stripe test mode. Then the final PROGRESS summary.
+**Run complete.** Every phase in scope is done and committed locally (nothing pushed): main brief 1–5, Letters L1–L5, Parametric P1–P6. Final gate: 667 / 667 tests including the Hinge Box golden test, `tsc` clean, `next build` OK, every browser script (`scripts/shots/*.mjs`) passing. No blockers (there is no BLOCKERS.md).
+
+**Next step (yours):** work through SETUP.md (hosted Supabase, Stripe test keys, Vercel variables, legal pages), review the commits with `git log`, then push when you are ready to deploy. Still out of scope: the Windows desktop app (main brief Phase 6). Decisions made on your behalf are in DECISIONS.md (D1–D59).
 
 Order of the run: main brief Phases 1–5 (Phase 6 Tauri is out of scope) → Letters L2, L4, L5 (L1 and L3 were done earlier) → Parametric P1–P6.
 
@@ -24,7 +26,36 @@ How to check a phase: `npx supabase start` (local stack, see SETUP.md), `npm tes
 | Parametric P3 — stacked + waffle | done | 645 / 645 |
 | Parametric P4 — radial + along a curve | done | 652 / 652 |
 | Parametric P5 — photo to relief + quality | done | 658 / 658 |
-| Parametric P6 | | |
+| Parametric P6 — productisation | done (Stripe test mode) | 667 / 667 |
+
+---
+
+## Parametric P6 — Productisation
+
+**Built**
+- Plan limits (D54): Free = a library model as parallel fins, up to 30 parts, exported with the "Made with HingeLab" strip below each sheet; Pro = every source, every method, any part count, no mark. One function (`parametricLocks` in `lib/plans.ts`) drives the lock icons on methods and sources, a "Pro:" note in Analysis that names what is locked, Upgrade to Pro on export, and the server check. Locked options can still be previewed. The pricing table and Upgrade dialog list "Parametric sculptures".
+- Server export for Free (D56): `/api/export` with `product: "parametric"` checks the plan, slices again with manifold on the server, enforces the 30-part limit and adds the mark (ZIP, single sheet or guide). Pro exports stay in the browser.
+- Cloud projects (D55, D57): for Pro, "+ New sculpture" creates a `projects` row with `product = 'parametric'` and the params as JSON, autosaved with a thumbnail. Imported 3D files and photo depth maps go to the private Storage bucket `models` (`{user}/{project}/…`, Pro-only uploads by policy) and are downloaded when a project is opened on a device that does not have them; duplicate copies the file, delete removes it. Free users design in the browser editor (cloud sculptures stay Pro, as the Phase 4 rule and its test require).
+- Cut-time estimate (D58): `lib/parametric/cutTime.ts`, speed presets per material for a 40–60 W CO2 laser plus 0.4 s per contour; shown as "Cut time — about N min" in Analysis and in step 1 of the assembly guide.
+- Migration `20261010000400_parametric.sql` (bucket and Storage policies), `supabase/config.toml` file limit 100 MiB, privacy page updated for model files, SETUP.md steps for hosted Storage and the cut-speed presets.
+
+**Tests:** 667 / 667, including the Hinge Box golden test. New `lib/billing/__tests__/exportParametric.test.ts` (7 cases: plan rules and messages, cut-time maths and presets, guide text, Free ZIP with the mark on every sheet, the mark sits below the sheet, refusals for methods/sources/parts, Pro clean, request validation) and `lib/projects/__tests__/files.integration.test.ts` (2 cases against the local stack: a Pro user saves a parametric project with its file, another user can neither read nor upload into that folder, copy and delete work; a Free user cannot upload and cannot create a parametric project). `tsc` clean, `next build` OK.
+
+**Browser run** `scripts/shots/parametric-p6.mjs`, against a dev server with dummy test-mode Stripe values (no Stripe account contacted): Free user → "+ New sculpture" opens the browser editor; four methods and three sources locked; cut time shown; the Free ZIP has the mark on both sheets and the guide states the cut time; closer fins (33 parts) and waffle show the Pro note and open Upgrade; the server refuses > 30 parts, radial and photo for Free and builds a Free sheet. The user is made Pro → cloud sculpture from an imported STL as a waffle, saved to the cloud, file in Storage, clean ZIP; after clearing the device the model loads from the cloud. A signed `customer.subscription.deleted` webhook → the gates come back. `parametric-p2.mjs` … `p5.mjs` now sign in as a Pro user first (D59) and all pass.
+
+**Screenshots (stop_and_show: "Pricing gates working in Stripe test mode")**
+- `docs/screenshots/parametric-6-free-editor.png` — Free: the head as parallel fins, lock icons on the Pro methods and sources, cut time in Analysis.
+- `docs/screenshots/parametric-6-upgrade-dialog.png` — Free with 33 parts: the Pro note and the Upgrade to Pro dialog naming the limit.
+- `docs/screenshots/parametric-6-free-waffle-preview.png` — Free previewing a waffle, with the Pro note.
+- `docs/screenshots/parametric-6-pro-cloud-waffle.png` — Pro: a cloud sculpture from an imported 3D file as a waffle, "Saved to cloud".
+- `docs/screenshots/parametric-6-after-cancel.png` — after the subscription is cancelled (webhook), the same sculpture shows the Pro note again.
+
+**Known limitations**
+- A real Stripe checkout was not run (no test keys on this machine); the plan change is made directly in the database or through a signed test webhook, as in Main 4. SETUP.md has the steps for a full test-mode checkout.
+- Cut-time presets are typical values, not calibrated to the user's laser, and there is no field to enter your own speeds.
+- A Free user's sculptures live only in that browser (no cloud saving on Free).
+- On the hosted Supabase Free plan the Storage upload limit is 50 MB, so larger models stay on the device only.
+- Server export time for big Free sculptures (up to 30 parts) has not been measured on Vercel.
 
 ---
 

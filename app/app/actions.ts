@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/supabase/server";
 import { isProduct, parseProjectFile } from "@/lib/projects";
 import * as repo from "@/lib/projects/repo";
+import { copyModelFile, deleteProjectFiles } from "@/lib/projects/files";
 
 export type ActionResult<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -33,7 +34,16 @@ export async function importProjectAction(text: string): Promise<ActionResult<{ 
 }
 
 export async function duplicateProjectAction(id: string): Promise<ActionResult<{ id: string }>> {
-  return run(async (db) => ({ id: (await repo.duplicateProject(db, id)).id }));
+  return run(async (db) => {
+    const row = await repo.duplicateProject(db, id);
+    const params = row.params as { source?: { fileId?: unknown } } | null;
+    const from = params?.source?.fileId;
+    if (row.product === "parametric" && typeof from === "string") {
+      const fileId = await copyModelFile(db, from, row.user_id, row.id).catch(() => null);
+      if (fileId) await repo.saveProject(db, row.id, row.product, { ...params, source: { ...params!.source, fileId } });
+    }
+    return { id: row.id };
+  });
 }
 
 export async function renameProjectAction(id: string, name: string): Promise<ActionResult> {
@@ -45,7 +55,9 @@ export async function renameProjectAction(id: string, name: string): Promise<Act
 
 export async function deleteProjectAction(id: string): Promise<ActionResult> {
   return run(async (db) => {
+    const project = await repo.getProject(db, id);
     await repo.deleteProject(db, id);
+    if (project?.product === "parametric") await deleteProjectFiles(db, project.user_id, id).catch(() => 0);
     return {};
   });
 }

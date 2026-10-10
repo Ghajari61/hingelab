@@ -3,10 +3,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { r3, type LayerContent } from "@/lib/hinge";
 import {
-  IMAGE_DEFAULTS, PARAMETRIC_DEFAULTS, assemblyGuideSVG, exportZip, formatOf, mergeParametricParams, packDepth, sheetFileName, sheetLayerContent, sheetSVG, toSheet,
+  IMAGE_DEFAULTS, PARAMETRIC_DEFAULTS, assemblyGuideSVG, exportZip, formatOf, mergeParametricParams, packDepth, sheetFileName, sheetLayerContent, sheetSVG, slugName, toSheet, unpackDepth,
   type MeshData, type ParametricParams, type Sheet, type SliceResult,
 } from "@/lib/parametric";
 import { clone } from "@/lib/hinge";
+import { parametricLock, parametricLocks } from "@/lib/plans";
+import { thumbnailSVG } from "@/lib/projects";
+import { downloadModelFile, uploadModelFile } from "@/lib/projects/files";
+import { getBrowserClient } from "@/lib/supabase/client";
+import { useCloudAutosave, type CloudDoc } from "@/hooks/useCloudAutosave";
+import { usePlan } from "@/components/billing/usePlan";
+import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
+import { importIntoCloud, openNewCloudProject } from "@/components/editor/cloud";
 import { useHistory } from "@/hooks/useHistory";
 import { readStored, useAutosave } from "@/hooks/useAutosave";
 import { PX_PER_MM, useCanvasView } from "@/hooks/useCanvasView";
@@ -20,7 +28,7 @@ import { StatusBar } from "@/components/editor/StatusBar";
 import { Dialogs, type ModalState } from "@/components/editor/dialogs";
 import { ParametricControlBar } from "./ParametricControlBar";
 import { ParametricDock } from "./ParametricDock";
-import { estimateDepth } from "./depthProtocol";
+import { depthPreview, estimateDepth } from "./depthProtocol";
 import { getStoredModel, getStoredPhoto, putStoredModel, putStoredPhoto, type StoredModel } from "./modelStore";
 import { Slicer } from "./slicerProtocol";
 import Viewport3D, { type ViewToggles } from "./Viewport3D";
@@ -30,12 +38,12 @@ const MAX_MODEL_BYTES = 100 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 30 * 1024 * 1024;
 const SHEET_GAP = 40;
 
-function loadInitial() {
+function loadInitial(cloud: CloudDoc | null) {
   const stored = readStored<ParametricParams>(KEY);
-  return { params: mergeParametricParams(stored?.params), units: (stored?.units === "in" ? "in" : "mm") as Units };
+  const units = (stored?.units === "in" ? "in" : "mm") as Units;
+  if (cloud) return { params: mergeParametricParams(cloud.params as Partial<ParametricParams>), units };
+  return { params: mergeParametricParams(stored?.params), units };
 }
-
-const slug = (s: string) => s.trim().replace(/\s+/g, "-").replace(/[^\p{L}\p{N}-]/gu, "").slice(0, 32) || "sculpture";
 
 /** Sheets in rows, left to right, `SHEET_GAP` mm apart. */
 function layoutSheets(sheets: Sheet[]) {
@@ -55,8 +63,8 @@ function layoutSheets(sheets: Sheet[]) {
   return { rects, W, H: Math.max(0, y - SHEET_GAP) };
 }
 
-export default function ParametricEditor({ onProduct }: { onProduct: (p: Product) => void }) {
-  const boot = useState(loadInitial)[0];
+export default function ParametricEditor({ onProduct, cloud = null }: { onProduct: (p: Product) => void; cloud?: CloudDoc | null }) {
+  const boot = useState(() => loadInitial(cloud))[0];
   const { params, replace, undo, redo, canUndo, canRedo } = useHistory(boot.params);
   const [units, setUnits] = useState<Units>(boot.units);
   const [tab, setTab] = useState<"3d" | "sheets">("3d");
@@ -67,7 +75,12 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
   const [explode, setExplode] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
-  const [saved, setSaved] = useState("Autosaved locally");
+  const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
+  const [upgrade, setUpgrade] = useState<string | null>(null);
+  /** idle → loading → done | failed: fetching a cloud project's model or photo onto this device. */
+  const [cloudFile, setCloudFile] = useState<"idle" | "loading" | "done" | "failed">("idle");
+  const account = usePlan();
+  const thumbRef = useRef<() => string | null>(() => null);
   const [modal, setModal] = useState<ModalState>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [model, setModel] = useState<StoredModel | null>(null);
@@ -86,7 +99,8 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
   const fileRef = useRef<HTMLInputElement>(null);
   const toastT = useRef<number>(0);
   const onStatus = useCallback((s: string) => setSaved(s), []);
-  useAutosave(params, units, onStatus, KEY, true);
+  useAutosave(params, units, onStatus, KEY, !cloud);
+  useCloudAutosave(cloud, params, () => thumbRef.current(), onStatus);
 
   function toastMsg(msg: string) {
     setToast(msg);
@@ -109,9 +123,36 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
     return () => slicer.current?.dispose();
   }, []);
 
+  // A cloud project whose model or photo is not on this device fetches it from Storage once.
+  const srcRef = params.source.kind === "mesh" || params.source.kind === "image" ? params.source : null;
+  const needsCloudFile = !!cloud && !!srcRef?.fileId && modelChecked
+    && !((srcRef.kind === "mesh" ? model : photo)?.name === srcRef.fileName);
+  useEffect(() => {
+    if (!needsCloudFile || cloudFile !== "idle" || !srcRef?.fileId) return;
+    const db = getBrowserClient();
+    if (!db) { setCloudFile("failed"); return; }
+    setCloudFile("loading");
+    setStage(srcRef.kind === "mesh" ? "Loading the model from the cloud" : "Loading the photo's depth from the cloud");
+    const { kind, fileName, fileId } = srcRef;
+    downloadModelFile(db, fileId)
+      .then((bytes) => {
+        const m: StoredModel = { name: fileName, key: fileId, bytes };
+        if (kind === "mesh") { setModel(m); void putStoredModel(m).catch(() => {}); }
+        else {
+          m.depthPreview = depthPreview(unpackDepth(bytes));
+          setPhoto(m);
+          void putStoredPhoto(m).catch(() => {});
+        }
+        setCloudFile("done");
+      })
+      .catch(() => setCloudFile("failed"))
+      .finally(() => setStage(null));
+  }, [needsCloudFile, cloudFile, srcRef]);
+
   // A saved project that points at a model or photo this browser no longer has falls back to the library.
   useEffect(() => {
-    if (!modelChecked || depthBusy) return;
+    if (!modelChecked || depthBusy || cloudFile === "loading" || (needsCloudFile && cloudFile === "idle")) return;
+    if (needsCloudFile && cloudFile === "failed") { setError("This project's file could not be loaded from the cloud. Check your connection and reload the page."); return; }
     const src = params.source;
     if (src.kind === "mesh" && (!model || model.name !== src.fileName)) {
       replace({ ...params, source: clone(PARAMETRIC_DEFAULTS.source) }, false);
@@ -121,7 +162,7 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
       replace({ ...params, source: clone(PARAMETRIC_DEFAULTS.source) }, false);
       toastMsg("The photo is not on this device. Load it again.");
     }
-  }, [modelChecked, model, photo, depthBusy, params, replace]);
+  }, [modelChecked, model, photo, depthBusy, cloudFile, needsCloudFile, params, replace]);
 
   const fileOf = (p: ParametricParams) => (p.source.kind === "mesh" ? model : p.source.kind === "image" ? photo : null);
   const srcFile = fileOf(params);
@@ -163,6 +204,7 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
     });
     return all;
   }, [result, partsById, layout]);
+  thumbRef.current = () => (content && layout.W > 0 ? thumbnailSVG(content, layout.W, layout.H) : null);
   const sheetRects = useMemo(() => (result?.sheets ?? []).map((sh, i) => ({
     ...layout.rects[i],
     label: `Sheet ${i + 1} · ${fmtLen(sh.width, units)} × ${fmtLen(sh.height, units)} · ${Math.round(sh.usage * 100)}% used${sh.oversize ? " · larger than your sheet" : ""}`,
@@ -205,22 +247,72 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
     }
   }
 
-  const base = () => `parametric-${slug(params.name)}`;
+  const base = () => slugName(params.name);
   const ready = () => {
     if (!result?.sheets.length) { toastMsg(error ? "Fix the settings before exporting" : "Still slicing"); return false; }
     return true;
   };
-  function exportZipNow() { if (ready()) offerFile(`${base()}.zip`, exportZip(result!, params), "application/zip"); }
-  function exportSheetNow() { if (ready()) offerFile(`${base()}-${sheetFileName(currentSheet, result!.sheets.length)}`, sheetSVG(result!, currentSheet, params), "image/svg+xml"); }
-  function guideNow() { if (ready()) offerFile(`${base()}-assembly-guide.svg`, assemblyGuideSVG(result!, params), "image/svg+xml"); }
+  const locks = parametricLocks(account.plan, params, result?.stats.partCount);
+
+  /**
+   * Exports with the plan applied. Pro (and servers without accounts) build the file here, clean.
+   * Free asks the server, which slices again and adds the HingeLab mark, so the limits hold (D56).
+   */
+  async function exportWith(what: { kind: "zip" } | { kind: "sheet"; index: number } | { kind: "guide" }, name: string, mime: string, build: () => string | Uint8Array) {
+    if (!ready()) return;
+    const lock = parametricLock(account.plan, params, result!.stats.partCount);
+    if (lock) { setUpgrade(lock); return; }
+    if (!account.configured || account.plan === "pro") { offerFile(name, build(), mime); return; }
+    try {
+      toastMsg("Preparing the export…");
+      const res = await fetch("/api/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ product: "parametric", params, what }) });
+      if (!res.ok) {
+        const err = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Export failed. Try again.";
+        if (res.status === 403) setUpgrade(err); else toastMsg(err);
+        return;
+      }
+      offerFile(name, new Uint8Array(await res.arrayBuffer()), mime);
+      if (what.kind !== "guide") window.setTimeout(() => toastMsg("Exported with the small “Made with HingeLab” mark (Free plan)"), 1600);
+    } catch {
+      toastMsg("Export needs a connection. Check your network and try again.");
+    }
+  }
+  function exportZipNow() { void exportWith({ kind: "zip" }, `${base()}.zip`, "application/zip", () => exportZip(result!, params)); }
+  function exportSheetNow() {
+    if (!ready()) return;
+    void exportWith({ kind: "sheet", index: currentSheet }, `${base()}-${sheetFileName(currentSheet, result!.sheets.length)}`, "image/svg+xml", () => sheetSVG(result!, currentSheet, params));
+  }
+  function guideNow() { void exportWith({ kind: "guide" }, `${base()}-assembly-guide.svg`, "image/svg+xml", () => assemblyGuideSVG(result!, params)); }
   function saveProject() {
     offerFile(`${base()}.hingelab.json`, JSON.stringify({ app: "HingeLab", product: "parametric", version: 1, params }, null, 2), "application/json");
   }
   function openProject() { if (fileRef.current) { fileRef.current.value = ""; fileRef.current.click(); } }
   function newProject() {
+    if (cloud) {
+      toastMsg("Creating a new sculpture…");
+      void openNewCloudProject("parametric").then((err) => { if (err) toastMsg(err); });
+      return;
+    }
     replace(clone(PARAMETRIC_DEFAULTS), true);
     setSelected([]);
     toastMsg("New sculpture");
+  }
+
+  /** In a cloud project, keeps the file in Storage so the project opens on any device. */
+  async function keepInCloud(name: string, bytes: ArrayBuffer): Promise<string | undefined> {
+    const db = cloud ? getBrowserClient() : null;
+    if (!db || !cloud) return undefined;
+    try {
+      const { data } = await db.auth.getUser();
+      if (!data.user) return undefined;
+      setStage("Saving the file to the cloud");
+      return await uploadModelFile(db, data.user.id, cloud.id, name, bytes);
+    } catch (e) {
+      toastMsg(e instanceof Error ? e.message : "The file could not be saved to the cloud");
+      return undefined;
+    } finally {
+      setStage(null);
+    }
   }
 
   async function importModel(f: File) {
@@ -229,7 +321,8 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
     const m: StoredModel = { name: f.name, key: `${f.name}:${f.size}:${f.lastModified}`, bytes: await f.arrayBuffer() };
     setModel(m);
     putStoredModel(m).catch(() => toastMsg("The model is loaded but could not be kept on this device"));
-    replace({ ...params, source: { kind: "mesh", fileName: f.name, units: "auto", upAxis: "Y" } }, true);
+    const fileId = await keepInCloud(f.name, m.bytes);
+    replace({ ...params, source: { kind: "mesh", fileName: f.name, units: "auto", upAxis: "Y", ...(fileId ? { fileId } : {}) } }, true);
     setSelected([]);
     toastMsg(`Imported ${f.name}`);
   }
@@ -244,8 +337,10 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
       const m: StoredModel = { name: f.name, key: `${f.name}:${f.size}:${f.lastModified}`, bytes: packDepth(r.depth), preview: r.preview, depthPreview: r.depthPreview };
       setPhoto(m);
       putStoredPhoto(m).catch(() => toastMsg("The photo is loaded but could not be kept on this device"));
-      const keep = params.source.kind === "image" ? params.source : IMAGE_DEFAULTS;
-      replace({ ...params, source: { ...keep, kind: "image", fileName: f.name } }, true);
+      const fileId = await keepInCloud(`${f.name}.depth`, m.bytes);
+      const { fileId: _old, ...keep } = params.source.kind === "image" ? params.source : IMAGE_DEFAULTS;
+      void _old;
+      replace({ ...params, source: { ...keep, kind: "image", fileName: f.name, ...(fileId ? { fileId } : {}) } }, true);
       setSelected([]);
       toastMsg(`Depth read in ${(r.ms / 1000).toFixed(1)} s (${r.ep})`);
     } catch (e) {
@@ -353,7 +448,7 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
   return (
     <div className="app">
       <MenuBar title={params.name} kind={`Parametric · ${result ? `${result.stats.partCount} parts` : "…"}`} menus={menus} onExport={exportZipNow} exportLabel="Export ZIP" />
-      <ParametricControlBar method={params.method} onMethod={(m) => edit((q) => { q.method = m; }, true)} onProduct={onProduct} />
+      <ParametricControlBar method={params.method} plan={account.plan} onMethod={(m) => edit((q) => { q.method = m; }, true)} onProduct={onProduct} />
       <div className="main">
         <ToolRail
           tool={tool}
@@ -436,6 +531,9 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
           fileName={model?.name ?? null}
           photo={photo}
           depthBusy={depthBusy}
+          plan={account.plan}
+          locks={locks}
+          onUpgrade={() => setUpgrade(parametricLock(account.plan, params, result?.stats.partCount))}
           askUnits={askUnits}
           onEdit={edit}
           onSelect={select}
@@ -466,6 +564,7 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
         }}
       />
       {toast && <div className="toast" role="status">{toast}</div>}
+      {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       <input
         ref={fileRef}
         type="file"
@@ -480,6 +579,11 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
               const j = JSON.parse(String(rd.result)) as { product?: string; params?: Partial<ParametricParams> };
               if (j.product !== "parametric" || !j.params) {
                 toastMsg(j.params ? "That is a Hinge Box or Letters project. Switch products to open it." : "That file is not a HingeLab project");
+                return;
+              }
+              if (cloud) {
+                toastMsg("Opening as a new cloud project…");
+                void importIntoCloud(String(rd.result)).then((err) => { if (err) toastMsg(err); });
                 return;
               }
               replace(mergeParametricParams(j.params), true);

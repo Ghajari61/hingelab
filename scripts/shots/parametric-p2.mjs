@@ -2,7 +2,7 @@
 // Parametric editor (3D and Sheets tabs), its assembly guide, and the ZIP export.
 import fs from "node:fs";
 import path from "node:path";
-import { BASE, OUT, shot, withBrowser } from "./lib.mjs";
+import { BASE, OUT, shot, signInAsPro, withBrowser } from "./lib.mjs";
 
 const assert = (cond, msg) => { if (!cond) throw new Error("FAILED: " + msg); console.log("ok -", msg); };
 const stage = (page) => page.locator(".pe-stage").textContent();
@@ -21,7 +21,9 @@ const download = async (page, click) => {
   return file;
 };
 
+let cleanup = async () => {};
 await withBrowser(async (page) => {
+  cleanup = await signInAsPro(page, "parametric2");
   await page.addInitScript(() => { if (!sessionStorage.getItem("p2")) { localStorage.clear(); sessionStorage.setItem("p2", "1"); } });
   await page.goto(`${BASE}/app/editor/local`);
   await page.getByRole("button", { name: "Parametric", exact: true }).click();
@@ -82,7 +84,7 @@ await withBrowser(async (page) => {
   await page.locator(".pe-units").getByRole("button", { name: "m", exact: true }).click();
   await page.waitForFunction(() => /300 mm wide/.test(document.querySelector(".dock")?.textContent ?? ""), null, { timeout: 60000 });
   assert((await page.locator(".pe-units").count()) === 0, "choosing metres scales the model to 300 mm");
-});
+}).finally(() => cleanup());
 
 /** Binary STL of an axis-aligned box (outward triangles). */
 function boxStl(w, h, d) {

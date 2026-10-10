@@ -15,10 +15,11 @@ export default async function MyBoxesPage() {
     listProjects(session.supabase).catch(() => []),
     session.supabase.from("profiles").select("plan").eq("id", session.user.id).maybeSingle(),
   ]);
+  const plan = planOf(profile.data?.plan);
   return (
     <div className="page site-page">
       <AppHeader current="boxes" />
-      <ProjectsHome projects={projects} products={["hinge-box", "letters"]} limit={projectLimit(planOf(profile.data?.plan))} />
+      <ProjectsHome projects={projects} products={["hinge-box", "letters", "parametric"]} localOnly={plan === "pro" ? [] : ["parametric"]} limit={projectLimit(plan)} />
     </div>
   );
 }

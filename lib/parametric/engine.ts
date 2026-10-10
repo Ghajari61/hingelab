@@ -4,6 +4,7 @@
  */
 import type { ManifoldToplevel, Manifold as ManifoldT } from "manifold-3d";
 import { staircaseProjection } from "./backboard";
+import { cutSpeedOf, estimateCutMinutes } from "./cutTime";
 import { finSpacingOf, LIMITS } from "./defaults";
 import { kerfPart } from "./joints";
 import { polylineLength } from "./label";
@@ -102,14 +103,18 @@ export function computeParametric(p: ParametricParams, src: PreparedMesh, wasm: 
     if (nest.sheets.length > LIMITS.maxSheets) warnings.push({ code: "TOO_MANY_SHEETS", message: `This needs ${nest.sheets.length} sheets; the limit is ${LIMITS.maxSheets}. Use bigger sheets or a smaller model.` });
 
     const partArea = out.parts.reduce((a, q) => a + q.shape.area, 0);
+    const cutLength = out.parts.reduce((a, q) => a + q.cut!.outline.reduce((h, c) => h + perimeter(c), 0) + q.cut!.inner.reduce((h, c) => h + perimeter(c), 0), 0);
+    const engraveLength = out.parts.reduce((a, q) => a + q.engrave.reduce((h, c) => h + polylineLength(c), 0), 0);
+    const contours = out.parts.reduce((a, q) => a + q.cut!.outline.length + q.cut!.inner.length + q.engrave.length, 0);
     const stats: Stats = {
       partCount: out.parts.length,
       planeCount: out.planes.length,
       sheetCount: nest.sheets.length,
-      cutLength: out.parts.reduce((a, q) => a + q.cut!.outline.reduce((h, c) => h + perimeter(c), 0) + q.cut!.inner.reduce((h, c) => h + perimeter(c), 0), 0),
-      engraveLength: out.parts.reduce((a, q) => a + q.engrave.reduce((h, c) => h + polylineLength(c), 0), 0),
+      cutLength,
+      engraveLength,
       partArea,
       materialUsage: nest.sheets.length ? partArea / nest.sheets.reduce((a, s) => a + s.width * s.height, 0) : 0,
+      estimatedCutTime: estimateCutMinutes(cutLength, engraveLength, contours, cutSpeedOf(p.material.id, p.material.T)),
     };
     const result: SliceResult = { method: p.method, planes: out.planes, sections: out.sections, parts: out.parts, sheets: nest.sheets, warnings, stats, guide: out.guide, crossings: out.crossings, bounds: out.bounds ?? b, engine, usesModel };
     const dev = opts.deviation && usesModel ? measureDeviation(result, src.mesh, p) : null;

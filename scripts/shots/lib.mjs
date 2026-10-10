@@ -41,3 +41,19 @@ export async function signIn(page, email, password = "test-password-123") {
 export function uniqueEmail(tag) {
   return `${tag}-${Date.now()}@hingelab.test`;
 }
+
+/** Creates a Pro user in the local Supabase stack, signs the page in, and returns a cleanup function. */
+export async function signInAsPro(page, tag) {
+  const { createClient } = await import("@supabase/supabase-js");
+  const { loadEnv } = await import("vite");
+  const env = loadEnv("development", process.cwd(), "");
+  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return async () => {};
+  const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+  const email = uniqueEmail(tag);
+  const { data, error } = await admin.auth.admin.createUser({ email, password: "test-password-123", email_confirm: true });
+  if (error) throw error;
+  const id = data.user.id;
+  await admin.from("profiles").update({ plan: "pro", plan_status: "active", current_period_end: new Date(Date.now() + 30 * 864e5).toISOString() }).eq("id", id);
+  await signIn(page, email);
+  return async () => { await admin.auth.admin.deleteUser(id); };
+}

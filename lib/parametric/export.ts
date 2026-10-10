@@ -5,6 +5,8 @@
 import { strToU8, zipSync } from "fflate";
 import { EXPORT_LAYERS, r3, type LayerContent, type Layers } from "@/lib/hinge";
 import { signedArea } from "@/lib/letters/polygon";
+import { addWatermark } from "@/lib/plans";
+import { fmtMinutes } from "./cutTime";
 import { finSpacingOf } from "./defaults";
 import { toSheet } from "./nest";
 import type { Contour, ParametricParams, Part, Point, Sheet, SliceResult } from "./types";
@@ -64,8 +66,8 @@ export function sheetSVG(result: SliceResult, sheetIndex: number, p: ParametricP
   layer("slots", S.inner);
   layer("labels", S.engrave);
   layer("outline", S.outline);
-  if (opts.watermark) s += `<g id="watermark" fill="#000000" stroke="none"><text x="${r3(sheet.width - 6)}" y="${r3(sheet.height - 3)}" font-family="Arial, Helvetica, sans-serif" font-size="4" text-anchor="end">Made with HingeLab</text></g>\n`;
-  return s + `</svg>\n`;
+  s += `</svg>\n`;
+  return opts.watermark ? addWatermark(s) : s;
 }
 
 /* ---------- Assembly guide ---------- */
@@ -129,7 +131,8 @@ export function assemblyGuideSVG(result: SliceResult, p: ParametricParams): stri
   const boardW = bb ? bb.x1 - bb.x0 : 0, boardH = bb ? bb.y1 - bb.y0 : 0;
   const W = Math.max(420, boardW + 40, 300);
   const thumbW = Math.min(260, W - 40), thumbH = 180;
-  const steps = [`Cut all ${result.sheets.length} sheet${result.sheets.length === 1 ? "" : "s"}. Every part is engraved with its id.`, ...result.guide];
+  const time = result.stats.estimatedCutTime ? ` (${fmtMinutes(result.stats.estimatedCutTime)} on the laser)` : "";
+  const steps = [`Cut all ${result.sheets.length} sheet${result.sheets.length === 1 ? "" : "s"}${time}. Every part is engraved with its id.`, ...result.guide];
 
   const lineH = 7;
   const top = 34;
@@ -178,6 +181,9 @@ export function assemblyGuideSVG(result: SliceResult, p: ParametricParams): stri
 }
 
 export const projectJSON = (p: ParametricParams) => JSON.stringify({ app: "HingeLab", product: "parametric", version: 1, params: p }, null, 2);
+
+/** File-name stem for a project's exports, e.g. "parametric-Wave-panel". */
+export const slugName = (name: string) => `parametric-${name.trim().replace(/\s+/g, "-").replace(/[^\p{L}\p{N}-]/gu, "").slice(0, 32) || "sculpture"}`;
 
 export const sheetFileName = (i: number, n: number) => `sheet-${String(i + 1).padStart(Math.max(2, String(n).length), "0")}.svg`;
 

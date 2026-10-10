@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { exportHingeForPlan } from "@/lib/billing/exportHinge";
 import { exportLettersForPlan, parseLetterRequest } from "@/lib/billing/exportLetters";
+import { exportParametricForPlan, parseParametricRequest } from "@/lib/billing/exportParametric";
+import { serverManifold } from "@/lib/billing/serverManifold";
 import { bundledFont, serverHarfBuzz, uploadedFont } from "@/lib/billing/letterFonts";
 import { currentPlan } from "@/lib/billing/plan";
 import type { Plan } from "@/lib/plans";
@@ -9,12 +11,13 @@ import type { Plan } from "@/lib/plans";
 const MAX_PARAMS_BODY = 256 * 1024;
 const MAX_FONT_BODY = 4.4 * 1024 * 1024;
 
-type Body = { product?: unknown; params?: unknown; font?: { name?: unknown; data?: unknown } };
+type Body = { product?: unknown; params?: unknown; what?: unknown; font?: { name?: unknown; data?: unknown } };
 
 /**
  * SVG export with the caller's plan applied on the server. Hinge Box: Free gets the
  * "Made with HingeLab" mark and cannot export Pro shapes or patterns. Letters: Free can export
- * only a single-letter Letter Box, with the mark.
+ * only a single-letter Letter Box, with the mark. Parametric: Free can export library shapes as
+ * parallel fins with up to 30 parts, with the mark (a ZIP, one sheet, or the assembly guide).
  */
 export async function POST(request: NextRequest) {
   let body: Body;
@@ -28,6 +31,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
   const { plan } = await currentPlan();
+  if (body.product === "parametric") {
+    const req = parseParametricRequest(body.params, body.what);
+    if ("error" in req) return NextResponse.json({ error: req.error }, { status: 400 });
+    const out = await exportParametricForPlan(req.p, req.what, plan, await serverManifold());
+    if (!out.ok) return NextResponse.json({ error: out.error }, { status: out.status });
+    return new NextResponse(out.body as BodyInit, {
+      headers: {
+        "content-type": out.type,
+        "content-disposition": `attachment; filename="${out.fileName.replace(/[^\w.-]/g, "_")}"`,
+        "cache-control": "no-store",
+        "x-hingelab-plan": plan,
+      },
+    });
+  }
   const out = body.product === "letters" ? await exportLetters(body, plan) : exportHingeForPlan(body.params, plan);
   if (!out.ok) return NextResponse.json({ error: out.error }, { status: out.status });
   return new NextResponse(out.svg, {

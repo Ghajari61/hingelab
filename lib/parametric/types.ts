@@ -306,6 +306,8 @@ export interface Stats {
   partArea: number;
   /** Part area over the area of the sheets used, 0..1. */
   materialUsage: number;
+  /** Minutes on the laser, from the material's speed preset (cutTime.ts). */
+  estimatedCutTime: number;
   /** Distance from points on the model's surface to the nearest assembled part, mm. */
   maxDeviation?: number;
   meanDeviation?: number;

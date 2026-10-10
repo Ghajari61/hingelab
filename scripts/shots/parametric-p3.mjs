@@ -2,7 +2,7 @@
 // and a waffle vase, in the 3D and Sheets tabs, plus the waffle assembly guide.
 import fs from "node:fs";
 import path from "node:path";
-import { BASE, OUT, shot, withBrowser } from "./lib.mjs";
+import { BASE, OUT, shot, signInAsPro, withBrowser } from "./lib.mjs";
 
 const assert = (cond, msg) => { if (!cond) throw new Error("FAILED: " + msg); console.log("ok -", msg); };
 const stage = (page) => page.locator(".pe-stage").textContent();
@@ -22,7 +22,9 @@ const download = async (page, click) => {
 };
 const method = (page, name) => page.getByRole("group", { name: "Slicing method" }).getByRole("button", { name }).click();
 
+let cleanup = async () => {};
 await withBrowser(async (page) => {
+  cleanup = await signInAsPro(page, "parametric3");
   await page.addInitScript(() => { if (!sessionStorage.getItem("p3")) { localStorage.clear(); sessionStorage.setItem("p3", "1"); } });
   await page.goto(`${BASE}/app/editor/local`);
   await page.getByRole("button", { name: "Parametric", exact: true }).click();
@@ -84,4 +86,4 @@ await withBrowser(async (page) => {
   console.log("saved docs/screenshots/parametric-3-waffle-guide.png");
   fs.rmSync(guide);
   await guidePage.close();
-});
+}).finally(() => cleanup());

@@ -21,12 +21,13 @@ Supabase CLI stack and (once you add test keys) Stripe test mode. Variable names
 ## Supabase (hosted)
 
 1. Create a project at https://supabase.com (region close to your users).
-2. Link and push the schema: `npx supabase link --project-ref <ref>` then `npx supabase db push`. This creates the tables, policies and triggers from `supabase/migrations/`.
-3. Authentication → URL Configuration: Site URL = your production URL; add `https://<your-domain>/**` and `http://localhost:3000/**` to Redirect URLs.
-4. Authentication → Providers → Email: keep "Confirm email" on.
-5. Authentication → Providers → Google: create an OAuth client in Google Cloud Console (APIs & Services → Credentials → OAuth client ID → Web application). Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`. Paste the client id and secret into Supabase.
-6. Optional, local Google sign-in: put the same id/secret in `.env.local` as `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` / `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`, set `enabled = true` under `[auth.external.google]` in `supabase/config.toml`, add `http://127.0.0.1:55421/auth/v1/callback` to the Google client, and restart the stack.
-7. Authentication → Emails → SMTP: connect a sending service (Resend, Postmark, …) before launch; the built-in sender is rate limited.
+2. Link and push the schema: `npx supabase link --project-ref <ref>` then `npx supabase db push`. This creates the tables, policies and triggers from `supabase/migrations/`, and the private Storage bucket `models` (files behind Parametric cloud projects) with its policies.
+3. Storage → Settings: raise the global upload limit to at least **100 MB**, the size of the largest 3D file the Parametric editor accepts (the bucket itself is set to 100 MB, but the project-wide limit caps it; on the Free Supabase plan the cap is 50 MB, so larger models would stay on the device only).
+4. Authentication → URL Configuration: Site URL = your production URL; add `https://<your-domain>/**` and `http://localhost:3000/**` to Redirect URLs.
+5. Authentication → Providers → Email: keep "Confirm email" on.
+6. Authentication → Providers → Google: create an OAuth client in Google Cloud Console (APIs & Services → Credentials → OAuth client ID → Web application). Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`. Paste the client id and secret into Supabase.
+7. Optional, local Google sign-in: put the same id/secret in `.env.local` as `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` / `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`, set `enabled = true` under `[auth.external.google]` in `supabase/config.toml`, add `http://127.0.0.1:55421/auth/v1/callback` to the Google client, and restart the stack.
+8. Authentication → Emails → SMTP: connect a sending service (Resend, Postmark, …) before launch; the built-in sender is rate limited.
 
 ## Stripe (test mode)
 
@@ -58,6 +59,8 @@ Set these in Vercel → Project → Settings → Environment Variables (Producti
 1. Read `/terms` and `/privacy` (app/terms/page.tsx, app/privacy/page.tsx). They are plain-language drafts written for this app, not legal advice; have them checked for your country and add your business name if required.
 2. Custom domain: Vercel → Project → Settings → Domains → add your domain and follow the DNS instructions. Then set `NEXT_PUBLIC_SITE_URL` to it, add it to Supabase Redirect URLs, and update the Stripe webhook endpoint.
 3. Check the social preview: after deploying, paste the URL into https://www.opengraph.xyz.
+4. Parametric cut-time estimates use speed presets for a typical 40–60 W CO2 laser (`lib/parametric/cutTime.ts`). Cut one sculpture on your own machine and adjust the presets if the estimate is far off.
+5. Free Parametric exports are built on the server with manifold (WebAssembly). After the first deploy, export a small Free sculpture once and check Vercel → Logs for the `/api/export` function (time and memory); raise the function memory in Vercel if it is close to the limit.
 
 ## Publish the work
 

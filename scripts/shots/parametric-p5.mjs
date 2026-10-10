@@ -3,7 +3,7 @@
 // score are shown. Also steps the Slice Inspector with its buttons and the arrow keys.
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { BASE, shot, withBrowser } from "./lib.mjs";
+import { BASE, shot, signInAsPro, withBrowser } from "./lib.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PORTRAIT = path.join(here, "fixtures", "portrait.jpg");
@@ -20,7 +20,9 @@ const waitSliced = async (page, prev = "", timeout = 120000) => {
 };
 const dockText = async (page) => (await page.locator(".dock").textContent()).replace(/\s+/g, " ");
 
+let cleanup = async () => {};
 await withBrowser(async (page) => {
+  cleanup = await signInAsPro(page, "parametric5");
   const logs = [];
   page.on("console", (m) => { if (m.type() === "error") logs.push(m.text()); });
   await page.addInitScript(() => { if (!sessionStorage.getItem("p5")) { localStorage.clear(); indexedDB.deleteDatabase("hingelab-models"); sessionStorage.setItem("p5", "1"); } });
@@ -100,4 +102,4 @@ await withBrowser(async (page) => {
   dock = await dockText(page);
   assert(/portrait\.jpg/.test(dock), "photo source kept after reload");
   if (logs.length) console.log("console errors:", logs.join("\n"));
-});
+}).finally(() => cleanup());

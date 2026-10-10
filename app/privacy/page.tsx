@@ -10,12 +10,12 @@ export default function PrivacyPage() {
       <p>HingeLab collects as little as it needs to run the editor, your account and your subscription.</p>
 
       <h2>Without an account</h2>
-      <p>The editor stores your current box and settings in your browser’s local storage. When you export, your box settings are sent to our server, which builds the file and does not keep it. Fonts you upload in Letters stay in your browser; if you export with one, it is sent along with the settings only to build that file and is not kept.</p>
+      <p>The editor stores your current box and settings in your browser’s local storage. When you export, your box settings are sent to our server, which builds the file and does not keep it. Fonts you upload in Letters stay in your browser; if you export with one, it is sent along with the settings only to build that file and is not kept. In Parametric, 3D files and photos you open are processed in your browser and kept only on your device; the depth of a photo is estimated in your browser, and the photo is never uploaded.</p>
 
       <h2>With an account</h2>
       <ul>
         <li><b>Account:</b> your email address, and your name and profile picture if you sign in with Google.</li>
-        <li><b>Projects:</b> the settings, name and a small preview image of each cloud project you save.</li>
+        <li><b>Projects:</b> the settings, name and a small preview image of each cloud project you save. For a Parametric cloud project, the 3D file you imported, or the depth map made from your photo (not the photo itself), is stored privately with the project and deleted with it.</li>
         <li><b>Plan:</b> your plan, subscription status and renewal date.</li>
       </ul>
       <p>We use this data only to provide HingeLab. We do not sell it, and we do not use advertising or tracking cookies.</p>
@@ -25,7 +25,7 @@ export default function PrivacyPage() {
 
       <h2>Service providers</h2>
       <ul>
-        <li>Supabase: account sign-in and project database.</li>
+        <li>Supabase: account sign-in, project database and project files.</li>
         <li>Stripe: subscriptions and payments.</li>
         <li>Vercel: website hosting.</li>
       </ul>

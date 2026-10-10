@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { MATERIALS, polyD, r3, type LayerKey } from "@/lib/hinge";
 import {
-  CLOCK_INSERTS, FORMULA_DEFAULTS, IMAGE_DEFAULTS, LEAF_CLOCK, LIBRARY, finSpacingOf,
+  CLOCK_INSERTS, FORMULA_DEFAULTS, IMAGE_DEFAULTS, LEAF_CLOCK, LIBRARY, cutSpeedOf, finSpacingOf, fmtMinutes,
   type CurveNormalParams, type FormulaSpec, type LibraryId, type ModelUnits, type ParametricParams, type Part, type SliceResult, type WarningCode,
 } from "@/lib/parametric";
 import { NumberField } from "@/components/editor/NumberField";
@@ -12,13 +12,16 @@ import { Sec } from "@/components/editor/PanelDock";
 import { fmtLen, type Units } from "@/components/editor/format";
 import { PARAM_FIELDS, type ParamField, type ParamSection } from "./fields";
 import type { StoredModel } from "./modelStore";
+import { LockIcon } from "@/components/billing/Lock";
+import { FREE_PARAMETRIC_PARTS, parametricLocks, type Plan } from "@/lib/plans";
 
 type Edit = (f: (q: ParametricParams) => void, record: boolean) => void;
 
 function Choice<T extends string>({ label, value, options, onPick }: {
   label: string;
   value: T;
-  options: { v: T; text: string; title?: string; disabled?: boolean }[];
+  /** `locked`: a Pro feature this plan can preview but not export. */
+  options: { v: T; text: string; title?: string; disabled?: boolean; locked?: boolean }[];
   onPick: (v: T) => void;
 }) {
   return (
@@ -26,7 +29,7 @@ function Choice<T extends string>({ label, value, options, onPick }: {
       <div className="rowlabel">{label}</div>
       <div className="iconseg full" role="group" aria-label={label}>
         {options.map((o) => (
-          <button key={o.v} type="button" title={o.title} disabled={o.disabled} aria-pressed={value === o.v} onClick={() => onPick(o.v)}>{o.text}</button>
+          <button key={o.v} type="button" data-v={o.v} title={o.locked ? `${o.title ?? o.text} (Pro)` : o.title} disabled={o.disabled} aria-pressed={value === o.v} className={o.locked ? "locked" : undefined} onClick={() => onPick(o.v)}>{o.text}{o.locked && <LockIcon />}</button>
         ))}
       </div>
     </>
@@ -126,8 +129,12 @@ function PartDrawing({ part }: { part: Part }) {
 }
 
 export function ParametricDock({
-  params, result, error, busy, units, selected, fileName, photo, depthBusy, askUnits, onEdit, onSelect, onImport, onImportPhoto, onExportSheet, onExportZip, onGuide,
+  params, result, error, busy, units, selected, fileName, photo, depthBusy, plan, locks, askUnits, onEdit, onSelect, onImport, onImportPhoto, onUpgrade, onExportSheet, onExportZip, onGuide,
 }: {
+  plan: Plan;
+  /** Pro features this design uses that the plan does not include (preview only). */
+  locks: string[];
+  onUpgrade: () => void;
   params: ParametricParams;
   result: SliceResult | null;
   error: string | null;
@@ -189,6 +196,8 @@ export function ParametricDock({
   const layerVis = (key: LayerKey) => onEdit((q) => { q.layers[key].vis = !q.layers[key].vis; }, true);
   const layerExp = (key: LayerKey, exp: boolean) => onEdit((q) => { q.layers[key].exp = exp; }, true);
   const sourceMeta = kind === "library" ? LIBRARY.find((l) => l.id === src.id)?.name : kind === "mesh" || kind === "image" ? src.fileName : formula?.type === "revolution" ? "Turned formula" : formula?.type === "radial-profile" ? "Radial profile formula" : "Surface formula";
+  const sourceLocked = (k: string) => parametricLocks(plan, { source: { kind: k }, method: "parallel" }).length > 0;
+  const speed = cutSpeedOf(params.material.id, params.material.T);
   const hubCrowd = result?.warnings.find((w) => w.code === "FINS_COLLIDE_AT_HUB")?.data;
   const cn = params.curveNormal;
   const editCurve = (f: (c: CurveNormalParams) => void, record: boolean) => onEdit((q) => f(q.curveNormal), record);
@@ -203,9 +212,9 @@ export function ParametricDock({
           onEdit((q) => { q.source = v === "library" ? { kind: "library", id: "abstract-head-cc0" } : structuredClone(FORMULA_DEFAULTS.heightfield); }, true);
         }} options={[
           { v: "library", text: "Library" },
-          { v: "mesh", text: "3D file", title: "Import an STL, OBJ or GLB model" },
-          { v: "image", text: "Photo", title: "Turn a photo into a relief using estimated depth" },
-          { v: "formula", text: "Formula", title: "A surface z = f(x, y) or a turned shape r = f(h)" },
+          { v: "mesh", text: "3D file", title: "Import an STL, OBJ or GLB model", locked: sourceLocked("mesh") },
+          { v: "image", text: "Photo", title: "Turn a photo into a relief using estimated depth", locked: sourceLocked("image") },
+          { v: "formula", text: "Formula", title: "A surface z = f(x, y) or a turned shape r = f(h)", locked: sourceLocked("formula") },
         ]} />
         {depthBusy && <p className="note" role="status">Reading depth from the photo. The first time downloads the 27 MB depth model.</p>}
         {kind === "image" && (
@@ -496,6 +505,15 @@ export function ParametricDock({
         ) : (
           <>
             {error && <div className="verdict err"><span className="dot" /><span>{error}</span></div>}
+            {locks.length > 0 && (
+              <div className="verdict warn pe-pro" data-testid="pro-note">
+                <span className="dot" />
+                <span>
+                  Pro: {locks.join(", ")}. Preview it freely; exporting needs Pro. The Free plan exports library shapes as parallel fins with up to {FREE_PARAMETRIC_PARTS} parts.
+                  <button type="button" onClick={onUpgrade}>Upgrade</button>
+                </span>
+              </div>
+            )}
             <div className={`verdict ${serious ? "warn" : "ok"}`}>
               <span className="dot" />
               <span>{serious ? `${result.stats.partCount} parts, with things to check below.` : `Ready to cut: ${result.stats.partCount} parts on ${result.stats.sheetCount} sheet${result.stats.sheetCount === 1 ? "" : "s"}.`}</span>
@@ -506,6 +524,7 @@ export function ParametricDock({
               <dt>Cut length</dt><dd>{(result.stats.cutLength / 1000).toFixed(2)} m</dd>
               <dt>Engrave length</dt><dd>{(result.stats.engraveLength / 1000).toFixed(2)} m</dd>
               <dt>Material used</dt><dd>{Math.round(result.stats.materialUsage * 100)}%</dd>
+              <dt title={`Laser time at ${speed.cut} mm/s cutting${speed.passes > 1 ? ` in ${speed.passes} passes` : ""} and ${speed.engrave} mm/s scoring, the preset for this material on a 40–60 W CO2 laser`}>Cut time</dt><dd data-testid="cut-time">{fmtMinutes(result.stats.estimatedCutTime)}</dd>
               <dt>Section method</dt><dd>{result.engine === "manifold" ? "Exact (closed solid)" : "Fallback (open mesh)"}</dd>
               {result.stats.fidelity !== undefined && (
                 <>

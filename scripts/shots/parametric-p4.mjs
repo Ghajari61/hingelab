@@ -2,7 +2,7 @@
 // the leaf-shaped wall clock built with "Along a curve" from formulas only, plus its assembly guide.
 import fs from "node:fs";
 import path from "node:path";
-import { BASE, OUT, shot, withBrowser } from "./lib.mjs";
+import { BASE, OUT, shot, signInAsPro, withBrowser } from "./lib.mjs";
 
 const assert = (cond, msg) => { if (!cond) throw new Error("FAILED: " + msg); console.log("ok -", msg); };
 const stage = (page) => page.locator(".pe-stage").textContent();
@@ -23,7 +23,9 @@ const download = async (page, click) => {
 const method = (page, name) => page.getByRole("group", { name: "Slicing method" }).getByRole("button", { name }).click();
 const dockText = async (page) => (await page.locator(".dock").textContent()).replace(/\s+/g, " ");
 
+let cleanup = async () => {};
 await withBrowser(async (page) => {
+  cleanup = await signInAsPro(page, "parametric4");
   await page.addInitScript(() => { if (!sessionStorage.getItem("p4")) { localStorage.clear(); sessionStorage.setItem("p4", "1"); } });
   await page.goto(`${BASE}/app/editor/local`);
   await page.getByRole("button", { name: "Parametric", exact: true }).click();
@@ -90,4 +92,4 @@ await withBrowser(async (page) => {
   console.log("saved docs/screenshots/parametric-4-leaf-clock-guide.png");
   fs.rmSync(guide);
   await guidePage.close();
-});
+}).finally(() => cleanup());
