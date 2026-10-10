@@ -5,6 +5,7 @@
 import { strToU8, zipSync } from "fflate";
 import { EXPORT_LAYERS, r3, type LayerContent, type Layers } from "@/lib/hinge";
 import { signedArea } from "@/lib/letters/polygon";
+import { SHEET_SPACING } from "@/lib/fit/arrange";
 import { calibrationBar } from "@/lib/fit/calibration";
 import { addWatermark } from "@/lib/plans";
 import { fmtMinutes } from "./cutTime";
@@ -62,9 +63,35 @@ export function sheetSVG(result: SliceResult, sheetIndex: number, p: ParametricP
   const sheet = result.sheets[sheetIndex];
   const parts = new Map(result.parts.map(q => [q.id, q]));
   const S = sheetPaths(sheet, parts, p.material.K);
-  const W = r3(sheet.width), H = r3(sheet.height);
   const ids = sheet.items.map(it => it.partId).join(", ");
   const comment = `HingeLab Parametric: ${p.name}, sheet ${sheetIndex + 1} of ${result.sheets.length}${sheet.oversize ? " (OVERSIZE: larger than the material)" : ""}. Material ${p.material.T} mm, kerf ${p.material.K} mm (compensated). Parts: ${ids}. Cut order: inner cuts, ${S.score.length ? "score, " : ""}engrave, outline.`;
+  return layeredSVG(sheet.width, sheet.height, comment, S, p, opts);
+}
+
+/**
+ * Every sheet in one layered SVG, stacked top to bottom with a gap as on the canvas (the main
+ * export; the ZIP and single sheets are extras).
+ */
+export function allSheetsSVG(result: SliceResult, p: ParametricParams, opts: { watermark?: boolean } = {}): string {
+  const parts = new Map(result.parts.map(q => [q.id, q]));
+  const S: SheetPaths = { outline: [], inner: [], engrave: [], score: [], fills: [] };
+  let y = 0, W = 0;
+  for (const sh of result.sheets) {
+    const cal = sh.calibration && { ...sh.calibration, y: sh.calibration.y + y };
+    const one = sheetPaths({ ...sh, calibration: cal, items: sh.items.map(it => ({ ...it, y: it.y + y })) }, parts, p.material.K);
+    for (const k of ["outline", "inner", "engrave", "score", "fills"] as const) S[k].push(...one[k]);
+    W = Math.max(W, sh.width);
+    y += sh.height + SHEET_SPACING;
+  }
+  const H = Math.max(0, y - SHEET_SPACING);
+  const n = result.sheets.length;
+  const sizes = result.sheets.map(sh => `${r3(sh.width)} × ${r3(sh.height)}${sh.oversize ? " (OVERSIZE)" : ""}`).join(", ");
+  const comment = `HingeLab Parametric: ${p.name}, ${n} sheet${n === 1 ? "" : "s"} stacked top to bottom ${SHEET_SPACING} mm apart (${sizes} mm). Material ${p.material.T} mm, kerf ${p.material.K} mm (compensated). Parts: ${result.parts.map(q => q.id).join(", ")}. Cut order: inner cuts, ${S.score.length ? "score, " : ""}engrave, outline.`;
+  return layeredSVG(W, H, comment, S, p, opts);
+}
+
+function layeredSVG(width: number, height: number, comment: string, S: SheetPaths, p: ParametricParams, opts: { watermark?: boolean }): string {
+  const W = r3(width), H = r3(height);
   let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">\n`;
   s += `<!-- ${comment.replace(/--/g, "- -")} -->\n`;
   const layer = (key: "outline" | "slots" | "labels" | "hinge", paths: string[], name = LAYER(key).name) => {
@@ -209,10 +236,11 @@ export const slugName = (name: string) => `parametric-${name.trim().replace(/\s+
 
 export const sheetFileName = (i: number, n: number) => `sheet-${String(i + 1).padStart(Math.max(2, String(n).length), "0")}.svg`;
 
-/** All sheets, the assembly guide and the project file as one ZIP. */
+/** Each sheet, all sheets in one file, the assembly guide and the project file as one ZIP. */
 export function exportZip(result: SliceResult, p: ParametricParams, opts: { watermark?: boolean } = {}): Uint8Array {
   const files: Record<string, Uint8Array> = {};
   result.sheets.forEach((_, i) => { files[sheetFileName(i, result.sheets.length)] = strToU8(sheetSVG(result, i, p, opts)); });
+  files["all-sheets.svg"] = strToU8(allSheetsSVG(result, p, opts));
   files["assembly-guide.svg"] = strToU8(assemblyGuideSVG(result, p));
   files["project.hingelab.json"] = strToU8(projectJSON(p));
   return zipSync(files, { level: 6 });

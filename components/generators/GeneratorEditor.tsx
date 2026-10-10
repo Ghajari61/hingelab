@@ -233,6 +233,15 @@ function GenEditor({ def, onProduct, onHome, start }: {
     if (svg) offerFile(def.fileName(built) + ".svg", svg, "image/svg+xml");
   }
 
+  async function exportDXFNow() {
+    const svg = await exportedSVG();
+    if (!svg) return;
+    const { svgToDXF } = await import("@/lib/export/dxf");
+    const out = svgToDXF(svg);
+    offerFile(def.fileName(built) + ".dxf", out.dxf, "application/dxf");
+    if (out.skipped) window.setTimeout(() => toastMsg("Pictures cannot go into a DXF: engrave them from the SVG"), 1600);
+  }
+
   async function copySVG() {
     const svg = await exportedSVG();
     if (!svg) return;
@@ -343,6 +352,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       { label: "Save as my preset…", kbd: "", run: () => setModal({ type: "preset", name: params.name }) },
       "-",
       { label: "Export SVG…", kbd: "Ctrl+E", run: exportNow },
+      { label: "Export DXF…", kbd: "", run: () => void exportDXFNow() },
       { label: "Copy SVG code", kbd: "", run: copySVG },
       "-",
       { label: "Rename…", kbd: "", run: () => setModal({ type: "rename", name: params.name }) },
@@ -461,7 +471,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
             />
           </section>
         </div>
-        <DockColumn onExport={exportNow} exportLabel="Export SVG" units={units} onUnits={setUnits} onResetAll={resetAll}>
+        <DockColumn onExport={exportNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export as DXF (R12, mm)", run: () => void exportDXFNow() }]} units={units} onUnits={setUnits} onResetAll={resetAll}>
           <GeneratorDock
             def={def}
             params={params}
@@ -487,7 +497,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
         x={cursor.x}
         y={cursor.y}
         zoom={zoom}
-        parts={out && lay ? { count: out.parts.length, used: `${fmtLen(lay.width, units, true)} × ${fmtLen(lay.height, units, true)}` } : null}
+        parts={out && lay ? { count: lay.items.filter((it) => it.i >= 0).length, used: `${fmtLen(lay.width, units, true)} × ${fmtLen(lay.height, units, true)}` } : null}
         fit={fit}
         saved={saved}
       />

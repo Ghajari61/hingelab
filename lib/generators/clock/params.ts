@@ -66,6 +66,17 @@ export interface ClockParams extends GenBase {
     tickWidth: number;
     dot: number;
     cut: boolean;
+    /** Numerals turn to follow the dial (their tops point outward) instead of standing upright. */
+    follow: boolean;
+  };
+  /** A line of text bent along the dial, inside the markers. */
+  inscription: {
+    text: string;
+    at: "top" | "bottom";
+    fontId: string;
+    size: number;
+    /** Gap between the markers and the text, mm. */
+    gap: number;
   };
   hands: {
     style: HandStyle;
@@ -91,7 +102,8 @@ export const CLOCK_DEFAULTS: ClockParams = {
   sheet: { ...SHEET_EXTRAS },
   layers: clone(HINGE.layers),
   face: { shape: "round", size: 300, sides: 6, corner: 6, rays: 24, depth: 22, path: "", layers: "ring", ring: 40, centre: 60 },
-  markers: { style: "numerals", numerals: "roman", quarters: false, fontId: "archivo-black", size: 20, inset: 8, minutes: true, tickLength: 10, tickWidth: 3, dot: 8, cut: false },
+  markers: { style: "numerals", numerals: "roman", quarters: false, fontId: "archivo-black", size: 20, inset: 8, minutes: true, tickLength: 10, tickWidth: 3, dot: 8, cut: false, follow: false },
+  inscription: { text: "", at: "top", fontId: "archivo-black", size: 10, gap: 6 },
   hands: { style: "spade", hour: 70, minute: 100, width: 10, tail: 20 },
   movement: { ...MOVEMENTS[0] },
   hanger: "keyhole",

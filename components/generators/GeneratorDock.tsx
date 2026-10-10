@@ -14,7 +14,7 @@ import { cleanExtras, GEN_LAYER_NAMES } from "@/lib/generators/output";
 import { getPath, setPath } from "@/lib/generators/path";
 import { Dices } from "lucide-react";
 import { ImagePicker } from "./ImagePicker";
-import type { AnyGenerator, FieldSpec, GenBase, GenOutput, NumberSpec } from "@/lib/generators/types";
+import { MAX_COPIES, SHEET_EXTRAS, type AnyGenerator, type FieldSpec, type GenBase, type GenOutput, type NumberSpec } from "@/lib/generators/types";
 
 type P = GenBase & Record<string, unknown>;
 
@@ -28,6 +28,7 @@ const MAT_FIELDS: BaseField[] = [
   { id: "T", label: "Thick", len: true, step: 0.1, min: 0.5, max: 30, mat: true },
   { id: "K", label: "Kerf", len: true, step: 0.01, min: 0, max: 1, mat: true },
 ];
+const COPIES_FIELD: BaseField = { id: "sheet.copies", label: "Copies", step: 1, min: 1, max: MAX_COPIES };
 const SHEET_FIELDS: BaseField[] = [
   { id: "bedW", label: "Bed W", len: true, step: 10, min: 50 },
   { id: "bedH", label: "Bed H", len: true, step: 10, min: 50 },
@@ -197,6 +198,7 @@ export function GeneratorDock({
         >
           <div className="grid2">{SHEET_FIELDS.map((f) => num(f, params[f.id as "bedW"], defaults[f.id as "bedW"]))}</div>
         </SheetSection>
+        <div className="grid2">{num(COPIES_FIELD, extras.copies, SHEET_EXTRAS.copies)}</div>
         <div className="gen-choice">
           <div className="rowlabel">Nesting</div>
           <div className="iconseg full" role="group" aria-label="Nesting">

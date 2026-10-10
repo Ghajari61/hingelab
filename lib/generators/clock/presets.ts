@@ -70,4 +70,14 @@ export const CLOCK_PRESETS: GenPreset<ClockParams>[] = [
       hands: { style: "arrow", hour: 65, minute: 95, width: 12, tail: 16 },
     },
   },
+  {
+    id: "station", name: "Station clock", note: "Numerals follow the dial, name along the top",
+    params: {
+      name: "Station clock",
+      face: { size: 320, layers: "single" },
+      markers: { style: "numerals", numerals: "roman", fontId: "archivo-black", size: 22, inset: 10, minutes: true, follow: true },
+      inscription: { text: "GRAND CENTRAL", at: "top", fontId: "archivo-black", size: 9, gap: 8 },
+      hands: { style: "spade", hour: 70, minute: 105, width: 10, tail: 20 },
+    },
+  },
 ];

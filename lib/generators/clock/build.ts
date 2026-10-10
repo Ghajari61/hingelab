@@ -8,6 +8,7 @@ import {
   TAU, arc, bboxOf, circle, customOutline, deg, distToContour, pointInContour, rect, regularPolygon, roundCorners,
   roundedRect, signedArea, stadium, transform,
 } from "../geom";
+import { arcSpan, bendAround } from "../textPath";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { MOVEMENT_BOX, type ClockParams } from "./params";
 
@@ -132,12 +133,30 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext): Mark
       if (!shape) { res.loading = true; continue; }
       for (const c of shape.missing) if (!res.missing.includes(c)) res.missing.push(c);
       const a = h * 30, [dx, dy] = dirOf(a);
-      const extent = Math.abs(shape.width * dx) + Math.abs(shape.height * dy);
+      const extent = m.follow ? shape.height : Math.abs(shape.width * dx) + Math.abs(shape.height * dy);
       const r = anchor(a) - extent / 2;
-      for (const c of shape.contours) res.engrave.push(c.map(([x, y]) => [x + dx * r, y + dy * r] as Pt));
+      for (const c of shape.contours) res.engrave.push((m.follow ? rot(c, a) : c).map(([x, y]) => [x + dx * r, y + dy * r] as Pt));
     }
   }
   return res;
+}
+
+/** Where the inscription runs: its centre-line radius, its extent across the line, and the angle it spans. */
+export interface Inscription { engrave: Contour[]; R: number; size: number; span: number; missing: string[]; loading: boolean }
+
+/** The inscription bent along the dial inside the markers (and inside the ring on a layered face, where it shows). */
+export function buildInscription(p: ClockParams, outline: Contour, ringInner: Contour | null, ctx: BuildContext): Inscription | null {
+  const ins = p.inscription;
+  if (!ins.text.trim()) return null;
+  const a = ins.at === "top" ? 0 : 180;
+  const band = p.markers.style === "none" && !p.markers.minutes ? 0 : p.markers.inset + markerDepth(p);
+  let R = markerEdge(p, outline, a) - band - ins.gap - ins.size * 0.6;
+  if (ringInner) R = Math.min(R, edgeDistance(ringInner, a) - 2 - ins.size * 0.6);
+  if (!ctx.text) return { engrave: [], R, size: ins.size, span: 0, missing: [], loading: true };
+  const shape = ctx.text(ins.text.replace(/\s+/g, " ").trim(), ins.fontId, ins.size);
+  if (!shape) return { engrave: [], R, size: ins.size, span: 0, missing: [], loading: true };
+  const span = arcSpan(shape.width, R);
+  return { engrave: R > ins.size ? bendAround(shape.contours, R, ins.at) : [], R, size: shape.height, span, missing: shape.missing, loading: false };
 }
 
 /** The movement's minute-hand hole: a circle with two flats. */
@@ -195,6 +214,7 @@ export interface ClockGeometry {
   hangerHidden: boolean;
   missing: string[];
   loading: boolean;
+  inscription: Inscription | null;
 }
 
 /**
@@ -235,6 +255,8 @@ export function clockGeometry(p: ClockParams, ctx: BuildContext = {}): (ClockGeo
   const onRing = layered && p.markers.inset + depth <= f.ring - 1.5;
   const straddle = layered && !onRing && p.markers.inset < f.ring + 1.5;
   const markersOn: ClockGeometry["markersOn"] = !layered ? "face" : onRing ? "ring" : "back";
+  const inscription = buildInscription(p, outline, ringInner, ctx);
+  const insEngrave = inscription?.engrave ?? [];
   const hangerHidden = !hanger || p.stand || (!!ringInner && hanger.every((q) => !pointInContour(q, ringInner!) && distToContour(q, ringInner!) >= 1.5));
 
   // The stand: a tab under the back plate that pushes through a slot in the base.
@@ -248,13 +270,13 @@ export function clockGeometry(p: ClockParams, ctx: BuildContext = {}): (ClockGeo
   const backHoles = [shaft, ...(hanger ? [hanger] : [])];
   if (!layered) {
     parts.push({
-      id: "face", name: "Face", outer: backOuter, holes: [...backHoles, ...(markers.holes)], engrave: markers.engrave, place: placeAt(0),
+      id: "face", name: "Face", outer: backOuter, holes: [...backHoles, ...(markers.holes)], engrave: [...markers.engrave, ...insEngrave], place: placeAt(0),
     });
   } else {
     parts.push({
       id: "back", name: "Back plate", outer: backOuter,
       holes: [...backHoles, ...(markersOn === "back" ? markers.holes : [])],
-      engrave: markersOn === "back" ? markers.engrave : [],
+      engrave: [...(markersOn === "back" ? markers.engrave : []), ...insEngrave],
       place: placeAt(0),
     });
     parts.push({
@@ -278,10 +300,14 @@ export function clockGeometry(p: ClockParams, ctx: BuildContext = {}): (ClockGeo
       holes: [rect(-(tabW + clr) / 2, -(T + clr) / 2, tabW + clr, T + clr)], place: { x: 0, y: 0, z: 0 },
     });
   }
-  return { parts, outline, ringInner, markersOn, straddle, keyholeFits, hangerHidden, missing: markers.missing, loading: markers.loading };
+  const missing = [...markers.missing, ...(inscription?.missing ?? []).filter((c) => !markers.missing.includes(c))];
+  return { parts, outline, ringInner, markersOn, straddle, keyholeFits, hangerHidden, missing, loading: markers.loading || !!inscription?.loading, inscription };
 }
 
-export function buildClock(p: ClockParams, ctx: BuildContext): GenOutput {
+/** The build output plus where the inscription ended up (for the checks). */
+export type ClockOutput = GenOutput & { inscription?: { R: number; span: number; size: number } };
+
+export function buildClock(p: ClockParams, ctx: BuildContext): ClockOutput {
   const g = clockGeometry(p, ctx);
   if ("error" in g) return { parts: [], stats: [], error: g.error };
   const thick = centreLayers(p) * p.T;
@@ -301,7 +327,8 @@ export function buildClock(p: ClockParams, ctx: BuildContext): GenOutput {
       ...(p.hands.style !== "none" ? [{ label: "Hands", value: `hour ${p.hands.hour} mm, minute ${p.hands.minute} mm` }] : []),
     ],
     assembly,
-    notice: g.loading ? "Loading the numeral font…" : undefined,
+    notice: g.loading ? "Loading the font…" : undefined,
     missing: g.missing,
+    inscription: g.inscription && !g.inscription.loading ? { R: g.inscription.R, span: g.inscription.span, size: g.inscription.size } : undefined,
   };
 }

@@ -69,6 +69,8 @@ const sections: SectionSpec<BoxesParams>[] = [
       { kind: "number", key: "sign.width", label: "Width", unit: "mm", min: 60, max: 600, step: 1, help: "Width of the sign." },
       { kind: "number", key: "sign.height", label: "Height", unit: "mm", min: 30, max: 300, step: 1, help: "Height of the sign above the base." },
       { kind: "number", key: "sign.corner", label: "Corner radius", unit: "mm", min: 0, max: 40, step: 0.5, help: "Rounds the sign's corners." },
+      { kind: "number", key: "sign.border", label: "Border inset", unit: "mm", min: 0, max: 40, step: 0.5, help: "Engraves a border line this far in from the edge, following the outline; 0 leaves it off." },
+      { kind: "number", key: "sign.borderWidth", label: "Border width", unit: "mm", min: 0.3, max: 10, step: 0.1, show: (p) => p.sign.border > 0, help: "Width of the engraved border line." },
       { kind: "number", key: "sign.base", label: "Base depth", unit: "mm", min: 30, max: 150, step: 1, help: "Front-to-back size of the base; deeper bases keep tall signs steady." },
     ],
   },

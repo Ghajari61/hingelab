@@ -4,7 +4,7 @@ import { CAL_STRIP } from "@/lib/fit/calibration";
 import { intersectShapes, offsetShapes, shapeContours, totalArea, unionShapes } from "@/lib/letters/polygon";
 import { ALL_GENERATORS } from "../all";
 import { arrangeGenerator, cleanExtras, genSVG, type CutPart, type GenArranged } from "../output";
-import { SHEET_EXTRAS, type GenBase } from "../types";
+import { MAX_COPIES, SHEET_EXTRAS, type GenBase } from "../types";
 import { CTX } from "./ctx";
 
 const at = (pt: CutPart, ox: number, oy: number) =>
@@ -33,8 +33,29 @@ describe("sheet extras", () => {
   it("old saves clean to the defaults", () => {
     expect(cleanExtras(undefined)).toEqual(SHEET_EXTRAS);
     expect(cleanExtras({ nest: "bogus", calibration: "yes", labels: 1 })).toEqual(SHEET_EXTRAS);
-    expect(cleanExtras({ nest: "outline", calibration: true, labels: true })).toEqual({ nest: "outline", calibration: true, labels: true });
+    expect(cleanExtras({ nest: "outline", calibration: true, labels: true })).toEqual({ nest: "outline", calibration: true, labels: true, copies: 1 });
+    expect(cleanExtras({ copies: 7.4 }).copies).toBe(7);
+    expect(cleanExtras({ copies: 0 }).copies).toBe(1);
+    expect(cleanExtras({ copies: 1e9 }).copies).toBe(MAX_COPIES);
   });
+
+  it("copies lay out every part that many times, apart and on the sheets", () => {
+    for (const def of ALL_GENERATORS) {
+      const p = def.defaults();
+      const one = arrangeGenerator(def, p, CTX);
+      for (const nest of ["box", "outline"] as const) {
+        const q = { ...p, sheet: { ...SHEET_EXTRAS, nest, copies: 3 } };
+        const a = arrangeGenerator(def, q, CTX);
+        const items = a.lay!.items;
+        expect(items.length, `${def.id} ${nest}`).toBe(3 * one.lay!.items.length);
+        expect(new Set(items.map((it) => it.pt.id)).size, def.id).toBe(items.length);
+        for (const name of new Set(one.lay!.items.map((it) => it.pt.name))) {
+          expect(items.filter((it) => it.pt.name === name).length, `${def.id} ${name}`).toBe(3 * one.lay!.items.filter((it) => it.pt.name === name).length);
+        }
+        checkSheets(a as GenArranged<GenBase>, p.gap, 0, `${def.id} × 3 ${nest}`);
+      }
+    }
+  }, 60000);
 
   for (const def of ALL_GENERATORS) {
     describe(def.id, () => {

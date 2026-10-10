@@ -72,6 +72,10 @@
 .dock-col { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-height: 0; background: var(--panel); border-left: 1px solid var(--line); }
 .dock-foot { display: grid; gap: 8px; padding: 12px; border-top: 1px solid var(--line); background: var(--panel); }
 .btn-export.wide { width: 100%; justify-content: center; height: 40px; margin: 0; font-size: 14px; border-radius: 10px; }
+.export-row { display: flex; gap: 8px; }
+.export-row .btn-export.wide { flex: 1; width: auto; }
+.btn-export-alt { height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font-weight: 600; font-size: 13px; cursor: pointer; }
+.btn-export-alt:hover { background: var(--field); }
 
 @media (max-width: 1180px) {
   .main { grid-template-columns: 208px minmax(0, 1fr) 320px; }

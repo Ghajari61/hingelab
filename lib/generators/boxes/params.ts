@@ -20,7 +20,7 @@ export interface BoxesParams extends GenBase {
   };
   box: { width: number; depth: number; height: number; lid: LidKind; clearance: number };
   tray: { width: number; depth: number; height: number; cols: number; rows: number; dividers: number };
-  sign: { width: number; height: number; corner: number; text: string; fontId: string; size: number; base: number };
+  sign: { width: number; height: number; corner: number; text: string; fontId: string; size: number; base: number; border: number; borderWidth: number };
   frame: { photoW: number; photoH: number; border: number; overlap: number; corner: number; mount: "hang" | "stand" };
   stand: { width: number; angle: number; slot: number; lip: number; height: number };
   keys: { width: number; height: number; corner: number; hooks: number; reach: number; text: string; fontId: string; size: number };
@@ -42,7 +42,7 @@ export const BOXES_DEFAULTS: BoxesParams = {
   joint: { finger: 10, outside: false },
   box: { width: 120, depth: 80, height: 60, lid: "closed", clearance: 0.3 },
   tray: { width: 240, depth: 160, height: 50, cols: 3, rows: 2, dividers: 85 },
-  sign: { width: 200, height: 70, corner: 8, text: "Hello", fontId: "fredoka", size: 30, base: 50 },
+  sign: { width: 200, height: 70, corner: 8, text: "Hello", fontId: "fredoka", size: 30, base: 50, border: 0, borderWidth: 1.5 },
   frame: { photoW: 100, photoH: 150, border: 20, overlap: 4, corner: 6, mount: "stand" },
   stand: { width: 75, angle: 65, slot: 14, lip: 10, height: 95 },
   keys: { width: 220, height: 90, corner: 10, hooks: 4, reach: 35, text: "KEYS", fontId: "fredoka", size: 18 },

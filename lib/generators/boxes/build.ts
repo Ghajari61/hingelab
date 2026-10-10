@@ -4,7 +4,7 @@
  * contract in types.ts: upright parts hang from their top edge, `yaw` turns side walls, `tilt` leans
  * roofs and the phone rest.
  */
-import { differenceShapes, unionShapes } from "@/lib/letters/polygon";
+import { differenceShapes, makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { circle, deg, rect, roundedRect, stadium } from "../geom";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { boxPanels, fingerCount } from "./joints";
@@ -174,6 +174,15 @@ function buildBird(p: BoxesParams): BoxesOutput {
   };
 }
 
+/** An engraved band following `outline` at `inset` mm in from its edge, `width` mm wide (empty when it does not fit). */
+export function borderBand(outline: Contour, inset: number, width: number): Contour[] {
+  const base = [makeShape(outline, [])];
+  const outer = offsetShapes(base, -inset);
+  const inner = offsetShapes(base, -(inset + Math.max(0.2, width)));
+  if (!outer.length) return [];
+  return shapeContours(differenceShapes(shapeContours(outer), shapeContours(inner)));
+}
+
 function buildSign(p: BoxesParams, ctx: BuildContext): BoxesOutput {
   const T = p.T, s = p.sign, m = 15;
   const W = s.width, H = s.height, Db = Math.max(30, s.base);
@@ -183,16 +192,17 @@ function buildSign(p: BoxesParams, ctx: BuildContext): BoxesOutput {
   const base = roundedRect(0, 0, W + 2 * m, Db, Math.min(8, Db / 4));
   const missing: string[] = [];
   const tx = textBlock(ctx, s.text, s.fontId, s.size, W / 2, H / 2, missing);
+  const border = s.border > 0 ? borderBand(roundedRect(0, 0, W, H, s.corner), s.border, s.borderWidth) : [];
   return {
     parts: [
-      { id: "plate", name: "Sign", outer: plate, holes: [], engrave: tx.cs, place: wall(0, T + H, ys) },
+      { id: "plate", name: "Sign", outer: plate, holes: [], engrave: [...border, ...tx.cs], place: wall(0, T + H, ys) },
       { id: "base", name: "Base", outer: base, holes: us.map((u) => rect(m + u - tw / 2, ys, tw, T)), place: flat(-m, 0, 0) },
     ],
     stats: [{ label: "Sign", value: `${W} × ${H} mm` }, { label: "Base", value: `${W + 2 * m} × ${Db} mm` }],
     assembly: ["Engrave the text, then cut. Push the two tabs into the base slots; a drop of glue makes it permanent."],
     notice: tx.loading ? "Loading the font." : undefined,
     missing,
-    info: { size: [W + 2 * m, Db, H + T], textWidth: tx.width, textRoom: W - 2 * Math.max(6, s.corner) },
+    info: { size: [W + 2 * m, Db, H + T], textWidth: tx.width, textRoom: W - 2 * Math.max(6, s.corner, s.border > 0 ? s.border + s.borderWidth + 3 : 0) },
   };
 }
 

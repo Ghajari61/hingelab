@@ -14,7 +14,7 @@ import { differenceShapes, offsetShapes, shapeContours, unionShapes } from "@/li
 import { rotatePoint } from "@/lib/nest/outline";
 import { finLabel } from "@/lib/parametric/label";
 import { bboxOf, pathD } from "./geom";
-import type { BuildContext, Contour, GenBase, GenImage, GenOutput, GenPart, GeneratorDef, SheetExtras } from "./types";
+import { MAX_COPIES, type BuildContext, type Contour, type GenBase, type GenImage, type GenOutput, type GenPart, type GeneratorDef, type SheetExtras } from "./types";
 
 /** Layer names in the generators' panels and SVG files (keys and colours shared with every product). */
 export const GEN_LAYER_NAMES: Record<LayerKey, string> = {
@@ -74,7 +74,8 @@ export function turnCutPart(pt: CutPart, angle: number): CutPart {
 /** Saved sheet extras, cleaned (old saves have none). */
 export function cleanExtras(x: unknown): SheetExtras {
   const q = (x && typeof x === "object" ? x : {}) as Partial<SheetExtras>;
-  return { nest: q.nest === "outline" ? "outline" : "box", calibration: q.calibration === true, labels: q.labels === true };
+  const copies = typeof q.copies === "number" && Number.isFinite(q.copies) ? Math.max(1, Math.min(MAX_COPIES, Math.round(q.copies))) : 1;
+  return { nest: q.nest === "outline" ? "outline" : "box", calibration: q.calibration === true, labels: q.labels === true, copies };
 }
 
 /** The part's name in the single-stroke font, placed where it fits clear of cuts and engraving. */
@@ -87,6 +88,13 @@ export function partLabel(pt: CutPart): Contour[] {
   return finLabel(s, pt.name, { arrow: false, nearWall: false }) ?? [];
 }
 
+/** `n` sets of the parts, set by set (ids stay unique; names stay the same, so labels match the assembly). */
+export function copiesOf(parts: CutPart[], n: number): CutPart[] {
+  const out: CutPart[] = [];
+  for (let k = 0; k < n; k++) for (const pt of parts) out.push(k ? { ...pt, id: `${pt.id}~${k + 1}` } : pt);
+  return out;
+}
+
 /** Build at a scale and lay the parts out on sheets (Fit "off" packs at design size, like Auto). */
 export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, ctx: BuildContext): GenArranged<P> {
   const fit = cleanFit(p.fit);
@@ -96,7 +104,8 @@ export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, 
     const q = s === 1 || !def.scale ? p : def.scale(p, s);
     const out = def.build(q, ctx);
     if (out.error) return { params: q, result: { error: out.error } };
-    return { params: q, result: { parts: out.parts.map((pt) => cutPart(pt, q.K)), out } };
+    const parts = out.parts.map((pt) => cutPart(pt, q.K));
+    return { params: q, result: { parts: x.copies > 1 ? copiesOf(parts, x.copies) : parts, out } };
   }, {
     pack: x.nest === "outline" ? outlinePacker<CutPart>((pt) => (pt.images.length ? [0] : [0, 90, 180, 270])) : undefined,
     turn: turnCutPart,

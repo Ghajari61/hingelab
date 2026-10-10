@@ -105,7 +105,7 @@ function PartDrawing({ part }: { part: Part }) {
 }
 
 export function ParametricDock({
-  params, result, error, busy, units, selected, fileName, photo, depthBusy, plan, locks, askUnits, textMissing = [], onEdit, onSelect, onImport, onImportPhoto, onUpgrade, onExportSheet, onExportZip, onGuide, onResetSection,
+  params, result, error, busy, units, selected, fileName, photo, depthBusy, plan, locks, askUnits, textMissing = [], onEdit, onSelect, onImport, onImportPhoto, onUpgrade, onExportAll, onExportDXF, onExportSheet, onExportZip, onGuide, onResetSection,
 }: {
   /** Characters of a Text source that its font does not have. */
   textMissing?: string[];
@@ -129,6 +129,8 @@ export function ParametricDock({
   onSelect: (ids: string[]) => void;
   onImport: (f: File) => void;
   onImportPhoto: (f: File) => void;
+  onExportAll: () => void;
+  onExportDXF: () => void;
   onExportSheet: () => void;
   onExportZip: () => void;
   onGuide: () => void;
@@ -600,6 +602,8 @@ export function ParametricDock({
       <Sec title="Layers & Export" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
         <LayersPanel layers={params.layers} labels={params.labels.enabled} only={params.method === "folded" || params.material.calibration ? ["outline", "slots", "hinge", "labels"] : ["outline", "slots", "labels"]} names={{ hinge: "Score lines" }} onVis={layerVis} onExp={layerExp} onLabels={(on) => onEdit((q) => { q.labels.enabled = on; }, true)} />
         <div className="pe-export">
+          <button type="button" className="btn-auto" disabled={!result?.sheets.length} onClick={onExportAll}>Export all sheets (SVG)</button>
+          <button type="button" className="btn-auto" disabled={!result?.sheets.length} onClick={onExportDXF}>Export all sheets (DXF)</button>
           <button type="button" className="btn-auto" disabled={!result?.sheets.length} onClick={onExportZip}>Export all sheets (ZIP)</button>
           <button type="button" className="btn-auto" disabled={!result?.sheets.length} onClick={onExportSheet}>Export this sheet (SVG)</button>
           <button type="button" className="btn-auto" disabled={!result?.parts.length} onClick={onGuide}>Assembly guide</button>

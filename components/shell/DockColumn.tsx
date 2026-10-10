@@ -5,10 +5,12 @@ import { Download, RotateCcw } from "lucide-react";
 import type { Units } from "@/components/editor/format";
 
 /** Right column: units and Reset all on top, the scrolling panel dock, the export button pinned underneath. */
-export function DockColumn({ children, onExport, exportLabel, units, onUnits, onResetAll, extra }: {
+export function DockColumn({ children, onExport, exportLabel, alt = [], units, onUnits, onResetAll, extra }: {
   children: ReactNode;
   onExport: () => void;
   exportLabel: string;
+  /** Other formats beside the main export (DXF). */
+  alt?: { label: string; title: string; run: () => void }[];
   units: Units;
   onUnits: (u: Units) => void;
   /** Restores every setting of the product; the editor records it as one undo step. */
@@ -51,7 +53,10 @@ export function DockColumn({ children, onExport, exportLabel, units, onUnits, on
       {children}
       <div className="dock-foot">
         {extra}
-        <button className="btn-export wide" type="button" onClick={onExport}><Download size={16} aria-hidden />{exportLabel}</button>
+        <div className="export-row">
+          <button className="btn-export wide" type="button" onClick={onExport}><Download size={16} aria-hidden />{exportLabel}</button>
+          {alt.map((a) => <button key={a.label} className="btn-export-alt" type="button" title={a.title} onClick={a.run}>{a.label}</button>)}
+        </div>
       </div>
     </div>
   );

@@ -6,7 +6,7 @@
 import type { Fix, Issue } from "@/lib/issues";
 import { distToContour } from "../geom";
 import type { Contour, GenOutput } from "../types";
-import { centreLayers, clockGeometry, handNeck, markerDepth, numeral } from "./build";
+import { centreLayers, clockGeometry, handNeck, markerDepth, numeral, type ClockOutput } from "./build";
 import { MAX_STANDARD_HAND, MOVEMENTS, MOVEMENT_BOX, type ClockParams } from "./params";
 
 type CIssue = Issue<ClockParams>;
@@ -17,6 +17,7 @@ const inradius = (c: Contour) => distToContour([0, 0], c);
 
 const withFace = (p: ClockParams, face: Partial<ClockParams["face"]>): ClockParams => ({ ...p, face: { ...p.face, ...face } });
 const withMarkers = (p: ClockParams, m: Partial<ClockParams["markers"]>): ClockParams => ({ ...p, markers: { ...p.markers, ...m } });
+const withInscription = (p: ClockParams, i: Partial<ClockParams["inscription"]>): ClockParams => ({ ...p, inscription: { ...p.inscription, ...i } });
 const withHands = (p: ClockParams, h: Partial<ClockParams["hands"]>): ClockParams => ({ ...p, hands: { ...p.hands, ...h } });
 
 /** Rough widest numeral, in cap heights (Archivo-like proportions). */
@@ -174,12 +175,37 @@ export function checkClock(p: ClockParams, out: GenOutput): CIssue[] {
     });
   }
 
+  // Text on the dial: too long to read round the curve, or squeezed into the middle.
+  const ins = (out as ClockOutput).inscription;
+  if (ins && p.inscription.text.trim()) {
+    if (ins.span > Math.PI) {
+      const size = Math.max(3, Math.floor(((p.inscription.size * Math.PI * 0.8) / ins.span) * 2) / 2);
+      issues.push({
+        code: "INSCRIPTION_LONG", level: "warn",
+        message: "The text on the dial wraps more than half way round and gets hard to read.",
+        fixes: [{ id: "smaller-text", label: `Make the text ${size} mm`, safe: true, apply: (q) => withInscription(q, { size }) }],
+      });
+    }
+    if (ins.R - ins.size * 0.6 < 30) {
+      issues.push({
+        code: "INSCRIPTION_CENTRE", level: "warn",
+        message: "The text on the dial runs into the middle of the face, where the nut and the hands sit.",
+        fixes: [
+          ...(p.inscription.gap > 2 ? [{ id: "smaller-gap", label: "Move the text out to the markers", safe: true, apply: (q: ClockParams) => withInscription(q, { gap: 2 }) }] : []),
+          { id: "smaller-text", label: `Make the text ${Math.max(3, Math.floor(p.inscription.size * 0.7))} mm`, safe: true, apply: (q) => withInscription(q, { size: Math.max(3, Math.floor(q.inscription.size * 0.7)) }) },
+        ],
+      });
+    }
+  }
+
   if (out.missing?.length) {
     const font = m.numerals === "persian" ? "vazirmatn" : "archivo-black";
+    const fixes: Fix<ClockParams>[] = [{ id: "font", label: m.numerals === "persian" ? "Use Vazirmatn" : "Use Archivo Black", safe: true, apply: (q) => withMarkers(q, { fontId: font }) }];
+    if (p.inscription.text.trim()) fixes.push({ id: "text-font", label: "Use Vazirmatn for the text on the dial", safe: true, apply: (q) => withInscription(q, { fontId: "vazirmatn" }) });
     issues.push({
       code: "MISSING_GLYPHS", level: "error",
       message: `The font has no glyph for ${out.missing.map((c) => `"${c}"`).join(", ")}.`,
-      fixes: [{ id: "font", label: m.numerals === "persian" ? "Use Vazirmatn" : "Use Archivo Black", safe: true, apply: (q) => withMarkers(q, { fontId: font }) }],
+      fixes,
     });
   }
   return issues;

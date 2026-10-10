@@ -206,6 +206,15 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
     if (svg.includes('id="watermark"')) toastMsg("Exported with the small “Made with HingeLab” mark (Free plan)");
   }
 
+  async function exportDXFNow() {
+    const svg = await exportedSVG();
+    if (!svg) return;
+    const { svgToDXF } = await import("@/lib/export/dxf");
+    const out = svgToDXF(svg);
+    offerFile(baseName(built) + ".dxf", out.dxf, "application/dxf");
+    if (out.skipped) window.setTimeout(() => toastMsg("Pictures cannot go into a DXF: engrave them from the SVG"), 1600);
+  }
+
   async function copySVG() {
     const svg = await exportedSVG();
     if (!svg) return;
@@ -342,6 +351,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
       { label: "Save as my preset…", kbd: "", run: () => setModal({ type: "preset", name: params.name }) },
       "-",
       { label: "Export SVG…", kbd: "Ctrl+E", run: exportNow },
+      { label: "Export DXF…", kbd: "", run: () => void exportDXFNow() },
       { label: "Copy SVG code", kbd: "", run: copySVG },
       "-",
       { label: "Rename box…", kbd: "", run: () => setModal({ type: "rename", name: params.name }) },
@@ -445,7 +455,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
           />
         </section>
         </div>
-        <DockColumn onExport={exportNow} exportLabel="Export SVG" units={units} onUnits={setUnits} onResetAll={resetAll}>
+        <DockColumn onExport={exportNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export as DXF (R12, mm)", run: () => void exportDXFNow() }]} units={units} onUnits={setUnits} onResetAll={resetAll}>
         <PanelDock
           params={params}
           model={model}

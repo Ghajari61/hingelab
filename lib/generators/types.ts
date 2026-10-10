@@ -58,9 +58,12 @@ export interface SheetExtras {
   calibration: boolean;
   /** Each part's name scored on it. */
   labels: boolean;
+  /** Sets of parts to cut (an array of the whole design, packed together). */
+  copies: number;
 }
 
-export const SHEET_EXTRAS: SheetExtras = { nest: "box", calibration: false, labels: false };
+export const SHEET_EXTRAS: SheetExtras = { nest: "box", calibration: false, labels: false, copies: 1 };
+export const MAX_COPIES = 50;
 
 /** One flat part, in its own frame: mm, y down. Geometry is nominal; the shell applies the kerf. */
 export interface GenPart {

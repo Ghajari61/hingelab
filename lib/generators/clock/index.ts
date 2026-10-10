@@ -9,6 +9,7 @@ import { CLOCK_PRESETS } from "./presets";
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const pointed = (p: ClockParams) => ["sunburst", "gear", "scallop"].includes(p.face.shape);
 const hasNumerals = (p: ClockParams) => p.markers.style === "numerals" || p.markers.style === "mixed";
+const hasInscription = (p: ClockParams) => !!p.inscription.text.trim();
 const hasTicks = (p: ClockParams) => p.markers.style === "ticks" || p.markers.style === "mixed" || p.markers.minutes;
 
 const SHAPE_NAMES: Record<ClockParams["face"]["shape"], string> = {
@@ -73,6 +74,22 @@ const sections: SectionSpec<ClockParams>[] = [
       { kind: "number", key: "markers.dot", label: "Dot size", unit: "mm", min: 2, max: 60, step: 0.5, show: (p) => p.markers.style === "dots", help: "Diameter of the hour dots; the dots at 12, 3, 6 and 9 are larger." },
       { kind: "toggle", key: "markers.minutes", label: "Minute ticks", help: "Adds a short tick for every minute between the hours." },
       { kind: "toggle", key: "markers.cut", label: "Cut through", show: (p) => p.markers.style !== "none" || p.markers.minutes, help: "Cuts the markers out instead of engraving them, so the layer behind shows through." },
+      { kind: "toggle", key: "markers.follow", label: "Follow the dial", show: hasNumerals, help: "Turns each numeral so its top points outward, as on classic dials, instead of standing upright." },
+    ],
+  },
+  {
+    id: "inscription", title: "Text on the dial",
+    help: "A line of text bent along the dial inside the markers, such as a name, a date or a motto.",
+    fields: [
+      { kind: "text", key: "inscription.text", label: "Text", maxLength: 60, placeholder: "Since 2026", help: "The words bent along the dial; leave empty for none." },
+      {
+        kind: "choice", key: "inscription.at", label: "Position", show: hasInscription,
+        help: "Along the top the text reads clockwise with the letters standing outward; along the bottom it reads the other way, so both read left to right.",
+        options: [{ v: "top", text: "Top" }, { v: "bottom", text: "Bottom" }],
+      },
+      { kind: "font", key: "inscription.fontId", label: "Font", show: hasInscription, sample: (p) => p.inscription.text || "Aa", help: "Typeface of the text (the same fonts as Letters)." },
+      { kind: "number", key: "inscription.size", label: "Text height", unit: "mm", min: 3, max: 80, step: 0.5, show: hasInscription, help: "Cap height of the text." },
+      { kind: "number", key: "inscription.gap", label: "Gap to markers", unit: "mm", min: 0, max: 100, step: 0.5, show: hasInscription, help: "Space between the markers and the text; a larger gap moves the text toward the centre." },
     ],
   },
   {
@@ -170,6 +187,7 @@ function scaleClock(p: ClockParams, s: number): ClockParams {
     face: { ...p.face, size: k(p.face.size), corner: k(p.face.corner), depth: k(p.face.depth), ring: k(p.face.ring), centre: k(p.face.centre) },
     markers: { ...p.markers, size: k(p.markers.size), inset: k(p.markers.inset), tickLength: k(p.markers.tickLength), tickWidth: k(p.markers.tickWidth), dot: k(p.markers.dot) },
     hands: { ...p.hands, hour: k(p.hands.hour), minute: k(p.hands.minute), width: k(p.hands.width), tail: k(p.hands.tail) },
+    inscription: { ...p.inscription, size: k(p.inscription.size), gap: k(p.inscription.gap) },
   };
 }
 
@@ -184,7 +202,7 @@ export const CLOCK: GeneratorDef<ClockParams> = {
   presets: CLOCK_PRESETS,
   build: buildClock,
   check: checkClock,
-  fonts: (p) => (p.markers.style === "numerals" || p.markers.style === "mixed" ? [p.markers.fontId] : []),
+  fonts: (p) => [...new Set([...(hasNumerals(p) ? [p.markers.fontId] : []), ...(hasInscription(p) ? [p.inscription.fontId] : [])])],
   scale: scaleClock,
   art,
   fileName: (p) => namedFile("clock", p.name, `${Math.round(p.face.size)}mm`),
@@ -200,6 +218,7 @@ export const CLOCK: GeneratorDef<ClockParams> = {
       "Cut the hands from thin material (1.5–3 mm) and keep them light; long, heavy hands stall a standard movement.",
       "Engrave the markers before cutting the outline, so the part does not move between jobs.",
       "Persian numerals need a font with Persian digits, such as Vazirmatn or Lalezar.",
+      "Text on the dial looks best short and in capitals; the generator warns when it would wrap more than half way round.",
     ],
     keywords: ["clock", "wall clock", "quartz", "movement", "numerals", "hands", "dial"],
   },

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { r3, type LayerContent } from "@/lib/hinge";
 import { IMAGE_DEFAULTS, PARAMETRIC_DEFAULTS, mergeParametricParams } from "@/lib/parametric/defaults";
-import { assemblyGuideSVG, exportZip, sheetFileName, sheetLayerContent, sheetSVG, slugName } from "@/lib/parametric/export";
+import { allSheetsSVG, assemblyGuideSVG, exportZip, sheetFileName, sheetLayerContent, sheetSVG, slugName } from "@/lib/parametric/export";
 import { toSheet } from "@/lib/parametric/nest";
 import { formatOf } from "@/lib/parametric/source/mesh";
 import { packOutline } from "@/lib/parametric/source/outlineBytes";
@@ -285,6 +285,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     }
   }
 
+  type ExportWhat = { kind: "zip" } | { kind: "all" } | { kind: "sheet"; index: number } | { kind: "guide" };
   const base = () => slugName(params.name);
   const ready = () => {
     if (!result?.sheets.length) { toastMsg(error ? "Fix the settings before exporting" : "Still slicing"); return false; }
@@ -296,24 +297,38 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
    * Exports with the plan applied. Pro (and servers without accounts) build the file here, clean.
    * Free asks the server, which slices again and adds the HingeLab mark, so the limits hold (D56).
    */
-  async function exportWith(what: { kind: "zip" } | { kind: "sheet"; index: number } | { kind: "guide" }, name: string, mime: string, build: () => string | Uint8Array) {
-    if (!ready()) return;
+  async function exportData(what: ExportWhat, build: () => string | Uint8Array): Promise<{ data: string | Uint8Array; marked: boolean } | null> {
+    if (!ready()) return null;
     const lock = parametricLock(account.plan, params, result!.stats.partCount);
-    if (lock) { setUpgrade(lock); return; }
-    if (!account.configured || account.plan === "pro") { offerFile(name, build(), mime); return; }
+    if (lock) { setUpgrade(lock); return null; }
+    if (!account.configured || account.plan === "pro") return { data: build(), marked: false };
     try {
       toastMsg("Preparing the export…");
       const res = await fetch("/api/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ product: "parametric", params, what }) });
       if (!res.ok) {
         const err = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Export failed. Try again.";
         if (res.status === 403) setUpgrade(err); else toastMsg(err);
-        return;
+        return null;
       }
-      offerFile(name, new Uint8Array(await res.arrayBuffer()), mime);
-      if (what.kind !== "guide") window.setTimeout(() => toastMsg("Exported with the small “Made with HingeLab” mark (Free plan)"), 1600);
+      return { data: new Uint8Array(await res.arrayBuffer()), marked: what.kind !== "guide" };
     } catch {
       toastMsg("Export needs a connection. Check your network and try again.");
+      return null;
     }
+  }
+  async function exportWith(what: ExportWhat, name: string, mime: string, build: () => string | Uint8Array) {
+    const out = await exportData(what, build);
+    if (!out) return;
+    offerFile(name, out.data, mime);
+    if (out.marked) window.setTimeout(() => toastMsg("Exported with the small “Made with HingeLab” mark (Free plan)"), 1600);
+  }
+  function exportAllNow() { void exportWith({ kind: "all" }, `${base()}.svg`, "image/svg+xml", () => allSheetsSVG(result!, params)); }
+  async function exportDXFNow() {
+    const out = await exportData({ kind: "all" }, () => allSheetsSVG(result!, params));
+    if (!out) return;
+    const { svgToDXF } = await import("@/lib/export/dxf");
+    offerFile(`${base()}.dxf`, svgToDXF(typeof out.data === "string" ? out.data : new TextDecoder().decode(out.data)).dxf, "application/dxf");
+    if (out.marked) window.setTimeout(() => toastMsg("Exported with the small “Made with HingeLab” mark (Free plan)"), 1600);
   }
   function exportZipNow() { void exportWith({ kind: "zip" }, `${base()}.zip`, "application/zip", () => exportZip(result!, params)); }
   function exportSheetNow() {
@@ -415,8 +430,8 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   function doRedo() { if (redo()) toastMsg("Redo"); }
   const select = (ids: string[]) => setSelected(ids);
 
-  const api = useRef({ exportZipNow, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef });
-  api.current = { exportZipNow, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef };
+  const api = useRef({ exportAllNow, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef });
+  api.current = { exportAllNow, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef };
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -429,7 +444,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
         if (k === "z" && !inField) { e.preventDefault(); e.shiftKey ? va.doRedo() : va.doUndo(); }
         else if (k === "s") { e.preventDefault(); va.saveProject(); }
         else if (k === "o") { e.preventDefault(); va.openProject(); }
-        else if (k === "e") { e.preventDefault(); va.exportZipNow(); }
+        else if (k === "e") { e.preventDefault(); va.exportAllNow(); }
         else if (k === "n") { e.preventDefault(); va.newProject(); }
         else if (k === "0") { e.preventDefault(); va.fit(); }
         else if (k === "1") { e.preventDefault(); va.zoomCenter(PX_PER_MM / va.viewRef.current.z); }
@@ -468,7 +483,9 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
       { label: "Save as my preset…", kbd: "", run: () => setModal({ type: "preset", name: params.name }) },
       { label: "Import 3D model…", kbd: "", run: () => { const i = document.querySelector<HTMLInputElement>('input[aria-label="Import model"]'); i?.click(); } },
       "-",
-      { label: "Export all sheets (ZIP)", kbd: "Ctrl+E", run: exportZipNow },
+      { label: "Export SVG (all sheets)…", kbd: "Ctrl+E", run: exportAllNow },
+      { label: "Export DXF (all sheets)", kbd: "", run: () => void exportDXFNow() },
+      { label: "Export all sheets (ZIP)", kbd: "", run: exportZipNow },
       { label: "Export this sheet (SVG)", kbd: "", run: exportSheetNow },
       { label: "Assembly guide (SVG)", kbd: "", run: guideNow },
       "-",
@@ -585,7 +602,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
               />
             </section>
         </div>
-        <DockColumn onExport={exportZipNow} exportLabel="Export ZIP" units={units} onUnits={setUnits} onResetAll={resetAll}>
+        <DockColumn onExport={exportAllNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export all sheets as a DXF (R12, mm)", run: () => void exportDXFNow() }]} units={units} onUnits={setUnits} onResetAll={resetAll}>
         <ParametricDock
           params={params}
           result={result}
@@ -606,6 +623,8 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
           onImport={importModel}
           onImportPhoto={importPhoto}
           onExportSheet={exportSheetNow}
+          onExportAll={exportAllNow}
+          onExportDXF={() => void exportDXFNow()}
           onExportZip={exportZipNow}
           onGuide={guideNow}
           onResetSection={resetSection}
