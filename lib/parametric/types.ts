@@ -4,6 +4,7 @@
  */
 import type { Layers } from "@/lib/hinge";
 import type { Contour, Point, Shape } from "@/lib/letters/types";
+import type { ShapeSpec, ShapeTargetId } from "./shapes";
 
 export type { Contour, Point, Shape };
 export type Vec3 = [number, number, number];
@@ -242,6 +243,8 @@ export interface ParametricParams {
   labels: { enabled: boolean; style: "engrave" | "score"; position: "auto-hidden-face" | "center"; prefix: string };
   /** Export layer switches (the hinge layer is unused here). */
   layers: Layers;
+  /** Shape-button settings behind the formula fields (the formulas themselves are what the engine reads). */
+  shapes?: Partial<Record<ShapeTargetId, ShapeSpec>>;
 }
 
 /** A slicing plane n·p = offset with an in-plane frame: part-local x along u, y along w. */

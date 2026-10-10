@@ -6,6 +6,7 @@ import {
   IMAGE_DEFAULTS, PARAMETRIC_DEFAULTS, assemblyGuideSVG, exportZip, formatOf, mergeParametricParams, packDepth, packOutline, sheetFileName, sheetLayerContent, sheetSVG, slugName, toSheet, unpackDepth,
   type MeshData, type ParametricParams, type Sheet, type SliceResult,
 } from "@/lib/parametric";
+import { syncShapes } from "@/lib/parametric/shapes";
 import { shapeText } from "@/lib/letters/shape";
 import { getLoadedFont, loadHarfBuzz } from "@/components/letters/runtime";
 import { clone } from "@/lib/hinge";
@@ -126,6 +127,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   const edit = useCallback((f: (q: ParametricParams) => void, record: boolean) => {
     const next = structuredClone(params);
     f(next);
+    syncShapes(params, next);
     replace(next, record);
   }, [params, replace]);
 

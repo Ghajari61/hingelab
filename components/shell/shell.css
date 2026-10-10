@@ -169,3 +169,16 @@ details.sec > summary:hover .sec-rst, .sec-rst:focus-visible { opacity: 1; }
 .vcube-btns button { display: grid; place-items: center; height: 24px; min-width: 26px; padding: 0 6px; border: 0; background: none; border-radius: 6px; font-size: 11px; font-weight: 500; color: var(--fg-dim); cursor: pointer; }
 .vcube-btns button:hover { background: var(--surface-hover); color: var(--fg); }
 .hud3d .iconseg button { height: 26px; }
+
+/* U6: shape buttons for formula fields */
+.shape-pick { display: grid; gap: 8px; padding: 8px 0 4px; border-top: 1px solid var(--line); }
+.shape-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.shape-custom { font-size: 11px; color: var(--fg-faint); border: 1px solid var(--line); border-radius: 8px; padding: 0 6px; }
+.shape-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.shape-grid button { display: grid; justify-items: center; gap: 2px; padding: 6px 2px 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--field); color: var(--fg-dim); cursor: pointer; font: 500 10.5px/1.15 var(--font-ui); min-width: 0; }
+.shape-grid button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shape-grid button:hover { color: var(--fg); background: var(--surface-hover); }
+.shape-grid button[aria-pressed="true"] { color: var(--fg); background: var(--panel); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.shape-grid svg path { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.shape-adv summary { cursor: pointer; font-size: 12px; color: var(--fg-dim); padding: 2px 0; }
+.shape-adv[open] { display: grid; gap: 6px; }

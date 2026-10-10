@@ -6,7 +6,9 @@ import {
   CLOCK_INSERTS, FORMULA_DEFAULTS, IMAGE_DEFAULTS, LEAF_CLOCK, LIBRARY, PARAMETRIC_DEFAULTS, TEXT_DEFAULTS, cutSpeedOf, finSpacingOf, fmtMinutes, mergeParametricParams,
   type CurveNormalParams, type FormulaSpec, type LibraryId, type ModelUnits, type ParametricParams, type Part, type SliceResult, type WarningCode,
 } from "@/lib/parametric";
+import { SHAPE_TARGETS, applyShape, contextOf } from "@/lib/parametric/shapes";
 import { BUNDLED_FONTS, fontInfo } from "@/lib/letters/fonts";
+import { ShapePicker } from "./ShapePicker";
 import { NumberField } from "@/components/editor/NumberField";
 import { LayersPanel } from "@/components/editor/LayersPanel";
 import { Sec } from "@/components/editor/PanelDock";
@@ -34,15 +36,6 @@ function Choice<T extends string>({ label, value, options, onPick }: {
         ))}
       </div>
     </>
-  );
-}
-
-/** A one-line formula: edits preview live and are recorded for undo on blur. */
-function FormulaInput({ label, value, onEdit }: { label: string; value: string; onEdit: (v: string, record: boolean) => void }) {
-  return (
-    <label className="pe-pick">{label}
-      <input className="textin mono" aria-label={label} spellCheck={false} value={value} onChange={(e) => onEdit(e.target.value, false)} onBlur={(e) => onEdit(e.target.value, true)} />
-    </label>
   );
 }
 
@@ -314,21 +307,24 @@ export function ParametricDock({
         {formula && (
           <>
             <Choice<FormulaSpec["type"]> label="Formula type" value={formula.type} onPick={(t) => onEdit((q) => { q.source = structuredClone(FORMULA_DEFAULTS[t]); }, true)} options={[
-              { v: "heightfield", text: "Surface z = f(x, y)", title: "A relief: height off the wall at each point" },
-              { v: "revolution", text: "Turned r = f(h)", title: "A shape turned around the vertical axis" },
-              { v: "radial-profile", text: "Radial z = f(θ, s)", title: "Height off the wall round a centre: a sunburst profile for radial fins" },
+              { v: "heightfield", text: "Surface", title: "A relief z = f(x, y): height off the wall at each point" },
+              { v: "revolution", text: "Turned", title: "A shape r = f(h) turned around the vertical axis" },
+              { v: "radial-profile", text: "Radial", title: "Height z = f(θ, s) off the wall round a centre: a sunburst profile for radial fins" },
             ]} />
-            <textarea
-              className="textin mono"
-              rows={2}
-              aria-label="Formula"
-              spellCheck={false}
-              value={formula.expression}
-              onChange={(e) => onEdit((q) => { if (q.source.kind === "formula") q.source.expression = e.target.value; }, false)}
-              onBlur={(e) => onEdit((q) => { if (q.source.kind === "formula") q.source.expression = e.target.value; }, true)}
+            <ShapePicker
+              target={formula.type}
+              label={formula.type === "revolution" ? "Profile" : "Relief"}
+              expression={formula.expression}
+              stored={params.shapes?.[formula.type]}
+              ctx={contextOf(formula)}
+              units={units}
+              formulaLabel="Formula"
+              multiline
+              note={`${FORMULA_NOTES[formula.type]}, pi, sin, cos, sqrt, abs, min, max, noise2, smoothstep and more.`}
+              onShape={(s, r) => onEdit((q) => applyShape(q, formula.type, s), r)}
+              onFormula={(v, r) => onEdit((q) => { if (q.source.kind === "formula") q.source.expression = v; }, r)}
             />
             <div className="grid2">{fields("formula")}</div>
-            <p className="note">{FORMULA_NOTES[formula.type]}, pi, sin, cos, sqrt, abs, min, max, noise2, smoothstep and more.</p>
           </>
         )}
         <label className="chk">
@@ -424,18 +420,28 @@ export function ParametricDock({
             ]} />
             <label className="chk"><input type="checkbox" checked={cn.count === null} onChange={(e) => editCurve((c) => { c.count = e.target.checked ? null : 48; }, true)} /> Fit as many fins as the spacing allows</label>
             <div className="grid2">{fields("method")}</div>
-            <FormulaInput label="Fin length L(t)" value={cn.finLength} onEdit={(v, r) => editCurve((c) => { c.finLength = v; }, r)} />
-            <FormulaInput label="Fin height (t, s, L)" value={cn.finHeight} onEdit={(v, r) => editCurve((c) => { c.finHeight = v; }, r)} />
-            <FormulaInput label="Twist ° (t)" value={cn.twist} onEdit={(v, r) => editCurve((c) => { c.twist = v; }, r)} />
-            <Choice label="Outer outline" value={cn.outerBoundary.kind} onPick={(k) => editCurve((c) => {
-              c.outerBoundary = k === "none" ? { kind: "none" } : k === "ellipse" ? { kind: "ellipse", w: 300, h: 220 } : { kind: "formula", expression: LEAF_CLOCK.outerBoundary.kind === "formula" ? LEAF_CLOCK.outerBoundary.expression : "120" };
+            <ShapePicker target="finLength" label="Fin length round the curve" expression={cn.finLength} stored={params.shapes?.finLength} units={units}
+              formulaLabel="Fin length L(t)" note="Use t, which runs 0 to 1 round the guide. The result is in mm."
+              onShape={(s, r) => onEdit((q) => applyShape(q, "finLength", s), r)} onFormula={(v, r) => editCurve((c) => { c.finLength = v; }, r)} />
+            <ShapePicker target="finHeight" label="Fin height along each fin" expression={cn.finHeight} stored={params.shapes?.finHeight} units={units}
+              formulaLabel="Fin height (t, s, L)" note="Use s (mm out along the fin), L (the fin's length) and t (0 to 1 round the guide)."
+              onShape={(s, r) => onEdit((q) => applyShape(q, "finHeight", s), r)} onFormula={(v, r) => editCurve((c) => { c.finHeight = v; }, r)} />
+            <ShapePicker target="twist" label="Twist round the curve" expression={cn.twist} stored={params.shapes?.twist} units={units}
+              formulaLabel="Twist ° (t)" note="Use t, which runs 0 to 1 round the guide. The result is in degrees, at most ±45."
+              onShape={(s, r) => onEdit((q) => applyShape(q, "twist", s), r)} onFormula={(v, r) => editCurve((c) => { c.twist = v; }, r)} />
+            <Choice label="Outer outline" value={cn.outerBoundary.kind} onPick={(k) => onEdit((q) => {
+              if (k === "formula") applyShape(q, "outline", q.shapes?.outline ?? SHAPE_TARGETS.outline.defaults);
+              else q.curveNormal.outerBoundary = k === "none" ? { kind: "none" } : { kind: "ellipse", w: 300, h: 220 };
             }, true)} options={[
               { v: "none", text: "None", title: "Fins keep their full length" },
               { v: "ellipse", text: "Oval", title: "Fins are cut off at an oval" },
-              { v: "formula", text: "r = f(phi)", title: "Fins are cut off at a polar outline, such as a leaf" },
+              { v: "formula", text: "Shape", title: "Fins are cut off at a shape round the centre, such as a leaf, heart or star" },
             ]} />
             {cn.outerBoundary.kind === "formula" && (
-              <FormulaInput label="Outline radius r(phi)" value={cn.outerBoundary.expression} onEdit={(v, r) => editCurve((c) => { if (c.outerBoundary.kind === "formula") c.outerBoundary.expression = v; }, r)} />
+              <ShapePicker target="outline" label="Outline" expression={cn.outerBoundary.expression} stored={params.shapes?.outline} units={units}
+                formulaLabel="Outline radius r(phi)" note="Use phi, the angle round the centre in radians. The result is the radius in mm and must stay positive."
+                onShape={(s, r) => onEdit((q) => applyShape(q, "outline", s), r)}
+                onFormula={(v, r) => editCurve((c) => { if (c.outerBoundary.kind === "formula") c.outerBoundary.expression = v; }, r)} />
             )}
             <label className="chk"><input type="checkbox" checked={cn.backPlate} onChange={(e) => editCurve((c) => { c.backPlate = e.target.checked; }, true)} /> Back plate with a slot for every tab</label>
             {cn.backPlate && (
@@ -453,7 +459,7 @@ export function ParametricDock({
                 </select>
               </label>
             )}
-            <p className="note">Fins stand square to the guide. t runs 0 to 1 round it, s is mm out along the fin, L its length, phi the angle round the centre.</p>
+            <p className="note">Fins stand square to the guide curve and fan out from it.</p>
           </>
         ) : (
           <>
