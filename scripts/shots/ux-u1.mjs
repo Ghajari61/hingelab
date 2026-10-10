@@ -32,8 +32,9 @@ await withBrowser(async (page) => {
   await shot(page, "ux-u1-hinge-sheets");
 
   await page.getByRole("tab", { name: "3D" }).click();
-  await page.waitForTimeout(400);
-  check(await page.locator(".stage-3d #preview3d svg").isVisible(), "3D view shows the assembled box");
+  await page.waitForSelector(".stage-3d #preview3d canvas", { timeout: 30000 });
+  await page.waitForTimeout(800);
+  check(await page.locator(".stage-3d #preview3d canvas").isVisible(), "3D view shows the assembled box");
   await shot(page, "ux-u1-hinge-3d");
   await page.getByRole("tab", { name: /Sheets/ }).click();
 

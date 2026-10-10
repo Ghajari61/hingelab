@@ -1,107 +1,49 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import type { LetterModel, LetterParams } from "@/lib/letters";
-import { buildLetterScene, type LetterScene } from "@/lib/letters/scene3d";
+import { useMemo, useState } from "react";
+import type { LayerContent, Layout, Point } from "@/lib/hinge";
+import type { LetterModel, LetterParams, LetterPart } from "@/lib/letters";
+import { buildLetterScene, WOOD } from "@/lib/letters/scene3d";
+import { flatScene, type FlatPart } from "@/lib/three/flat";
+import { lookOf } from "@/lib/three/looks";
+import Viewport3D from "@/components/shell/Viewport3D";
+import { View3DHud } from "@/components/shell/View3DHud";
 
-interface Stage {
-  renderer: THREE.WebGLRenderer;
-  scene: THREE.Scene;
-  camera: THREE.PerspectiveCamera;
-  controls: OrbitControls;
-  render: () => void;
+/** Tints that keep base, lid, lip and glued pieces apart once the material look replaces the colours. */
+function tintLetters(group: { traverse: (f: (o: { name: string; userData: Record<string, unknown> }) => void) => void }) {
+  group.traverse((o) => {
+    if (o.name.startsWith("wall ")) o.userData.vertexBase = WOOD.wall;
+    else if (/· lid lip/u.test(o.name)) o.userData.tint = 0.86;
+    else if (/· lid/u.test(o.name)) o.userData.tint = 1.04;
+    else if (/· base/u.test(o.name)) o.userData.tint = 0.93;
+  });
 }
 
-/** The assembled letters in three.js: drag to orbit, scroll to zoom. Renders only when something changes. */
-export default function LetterPreview3D({ model, params, explode, className = "" }: { model: LetterModel | null; params: LetterParams; explode: number; className?: string }) {
-  const host = useRef<HTMLDivElement>(null);
-  const stage = useRef<Stage | null>(null);
-  const shown = useRef<LetterScene | null>(null);
-  const framed = useRef<string>("");
-  const [noGL, setNoGL] = useState(false);
+function flatParts(lay: Layout<LetterPart>): FlatPart[] {
+  return lay.items.map(({ pt, ox, oy }) => {
+    const sh = (q: Point): Point => [q[0] + ox, q[1] + oy];
+    if (pt.kind === "solid") return { name: pt.name, outer: pt.outer.map(sh), holes: pt.holes.map((h) => h.map(sh)) };
+    if (pt.kind === "plate") return { name: pt.name, outer: pt.outer.map(sh), holes: [...pt.holes, ...pt.slots].map((h) => h.map(sh)) };
+    return { name: pt.name, outer: pt.outline.map(sh), holes: [] };
+  });
+}
 
-  useEffect(() => {
-    const el = host.current;
-    if (!el) return;
-    let renderer: THREE.WebGLRenderer;
-    try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    } catch {
-      setNoGL(true);
-      return;
-    }
-    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
-    el.prepend(renderer.domElement);
-    const scene = new THREE.Scene();
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x3a3226, 1.6));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.8);
-    sun.position.set(0.6, 1, 0.8);
-    scene.add(sun);
-    const camera = new THREE.PerspectiveCamera(32, 1, 1, 20000);
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = false;
-    controls.enablePan = false;
-    const render = () => renderer.render(scene, camera);
-    controls.addEventListener("change", render);
-    const resize = () => {
-      const w = el.clientWidth, h = el.clientHeight;
-      if (!w || !h) return;
-      renderer.setSize(w, h, false);
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      render();
-    };
-    const ro = new ResizeObserver(resize);
-    ro.observe(el);
-    stage.current = { renderer, scene, camera, controls, render };
-    resize();
-    return () => {
-      ro.disconnect();
-      controls.dispose();
-      shown.current?.dispose();
-      shown.current = null;
-      renderer.dispose();
-      renderer.domElement.remove();
-      stage.current = null;
-      framed.current = "";
-    };
-  }, []);
-
-  useEffect(() => {
-    const st = stage.current;
-    if (!st) return;
-    if (shown.current) {
-      st.scene.remove(shown.current.group);
-      shown.current.dispose();
-      shown.current = null;
-    }
-    if (model) {
-      const sc = buildLetterScene(model, params, explode);
-      st.scene.add(sc.group);
-      shown.current = sc;
-      // reframe when the text, mode or size changes, not while the lid is lifted or a setting is scrubbed
-      const key = `${params.text}|${params.mode}|${params.fontId}|${Math.round(params.size)}`;
-      if (key !== framed.current) {
-        framed.current = key;
-        const r = Math.hypot(...sc.size) / 2 || 100;
-        const dist = r / Math.sin(THREE.MathUtils.degToRad(st.camera.fov / 2)) * 1.25;
-        st.camera.position.set(0, dist * 0.55, dist * 0.84);
-        st.camera.near = dist / 100;
-        st.camera.far = dist * 10;
-        st.camera.updateProjectionMatrix();
-        st.controls.target.set(0, sc.size[1] / 2, 0);
-        st.controls.update();
-      }
-    }
-    st.render();
-  }, [model, params, explode]);
-
+/** The assembled letters (or their parts lying flat) in the shared 3D stage. */
+export default function LetterPreview3D({ model, params, lay, content }: { model: LetterModel | null; params: LetterParams; lay: Layout<LetterPart> | null; content: LayerContent | null }) {
+  const [explode, setExplode] = useState(0);
+  const [flat, setFlat] = useState(false);
+  const lid = params.mode === "box" && params.lid !== "open";
+  const scene = useMemo(() => {
+    if (!model) return null;
+    if (flat && lay) return flatScene(flatParts(lay), params.T, content && params.mode === "box" && params.wallStyle === "hinge" ? { d: content.hinge, width: lay.width, height: lay.height } : undefined);
+    const sc = buildLetterScene(model, params, lid ? explode : 0);
+    tintLetters(sc.group as never);
+    return sc;
+  }, [model, params, explode, flat, lay, content, lid]);
+  const key = flat && lay ? `flat|${Math.round(lay.width)}x${Math.round(lay.height)}` : `${params.text}|${params.mode}|${params.fontId}|${Math.round(params.size)}`;
   return (
-    <div ref={host} id="preview3d" className={`p3d ${className}`} aria-label="Assembled letters preview, drag to rotate">
-      {noGL ? <span className="note">3D preview needs WebGL, which this browser has turned off.</span> : null}
-      <span className="hint3d">Drag to rotate · scroll to zoom</span>
-    </div>
+    <Viewport3D scene={scene} look={lookOf(params.material)} frameKey={key} label="Assembled letters in 3D, drag to orbit">
+      <View3DHud flat={flat} onFlat={setFlat} explode={explode} onExplode={setExplode} explodeLabel={lid ? "Lift lid" : null} />
+    </Viewport3D>
   );
 }

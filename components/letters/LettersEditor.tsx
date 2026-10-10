@@ -88,8 +88,10 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   const [spaceDown, setSpaceDown] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
   const [showZones, setShowZones] = useState(true);
-  const [explode, setExplode] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("sheets");
+  /** three.js loads the first time the 3D view opens, then stays mounted. */
+  const [seen3d, setSeen3d] = useState(false);
+  if (viewMode === "3d" && !seen3d) setSeen3d(true);
   const [upgrade, setUpgrade] = useState<string | null>(null);
   const account = usePlan();
   const myPresets = useMyPresets();
@@ -444,12 +446,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
         <div className="stage">
         <ViewToggle value={viewMode} onChange={setViewMode} />
         <div className="stage-3d" hidden={viewMode !== "3d"}>
-          <LetterPreview3D model={model} params={built} explode={params.mode === "box" && params.lid !== "open" ? explode : 0} />
-          {params.mode === "box" && params.lid !== "open" && (
-            <div className="hud3d">
-              <label className="explode">Lift lid <input type="range" min={0} max={1} step={0.01} value={explode} aria-label="Lift lid" onChange={(e) => setExplode(parseFloat(e.target.value))} /></label>
-            </div>
-          )}
+          {seen3d && <LetterPreview3D model={model} params={built} lay={lay} content={content} />}
         </div>
         <section className="viewport" aria-label="Canvas">
           <div className="ruler-corner" />

@@ -155,3 +155,17 @@ details.sec > summary:hover .sec-rst, .sec-rst:focus-visible { opacity: 1; }
 .fit-count output { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--fg); }
 .fit-result { margin: 10px 0 6px; padding: 8px 10px; border-radius: 8px; background: var(--field); border: 1px solid var(--line); font-size: 12.5px; line-height: 1.45; color: var(--fg); font-variant-numeric: tabular-nums; }
 .fit-result.warn { border-color: color-mix(in srgb, var(--warn) 55%, var(--line)); color: var(--warn); }
+
+/* U5: shared 3D stage, view cube */
+.v3d { cursor: grab; }
+.v3d:active { cursor: grabbing; }
+.vcube-wrap { position: absolute; top: 16px; right: 16px; z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.vcube-stage { position: relative; width: 84px; height: 84px; }
+.vcube { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; }
+.vcube-face { position: absolute; left: 0; top: 0; display: grid; place-items: center; padding: 0; font-size: 10px; font-weight: 600; letter-spacing: .02em; color: var(--fg-dim); background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line-strong, var(--line)); backface-visibility: hidden; cursor: pointer; box-sizing: border-box; }
+.vcube-face:hover:not(:disabled) { background: var(--accent-soft); color: var(--fg); border-color: var(--accent); }
+.vcube-face:disabled { cursor: default; color: var(--fg-faint); }
+.vcube-btns { display: flex; gap: 2px; padding: 2px; background: var(--hud-bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow-2); }
+.vcube-btns button { display: grid; place-items: center; height: 24px; min-width: 26px; padding: 0 6px; border: 0; background: none; border-radius: 6px; font-size: 11px; font-weight: 500; color: var(--fg-dim); cursor: pointer; }
+.vcube-btns button:hover { background: var(--surface-hover); color: var(--fg); }
+.hud3d .iconseg button { height: 26px; }

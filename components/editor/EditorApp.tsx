@@ -21,7 +21,7 @@ import { fmtLen, type Units } from "./format";
 import type { NumericKey } from "./fields";
 import { MenuBar, type MenuEntry } from "./MenuBar";
 import { hingeGroups, PRODUCT_INFO, type Product } from "./ControlBar";
-import { Preview3D } from "./Preview3D";
+import dynamic from "next/dynamic";
 import { GalleryRail } from "@/components/shell/GalleryRail";
 import { ViewToggle, type ViewMode } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
@@ -34,6 +34,11 @@ import { rulerSvg } from "./Rulers";
 import { PanelDock } from "./PanelDock";
 import { StatusBar } from "./StatusBar";
 import { Dialogs, type ModalState } from "./dialogs";
+
+const HingeView3D = dynamic(() => import("./HingeView3D"), {
+  ssr: false,
+  loading: () => <div id="preview3d" className="p3d v3d" />,
+});
 
 function loadInitial(cloud: CloudDoc | null) {
   if (cloud) return { params: mergeParams(cloud.params as Partial<Params>), units: readUnits() };
@@ -65,8 +70,10 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   const [tool, setTool] = useState<"hand" | "zoom">("hand");
   const [spaceDown, setSpaceDown] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
-  const [explode, setExplode] = useState(0.35);
   const [viewMode, setViewMode] = useState<ViewMode>("sheets");
+  /** three.js loads the first time the 3D view opens, then stays mounted. */
+  const [seen3d, setSeen3d] = useState(false);
+  if (viewMode === "3d" && !seen3d) setSeen3d(true);
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
   const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
@@ -381,12 +388,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
         <div className="stage">
         <ViewToggle value={viewMode} onChange={setViewMode} />
         <div className="stage-3d" hidden={viewMode !== "3d"}>
-          <Preview3D model={model} params={built} explode={explode} />
-          {params.lid !== "open" && (
-            <div className="hud3d">
-              <label className="explode">Lift lid <input type="range" min={0} max={1} step={0.01} value={explode} aria-label="Lift lid" onChange={(e) => setExplode(parseFloat(e.target.value))} /></label>
-            </div>
-          )}
+          {seen3d && <HingeView3D model={model} params={built} lay={lay} content={content} />}
         </div>
         <section className="viewport" aria-label="Canvas">
           <div className="ruler-corner" />
