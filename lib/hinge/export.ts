@@ -4,6 +4,7 @@ import { polyD } from "./polygon";
 import { colSegments, hingeCutPaths } from "./hinge";
 import { outlinePath } from "./wall";
 import { clamp, r3 } from "./util";
+import { xmlCommentText } from "@/lib/security/svg";
 
 export const EXPORT_LAYERS: ExportLayer[] = [
   { key: "outline", name: "Outline cut", code: "02", color: "#FF0000", ui: "var(--l-outline)" },
@@ -47,7 +48,7 @@ const escapeXml = (s: string) => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<":
 export function layeredSVG(width: number, height: number, comment: string, LC: LayerContent, layers: Layers, labels: boolean) {
   const W = r3(width), H = r3(height);
   let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">\n`;
-  s += `<!-- ${comment.replace(/--/g, "- -")} -->\n`;
+  s += `<!-- ${xmlCommentText(comment)} -->\n`;
   const order = ["labels", "slots", "hinge", "outline"] as const;
   for (const key of order) {
     const def = EXPORT_LAYERS.find(l => l.key === key)!;

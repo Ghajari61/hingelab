@@ -7,6 +7,7 @@ import { EXPORT_LAYERS, r3, type LayerContent, type Layers } from "@/lib/hinge";
 import { signedArea } from "@/lib/letters/polygon";
 import { SHEET_SPACING } from "@/lib/fit/arrange";
 import { calibrationBar } from "@/lib/fit/calibration";
+import { xmlCommentText } from "@/lib/security/svg";
 import { addWatermark } from "@/lib/plans";
 import { fmtMinutes } from "./cutTime";
 import { finSpacingOf } from "./defaults";
@@ -93,7 +94,7 @@ export function allSheetsSVG(result: SliceResult, p: ParametricParams, opts: { w
 function layeredSVG(width: number, height: number, comment: string, S: SheetPaths, p: ParametricParams, opts: { watermark?: boolean }): string {
   const W = r3(width), H = r3(height);
   let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">\n`;
-  s += `<!-- ${comment.replace(/--/g, "- -")} -->\n`;
+  s += `<!-- ${xmlCommentText(comment)} -->\n`;
   const layer = (key: "outline" | "slots" | "labels" | "hinge", paths: string[], name = LAYER(key).name) => {
     const def = LAYER(key);
     // Folded nets keep their edge numbers when part labels are off.

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FolderOpen } from "lucide-react";
 import { EmptyState, SegmentedControl, useToast } from "@/components/ui";
 import { generatorMeta } from "@/lib/generators/catalog";
+import { inertSvgMarkup } from "@/lib/security/svg";
 import { fuzzyFilter } from "@/lib/studio/fuzzy";
 import { deleteLocalProject, listLocalProjects, loadLocalProject, saveLocalProject, type LocalProjectSummary } from "@/lib/studio/localStore";
 import { editorPath } from "../projectActions";
@@ -50,7 +51,7 @@ export default function ProjectsPage() {
             <div className="gen-grid" role="list">
               {shown.map((p) => (
                 <div key={p.id} role="listitem" className="recent-card" style={{ cursor: "default" }}>
-                  <button type="button" className="thumb" style={{ border: 0, cursor: "pointer" }} aria-label={`Open ${p.name}`} onClick={() => router.push(editorPath(p.id))} dangerouslySetInnerHTML={p.thumbnail ? { __html: p.thumbnail } : undefined} />
+                  <button type="button" className="thumb" style={{ border: 0, cursor: "pointer" }} aria-label={`Open ${p.name}`} onClick={() => router.push(editorPath(p.id))} dangerouslySetInnerHTML={inertSvgMarkup(p.thumbnail) ? { __html: inertSvgMarkup(p.thumbnail)! } : undefined} />
                   <span className="nm">{p.name}</span>
                   <span className="meta">{p.generators[0] ? generatorMeta(p.generators[0])?.name : "Design"} · {new Date(p.updatedAt).toLocaleDateString()}</span>
                   <div style={{ display: "flex", gap: 6 }}>

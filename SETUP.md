@@ -21,13 +21,14 @@ Supabase CLI stack and (once you add test keys) Stripe test mode. Variable names
 ## Supabase (hosted)
 
 1. Create a project at https://supabase.com (region close to your users).
-2. Link and push the schema: `npx supabase link --project-ref <ref>` then `npx supabase db push`. This creates the tables, policies and triggers from `supabase/migrations/`, the private Storage bucket `models` (files behind Parametric cloud projects) with its policies, and the `user_presets` table behind "Save as my preset". Run `npx supabase db push` again whenever a new file appears in `supabase/migrations/`.
+2. Link and push the schema: `npx supabase link --project-ref <ref>` then `npx supabase db push`. This creates the tables, policies and triggers from `supabase/migrations/`, the private Storage bucket `models` (files behind Parametric cloud projects) with its policies, and the `user_presets` table behind "Save as my preset". Run `npx supabase db push` again whenever a new file appears in `supabase/migrations/` (`npx supabase migration list --linked` shows what is applied). `20261011000100_security_hardening.sql` adds the shared API rate limiter; without it the limits are counted per server instance only.
 3. Storage → Settings: raise the global upload limit to at least **100 MB**, the size of the largest 3D file the Parametric editor accepts (the bucket itself is set to 100 MB, but the project-wide limit caps it; on the Free Supabase plan the cap is 50 MB, so larger models would stay on the device only).
 4. Authentication → URL Configuration: Site URL = your production URL; add `https://<your-domain>/**` and `http://localhost:3000/**` to Redirect URLs.
 5. Authentication → Providers → Email: keep "Confirm email" on.
 6. Authentication → Providers → Google: create an OAuth client in Google Cloud Console (APIs & Services → Credentials → OAuth client ID → Web application). Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`. Paste the client id and secret into Supabase.
 7. Optional, local Google sign-in: put the same id/secret in `.env.local` as `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` / `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`, set `enabled = true` under `[auth.external.google]` in `supabase/config.toml`, add `http://127.0.0.1:55421/auth/v1/callback` to the Google client, and restart the stack.
 8. Authentication → Emails → SMTP: connect a sending service (Resend, Postmark, …) before launch; the built-in sender is rate limited.
+9. Authentication → Settings / Attack Protection (see `SECURITY_AUDIT.md`): turn on leaked-password protection, "Secure password change" and "Secure email change", and set a minimum password length of at least 8. Do not turn on CAPTCHA there yet: the sign-up and reset forms do not send a CAPTCHA token, so every sign-up would fail.
 
 ## Stripe (test mode)
 

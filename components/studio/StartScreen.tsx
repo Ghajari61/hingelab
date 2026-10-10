@@ -6,6 +6,7 @@ import { FolderOpen, ImagePlus, Search, X } from "lucide-react";
 import { Badge, ContextMenu, Dialog, TextField, useToast, type MenuItem } from "@/components/ui";
 import { useAccount } from "@/components/auth/useAccount";
 import { GENERATORS, generatorMeta } from "@/lib/generators/catalog";
+import { inertSvgMarkup } from "@/lib/security/svg";
 import { fuzzyFilter } from "@/lib/studio/fuzzy";
 import { deleteLocalProject, listLocalProjects, loadLocalProject, newLocalId, saveLocalProject, type LocalProjectSummary } from "@/lib/studio/localStore";
 import { uniqueName } from "@/lib/studio/naming";
@@ -231,7 +232,7 @@ export default function StartScreen() {
                     onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, p }); }}
                     onKeyDown={(e) => { if (e.key === "F2") { e.preventDefault(); setRenaming({ p, name: p.name }); } if (e.key === "ContextMenu") { const r = e.currentTarget.getBoundingClientRect(); setMenu({ x: r.left + 20, y: r.top + 20, p }); } }}
                   >
-                    <span className="thumb" dangerouslySetInnerHTML={p.thumbnail ? { __html: p.thumbnail } : undefined} />
+                    <span className="thumb" dangerouslySetInnerHTML={inertSvgMarkup(p.thumbnail) ? { __html: inertSvgMarkup(p.thumbnail)! } : undefined} />
                     <span className="nm">{p.name}</span>
                     <span className="meta">{g ? g.name : "Design"} · {ago(p.updatedAt)}</span>
                   </button>

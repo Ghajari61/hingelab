@@ -1,6 +1,7 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import { SHEET_EXTRAS, type GenBase } from "../types";
+import { isImageDataURL } from "@/lib/security/svg";
 import { mergeInto } from "../util";
 
 export type PuzzleShape = "rect" | "circle" | "heart" | "custom";
@@ -77,5 +78,7 @@ export const PUZZLE_DEFAULTS: PuzzleParams = {
 };
 
 export function mergePuzzle(raw: unknown): PuzzleParams {
-  return mergeInto(clone(PUZZLE_DEFAULTS), raw);
+  const p = mergeInto(clone(PUZZLE_DEFAULTS), raw);
+  if (p.engrave.image && !isImageDataURL(p.engrave.image)) p.engrave = { ...p.engrave, image: "" };
+  return p;
 }

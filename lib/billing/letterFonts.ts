@@ -31,10 +31,13 @@ export function bundledFont(hb: HarfBuzz, id: string): Promise<LoadedFont> | nul
   return p;
 }
 
-/** An uploaded font sent with the request as base64. Throws a readable error. */
+/** An error whose message is written for the user; other errors are logged, not shown. */
+export class FontError extends Error {}
+
+/** An uploaded font sent with the request as base64. Throws a readable FontError. */
 export function uploadedFont(hb: HarfBuzz, id: string, name: string, base64: string): LoadedFont {
   const b = Buffer.from(base64, "base64");
-  if (!b.length) throw new Error("The uploaded font is empty.");
-  if (b.length > MAX_UPLOAD_FONT_BYTES) throw new Error("Uploaded fonts over 3 MB cannot be exported through the server yet. Use a smaller font file.");
+  if (!b.length) throw new FontError("The uploaded font is empty.");
+  if (b.length > MAX_UPLOAD_FONT_BYTES) throw new FontError("Uploaded fonts over 3 MB cannot be exported through the server yet. Use a smaller font file.");
   return loadFont(hb, id, name.slice(0, 120) || "Uploaded font", toArrayBuffer(b));
 }

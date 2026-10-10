@@ -18,6 +18,8 @@ export type BillingStore = {
   /** Links a customer to a user (checkout started before the customer id was saved). */
   updateByUser: (userId: string, patch: ProfilePatch) => Promise<boolean>;
   retrieveSubscription: (id: string) => Promise<Stripe.Subscription>;
+  /** Another subscription of the customer that still grants Pro, if any. */
+  otherProSubscription?: (customerId: string, exceptId: string) => Promise<Stripe.Subscription | null>;
 };
 
 const idOf = (v: string | { id: string } | null | undefined) => (typeof v === "string" ? v : v?.id ?? null);
@@ -63,9 +65,14 @@ export async function handleStripeEvent(event: Stripe.Event, store: BillingStore
       const customer = idOf(sub.customer);
       if (!customer) return "ignored: no customer";
       // Events can arrive out of order, so the current state comes from Stripe, not the event snapshot.
-      const patch = event.type === "customer.subscription.deleted"
+      let patch = event.type === "customer.subscription.deleted"
         ? { plan: "free" as Plan, plan_status: sub.status, current_period_end: periodEnd(sub) }
         : patchFromSubscription(await store.retrieveSubscription(sub.id));
+      // Ending one subscription must not take Pro away while another one is still paid for.
+      if (patch.plan === "free" && store.otherProSubscription) {
+        const other = await store.otherProSubscription(customer, sub.id);
+        if (other) patch = patchFromSubscription(other);
+      }
       const found = await store.updateByCustomer(customer, patch);
       return found ? `${event.type} for ${customer}: ${patch.plan}` : `no profile for ${customer}`;
     }

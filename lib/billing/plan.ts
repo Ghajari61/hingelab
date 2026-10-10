@@ -5,10 +5,11 @@ import { planOf, type Plan } from "@/lib/plans";
 
 /**
  * The caller's plan, read on the server. Signed-out visitors are on Free. Without Supabase there
- * are no accounts and nothing to buy, so everything is open (same rule as `usePlan`).
+ * are no accounts and nothing to buy, so everything is open (same rule as `usePlan`) - except on a
+ * production deployment, where missing configuration must not unlock Pro.
  */
 export async function currentPlan(): Promise<{ plan: Plan; userId: string | null }> {
-  if (!supabaseConfigured()) return { plan: "pro", userId: null };
+  if (!supabaseConfigured()) return { plan: process.env.VERCEL_ENV === "production" ? "free" : "pro", userId: null };
   const session = await getUser();
   if (!session) return { plan: "free", userId: null };
   const { data } = await session.supabase.from("profiles").select("plan").eq("id", session.user.id).maybeSingle();

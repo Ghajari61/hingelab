@@ -13,6 +13,7 @@ import type { Issue } from "@/lib/issues";
 import { differenceShapes, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { rotatePoint } from "@/lib/nest/outline";
 import { finLabel } from "@/lib/parametric/label";
+import { isImageDataURL, xmlCommentText } from "@/lib/security/svg";
 import { bboxOf, pathD } from "./geom";
 import { MAX_COPIES, type BuildContext, type Contour, type GenBase, type GenImage, type GenOutput, type GenPart, type GeneratorDef, type SheetExtras } from "./types";
 
@@ -144,7 +145,7 @@ export function genContent(lay: Layout<CutPart>): GenContent {
     for (const c of pt.score) L.hinge.push(pathD(c, false, ox, oy));
     L.fills.push([...pt.outline, ...pt.inner].map((c) => pathD(c, true, ox, oy)).join(" "));
     if (pt.engrave.length) L.engrave.push(pt.engrave.map((c) => pathD(c, true, ox, oy)).join(" "));
-    for (const im of pt.images) L.images.push({ href: im.href, x: r3(im.x + ox), y: r3(im.y + oy), w: r3(im.w), h: r3(im.h), clip: im.clip ? pathD(im.clip, true, ox, oy) : undefined });
+    for (const im of pt.images) if (isImageDataURL(im.href)) L.images.push({ href: im.href, x: r3(im.x + ox), y: r3(im.y + oy), w: r3(im.w), h: r3(im.h), clip: im.clip ? pathD(im.clip, true, ox, oy) : undefined });
   }
   return L;
 }
@@ -161,7 +162,7 @@ export function genSVG<P extends GenBase>(def: GeneratorDef<P>, p: P, lay: Layou
   const parts = lay.items.map((it) => it.pt.name).join(", ");
   const note = `HingeLab ${def.name}: ${p.name}. ${def.summary(p)}. Material ${p.T} mm, kerf ${p.K} mm (compensated). Parts: ${parts}.${comment ? " " + comment : ""}`;
   let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"${C.images.length ? ' xmlns:xlink="http://www.w3.org/1999/xlink"' : ""} width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">\n`;
-  s += `<!-- ${esc(note).replace(/--/g, "- -")} -->\n`;
+  s += `<!-- ${xmlCommentText(esc(note))} -->\n`;
   const layer = (key: LayerKey, paths: string[], fill: boolean) => {
     if (!p.layers[key].exp || !paths.length) return;
     const def = EXPORT_LAYERS.find((l) => l.key === key)!;
@@ -176,7 +177,7 @@ export function genSVG<P extends GenBase>(def: GeneratorDef<P>, p: P, lay: Layou
     s += `<defs>\n${C.images.map((im, i) => (im.clip ? `  <clipPath id="engrave-clip-${i}"><path d="${im.clip}"/></clipPath>\n` : "")).join("")}</defs>\n`;
     s += `<g id="labels-images" inkscape:groupmode="layer" inkscape:label="${def.code} ${GEN_LAYER_NAMES.labels} (picture)">\n`;
     C.images.forEach((im, i) => {
-      s += `  <image x="${im.x}" y="${im.y}" width="${im.w}" height="${im.h}" preserveAspectRatio="none"${im.clip ? ` clip-path="url(#engrave-clip-${i})"` : ""} href="${im.href}" xlink:href="${im.href}"/>\n`;
+      s += `  <image x="${im.x}" y="${im.y}" width="${im.w}" height="${im.h}" preserveAspectRatio="none"${im.clip ? ` clip-path="url(#engrave-clip-${i})"` : ""} href="${esc(im.href)}" xlink:href="${esc(im.href)}"/>\n`;
     });
     s += `</g>\n`;
   }

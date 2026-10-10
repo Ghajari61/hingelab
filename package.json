@@ -54,6 +54,10 @@
     "storybook": "^10.6.1",
     "typescript": "^5.9.2",
     "vite": "^7.3.7",
-    "vitest": "^3.2.4"
+    "vite-node": "^5.3.0",
+    "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "postcss": "^8.5.29"
   }
 }

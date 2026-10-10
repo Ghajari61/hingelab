@@ -2,12 +2,21 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe, priceId, siteURL, stripeConfigured } from "@/lib/stripe";
+import { LIMITS, rateLimit, tooManyRequests } from "@/lib/security/rateLimit";
+import { isCrossSite, isJSONRequest, siteOrigins } from "@/lib/security/request";
 
-/** Starts a Stripe Checkout for Pro (monthly or yearly) for the signed-in user. */
+/**
+ * Starts a Stripe Checkout for Pro (monthly or yearly) for the signed-in user. Only the interval
+ * comes from the request; the price, customer and user id are decided here.
+ */
 export async function POST(request: NextRequest) {
+  if (isCrossSite(request, siteOrigins())) return NextResponse.json({ error: "Cross-site requests are not allowed." }, { status: 403 });
+  if (!isJSONRequest(request)) return NextResponse.json({ error: "Send JSON." }, { status: 415 });
   if (!stripeConfigured()) return NextResponse.json({ error: "Billing is not set up yet." }, { status: 503 });
   const session = await getUser();
   if (!session) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  const limited = await rateLimit(LIMITS.checkout, `user:${session.user.id}`);
+  if (!limited.ok) return tooManyRequests(limited);
 
   const body = (await request.json().catch(() => ({}))) as { interval?: string };
   const interval = body.interval === "year" ? "year" : "month";

@@ -5,6 +5,7 @@
 import { isGeneratorId } from "@/lib/generators/ids";
 import { arrangeGenerator, genSVG } from "@/lib/generators/output";
 import { loadGenerator } from "@/lib/generators/registry";
+import { sanitizeGeneratorParams } from "@/lib/generators/sanitize";
 import { makeTextFn } from "@/lib/generators/text";
 import type { BuildContext } from "@/lib/generators/types";
 import type { LoadedFont } from "@/lib/letters/fonts";
@@ -18,7 +19,7 @@ export type GeneratorExport =
 export async function exportGeneratorForPlan(id: unknown, raw: unknown, plan: Plan): Promise<GeneratorExport> {
   if (!isGeneratorId(id)) return { ok: false, status: 400, error: "Unknown product." };
   const def = await loadGenerator[id]();
-  const p = def.merge(raw);
+  const p = sanitizeGeneratorParams(def, def.merge(raw));
   let ctx: BuildContext = {};
   const fontIds = def.fonts?.(p) ?? [];
   if (fontIds.length) {

@@ -11,6 +11,7 @@ import {
   type ParametricParams,
 } from "@/lib/parametric";
 import { needsWatermark, parametricLock, type Plan } from "@/lib/plans";
+import { parametricRequestError } from "./validate";
 
 export type ParametricWhat = { kind: "zip" } | { kind: "all" } | { kind: "sheet"; index: number } | { kind: "guide" };
 
@@ -31,6 +32,8 @@ export function parseParametricRequest(partial: unknown, what: unknown): { p: Pa
   }
   if (!p.source || typeof p.source !== "object" || typeof p.method !== "string") return { error: "Invalid sculpture settings." };
   if (p.source.kind === "formula" && !(p.source.resolution > 0 && p.source.resolution <= MAX_SERVER_RESOLUTION)) return { error: "Invalid formula resolution." };
+  const invalid = parametricRequestError(p);
+  if (invalid) return { error: invalid };
   const w = (what ?? { kind: "zip" }) as Partial<ParametricWhat>;
   if (w.kind === "zip" || w.kind === "all" || w.kind === "guide") return { p, what: { kind: w.kind } };
   if (w.kind === "sheet" && Number.isInteger((w as { index?: unknown }).index) && (w as { index: number }).index >= 0) return { p, what: { kind: "sheet", index: (w as { index: number }).index } };
