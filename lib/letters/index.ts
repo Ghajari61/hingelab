@@ -1,0 +1,17 @@
+export { LETTER_DEFAULTS, minFeatureOf, bridgeWidthOf, hingeParamsOf, wallHeightOf, wallMaxLengthOf, cornerRadiusOf } from "./defaults";
+export { BUNDLED_FONTS, fontInfo, loadFont, missingChars, fontFamilyName } from "./fonts";
+export type { FontInfo, FontScript, HarfBuzz, LoadedFont } from "./fonts";
+export { shapeText, detectDirection, resolveDirection, spacingAllowed } from "./shape";
+export type { GlyphOutline, TextOutline } from "./shape";
+export { flatten, cleanContour, signedArea, unionShapes, differenceShapes, offsetShapes, shapeContours, pointInShape, makeShape, UNIT } from "./polygon";
+export { groupOutlines, weldPieces, closestPoints, thinFeatures, solidParts } from "./solid";
+export { Loop, windowRadius } from "./path";
+export { curvatureZones } from "./curvature";
+export { fillet } from "./fillet";
+export { hingeWall, verdictOf, SPLICE } from "./strips";
+export { facetContour, facetedWall } from "./facets";
+export { letterBoxes, boxError } from "./box";
+export { computeLetterModel } from "./model";
+export { layoutLetters, letterLayerContent, exportLetterSVG, zoneOverlay, baseOffset, ZONE_COLORS } from "./export";
+export type { OverlayPath } from "./export";
+export type * from "./types";

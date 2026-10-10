@@ -1,0 +1,1476 @@
+<title>HingeLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500&display=swap">
+<style>
+/* Layout: desktop graphics-app shell — menubar / control bar / [tool rail | rulers+canvas | panel dock] / status bar.
+   Deliberately single-theme dark, like pro design software. */
+:root {
+  --pasteboard: #161616;
+  --canvas-dot: #262626;
+  --chrome: #1F1F1F;
+  --panel: #262626;
+  --panel-2: #2E2E2E;
+  --field: #1B1B1B;
+  --line: #383838;
+  --line-soft: #2F2F2F;
+  --fg: #E3E3E3;
+  --fg-dim: #A3A3A3;
+  --fg-faint: #6E6E6E;
+  --accent: #3B8FF0;
+  --accent-hi: #5AA2F5;
+  --accent-ink: #FFFFFF;
+  --ok: #2FA37E;
+  --warn: #E58A1F;
+  --err: #EC5157;
+  --sheet: #1F1D1A;
+  --sheet-edge: #4A4440;
+  --wood: #C9A36A;
+  --l-outline: #FF5252;
+  --l-slots: #3DDC6E;
+  --l-hinge: #4DA6FF;
+  --l-labels: #D8D8D8;
+  --font-ui: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-num: "Source Code Pro", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { background: var(--chrome); color: var(--fg); font-family: var(--font-ui); font-size: 13px; line-height: 1.4; overflow: hidden; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.app { height: 100%; display: grid; grid-template-rows: 34px 42px minmax(0,1fr) 26px; }
+
+/* ---------- menubar ---------- */
+.menubar { display: flex; align-items: center; gap: 4px; padding-inline: 10px; background: var(--chrome); border-bottom: 1px solid var(--line-soft); min-width: 0; }
+.logo { display: flex; align-items: center; gap: 8px; padding-inline-end: 10px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; }
+.logo-mark { width: 22px; height: 22px; border-radius: 5px; background: linear-gradient(135deg, #3B8FF0, #2563C9); display: grid; place-items: center; }
+.menus { display: flex; gap: 0; }
+.menu { position: relative; }
+.menu > button { background: none; border: 0; padding: 5px 9px; border-radius: 4px; cursor: pointer; color: var(--fg-dim); }
+.menu > button:hover, .menu.open > button { background: var(--panel-2); color: var(--fg); }
+.dropdown { position: absolute; top: calc(100% + 4px); left: 0; min-width: 230px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 5px; box-shadow: 0 12px 32px rgba(0,0,0,.5); z-index: 50; display: grid; }
+.dropdown button { background: none; border: 0; text-align: left; padding: 6px 10px; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; gap: 24px; }
+.dropdown button:hover { background: var(--accent); color: var(--accent-ink); }
+.dropdown button:hover kbd { color: var(--accent-ink); }
+.dropdown button:disabled { color: var(--fg-faint); background: none; cursor: default; }
+.dropdown hr { border: 0; border-top: 1px solid var(--line); margin: 4px 2px; }
+kbd { font-family: var(--font-num); font-size: 11px; color: var(--fg-faint); }
+.doc-title { margin-inline-start: auto; color: var(--fg-dim); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.doc-title b { color: var(--fg); font-weight: 600; }
+.btn-export { margin-inline-start: 12px; background: var(--accent); color: var(--accent-ink); border: 0; padding: 5px 14px; border-radius: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn-export:hover { background: var(--accent-hi); }
+
+/* ---------- control bar ---------- */
+.controlbar { display: flex; align-items: center; gap: 14px; padding-inline: 12px; background: var(--panel); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.cb-group { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.cb-label { color: var(--fg-faint); font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; }
+.cb-sep { width: 1px; height: 22px; background: var(--line); flex: none; }
+.iconseg { display: inline-flex; background: var(--field); border: 1px solid var(--line); border-radius: 5px; padding: 2px; gap: 2px; }
+.iconseg button { background: none; border: 0; height: 26px; min-width: 30px; padding-inline: 7px; border-radius: 3px; cursor: pointer; color: var(--fg-dim); display: inline-flex; align-items: center; gap: 6px; }
+.iconseg button:hover { color: var(--fg); background: var(--panel-2); }
+.iconseg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.iconseg svg { display: block; }
+.product-tabs { margin-inline-start: auto; }
+.product-tabs .soon { font-size: 10px; color: var(--fg-faint); border: 1px solid var(--line); padding: 0 5px; border-radius: 8px; }
+
+/* ---------- main ---------- */
+.main { display: grid; grid-template-columns: 44px minmax(0,1fr) 312px; min-height: 0; }
+.toolrail { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding-block: 8px; gap: 4px; }
+.tool { width: 32px; height: 32px; border-radius: 5px; border: 0; background: none; color: var(--fg-dim); cursor: pointer; display: grid; place-items: center; position: relative; }
+.tool:hover { background: var(--panel-2); color: var(--fg); }
+.tool[aria-pressed="true"] { background: var(--panel-2); color: var(--accent-hi); box-shadow: inset 0 0 0 1px var(--line); }
+.tool .tip { position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); background: var(--panel-2); border: 1px solid var(--line); padding: 3px 8px; border-radius: 4px; white-space: nowrap; font-size: 12px; color: var(--fg); pointer-events: none; opacity: 0; z-index: 40; }
+.tool:hover .tip { opacity: 1; }
+.rail-sep { width: 22px; height: 1px; background: var(--line); margin-block: 4px; }
+
+.viewport { position: relative; display: grid; grid-template-columns: 20px minmax(0,1fr); grid-template-rows: 20px minmax(0,1fr); min-height: 0; min-width: 0; background: var(--pasteboard); }
+.ruler-corner { background: var(--panel); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.ruler { background: var(--panel); overflow: hidden; }
+.ruler.h { border-bottom: 1px solid var(--line); }
+.ruler.v { border-right: 1px solid var(--line); }
+.ruler svg { display: block; width: 100%; height: 100%; }
+.canvas { position: relative; overflow: hidden; touch-action: none; cursor: grab; background-color: var(--pasteboard); background-image: radial-gradient(var(--canvas-dot) 1px, transparent 1.3px); background-size: 16px 16px; }
+.canvas.dragging { cursor: grabbing; }
+.canvas.zoom-in { cursor: zoom-in; }
+.canvas svg#stage { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.canvas-hud { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 4px; background: rgba(38,38,38,.92); border: 1px solid var(--line); border-radius: 6px; padding: 3px; }
+.canvas-hud button { background: none; border: 0; height: 26px; min-width: 28px; border-radius: 4px; color: var(--fg-dim); cursor: pointer; font-family: var(--font-num); font-size: 12px; }
+.canvas-hud button:hover { background: var(--panel-2); color: var(--fg); }
+.canvas-error { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); background: #3A1F21; border: 1px solid var(--err); color: #FFD9DA; padding: 8px 14px; border-radius: 6px; max-width: min(520px, 90%); font-size: 13px; }
+
+/* ---------- dock ---------- */
+.dock { background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; min-height: 0; scrollbar-width: thin; scrollbar-color: #444 transparent; }
+details.sec { border-bottom: 1px solid var(--line); }
+details.sec > summary { list-style: none; cursor: pointer; padding: 9px 12px; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 12.5px; color: var(--fg); user-select: none; }
+details.sec > summary::-webkit-details-marker { display: none; }
+details.sec > summary .chev { transition: transform .15s; color: var(--fg-faint); }
+details.sec[open] > summary .chev { transform: rotate(90deg); }
+details.sec > summary .sum-meta { margin-inline-start: auto; font-weight: 400; color: var(--fg-faint); font-size: 11.5px; font-family: var(--font-num); }
+.sec-body { padding: 2px 12px 12px; display: grid; gap: 8px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px 10px; }
+.fld { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; background: var(--field); border: 1px solid var(--line); border-radius: 4px; min-width: 0; }
+.fld:focus-within { border-color: var(--accent); }
+.fld label { padding-inline: 7px 4px; color: var(--fg-dim); font-size: 11.5px; cursor: ew-resize; user-select: none; white-space: nowrap; touch-action: none; }
+.fld label:hover { color: var(--fg); }
+.fld .in { display: flex; align-items: center; min-width: 0; }
+.fld input { width: 100%; min-width: 0; background: none; border: 0; color: var(--fg); font-family: var(--font-num); font-size: 12.5px; padding: 5px 2px; text-align: right; outline: none; }
+.fld .u { color: var(--fg-faint); font-family: var(--font-num); font-size: 10.5px; padding-inline: 3px 7px; }
+.fld.wide { grid-column: 1 / -1; }
+.fld[hidden] { display: none; }
+.fld.invalid { border-color: var(--err); }
+select.sel { width: 100%; background: var(--field); border: 1px solid var(--line); border-radius: 4px; color: var(--fg); padding: 5px 7px; font: inherit; font-size: 12.5px; }
+.rowlabel { color: var(--fg-faint); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.chk { display: flex; align-items: center; gap: 8px; color: var(--fg-dim); cursor: pointer; }
+.chk input { accent-color: var(--accent); }
+.note { color: var(--fg-faint); font-size: 11.5px; margin: 0; }
+
+#preview3d { background: radial-gradient(ellipse at 50% 40%, #2C2C2C, #1C1C1C 75%); border: 1px solid var(--line); border-radius: 5px; height: 190px; display: grid; place-items: center; cursor: grab; touch-action: none; position: relative; overflow: hidden; }
+#preview3d svg { width: 100%; height: 100%; display: block; }
+#preview3d .hint3d { position: absolute; left: 8px; bottom: 6px; color: var(--fg-faint); font-size: 11px; pointer-events: none; }
+.explode { display: flex; align-items: center; gap: 8px; color: var(--fg-dim); font-size: 12px; }
+.explode input { flex: 1; accent-color: var(--accent); }
+
+.btn-auto { display: inline-flex; align-items: center; justify-content: center; gap: 7px; background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); border-radius: 4px; padding: 6px 10px; cursor: pointer; font-size: 12.5px; }
+.btn-auto:hover { border-color: var(--accent); color: var(--accent-hi); }
+#inspector { background: #EFE6D6; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+#inspector svg { display: block; width: 100%; height: auto; }
+#inspector .cap { display: flex; justify-content: space-between; padding: 4px 8px; background: var(--field); color: var(--fg-faint); font-size: 11px; border-top: 1px solid var(--line); }
+.layers { display: grid; gap: 2px; }
+.layer { display: grid; grid-template-columns: 22px 14px minmax(0,1fr) auto 22px; align-items: center; gap: 8px; padding: 4px 4px; border-radius: 4px; }
+.layer:hover { background: var(--panel-2); }
+.layer .eye { background: none; border: 0; padding: 0; cursor: pointer; color: var(--fg-dim); display: grid; place-items: center; height: 20px; }
+.layer .eye[aria-pressed="false"] { color: var(--fg-faint); opacity: .5; }
+.layer .sw { width: 12px; height: 12px; border-radius: 2px; }
+.layer .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.layer .code { font-family: var(--font-num); font-size: 11px; color: var(--fg-faint); }
+.layer input { accent-color: var(--accent); margin: 0; }
+
+.stats { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px 10px; font-size: 12.5px; }
+.stats dt { color: var(--fg-dim); }
+.stats dd { margin: 0; font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
+.verdict { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 5px; border: 1px solid var(--line); background: var(--field); font-size: 12.5px; }
+.verdict .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex: none; }
+.verdict.ok .dot { background: var(--ok); } .verdict.warn .dot { background: var(--warn); } .verdict.err .dot { background: var(--err); }
+.verdict.ok { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.verdict.warn { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
+.verdict.err { border-color: color-mix(in srgb, var(--err) 55%, var(--line)); }
+.issues { margin: 0; padding-inline-start: 16px; color: var(--fg-dim); font-size: 12px; display: grid; gap: 3px; }
+
+/* ---------- status bar ---------- */
+.statusbar { display: flex; align-items: center; gap: 16px; padding-inline: 10px; background: var(--chrome); border-top: 1px solid var(--line-soft); color: var(--fg-dim); font-size: 11.5px; white-space: nowrap; overflow-x: auto; scrollbar-width: none; }
+.statusbar .num { font-family: var(--font-num); color: var(--fg); }
+.statusbar .push { margin-inline-start: auto; }
+.unit-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.unit-toggle button { background: none; border: 0; padding: 1px 8px; cursor: pointer; color: var(--fg-dim); font-size: 11px; }
+.unit-toggle button[aria-pressed="true"] { background: var(--panel-2); color: var(--fg); }
+.s-ok { color: var(--ok); } .s-warn { color: var(--warn); } .s-err { color: var(--err); }
+
+/* ---------- modal + toast ---------- */
+.modal-back { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: grid; place-items: center; z-index: 100; padding: 16px; }
+.modal { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; width: min(560px, 100%); max-height: 85vh; overflow: auto; box-shadow: 0 24px 64px rgba(0,0,0,.6); }
+.modal header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 14px; }
+.modal header button { background: none; border: 0; color: var(--fg-dim); cursor: pointer; font-size: 18px; line-height: 1; }
+.modal .mb { padding: 14px 16px 18px; display: grid; gap: 10px; color: var(--fg-dim); font-size: 13px; }
+.modal .mb h3 { margin: 6px 0 0; color: var(--fg); font-size: 13px; }
+.modal .mb p, .modal .mb ul { margin: 0; }
+.modal .mb ul { padding-inline-start: 18px; display: grid; gap: 4px; }
+.modal textarea { width: 100%; height: 180px; background: var(--field); color: var(--fg); border: 1px solid var(--line); border-radius: 4px; font-family: var(--font-num); font-size: 11px; padding: 8px; }
+.toast { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.5); z-index: 120; font-size: 13px; }
+
+/* ---------- small screens ---------- */
+@media (max-width: 860px) {
+  body { overflow: auto; }
+  .app { height: auto; min-height: 100%; grid-template-rows: auto auto auto auto; }
+  .menubar { flex-wrap: wrap; padding-block: 4px; }
+  .doc-title { display: none; }
+  .btn-export { margin-inline-start: auto; }
+  .main { grid-template-columns: minmax(0,1fr); }
+  .toolrail { flex-direction: row; justify-content: center; border-right: 0; border-bottom: 1px solid var(--line); padding-block: 4px; flex-wrap: wrap; }
+  .rail-sep { width: 1px; height: 22px; margin-block: 0; margin-inline: 4px; }
+  .tool .tip { display: none; }
+  .viewport { height: 58vh; }
+  .dock { border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
+  .product-tabs { margin-inline-start: 0; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app" id="app">
+  <!-- MENUBAR -->
+  <header class="menubar">
+    <div class="logo">
+      <span class="logo-mark" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round"><path d="M2 2v10M4.7 2v4M4.7 8v4M7.4 2v10M10.1 2v4M10.1 8v4M12.6 2v10"/></svg>
+      </span>
+      HingeLab
+    </div>
+    <nav class="menus" id="menus" aria-label="Main menu">
+      <div class="menu" data-menu="file"><button type="button" aria-haspopup="true">File</button></div>
+      <div class="menu" data-menu="edit"><button type="button" aria-haspopup="true">Edit</button></div>
+      <div class="menu" data-menu="view"><button type="button" aria-haspopup="true">View</button></div>
+      <div class="menu" data-menu="help"><button type="button" aria-haspopup="true">Help</button></div>
+    </nav>
+    <div class="doc-title" id="docTitle"></div>
+    <button class="btn-export" id="exportBtn" type="button">Export SVG</button>
+  </header>
+
+  <!-- CONTROL BAR -->
+  <div class="controlbar" id="controlbar">
+    <div class="cb-group">
+      <span class="cb-label">Shape</span>
+      <div class="iconseg" id="shapeSeg" role="group" aria-label="Box shape">
+        <button type="button" data-v="rect" title="Rounded rectangle"><svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="15" height="11" rx="3.5"/></svg>Rounded</button>
+        <button type="button" data-v="pill" title="Stadium / pill"><svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2" width="15" height="10" rx="5"/></svg>Pill</button>
+        <button type="button" data-v="poly" title="Rounded polygon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M8 1.5l5.6 3.25v6.5L8 14.5l-5.6-3.25v-6.5z"/></svg>Polygon</button>
+        <button type="button" data-v="cyl" title="Cylinder"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.3"/></svg>Cylinder</button>
+      </div>
+    </div>
+    <div class="cb-sep"></div>
+    <div class="cb-group">
+      <span class="cb-label">Lid</span>
+      <div class="iconseg" id="lidSeg" role="group" aria-label="Lid type">
+        <button type="button" data-v="open">Open tray</button>
+        <button type="button" data-v="fixed">Fixed lid</button>
+        <button type="button" data-v="removable">Removable lid</button>
+      </div>
+    </div>
+    <div class="cb-sep"></div>
+    <div class="cb-group">
+      <span class="cb-label">Pattern</span>
+      <div class="iconseg" id="patSeg" role="group" aria-label="Hinge pattern">
+        <button type="button" data-v="straight" title="Straight lattice"><svg width="18" height="14" viewBox="0 0 18 14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M3 1v5M3 8v5M7 1v12M11 1v5M11 8v5M15 1v12"/></svg>Straight</button>
+        <button type="button" data-v="wave" title="Wave lattice: parallel waves, constant bar width"><svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M4 1c-2 2 2 4 0 6s2 4 0 6M9 1c-2 2 2 4 0 6s2 4 0 6M14 1c-2 2 2 4 0 6s2 4 0 6"/></svg>Wave</button>
+        <button type="button" data-v="relief" title="Lattice with round relief holes at every cut end"><svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M5 3.5v7M12 0v4.5M12 9.5V14"/><circle cx="5" cy="3" r="1.1"/><circle cx="5" cy="11" r="1.1"/><circle cx="12" cy="5" r="1.1"/><circle cx="12" cy="9" r="1.1"/></svg>Relief</button>
+        <button type="button" data-v="serpentine" title="Serpentine: cuts from alternating edges, for very tight bends"><svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M3 0v10.5M7 3.5V14M11 0v10.5M15 3.5V14"/></svg>Serpentine</button>
+      </div>
+    </div>
+    <div class="cb-group product-tabs">
+      <span class="cb-label">Product</span>
+      <div class="iconseg" role="group" aria-label="Product">
+        <button type="button" aria-pressed="true">Hinge Box</button>
+        <button type="button" disabled title="Coming next">Letters <span class="soon">soon</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <aside class="toolrail" aria-label="Tools">
+      <button class="tool" type="button" id="toolHand" aria-pressed="true"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"><path d="M6 9V4.2a1.2 1.2 0 012.4 0V8M8.4 8V3a1.2 1.2 0 012.4 0v5M10.8 8V4a1.2 1.2 0 012.4 0v6.5c0 3-2 5.5-5 5.5-2.2 0-3.3-1-4.5-3L3 10.2a1.2 1.2 0 012-1.3L6 10"/></svg><span class="tip">Hand (H) — drag to pan</span></button>
+      <button class="tool" type="button" id="toolZoom" aria-pressed="false"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7.5" cy="7.5" r="5"/><path d="M11.2 11.2L16 16M5.5 7.5h4M7.5 5.5v4"/></svg><span class="tip">Zoom (Z) — click to zoom, Alt-click out</span></button>
+      <div class="rail-sep"></div>
+      <button class="tool" type="button" id="toolFit"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 6V2h4M12 2h4v4M16 12v4h-4M6 16H2v-4"/></svg><span class="tip">Fit sheet (Ctrl+0)</span></button>
+      <button class="tool" type="button" id="toolGrid" aria-pressed="true"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 6h14M2 12h14M6 2v14M12 2v14"/></svg><span class="tip">Toggle grid (')</span></button>
+      <div class="rail-sep"></div>
+      <button class="tool" type="button" id="toolSave"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M3 2.5h9.5l2.5 2.5v10.5H3z"/><path d="M6 2.5v4h6v-4M5.5 15.5v-5h7v5"/></svg><span class="tip">Save project (Ctrl+S)</span></button>
+      <button class="tool" type="button" id="toolOpen"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M2 14.5V3.5h5l1.5 2H15v2.5"/><path d="M2 14.5l2.5-6.5H17l-2.5 6.5z"/></svg><span class="tip">Open project (Ctrl+O)</span></button>
+    </aside>
+
+    <section class="viewport" aria-label="Canvas">
+      <div class="ruler-corner"></div>
+      <div class="ruler h" id="rulerH"></div>
+      <div class="ruler v" id="rulerV"></div>
+      <div class="canvas" id="canvas">
+        <svg id="stage" xmlns="http://www.w3.org/2000/svg"><g id="world"></g></svg>
+        <div class="canvas-error" id="canvasError" hidden></div>
+        <div class="canvas-hud">
+          <button type="button" id="hudOut" title="Zoom out">−</button>
+          <button type="button" id="hudZoom" title="Actual size">100%</button>
+          <button type="button" id="hudIn" title="Zoom in">+</button>
+          <button type="button" id="hudFit" title="Fit sheet">Fit</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="dock" id="dock" aria-label="Panels">
+      <details class="sec" open>
+        <summary><svg class="chev" width="8" height="8" viewBox="0 0 8 8"><path d="M2 1l4 3-4 3z" fill="currentColor"/></svg>3D Preview<span class="sum-meta" id="dimsMeta"></span></summary>
+        <div class="sec-body">
+          <div id="preview3d" aria-label="Assembled box preview, drag to rotate"><span class="hint3d">Drag to rotate</span></div>
+          <label class="explode">Explode lid <input type="range" id="explode" min="0" max="1" step="0.01" value="0.35"></label>
+        </div>
+      </details>
+      <details class="sec" open>
+        <summary><svg class="chev" width="8" height="8" viewBox="0 0 8 8"><path d="M2 1l4 3-4 3z" fill="currentColor"/></svg>Dimensions<span class="sum-meta">outer</span></summary>
+        <div class="sec-body"><div class="grid2" id="secDims"></div></div>
+      </details>
+      <details class="sec" open>
+        <summary><svg class="chev" width="8" height="8" viewBox="0 0 8 8"><path d="M2 1l4 3-4 3z" fill="currentColor"/></svg>Material</summary>
+        <div class="sec-body">
+          <select class="sel" id="material" aria-label="Material preset"></select>
+          <div class="grid2" id="secMat"></div>
+        </div>
+      </details>
+      <details class="sec" open>
+        <summary><svg class="chev" width="8" height="8" viewBox="0 0 8 8"><path d="M2 1l4 3-4 3z" fill="currentColor"/></svg>Hinge Pattern<span class="sum-meta" id="patMeta"></span></summary>
+        <div class="sec-body">
+          <div class="rowlabel">Cut style</div>
+          <div class="iconseg" id="cutSeg" role="group" aria-label="Cut style">
+            <button type="button" data-v="slot" title="Each cut is a round-ended slot of set width; edge cuts become notches in the outline"><svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="4" y="1" width="3" height="12" rx="1.5"/><rect x="11" y="1" width="3" height="12" rx="1.5"/></svg>Slots</button>
+            <button type="button" data-v="line" title="Each cut is a single laser line (kerf width only)"><svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5.5 1v12M12.5 1v12"/></svg>Single line</button>
+          </div>
+          <div class="grid2" id="secHinge"></div>
+          <button type="button" class="btn-auto" id="autoFitBtn"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M7 1v2M7 11v2M1 7h2M11 7h2M2.8 2.8l1.4 1.4M9.8 9.8l1.4 1.4M2.8 11.2l1.4-1.4M9.8 4.2l1.4-1.4"/></svg>Auto-fit pattern to this corner</button>
+          <div id="inspector" aria-label="Hinge close-up"></div>
+          <p class="note">Drag a field label left or right to scrub its value. Hold Shift for bigger steps. Stretch shortens each hinge zone to make up for the cuts opening as the wall bends; raise it only if a test wall comes out too long.</p></div>
+      </details>
+      <details class="sec" open>
+        <summary><svg class="chev" width="8" height="8" viewBox="0 0 8 8"><path d="M2 1l4 3-4 3z" fill="currentColor"/></svg>Bend Analysis</summary>
+        <div class="sec-body" id="analysis"></div>
+      </details>
+      <details class="sec">
+        <summary><svg class="chev" width="8" height="8" viewBox="0 0 8 8"><path d="M2 1l4 3-4 3z" fill="currentColor"/></svg>Joints &amp; Fit</summary>
+        <div class="sec-body">
+          <div class="grid2" id="secJoints"></div>
+          <div class="rowlabel">Wall pieces</div>
+          <div class="iconseg" id="splitSeg" role="group" aria-label="Wall pieces">
+            <button type="button" data-v="1">One strip</button>
+            <button type="button" data-v="2">Two halves</button>
+          </div>
+          <p class="note">Two halves fits long walls on small beds. Seams land in the middle of flat sides.</p>
+        </div>
+      </details>
+      <details class="sec" open>
+        <summary><svg class="chev" width="8" height="8" viewBox="0 0 8 8"><path d="M2 1l4 3-4 3z" fill="currentColor"/></svg>Layers</summary>
+        <div class="sec-body"><div class="layers" id="layers"></div><p class="note">Colors follow the LightBurn palette, so each layer can get its own speed and power.</p></div>
+      </details>
+      <details class="sec">
+        <summary><svg class="chev" width="8" height="8" viewBox="0 0 8 8"><path d="M2 1l4 3-4 3z" fill="currentColor"/></svg>Sheet &amp; Layout</summary>
+        <div class="sec-body"><div class="grid2" id="secSheet"></div>
+          <label class="chk"><input type="checkbox" id="testStripChk"> Add a bend test strip</label>
+          <p class="note">The test strip carries one corner's hinge with 15 mm of flat on each side. Cut it first to check the bend in your material.</p>
+        </div>
+      </details>
+    </aside>
+  </div>
+
+  <!-- STATUS BAR -->
+  <footer class="statusbar">
+    <span>X <span class="num" id="sx">—</span></span>
+    <span>Y <span class="num" id="sy">—</span></span>
+    <span>Zoom <span class="num" id="sz">—</span></span>
+    <span id="sParts"></span>
+    <span id="sFit"></span>
+    <span class="push" id="sSaved">Autosaved locally</span>
+    <span class="unit-toggle" role="group" aria-label="Units">
+      <button type="button" data-u="mm">mm</button><button type="button" data-u="in">in</button>
+    </span>
+  </footer>
+</div>
+
+<div id="modalRoot"></div>
+<input type="file" id="fileInput" accept=".json,application/json" hidden>
+
+<script>
+(function () {
+"use strict";
+const $ = (id) => document.getElementById(id);
+const r3 = (n) => Math.round(n * 1000) / 1000;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const TAU = Math.PI * 2;
+
+/* ===================================================== state */
+const MATERIALS = {
+  birch3:  { name: "Baltic birch plywood 3 mm", T: 3,     K: 0.15, gamma: 0.020 },
+  birch18: { name: "Baltic birch plywood 1/8\"", T: 3.175, K: 0.15, gamma: 0.020 },
+  poplar3: { name: "Poplar plywood 3 mm",        T: 3,     K: 0.16, gamma: 0.022 },
+  mdf3:    { name: "MDF 3 mm",                   T: 3,     K: 0.18, gamma: 0.012 },
+  card2:   { name: "Chipboard / cardboard 2 mm", T: 2,     K: 0.20, gamma: 0.030 },
+  acr3:    { name: "Acrylic 3 mm (brittle)",     T: 3,     K: 0.10, gamma: 0.008 },
+  custom:  { name: "Custom material",            T: null,  K: null, gamma: 0.018 },
+};
+const DEFAULTS = {
+  name: "Untitled box",
+  shape: "rect", lid: "removable", pattern: "straight",
+  W: 140, D: 90, H: 70, R: 24, sides: 6, dia: 90, cylFlats: 6,
+  material: "birch3", T: 3, K: 0.15,
+  cutStyle: "slot", slotW: 0.8,
+  slit: 28, bridge: 3, pitch: 2.5, overrun: 3, stretch: 0,
+  tabW: 10, slotClr: 0.1, lidGap: 0.3, split: 1,
+  bedW: 600, bedH: 400, gap: 5, labels: true, testStrip: false,
+  layers: { outline: { vis: true, exp: true }, slots: { vis: true, exp: true }, hinge: { vis: true, exp: true }, labels: { vis: true, exp: true } },
+};
+let P = clone(DEFAULTS);
+let units = "mm";
+let showGrid = true;
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+try {
+  const s = JSON.parse(localStorage.getItem("hingelab-v1") || "null");
+  if (s && s.params) P = Object.assign(clone(DEFAULTS), s.params, { layers: Object.assign(clone(DEFAULTS.layers), s.params.layers || {}) });
+  if (s && s.units) units = s.units;
+} catch (e) {}
+function migrate(p) { if (p.pattern === "bone") p.pattern = "relief"; if (p.stretch == null) p.stretch = 0; if (p.testStrip == null) p.testStrip = false; if (p.cutStyle == null) p.cutStyle = "line"; if (p.slotW == null) p.slotW = 0.8; return p; }
+migrate(P);
+
+/* ===================================================== history */
+const undoStack = [], redoStack = [];
+let lastSnap = JSON.stringify(P);
+function commit() {
+  const snap = JSON.stringify(P);
+  if (snap === lastSnap) return;
+  undoStack.push(lastSnap); if (undoStack.length > 100) undoStack.shift();
+  redoStack.length = 0; lastSnap = snap;
+}
+function undo() { if (!undoStack.length) return; redoStack.push(JSON.stringify(P)); lastSnap = undoStack.pop(); P = JSON.parse(lastSnap); syncControls(); update(); toast("Undo"); }
+function redo() { if (!redoStack.length) return; undoStack.push(JSON.stringify(P)); lastSnap = redoStack.pop(); P = JSON.parse(lastSnap); syncControls(); update(); toast("Redo"); }
+
+/* ===================================================== geometry */
+function buildCore(p) {
+  const t = p.T;
+  let edges = [], R;
+  const mk = (cx, cy, nx, ny, len) => ({ c: [cx, cy], n: [nx, ny], len: Math.max(0, len) });
+  if (p.shape === "rect" || p.shape === "pill") {
+    R = p.shape === "pill" ? Math.min(p.W, p.D) / 2 : p.R;
+    const hw = p.W / 2 - R, hd = p.D / 2 - R;
+    if (hw < -1e-9 || hd < -1e-9) return { error: "Corner radius is larger than half the width or depth. Lower the radius or enlarge the box." };
+    edges = [mk(0, -hd, 0, -1, 2 * hw), mk(hw, 0, 1, 0, 2 * hd), mk(0, hd, 0, 1, 2 * hw), mk(-hw, 0, -1, 0, 2 * hd)];
+  } else if (p.shape === "poly") {
+    const N = Math.round(p.sides);
+    if (N < 3 || N > 12) return { error: "Polygon needs 3 to 12 sides." };
+    R = p.R;
+    const a = p.W / 2 - R;
+    if (a <= 0) return { error: "Corner radius is too large for this polygon size." };
+    const q = 2 * a * Math.tan(Math.PI / N);
+    for (let i = 0; i < N; i++) { const f = -Math.PI / 2 + i * TAU / N, n = [Math.cos(f), Math.sin(f)]; edges.push(mk(a * n[0], a * n[1], n[0], n[1], q)); }
+  } else {
+    const N = Math.round(p.cylFlats);
+    if (N < 3 || N > 16) return { error: "Cylinder needs 3 to 16 tab flats." };
+    const q = p.tabW + 4;
+    const a = q / (2 * Math.tan(Math.PI / N));
+    R = p.dia / 2 - a;
+    if (R < t + 2) return { error: "Diameter is too small for this many tab flats. Increase the diameter or reduce the flats." };
+    for (let i = 0; i < N; i++) { const f = -Math.PI / 2 + i * TAU / N, n = [Math.cos(f), Math.sin(f)]; edges.push(mk(a * n[0], a * n[1], n[0], n[1], q)); }
+  }
+  for (const e of edges) {
+    e.t = [-e.n[1], e.n[0]];
+    e.p0 = [e.c[0] - e.t[0] * e.len / 2, e.c[1] - e.t[1] * e.len / 2];
+    e.p1 = [e.c[0] + e.t[0] * e.len / 2, e.c[1] + e.t[1] * e.len / 2];
+  }
+  for (let i = 0; i < edges.length; i++) {
+    const a1 = Math.atan2(edges[i].n[1], edges[i].n[0]), a2 = Math.atan2(edges[(i + 1) % edges.length].n[1], edges[(i + 1) % edges.length].n[0]);
+    let d = a2 - a1; while (d <= 1e-9) d += TAU; edges[i].sweep = d;
+  }
+  return { edges, R };
+}
+
+function roundedPath(edges, r, ox = 0, oy = 0) {
+  const pt = (p, n) => `${r3(p[0] + n[0] * r + ox)},${r3(p[1] + n[1] * r + oy)}`;
+  let d = `M${pt(edges[0].p0, edges[0].n)}`;
+  edges.forEach((e, i) => {
+    const nx = edges[(i + 1) % edges.length];
+    d += ` L${pt(e.p1, e.n)} A${r3(r)},${r3(r)} 0 ${e.sweep > Math.PI ? 1 : 0} 1 ${pt(nx.p0, nx.n)}`;
+  });
+  return d + " Z";
+}
+
+function tabCount(len, tabW, seam) {
+  const m = 1.5;
+  let n = Math.floor((len - 2 * m + 2 * tabW) / (3 * tabW));
+  if (len < tabW + 2 * m) n = 0;
+  n = Math.max(0, n);
+  if (seam && n % 2 === 1) n -= 1;
+  return n;
+}
+
+function simplify(pts) {
+  const eq = (a, b) => Math.abs(a[0] - b[0]) < 1e-9 && Math.abs(a[1] - b[1]) < 1e-9;
+  let out = [];
+  for (const q of pts) if (!out.length || !eq(out[out.length - 1], q)) out.push(q);
+  if (out.length > 1 && eq(out[0], out[out.length - 1])) out.pop();
+  let changed = true;
+  while (changed && out.length > 3) {
+    changed = false; const res = [];
+    for (let i = 0; i < out.length; i++) {
+      const a = out[(i - 1 + out.length) % out.length], b = out[i], c = out[(i + 1) % out.length];
+      const cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+      if (Math.abs(cr) < 1e-9) { changed = true; continue; }
+      res.push(b);
+    }
+    out = res;
+  }
+  return out;
+}
+function offsetRect(pts, d) {
+  if (!d) return pts;
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; area += a[0] * b[1] - b[0] * a[1]; }
+  const s = area > 0 ? 1 : -1;
+  const nrm = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy); return [s * dy / l, -s * dx / l]; };
+  return pts.map((q, i) => { const a = pts[(i - 1 + pts.length) % pts.length], b = pts[(i + 1) % pts.length], n1 = nrm(a, q), n2 = nrm(q, b); return [q[0] + d * (n1[0] + n2[0]), q[1] + d * (n1[1] + n2[1])]; });
+}
+const polyD = (pts, ox, oy) => "M" + pts.map(q => `${r3(q[0] + ox)},${r3(q[1] + oy)}`).join(" L") + " Z";
+
+function hingeSegments(h, slit, g) {
+  let n = Math.max(1, Math.round((h - g) / (slit + g)));
+  let Lp = (h - g) / n - g;
+  while (Lp < g && n > 1) { n--; Lp = (h - g) / n - g; }
+  const closed = [];
+  for (let i = 0; i < n; i++) { const y = g + i * (Lp + g); closed.push([y, y + Lp]); }
+  const open = []; let y = -0.4;
+  for (let i = 0; i < n; i++) { const c = g + i * (Lp + g) + Lp / 2; open.push([y, c - g / 2]); y = c + g / 2; }
+  open.push([y, h + 0.4]);
+  return { closed, open, Lp, n };
+}
+
+/* Columns of one hinge zone [a,b]. The column count is odd, so both ends of a zone are "closed"
+   columns (bridges at both edges) and the zone blends into the flat wall without an edge notch.
+   Serpentine alternates cuts that start at the top edge and at the bottom edge. */
+function makeCols(a, b, p) {
+  let nc = Math.max(1, Math.floor((b - a) / p.pitch));
+  if (nc % 2 === 0) nc -= 1;
+  const start = a + ((b - a) - (nc - 1) * p.pitch) / 2;
+  const cols = [];
+  for (let j = 0; j < nc; j++) {
+    const kind = p.pattern === "serpentine" ? (j % 2 === 0 ? "top" : "bottom") : (j % 2 === 0 ? "closed" : "open");
+    cols.push({ x: start + j * p.pitch, kind });
+  }
+  return cols;
+}
+function colSegments(kind, hs, h, g) {
+  if (kind === "closed") return hs.closed;
+  if (kind === "open") return hs.open;
+  if (kind === "top") return [[-0.4, h - g]];
+  return [[g, h + 0.4]];
+}
+/* Wave cuts follow ONE global sine (phase depends on y only), so every cut is a parallel copy of its
+   neighbour and the torsion bars keep a constant width. */
+function waveParams(p) { return { A: p.pitch * 0.3, lambda: Math.max(4 * p.pitch, 8) }; }
+function reliefRadius(p) { return clamp((p.pitch - p.K) * 0.22, 0.25, 0.6); }
+function slitPaths(x, segs, h, p, ox, oy) {
+  const out = [];
+  for (const [y1, y2] of segs) {
+    if (y2 - y1 < 0.3) continue;
+    if (p.pattern === "wave") {
+      const { A, lambda } = waveParams(p), len = y2 - y1;
+      const steps = Math.max(6, Math.ceil(len / 0.6));
+      let d = "";
+      for (let i = 0; i <= steps; i++) { const y = y1 + len * i / steps, xx = x + A * Math.sin(TAU * y / lambda); d += (i ? " L" : "M") + `${r3(xx + ox)},${r3(y + oy)}`; }
+      out.push(d);
+    } else {
+      out.push(`M${r3(x + ox)},${r3(y1 + oy)} L${r3(x + ox)},${r3(y2 + oy)}`);
+      if (p.pattern === "relief") {
+        const rr = reliefRadius(p);
+        const circ = (cy) => `M${r3(x - rr + ox)},${r3(cy + oy)} A${r3(rr)},${r3(rr)} 0 1 0 ${r3(x + rr + ox)},${r3(cy + oy)} A${r3(rr)},${r3(rr)} 0 1 0 ${r3(x - rr + ox)},${r3(cy + oy)} Z`;
+        if (y1 > 0.01) out.push(circ(y1));
+        if (y2 < h - 0.01) out.push(circ(y2));
+      }
+    }
+  }
+  return out;
+}
+
+/* ---- Slot cut style ----
+   Each cut is a closed, round-ended slot of width slotW (the laser follows its outline, so the path is
+   inset by kerf/2 and the removed strip is exactly slotW wide). Cuts that reach the top or bottom edge
+   become rounded notches in the wall outline itself, so the part has one clean outer contour.
+   Wave keeps its edge cuts as wavy slots that run past the edge into the waste. */
+const cutWidth = (p) => p.cutStyle === "slot" ? p.slotW : p.K;
+const mergesEdgeCuts = (p) => p.cutStyle === "slot" && p.pattern !== "wave";
+function stadiumD(x, ya, yb, rr, ox, oy) {
+  if (yb - ya < 2 * rr + 0.05) { const cy = (ya + yb) / 2; return `M${r3(x - rr + ox)},${r3(cy + oy)} A${r3(rr)},${r3(rr)} 0 1 0 ${r3(x + rr + ox)},${r3(cy + oy)} A${r3(rr)},${r3(rr)} 0 1 0 ${r3(x - rr + ox)},${r3(cy + oy)} Z`; }
+  const s0 = ya + rr, s1 = yb - rr;
+  return `M${r3(x - rr + ox)},${r3(s0 + oy)} L${r3(x - rr + ox)},${r3(s1 + oy)} A${r3(rr)},${r3(rr)} 0 0 0 ${r3(x + rr + ox)},${r3(s1 + oy)} L${r3(x + rr + ox)},${r3(s0 + oy)} A${r3(rr)},${r3(rr)} 0 0 0 ${r3(x - rr + ox)},${r3(s0 + oy)} Z`;
+}
+function hingeCutPaths(x, segs, h, p, ox, oy) {
+  if (p.cutStyle !== "slot") return slitPaths(x, segs, h, p, ox, oy);
+  const out = [], rr = (p.slotW - p.K) / 2, k2 = p.K / 2;
+  for (const [y1, y2] of segs) {
+    const atEdge = y1 < 0 || y2 > h;
+    if (atEdge && mergesEdgeCuts(p)) continue;          // drawn as an outline notch instead
+    if (y2 - y1 < p.slotW * 0.8) continue;
+    if (p.pattern === "wave") {
+      const { A, lambda } = waveParams(p);
+      const ya = y1 + k2 + rr, yb = y2 - k2 - rr, len = yb - ya, steps = Math.max(6, Math.ceil(len / 0.6));
+      const L = [], Rt = [];
+      for (let i = 0; i <= steps; i++) { const y = ya + len * i / steps, xx = x + A * Math.sin(TAU * y / lambda); L.push([xx - rr, y]); Rt.push([xx + rr, y]); }
+      const P2 = (q) => `${r3(q[0] + ox)},${r3(q[1] + oy)}`;
+      out.push(`M${L.map(P2).join(" L")} A${r3(rr)},${r3(rr)} 0 0 0 ${P2(Rt[steps])} L${Rt.slice().reverse().map(P2).join(" L")} A${r3(rr)},${r3(rr)} 0 0 0 ${P2(L[0])} Z`);
+    } else if (p.pattern === "relief") {
+      const R = Math.max(reliefRadius(p), rr * 1.6), dy = Math.sqrt(R * R - rr * rr);
+      const ya = y1, yb = y2;
+      out.push(`M${r3(x - rr + ox)},${r3(ya + dy + oy)} L${r3(x - rr + ox)},${r3(yb - dy + oy)} A${r3(R)},${r3(R)} 0 1 0 ${r3(x + rr + ox)},${r3(yb - dy + oy)} L${r3(x + rr + ox)},${r3(ya + dy + oy)} A${r3(R)},${r3(R)} 0 1 0 ${r3(x - rr + ox)},${r3(ya + dy + oy)} Z`);
+    } else {
+      out.push(stadiumD(x, y1 + k2, y2 - k2, rr, ox, oy));
+    }
+  }
+  return out;
+}
+/* Wall outline: body rectangle, tabs, and (in slot mode) rounded notches for edge-reaching cuts. */
+function wallOutline(w, h, topTabs, bottomTabs, cols, p, hs) {
+  const t = p.T, k = p.K, a = p.tabW, r = p.slotW / 2;
+  const top = [], bot = [];
+  if (mergesEdgeCuts(p)) for (const c of cols) for (const [y1, y2] of colSegments(c.kind, hs, h, p.bridge)) {
+    if (y1 < 0 && y2 > 0) top.push({ x: c.x, d: y2 });
+    if (y2 > h && y1 < h) bot.push({ x: c.x, d: h - y1 });
+  }
+  const ev = (list, tabs) => [...tabs.map(x => ({ x, tab: true })), ...list].sort((m, n) => m.x - n.x);
+  const pts = [[0, 0]];
+  for (const e of ev(top, topTabs)) {
+    if (e.tab) pts.push([e.x - a / 2, 0], [e.x - a / 2, -t], [e.x + a / 2, -t], [e.x + a / 2, 0]);
+    else { const yc = Math.max(0.2, e.d - r + k / 2); pts.push([e.x - r, 0], [e.x - r, yc], [e.x + r, yc], [e.x + r, 0]); }
+  }
+  pts.push([w, 0], [w, h]);
+  for (const e of ev(bot, bottomTabs).reverse()) {
+    if (e.tab) pts.push([e.x + a / 2, h], [e.x + a / 2, h + t], [e.x - a / 2, h + t], [e.x - a / 2, h]);
+    else { const yc = h - Math.max(0.2, e.d - r + k / 2); pts.push([e.x + r, h], [e.x + r, yc], [e.x - r, yc], [e.x - r, h]); }
+  }
+  pts.push([0, h]);
+  const outline = offsetRect(simplify(pts), k / 2);
+  const caps = [], capLen = p.slotW - k, xs = [...top, ...bot].map(e => e.x);
+  for (let i = 0; i < outline.length; i++) {
+    const A = outline[i], B = outline[(i + 1) % outline.length];
+    if (Math.abs(A[1] - B[1]) > 1e-9 || Math.abs(Math.abs(B[0] - A[0]) - capLen) > 1e-6) continue;
+    const mx = (A[0] + B[0]) / 2;
+    if (xs.some(x => Math.abs(x - mx) < 1e-6)) caps.push(i);
+  }
+  return { outline, caps };
+}
+function outlinePath(pt, ox, oy) {
+  if (!pt.caps || !pt.caps.length) return polyD(pt.outline, ox, oy);
+  const o = pt.outline, rr = (P_slotW(pt) ) / 2, set = new Set(pt.caps);
+  let d = `M${r3(o[0][0] + ox)},${r3(o[0][1] + oy)}`;
+  for (let i = 0; i < o.length; i++) {
+    const nx = o[(i + 1) % o.length];
+    d += set.has(i) ? ` A${r3(rr)},${r3(rr)} 0 0 0 ${r3(nx[0] + ox)},${r3(nx[1] + oy)}` : ` L${r3(nx[0] + ox)},${r3(nx[1] + oy)}`;
+  }
+  return d + " Z";
+}
+function P_slotW(pt) { const o = pt.outline, i = pt.caps[0], A = o[i], B = o[(i + 1) % o.length]; return Math.abs(B[0] - A[0]); }
+
+/* Bend estimate from torsion-bar strain. Each bar between two neighbouring cuts twists; the sum of
+   the twists over a zone gives the bend. rMin = pitch * barWidth / (1.2 * gamma * barLength). */
+function bendAnalysis(p, hBody, rN) {
+  const mat = MATERIALS[p.material] || MATERIALS.custom;
+  const hs = hingeSegments(hBody, p.slit, p.bridge);
+  const barW = Math.min(p.pitch - cutWidth(p), p.T);
+  let barLen;
+  if (p.pattern === "serpentine") barLen = Math.max(0.1, (hBody - 2 * p.bridge) / 2);
+  else barLen = Math.max(0.1, (hs.Lp - p.bridge) / 2) * (p.pattern === "wave" ? 1.12 : 1);
+  const gamma = mat.gamma * (p.pattern === "relief" ? 1.1 : 1);
+  const rMin = (p.pitch * barW) / (1.2 * gamma * barLen);
+  const ratio = rN / rMin;
+  return { rMin, ratio, verdict: ratio >= 1.25 ? "ok" : ratio >= 1 ? "warn" : "err", barLen, barW, Lp: p.pattern === "serpentine" ? hBody - p.bridge : hs.Lp, nSeg: p.pattern === "serpentine" ? 1 : hs.n };
+}
+
+/* Auto-fit: search spacing, bridge and slit length for the STIFFEST lattice that still reaches the
+   needed radius with a 30% safety margin. Stiffer = fewer cuts, less charring, stronger wall. */
+function autoFit(p, hBody, rN) {
+  const t = p.T, k = p.K;
+  let best = null, fallback = null;
+  const minBar = Math.max(0.9, 0.35 * t);
+  void k;
+  for (let pitch = Math.max(cutWidth(p) + minBar, 0.45 * t); pitch <= Math.max(1.05 * t, cutWidth(p) + minBar + 0.5) + 1e-9; pitch += 0.05 * t) {
+    for (let bridge = Math.max(2, 0.75 * t); bridge <= 1.25 * t + 1e-9; bridge += 0.125 * t) {
+      const slits = p.pattern === "serpentine" ? [p.slit] : [];
+      if (!slits.length) for (let s = Math.max(10, 4 * bridge); s <= hBody - bridge; s += 1) slits.push(s);
+      for (const slit of slits) {
+        const q = Object.assign({}, p, { pitch: r3(pitch), bridge: r3(bridge), slit });
+        const a = bendAnalysis(q, hBody, rN);
+        if (!fallback || a.rMin < fallback.a.rMin) fallback = { q, a };
+        if (a.rMin * 1.3 <= rN && (!best || a.rMin > best.a.rMin + 1e-6 || (Math.abs(a.rMin - best.a.rMin) < 0.3 && q.pitch > best.q.pitch))) best = { q, a };
+      }
+    }
+  }
+  return best ? { ok: true, ...best } : { ok: false, ...fallback };
+}
+
+function computeModel(p) {
+  const issues = [];
+  const t = p.T, k = p.K;
+  const nums = ["W", "D", "H", "R", "dia", "T", "K", "slotW", "slit", "bridge", "pitch", "overrun", "tabW", "slotClr", "lidGap", "bedW", "bedH", "gap"];
+  for (const n of nums) if (!isFinite(p[n])) return { error: "Every field needs a number." };
+  if (t <= 0.5) return { error: "Material thickness must be more than 0.5 mm." };
+  if (k < 0 || k >= t) return { error: "Kerf must be between 0 and the material thickness." };
+  if (p.cutStyle === "slot" && p.slotW < k + 0.05) return { error: "Slot width must be at least 0.05 mm wider than the kerf." };
+  if (p.pitch <= cutWidth(p) + 0.3) return { error: p.cutStyle === "slot" ? "Slit spacing is too tight for this slot width. Increase the spacing or narrow the slots." : "Slit spacing is too tight for this kerf. Increase the spacing." };
+  const core = buildCore(p);
+  if (core.error) return { error: core.error };
+  const { edges, R } = core;
+  const N = edges.length;
+  if (R < t + 1) return { error: `Corner radius must be at least ${r3(t + 1)} mm for ${r3(t)} mm material.` };
+  const rN = R - t / 2;
+  const hBody = p.lid === "open" ? p.H - t : p.H - 2 * t;
+  if (hBody < 2 * p.bridge + 6) return { error: "The box is too short for this bridge size. Increase height or reduce the bridge." };
+  const topTabs = p.lid === "fixed";
+
+  // ---- strip layout along the wall centerline
+  const seamEdges = p.split === 2 ? [0, Math.floor(N / 2)] : [0];
+  edges.forEach((e, i) => {
+    e.seam = seamEdges.includes(i);
+    const n = tabCount(e.len, p.tabW, e.seam);
+    e.tabs = []; for (let j = 0; j < n; j++) e.tabs.push(e.len * (j + 0.5) / n);
+  });
+  const segs = []; let x = 0;
+  const pushEdge = (i, from, to) => { segs.push({ kind: "edge", i, from, to, x0: x }); x += to - from; };
+  pushEdge(0, edges[0].len / 2, edges[0].len);
+  for (let i = 0; i < N; i++) {
+    const arcLen = edges[i].sweep * rN / (1 + (p.stretch || 0) / 100);
+    segs.push({ kind: "arc", i, x0: x, len: arcLen }); x += arcLen;
+    if (i + 1 < N) pushEdge(i + 1, 0, edges[i + 1].len);
+  }
+  pushEdge(0, 0, edges[0].len / 2);
+  const L = x;
+
+  // tabs in strip coords
+  const tabX = [];
+  for (const s of segs) if (s.kind === "edge") for (const u of edges[s.i].tabs) if (u - p.tabW / 2 >= s.from - 1e-6 && u + p.tabW / 2 <= s.to + 1e-6) tabX.push(s.x0 + u - s.from);
+
+  // hinge intervals around arcs
+  const freeStart = (e) => e.tabs.length ? e.tabs[0] - p.tabW / 2 : (e.seam ? e.len / 2 - 2 : e.len / 2);
+  const freeEnd = (e) => e.tabs.length ? e.len - (e.tabs[e.tabs.length - 1] + p.tabW / 2) : (e.seam ? e.len / 2 - 2 : e.len / 2);
+  let ivals = [];
+  segs.filter(s => s.kind === "arc").forEach(s => {
+    const before = Math.max(0, Math.min(p.overrun, freeEnd(edges[s.i]) - 1.5));
+    const after = Math.max(0, Math.min(p.overrun, freeStart(edges[(s.i + 1) % N]) - 1.5));
+    ivals.push([s.x0 - before, s.x0 + s.len + after]);
+  });
+  ivals.sort((a, b) => a[0] - b[0]);
+  const merged = [];
+  for (const iv of ivals) { const last = merged[merged.length - 1]; if (last && iv[0] <= last[1] + p.pitch) last[1] = Math.max(last[1], iv[1]); else merged.push(iv.slice()); }
+  const hs = hingeSegments(hBody, p.slit, p.bridge);
+  if (p.pattern === "serpentine" && hBody - 2 * p.bridge < 4) return { error: "The wall is too short for serpentine cuts with this bridge size." };
+  const cols = [];
+  for (const [a, b] of merged) cols.push(...makeCols(a, b, p));
+  const zoneLen = merged.length ? Math.max(...merged.map(([a, b]) => b - a)) : 0;
+
+  // pieces
+  let cuts = [[0, L]];
+  if (p.split === 2) {
+    const m = seamEdges[1], s = segs.find(sg => sg.kind === "edge" && sg.i === m);
+    const xs = s.x0 + edges[m].len / 2;
+    cuts = [[0, xs], [xs, L]];
+  }
+  const parts = [];
+  const a = p.tabW;
+  const edgeMargin = p.cutStyle === "slot" ? Math.max(0.4, p.slotW) : 0.4;
+  cuts.forEach(([x0, x1], pi) => {
+    const w = x1 - x0;
+    const tabsHere = tabX.filter(tx => tx > x0 && tx < x1).map(tx => tx - x0).sort((m, n) => m - n);
+    const myCols = cols.filter(c => c.x > x0 + edgeMargin && c.x < x1 - edgeMargin).map(c => ({ x: c.x - x0, kind: c.kind }));
+    const wo = wallOutline(w, hBody, topTabs ? tabsHere : [], tabsHere, myCols, p, hs);
+    const outline = wo.outline;
+    // label on the longest straight
+    let lab = null, best = 0;
+    for (const s of segs) if (s.kind === "edge") { const sx0 = Math.max(s.x0, x0), sx1 = Math.min(s.x0 + s.to - s.from, x1); if (sx1 - sx0 > best) { best = sx1 - sx0; lab = (sx0 + sx1) / 2 - x0; } }
+    parts.push({
+      kind: "wall", name: cuts.length > 1 ? `WALL ${pi === 0 ? "A" : "B"}` : "WALL",
+      outline, caps: wo.caps, cols: myCols, hBody, w,
+      label: best > 18 ? { x: lab, y: hBody / 2 } : null,
+      bbox: bboxOf(outline),
+    });
+  });
+
+  // plates
+  const slotRects = [];
+  edges.forEach(e => e.tabs.forEach(u => {
+    const c = [e.p0[0] + e.t[0] * u + e.n[0] * rN, e.p0[1] + e.t[1] * u + e.n[1] * rN];
+    const sa = (p.tabW + p.slotClr - k) / 2, sb = (t + p.slotClr - k) / 2;
+    slotRects.push([[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([i, j]) => [c[0] + e.t[0] * sa * i + e.n[0] * sb * j, c[1] + e.t[1] * sa * i + e.n[1] * sb * j]));
+  }));
+  const plateR = R + k / 2;
+  const ext = plateExtent(edges, plateR);
+  parts.push({ kind: "plate", name: "BASE", r: plateR, edges, slots: slotRects, bbox: ext });
+  if (p.lid === "fixed") parts.push({ kind: "plate", name: "LID", r: plateR, edges, slots: slotRects, bbox: ext });
+  if (p.lid === "removable") {
+    parts.push({ kind: "plate", name: "LID", r: plateR, edges, slots: [], bbox: ext });
+    const lipR = R - t - p.lidGap + k / 2;
+    if (lipR > 0.5) parts.push({ kind: "plate", name: "LID LIP", r: lipR, edges, slots: [], bbox: plateExtent(edges, lipR) });
+    else issues.push({ lvl: "warn", msg: "Corner radius is too small for a lid lip, so the lip was left out. Increase the radius above " + r3(t + p.lidGap + 1) + " mm." });
+  }
+
+  // ---- bend test strip: one corner's hinge zone plus 15 mm of flat on each side
+  if (p.testStrip && zoneLen > 0) {
+    const flat = 15, tw = zoneLen + 2 * flat, th = hBody;
+    const tcols = makeCols(flat, flat + zoneLen, p);
+    const wo = wallOutline(tw, th, [], [], tcols, p, hs), outline = wo.outline;
+    parts.push({ kind: "wall", name: "BEND TEST", outline, caps: wo.caps, cols: tcols, hBody: th, w: tw, label: { x: flat / 2, y: th / 2, vertical: true }, bbox: bboxOf(outline), test: true });
+  }
+
+  // ---- bend analysis
+  const an = bendAnalysis(p, hBody, rN);
+  if (p.pitch - cutWidth(p) < 0.9) issues.push({ lvl: "warn", msg: "Torsion bars are under 0.9 mm wide and may char or snap. Widen the slit spacing" + (p.cutStyle === "slot" ? " or narrow the slots." : ".") });
+  if (p.material === "acr3") issues.push({ lvl: "warn", msg: "Acrylic living hinges crack easily. Use them only for gentle curves or heat-assisted bends." });
+  if (p.pattern !== "serpentine" && hs.Lp < p.bridge * 2) issues.push({ lvl: "warn", msg: "Slits are short compared with the bridges, so the hinge will be stiff. Lengthen the slits or shrink the bridges." });
+  if (p.pattern === "serpentine") issues.push({ lvl: "info", msg: "Serpentine bends very tightly but the wall can stretch. Glue the wall to the base and lid." });
+  if (an.ratio > 3) issues.push({ lvl: "info", msg: "The hinge is far more flexible than this corner needs. Auto-fit can make it stiffer and stronger." });
+  if (edges.some(e => e.len > 0.01 && e.tabs.length === 0 && !e.seam) || edges.every(e => e.tabs.length === 0)) {
+    if (edges.every(e => e.tabs.length === 0)) issues.push({ lvl: "warn", msg: "No flat side is long enough for a tab, so the wall must be glued in place. Use smaller tabs or a larger box." });
+  }
+  return { core, R, rN, L, hBody, parts, cols, hs, issues, zoneLen, analysis: Object.assign(an, { columns: cols.length }) };
+}
+function bboxOf(pts) { const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]); return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) }; }
+function plateExtent(edges, r) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const e of edges) for (const q of [e.p0, e.p1]) { x0 = Math.min(x0, q[0] - r); x1 = Math.max(x1, q[0] + r); y0 = Math.min(y0, q[1] - r); y1 = Math.max(y1, q[1] + r); }
+  // tighter for polygons: sample arcs
+  x0 = Infinity; y0 = Infinity; x1 = -Infinity; y1 = -Infinity;
+  edges.forEach(e => { const a1 = Math.atan2(e.n[1], e.n[0]); for (let s = 0; s <= 16; s++) { const a = a1 + e.sweep * s / 16, q = [e.p1[0] + Math.cos(a) * r, e.p1[1] + Math.sin(a) * r]; x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); } });
+  return { x0, y0, x1, y1 };
+}
+
+/* ===================================================== layout + drawing */
+function layoutParts(parts, bedW, gap) {
+  const margin = 5;
+  const items = parts.map((pt, i) => ({ pt, i, w: pt.bbox.x1 - pt.bbox.x0, h: pt.bbox.y1 - pt.bbox.y0 }));
+  const order = items.slice().sort((a, b) => (b.pt.kind === "wall") - (a.pt.kind === "wall") || b.h - a.h);
+  let x = margin, y = margin, rowH = 0, maxX = 0;
+  for (const it of order) {
+    if (x > margin && x + it.w > bedW - margin) { x = margin; y += rowH + gap; rowH = 0; }
+    it.ox = x - it.pt.bbox.x0; it.oy = y - it.pt.bbox.y0;
+    x += it.w + gap; rowH = Math.max(rowH, it.h); maxX = Math.max(maxX, x - gap);
+  }
+  return { items, width: maxX + margin, height: y + rowH + margin };
+}
+
+function layerContent(model, lay, p) {
+  const L = { outline: [], slots: [], hinge: [], labels: [], fills: [] };
+  for (const it of lay.items) {
+    const pt = it.pt, ox = it.ox, oy = it.oy;
+    if (pt.kind === "wall") {
+      const d = outlinePath(pt, ox, oy);
+      L.outline.push(d); L.fills.push(d);
+      for (const c of pt.cols) L.hinge.push(...hingeCutPaths(c.x, colSegments(c.kind, model.hs, pt.hBody, p.bridge), pt.hBody, p, ox, oy));
+      if (pt.label) L.labels.push({ x: pt.label.x + ox, y: pt.label.y + oy, text: pt.name, size: pt.label.vertical ? clamp(pt.hBody / 11, 2.5, 5) : clamp(pt.hBody / 7, 3, 7), rot: pt.label.vertical ? -90 : 0 });
+    } else {
+      const d = roundedPath(pt.edges, pt.r, ox, oy);
+      L.outline.push(d); L.fills.push(d);
+      for (const s of pt.slots) L.slots.push(polyD(s, ox, oy));
+      const w = pt.bbox.x1 - pt.bbox.x0, h = pt.bbox.y1 - pt.bbox.y0;
+      L.labels.push({ x: ox, y: oy, text: pt.name, size: clamp(Math.min(w, h) / 9, 3, 8) });
+    }
+  }
+  return L;
+}
+
+const EXPORT_LAYERS = [
+  { key: "outline", name: "Outline cut", code: "02", color: "#FF0000", ui: "var(--l-outline)" },
+  { key: "slots",   name: "Inner cuts (slots)", code: "03", color: "#00E000", ui: "var(--l-slots)" },
+  { key: "hinge",   name: "Hinge slits", code: "01", color: "#0000FF", ui: "var(--l-hinge)" },
+  { key: "labels",  name: "Part labels (engrave)", code: "00", color: "#000000", ui: "var(--l-labels)" },
+];
+
+function exportSVG(model, lay, p) {
+  const W = r3(lay.width), H = r3(lay.height);
+  const LC = layerContent(model, lay, p);
+  const m = p.shape === "cyl" ? `cylinder Ø${r3(p.dia)}` : `${r3(p.W)}x${p.shape === "poly" ? p.sides + "-gon" : r3(p.D)}`;
+  let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">\n`;
+  s += `<!-- HingeLab living-hinge box: ${m} x ${r3(p.H)} mm, ${p.lid} lid, ${p.pattern} pattern. Material ${p.T} mm, kerf ${p.K} mm (compensated). Cut order: slots, hinge, outline. -->\n`;
+  const order = ["labels", "slots", "hinge", "outline"];
+  for (const key of order) {
+    const def = EXPORT_LAYERS.find(l => l.key === key);
+    if (!p.layers[key].exp || (key === "labels" && !p.labels)) continue;
+    s += `<g id="${key}" inkscape:groupmode="layer" inkscape:label="${def.code} ${def.name}" fill="none" stroke="${def.color}" stroke-width="0.1">\n`;
+    if (key === "labels") for (const lb of LC.labels) s += `  <text x="${r3(lb.x)}" y="${r3(lb.y)}" font-family="Arial, Helvetica, sans-serif" font-size="${r3(lb.size)}" fill="${def.color}" stroke="none" text-anchor="middle" dominant-baseline="middle"${lb.rot ? ` transform="rotate(${lb.rot} ${r3(lb.x)} ${r3(lb.y)})"` : ""}>${lb.text}</text>\n`;
+    else for (const d of LC[key]) s += `  <path d="${d}"/>\n`;
+    s += `</g>\n`;
+  }
+  return s + `</svg>\n`;
+}
+
+/* ===================================================== canvas view */
+const view = { z: 2, tx: 40, ty: 40 };
+let current = null;
+const stage = $("stage"), world = $("world"), canvas = $("canvas");
+
+function drawCanvas() {
+  if (!current || current.error) { world.innerHTML = ""; return; }
+  const { model, lay } = current, p = P;
+  const LC = layerContent(model, lay, p);
+  const sw = 1.1 / view.z;
+  let g = `<rect x="0" y="0" width="${p.bedW}" height="${p.bedH}" fill="var(--sheet)" stroke="var(--sheet-edge)" stroke-width="${sw}"/>`;
+  if (showGrid) {
+    const step = 10; let gl = "";
+    for (let x = step; x < p.bedW; x += step) gl += `M${x},0V${p.bedH}`;
+    for (let y = step; y < p.bedH; y += step) gl += `M0,${y}H${p.bedW}`;
+    g += `<path d="${gl}" stroke="#2A2724" stroke-width="${sw * 0.8}" fill="none"/>`;
+  }
+  g += `<text x="0" y="${-6 / view.z}" font-family="Source Sans 3, sans-serif" font-size="${11 / view.z}" fill="var(--fg-faint)">Laser bed ${fmtLen(p.bedW)} × ${fmtLen(p.bedH)}</text>`;
+  g += LC.fills.map(d => `<path d="${d}" fill="var(--wood)" fill-opacity="0.13" stroke="none"/>`).join("");
+  const vis = (k) => p.layers[k].vis;
+  // hairline hinge: thin enough that individual cuts stay readable when zoomed out
+  if (vis("hinge")) g += `<path d="${LC.hinge.join(" ")}" fill="none" stroke="var(--l-hinge)" stroke-width="${0.6 / view.z}" stroke-linecap="butt" stroke-opacity="${r3(clamp(p.pitch * view.z / 7, 0.45, 1))}" vector-effect="non-scaling-stroke" style="stroke-width:${p.pitch * view.z > 6 ? 1 : 0.6}px"/>`;
+  if (vis("slots")) g += `<path d="${LC.slots.join(" ")}" fill="none" stroke="var(--l-slots)" stroke-width="${sw}"/>`;
+  if (vis("outline")) g += `<path d="${LC.outline.join(" ")}" fill="none" stroke="var(--l-outline)" stroke-width="${sw * 1.2}" stroke-linejoin="round"/>`;
+  if (vis("labels") && p.labels) g += LC.labels.map(lb => `<text x="${r3(lb.x)}" y="${r3(lb.y)}" font-family="Source Sans 3, sans-serif" font-weight="600" font-size="${r3(lb.size)}" fill="var(--l-labels)" fill-opacity=".8" text-anchor="middle" dominant-baseline="middle"${lb.rot ? ` transform="rotate(${lb.rot} ${r3(lb.x)} ${r3(lb.y)})"` : ""}>${lb.text}</text>`).join("");
+  world.innerHTML = g;
+  applyView();
+}
+function applyView() {
+  world.setAttribute("transform", `translate(${view.tx},${view.ty}) scale(${view.z})`);
+  $("sz").textContent = Math.round(view.z / PX_PER_MM * 100) + "%";
+  $("hudZoom").textContent = Math.round(view.z / PX_PER_MM * 100) + "%";
+  drawRulers();
+}
+const PX_PER_MM = 96 / 25.4;
+function fit() {
+  const r = canvas.getBoundingClientRect();
+  if (!r.width || !r.height) return;
+  const W = Math.max(P.bedW, current && current.lay ? current.lay.width : 0), H = Math.max(P.bedH, current && current.lay ? current.lay.height : 0);
+  view.z = Math.min((r.width - 60) / W, (r.height - 60) / H);
+  view.tx = (r.width - W * view.z) / 2; view.ty = (r.height - H * view.z) / 2 + 6;
+  drawCanvas();
+}
+function zoomAt(f, cx, cy) {
+  const nz = clamp(view.z * f, 0.2, 80);
+  view.tx = cx - (cx - view.tx) * (nz / view.z); view.ty = cy - (cy - view.ty) * (nz / view.z); view.z = nz;
+  drawCanvas();
+}
+function zoomCenter(f) { const r = canvas.getBoundingClientRect(); zoomAt(f, r.width / 2, r.height / 2); }
+
+function drawRulers() {
+  const rh = $("rulerH"), rv = $("rulerV");
+  const wH = rh.clientWidth, hV = rv.clientHeight;
+  const u = units === "in" ? 25.4 : 1;
+  const pxPerUnit = view.z * u;
+  const steps = units === "in" ? [0.0625, 0.125, 0.25, 0.5, 1, 2, 5, 10] : [1, 2, 5, 10, 20, 50, 100, 200, 500];
+  let step = steps.find(s => s * pxPerUnit >= 50) || steps[steps.length - 1];
+  const minor = step / (units === "in" ? 4 : 5);
+  const mk = (len, horiz) => {
+    let d = "", txt = "";
+    const off = horiz ? view.tx : view.ty;
+    const start = Math.floor((-off / pxPerUnit) / minor) * minor, end = (len - off) / pxPerUnit;
+    for (let v = start; v <= end; v += minor) {
+      const pos = r3(off + v * pxPerUnit), major = Math.abs(v / step - Math.round(v / step)) < 1e-6;
+      const tl = major ? 20 : 6;
+      d += horiz ? `M${pos},20V${20 - tl}` : `M20,${pos}H${20 - tl}`;
+      if (major) {
+        const lbl = units === "in" ? r3(v) : Math.round(v);
+        txt += horiz ? `<text x="${pos + 3}" y="9" font-size="9">${lbl}</text>` : `<text x="9" y="${pos + 3}" font-size="9" transform="rotate(-90 9 ${pos + 3})">${lbl}</text>`;
+      }
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg"><path d="${d}" stroke="#5A5A5A" stroke-width="1" fill="none" shape-rendering="crispEdges"/><g fill="#8A8A8A" font-family="Source Code Pro, monospace">${txt}</g></svg>`;
+  };
+  rh.innerHTML = mk(wH, true); rv.innerHTML = mk(hV, false);
+}
+
+/* pan / zoom interaction */
+let tool = "hand", drag = null, spaceDown = false;
+canvas.addEventListener("pointerdown", (e) => {
+  const r = canvas.getBoundingClientRect(), cx = e.clientX - r.left, cy = e.clientY - r.top;
+  if (tool === "zoom" && !spaceDown && e.button === 0) { zoomAt(e.altKey ? 1 / 1.6 : 1.6, cx, cy); return; }
+  drag = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty };
+  canvas.setPointerCapture(e.pointerId); canvas.classList.add("dragging");
+});
+canvas.addEventListener("pointermove", (e) => {
+  const r = canvas.getBoundingClientRect();
+  const mx = (e.clientX - r.left - view.tx) / view.z, my = (e.clientY - r.top - view.ty) / view.z;
+  $("sx").textContent = fmtLen(mx, true); $("sy").textContent = fmtLen(my, true);
+  if (!drag) return;
+  view.tx = drag.tx + e.clientX - drag.x; view.ty = drag.ty + e.clientY - drag.y; applyView();
+});
+const endDrag = () => { drag = null; canvas.classList.remove("dragging"); };
+canvas.addEventListener("pointerup", endDrag); canvas.addEventListener("pointercancel", endDrag);
+canvas.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const r = canvas.getBoundingClientRect();
+  if (e.ctrlKey || e.metaKey || Math.abs(e.deltaY) > 0 && !e.shiftKey && Math.abs(e.deltaX) < 1) zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top);
+  else { view.tx -= e.deltaX; view.ty -= e.deltaY; applyView(); }
+}, { passive: false });
+function setTool(t) { tool = t; $("toolHand").setAttribute("aria-pressed", t === "hand"); $("toolZoom").setAttribute("aria-pressed", t === "zoom"); canvas.classList.toggle("zoom-in", t === "zoom"); }
+$("toolHand").onclick = () => setTool("hand");
+$("toolZoom").onclick = () => setTool("zoom");
+$("toolFit").onclick = fit; $("hudFit").onclick = fit;
+$("toolGrid").onclick = () => { showGrid = !showGrid; $("toolGrid").setAttribute("aria-pressed", showGrid); drawCanvas(); };
+$("hudIn").onclick = () => zoomCenter(1.25); $("hudOut").onclick = () => zoomCenter(0.8);
+$("hudZoom").onclick = () => zoomCenter(PX_PER_MM / view.z);
+window.addEventListener("resize", () => { applyView(); });
+
+/* ===================================================== 3D preview */
+let yaw = -0.6, explode = 0.35;
+function ring(edges, r, perArc) {
+  const pts = [];
+  edges.forEach(e => {
+    const a1 = Math.atan2(e.n[1], e.n[0]);
+    pts.push({ p: [e.p0[0] + e.n[0] * r, e.p0[1] + e.n[1] * r], arc: false });
+    pts.push({ p: [e.p1[0] + e.n[0] * r, e.p1[1] + e.n[1] * r], arc: false });
+    const n = Math.max(2, Math.round(perArc * e.sweep / (Math.PI / 2)));
+    for (let s = 1; s < n; s++) { const a = a1 + e.sweep * s / n; pts.push({ p: [e.p1[0] + Math.cos(a) * r, e.p1[1] + Math.sin(a) * r], arc: true }); }
+  });
+  // dedupe
+  return pts.filter((q, i) => { const n = pts[(i + 1) % pts.length]; return Math.hypot(q.p[0] - n.p[0], q.p[1] - n.p[1]) > 1e-6; });
+}
+function draw3D() {
+  const host = $("preview3d");
+  if (!current || current.error) { host.querySelector("svg")?.remove(); return; }
+  const { model } = current, p = P, t = p.T, edges = model.core.edges, R = model.R;
+  const elev = 0.62, ce = Math.cos(elev), se = Math.sin(elev), cy = Math.cos(yaw), sy = Math.sin(yaw);
+  const proj = (x, y, z) => { const X = x * cy - y * sy, Y = x * sy + y * cy; return [X, Y * se - z * ce, Y]; };
+  const rot = (nx, ny) => [nx * cy - ny * sy, nx * sy + ny * cy];
+  const outer = ring(edges, R, 10);
+  const lidLift = p.lid === "removable" ? explode * p.H * 0.9 : 0;
+  const zBodyTop = p.lid === "open" ? p.H : p.H - t;
+  const polys = []; // {pts:[[x,y]], fill, depth, stroke}
+  const wood = [201, 163, 106];
+  const shade = (k, dark = 0) => `rgb(${wood.map(c => Math.round(c * k * (1 - dark))).join(",")})`;
+  const L = [-0.55, 0.83];
+  function walls(rg, z0, z1, opts) {
+    const out = [];
+    for (let i = 0; i < rg.length; i++) {
+      const a = rg[i].p, b = rg[(i + 1) % rg.length].p;
+      const nx = b[1] - a[1], ny = -(b[0] - a[0]), l = Math.hypot(nx, ny);
+      const nr = rot(nx / l, ny / l);
+      const front = nr[1] > 0;
+      if (opts.only === "front" && !front) continue;
+      if (opts.only === "back" && front) continue;
+      const k = 0.5 + 0.5 * Math.max(0, nr[0] * L[0] + nr[1] * L[1]);
+      const q = [proj(a[0], a[1], z0), proj(b[0], b[1], z0), proj(b[0], b[1], z1), proj(a[0], a[1], z1)];
+      const isArc = rg[i].arc || rg[(i + 1) % rg.length].arc;
+      out.push({ q, fill: front ? shade(k) : shade(0.55, 0.15), depth: (q[0][2] + q[1][2]) / 2, line: opts.hinge && isArc && front ? [q[0], q[3]] : null });
+    }
+    return out;
+  }
+  const cap = (rg, z, k) => ({ q: rg.map(v => proj(v.p[0], v.p[1], z)), fill: shade(k), depth: -1e9 });
+  // inner (back) walls + floor when top is visible
+  const items = [];
+  if (p.lid !== "fixed") {
+    items.push(cap(outer, t, 0.62));
+    items.push(...walls(outer, t, zBodyTop, { only: "back" }).sort((a, b) => a.depth - b.depth));
+  }
+  items.push(...walls(outer, 0, zBodyTop, { only: "front", hinge: true }).sort((a, b) => a.depth - b.depth));
+  if (p.lid === "fixed") items.push(cap(outer, p.H, 1.02));
+  if (p.lid === "removable") {
+    const z0 = p.H - t + lidLift;
+    const lipR = R - t - p.lidGap;
+    if (lipR > 0.5 && lidLift > 0.5) items.push(...walls(ring(edges, lipR, 8), z0 - t, z0, { only: "front" }));
+    items.push(...walls(outer, z0, z0 + t, { only: "front" }));
+    items.push(cap(outer, z0 + t, 1.02));
+  }
+  const all = items.flatMap(it => it.q);
+  const xs = all.map(q => q[0]), ys = all.map(q => q[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const VW = 280, VH = 186, sc = Math.min((VW - 30) / (maxX - minX), (VH - 26) / (maxY - minY));
+  const ox = (VW - (maxX - minX) * sc) / 2 - minX * sc, oy = (VH - (maxY - minY) * sc) / 2 - minY * sc;
+  const P2 = q => `${r3(q[0] * sc + ox)},${r3(q[1] * sc + oy)}`;
+  let svg = `<svg viewBox="0 0 ${VW} ${VH}" xmlns="http://www.w3.org/2000/svg">`;
+  svg += `<ellipse cx="${VW / 2}" cy="${r3(maxY * sc + oy + 4)}" rx="${r3((maxX - minX) * sc * 0.48)}" ry="7" fill="#000" fill-opacity=".35"/>`;
+  for (const it of items) {
+    svg += `<polygon points="${it.q.map(P2).join(" ")}" fill="${it.fill}" stroke="rgba(60,40,20,.35)" stroke-width=".5" stroke-linejoin="round"/>`;
+    if (it.line) svg += `<line x1="${P2(it.line[0]).split(",")[0]}" y1="${P2(it.line[0]).split(",")[1]}" x2="${P2(it.line[1]).split(",")[0]}" y2="${P2(it.line[1]).split(",")[1]}" stroke="rgba(50,30,10,.55)" stroke-width=".7"/>`;
+  }
+  svg += `</svg>`;
+  host.querySelector("svg")?.remove();
+  host.insertAdjacentHTML("afterbegin", svg);
+}
+(function () {
+  const host = $("preview3d"); let d = null;
+  host.addEventListener("pointerdown", e => { d = { x: e.clientX, yaw }; host.setPointerCapture(e.pointerId); });
+  host.addEventListener("pointermove", e => { if (!d) return; yaw = d.yaw + (e.clientX - d.x) * 0.012; draw3D(); });
+  const end = () => d = null; host.addEventListener("pointerup", end); host.addEventListener("pointercancel", end);
+  $("explode").addEventListener("input", e => { explode = parseFloat(e.target.value); draw3D(); });
+})();
+
+/* ===================================================== panel fields */
+const FIELDS = [
+  { id: "W", label: "Width", sec: "secDims", len: true, step: 1, min: 10, show: p => p.shape !== "cyl", lab: p => p.shape === "poly" ? "Across" : "Width" },
+  { id: "D", label: "Depth", sec: "secDims", len: true, step: 1, min: 10, show: p => p.shape === "rect" || p.shape === "pill" },
+  { id: "dia", label: "Diameter", sec: "secDims", len: true, step: 1, min: 20, show: p => p.shape === "cyl" },
+  { id: "H", label: "Height", sec: "secDims", len: true, step: 1, min: 10 },
+  { id: "R", label: "Radius", sec: "secDims", len: true, step: 0.5, min: 1, show: p => p.shape === "rect" || p.shape === "poly" },
+  { id: "sides", label: "Sides", sec: "secDims", step: 1, min: 3, max: 12, show: p => p.shape === "poly" },
+  { id: "cylFlats", label: "Tab flats", sec: "secDims", step: 1, min: 3, max: 16, show: p => p.shape === "cyl" },
+  { id: "T", label: "Thick", sec: "secMat", len: true, step: 0.1, min: 0.5, mat: true },
+  { id: "K", label: "Kerf", sec: "secMat", len: true, step: 0.01, min: 0, mat: true },
+  { id: "slotW", label: "Slot width", sec: "secHinge", len: true, step: 0.05, min: 0.2, show: p => p.cutStyle === "slot" },
+  { id: "slit", label: "Slit", sec: "secHinge", len: true, step: 0.5, min: 3, show: p => p.pattern !== "serpentine" },
+  { id: "bridge", label: "Bridge", sec: "secHinge", len: true, step: 0.25, min: 0.5 },
+  { id: "pitch", label: "Spacing", sec: "secHinge", len: true, step: 0.05, min: 0.5 },
+  { id: "overrun", label: "Overrun", sec: "secHinge", len: true, step: 0.5, min: 0 },
+  { id: "stretch", label: "Stretch %", sec: "secHinge", step: 0.5, min: 0, max: 8, float: true },
+  { id: "tabW", label: "Tab width", sec: "secJoints", len: true, step: 0.5, min: 3 },
+  { id: "slotClr", label: "Slot play", sec: "secJoints", len: true, step: 0.05, min: -0.5 },
+  { id: "lidGap", label: "Lid gap", sec: "secJoints", len: true, step: 0.05, min: 0, show: p => p.lid === "removable" },
+  { id: "bedW", label: "Bed W", sec: "secSheet", len: true, step: 10, min: 50 },
+  { id: "bedH", label: "Bed H", sec: "secSheet", len: true, step: 10, min: 50 },
+  { id: "gap", label: "Spacing", sec: "secSheet", len: true, step: 0.5, min: 0 },
+];
+const uf = () => units === "in" ? 25.4 : 1;
+function fmtLen(mm, short) { if (!isFinite(mm)) return "—"; return units === "in" ? `${(mm / 25.4).toFixed(short ? 2 : 3)} in` : `${(Math.round(mm * 10) / 10)} mm`; }
+function dispVal(f) { const v = P[f.id]; if (!f.len) return String(v); return units === "in" ? String(r3(v / 25.4)) : String(Math.round(v * 1000) / 1000); }
+
+function buildFields() {
+  for (const f of FIELDS) {
+    const host = $(f.sec);
+    const wrap = document.createElement("div");
+    wrap.className = "fld"; wrap.dataset.id = f.id;
+    wrap.innerHTML = `<label for="f_${f.id}">${f.label}</label><span class="in"><input id="f_${f.id}" type="text" inputmode="decimal" autocomplete="off" spellcheck="false"><span class="u"></span></span>`;
+    host.appendChild(wrap);
+    const input = wrap.querySelector("input"), label = wrap.querySelector("label");
+    const setFrom = (raw, doCommit) => {
+      let v = parseFloat(raw);
+      if (!isFinite(v)) { wrap.classList.add("invalid"); return; }
+      wrap.classList.remove("invalid");
+      if (f.len) v *= uf();
+      if (f.min != null) v = Math.max(f.min, v);
+      if (f.max != null) v = Math.min(f.max, v);
+      if (!f.len && !f.float) v = Math.round(v);
+      P[f.id] = v;
+      if (f.mat && P.material !== "custom") { P.material = "custom"; $("material").value = "custom"; }
+      update(); if (doCommit) commit();
+    };
+    input.addEventListener("input", () => setFrom(input.value, false));
+    input.addEventListener("change", () => { setFrom(input.value, true); input.value = dispVal(f); });
+    input.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      e.preventDefault();
+      const stepMM = f.len ? (units === "in" ? (f.step >= 1 ? 3.175 : 0.254) : f.step) : f.step;
+      const mult = e.shiftKey ? 10 : 1;
+      P[f.id] = clamp(P[f.id] + (e.key === "ArrowUp" ? 1 : -1) * stepMM * mult, f.min ?? -1e9, f.max ?? 1e9);
+      if (f.mat && P.material !== "custom") { P.material = "custom"; $("material").value = "custom"; }
+      input.value = dispVal(f); update(); commit();
+    });
+    // scrubby label
+    let sd = null;
+    label.addEventListener("pointerdown", (e) => { e.preventDefault(); sd = { x: e.clientX, v: P[f.id], moved: false }; label.setPointerCapture(e.pointerId); });
+    label.addEventListener("pointermove", (e) => {
+      if (!sd) return;
+      const dx = e.clientX - sd.x; if (Math.abs(dx) > 2) sd.moved = true;
+      const stepMM = f.len ? (units === "in" ? (f.step >= 1 ? 1.5875 : 0.127) : f.step) : f.step;
+      let v = sd.v + Math.round(dx / 4) * stepMM * (e.shiftKey ? 10 : 1);
+      v = clamp(v, f.min ?? -1e9, f.max ?? 1e9);
+      if (v !== P[f.id]) { P[f.id] = (f.len || f.float) ? Math.round(v * 1000) / 1000 : Math.round(v); if (f.mat && P.material !== "custom") { P.material = "custom"; $("material").value = "custom"; } input.value = dispVal(f); update(); }
+    });
+    const endScrub = () => { if (sd) { if (!sd.moved) input.focus(); else commit(); } sd = null; };
+    label.addEventListener("pointerup", endScrub); label.addEventListener("pointercancel", endScrub);
+  }
+}
+
+function syncControls() {
+  for (const f of FIELDS) {
+    const wrap = document.querySelector(`.fld[data-id="${f.id}"]`);
+    wrap.hidden = f.show ? !f.show(P) : false;
+    wrap.querySelector("label").textContent = f.lab ? f.lab(P) : f.label;
+    const inp = wrap.querySelector("input");
+    if (document.activeElement !== inp) inp.value = dispVal(f);
+    wrap.querySelector(".u").textContent = f.len ? units : "";
+    wrap.classList.remove("invalid");
+  }
+  const seg = (id, val) => document.querySelectorAll(`#${id} button[data-v]`).forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === String(val))));
+  seg("shapeSeg", P.shape); seg("lidSeg", P.lid); seg("patSeg", P.pattern); seg("splitSeg", P.split); seg("cutSeg", P.cutStyle);
+  $("material").value = P.material;
+  $("testStripChk").checked = !!P.testStrip;
+  document.querySelectorAll(".unit-toggle button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.u === units)));
+  renderLayers();
+}
+
+function bindSeg(id, key, num) {
+  document.querySelectorAll(`#${id} button[data-v]`).forEach(b => b.addEventListener("click", () => {
+    P[key] = num ? Number(b.dataset.v) : b.dataset.v;
+    if (key === "shape" && P.shape === "pill") P.R = Math.min(P.W, P.D) / 2;
+    syncControls(); update(); commit();
+  }));
+}
+
+function renderLayers() {
+  const host = $("layers");
+  host.innerHTML = EXPORT_LAYERS.map(l => `
+    <div class="layer">
+      <button class="eye" type="button" data-k="${l.key}" aria-pressed="${P.layers[l.key].vis}" aria-label="Show ${l.name}">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></svg>
+      </button>
+      <span class="sw" style="background:${l.ui}"></span>
+      <span class="nm">${l.name}</span>
+      <span class="code">C${l.code}</span>
+      <input type="checkbox" data-k="${l.key}" ${P.layers[l.key].exp ? "checked" : ""} aria-label="Include ${l.name} in export" title="Include in export">
+    </div>`).join("") +
+    `<label class="chk" style="margin-top:6px"><input type="checkbox" id="labelsChk" ${P.labels ? "checked" : ""}> Engrave part names</label>`;
+  host.querySelectorAll(".eye").forEach(b => b.onclick = () => { P.layers[b.dataset.k].vis = !P.layers[b.dataset.k].vis; renderLayers(); drawCanvas(); commit(); save(); });
+  host.querySelectorAll("input[data-k]").forEach(c => c.onchange = () => { P.layers[c.dataset.k].exp = c.checked; commit(); save(); });
+  $("labelsChk").onchange = (e) => { P.labels = e.target.checked; drawCanvas(); commit(); save(); };
+}
+
+/* ===================================================== update cycle */
+function update() {
+  const model = computeModel(P);
+  if (model.error) {
+    current = { error: model.error };
+    $("canvasError").hidden = false; $("canvasError").textContent = model.error;
+    world.innerHTML = ""; draw3D(); renderAnalysis(null, model.error); updateStatus(null); drawInspector(null);
+    save(); return;
+  }
+  $("canvasError").hidden = true;
+  const lay = layoutParts(model.parts, P.bedW, P.gap);
+  current = { model, lay };
+  drawCanvas(); draw3D(); renderAnalysis(model); updateStatus(model, lay); drawInspector(model);
+  $("dimsMeta").textContent = P.shape === "cyl" ? `Ø${fmtLen(P.dia)} × ${fmtLen(P.H)}` : `${fmtLen(P.W)} × ${P.shape === "poly" ? P.sides + " sides" : fmtLen(P.D)} × ${fmtLen(P.H)}`;
+  $("patMeta").textContent = `${model.analysis.columns} slits`;
+  $("docTitle").innerHTML = `<b>${escapeHtml(P.name)}</b> · ${({ rect: "Rounded box", pill: "Pill box", poly: P.sides + "-sided box", cyl: "Cylinder" })[P.shape]}`;
+  save();
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function renderAnalysis(model, err) {
+  const host = $("analysis");
+  if (!model) { host.innerHTML = `<div class="verdict err"><span class="dot"></span><span>${escapeHtml(err)}</span></div>`; return; }
+  const a = model.analysis;
+  const msg = {
+    ok: `Bends safely. The corners need a ${fmtLen(model.rN)} radius and this pattern should reach about ${fmtLen(a.rMin)}.`,
+    warn: `Tight bend. The corners need ${fmtLen(model.rN)}, close to the estimated limit of ${fmtLen(a.rMin)}. Cut a test strip first.`,
+    err: `Likely to crack. The corners need ${fmtLen(model.rN)} but the pattern only reaches about ${fmtLen(a.rMin)}. Lengthen the slits, tighten the spacing, or enlarge the corner radius.`,
+  }[a.verdict];
+  host.innerHTML = `
+    <div class="verdict ${a.verdict}"><span class="dot"></span><span>${msg}</span></div>
+    <dl class="stats">
+      <dt>Corner bend radius (neutral)</dt><dd>${fmtLen(model.rN)}</dd>
+      <dt>Estimated minimum radius</dt><dd>${fmtLen(a.rMin)}</dd>
+      <dt>Wall strip length</dt><dd>${fmtLen(model.L)}</dd>
+      <dt>Wall height (between plates)</dt><dd>${fmtLen(model.hBody)}</dd>
+      <dt>Slit length (actual)</dt><dd>${fmtLen(a.Lp)}</dd>
+      <dt>Slits per column</dt><dd>${a.nSeg}</dd>
+      <dt>Torsion bar length × width</dt><dd>${fmtLen(a.barLen, true)} × ${fmtLen(a.barW, true)}</dd>
+      <dt>Hinge columns</dt><dd>${a.columns}</dd>
+    </dl>
+    ${model.issues.length ? `<ul class="issues">${model.issues.map(i => `<li>${escapeHtml(i.msg)}</li>`).join("")}</ul>` : ""}
+    <p class="note">The minimum radius is an engineering estimate from torsion-bar strain. Always cut a test piece in your own material.</p>`;
+}
+/* Close-up of the hinge at true proportions: cuts are drawn as wide as the kerf, so the wood left
+   between them is the real torsion bar. */
+function drawInspector(model) {
+  const host = $("inspector");
+  const wall = model && model.parts.find(pt => pt.kind === "wall" && pt.cols.length >= 2 && !pt.test);
+  if (!wall) { host.innerHTML = `<div class="cap"><span>No hinge to show</span></div>`; return; }
+  const p = P, s = p.pitch, h = wall.hBody;
+  const c0 = wall.cols[0];
+  const ncShow = Math.min(wall.cols.length, 7);
+  const wx0 = c0.x - 4.5 * s - 3, ww = Math.max(22, (ncShow + 3) * s + 8);
+  const wy0 = -4.2, wh = Math.min(h + 5.5, ww * 0.82);
+  const fs = ww / 26;
+  let g = `<rect x="${r3(wx0)}" y="${r3(wy0)}" width="${r3(ww)}" height="${r3(wh)}" fill="#EFE6D6"/>`;
+  const lw = r3(Math.max(p.K, 0.1) * 0.6);
+  g += `<path d="${outlinePath(wall, 0, 0)}" fill="#D9B98A" stroke="#D0342C" stroke-width="${lw}"/>`;
+  const paths = [];
+  for (const c of wall.cols) { if (c.x < wx0 - s || c.x > wx0 + ww + s) continue; paths.push(...hingeCutPaths(c.x, colSegments(c.kind, model.hs, h, p.bridge), h, p, 0, 0)); }
+  g += p.cutStyle === "slot"
+    ? `<path d="${paths.join(" ")}" fill="#EFE6D6" stroke="#1F3F8F" stroke-width="${lw}"/>`
+    : `<path d="${paths.join(" ")}" fill="none" stroke="#1F3F8F" stroke-width="${r3(Math.max(p.K, 0.12))}" stroke-linecap="round"/>`;
+  // annotations
+  const ink = "#5B4630", dim = (x1, y1, x2, y2) => `<path d="M${r3(x1)},${r3(y1)}L${r3(x2)},${r3(y2)}" stroke="${ink}" stroke-width="${r3(fs * 0.06)}" marker-start="url(#ar)" marker-end="url(#ar)"/>`;
+  const txt = (x, y, t, anchor = "middle") => `<text x="${r3(x)}" y="${r3(y)}" font-size="${r3(fs * 0.62)}" font-family="Source Code Pro, monospace" fill="${ink}" text-anchor="${anchor}">${t}</text>`;
+  const c1 = wall.cols[1];
+  g += dim(c0.x, -1.6, c1.x, -1.6) + txt((c0.x + c1.x) / 2, -2.4, `spacing ${r3(s)}`);
+  // bridge on the first closed (or top-cut) column, slit length beside it
+  const bx = c0.x - s * 0.5 - 0.6;
+  if (p.pattern !== "serpentine") {
+    g += dim(bx, 0, bx, p.bridge) + txt(bx - 0.5, p.bridge * 0.5 + fs * 0.2, `bridge ${r3(p.bridge)}`, "end");
+    const ly = Math.min(p.bridge + model.hs.Lp, wy0 + wh - 1);
+    g += dim(bx, p.bridge, bx, ly) + txt(bx - 0.5, (p.bridge + ly) / 2 + fs * 0.2, `slit ${r3(model.hs.Lp)}`, "end");
+  } else {
+    const ly = Math.min(h - p.bridge, wy0 + wh - 1);
+    g += dim(bx, 0, bx, ly) + txt(bx - 0.5, ly / 2, `cut ${r3(h - p.bridge)}`, "end");
+  }
+  const lastShown = wall.cols.filter(c => c.x < wx0 + ww - 1).pop();
+  g += `<text x="${r3(wx0 + ww - 0.6)}" y="${r3(wy0 + 1.6)}" font-size="${r3(fs * 0.62)}" font-family="Source Code Pro, monospace" fill="${ink}" text-anchor="end">bar ${r3(p.pitch - cutWidth(p))} × ${r3(p.T)}${p.cutStyle === "slot" ? ` · slot ${r3(p.slotW)}` : ""}</text>`;
+  void lastShown;
+  const defs = `<defs><marker id="ar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="${r3(fs * 0.5)}" markerHeight="${r3(fs * 0.5)}" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,1L10,5L0,9z" fill="${ink}"/></marker></defs>`;
+  host.innerHTML = `<svg viewBox="${r3(wx0)} ${r3(wy0)} ${r3(ww)} ${r3(wh)}" xmlns="http://www.w3.org/2000/svg">${defs}${g}</svg><div class="cap"><span>Hinge close-up, true proportions</span><span>${fmtLen(ww, true)} wide</span></div>`;
+}
+function runAutoFit() {
+  if (!current || current.error) { toast("Fix the settings first"); return; }
+  const m = current.model, res = autoFit(P, m.hBody, m.rN);
+  P.pitch = res.q.pitch; P.bridge = res.q.bridge; if (P.pattern !== "serpentine") P.slit = res.q.slit;
+  syncControls(); update(); commit();
+  toast(res.ok ? `Fitted: spacing ${fmtLen(P.pitch, true)}, bridge ${fmtLen(P.bridge, true)}${P.pattern !== "serpentine" ? `, slit ${fmtLen(P.slit, true)}` : ""}` : "No lattice reaches this radius safely. Try Serpentine or a larger corner radius.");
+}
+function updateStatus(model, lay) {
+  if (!model) { $("sParts").textContent = ""; $("sFit").innerHTML = `<span class="s-err">Fix the highlighted setting</span>`; return; }
+  $("sParts").innerHTML = `Parts <span class="num">${model.parts.length}</span> · Used <span class="num">${fmtLen(lay.width, true)} × ${fmtLen(lay.height, true)}</span>`;
+  const fits = lay.width <= P.bedW + 1e-6 && lay.height <= P.bedH + 1e-6;
+  const longStrip = model.parts.some(pt => pt.kind === "wall" && pt.w + 10 > P.bedW);
+  $("sFit").innerHTML = fits ? `<span class="s-ok">● Fits the bed</span>` : `<span class="s-warn">● Larger than the bed${longStrip && P.split === 1 ? " — try Two halves under Joints" : ""}</span>`;
+}
+
+/* ===================================================== persistence, files */
+let saveT;
+function save() {
+  clearTimeout(saveT);
+  saveT = setTimeout(() => { try { localStorage.setItem("hingelab-v1", JSON.stringify({ params: P, units })); $("sSaved").textContent = "Autosaved locally"; } catch (e) { $("sSaved").textContent = "Local autosave unavailable"; } }, 300);
+}
+let downloads = null;
+if (window.claude && window.claude.use) window.claude.use("downloads").then(d => downloads = d).catch(() => {});
+async function offerFile(filename, data, mime) {
+  if (downloads) {
+    try { await downloads.save({ filename, data }); toast(`Saved ${filename}`); return; }
+    catch (e) {
+      if (e && e.code === "declined") { toast("Save cancelled"); return; }
+      if (e && e.code === "rate_limited") { toast("A save dialog is already open"); return; }
+    }
+  }
+  try {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([data], { type: mime })); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    toast(`Downloading ${filename}`);
+  } catch (e) { showCode(filename, data); }
+}
+function baseName() {
+  const d = P.shape === "cyl" ? `cyl${Math.round(P.dia)}` : `${Math.round(P.W)}x${P.shape === "poly" ? P.sides + "gon" : Math.round(P.D)}`;
+  return `hingebox-${d}x${Math.round(P.H)}-${P.T}mm`;
+}
+function exportNow() {
+  if (!current || current.error) { toast("Fix the settings before exporting"); return; }
+  offerFile(baseName() + ".svg", exportSVG(current.model, current.lay, P), "image/svg+xml");
+}
+function copySVG() {
+  if (!current || current.error) return;
+  const svg = exportSVG(current.model, current.lay, P);
+  try { navigator.clipboard.writeText(svg).then(() => toast("SVG copied to clipboard"), () => showCode(baseName() + ".svg", svg)); }
+  catch (e) { showCode(baseName() + ".svg", svg); }
+}
+function saveProject() { offerFile(baseName() + ".hingelab.json", JSON.stringify({ app: "HingeLab", version: 1, params: P }, null, 2), "application/json"); }
+function openProject() { $("fileInput").value = ""; $("fileInput").click(); }
+$("fileInput").addEventListener("change", (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const j = JSON.parse(rd.result);
+      if (!j.params) throw new Error();
+      P = migrate(Object.assign(clone(DEFAULTS), j.params, { layers: Object.assign(clone(DEFAULTS.layers), j.params.layers || {}) }));
+      syncControls(); update(); commit(); fit(); toast(`Opened ${f.name}`);
+    } catch (err) { toast("That file is not a HingeLab project"); }
+  };
+  rd.readAsText(f);
+});
+function newProject() { P = clone(DEFAULTS); syncControls(); update(); commit(); fit(); toast("New box"); }
+
+/* ===================================================== menus, modal, toast */
+const MENUS = {
+  file: [["New box", "Ctrl+N", newProject], ["Open project…", "Ctrl+O", openProject], ["Save project", "Ctrl+S", saveProject], "-", ["Export SVG…", "Ctrl+E", exportNow], ["Copy SVG code", "", copySVG], "-", ["Rename box…", "", renameDialog]],
+  edit: [["Undo", "Ctrl+Z", undo], ["Redo", "Ctrl+Shift+Z", redo], "-", ["Reset hinge pattern", "", () => { Object.assign(P, { pattern: DEFAULTS.pattern, slit: DEFAULTS.slit, bridge: DEFAULTS.bridge, pitch: DEFAULTS.pitch, overrun: DEFAULTS.overrun, stretch: DEFAULTS.stretch, cutStyle: DEFAULTS.cutStyle, slotW: DEFAULTS.slotW }); syncControls(); update(); commit(); }]],
+  view: [["Zoom in", "Ctrl++", () => zoomCenter(1.25)], ["Zoom out", "Ctrl+−", () => zoomCenter(0.8)], ["Fit sheet", "Ctrl+0", fit], ["Actual size", "Ctrl+1", () => zoomCenter(PX_PER_MM / view.z)], "-", ["Toggle grid", "'", () => $("toolGrid").click()], ["Units: millimeters", "", () => setUnits("mm")], ["Units: inches", "", () => setUnits("in")]],
+  help: [["Living hinge guide", "", guideDialog], ["Keyboard shortcuts", "", keysDialog]],
+};
+let openMenu = null;
+document.querySelectorAll(".menu").forEach(m => {
+  const btn = m.querySelector("button");
+  btn.addEventListener("click", (e) => { e.stopPropagation(); if (openMenu === m) closeMenus(); else showMenu(m); });
+  btn.addEventListener("mouseenter", () => { if (openMenu && openMenu !== m) showMenu(m); });
+});
+function showMenu(m) {
+  closeMenus();
+  const dd = document.createElement("div"); dd.className = "dropdown"; dd.setAttribute("role", "menu");
+  for (const it of MENUS[m.dataset.menu]) {
+    if (it === "-") { dd.appendChild(document.createElement("hr")); continue; }
+    const b = document.createElement("button"); b.type = "button"; b.setAttribute("role", "menuitem");
+    b.innerHTML = `<span>${it[0]}</span><kbd>${it[1]}</kbd>`;
+    if (it[0] === "Undo") b.disabled = !undoStack.length; if (it[0] === "Redo") b.disabled = !redoStack.length;
+    b.onclick = () => { closeMenus(); it[2](); };
+    dd.appendChild(b);
+  }
+  m.appendChild(dd); m.classList.add("open"); openMenu = m;
+  const r = dd.getBoundingClientRect(); if (r.right > window.innerWidth - 8) dd.style.left = `${window.innerWidth - 8 - r.right}px`;
+}
+function closeMenus() { document.querySelectorAll(".dropdown").forEach(d => d.remove()); document.querySelectorAll(".menu.open").forEach(m => m.classList.remove("open")); openMenu = null; }
+document.addEventListener("click", closeMenus);
+
+function modal(title, html) {
+  const root = $("modalRoot");
+  root.innerHTML = `<div class="modal-back"><div class="modal" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}"><header>${escapeHtml(title)}<button type="button" aria-label="Close">×</button></header><div class="mb">${html}</div></div></div>`;
+  const close = () => root.innerHTML = "";
+  root.querySelector("header button").onclick = close;
+  root.querySelector(".modal-back").addEventListener("click", e => { if (e.target.classList.contains("modal-back")) close(); });
+  return { root, close };
+}
+function showCode(name, data) {
+  const m = modal("Copy your file", `<p>This view can't start a download. Copy the code below, paste it into a text editor and save it as <b>${escapeHtml(name)}</b>.</p><textarea readonly>${escapeHtml(data)}</textarea>`);
+  const ta = m.root.querySelector("textarea"); ta.focus(); ta.select();
+}
+function renameDialog() {
+  const m = modal("Rename box", `<input id="renameIn" class="sel" value="${escapeHtml(P.name)}" maxlength="60"><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" class="btn-export" id="renameOk">Rename</button></div>`);
+  const inp = m.root.querySelector("#renameIn"); inp.focus(); inp.select();
+  const ok = () => { P.name = inp.value.trim() || "Untitled box"; m.close(); update(); commit(); };
+  m.root.querySelector("#renameOk").onclick = ok; inp.addEventListener("keydown", e => { if (e.key === "Enter") ok(); });
+}
+function guideDialog() {
+  modal("Living hinge guide", `
+    <p>A living hinge is a field of parallel slits that lets a stiff sheet bend. Each bridge between slits twists a little, and hundreds of small twists add up to a curve.</p>
+    <h3>What each setting does</h3>
+    <ul>
+      <li><b>Slit</b>: longer slits make longer torsion bars and a softer, tighter bend.</li>
+      <li><b>Bridge</b>: the uncut material between slits. Smaller bridges bend more easily but are more fragile.</li>
+      <li><b>Spacing</b>: distance between slit columns. Tighter spacing bends further but leaves thinner bars that can char.</li>
+      <li><b>Overrun</b>: extends the hinge a few millimeters past each corner so the curve blends into the flat sides.</li>
+      <li><b>Stretch</b>: shortens each hinge zone by this percentage, because the cuts open slightly as the wall bends. Leave it at 0 and raise it only if your test wall comes out too long.</li>
+    </ul>
+    <h3>Patterns</h3>
+    <ul>
+      <li><b>Straight</b>: the classic lattice. Strong and predictable; the best default.</li>
+      <li><b>Wave</b>: every cut is a parallel copy of the same wave, so bars keep one width. A little softer than Straight and hides the slits visually.</li>
+      <li><b>Relief</b>: Straight with a small round hole at every cut end, which spreads stress and resists cracking in brittle sheet such as MDF.</li>
+      <li><b>Serpentine</b>: cuts run in from alternate edges, turning the wall into a spring. Bends very tightly but stretches, so glue the wall.</li>
+    </ul>
+    <h3>Auto-fit</h3>
+    <ul>
+      <li>Auto-fit picks the stiffest pattern that still reaches your corner radius with a 30% safety margin. Stiffer means fewer cuts, less charring and a stronger wall.</li>
+    </ul>
+    <h3>Cutting tips</h3>
+    <ul>
+      <li>Cut the green slots first, then the blue hinge, then the red outline, so parts don't shift before they're finished.</li>
+      <li>Run the hinge layer slightly faster or with less power than the outline to reduce charring.</li>
+      <li>Bend with the grain of the face veneer running across the slits, and pre-flex the strip gently before assembly.</li>
+      <li>Measure your sheet with calipers. Plywood sold as 3 mm is often 2.7 to 3.2 mm.</li>
+    </ul>`);
+}
+function keysDialog() {
+  modal("Keyboard shortcuts", `<ul>
+    <li><kbd>H</kbd> Hand tool · <kbd>Z</kbd> Zoom tool · hold <kbd>Space</kbd> to pan</li>
+    <li><kbd>Ctrl/⌘ + 0</kbd> Fit sheet · <kbd>Ctrl/⌘ + 1</kbd> Actual size · <kbd>Ctrl/⌘ + / −</kbd> Zoom</li>
+    <li><kbd>Ctrl/⌘ + Z</kbd> Undo · <kbd>Ctrl/⌘ + Shift + Z</kbd> Redo</li>
+    <li><kbd>Ctrl/⌘ + S</kbd> Save project · <kbd>Ctrl/⌘ + O</kbd> Open · <kbd>Ctrl/⌘ + E</kbd> Export SVG</li>
+    <li>In a field: <kbd>↑</kbd> <kbd>↓</kbd> to step, with <kbd>Shift</kbd> for ×10. Drag a field label to scrub.</li></ul>`);
+}
+let toastT;
+function toast(msg) {
+  let el = document.querySelector(".toast"); if (!el) { el = document.createElement("div"); el.className = "toast"; el.setAttribute("role", "status"); document.body.appendChild(el); }
+  el.textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => el.remove(), 2400);
+}
+function setUnits(u) { units = u; syncControls(); update(); drawRulers(); }
+document.querySelectorAll(".unit-toggle button").forEach(b => b.onclick = () => setUnits(b.dataset.u));
+
+document.addEventListener("keydown", (e) => {
+  const inField = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+  const mod = e.ctrlKey || e.metaKey;
+  if (e.key === "Escape") { closeMenus(); $("modalRoot").innerHTML = ""; }
+  if (mod) {
+    const k = e.key.toLowerCase();
+    if (k === "z" && !inField) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+    else if (k === "s") { e.preventDefault(); saveProject(); }
+    else if (k === "o") { e.preventDefault(); openProject(); }
+    else if (k === "e") { e.preventDefault(); exportNow(); }
+    else if (k === "0") { e.preventDefault(); fit(); }
+    else if (k === "1") { e.preventDefault(); zoomCenter(PX_PER_MM / view.z); }
+    else if (k === "=" || k === "+") { e.preventDefault(); zoomCenter(1.25); }
+    else if (k === "-") { e.preventDefault(); zoomCenter(0.8); }
+    return;
+  }
+  if (inField) return;
+  if (e.key === "h" || e.key === "H") setTool("hand");
+  if (e.key === "z" || e.key === "Z") setTool("zoom");
+  if (e.key === "'") $("toolGrid").click();
+  if (e.code === "Space") { spaceDown = true; canvas.classList.remove("zoom-in"); }
+});
+document.addEventListener("keyup", (e) => { if (e.code === "Space") { spaceDown = false; canvas.classList.toggle("zoom-in", tool === "zoom"); } });
+
+/* ===================================================== init */
+const matSel = $("material");
+matSel.innerHTML = Object.entries(MATERIALS).map(([k, m]) => `<option value="${k}">${m.name}</option>`).join("");
+matSel.addEventListener("change", () => {
+  P.material = matSel.value; const m = MATERIALS[P.material];
+  if (m.T != null) { P.T = m.T; P.K = m.K; }
+  syncControls(); update(); commit();
+});
+buildFields();
+bindSeg("shapeSeg", "shape"); bindSeg("lidSeg", "lid"); bindSeg("patSeg", "pattern"); bindSeg("splitSeg", "split", true); bindSeg("cutSeg", "cutStyle");
+$("exportBtn").onclick = exportNow;
+$("autoFitBtn").onclick = runAutoFit;
+$("testStripChk").onchange = (e) => { P.testStrip = e.target.checked; update(); commit(); };
+$("toolSave").onclick = saveProject; $("toolOpen").onclick = openProject;
+syncControls();
+update();
+requestAnimationFrame(() => { fit(); draw3D(); });
+if (window.ResizeObserver) new ResizeObserver(() => { if (!view._fitted) { fit(); view._fitted = true; } else applyView(); }).observe(canvas);
+window.__hl = { outlinePath, computeModel, exportSVG, layoutParts, layerContent, autoFit, bendAnalysis, get P() { return P; }, set P(v) { P = v; }, update };
+})();
+</script>

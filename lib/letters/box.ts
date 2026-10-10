@@ -1,0 +1,190 @@
+/**
+ * Letter Box: every letter becomes a closed box, a base and a lid in the letter's shape joined
+ * by walls along every outline and counter. Walls are living-hinge strips or flat panels.
+ */
+import { bendAnalysis, cutWidth } from "@/lib/hinge";
+import { cornerRadiusOf, hingeParamsOf, wallHeightOf } from "./defaults";
+import { facetContour, facetedWall } from "./facets";
+import { fillet, smoothShapes } from "./fillet";
+import { MIN_PIECE_AREA, dropSpecks, makeShape, offsetShapes, pointInShape, shapeContours, unionShapes } from "./polygon";
+import { labelPoint } from "./solid";
+import { hingeWall } from "./strips";
+import type { BoxInfo, BoxLetterStat, Contour, LetterIssue, LetterParams, LetterPart, PanelPart, PartMark, PlatePart, Shape, StripPart, Wall } from "./types";
+
+export interface BoxLetter {
+  shape: Shape;
+  name: string;
+}
+
+export interface BoxResult {
+  walls: (StripPart | PanelPart)[];
+  plates: PlatePart[];
+  box: BoxInfo;
+  issues: LetterIssue[];
+}
+
+const r1 = (x: number) => Math.round(x * 10) / 10;
+const centroid = (c: Contour) => c.reduce((m, q) => [m[0] + q[0] / c.length, m[1] + q[1] / c.length], [0, 0]) as [number, number];
+
+/** Check the inputs a box needs; returns an error message or null. */
+export function boxError(p: LetterParams): string | null {
+  const hBody = wallHeightOf(p);
+  if (p.K >= p.T) return "Kerf must be between 0 and the material thickness.";
+  if (p.wallStyle === "hinge") {
+    const hp = hingeParamsOf(p);
+    if (p.cutStyle === "slot" && p.slotW < p.K + 0.05) return "Slot width must be at least 0.05 mm wider than the kerf.";
+    if (p.pitch <= cutWidth(hp) + 0.3) return p.cutStyle === "slot" ? "Slit spacing is too tight for this slot width. Increase the spacing or narrow the slots." : "Slit spacing is too tight for this kerf. Increase the spacing.";
+    if (hBody < 2 * p.bridge + 6) return "The box is too shallow for this bridge size. Increase the depth or reduce the bridge.";
+  } else if (hBody < 3 * p.T) {
+    return "The box is too shallow. Increase the depth.";
+  }
+  return null;
+}
+
+/**
+ * Base, lid and lid lip. `shapes` is the letter's outer wall face; slots and marks are in the
+ * same coordinates. Each kerf-compensated piece gets the slots and marks that fall inside it.
+ */
+function boxPlates(shapes: Shape[], name: string, p: LetterParams, slots: Contour[], marks: PartMark[], join: "round" | "miter", issues: LetterIssue[]): PlatePart[] {
+  const out: PlatePart[] = [];
+  const make = (s: Shape, label: string, withSlots: boolean, withMarks: boolean): PlatePart => {
+    const lp = labelPoint(s);
+    return {
+      kind: "plate",
+      name: label,
+      outer: s.outer,
+      holes: s.holes,
+      slots: withSlots ? slots.filter(sl => pointInShape(centroid(sl), s)) : [],
+      marks: withMarks ? marks.filter(m => pointInShape([m.x, m.y], s)) : [],
+      label: { x: lp[0], y: lp[1], size: Math.max(2.5, Math.min(6, Math.sqrt(s.area) / 10)) },
+      bbox: s.bbox,
+    };
+  };
+  const series = (pieces: Shape[], label: string, withSlots: boolean, withMarks: boolean) =>
+    pieces.forEach((s, k) => out.push(make(s, pieces.length > 1 ? `${label} ${k + 1}` : label, withSlots, withMarks)));
+
+  const plate = dropSpecks(offsetShapes(shapes, p.K / 2, join), MIN_PIECE_AREA);
+  series(plate, `${name} · base`, true, true);
+  if (p.lid === "fixed") series(plate, `${name} · lid`, true, false);
+  if (p.lid === "removable") {
+    series(plate, `${name} · lid`, false, false);
+    const lip = dropSpecks(offsetShapes(shapes, -(p.T + p.lidGap) + p.K / 2, join), 4);
+    if (lip.length) series(lip, `${name} · lid lip`, false, false);
+    else issues.push({ lvl: "warn", msg: `“${name}” is too narrow for a lid lip, so the lip was left out.` });
+  }
+  return out;
+}
+
+export function letterBoxes(letters: BoxLetter[], p: LetterParams): BoxResult {
+  const issues: LetterIssue[] = [];
+  const hp = hingeParamsOf(p);
+  const hBody = wallHeightOf(p);
+  const rMin = bendAnalysis(hp, hBody, 1).rMin;
+  const rCorner = cornerRadiusOf(p);
+  const topTabs = p.lid === "fixed";
+  const hinge = p.wallStyle === "hinge";
+
+  const wallParts: (StripPart | PanelPart)[] = [];
+  const plates: PlatePart[] = [];
+  const filleted: Shape[] = [];
+  const walls: Wall[] = [];
+  const stats: BoxLetterStat[] = [];
+
+  const used = new Map<string, number>();
+  const unique = (base: string) => {
+    const k = (used.get(base) ?? 0) + 1;
+    used.set(base, k);
+    return k > 1 ? `${base} ${k}` : base;
+  };
+
+  for (const L of letters) {
+    const fr = fillet([L.shape], rCorner, hinge ? 2 * p.T : 0);
+    if (!fr.shapes.length) {
+      issues.push({ lvl: "warn", msg: `“${L.name}” has strokes narrower than twice the corner radius (R ${r1(rCorner)} mm), so a wall cannot follow it and it was left out. Use a larger size, Thicken, a longer slit for a smaller radius, or Flat panels.` });
+      continue;
+    }
+    if (fr.changed) issues.push({ lvl: "warn", msg: `Part of “${L.name}” is too thin or too sharp for a hinge wall with R ${r1(rCorner)} mm corners, so it was rounded off. Use a bolder font, a larger size, Thicken, or a smaller corner radius.` });
+    fr.shapes.forEach(F => {
+      const name = unique(L.name);
+      const centers = smoothShapes(dropSpecks(offsetShapes([F], -p.T / 2), MIN_PIECE_AREA));
+      if (!centers.length) {
+        issues.push({ lvl: "warn", msg: `“${name}” is too thin for box walls and was left out. Use a larger size or a bolder font.` });
+        return;
+      }
+      if (centers.length > 1 || centers.reduce((n, c) => n + c.holes.length, 0) !== F.holes.length) {
+        issues.push({ lvl: "warn", msg: `Some strokes of “${name}” are too thin for box walls, so the walls do not follow the whole letter.` });
+      }
+      const contours: { c: Contour; label: string }[] = [];
+      let holeNo = 0;
+      centers.forEach((c, ci) => {
+        contours.push({ c: c.outer, label: centers.length > 1 ? `outer ${ci + 1}` : "outer" });
+        for (const h of c.holes) contours.push({ c: h, label: `hole ${++holeNo}` });
+      });
+
+      const before = walls.length;
+      const slots: Contour[] = [];
+      const marks: PartMark[] = [];
+      let plateShapes: Shape[];
+      if (hinge) {
+        let seamNo = 1;
+        for (const { c, label } of contours) {
+          const w = hingeWall(c, { letter: name, contour: label, p, hp, hBody, topTabs, rMin, seamNo });
+          seamNo += w.seamCount;
+          wallParts.push(...w.parts);
+          walls.push(w.wall);
+          slots.push(...w.wall.slots);
+          issues.push(...w.issues);
+        }
+        plateShapes = [F];
+      } else {
+        let panelNo = 1;
+        const facetShapes: Shape[] = [];
+        const facet = (c: Contour) => facetContour(c, p.facetTol, p.panelMin);
+        centers.forEach(c => facetShapes.push(makeShape(facet(c.outer), c.holes.map(facet))));
+        for (const { c, label } of contours) {
+          const fw = facetedWall(facet(c), { letter: name, contour: label, p, hBody, topTabs, panelNo });
+          panelNo += fw.parts.length;
+          wallParts.push(...fw.parts);
+          walls.push(fw.wall);
+          slots.push(...fw.wall.slots);
+          marks.push(...fw.marks);
+          issues.push(...fw.issues);
+        }
+        plateShapes = dropSpecks(unionShapes(shapeContours(offsetShapes(facetShapes, p.T / 2, "miter"))), MIN_PIECE_AREA);
+      }
+      filleted.push(...plateShapes);
+      plates.push(...boxPlates(plateShapes, name, p, slots, marks, hinge ? "round" : "miter", issues));
+
+      const mine = walls.slice(before);
+      const curves = mine.flatMap(w => w.zones.filter(z => z.kind === "curve" && !z.splice));
+      const rank = { ok: 0, tight: 1, crack: 2 } as const;
+      const worst = curves.reduce<BoxLetterStat["verdict"]>((v, z) => (z.verdict && (!v || rank[z.verdict] > rank[v]) ? z.verdict : v), null);
+      stats.push({
+        letter: name,
+        perimeter: mine.reduce((s, w) => s + w.length, 0),
+        pieces: mine.reduce((s, w) => s + w.pieceLengths.length, 0),
+        zones: curves.length,
+        rTight: curves.reduce((r, z) => Math.min(r, z.rTight), Infinity),
+        verdict: worst,
+      });
+    });
+  }
+
+  if (hinge) {
+    for (const s of stats) {
+      if (s.verdict === "crack") issues.push({ lvl: "warn", msg: `“${s.letter}” bends tighter (R ${r1(s.rTight)} mm) than this hinge allows (about ${r1(rMin)} mm). Use Auto-fit, a larger size or a larger corner radius.` });
+      else if (s.verdict === "tight") issues.push({ lvl: "info", msg: `“${s.letter}” bends close to the hinge limit (R ${r1(s.rTight)} mm). Cut a test piece first.` });
+    }
+    if (p.pitch - cutWidth(hp) < 0.9) issues.push({ lvl: "warn", msg: "Torsion bars are under 0.9 mm wide and may char or snap. Widen the slit spacing" + (p.cutStyle === "slot" ? " or narrow the slots." : ".") });
+    if (p.material === "acr3") issues.push({ lvl: "warn", msg: "Acrylic living hinges crack easily. Use them only for gentle curves or heat-assisted bends." });
+  } else if (!p.labels) {
+    issues.push({ lvl: "info", msg: "Turn on Labels to engrave the panel numbers on the panels and the base, so they are easy to match." });
+  }
+
+  return {
+    walls: wallParts,
+    plates,
+    box: { style: p.wallStyle, hBody, rCorner, rMin, filleted, walls, letters: stats },
+    issues,
+  };
+}

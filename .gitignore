@@ -1,0 +1,9 @@
+node_modules
+.next
+out
+*.tsbuildinfo
+.vercel
+public/hb
+.env*
+*.zip
+.vitest-*.json

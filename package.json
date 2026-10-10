@@ -1,0 +1,29 @@
+{
+  "name": "hingelab",
+  "private": true,
+  "scripts": {
+    "predev": "node scripts/copy-harfbuzz.js",
+    "dev": "next dev",
+    "prebuild": "node scripts/copy-harfbuzz.js",
+    "build": "next build",
+    "postinstall": "node scripts/copy-harfbuzz.js",
+    "start": "next start",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "clipper-lib": "^6.4.2",
+    "harfbuzzjs": "^1.6.3",
+    "next": "^15.5.4",
+    "opentype.js": "^2.0.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/clipper-lib": "^6.4.0",
+    "@types/node": "^22.18.6",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
