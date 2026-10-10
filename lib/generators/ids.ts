@@ -1,5 +1,5 @@
 /** Generator ids and the little the shell needs before a generator's code loads. */
-export const GENERATOR_IDS = ["clock"] as const;
+export const GENERATOR_IDS = ["clock", "puzzle"] as const;
 export type GeneratorId = (typeof GENERATOR_IDS)[number];
 
 export const isGeneratorId = (v: unknown): v is GeneratorId => typeof v === "string" && (GENERATOR_IDS as readonly string[]).includes(v);
@@ -15,4 +15,5 @@ export interface GeneratorInfo {
 
 export const GENERATOR_INFO: Record<GeneratorId, GeneratorInfo> = {
   clock: { name: "Clock", blurb: "Wall and desk clocks with numerals, hands and a hole for a standard quartz movement.", icon: "clock", storageKey: "hingelab-gen-clock-v1" },
+  puzzle: { name: "Puzzle", blurb: "Jigsaw puzzles in any shape with classic or kids tabs, a frame or tray, and a picture engraved on top.", icon: "puzzle", storageKey: "hingelab-gen-puzzle-v1" },
 };

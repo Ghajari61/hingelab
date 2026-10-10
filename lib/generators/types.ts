@@ -20,6 +20,18 @@ export interface GenPreset<P> {
   name: string;
   note: string;
   params: DeepPartial<P>;
+  /** Exporting it needs the Pro plan (shown on its card). */
+  pro?: boolean;
+}
+
+/** A raster picture on the engrave layer, in the part's frame (mm), clipped to `clip`. */
+export interface GenImage {
+  href: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  clip?: Contour;
 }
 
 /** Settings every generator has; the shell owns their panels. */
@@ -51,6 +63,10 @@ export interface GenPart {
   score?: Contour[];
   /** Engraved regions, filled (even-odd). */
   engrave?: Contour[];
+  /** Engraved pictures. */
+  images?: GenImage[];
+  /** The pieces the cuts make (puzzles): drawn separately in 3D. */
+  pieces?: Contour[];
   /** Where the part sits when assembled (3D): its frame is moved by (x, y), lifted to z, turned rot°. */
   place?: { x: number; y: number; z: number; rot?: number; upright?: boolean };
   /** Thickness when it differs from the material (for example acrylic hands). */
@@ -106,6 +122,8 @@ export interface NumberSpec<P> extends FieldCommon<P> {
   step: number;
   /** Whole numbers only (counts). */
   int?: boolean;
+  /** Offer a Randomise button (seeds). */
+  random?: boolean;
 }
 
 export interface ChoiceSpec<P> extends FieldCommon<P> {
@@ -134,7 +152,13 @@ export interface FontSpec<P> extends FieldCommon<P> {
   sample?: (p: P) => string;
 }
 
-export type FieldSpec<P> = NumberSpec<P> | ChoiceSpec<P> | ToggleSpec<P> | TextSpec<P> | FontSpec<P>;
+/** A picture the user picks; stored as a grey JPEG data URL, its width / height in `aspectKey`. */
+export interface ImageSpec<P> extends FieldCommon<P> {
+  kind: "image";
+  aspectKey: string;
+}
+
+export type FieldSpec<P> = NumberSpec<P> | ChoiceSpec<P> | ToggleSpec<P> | TextSpec<P> | FontSpec<P> | ImageSpec<P>;
 
 export interface SectionSpec<P> {
   id: string;
@@ -166,6 +190,8 @@ export interface GeneratorDef<P extends GenBase> {
   build(p: P, ctx: BuildContext): GenOutput;
   /** Checks with fixes; the shell adds the sheet checks. */
   check(p: P, out: GenOutput): Issue<P>[];
+  /** Why exporting this design needs Pro, or null (checked again by the server). */
+  pro?(p: P, out: GenOutput): string | null;
   /** Fonts the build will ask for. */
   fonts?(p: P): string[];
   /** Scale the design (Fit to sheets); omit when the design must keep its size. */

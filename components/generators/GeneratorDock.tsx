@@ -11,7 +11,9 @@ import type { BaseField } from "@/components/editor/fields";
 import type { Units } from "@/components/editor/format";
 import { cleanFit } from "@/lib/fit/fitToSheets";
 import { GEN_LAYER_NAMES } from "@/lib/generators/output";
-import { getPath } from "@/lib/generators/path";
+import { getPath, setPath } from "@/lib/generators/path";
+import { Dices } from "lucide-react";
+import { ImagePicker } from "./ImagePicker";
 import type { AnyGenerator, FieldSpec, GenBase, GenOutput, NumberSpec } from "@/lib/generators/types";
 
 type P = GenBase & Record<string, unknown>;
@@ -90,6 +92,15 @@ export function GeneratorDock({
         </div>
       );
     }
+    if (f.kind === "image") {
+      return (
+        <ImagePicker
+          key={f.key} label={f.label} value={String(value ?? "")}
+          onPick={(url, aspect) => onApply(setPath(setPath(params, f.key, url), f.aspectKey, aspect) as P)}
+          onClear={() => onSet(f.key, "", true)}
+        />
+      );
+    }
     if (f.kind === "font") {
       return (
         <div className="gen-font" key={f.key}>
@@ -127,8 +138,19 @@ export function GeneratorDock({
     const flush = () => { if (run.length) out.push(<div className="grid2" key={`g${out.length}`}>{run}</div>); run = []; };
     for (const f of fields) {
       if (f.kind === "choice" && f.rail) continue;
-      if (f.kind === "number") run.push(field(f));
-      else { flush(); out.push(field(f)); }
+      if (f.kind === "number") {
+        run.push(field(f));
+        if (f.random && (!f.show || f.show(params))) {
+          run.push(
+            <button
+              key={`${f.key}-random`} type="button" className="btn-auto gen-random" title={`New ${f.label.toLowerCase()}`}
+              onClick={() => onSet(f.key, Math.floor(f.min + Math.random() * (f.max - f.min + 1)), true)}
+            >
+              <Dices size={15} /> Randomise
+            </button>,
+          );
+        }
+      } else { flush(); out.push(field(f)); }
     }
     flush();
     return out;

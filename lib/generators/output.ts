@@ -10,7 +10,7 @@ import { r3 } from "@/lib/hinge/util";
 import type { Issue } from "@/lib/issues";
 import { offsetShapes, unionShapes } from "@/lib/letters/polygon";
 import { bboxOf, pathD } from "./geom";
-import type { BuildContext, Contour, GenBase, GenOutput, GenPart, GeneratorDef } from "./types";
+import type { BuildContext, Contour, GenBase, GenImage, GenOutput, GenPart, GeneratorDef } from "./types";
 
 /** Layer names in the generators' panels and SVG files (keys and colours shared with every product). */
 export const GEN_LAYER_NAMES: Record<LayerKey, string> = {
@@ -31,6 +31,7 @@ export interface CutPart {
   cuts: Contour[];
   score: Contour[];
   engrave: Contour[];
+  images: GenImage[];
   bbox: BBox;
 }
 
@@ -44,7 +45,7 @@ export function cutPart(p: GenPart, K: number): CutPart {
   }
   return {
     src: p, id: p.id, name: p.name, outline, inner,
-    cuts: p.cuts ?? [], score: p.score ?? [], engrave: p.engrave ?? [],
+    cuts: p.cuts ?? [], score: p.score ?? [], engrave: p.engrave ?? [], images: p.images ?? [],
     bbox: bboxOf(outline),
   };
 }
@@ -68,9 +69,12 @@ export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, 
   });
 }
 
-/** Canvas layers plus the engraved fills, in sheet coordinates. */
-export function genContent(lay: Layout<CutPart>): LayerContent & { engrave: string[] } {
-  const L: LayerContent & { engrave: string[] } = { outline: [], slots: [], hinge: [], labels: [], fills: [], engrave: [] };
+export interface SheetImage { href: string; x: number; y: number; w: number; h: number; clip?: string }
+export type GenContent = LayerContent & { engrave: string[]; images: SheetImage[] };
+
+/** Canvas layers plus the engraved fills and pictures, in sheet coordinates. */
+export function genContent(lay: Layout<CutPart>): GenContent {
+  const L: GenContent = { outline: [], slots: [], hinge: [], labels: [], fills: [], engrave: [], images: [] };
   for (const { pt, ox, oy } of lay.items) {
     for (const c of pt.outline) L.outline.push(pathD(c, true, ox, oy));
     for (const c of pt.inner) L.slots.push(pathD(c, true, ox, oy));
@@ -78,6 +82,7 @@ export function genContent(lay: Layout<CutPart>): LayerContent & { engrave: stri
     for (const c of pt.score) L.hinge.push(pathD(c, false, ox, oy));
     L.fills.push([...pt.outline, ...pt.inner].map((c) => pathD(c, true, ox, oy)).join(" "));
     if (pt.engrave.length) L.engrave.push(pt.engrave.map((c) => pathD(c, true, ox, oy)).join(" "));
+    for (const im of pt.images) L.images.push({ href: im.href, x: r3(im.x + ox), y: r3(im.y + oy), w: r3(im.w), h: r3(im.h), clip: im.clip ? pathD(im.clip, true, ox, oy) : undefined });
   }
   return L;
 }
@@ -93,7 +98,7 @@ export function genSVG<P extends GenBase>(def: GeneratorDef<P>, p: P, lay: Layou
   const C = genContent(lay);
   const parts = lay.items.map((it) => it.pt.name).join(", ");
   const note = `HingeLab ${def.name}: ${p.name}. ${def.summary(p)}. Material ${p.T} mm, kerf ${p.K} mm (compensated). Parts: ${parts}.${comment ? " " + comment : ""}`;
-  let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">\n`;
+  let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"${C.images.length ? ' xmlns:xlink="http://www.w3.org/1999/xlink"' : ""} width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">\n`;
   s += `<!-- ${esc(note).replace(/--/g, "- -")} -->\n`;
   const layer = (key: LayerKey, paths: string[], fill: boolean) => {
     if (!p.layers[key].exp || !paths.length) return;
@@ -104,6 +109,15 @@ export function genSVG<P extends GenBase>(def: GeneratorDef<P>, p: P, lay: Layou
     for (const d of paths) s += `  <path d="${d}"/>\n`;
     s += `</g>\n`;
   };
+  if (p.layers.labels.exp && C.images.length) {
+    const def = EXPORT_LAYERS.find((l) => l.key === "labels")!;
+    s += `<defs>\n${C.images.map((im, i) => (im.clip ? `  <clipPath id="engrave-clip-${i}"><path d="${im.clip}"/></clipPath>\n` : "")).join("")}</defs>\n`;
+    s += `<g id="labels-images" inkscape:groupmode="layer" inkscape:label="${def.code} ${GEN_LAYER_NAMES.labels} (picture)">\n`;
+    C.images.forEach((im, i) => {
+      s += `  <image x="${im.x}" y="${im.y}" width="${im.w}" height="${im.h}" preserveAspectRatio="none"${im.clip ? ` clip-path="url(#engrave-clip-${i})"` : ""} href="${im.href}" xlink:href="${im.href}"/>\n`;
+    });
+    s += `</g>\n`;
+  }
   layer("labels", C.engrave, true);
   layer("hinge", C.hinge, false);
   layer("slots", C.slots, false);

@@ -22,6 +22,8 @@ import { rulerSvg } from "@/components/editor/Rulers";
 import { StatusBar } from "@/components/editor/StatusBar";
 import { Dialogs, type ModalState } from "@/components/editor/dialogs";
 import { HelpContext, useHelpPanel } from "@/components/help/HelpContext";
+import { usePlan } from "@/components/billing/usePlan";
+import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 import { getLoadedFont, loadHarfBuzz } from "@/components/letters/runtime";
 import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
 import { autoFixAll, type Fix, type Issue } from "@/lib/issues";
@@ -99,6 +101,8 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const helpMap = useMemo(() => generatorHelpMap(def), [def]);
   const help = useHelpPanel(helpMap);
   const myPresets = useMyPresets();
+  const account = usePlan();
+  const [upgrade, setUpgrade] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastT = useRef<number>(0);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -144,15 +148,21 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const error = fontError ?? ("error" in arranged.result ? arranged.result.error : null);
   const lay = model ? arranged.lay : null;
   const content = useMemo(() => (lay ? genContent(lay) : null), [lay]);
+  const lock = out && def.pro ? def.pro(built, out) : null;
+  const locked = !!lock && account.plan !== "pro";
   const issues = useMemo<Issue<P>[]>(
-    () => (out ? [...def.check(deferred, out), ...sheetIssues(def, deferred, arranged)] : []),
-    [def, deferred, out, arranged],
+    () => (out ? [
+      ...def.check(deferred, out),
+      ...sheetIssues(def, deferred, arranged),
+      ...(locked && lock ? [{ code: "NEEDS_PRO", level: "info" as const, message: `${lock} You can design it freely; exporting needs Pro.`, fixes: [] }] : []),
+    ] : []),
+    [def, deferred, out, arranged, locked, lock],
   );
   const layerKeys = useMemo<LayerKey[]>(() => {
     const k: LayerKey[] = ["outline"];
     if (content?.slots.length) k.push("slots");
     if (content?.hinge.length) k.push("hinge");
-    if (content?.engrave.length) k.push("labels");
+    if (content?.engrave.length || content?.images.length) k.push("labels");
     return k;
   }, [content]);
 
@@ -199,20 +209,32 @@ function GenEditor({ def, onProduct, onHome, start }: {
     }
   }
 
-  function exportedSVG(): string | null {
+  async function exportedSVG(): Promise<string | null> {
     if (!lay || !out) { toastMsg(error ? "Fix the settings before exporting" : "Still loading"); return null; }
     if (out.notice) { toastMsg(out.notice); return null; }
     if (issues.some((i) => i.code === "MISSING_GLYPHS")) { toastMsg("Pick a font that has every character first"); return null; }
-    return genSVG(def, built, lay);
+    if (!lock || !account.configured) return genSVG(def, built, lay);
+    if (locked) { setUpgrade(lock); return null; }
+    // A Pro design: the server checks the plan and builds it again.
+    try {
+      const res = await fetch("/api/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ product: def.id, params }) });
+      if (res.ok) return await res.text();
+      const err = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Export failed. Try again.";
+      if (res.status === 403) setUpgrade(err);
+      else toastMsg(err);
+    } catch {
+      toastMsg("Export failed. Check your connection and try again.");
+    }
+    return null;
   }
 
-  function exportNow() {
-    const svg = exportedSVG();
+  async function exportNow() {
+    const svg = await exportedSVG();
     if (svg) offerFile(def.fileName(built) + ".svg", svg, "image/svg+xml");
   }
 
-  function copySVG() {
-    const svg = exportedSVG();
+  async function copySVG() {
+    const svg = await exportedSVG();
     if (!svg) return;
     const name = def.fileName(built) + ".svg";
     try {
@@ -420,6 +442,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
               sheets={arranged.sheets}
               content={content}
               engrave={content?.engrave}
+              images={content?.images}
               layers={params.layers}
               labels={false}
               error={error}
@@ -478,6 +501,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
         }}
         onSavePreset={(name) => { setModal(null); void myPresets.save(def.id, name, params).then(toastMsg); }}
       />
+      {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
       <input
         ref={fileRef}

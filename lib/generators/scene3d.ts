@@ -25,10 +25,27 @@ export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D 
     if (pl.upright) stand.rotation.x = Math.PI / 2;
     const spin = new THREE.Group();
     spin.rotation.z = -((pl.rot ?? 0) * Math.PI) / 180;
-    const mesh = slab(p.outer, p.holes, 0, t, p.name);
-    mesh.userData.tint = /hand/i.test(p.name) ? 0.72 : levels.indexOf(pl.z) % 2 ? 1.06 : 0.94;
-    spin.add(mesh);
-    for (const s of p.engrave?.length ? unionShapes(p.engrave, [], true) : []) {
+    const tint = /hand/i.test(p.name) ? 0.72 : levels.indexOf(pl.z) % 2 ? 1.06 : 0.94;
+    if (p.pieces?.length) {
+      // Pieces drift apart from the middle as the view explodes.
+      let cx = 0, cy = 0, n = 0;
+      for (const c of p.pieces) for (const [x, y] of c) { cx += x; cy += y; n++; }
+      cx /= n || 1; cy /= n || 1;
+      p.pieces.forEach((c, i) => {
+        let px = 0, py = 0;
+        for (const [x, y] of c) { px += x; py += y; }
+        px /= c.length; py /= c.length;
+        const k = explode * 0.12;
+        const m = slab(c.map(([x, y]) => [x + (px - cx) * k, y + (py - cy) * k] as [number, number]), [], 0, t, `${p.name} piece ${i + 1}`);
+        m.userData.tint = tint * (i % 2 ? 1.03 : 0.97);
+        spin.add(m);
+      });
+    } else {
+      const mesh = slab(p.outer, p.holes, 0, t, p.name);
+      mesh.userData.tint = tint;
+      spin.add(mesh);
+    }
+    for (const s of p.engrave?.length && !(p.pieces?.length && explode > 0) ? unionShapes(p.engrave, [], true) : []) {
       const e = slab(s.outer, s.holes, t, 0.2, `${p.name} engraving`);
       (e.material as THREE.Material).dispose();
       e.material = ENGRAVE;

@@ -1,6 +1,7 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import type { GenBase } from "../types";
+import { isObj, mergeInto } from "../util";
 
 export type FaceShape = "round" | "square" | "polygon" | "sunburst" | "gear" | "scallop" | "custom";
 export type FaceLayers = "single" | "ring" | "stack";
@@ -95,20 +96,6 @@ export const CLOCK_DEFAULTS: ClockParams = {
   hanger: "keyhole",
   stand: false,
 };
-
-const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
-
-function mergeInto<T extends object>(base: T, raw: unknown): T {
-  if (!isObj(raw)) return base;
-  const out = { ...base } as Record<string, unknown>;
-  for (const [k, v] of Object.entries(base)) {
-    const r = raw[k];
-    if (r === undefined) continue;
-    if (isObj(v)) out[k] = mergeInto(v, r);
-    else if (typeof v === typeof r) out[k] = r;
-  }
-  return out as T;
-}
 
 export function mergeClock(raw: unknown): ClockParams {
   const p = mergeInto(clone(CLOCK_DEFAULTS), raw);

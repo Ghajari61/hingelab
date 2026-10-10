@@ -23,6 +23,7 @@ const LAZY_BUDGETS = {
   "3D view (three.js)": { key: /EditorApp\.tsx -> \.\/HingeView3D$/, kb: 195 },
   "Generator editor": { key: /Workspace\.tsx -> @\/components\/generators\/GeneratorEditor$/, kb: 125 },
   "Clock generator": { key: /registry\.ts -> \.\/clock$/, kb: 15 },
+  "Puzzle generator": { key: /registry\.ts -> \.\/puzzle$/, kb: 15 },
 };
 
 const gz = new Map();

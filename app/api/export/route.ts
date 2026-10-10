@@ -1,15 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { exportGeneratorForPlan } from "@/lib/billing/exportGenerator";
 import { exportHingeForPlan } from "@/lib/billing/exportHinge";
 import { exportLettersForPlan, parseLetterRequest } from "@/lib/billing/exportLetters";
 import { exportParametricForPlan, parseParametricRequest } from "@/lib/billing/exportParametric";
 import { serverManifold } from "@/lib/billing/serverManifold";
 import { bundledFont, serverHarfBuzz, uploadedFont } from "@/lib/billing/letterFonts";
 import { currentPlan } from "@/lib/billing/plan";
+import { isGeneratorId } from "@/lib/generators/ids";
 import type { Plan } from "@/lib/plans";
 
 /** Hinge Box and Letters settings are a few kB; a Letters request may carry an uploaded font. */
 const MAX_PARAMS_BODY = 256 * 1024;
 const MAX_FONT_BODY = 4.4 * 1024 * 1024;
+/** A generator design may carry an engraved picture (a grey JPEG of at most 700 kB). */
+const MAX_GENERATOR_BODY = 1.2 * 1024 * 1024;
 
 type Body = { product?: unknown; params?: unknown; what?: unknown; font?: { name?: unknown; data?: unknown } };
 
@@ -18,6 +22,7 @@ type Body = { product?: unknown; params?: unknown; what?: unknown; font?: { name
  * "Made with HingeLab" mark and cannot export Pro shapes or patterns. Letters: Free can export
  * only a single-letter Letter Box, with the mark. Parametric: Free can export library shapes as
  * parallel fins with up to 30 parts, with the mark (a ZIP, one sheet, or the assembly guide).
+ * Generators: the editor exports free designs itself and sends only Pro ones here to be checked.
  */
 export async function POST(request: NextRequest) {
   let body: Body;
@@ -26,11 +31,19 @@ export async function POST(request: NextRequest) {
     if (text.length > MAX_FONT_BODY) return NextResponse.json({ error: "Request too large." }, { status: 413 });
     body = JSON.parse(text);
     if (!body || typeof body !== "object") throw new Error();
-    if (!(body.product === "letters" && body.font) && text.length > MAX_PARAMS_BODY) return NextResponse.json({ error: "Request too large." }, { status: 413 });
+    if (isGeneratorId(body.product) && text.length > MAX_GENERATOR_BODY) return NextResponse.json({ error: "Request too large." }, { status: 413 });
+    if (!(body.product === "letters" && body.font) && !isGeneratorId(body.product) && text.length > MAX_PARAMS_BODY) return NextResponse.json({ error: "Request too large." }, { status: 413 });
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
   const { plan } = await currentPlan();
+  if (isGeneratorId(body.product)) {
+    const out = await exportGeneratorForPlan(body.product, body.params, plan);
+    if (!out.ok) return NextResponse.json({ error: out.error }, { status: out.status });
+    return new NextResponse(out.svg, {
+      headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "no-store", "x-hingelab-plan": plan },
+    });
+  }
   if (body.product === "parametric") {
     const req = parseParametricRequest(body.params, body.what);
     if ("error" in req) return NextResponse.json({ error: req.error }, { status: 400 });

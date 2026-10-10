@@ -7,4 +7,5 @@ import type { AnyGenerator } from "./types";
 
 export const loadGenerator: Record<GeneratorId, () => Promise<AnyGenerator>> = {
   clock: () => import("./clock").then((m) => m.CLOCK as AnyGenerator),
+  puzzle: () => import("./puzzle").then((m) => m.PUZZLE as AnyGenerator),
 };

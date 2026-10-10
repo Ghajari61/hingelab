@@ -1,4 +1,5 @@
-import { circle, pathD, transform } from "../geom";
+import { circle, transform } from "../geom";
+import { HEART_PATH as HEART, fitArt as fit, namedFile } from "../util";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { buildClock, faceOutline, handOutline } from "./build";
 import { checkClock } from "./check";
@@ -129,16 +130,6 @@ const sections: SectionSpec<ClockParams>[] = [
   },
 ];
 
-/** Picture cards for the rail: drawn from the real geometry, scaled into 64 × 44. */
-function fit(cs: Contour[], box = 38): string[] {
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (const c of cs) for (const [x, y] of c) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
-  const s = box / Math.max(x1 - x0, y1 - y0, 1);
-  return cs.map((c) => pathD(transform(c, { x: 32 - ((x0 + x1) / 2) * s, y: 22 - ((y0 + y1) / 2) * s, sx: s, sy: s }), true));
-}
-
-const HEART = "M 50 90 C 20 70 0 50 0 28 C 0 10 14 0 27 0 C 38 0 46 7 50 16 C 54 7 62 0 73 0 C 86 0 100 10 100 28 C 100 50 80 70 50 90 Z";
-
 function art(key: string, v: string): { d: string; fill?: boolean }[] {
   if (key === "face.shape") {
     const p = mergeClock({ face: { shape: v, size: 100, sides: 6, rays: v === "gear" ? 12 : v === "scallop" ? 10 : 16, depth: v === "sunburst" ? 14 : 8, corner: v === "square" ? 14 : 6, path: v === "custom" ? HEART : "" } });
@@ -182,7 +173,6 @@ function scaleClock(p: ClockParams, s: number): ClockParams {
   };
 }
 
-const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "clock";
 
 export const CLOCK: GeneratorDef<ClockParams> = {
   id: "clock",
@@ -197,10 +187,8 @@ export const CLOCK: GeneratorDef<ClockParams> = {
   fonts: (p) => (p.markers.style === "numerals" || p.markers.style === "mixed" ? [p.markers.fontId] : []),
   scale: scaleClock,
   art,
-  fileName: (p) => {
-    const s = slug(p.name);
-    return `${/(^|-)clock(-|$)/.test(s) ? s : `clock-${s}`}-${Math.round(p.face.size)}mm`;
-  },
+  fileName: (p) => namedFile("clock", p.name, `${Math.round(p.face.size)}mm`),
+
   summary: (p) => `${p.face.size} mm ${SHAPE_NAMES[p.face.shape].toLowerCase()} face, ${MARKER_NAMES[p.markers.style].toLowerCase()}`,
   help: {
     intro: [

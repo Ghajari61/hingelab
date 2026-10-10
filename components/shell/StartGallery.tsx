@@ -34,7 +34,7 @@ type AnyPreset = Preset<Record<string, unknown>>;
 export type StartChoice = { product: Product; preset?: AnyPreset };
 
 function isPro(product: Product, p: AnyPreset): boolean {
-  if (isGeneratorId(product)) return false;
+  if (isGeneratorId(product)) return !!(p as AnyPreset & { pro?: boolean }).pro;
   const q = p.params as Record<string, unknown>;
   if (product === "hinge") return hingeLocks("free", hingePresetParams(q)).length > 0;
   if (product === "letters") return lettersLock("free", { mode: (q.mode as string) ?? "solid", text: (q.text as string) ?? "" }) !== null;
