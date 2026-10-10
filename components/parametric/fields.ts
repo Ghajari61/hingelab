@@ -1,5 +1,5 @@
 import type { BaseField } from "@/components/editor/fields";
-import { finSpacingOf, minFeatureOf, tabDepthOf, type ParametricParams } from "@/lib/parametric";
+import { MAX_TABS, finSpacingOf, minFeatureOf, tabDepthOf, type ParametricParams } from "@/lib/parametric";
 
 export type ParamSection = "transform" | "formula" | "photo" | "text" | "method" | "material" | "sheet" | "joints" | "quality";
 
@@ -22,6 +22,8 @@ const isStacked = (p: ParametricParams) => p.method === "stacked";
 const isWaffle = (p: ParametricParams) => p.method === "waffle";
 const isRadial = (p: ParametricParams) => p.method === "radial";
 const isCurve = (p: ParametricParams) => p.method === "curveNormal";
+/** Methods whose fins have tabs: into the backboard, the curve's back plate or the radial hub rings. */
+export const hasTabs = (p: ParametricParams) => hasBoard(p) || (isCurve(p) && p.curveNormal.backPlate) || (isRadial(p) && p.radial.hubPlates > 0);
 const curveGuide = (p: ParametricParams) => p.curveNormal.guide;
 const curveBoundary = (p: ParametricParams) => p.curveNormal.outerBoundary;
 
@@ -58,7 +60,7 @@ export const PARAM_FIELDS: ParamField[] = [
   { sec: "method", id: "backboardMargin", label: "Margin", len: true, step: 1, min: 0, max: 200, get: p => p.parallel.backboardMargin, set: (p, v) => { p.parallel.backboardMargin = v; }, show: hasBoard },
   { sec: "method", id: "slatDepth", label: "Slat depth", len: true, step: 1, min: 2, max: 200, get: p => p.parallel.slatDepth, set: (p, v) => { p.parallel.slatDepth = v; }, show: p => isParallel(p) && p.parallel.backboard === "slats" },
   { sec: "method", id: "tabDepth", label: "Tab depth", len: true, step: 0.5, min: 0.5, max: 50, get: tabDepthOf, set: (p, v) => { p.parallel.finDepthBehind = v; }, show: hasBoard },
-  { sec: "method", id: "dowelCount", label: "Dowels", step: 1, min: 1, max: 4, get: p => p.stacked.dowelCount, set: (p, v) => { p.stacked.dowelCount = v; }, show: p => isStacked(p) && p.stacked.dowels },
+  { sec: "method", id: "dowelCount", label: "Dowels", step: 1, min: 1, max: 12, get: p => p.stacked.dowelCount, set: (p, v) => { p.stacked.dowelCount = v; }, show: p => isStacked(p) && p.stacked.dowels },
   { sec: "method", id: "shell", label: "Wall", len: true, step: 1, min: 2, max: 100, get: p => p.stacked.shell, set: (p, v) => { p.stacked.shell = v; }, show: p => isStacked(p) && p.stacked.hollow },
   { sec: "method", id: "spacingA", label: "Spacing A", len: true, step: 1, min: 3, max: 500, get: p => p.waffle.spacingA, set: (p, v) => { p.waffle.spacingA = v; }, show: isWaffle },
   { sec: "method", id: "spacingB", label: "Spacing B", len: true, step: 1, min: 3, max: 500, get: p => p.waffle.spacingB, set: (p, v) => { p.waffle.spacingB = v; }, show: isWaffle },
@@ -83,7 +85,9 @@ export const PARAM_FIELDS: ParamField[] = [
   { sec: "sheet", id: "sheetMargin", label: "Margin", len: true, step: 1, min: 0, max: 50, get: p => p.material.sheetMargin, set: (p, v) => { p.material.sheetMargin = v; } },
   { sec: "sheet", id: "partGap", label: "Part gap", len: true, step: 0.5, min: 0, max: 50, get: p => p.material.partGap, set: (p, v) => { p.material.partGap = v; } },
 
-  { sec: "joints", id: "tabWidth", label: "Tab width", len: true, step: 1, min: 3, max: 100, get: p => p.joints.tabWidth, set: (p, v) => { p.joints.tabWidth = v; }, show: hasBoard },
+  { sec: "joints", id: "tabWidth", label: "Tab width", len: true, step: 1, min: 3, max: 100, get: p => p.joints.tabWidth, set: (p, v) => { p.joints.tabWidth = v; }, show: hasTabs },
+  { sec: "joints", id: "tabCount", label: "Tabs", step: 1, min: 1, max: MAX_TABS, get: p => p.joints.tabCount ?? 0, set: (p, v) => { p.joints.tabCount = Math.round(v); }, show: p => hasTabs(p) && p.joints.tabCount !== null },
+  { sec: "joints", id: "tabPitch", label: "Tab every", len: true, step: 5, min: 10, max: 2000, get: p => p.joints.tabPitch, set: (p, v) => { p.joints.tabPitch = v; }, show: p => hasTabs(p) && p.joints.tabCount === null },
   { sec: "joints", id: "slotClearance", label: "Slot play", len: true, step: 0.02, min: -0.5, max: 2, get: p => p.joints.slotClearance, set: (p, v) => { p.joints.slotClearance = v; }, show: p => !isWaffle(p) },
   { sec: "joints", id: "dowelDia", label: "Dowel Ø", len: true, step: 0.5, min: 1, max: 30, get: p => p.joints.dowelDia, set: (p, v) => { p.joints.dowelDia = v; }, show: p => isStacked(p) && p.stacked.dowels },
   { sec: "joints", id: "halfLapClearance", label: "Lap play", len: true, step: 0.02, min: -0.5, max: 2, get: p => p.joints.halfLapClearance, set: (p, v) => { p.joints.halfLapClearance = v; }, show: isWaffle },

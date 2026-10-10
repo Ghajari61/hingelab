@@ -22,7 +22,7 @@ export const PARAMETRIC_DEFAULTS: ParametricParams = {
     outerBoundary: { kind: "none" }, backPlate: true, backMargin: 8, centerFeature: "clock-insert", clockInsertDia: 60,
   },
   material: { id: HINGE.material, T: HINGE.T, K: HINGE.K, sheetW: HINGE.bedW, sheetH: HINGE.bedH, sheetMargin: 5, partGap: 3, grain: "any" },
-  joints: { slotClearance: 0.1, tabDepth: null, tabWidth: 10, dowelDia: 6, halfLapClearance: 0.1 },
+  joints: { slotClearance: 0.1, tabDepth: null, tabWidth: 10, tabCount: null, tabPitch: 60, dowelDia: 6, halfLapClearance: 0.1 },
   quality: { chordTolerance: 0.1, smoothing: 0.25, minFeature: null, minIslandArea: 25 },
   labels: { enabled: true, style: "engrave", position: "auto-hidden-face", prefix: "" },
   layers: clone(HINGE.layers),

@@ -5,7 +5,7 @@ import { BOARD_ID } from "../backboard";
 import { mergeParametricParams, tabDepthOf } from "../defaults";
 import { computeParametric, loadSource } from "../engine";
 import { assemblyGuideSVG, exportZip, sheetSVG } from "../export";
-import { kerfPart, rect } from "../joints";
+import { kerfPart, rect, tabCenters } from "../joints";
 import { bridgeIslands } from "../methods/parallel";
 import { nestParts, toSheet } from "../nest";
 import { compileFormula } from "../source/formula";
@@ -28,6 +28,7 @@ function checkTabsAndSlots(p: ParametricParams, r: SliceResult) {
     if (!part.tabs) continue;
     for (const [x0, x1] of part.tabs) {
       expect(x1 - x0).toBeCloseTo(tw, 9);
+      expect(pointInShape([(x0 + x1) / 2, -depth / 2], part.shape), `${part.id} keeps its tab at ${x0.toFixed(2)}`).toBe(true);
       const [X, Y, Z] = apply(part.placement, (x0 + x1) / 2, -depth / 2, 0);
       expect(Z).toBeCloseTo(-depth / 2, 9);
       const at: Point = [X, -Y];
@@ -120,6 +121,38 @@ describe("parametric P2: parallel fins complete", () => {
     expect(board.shape.outer).toHaveLength(4);
     expect(s.parts.some(q => q.kind === "slat")).toBe(true);
     for (const q of s.parts.filter(q => q.kind !== "backboard")) expect(q.shape.bbox.y1).toBeGreaterThanOrEqual(slats.parallel.slatDepth - 1e-6);
+  });
+
+  it("tab count: Auto spreads one about every pitch, a set number is kept where it fits, with 1 mm to the ends and 2 mm between", () => {
+    expect(tabCenters(11, 10)).toEqual([]);
+    expect(tabCenters(23, 10)).toHaveLength(1);
+    expect(tabCenters(108, 10)).toHaveLength(2);
+    expect(tabCenters(200, 10)).toHaveLength(3);
+    expect(tabCenters(108, 10, { pitch: 25 })).toHaveLength(4);
+    expect(tabCenters(108, 10, { count: 1 })).toEqual([54]);
+    expect(tabCenters(108, 10, { count: 20 })).toHaveLength(9);
+    for (const [len, count] of [[108, 5], [108, 20], [30, 4], [500, 50]] as const) {
+      const cs = tabCenters(len, 10, { count });
+      expect(cs[0] - 5).toBeGreaterThanOrEqual(1 - 1e-9);
+      expect(len - cs.at(-1)! - 5).toBeGreaterThanOrEqual(1 - 1e-9);
+      for (let i = 1; i < cs.length; i++) expect(cs[i] - cs[i - 1] - 10).toBeGreaterThanOrEqual(2 - 1e-9);
+    }
+  });
+
+  it("a set number of tabs reaches every long fin, and every tab still has its slot (plate)", async () => {
+    const auto = await run(mergeParametricParams({}));
+    const p = mergeParametricParams({ joints: { tabCount: 6 } as ParametricParams["joints"] });
+    const r = await run(p);
+    checkTabsAndSlots(p, r);
+    const fins = r.parts.filter(q => q.kind === "fin");
+    expect(Math.max(...fins.map(q => q.tabs!.length))).toBe(6);
+    expect(fins.filter(q => q.tabs!.length === 6).length).toBeGreaterThan(fins.length / 2);
+    expect(r.parts.find(q => q.id === BOARD_ID)!.innerCuts.length).toBeGreaterThan(auto.parts.find(q => q.id === BOARD_ID)!.innerCuts.length);
+
+    const dense = mergeParametricParams({ joints: { tabPitch: 25 } as ParametricParams["joints"] });
+    const d = await run(dense);
+    checkTabsAndSlots(dense, d);
+    expect(d.parts.find(q => q.id === BOARD_ID)!.innerCuts.length).toBeGreaterThan(auto.parts.find(q => q.id === BOARD_ID)!.innerCuts.length);
   });
 
   it("invariant 4: nested parts fit their sheets and keep the part gap; oversize parts are reported", async () => {

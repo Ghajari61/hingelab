@@ -116,7 +116,7 @@ export function sliceStacked(p: ParametricParams, ctx: MethodContext): MethodOut
   if (o.dowels) {
     const eroded = layers.map(s => (s.length ? offsetShapes(s, -(r + 2)) : []));
     const close = (from: number, to: number, region: Shape[]) => {
-      const pts = areaOf(region) > 1e-3 ? spreadPoints(region, Math.min(4, Math.max(1, Math.round(o.dowelCount))), 2 * r + 4) : [];
+      const pts = areaOf(region) > 1e-3 ? spreadPoints(region, Math.min(12, Math.max(1, Math.round(o.dowelCount))), 2 * r + 4) : [];
       if (!pts.length) { for (let i = from; i <= to; i++) if (layers[i].length) bare.push(i); return; }
       chains.push({ from, to, count: pts.length });
       for (let i = from; i <= to; i++) dowelsOf[i] = pts;

@@ -1,6 +1,6 @@
 import { unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
-import { pointInContour, signedArea } from "@/lib/letters/polygon";
+import { pointInContour, pointInShape, signedArea } from "@/lib/letters/polygon";
 import { LEAF_CLOCK, mergeParametricParams } from "../defaults";
 import { computeParametric, loadSource } from "../engine";
 import { assemblyGuideSVG, exportZip, sheetSVG } from "../export";
@@ -111,6 +111,38 @@ describe("parametric radial + along a curve", () => {
       }
     }
     checkInvariants(r);
+  });
+
+  it("a set number of tabs: three hub tabs per fin on a wide hub, each in its own slot; four tabs per fin along a curve", async () => {
+    const wasm = await manifold();
+    const p = cylinderParams();
+    p.radial.hubWidth = 50;
+    p.joints.tabCount = 3;
+    const r = computeParametric(p, await cylinder(p), wasm);
+    const T = p.material.T;
+    const fins = r.parts.filter(q => q.kind === "radial-fin"), hubs = r.parts.filter(q => q.kind === "hub");
+    expect(fins).toHaveLength(24);
+    for (const hub of hubs) {
+      expect(hub.innerCuts).toHaveLength(72);
+      const hp = r.planes[hub.plane];
+      for (const f of fins) {
+        expect(f.tabs).toHaveLength(3);
+        for (const [a, b] of f.tabs!) {
+          expect(pointInShape([(a + b) / 2, hp.offset < 0 ? -60 - T / 2 : 60 + T / 2], f.shape), `${f.id} keeps its tab`).toBe(true);
+          const P = toModel(r, f, [(a + b) / 2, hp.offset < 0 ? -60 - T / 2 : 60 + T / 2]);
+          expect(hub.innerCuts.filter(c => pointInContour([dot(hp.u, P), dot(hp.w, P)], c)), `${f.id} in ${hub.id}`).toHaveLength(1);
+        }
+      }
+    }
+    checkInvariants(r);
+
+    const c = ellipseParams();
+    c.joints.tabCount = 4;
+    const rc = computeParametric(c, await loadSource(c), wasm);
+    const cf = rc.parts.filter(q => q.kind === "fin");
+    expect(cf.every(f => f.tabs!.length === 4)).toBe(true);
+    expect(rc.parts.find(q => q.kind === "backboard")!.innerCuts).toHaveLength(48 * 4 + 1);
+    checkInvariants(rc);
   });
 
   it("hub collision: 80 fins round a 20 mm hub report FINS_COLLIDE_AT_HUB with maxCount 31", async () => {

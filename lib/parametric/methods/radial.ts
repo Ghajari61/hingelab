@@ -1,11 +1,11 @@
 /**
  * Radial fins: half-sections in planes that all contain one axis (a lamp shade, a sunburst
- * clock). Fins start at the hub opening; hub rings at one or both ends of the axis carry one
- * radial slot per fin, and every fin has a tab into each hub on a strip along its inner edge.
+ * clock). Fins start at the hub opening; hub rings at one or both ends of the axis carry radial
+ * slots for every fin, and every fin has tabs into each hub on a strip along its inner edge.
  */
 import { intersectShapes, makeShape, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { minFeatureOf } from "../defaults";
-import { rect } from "../joints";
+import { TAB_OVERLAP, rect, tabCenters, tabRuleOf } from "../joints";
 import { finLabel } from "../label";
 import { cleanSection } from "../slice/clean";
 import { placementOf } from "../slice/planes";
@@ -94,7 +94,9 @@ export function sliceRadial(p: ParametricParams, ctx: MethodContext, profile?: P
   const hubW = Math.max(2 * T + 4, o.hubWidth);
   const m0 = Math.max(T, 3);
   const tabLen = Math.max(3, Math.min(p.joints.tabWidth, hubW - 2 * m0));
-  const tabFrom = rIn + (hubW - tabLen) / 2;
+  // Tab starts along the radius, spread across the hub ring with the shared tab rule (one centred tab when only one fits).
+  const centres = tabCenters(hubW - 2 * m0, tabLen, tabRuleOf(p.joints));
+  const tabFroms = centres.length ? centres.map(c => rIn + m0 + c - tabLen / 2) : [rIn + (hubW - tabLen) / 2];
 
   const parts: Part[] = [];
   const finParts: number[][] = [];
@@ -110,10 +112,15 @@ export function sliceRadial(p: ParametricParams, ctx: MethodContext, profile?: P
     if (hubs > 0) {
       const zone = intersectShapes(shapeContours(shapes), [rect(xa + rIn, -BIG, xa + rIn + hubW, BIG)]);
       const top = hubs === 2 ? high : Math.max(low + hubW, ...zone.map(z => z.bbox.y1));
-      const extra = [rect(xa + rIn, low, xa + rIn + hubW, top), rect(xa + tabFrom, low - T, xa + tabFrom + tabLen, low)];
-      if (hubs === 2) extra.push(rect(xa + tabFrom, high, xa + tabFrom + tabLen, high + T));
-      shapes = unionShapes([...shapeContours(shapes), ...extra]);
-      tabs.push([xa + tabFrom, xa + tabFrom + tabLen]);
+      // Extra tabs reach TAB_OVERLAP into the hub strip so Clipper always merges them; the first keeps its exact outline.
+      const tabRects = (tabFrom: number, e: number) => {
+        const r = [rect(xa + tabFrom, low - T, xa + tabFrom + tabLen, low + e)];
+        if (hubs === 2) r.push(rect(xa + tabFrom, high - e, xa + tabFrom + tabLen, high + T));
+        return r;
+      };
+      shapes = unionShapes([...shapeContours(shapes), rect(xa + rIn, low, xa + rIn + hubW, top), ...tabRects(tabFroms[0], 0)]);
+      if (tabFroms.length > 1) shapes = unionShapes([...shapeContours(shapes), ...tabFroms.slice(1).flatMap(f => tabRects(f, TAB_OVERLAP))]);
+      for (const tabFrom of tabFroms) tabs.push([xa + tabFrom, xa + tabFrom + tabLen]);
     }
     const pieces = [...shapes].sort((p1, p2) => p2.area - p1.area);
     const ids = pieceIds(finIdOf(i), pieces.length);
@@ -132,10 +139,10 @@ export function sliceRadial(p: ParametricParams, ctx: MethodContext, profile?: P
   if (hubs > 0 && parts.length) {
     const cx = dot(e1, centre), cy = dot(e2, centre);
     const sw = (T + p.joints.slotClearance) / 2;
-    const slotOf = (deg: number): Contour => {
+    const slotsOf = (deg: number): Contour[] => {
       const th = (deg * Math.PI) / 180, d: Point = [Math.cos(th), Math.sin(th)], q: Point = [-d[1], d[0]];
       const at = (r: number, h: number): Point => [cx + d[0] * r + q[0] * h, cy + d[1] * r + q[1] * h];
-      return [at(tabFrom, -sw), at(tabFrom + tabLen, -sw), at(tabFrom + tabLen, sw), at(tabFrom, sw)];
+      return tabFroms.map(tabFrom => [at(tabFrom, -sw), at(tabFrom + tabLen, -sw), at(tabFrom + tabLen, sw), at(tabFrom, sw)]);
     };
     const tabbed = angles.map((_, i) => finParts[i].some(j => parts[j].tabs));
     const ring = makeShape(circle(cx, cy, rIn + hubW, 144), rIn >= 1 ? [circle(cx, cy, rIn, 144).reverse()] : []);
@@ -144,12 +151,13 @@ export function sliceRadial(p: ParametricParams, ctx: MethodContext, profile?: P
       const id = finId(h, offsets.length, "H");
       const plane: Plane = { normal: a, offset, u: e1, w: e2 };
       hubPlanes.push(plane);
-      const slots = angles.flatMap((deg, i) => (tabbed[i] ? [slotOf(deg)] : []));
+      const slots = angles.flatMap((deg, i) => (tabbed[i] ? slotsOf(deg) : []));
       const engrave: Contour[] = [];
       const first = angles.findIndex((_, i) => tabbed[i]);
-      if (first >= 0 && hubW - tabLen > 2 * 1.5 + 1) {
+      const lastEnd = tabFroms[tabFroms.length - 1] + tabLen;
+      if (first >= 0 && rIn + hubW - lastEnd > 2) {
         const th = (angles[first] * Math.PI) / 180;
-        const r0 = tabFrom + tabLen + 1, r1 = rIn + hubW - 1;
+        const r0 = lastEnd + 1, r1 = rIn + hubW - 1;
         if (r1 - r0 >= 1.5) engrave.push([[cx + Math.cos(th) * r0, cy + Math.sin(th) * r0], [cx + Math.cos(th) * r1, cy + Math.sin(th) * r1]]);
       }
       const neighbors = parts.filter(q => q.tabs).map(q => q.id);

@@ -9,6 +9,7 @@
 **Requested additions (outside the phase plan):**
 - Field reset (`64f9baf`, deployed): double-click a field's name or click its ↺ to restore the default in the Hinge Box, Letters and Parametric editors; `scripts/shots/reset-fields.mjs`.
 - Parametric **Text** source (D76): "Model from → Text" slices a typed letter, word or name (Latin or Persian) with a bundled font, rounded (pillow) or flat profile, height, spacing, depth and rounding. Pro source, exported in the browser. Tests 749 / 749 (6 new in `lib/parametric/__tests__/text.test.ts`), golden byte-for-byte, `tsc` clean, `next build` OK; `scripts/shots/parametric-text.mjs` passes ("Sam" 71 parts, "سام" in Vazirmatn 45 parts). Screenshots `docs/screenshots/parametric-text-sam.png`, `parametric-text-persian.png`.
+- Parametric **tab count** (D77): Joints & Fit → "Tabs per fin" Auto (with "Tab every", default 60 mm) or "Set number" (1–50), for Parallel fins, Along a curve and the Radial hub; Stacked dowels go up to 12. Fixed a bug where most tabs (43 of 64 on the default head) were silently missing from the fins while the backboard had their slots. Tests 752 / 752 (new: tab rule, set number on the plate, radial hub tabs and curve tabs; the slot check now also asserts each tab is on its fin), golden byte-for-byte, `tsc` clean, `next build` OK; `scripts/shots/parametric-tabs.mjs` passes. Screenshots `docs/screenshots/parametric-tabs-6.png`, `parametric-tabs-6-sheets.png`.
 
 How the earlier work maps onto the studio phases:
 

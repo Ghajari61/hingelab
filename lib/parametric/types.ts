@@ -134,7 +134,7 @@ export interface StackedParams {
   /** Stacking direction: Y = horizontal layers of a standing model, Z = layers parallel to the wall. */
   axis: "Y" | "Z";
   dowels: boolean;
-  /** Dowels per chain, 1..4. */
+  /** Dowels per chain, 1..12. */
   dowelCount: number;
   /** Engrave the outline of the layer above on each layer. */
   registrationMarks: boolean;
@@ -210,6 +210,10 @@ export interface JointSettings {
   /** null = backboard thickness. */
   tabDepth: number | null;
   tabWidth: number;
+  /** Tabs per wall edge (per hub joint for radial fins); null = Auto, one about every `tabPitch` mm. Fewer are used where they do not fit. */
+  tabCount: number | null;
+  /** Auto spacing of tabs along an edge, mm. */
+  tabPitch: number;
   dowelDia: number;
   halfLapClearance: number;
 }

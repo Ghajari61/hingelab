@@ -5,7 +5,7 @@
  */
 import { makeShape, offsetShapes, pointInContour, shapeContours, signedArea, unionShapes } from "@/lib/letters/polygon";
 import { minFeatureOf, tabDepthOf } from "../defaults";
-import { rect, tabCenters } from "../joints";
+import { rect, tabCenters, tabRuleOf } from "../joints";
 import { finLabel } from "../label";
 import { cleanSection } from "../slice/clean";
 import { placementOf } from "../slice/planes";
@@ -170,7 +170,7 @@ export function sliceCurveNormal(p: ParametricParams): MethodOut {
     const body = cleanSection([[[x0, y0], [x0 + f.L, y0], ...top]], { evenOdd: false, clipToWall: false, chordTolerance: p.quality.chordTolerance, smoothing: 0, minFeature: minFeatureOf(p), minIslandArea: p.quality.minIslandArea }).shapes;
     if (!body.length) return;
     const main = [...body].sort((a, b) => b.area - a.area)[0];
-    const tabs: [number, number][] = o.backPlate ? tabCenters(f.L - 2, p.joints.tabWidth).map(c => [x0 + 1 + c - p.joints.tabWidth / 2, x0 + 1 + c + p.joints.tabWidth / 2]) : [];
+    const tabs: [number, number][] = o.backPlate ? tabCenters(f.L - 2, p.joints.tabWidth, tabRuleOf(p.joints)).map(c => [x0 + 1 + c - p.joints.tabWidth / 2, x0 + 1 + c + p.joints.tabWidth / 2]) : [];
     const outline = tabs.length ? unionShapes([...shapeContours([main]), ...tabs.map(([a, b]) => rect(a, y0 - depth, b, y0 + 0.01))])[0] : main;
     if (o.backPlate && !tabs.length) noTab.push(id);
     // Slots: rotated rectangles on the plate under each tab, wider by 1/cos(tilt).

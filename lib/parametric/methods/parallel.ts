@@ -6,7 +6,7 @@
 import { intersectShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { backboardPart, boardOutline, boardRangeAlong, convexHull, slotFor, type BoardSlot } from "../backboard";
 import { bridgeWidthOf, finSpacingOf, tabDepthOf } from "../defaults";
-import { finTabs, rect, withTabs } from "../joints";
+import { finTabs, rect, tabRuleOf, withTabs } from "../joints";
 import { finLabel } from "../label";
 import { parallelPlanes, placementOf } from "../slice/planes";
 import type { Contour, ParametricParams, Part, Plane, Point, Shape, Warning } from "../types";
@@ -114,7 +114,7 @@ export function sliceParallel(p: ParametricParams, ctx: ParallelContext): Method
       }
       let shape = s, tabs: [number, number][] | undefined;
       if (mode !== "none" && projection.length) {
-        tabs = finTabs(s, p.joints.tabWidth);
+        tabs = finTabs(s, p.joints.tabWidth, tabRuleOf(p.joints));
         if (!tabs.length) noTabIds.push(pid);
         shape = withTabs(s, tabs, depth);
         for (const [x0, x1] of tabs) slots.push({ finId: pid, contour: slotFor(e.plane, x0, x1, T, p.joints.slotClearance) });

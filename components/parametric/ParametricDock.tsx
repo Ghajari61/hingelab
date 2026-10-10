@@ -11,7 +11,7 @@ import { NumberField } from "@/components/editor/NumberField";
 import { LayersPanel } from "@/components/editor/LayersPanel";
 import { Sec } from "@/components/editor/PanelDock";
 import { fmtLen, type Units } from "@/components/editor/format";
-import { PARAM_FIELDS, type ParamField, type ParamSection } from "./fields";
+import { PARAM_FIELDS, hasTabs, type ParamField, type ParamSection } from "./fields";
 import type { StoredModel } from "./modelStore";
 import { LockIcon } from "@/components/billing/Lock";
 import { FREE_PARAMETRIC_PARTS, parametricLocks, type Plan } from "@/lib/plans";
@@ -492,7 +492,16 @@ export function ParametricDock({
       </Sec>
 
       <Sec title="Joints & Fit">
+        {hasTabs(params) && (
+          <Choice label={params.method === "radial" ? "Tabs per hub joint" : "Tabs per fin"} value={params.joints.tabCount === null ? "auto" : "count"} onPick={(v) => onEdit((q) => {
+            q.joints.tabCount = v === "auto" ? null : Math.max(...parts.filter((x) => x.tabs?.length).map((x) => x.tabs!.length), 3);
+          }, true)} options={[
+            { v: "auto", text: "Auto", title: "Spread tabs along each fin, one about every “Tab every” mm" },
+            { v: "count", text: "Set number", title: "The same number of tabs on every fin, where they fit" },
+          ]} />
+        )}
         <div className="grid2">{fields("joints")}</div>
+        {hasTabs(params) && <p className="note">Tabs are spread evenly along each fin's wall edge; a short edge gets fewer, so every tab keeps 2 mm to the next.</p>}
         <p className="note">Slots are drawn {fmtLen(params.material.T, units, true)} + slot play wide; kerf is compensated once, on export.</p>
       </Sec>
 
