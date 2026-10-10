@@ -27,6 +27,7 @@ import { GalleryRail } from "@/components/shell/GalleryRail";
 import { ViewToggle } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
+import type { Preset } from "@/lib/presets";
 import { Canvas } from "@/components/editor/Canvas";
 import { rulerSvg } from "@/components/editor/Rulers";
 import { StatusBar } from "@/components/editor/StatusBar";
@@ -68,7 +69,13 @@ function layoutSheets(sheets: Sheet[]) {
   return { rects, W, H: Math.max(0, y - SHEET_GAP) };
 }
 
-export default function ParametricEditor({ onProduct, cloud = null }: { onProduct: (p: Product) => void; cloud?: CloudDoc | null }) {
+export default function ParametricEditor({ onProduct, onHome, start, cloud = null }: {
+  onProduct: (p: Product) => void;
+  onHome: () => void;
+  /** Preset chosen on the start page, applied as one undoable step over the autosaved design. */
+  start?: Preset<Record<string, unknown>>;
+  cloud?: CloudDoc | null;
+}) {
   const boot = useState(() => loadInitial(cloud))[0];
   const { params, replace, undo, redo, canUndo, canRedo } = useHistory(boot.params);
   const [units, setUnits] = useState<Units>(boot.units);
@@ -374,6 +381,28 @@ export default function ParametricEditor({ onProduct, cloud = null }: { onProduc
     }
   }
 
+  function resetSection(title: string, keys: (keyof ParametricParams)[]) {
+    const def = clone(PARAMETRIC_DEFAULTS) as unknown as Record<string, unknown>;
+    edit((q) => { for (const k of keys) (q as unknown as Record<string, unknown>)[k] = def[k]; }, true);
+    toastMsg(`${title} reset. Ctrl+Z undoes it.`);
+  }
+
+  function resetAll() {
+    replace({ ...clone(PARAMETRIC_DEFAULTS), name: params.name, source: params.source }, true);
+    setSelected([]);
+    toastMsg("All settings reset. Ctrl+Z undoes it.");
+  }
+
+  const started = useRef(false);
+  useEffect(() => {
+    if (!start || started.current) return;
+    started.current = true;
+    replace(mergeParametricParams(start.params as Partial<ParametricParams>), true);
+    setSelected([]);
+    toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function doUndo() { if (undo()) toastMsg("Undo"); }
   function doRedo() { if (redo()) toastMsg("Redo"); }
   const select = (ids: string[]) => setSelected(ids);
@@ -425,6 +454,7 @@ export default function ParametricEditor({ onProduct, cloud = null }: { onProduc
   const menus: Record<"file" | "edit" | "view" | "help", MenuEntry[]> = {
     file: [
       { label: "New sculpture", kbd: "Ctrl+N", run: newProject },
+      { label: "Start page", kbd: "", run: onHome },
       { label: "Open project…", kbd: "Ctrl+O", run: openProject },
       { label: "Save project", kbd: "Ctrl+S", run: saveProject },
       { label: "Import 3D model…", kbd: "", run: () => { const i = document.querySelector<HTMLInputElement>('input[aria-label="Import model"]'); i?.click(); } },
@@ -438,6 +468,8 @@ export default function ParametricEditor({ onProduct, cloud = null }: { onProduc
     edit: [
       { label: "Undo", kbd: "Ctrl+Z", run: doUndo, disabled: !canUndo },
       { label: "Redo", kbd: "Ctrl+Shift+Z", run: doRedo, disabled: !canRedo },
+      "-",
+      { label: "Reset all settings", kbd: "", run: resetAll },
     ],
     view: [
       { label: "3D view", kbd: "", run: () => setTab("3d") },
@@ -472,12 +504,13 @@ export default function ParametricEditor({ onProduct, cloud = null }: { onProduc
     <div className="app">
       <MenuBar
         title={params.name} kind={`Parametric · ${result ? `${result.stats.partCount} parts` : "…"}`} menus={menus} product="parametric" onProduct={onProduct}
-        history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }} onSave={saveProject} onOpen={openProject}
+        onSave={saveProject} onOpen={openProject}
       />
       <div className="main">
         <GalleryRail
           title={PRODUCT_INFO.parametric.name} icon={PRODUCT_INFO.parametric.icon}
           groups={methodGroups({ method: params.method, plan: account.plan, onMethod: (m) => edit((q) => { q.method = m; }, true) })}
+          history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
         />
         <div className={`stage pe-center${tab === "3d" ? " no-rulers" : ""}`}>
           <ViewToggle value={tab} onChange={setTab} sheetsLabel={`Sheets${result ? ` (${result.sheets.length})` : ""}`} />
@@ -536,7 +569,7 @@ export default function ParametricEditor({ onProduct, cloud = null }: { onProduc
               />
             </section>
         </div>
-        <DockColumn onExport={exportZipNow} exportLabel="Export ZIP">
+        <DockColumn onExport={exportZipNow} exportLabel="Export ZIP" units={units} onUnits={setUnits} onResetAll={resetAll}>
         <ParametricDock
           params={params}
           result={result}
@@ -559,6 +592,7 @@ export default function ParametricEditor({ onProduct, cloud = null }: { onProduc
           onExportSheet={exportSheetNow}
           onExportZip={exportZipNow}
           onGuide={guideNow}
+          onResetSection={resetSection}
         />
         </DockColumn>
       </div>
@@ -569,8 +603,6 @@ export default function ParametricEditor({ onProduct, cloud = null }: { onProduc
         parts={result ? { count: result.stats.partCount, used: `${result.sheets.length} sheet${result.sheets.length === 1 ? "" : "s"}, ${Math.round(result.stats.materialUsage * 100)}%` } : null}
         fit={fit}
         saved={saved}
-        units={units}
-        onUnits={setUnits}
       />
       <Dialogs
         modal={modal}

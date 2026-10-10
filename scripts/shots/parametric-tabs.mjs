@@ -13,7 +13,7 @@ const waitSliced = async (page, prev = "", timeout = 120000) => {
 };
 
 await withBrowser(async (page) => {
-  await page.goto(`${BASE}/app/editor/local`);
+  await page.goto(`${BASE}/app/editor/local?p=hinge`);
   await page.getByRole("button", { name: "Parametric", exact: true }).click();
   let s = await waitSliced(page);
 

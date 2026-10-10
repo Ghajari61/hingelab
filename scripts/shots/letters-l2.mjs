@@ -4,7 +4,7 @@ import { BASE, shot, withBrowser } from "./lib.mjs";
 const assert = (cond, msg) => { if (!cond) throw new Error("FAILED: " + msg); console.log("ok -", msg); };
 
 await withBrowser(async (page) => {
-  await page.goto(`${BASE}/app/editor/local`);
+  await page.goto(`${BASE}/app/editor/local?p=hinge`);
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.getByRole("button", { name: "Letters", exact: true }).click();

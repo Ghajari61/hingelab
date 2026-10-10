@@ -60,7 +60,7 @@ export function ProjectsHome({ projects, products, localOnly = [], limit = Infin
               onClick={() => {
                 if (!localOnly.includes(pr)) { act(() => createProjectAction(pr), true); return; }
                 try { localStorage.setItem("hingelab-product", pr === "hinge-box" ? "hinge" : pr); } catch { /* private mode */ }
-                router.push("/app/editor/local");
+                router.push(`/app/editor/local?p=${pr === "hinge-box" ? "hinge" : pr}`);
               }}
             >
               + {NEW_LABEL[pr]}

@@ -23,6 +23,7 @@ import { GalleryRail } from "@/components/shell/GalleryRail";
 import { ViewToggle, type ViewMode } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
+import type { Preset } from "@/lib/presets";
 import { Canvas } from "./Canvas";
 import { rulerSvg } from "./Rulers";
 import { PanelDock } from "./PanelDock";
@@ -45,7 +46,13 @@ function shapeKind(p: Params) {
   return ({ rect: "Rounded box", pill: "Pill box", poly: `${p.sides}-sided box`, cyl: "Cylinder" })[p.shape];
 }
 
-export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: Product) => void; cloud?: CloudDoc | null }) {
+export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
+  onProduct: (p: Product) => void;
+  onHome: () => void;
+  /** Preset chosen on the start page, applied as one undoable step over the autosaved design. */
+  start?: Preset<Record<string, unknown>>;
+  cloud?: CloudDoc | null;
+}) {
   const boot = useState(() => loadInitial(cloud))[0];
   const history = useHistory(boot.params);
   const { params, replace, undo, redo, canUndo, canRedo } = history;
@@ -224,6 +231,32 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
       : "No lattice reaches this radius safely. Try Serpentine or a larger corner radius.");
   }
 
+  function resetSection(title: string, keys: (keyof Params)[]) {
+    const next = { ...params };
+    const def = clone(DEFAULTS);
+    for (const k of keys) (next as Record<keyof Params, unknown>)[k] = def[k];
+    patch(next, true);
+    toastMsg(`${title} reset. Ctrl+Z undoes it.`);
+  }
+
+  function resetAll() {
+    const next = { ...clone(DEFAULTS), name: params.name };
+    patch(next, true);
+    applyFit(next);
+    toastMsg("All settings reset. Ctrl+Z undoes it.");
+  }
+
+  const started = useRef(false);
+  useEffect(() => {
+    if (!start || started.current) return;
+    started.current = true;
+    const next = mergeParams(start.params as Partial<Params>);
+    patch(next, true);
+    applyFit(next);
+    toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function doUndo() { if (undo()) toastMsg("Undo"); }
   function doRedo() { if (redo()) toastMsg("Redo"); }
 
@@ -267,6 +300,7 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
   const menus: Record<"file" | "edit" | "view" | "help", MenuEntry[]> = {
     file: [
       { label: "New box", kbd: "Ctrl+N", run: newProject },
+      { label: "Start page", kbd: "", run: onHome },
       { label: "Open project…", kbd: "Ctrl+O", run: openProject },
       { label: "Save project", kbd: "Ctrl+S", run: saveProject },
       "-",
@@ -280,6 +314,7 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
       { label: "Redo", kbd: "Ctrl+Shift+Z", run: doRedo, disabled: !canRedo },
       "-",
       { label: "Reset hinge pattern", kbd: "", run: resetPattern },
+      { label: "Reset all settings", kbd: "", run: resetAll },
     ],
     view: [
       { label: "Zoom in", kbd: "Ctrl++", run: () => viewApi.zoomCenter(1.25) },
@@ -311,12 +346,13 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
     <div className="app">
       <MenuBar
         title={meta.current.title} kind={meta.current.kind} menus={menus} product="hinge" onProduct={onProduct}
-        history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }} onSave={saveProject} onOpen={openProject}
+        onSave={saveProject} onOpen={openProject}
       />
       <div className="main">
         <GalleryRail
           title={PRODUCT_INFO.hinge.name} icon={PRODUCT_INFO.hinge.icon}
           groups={hingeGroups({ params, plan: account.plan, onShape: (v) => setChoice("shape", v), onLid: (v) => setChoice("lid", v), onPattern: (v) => setChoice("pattern", v) })}
+          history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
         />
         <div className="stage">
         <ViewToggle value={viewMode} onChange={setViewMode} />
@@ -357,7 +393,7 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
           />
         </section>
         </div>
-        <DockColumn onExport={exportNow} exportLabel="Export SVG">
+        <DockColumn onExport={exportNow} exportLabel="Export SVG" units={units} onUnits={setUnits} onResetAll={resetAll}>
         <PanelDock
           params={params}
           model={model}
@@ -386,6 +422,7 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
             patch({ ...params, layers }, true);
           }}
           onLabels={(on) => patch({ ...params, labels: on }, true)}
+          onResetSection={resetSection}
         />
         </DockColumn>
       </div>
@@ -396,8 +433,6 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
         parts={model && lay ? { count: model.parts.length, used: `${fmtLen(lay.width, units, true)} × ${fmtLen(lay.height, units, true)}` } : null}
         fit={fit}
         saved={saved}
-        units={units}
-        onUnits={setUnits}
       />
       <Dialogs
         modal={modal}

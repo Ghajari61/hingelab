@@ -26,7 +26,7 @@ await withBrowser(async (page) => {
   const logs = [];
   page.on("console", (m) => { if (m.type() === "error") logs.push(m.text()); });
   await page.addInitScript(() => { if (!sessionStorage.getItem("p5")) { localStorage.clear(); indexedDB.deleteDatabase("hingelab-models"); sessionStorage.setItem("p5", "1"); } });
-  await page.goto(`${BASE}/app/editor/local`);
+  await page.goto(`${BASE}/app/editor/local?p=hinge`);
   await page.getByRole("button", { name: "Parametric", exact: true }).click();
   let s = await waitSliced(page);
 

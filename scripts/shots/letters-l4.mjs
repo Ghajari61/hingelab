@@ -10,7 +10,7 @@ const el = async (page, sel, name) => {
 const settle = (page) => page.waitForTimeout(1500);
 
 await withBrowser(async (page) => {
-  await page.goto(`${BASE}/app/editor/local`);
+  await page.goto(`${BASE}/app/editor/local?p=hinge`);
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.getByRole("button", { name: "Letters", exact: true }).click();

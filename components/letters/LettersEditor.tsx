@@ -21,6 +21,7 @@ import { GalleryRail } from "@/components/shell/GalleryRail";
 import { ViewToggle, type ViewMode } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
+import type { Preset } from "@/lib/presets";
 import { Canvas } from "@/components/editor/Canvas";
 import { rulerSvg } from "@/components/editor/Rulers";
 import { StatusBar } from "@/components/editor/StatusBar";
@@ -69,7 +70,13 @@ function baseName(p: LetterParams) {
   return `letters-${slug}-${p.mode}-${Math.round(p.size)}mm`;
 }
 
-export default function LettersEditor({ onProduct, cloud = null }: { onProduct: (p: Product) => void; cloud?: CloudDoc | null }) {
+export default function LettersEditor({ onProduct, onHome, start, cloud = null }: {
+  onProduct: (p: Product) => void;
+  onHome: () => void;
+  /** Preset chosen on the start page, applied as one undoable step over the autosaved design. */
+  start?: Preset<Record<string, unknown>>;
+  cloud?: CloudDoc | null;
+}) {
   const boot = useState(() => loadInitial(cloud))[0];
   const { params, replace, undo, redo, canUndo, canRedo } = useHistory(boot.params);
   const [units, setUnits] = useState<Units>(boot.units);
@@ -282,6 +289,30 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
       : "No lattice reaches this radius safely. Try Serpentine, a larger size or a larger corner radius.");
   }
 
+  function resetSection(title: string, keys: (keyof LetterParams)[]) {
+    const def = clone(LETTER_DEFAULTS);
+    const next: Partial<LetterParams> = {};
+    for (const k of keys) (next as Record<string, unknown>)[k] = def[k];
+    patch(next, true);
+    toastMsg(`${title} reset. Ctrl+Z undoes it.`);
+  }
+
+  function resetAll() {
+    replace({ ...clone(LETTER_DEFAULTS), name: params.name, text: params.text, fontId: params.fontId }, true);
+    window.setTimeout(() => viewApi.fit(), 50);
+    toastMsg("All settings reset. Ctrl+Z undoes it.");
+  }
+
+  const started = useRef(false);
+  useEffect(() => {
+    if (!start || started.current) return;
+    started.current = true;
+    replace(mergeParams(start.params as Partial<LetterParams>), true);
+    window.setTimeout(() => viewApi.fit(), 50);
+    toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function doUndo() { if (undo()) toastMsg("Undo"); }
   function doRedo() { if (redo()) toastMsg("Redo"); }
 
@@ -332,6 +363,7 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
   const menus: Record<"file" | "edit" | "view" | "help", MenuEntry[]> = {
     file: [
       { label: "New letters", kbd: "Ctrl+N", run: newProject },
+      { label: "Start page", kbd: "", run: onHome },
       { label: "Open project…", kbd: "Ctrl+O", run: openProject },
       { label: "Save project", kbd: "Ctrl+S", run: saveProject },
       "-",
@@ -343,6 +375,8 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
     edit: [
       { label: "Undo", kbd: "Ctrl+Z", run: doUndo, disabled: !canUndo },
       { label: "Redo", kbd: "Ctrl+Shift+Z", run: doRedo, disabled: !canRedo },
+      "-",
+      { label: "Reset all settings", kbd: "", run: resetAll },
     ],
     view: [
       { label: "Zoom in", kbd: "Ctrl++", run: () => viewApi.zoomCenter(1.25) },
@@ -374,7 +408,7 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
     <div className="app">
       <MenuBar
         title={params.name} kind={`Letters · ${font?.name ?? "…"} · ${sizeLabel}`} menus={menus} product="letters" onProduct={onProduct}
-        history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }} onSave={saveProject} onOpen={openProject}
+        onSave={saveProject} onOpen={openProject}
       />
       <div className="main">
         <GalleryRail
@@ -383,6 +417,7 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
             mode: params.mode, pro: account.plan === "pro", wallStyle: params.wallStyle, lid: params.lid,
             onMode: (m) => patch({ mode: m }, true), onWallStyle: (w) => patch({ wallStyle: w }, true), onLid: (l) => patch({ lid: l }, true),
           })}
+          history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
         />
         <div className="stage">
         <ViewToggle value={viewMode} onChange={setViewMode} />
@@ -425,7 +460,7 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
           />
         </section>
         </div>
-        <DockColumn onExport={exportNow} exportLabel="Export SVG">
+        <DockColumn onExport={exportNow} exportLabel="Export SVG" units={units} onUnits={setUnits} onResetAll={resetAll}>
         <LettersDock
           params={params}
           model={model}
@@ -446,6 +481,7 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
           onPick={(id) => patch({ fontId: id }, true)}
           onUpload={uploadFont}
           onDeleteFont={removeFont}
+          onResetSection={resetSection}
         />
         </DockColumn>
       </div>
@@ -456,8 +492,6 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
         parts={model && lay ? { count: model.parts.length, used: `${fmtLen(lay.width, units, true)} × ${fmtLen(lay.height, units, true)}` } : null}
         fit={fit}
         saved={saved}
-        units={units}
-        onUnits={setUnits}
       />
       <Dialogs
         modal={modal}

@@ -6,7 +6,7 @@ const check = (ok, msg) => { if (!ok) throw new Error("FAILED: " + msg); console
 
 await withBrowser(async (page) => {
   await page.addInitScript(() => { if (!sessionStorage.getItem("u1")) { localStorage.clear(); sessionStorage.setItem("u1", "1"); } });
-  await page.goto(`${BASE}/app/editor/local`);
+  await page.goto(`${BASE}/app/editor/local?p=hinge`);
   await page.waitForSelector(".gallery .gcard");
   check(await page.evaluate(() => document.documentElement.dataset.theme) === "light", "light theme by default");
   const bg = await page.evaluate(() => getComputedStyle(document.querySelector(".menubar")).backgroundColor);

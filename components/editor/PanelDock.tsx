@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { RotateCcw } from "lucide-react";
 import { DEFAULTS, MATERIALS, type Params } from "@/lib/hinge";
 import { FIELDS, type NumericKey } from "./fields";
 import { NumberField } from "./NumberField";
@@ -14,7 +15,14 @@ function Chevron() {
   return <svg className="chev" width="8" height="8" viewBox="0 0 8 8"><path d="M2 1l4 3-4 3z" fill="currentColor" /></svg>;
 }
 
-export function Sec({ title, meta, startOpen, children }: { title: string; meta?: string; startOpen?: boolean; children: React.ReactNode }) {
+export function Sec({ title, meta, startOpen, onReset, children }: {
+  title: string;
+  meta?: string;
+  startOpen?: boolean;
+  /** Shows a reset icon on the header that restores this section's defaults. */
+  onReset?: () => void;
+  children: React.ReactNode;
+}) {
   const init = useRef(false);
   return (
     <details
@@ -30,6 +38,12 @@ export function Sec({ title, meta, startOpen, children }: { title: string; meta?
         <Chevron />
         {title}
         {meta ? <span className="sum-meta">{meta}</span> : null}
+        {onReset && (
+          <button
+            type="button" className="sec-rst" aria-label={`Reset ${title} section`} title={`Reset ${title} to defaults`}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReset(); }}
+          ><RotateCcw size={13} /></button>
+        )}
       </summary>
       <div className="sec-body">{children}</div>
     </details>
@@ -39,7 +53,7 @@ export function Sec({ title, meta, startOpen, children }: { title: string; meta?
 export function PanelDock({
   params, model, error, units, dimsMeta, patMeta,
   onLive, onCommit, onMaterial, onSplit, onCutStyle, onAutoFit, onTestStrip,
-  onVis, onExp, onLabels,
+  onVis, onExp, onLabels, onResetSection,
 }: {
   params: Params;
   model: Model | null;
@@ -57,6 +71,7 @@ export function PanelDock({
   onVis: (key: keyof Params["layers"]) => void;
   onExp: (key: keyof Params["layers"], exp: boolean) => void;
   onLabels: (on: boolean) => void;
+  onResetSection: (title: string, keys: (keyof Params)[]) => void;
 }) {
   const fields = (sec: (typeof FIELDS)[number]["sec"]) => FIELDS.filter((f) => f.sec === sec).map((f) => (
     <NumberField
@@ -73,17 +88,17 @@ export function PanelDock({
   ));
   return (
     <aside className="dock" aria-label="Panels">
-      <Sec title="Dimensions" meta={dimsMeta} startOpen>
+      <Sec title="Dimensions" meta={dimsMeta} startOpen onReset={() => onResetSection("Dimensions", ["W", "D", "H", "R", "sides", "dia", "cylFlats"])}>
 
         <div className="grid2">{fields("secDims")}</div>
       </Sec>
-      <Sec title="Material" startOpen>
+      <Sec title="Material" startOpen onReset={() => onResetSection("Material", ["material", "T", "K"])}>
         <select className="sel" aria-label="Material preset" value={params.material} onChange={(e) => onMaterial(e.target.value)}>
           {Object.entries(MATERIALS).map(([k, m]) => <option key={k} value={k}>{m.name}</option>)}
         </select>
         <div className="grid2">{fields("secMat")}</div>
       </Sec>
-      <Sec title="Hinge Pattern" meta={patMeta} startOpen>
+      <Sec title="Hinge Pattern" meta={patMeta} startOpen onReset={() => onResetSection("Hinge pattern", ["pattern", "cutStyle", "slotW", "slit", "bridge", "pitch", "overrun", "stretch"])}>
         <div className="rowlabel">Cut style</div>
         <div className="iconseg" id="cutSeg" role="group" aria-label="Cut style">
           <button type="button" data-v="slot" aria-pressed={params.cutStyle === "slot"} onClick={() => onCutStyle("slot")} title="Each cut is a round-ended slot of set width; edge cuts become notches in the outline">
@@ -103,7 +118,7 @@ export function PanelDock({
       <Sec title="Bend Analysis" startOpen>
         <AnalysisPanel model={model} error={error} units={units} />
       </Sec>
-      <Sec title="Joints & Fit">
+      <Sec title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["tabW", "slotClr", "lidGap", "split"])}>
         <div className="grid2">{fields("secJoints")}</div>
         <div className="rowlabel">Wall pieces</div>
         <div className="iconseg" role="group" aria-label="Wall pieces">
@@ -112,10 +127,10 @@ export function PanelDock({
         </div>
         <p className="note">Two halves fits long walls on small beds. Seams land in the middle of flat sides.</p>
       </Sec>
-      <Sec title="Layers" startOpen>
+      <Sec title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
         <LayersPanel layers={params.layers} labels={params.labels} onVis={onVis} onExp={onExp} onLabels={onLabels} />
       </Sec>
-      <Sec title="Sheet & Layout">
+      <Sec title="Sheet & Layout" onReset={() => onResetSection("Sheet & Layout", ["bedW", "bedH", "gap", "testStrip"])}>
         <div className="grid2">{fields("secSheet")}</div>
         <label className="chk"><input type="checkbox" checked={!!params.testStrip} onChange={(e) => onTestStrip(e.target.checked)} /> Add a bend test strip</label>
         <p className="note">The test strip carries one corner&apos;s hinge with 15 mm of flat on each side. Cut it first to check the bend in your material.</p>

@@ -95,7 +95,7 @@ export default function StartScreen() {
       if ("id" in r) { router.push(editorPath(r.id)); return; }
       toast({
         message: "This project was saved by the classic single-product editor.",
-        action: { label: "Open it there", run: () => { try { localStorage.setItem("hingelab-product", r.legacy.product === "hinge-box" ? "hinge" : r.legacy.product); } catch { /* ignore */ } router.push("/app/editor/local"); } },
+        action: { label: "Open it there", run: () => { try { localStorage.setItem("hingelab-product", r.legacy.product === "hinge-box" ? "hinge" : r.legacy.product); } catch { /* ignore */ } router.push(`/app/editor/local?p=${r.legacy.product === "hinge-box" ? "hinge" : r.legacy.product}`); } },
       });
     } catch (e) {
       toast({ message: e instanceof Error ? e.message : "That file could not be opened.", kind: "danger" });

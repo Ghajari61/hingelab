@@ -21,7 +21,7 @@ await withBrowser(async (page) => {
   await page.waitForURL((u) => u.pathname === "/app");
   console.log("signed up and landed on", page.url());
 
-  await page.goto(`${BASE}/app/editor/local`);
+  await page.goto(`${BASE}/app/editor/local?p=hinge`);
   await page.waitForSelector(".avatar");
   await page.click(".avatar");
   await page.waitForSelector(".user-menu .dropdown");

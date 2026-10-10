@@ -33,7 +33,7 @@ function Choice<T extends string>({ label, value, options, onPick }: {
 }
 
 export function LettersDock({
-  params, model, error, units, uploads, showZones, onShowZones, onAutoFit, onPatch, onField, onMaterial, onPick, onUpload, onDeleteFont,
+  params, model, error, units, uploads, showZones, onShowZones, onAutoFit, onResetSection, onPatch, onField, onMaterial, onPick, onUpload, onDeleteFont,
 }: {
   params: LetterParams;
   model: LetterModel | null;
@@ -49,6 +49,7 @@ export function LettersDock({
   onPick: (id: string) => void;
   onUpload: (file: File) => void;
   onDeleteFont: (id: string) => void;
+  onResetSection: (title: string, keys: (keyof LetterParams)[]) => void;
 }) {
   const box = params.mode === "box";
   const hinge = box && params.wallStyle === "hinge";
@@ -79,7 +80,7 @@ export function LettersDock({
   return (
     <aside className="dock" aria-label="Panels">
 
-      <Sec title="Text" meta={params.text.trim() ? `${[...params.text.trim()].length} chars` : undefined} startOpen>
+      <Sec title="Text" meta={params.text.trim() ? `${[...params.text.trim()].length} chars` : undefined} startOpen onReset={() => onResetSection("Text", ["sizeMode", "size", "letterSpacing", "thicken", "weld", "direction"])}>
         <textarea
           className="textin"
           dir="auto"
@@ -110,7 +111,7 @@ export function LettersDock({
         <p className="note">Letter spacing never separates letters that join, as in Persian. Thicken grows every stroke outward.</p>
       </Sec>
       {box ? (
-        <Sec title="Box" meta={params.wallStyle === "hinge" ? "Living hinge" : "Flat panels"} startOpen>
+        <Sec title="Box" meta={params.wallStyle === "hinge" ? "Living hinge" : "Flat panels"} startOpen onReset={() => onResetSection("Box", ["depth", "minCornerRadius", "facetTol", "panelMin", "wallMaxLength", "islandArea", "smallIslands", "stackIslands", "marquee"])}>
           <div className="grid2">{fields("box")}</div>
           {hinge && (
             <label className="chk">
@@ -146,7 +147,7 @@ export function LettersDock({
           </p>
         </Sec>
       ) : params.mode === "stencil" ? (
-        <Sec title="Stencil" meta={`${params.bridgesPerIsland} bridge${params.bridgesPerIsland > 1 ? "s" : ""} per centre`} startOpen>
+        <Sec title="Stencil" meta={`${params.bridgesPerIsland} bridge${params.bridgesPerIsland > 1 ? "s" : ""} per centre`} startOpen onReset={() => onResetSection("Stencil", ["bridgesPerIsland", "stencilBridge", "sheetMargin"])}>
           <p className="note">The letters are cut out of one sheet. Bridges hold the centres of letters such as A, O and 8 so they don&apos;t fall out.</p>
           <Choice label="Bridges per centre" value={String(params.bridgesPerIsland) as "1" | "2"} onPick={(v) => onPatch({ bridgesPerIsland: v === "2" ? 2 : 1 }, true)} options={[
             { v: "1", text: "One", title: "One bridge across the thinnest stroke" },
@@ -156,7 +157,7 @@ export function LettersDock({
           <p className="note">Margin is the border of sheet around the text.</p>
         </Sec>
       ) : (
-        <Sec title="Mode" meta="Solid" startOpen>
+        <Sec title="Mode" meta="Solid" startOpen onReset={() => onResetSection("Solid", ["weldDots", "stencilBridge"])}>
           <p className="note">Solid cuts each letter shape out as a flat piece, with counters as inner cuts.</p>
           <label className="chk">
             <input type="checkbox" checked={params.weldDots} onChange={(e) => onPatch({ weldDots: e.target.checked }, true)} /> Weld dots
@@ -165,14 +166,14 @@ export function LettersDock({
           <p className="note">Weld dots joins every separate piece of a word, dots and accents included, with small bridges so each word cuts as one part.</p>
         </Sec>
       )}
-      <Sec title="Material" startOpen>
+      <Sec title="Material" startOpen onReset={() => onResetSection("Material", ["material", "T", "K"])}>
         <select className="sel" aria-label="Material preset" value={params.material} onChange={(e) => onMaterial(e.target.value)}>
           {Object.entries(MATERIALS).map(([k, m]) => <option key={k} value={k}>{m.name}</option>)}
         </select>
         <div className="grid2">{fields("mat")}</div>
       </Sec>
       {hinge && (
-        <Sec title="Hinge Pattern" meta={params.pattern[0].toUpperCase() + params.pattern.slice(1)} startOpen>
+        <Sec title="Hinge Pattern" meta={params.pattern[0].toUpperCase() + params.pattern.slice(1)} startOpen onReset={() => onResetSection("Hinge pattern", ["cutStyle", "pattern", "slotW", "slit", "bridge", "pitch", "overrun", "stretch"])}>
           <Choice<CutStyle> label="Cut style" value={params.cutStyle} onPick={(v) => onPatch({ cutStyle: v }, true)} options={[
             { v: "slot", text: "Slots", title: "Each cut is a round-ended slot of set width; edge cuts become notches in the outline" },
             { v: "line", text: "Single line", title: "Each cut is a single laser line (kerf width only)" },
@@ -194,15 +195,15 @@ export function LettersDock({
         <LettersAnalysis model={model} error={error} units={units} showZones={showZones} onShowZones={onShowZones} />
       </Sec>
       {box && (
-        <Sec title="Joints & Fit">
+        <Sec title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["tabW", "slotClr", "lidGap"])}>
           <div className="grid2">{fields("joints")}</div>
           <p className="note">Tabs on the walls fit slots in the base{params.lid === "fixed" ? " and the lid" : ""}. Slot play loosens or tightens that fit.</p>
         </Sec>
       )}
-      <Sec title="Layers" startOpen>
+      <Sec title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
         <LayersPanel layers={params.layers} labels={params.labels} only={hinge ? undefined : ["outline", "slots", "labels"]} onVis={layerVis} onExp={layerExp} onLabels={(on) => onPatch({ labels: on }, true)} />
       </Sec>
-      <Sec title="Sheet & Layout">
+      <Sec title="Sheet & Layout" onReset={() => onResetSection("Sheet & Layout", ["bedW", "bedH", "gap"])}>
         <div className="grid2">{fields("sheet")}</div>
         <p className="note">Parts are packed in reading order.</p>
       </Sec>

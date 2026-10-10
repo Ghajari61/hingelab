@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Redo2, Undo2 } from "lucide-react";
 import { LockIcon } from "@/components/billing/Lock";
 import type { Opt } from "@/components/editor/ControlBar";
 import { ART } from "./cardArt";
@@ -17,16 +18,25 @@ export type GalleryGroup = {
   cols?: 2 | 3;
 };
 
-/** Left rail: the product's big choices as picture cards (Atomm-style), grouped. */
-export function GalleryRail({ title, icon, groups, children }: {
+export type History = { canUndo: boolean; canRedo: boolean; undo: () => void; redo: () => void };
+
+/** Left rail: undo/redo on top, then the product's big choices as picture cards (Atomm-style), grouped. */
+export function GalleryRail({ title, icon, groups, history, children }: {
   title: string;
   icon?: ReactNode;
   groups: GalleryGroup[];
+  history: History;
   children?: ReactNode;
 }) {
   return (
     <aside className="gallery" aria-label={`${title} options`}>
-      <div className="gallery-head">{icon}<span>{title}</span></div>
+      <div className="gallery-head">
+        {icon}<span>{title}</span>
+        <span className="hist">
+          <button type="button" className="hdr-btn" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!history.canUndo} onClick={history.undo}><Undo2 size={16} /></button>
+          <button type="button" className="hdr-btn" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!history.canRedo} onClick={history.redo}><Redo2 size={16} /></button>
+        </span>
+      </div>
       <div className="gallery-scroll">
         {children}
         {groups.map((g) => (

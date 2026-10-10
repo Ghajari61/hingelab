@@ -27,7 +27,7 @@ let cleanup = async () => {};
 await withBrowser(async (page) => {
   cleanup = await signInAsPro(page, "parametric4");
   await page.addInitScript(() => { if (!sessionStorage.getItem("p4")) { localStorage.clear(); sessionStorage.setItem("p4", "1"); } });
-  await page.goto(`${BASE}/app/editor/local`);
+  await page.goto(`${BASE}/app/editor/local?p=hinge`);
   await page.getByRole("button", { name: "Parametric", exact: true }).click();
   let s = await waitSliced(page);
 

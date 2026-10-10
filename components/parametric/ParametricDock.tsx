@@ -130,7 +130,7 @@ function PartDrawing({ part }: { part: Part }) {
 }
 
 export function ParametricDock({
-  params, result, error, busy, units, selected, fileName, photo, depthBusy, plan, locks, askUnits, textMissing = [], onEdit, onSelect, onImport, onImportPhoto, onUpgrade, onExportSheet, onExportZip, onGuide,
+  params, result, error, busy, units, selected, fileName, photo, depthBusy, plan, locks, askUnits, textMissing = [], onEdit, onSelect, onImport, onImportPhoto, onUpgrade, onExportSheet, onExportZip, onGuide, onResetSection,
 }: {
   /** Characters of a Text source that its font does not have. */
   textMissing?: string[];
@@ -157,6 +157,7 @@ export function ParametricDock({
   onExportSheet: () => void;
   onExportZip: () => void;
   onGuide: () => void;
+  onResetSection: (title: string, keys: (keyof ParametricParams)[]) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
@@ -214,7 +215,7 @@ export function ParametricDock({
 
   return (
     <aside className="dock" aria-label="Panels">
-      <Sec title="Source" meta={params.method === "curveNormal" ? "Formulas only" : sourceMeta} startOpen>
+      <Sec title="Source" meta={params.method === "curveNormal" ? "Formulas only" : sourceMeta} startOpen onReset={() => onResetSection("Size and rotation", ["sourceSettings"])}>
         {params.method === "curveNormal" && <p className="note">Along a curve builds the fins from the formulas in Method; the model below is not used.</p>}
         <Choice label="Model from" value={kind} onPick={(v) => {
           if (v === "mesh") { if (fileName) onEdit((q) => { q.source = { kind: "mesh", fileName, units: "auto", upAxis: "Y" }; }, true); else fileRef.current?.click(); return; }
@@ -350,7 +351,7 @@ export function ParametricDock({
         <input ref={photoRef} type="file" accept="image/jpeg,image/png,image/webp" hidden aria-label="Load photo" onChange={(e) => { const f = e.target.files?.[0]; if (f) onImportPhoto(f); e.target.value = ""; }} />
       </Sec>
 
-      <Sec title="Method" meta={methodMeta(params, units, result)} startOpen>
+      <Sec title="Method" meta={methodMeta(params, units, result)} startOpen onReset={() => onResetSection("Method settings", [params.method])}>
         {params.method === "stacked" ? (
           <>
             <Choice label="Layers stacked along" value={params.stacked.axis} onPick={(a) => onEdit((q) => { q.stacked.axis = a; }, true)} options={[
@@ -475,7 +476,7 @@ export function ParametricDock({
         )}
       </Sec>
 
-      <Sec title="Material" meta={`${fmtLen(params.material.T, units, true)} · ${fmtLen(params.material.sheetW, units)} × ${fmtLen(params.material.sheetH, units)}`}>
+      <Sec title="Material" onReset={() => onResetSection("Material", ["material"])} meta={`${fmtLen(params.material.T, units, true)} · ${fmtLen(params.material.sheetW, units)} × ${fmtLen(params.material.sheetH, units)}`}>
         <select className="sel" aria-label="Material preset" value={params.material.id} onChange={(e) => {
           const m = MATERIALS[e.target.value];
           onEdit((q) => { q.material.id = e.target.value; if (m && m.T != null && m.K != null) { q.material.T = m.T; q.material.K = m.K; } }, true);
@@ -491,7 +492,7 @@ export function ParametricDock({
         ]} />
       </Sec>
 
-      <Sec title="Joints & Fit">
+      <Sec title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["joints"])}>
         {hasTabs(params) && (
           <Choice label={params.method === "radial" ? "Tabs per hub joint" : "Tabs per fin"} value={params.joints.tabCount === null ? "auto" : "count"} onPick={(v) => onEdit((q) => {
             q.joints.tabCount = v === "auto" ? null : Math.max(...parts.filter((x) => x.tabs?.length).map((x) => x.tabs!.length), 3);
@@ -505,7 +506,7 @@ export function ParametricDock({
         <p className="note">Slots are drawn {fmtLen(params.material.T, units, true)} + slot play wide; kerf is compensated once, on export.</p>
       </Sec>
 
-      <Sec title="Quality">
+      <Sec title="Quality" onReset={() => onResetSection("Quality", ["quality"])}>
         <div className="grid2">{fields("quality")}</div>
         <p className="note">Detail thinner than the minimum would snap when cut, so it is removed and reported.</p>
       </Sec>
@@ -598,7 +599,7 @@ export function ParametricDock({
         )}
       </Sec>
 
-      <Sec title="Layers & Export" startOpen>
+      <Sec title="Layers & Export" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
         <LayersPanel layers={params.layers} labels={params.labels.enabled} only={["outline", "slots", "labels"]} onVis={layerVis} onExp={layerExp} onLabels={(on) => onEdit((q) => { q.labels.enabled = on; }, true)} />
         <div className="pe-export">
           <button type="button" className="btn-auto" disabled={!result?.sheets.length} onClick={onExportZip}>Export all sheets (ZIP)</button>

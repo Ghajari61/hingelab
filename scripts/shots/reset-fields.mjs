@@ -5,7 +5,7 @@ import { BASE, withBrowser } from "./lib.mjs";
 const check = (ok, msg) => { if (!ok) throw new Error("FAILED: " + msg); console.log("ok", msg); };
 
 await withBrowser(async (page) => {
-  await page.goto(`${BASE}/app/editor/local`);
+  await page.goto(`${BASE}/app/editor/local?p=hinge`);
   await page.getByRole("button", { name: "Parametric", exact: true }).click();
   const scale = page.locator('.fld[data-id="uniformScale"]');
   const input = scale.locator("input");
