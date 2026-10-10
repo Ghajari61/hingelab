@@ -1,6 +1,6 @@
 # Progress
 
-**Next step:** Parametric P4 - `lib/parametric/methods/radial.ts` (fins around a central axis, with hubs) and `methods/curveNormal.ts` (fins square to a guide curve, outer boundary, clock insert), plus the radial-profile formula source; wire both into `engine.ts` (remove METHOD_NOT_READY) and the Method control (remove "soon"); tests "cylinder radial", "hub collision" (maxCount 31) and "ellipse curveNormal" from `CURSOR_PARAMETRIC_PROMPT.json`; screenshot of a leaf-shaped wall clock built with curveNormal from formulas only. Then P5-P6.
+**Next step:** Parametric P5 - photo to relief: depth estimation in the browser with Depth-Anything-V2-Small (Apache-2.0; licence noted in `public/models/LICENSES.md`, model not committed if too large: download step in SETUP.md), the depth map as a heightfield source, then the deviation heat map (parts re-assembled vs. the source surface) and a fidelity score in Analysis; tests and the "stop_and_show" screenshots from P5 in `CURSOR_PARAMETRIC_PROMPT.json`. Then P6 (Supabase save of parametric projects, plan limits, cut-time estimate).
 
 Order of the run: main brief Phases 1–5 (Phase 6 Tauri is out of scope) → Letters L2, L4, L5 (L1 and L3 were done earlier) → Parametric P1–P6.
 
@@ -22,7 +22,25 @@ How to check a phase: `npx supabase start` (local stack, see SETUP.md), `npm tes
 | Parametric P1 — core slicing | done | 632 / 632 |
 | Parametric P2 — parallel fins complete | done | 640 / 640 |
 | Parametric P3 — stacked + waffle | done | 645 / 645 |
-| Parametric P4–P6 | | |
+| Parametric P4 — radial + along a curve | done | 652 / 652 |
+| Parametric P5–P6 | | |
+
+---
+
+## Parametric P4 — Radial + Along a curve
+
+**Built**
+- `lib/parametric/methods/radial.ts` (D47): fins as half-planes round an X, Y or Z axis (count, angle range, hub radius), hub rings at one or both ends with a radial slot per fin and an orientation tick, an inner strip and tabs on every fin, FINS_COLLIDE_AT_HUB with the largest fin count and the smallest hub radius that fit.
+- Radial-profile formula source `z = f(theta, s)` (`source/formula.ts`): a closed polar solid for slicing, or exact fin outlines drawn straight from the formula ("Fin shape from: Radial formula").
+- `lib/parametric/methods/curveNormal.ts` (D48): fins square to an oval or circle, spaced by arc length; length, height and twist as formulas of t, s and L; an outer outline (oval or polar formula) that clips them; a back plate with one slot per tab (widened for twist) and a centre feature (clock insert 30/37/50/60 mm + 0.2 press fit, opening, or mirror); FINS_COLLIDE for fins that touch.
+- The "Leaf clock" preset: a 330 × 200 mm pointed-leaf plate, 56 twisting fins round a 120 × 76 oval and a 60 mm clock insert, from formulas only (no 3D file).
+- Editor: Radial and Along a curve are live in the Method control. Method panel per method (axis, hub rings, fin source, count, angles, hub radius/width, buttons to fix a crowded hub; guide shape and size, count or auto spacing, the three formulas, outline, back plate, centre feature, clock insert, "Load the leaf clock"); "Radial z = f(θ, s)" in Source. The model is hidden in 3D when it is not used, radial and curve fins explode outward along their length, and the assembly guide draws the curve back plate front-on with every slot named (D49).
+
+**Tests:** 652 / 652, including the Hinge Box golden test. New `radial-curve.test.ts` (7 cases): "cylinder radial" (r 80 × 120 cylinder, 24 fins round Y, 2 hubs: every fin a 60 × 120 rectangle plus strip and tabs, 15° apart, every tab in exactly one slot of each hub), "hub collision" (80 fins at r 20, T 3 → "at most 31 fins"), radial-profile direct vs. sliced (outlines agree within 1 %), "ellipse curveNormal" (120 × 70, 48 fins: square to the ellipse within 0.01°, no footprints closer than T, slots on the footprints within 1e-6 mm, clock hole 60.2 mm), crowded guide reported + the leaf clock (every fin ends on the leaf outline within 2 mm, plate = outline), exports (sheets, guide, ZIP) for both methods, and regression snapshots (cylinder radial, ellipse curve normal). `tsc` clean, `next build` OK. Browser run `scripts/shots/parametric-p4.mjs`: radial vase 26 parts on 2 sheets, radial-formula sunburst 26 parts on 1 sheet, leaf clock 57 parts on 1 sheet without touching fins, guide saved; `parametric-p2.mjs` and `parametric-p3.mjs` still pass.
+
+**Screenshots:** `parametric-4-leaf-clock-3d.png` (the stop-and-show item), `parametric-4-leaf-clock-exploded.png`, `parametric-4-leaf-clock-sheets.png`, `parametric-4-leaf-clock-guide.png`, `parametric-4-radial-vase-3d.png`, `parametric-4-radial-sunburst-3d.png`.
+
+**Known limitations:** the radial axis is X, Y or Z (turn the model for other directions). Guide curves are ovals and circles only (no SVG path or drawn spline yet). Fin length cannot come from a mesh yet (formulas only). Twisted fins lean past the plate edge near the leaf tips by up to height × sin(twist).
 
 ---
 

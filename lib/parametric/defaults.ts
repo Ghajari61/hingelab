@@ -15,6 +15,12 @@ export const PARAMETRIC_DEFAULTS: ParametricParams = {
   },
   stacked: { axis: "Y", dowels: true, dowelCount: 2, registrationMarks: true, hollow: false, shell: 8 },
   waffle: { spacingA: 30, spacingB: 30, familyAxes: ["X", "Z"], lapDirection: "A-from-bottom", baseRibs: false },
+  radial: { axis: "Z", axisPoint: null, count: 24, angleRange: [0, 360], innerRadius: 20, hubPlates: 1, hubWidth: 20, profileSource: "mesh" },
+  curveNormal: {
+    guide: { kind: "ellipse", w: 120, h: 70 }, count: null, spacingAtGuide: 8,
+    finLength: "60", finHeight: "5 + 15*sin(pi*s/L)", twist: "0",
+    outerBoundary: { kind: "none" }, backPlate: true, backMargin: 8, centerFeature: "clock-insert", clockInsertDia: 60,
+  },
   material: { id: HINGE.material, T: HINGE.T, K: HINGE.K, sheetW: HINGE.bedW, sheetH: HINGE.bedH, sheetMargin: 5, partGap: 3, grain: "any" },
   joints: { slotClearance: 0.1, tabDepth: null, tabWidth: 10, dowelDia: 6, halfLapClearance: 0.1 },
   quality: { chordTolerance: 0.1, smoothing: 0.25, minFeature: null, minIslandArea: 25 },
@@ -31,6 +37,21 @@ export const FORMULA_DEFAULTS: Record<FormulaSpec["type"], FormulaSpec> = {
     kind: "formula", type: "revolution", expression: "45 + 25*sin(h/32) - 12*cos(h/15)",
     domain: { x: [-100, 100], y: [-100, 100] }, height: 240, variables: {}, resolution: 120, base: 0,
   },
+  "radial-profile": {
+    kind: "formula", type: "radial-profile", expression: "8 + 22*exp(-((s - 40)/22)^2)*(0.75 + 0.25*cos(3*theta))",
+    domain: { x: [20, 120], y: [0, 0] }, height: 0, variables: {}, resolution: 96, base: 3,
+  },
+};
+
+/** Standard clock insert diameters, mm. */
+export const CLOCK_INSERTS = [30, 37, 50, 60] as const;
+
+/** The leaf-shaped wall clock: fins fanning round an oval, clipped by a leaf outline, all from formulas. */
+export const LEAF_CLOCK: ParametricParams["curveNormal"] = {
+  guide: { kind: "ellipse", w: 120, h: 76 }, count: 56, spacingAtGuide: 6,
+  finLength: "200", finHeight: "4 + (14 + 10*cos(2*pi*t)^2)*abs(sin(pi*s/L))^0.7", twist: "12*sin(2*pi*t)",
+  outerBoundary: { kind: "formula", expression: "1/((abs(cos(phi))/165)^1.25 + (abs(sin(phi))/100)^1.25)^0.8" },
+  backPlate: true, backMargin: 8, centerFeature: "clock-insert", clockInsertDia: 60,
 };
 
 /** Budgets and limits from the brief. */
@@ -55,7 +76,7 @@ export function mergeParametricParams(partial?: Partial<ParametricParams> | null
   const base = clone(PARAMETRIC_DEFAULTS);
   if (!partial) return base;
   const out: ParametricParams = { ...base, ...partial } as ParametricParams;
-  for (const k of ["sourceSettings", "parallel", "stacked", "waffle", "material", "joints", "quality", "labels"] as const) {
+  for (const k of ["sourceSettings", "parallel", "stacked", "waffle", "radial", "curveNormal", "material", "joints", "quality", "labels"] as const) {
     (out as unknown as Record<string, unknown>)[k] = { ...(base[k] as object), ...((partial[k] as object) ?? {}) };
   }
   out.layers = { ...base.layers, ...(partial.layers ?? {}) };

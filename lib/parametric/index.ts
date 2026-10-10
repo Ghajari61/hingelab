@@ -1,6 +1,6 @@
 export * from "./types";
 export {
-  PARAMETRIC_DEFAULTS, FORMULA_DEFAULTS, LIMITS, minFeatureOf, finSpacingOf, tabDepthOf, bridgeWidthOf, mergeParametricParams,
+  PARAMETRIC_DEFAULTS, FORMULA_DEFAULTS, LIMITS, CLOCK_INSERTS, LEAF_CLOCK, minFeatureOf, finSpacingOf, tabDepthOf, bridgeWidthOf, mergeParametricParams,
 } from "./defaults";
 export { LIBRARY, libraryMesh } from "./source/library";
 export { formatOf, bounds } from "./source/mesh";

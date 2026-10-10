@@ -6,7 +6,7 @@
 import { parse, type MathNode } from "mathjs";
 import { LIMITS } from "../defaults";
 import type { FormulaSpec, MeshData } from "../types";
-import { heightfieldBlock, revolution } from "./library";
+import { Builder, heightfieldBlock, revolution } from "./library";
 
 type Fn = (...a: number[]) => number;
 export type Evaluator = (vars: Record<string, number>) => number;
@@ -187,6 +187,56 @@ export function formulaHeightfield(s: FormulaSpec): { mesh: MeshData; lift: numb
   }
   const lift = Math.max(0.5, s.base) - lo;
   return { mesh: heightfieldBlock(w, h, (x, y) => z(x, y) + lift, nx, ny), lift };
+}
+
+/**
+ * Radial profile height = f(theta, s) as an evaluator: theta in radians round the Z axis from +X,
+ * s = r − r0 along the fin. Heights are clamped to at least `base` (and 0.5 mm).
+ */
+export function radialProfileFn(s: FormulaSpec): { height: (theta: number, ss: number) => number; r0: number; r1: number } {
+  const f = compileFormula(s.expression, ["theta", "s"], Object.keys(s.variables));
+  const vars = varValues(s);
+  const r0 = Math.max(1, Math.min(s.domain.x[0], s.domain.x[1])), r1 = Math.max(s.domain.x[0], s.domain.x[1]);
+  if (!(r1 - r0 >= 2)) throw new Error("The radius range needs an outer radius at least 2 mm beyond the inner one.");
+  const lo = Math.max(0.5, s.base);
+  return {
+    r0, r1,
+    height: (theta, ss) => {
+      vars.theta = theta; vars.s = ss;
+      const v = f(vars);
+      if (!Number.isFinite(v)) throw new Error("The formula gives no number somewhere on the profile (for example sqrt of a negative value).");
+      return Math.max(lo, v);
+    },
+  };
+}
+
+/** Radial profile as a closed solid on the wall: a polar heightfield z = f(theta, r − r0) for r0 ≤ r ≤ r1. */
+export function formulaRadialProfile(s: FormulaSpec): MeshData {
+  const { height, r0, r1 } = radialProfileFn(s);
+  const seg = Math.max(24, Math.min(720, Math.round(s.resolution) * 3));
+  const rings = Math.max(4, Math.min(256, Math.round(s.resolution / 2)));
+  if ((seg + 1) * (rings + 1) > LIMITS.maxFormulaSamples) throw new Error("Lower the resolution: the formula would need more than 5 million samples.");
+  const B = new Builder();
+  const top: number[][] = [], bot: number[][] = [];
+  for (let k = 0; k <= rings; k++) {
+    const r = r0 + ((r1 - r0) * k) / rings;
+    top.push([]); bot.push([]);
+    for (let j = 0; j < seg; j++) {
+      const th = (2 * Math.PI * j) / seg, x = r * Math.cos(th), y = r * Math.sin(th);
+      top[k].push(B.v(x, y, height(th, r - r0)));
+      bot[k].push(B.v(x, y, 0));
+    }
+  }
+  for (let j = 0; j < seg; j++) {
+    const j1 = (j + 1) % seg;
+    for (let k = 0; k < rings; k++) {
+      B.q(top[k][j], top[k + 1][j], top[k + 1][j1], top[k][j1]);
+      B.q(bot[k][j1], bot[k + 1][j1], bot[k + 1][j], bot[k][j]);
+    }
+    B.q(bot[rings][j], bot[rings][j1], top[rings][j1], top[rings][j]);
+    B.q(bot[0][j1], bot[0][j], top[0][j], top[0][j1]);
+  }
+  return B.done();
 }
 
 /** Revolution r = f(h) for h in [0, H], around the Y axis. */

@@ -87,7 +87,9 @@ function isoThumbnail(result: SliceResult, T: number, w: number, h: number): str
   for (const part of result.parts) {
     const board = part.kind === "backboard";
     const n = part.plane >= 0 ? result.planes[part.plane].normal : ([0, 0, 1] as V3);
-    const ex = board ? [0, 0, -40] : [n[0] * (part.plane - mid) * gap * 0.5, n[1] * (part.plane - mid) * gap * 0.5, 0];
+    const fanned = (result.method === "radial" || result.method === "curveNormal") && part.plane >= 0 && part.kind !== "backboard" && part.kind !== "hub";
+    const u = part.plane >= 0 ? result.planes[part.plane].u : ([1, 0, 0] as V3);
+    const ex = board ? [0, 0, -40] : fanned ? [u[0] * gap, u[1] * gap, u[2] * gap] : [n[0] * (part.plane - mid) * gap * 0.5, n[1] * (part.plane - mid) * gap * 0.5, 0];
     for (const z of [T / 2, -T / 2]) {
       const pts3 = part.shape.outer.map(([x, y]) => { const q = apply(part.placement, x, y, z); return view([q[0] + ex[0], q[1] + ex[1], q[2] + ex[2]]); });
       polys.push({ pts: pts3.map(q => [q[0], -q[1]]), depth: pts3.reduce((a, q) => a + q[2], 0) / pts3.length, board });
@@ -107,9 +109,17 @@ const METHOD_NAMES: Record<ParametricParams["method"], string> = {
   parallel: "parallel fins", stacked: "stacked layers", waffle: "waffle ribs", radial: "radial fins", curveNormal: "fins along a curve",
 };
 
+/** Distance between neighbouring slots on the board, for the slot label size. */
+const guideSpacing = (p: ParametricParams) => (p.method === "curveNormal" ? p.curveNormal.spacingAtGuide : finSpacingOf(p));
+
 function methodLine(p: ParametricParams): string {
   if (p.method === "stacked") return `layers ${p.material.T} mm thick stacked along ${p.stacked.axis}`;
   if (p.method === "waffle") return `ribs every ${r3(p.waffle.spacingA)} / ${r3(p.waffle.spacingB)} mm across ${p.waffle.familyAxes.join(" and ")}`;
+  if (p.method === "radial") return `${p.radial.count} fins round ${p.radial.axis} from ${r3(p.radial.angleRange[0])}° to ${r3(p.radial.angleRange[1])}°, hub radius ${r3(p.radial.innerRadius)} mm`;
+  if (p.method === "curveNormal") {
+    const g = p.curveNormal.guide;
+    return `fins square to ${g.kind === "circle" ? `a ${r3(g.d)} mm circle` : `a ${r3(g.w)} × ${r3(g.h)} mm oval`}`;
+  }
   return `fins every ${r3(finSpacingOf(p))} mm along ${p.parallel.axis}`;
 }
 
@@ -133,7 +143,9 @@ export function assemblyGuideSVG(result: SliceResult, p: ParametricParams): stri
   s += `<g id="thumbnail" transform="translate(20 ${top})">${isoThumbnail(result, p.material.T, thumbW, thumbH)}</g>\n`;
   if (board && bb) {
     s += `<text x="20" y="${r3(boardY - 6)}" font-size="4.5" font-weight="bold">Backboard ${board.id} at full size (front view)</text>\n`;
-    s += `<g id="backboard" transform="translate(${r3(20 - bb.x0)} ${r3(boardY - bb.y0)})" fill="none" stroke="#000" stroke-width="0.3">\n`;
+    // Plates whose local y runs up the wall are drawn flipped so the guide shows the front.
+    const flip = board.placement[5] > 0;
+    s += `<g id="backboard" transform="${flip ? `translate(${r3(20 - bb.x0)} ${r3(boardY + bb.y1)}) scale(1 -1)` : `translate(${r3(20 - bb.x0)} ${r3(boardY - bb.y0)})`}" fill="none" stroke="#000" stroke-width="0.3">\n`;
     s += `  <path d="${[board.shape.outer, ...board.shape.holes].map(closedD).join("")}"/>\n`;
     for (const c of board.innerCuts) s += `  <path d="${closedD(c)}" stroke="#00A000"/>\n`;
     // The board's slots are stored in part order, one per tab.
@@ -145,7 +157,15 @@ export function assemblyGuideSVG(result: SliceResult, p: ParametricParams): stri
         const xs = c.map(q => q[0]), ys = c.map(q => q[1]);
         const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
         const vertical = Math.max(...ys) - Math.min(...ys) > Math.max(...xs) - Math.min(...xs);
-        const fs = Math.min(2.6, Math.max(1.2, finSpacingOf(p) - p.material.T - 1));
+        const fs = Math.min(2.6, Math.max(1.2, guideSpacing(p) - p.material.T - 1));
+        if (flip) {
+          const [a, b] = Math.hypot(c[1][0] - c[0][0], c[1][1] - c[0][1]) >= Math.hypot(c[2][0] - c[1][0], c[2][1] - c[1][1]) ? [c[0], c[1]] : [c[1], c[2]];
+          let ang = (Math.atan2(-(b[1] - a[1]), b[0] - a[0]) * 180) / Math.PI;
+          if (ang > 90) ang -= 180;
+          if (ang <= -90) ang += 180;
+          s += `  <text x="0" y="0" font-size="${r3(fs)}" fill="#000" stroke="none" text-anchor="middle" dominant-baseline="middle" transform="translate(${r3(cx)} ${r3(cy)}) scale(1 -1) rotate(${r3(ang)})">${escapeXml(part.id)}</text>\n`;
+          continue;
+        }
         s += `  <text x="${r3(cx)}" y="${r3(cy)}" font-size="${r3(fs)}" fill="#000" stroke="none" text-anchor="middle" dominant-baseline="middle"${vertical ? ` transform="rotate(-90 ${r3(cx)} ${r3(cy)})"` : ""}>${escapeXml(part.id)}</text>\n`;
       }
     }

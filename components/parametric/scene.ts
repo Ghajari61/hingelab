@@ -23,9 +23,15 @@ export function planesObject(r: SliceResult): THREE.Group {
   const mat = new THREE.MeshBasicMaterial({ color: 0x4da6ff, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false });
   const edge = new THREE.LineBasicMaterial({ color: 0x4da6ff, transparent: true, opacity: 0.5 });
   const { min, max } = r.bounds;
-  for (const pl of r.planes) {
-    const [u0, u1] = range(pl.u, min, max);
+  r.planes.forEach((pl, i) => {
+    let [u0, u1] = range(pl.u, min, max);
     let [w0, w1] = range(pl.w, min, max);
+    // Radial and along-a-curve planes only show the half where their fins are.
+    const own = r.parts.filter(q => q.plane === i && fanned(r, q));
+    if (own.length) {
+      u0 = Math.min(...own.map(q => q.shape.bbox.x0)) - 2; u1 = Math.max(...own.map(q => q.shape.bbox.x1)) + 2;
+      w0 = Math.min(...own.map(q => q.shape.bbox.y0)) - 2; w1 = Math.max(...own.map(q => q.shape.bbox.y1)) + 2;
+    }
     // Wall-mounted frames (W out of the wall) start at the wall.
     if (pl.w[2] > 0.5) w0 = Math.max(0, w0);
     w1 = Math.max(w0 + 1, w1);
@@ -37,9 +43,12 @@ export function planesObject(r: SliceResult): THREE.Group {
     const line = new THREE.LineSegments(new THREE.EdgesGeometry(g), edge);
     line.applyMatrix4(mx);
     grp.add(mesh, line);
-  }
+  });
   return grp;
 }
+
+/** Fins that fan round an axis or a curve, one per plane. */
+const fanned = (r: SliceResult, q: Part) => (r.method === "radial" || r.method === "curveNormal") && (q.kind === "radial-fin" || q.kind === "fin");
 
 function range(axis: Plane["u"], min: number[], max: number[]) {
   let lo = 0, hi = 0;
@@ -73,10 +82,15 @@ export function partsObject(r: SliceResult, T: number, explode = 0): THREE.Group
     const mx = new THREE.Matrix4().fromArray(part.placement);
     if (explode && part.plane >= 0) {
       const pl = r.planes[part.plane];
-      const ids = fam.get(famKey(pl))!;
-      const d = (ids.indexOf(part.plane) - (ids.length - 1) / 2) * explode;
-      const n = pl.normal;
-      mx.premultiply(new THREE.Matrix4().makeTranslation(n[0] * d, n[1] * d, n[2] * d));
+      // Radial and along-a-curve fins move outward along their own length instead.
+      if (fanned(r, part)) {
+        mx.premultiply(new THREE.Matrix4().makeTranslation(pl.u[0] * explode, pl.u[1] * explode, pl.u[2] * explode));
+      } else {
+        const ids = fam.get(famKey(pl))!;
+        const d = (ids.indexOf(part.plane) - (ids.length - 1) / 2) * explode;
+        const n = pl.normal;
+        mx.premultiply(new THREE.Matrix4().makeTranslation(n[0] * d, n[1] * d, n[2] * d));
+      }
     }
     const mesh = new THREE.Mesh(g, mat);
     mesh.applyMatrix4(mx);

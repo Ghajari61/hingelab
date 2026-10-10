@@ -8,10 +8,12 @@ import { finSpacingOf, LIMITS } from "./defaults";
 import { kerfPart } from "./joints";
 import { polylineLength } from "./label";
 import { sliceParallel } from "./methods/parallel";
+import { sliceCurveNormal } from "./methods/curveNormal";
+import { sliceRadial } from "./methods/radial";
 import { sliceStacked } from "./methods/stacked";
 import { sliceWaffle } from "./methods/waffle";
 import { nestParts } from "./nest";
-import { formulaHeightfield, formulaRevolution } from "./source/formula";
+import { formulaHeightfield, formulaRadialProfile, formulaRevolution, radialProfileFn } from "./source/formula";
 import { libraryMesh } from "./source/library";
 import { bounds, formatOf, parseMeshFile, prepareMesh, type PreparedMesh } from "./source/mesh";
 import { fallbackSections, manifoldSections, tryManifold, type SectionSource } from "./slice/section";
@@ -32,6 +34,7 @@ export async function loadSource(p: ParametricParams, file?: ArrayBuffer): Promi
       const r = await prepareMesh(mesh, p.sourceSettings, { units: "mm", upAxis: "Y", anchor: "wall" });
       return { ...r, lift };
     }
+    if (s.type === "radial-profile") return prepareMesh(formulaRadialProfile(s), p.sourceSettings, { units: "mm", upAxis: "Y", anchor: "wall" });
     return prepareMesh(formulaRevolution(s), p.sourceSettings, { units: "mm", upAxis: "Y", anchor: "centre" });
   }
   const fmt = formatOf(s.fileName);
@@ -62,9 +65,12 @@ export function computeParametric(p: ParametricParams, src: PreparedMesh, wasm: 
   if (!(ext > 0)) throw new Error("The model is empty.");
   if (ext > LIMITS.maxModelExtent) throw new Error(`The model is ${Math.round(ext)} mm across; the limit is ${LIMITS.maxModelExtent} mm. Scale it down.`);
 
-  const warnings: Warning[] = [...src.warnings];
-  const solid = src.openEdges === 0 ? tryManifold(wasm, src.mesh) : null;
-  if (!solid && src.openEdges === 0) warnings.push({ code: "NON_MANIFOLD", message: "The mesh could not be read as a closed solid; it was sliced with the fallback section method." });
+  const s = p.source;
+  const profile = p.method === "radial" && p.radial.profileSource === "formula" && s.kind === "formula" && s.type === "radial-profile" ? radialProfileFn(s) : undefined;
+  const usesModel = p.method !== "curveNormal" && !profile;
+  const warnings: Warning[] = usesModel ? [...src.warnings] : [];
+  const solid = usesModel && src.openEdges === 0 ? tryManifold(wasm, src.mesh) : null;
+  if (usesModel && !solid && src.openEdges === 0) warnings.push({ code: "NON_MANIFOLD", message: "The mesh could not be read as a closed solid; it was sliced with the fallback section method." });
   const engine: SliceResult["engine"] = solid ? "manifold" : "fallback";
   const sections = (pl: Plane): SectionSource => (solid ? manifoldSections(wasm, solid, pl.u, pl.w, pl.normal) : fallbackSections(src.mesh, pl.u, pl.w, pl.normal));
   const projection = (planes: Plane[], secs: Shape[][]): Contour[] => {
@@ -74,8 +80,12 @@ export function computeParametric(p: ParametricParams, src: PreparedMesh, wasm: 
 
   try {
     const ctx = { bounds: b, sections };
-    if (p.method === "radial" || p.method === "curveNormal") warnings.push({ code: "METHOD_NOT_READY", message: "This method is not available yet; showing parallel fins." });
-    const out = p.method === "stacked" ? sliceStacked(p, ctx) : p.method === "waffle" ? sliceWaffle(p, ctx) : sliceParallel(p, { ...ctx, projection });
+    const out =
+      p.method === "stacked" ? sliceStacked(p, ctx)
+      : p.method === "waffle" ? sliceWaffle(p, ctx)
+      : p.method === "radial" ? sliceRadial(p, ctx, profile)
+      : p.method === "curveNormal" ? sliceCurveNormal(p)
+      : sliceParallel(p, { ...ctx, projection });
     warnings.push(...out.warnings);
     if (out.parts.length > LIMITS.maxParts) warnings.push({ code: "TOO_MANY_PARTS", message: `This would make ${out.parts.length} parts. Increase spacing or reduce size (limit ${LIMITS.maxParts}).` });
 
@@ -94,7 +104,7 @@ export function computeParametric(p: ParametricParams, src: PreparedMesh, wasm: 
       partArea,
       materialUsage: nest.sheets.length ? partArea / nest.sheets.reduce((a, s) => a + s.width * s.height, 0) : 0,
     };
-    return { planes: out.planes, sections: out.sections, parts: out.parts, sheets: nest.sheets, warnings, stats, guide: out.guide, crossings: out.crossings, bounds: b, engine };
+    return { method: p.method, planes: out.planes, sections: out.sections, parts: out.parts, sheets: nest.sheets, warnings, stats, guide: out.guide, crossings: out.crossings, bounds: out.bounds ?? b, engine, usesModel };
   } finally {
     solid?.delete();
   }

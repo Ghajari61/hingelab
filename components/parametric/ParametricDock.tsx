@@ -3,8 +3,8 @@
 import { useRef } from "react";
 import { MATERIALS, polyD, r3, type LayerKey } from "@/lib/hinge";
 import {
-  FORMULA_DEFAULTS, LIBRARY, finSpacingOf,
-  type FormulaSpec, type LibraryId, type ModelUnits, type ParametricParams, type Part, type SliceResult, type WarningCode,
+  CLOCK_INSERTS, FORMULA_DEFAULTS, LEAF_CLOCK, LIBRARY, finSpacingOf,
+  type CurveNormalParams, type FormulaSpec, type LibraryId, type ModelUnits, type ParametricParams, type Part, type SliceResult, type WarningCode,
 } from "@/lib/parametric";
 import { NumberField } from "@/components/editor/NumberField";
 import { LayersPanel } from "@/components/editor/LayersPanel";
@@ -32,6 +32,15 @@ function Choice<T extends string>({ label, value, options, onPick }: {
   );
 }
 
+/** A one-line formula: edits preview live and are recorded for undo on blur. */
+function FormulaInput({ label, value, onEdit }: { label: string; value: string; onEdit: (v: string, record: boolean) => void }) {
+  return (
+    <label className="pe-pick">{label}
+      <input className="textin mono" aria-label={label} spellCheck={false} value={value} onChange={(e) => onEdit(e.target.value, false)} onBlur={(e) => onEdit(e.target.value, true)} />
+    </label>
+  );
+}
+
 const WARNING_TITLES: Partial<Record<WarningCode, string>> = {
   PART_TOO_BIG: "Larger than the sheet",
   TOO_MANY_SHEETS: "Too many sheets",
@@ -51,18 +60,40 @@ const WARNING_TITLES: Partial<Record<WarningCode, string>> = {
   NO_DOWEL: "Layers without dowels",
   CROSSING_TOO_SHORT: "Crossings too short",
   NO_JOINT: "Ribs without a joint",
+  FINS_COLLIDE_AT_HUB: "Fins crowd the hub",
+  FINS_COLLIDE: "Fins touch",
 };
-const SERIOUS: WarningCode[] = ["PART_TOO_BIG", "TOO_MANY_SHEETS", "TOO_MANY_PARTS", "NON_MANIFOLD", "FLOATING_PIECE", "METHOD_NOT_READY"];
+const SERIOUS: WarningCode[] = ["PART_TOO_BIG", "TOO_MANY_SHEETS", "TOO_MANY_PARTS", "NON_MANIFOLD", "FLOATING_PIECE", "METHOD_NOT_READY", "FINS_COLLIDE_AT_HUB", "FINS_COLLIDE"];
 
-const KIND_NAMES: Partial<Record<Part["kind"], string>> = { backboard: "Backboard", slat: "Slat", fin: "Fin", layer: "Layer", "rib-x": "Rib (A)", "rib-y": "Rib (B)" };
+const KIND_NAMES: Partial<Record<Part["kind"], string>> = {
+  backboard: "Backboard", slat: "Slat", fin: "Fin", layer: "Layer", "rib-x": "Rib (A)", "rib-y": "Rib (B)", "radial-fin": "Radial fin", hub: "Hub ring",
+};
 
 const axisName = (n: readonly number[]) => (Math.abs(n[0]) > 0.5 ? "X" : Math.abs(n[1]) > 0.5 ? "Y" : "Z");
+const onAxis = (n: readonly number[]) => Math.max(...n.map(Math.abs)) > 0.999;
+/** Fins turned round an axis or a curve: their plane offset means nothing to the user. */
+const fannedPart = (r: SliceResult, q: Part) => (r.method === "radial" || r.method === "curveNormal") && (q.kind === "radial-fin" || q.kind === "fin");
 
-function methodMeta(p: ParametricParams, units: Units) {
+function guideText(g: CurveNormalParams["guide"], units: Units) {
+  return g.kind === "circle" ? `a ${fmtLen(g.d, units, true)} circle` : `a ${fmtLen(g.w, units)} × ${fmtLen(g.h, units, true)} oval`;
+}
+
+function methodMeta(p: ParametricParams, units: Units, result: SliceResult | null) {
   if (p.method === "stacked") return `Layers along ${p.stacked.axis}, ${fmtLen(p.material.T, units, true)} each`;
   if (p.method === "waffle") return `Waffle ${p.waffle.familyAxes.join(" × ")}, ${fmtLen(p.waffle.spacingA, units, true)} / ${fmtLen(p.waffle.spacingB, units, true)}`;
+  if (p.method === "radial") return `${p.radial.count} fins round ${p.radial.axis}`;
+  if (p.method === "curveNormal") {
+    const n = p.curveNormal.count ?? result?.parts.filter((q) => q.kind === "fin").length;
+    return `${n ?? "Auto"} fins round ${guideText(p.curveNormal.guide, units)}`;
+  }
   return `Parallel fins every ${fmtLen(finSpacingOf(p), units, true)}`;
 }
+
+const FORMULA_NOTES: Record<FormulaSpec["type"], string> = {
+  heightfield: "Use x and y in mm",
+  revolution: "Use h in mm",
+  "radial-profile": "Use theta (radians round the centre) and s (mm out from the inner radius)",
+};
 
 /** The part as it will be cut (sheet orientation), with its inner cuts and engraving. */
 function PartDrawing({ part }: { part: Part }) {
@@ -129,11 +160,15 @@ export function ParametricDock({
   const serious = [...groups.keys()].some((c) => SERIOUS.includes(c));
   const layerVis = (key: LayerKey) => onEdit((q) => { q.layers[key].vis = !q.layers[key].vis; }, true);
   const layerExp = (key: LayerKey, exp: boolean) => onEdit((q) => { q.layers[key].exp = exp; }, true);
-  const sourceMeta = kind === "library" ? LIBRARY.find((l) => l.id === src.id)?.name : kind === "mesh" ? src.fileName : formula?.type === "revolution" ? "Turned formula" : "Surface formula";
+  const sourceMeta = kind === "library" ? LIBRARY.find((l) => l.id === src.id)?.name : kind === "mesh" ? src.fileName : formula?.type === "revolution" ? "Turned formula" : formula?.type === "radial-profile" ? "Radial profile formula" : "Surface formula";
+  const hubCrowd = result?.warnings.find((w) => w.code === "FINS_COLLIDE_AT_HUB")?.data;
+  const cn = params.curveNormal;
+  const editCurve = (f: (c: CurveNormalParams) => void, record: boolean) => onEdit((q) => f(q.curveNormal), record);
 
   return (
     <aside className="dock" aria-label="Panels">
-      <Sec title="Source" meta={sourceMeta} startOpen>
+      <Sec title="Source" meta={params.method === "curveNormal" ? "Formulas only" : sourceMeta} startOpen>
+        {params.method === "curveNormal" && <p className="note">Along a curve builds the fins from the formulas in Method; the model below is not used.</p>}
         <Choice label="Model from" value={kind} onPick={(v) => {
           if (v === "mesh") { if (fileName) onEdit((q) => { q.source = { kind: "mesh", fileName, units: "auto", upAxis: "Y" }; }, true); else fileRef.current?.click(); return; }
           onEdit((q) => { q.source = v === "library" ? { kind: "library", id: "abstract-head-cc0" } : structuredClone(FORMULA_DEFAULTS.heightfield); }, true);
@@ -183,6 +218,7 @@ export function ParametricDock({
             <Choice<FormulaSpec["type"]> label="Formula type" value={formula.type} onPick={(t) => onEdit((q) => { q.source = structuredClone(FORMULA_DEFAULTS[t]); }, true)} options={[
               { v: "heightfield", text: "Surface z = f(x, y)", title: "A relief: height off the wall at each point" },
               { v: "revolution", text: "Turned r = f(h)", title: "A shape turned around the vertical axis" },
+              { v: "radial-profile", text: "Radial z = f(θ, s)", title: "Height off the wall round a centre: a sunburst profile for radial fins" },
             ]} />
             <textarea
               className="textin mono"
@@ -194,7 +230,7 @@ export function ParametricDock({
               onBlur={(e) => onEdit((q) => { if (q.source.kind === "formula") q.source.expression = e.target.value; }, true)}
             />
             <div className="grid2">{fields("formula")}</div>
-            <p className="note">Use {formula.type === "heightfield" ? "x and y" : "h"} in mm, pi, sin, cos, sqrt, abs, min, max, noise2, smoothstep and more.</p>
+            <p className="note">{FORMULA_NOTES[formula.type]}, pi, sin, cos, sqrt, abs, min, max, noise2, smoothstep and more.</p>
           </>
         )}
         <label className="chk">
@@ -216,7 +252,7 @@ export function ParametricDock({
         <input ref={fileRef} type="file" accept=".stl,.obj,.glb" hidden aria-label="Import model" onChange={(e) => { const f = e.target.files?.[0]; if (f) onImport(f); e.target.value = ""; }} />
       </Sec>
 
-      <Sec title="Method" meta={methodMeta(params, units)} startOpen>
+      <Sec title="Method" meta={methodMeta(params, units, result)} startOpen>
         {params.method === "stacked" ? (
           <>
             <Choice label="Layers stacked along" value={params.stacked.axis} onPick={(a) => onEdit((q) => { q.stacked.axis = a; }, true)} options={[
@@ -240,6 +276,85 @@ export function ParametricDock({
             ]} />
             <div className="grid2">{fields("method")}</div>
             <p className="note">Every crossing is a half-lap: each rib is slotted half way, and the partner&apos;s id is engraved beside the slot.</p>
+          </>
+        ) : params.method === "radial" ? (
+          <>
+            <Choice label="Fins turn round" value={params.radial.axis} onPick={(a) => onEdit((q) => { q.radial.axis = a; }, true)} options={[
+              { v: "Z", text: "Out of the wall (Z)", title: "A sunburst on the wall" },
+              { v: "Y", text: "Upright (Y)", title: "A lamp shade or vase standing up" },
+              { v: "X", text: "Sideways (X)" },
+            ]} />
+            <Choice label="Hub rings" value={String(params.radial.hubPlates) as "0" | "1" | "2"} onPick={(h) => onEdit((q) => { q.radial.hubPlates = Number(h) as 0 | 1 | 2; }, true)} options={[
+              { v: "0", text: "None", title: "Glue the fins yourself" },
+              { v: "1", text: "One", title: "A slotted ring at the low end of the axis" },
+              { v: "2", text: "Both ends", title: "Slotted rings at both ends of the axis" },
+            ]} />
+            <Choice label="Fin shape from" value={params.radial.profileSource} onPick={(s) => onEdit((q) => {
+              q.radial.profileSource = s;
+              if (s === "formula" && !(q.source.kind === "formula" && q.source.type === "radial-profile")) {
+                q.source = structuredClone(FORMULA_DEFAULTS["radial-profile"]);
+                q.radial.axis = "Z";
+              }
+            }, true)} options={[
+              { v: "mesh", text: "The model", title: "Slice the model through the axis" },
+              { v: "formula", text: "Radial formula", title: "Draw each fin straight from a radial-profile formula, without slicing" },
+            ]} />
+            <div className="grid2">{fields("method")}</div>
+            {hubCrowd && (
+              <div className="verdict warn pe-units">
+                <span className="dot" />
+                <span>
+                  Fins meet at the hub. Use
+                  <button type="button" onClick={() => onEdit((q) => { q.radial.count = hubCrowd.maxCount; }, true)}>{hubCrowd.maxCount} fins</button>
+                  or
+                  <button type="button" onClick={() => onEdit((q) => { q.radial.innerRadius = Math.ceil(hubCrowd.minRadius); }, true)}>a {fmtLen(Math.ceil(hubCrowd.minRadius), units, true)} hub</button>
+                </span>
+              </div>
+            )}
+            <p className="note">Each fin is a half-plane through the axis. Its inner edge sits in the hub slots; the tick engraved on the hub marks fin R01.</p>
+          </>
+        ) : params.method === "curveNormal" ? (
+          <>
+            <button type="button" className="btn-auto" onClick={() => onEdit((q) => { q.curveNormal = structuredClone(LEAF_CLOCK); }, true)}>Load the leaf clock</button>
+            <Choice label="Guide curve" value={cn.guide.kind} onPick={(k) => editCurve((c) => {
+              const g = c.guide;
+              const size = g.kind === "ellipse" ? Math.max(g.w, g.h) : g.d;
+              c.guide = k === "circle" ? { kind: "circle", d: size } : { kind: "ellipse", w: size, h: Math.round(size * 0.6) };
+            }, true)} options={[
+              { v: "ellipse", text: "Oval" }, { v: "circle", text: "Circle" },
+            ]} />
+            <label className="chk"><input type="checkbox" checked={cn.count === null} onChange={(e) => editCurve((c) => { c.count = e.target.checked ? null : 48; }, true)} /> Fit as many fins as the spacing allows</label>
+            <div className="grid2">{fields("method")}</div>
+            <FormulaInput label="Fin length L(t)" value={cn.finLength} onEdit={(v, r) => editCurve((c) => { c.finLength = v; }, r)} />
+            <FormulaInput label="Fin height (t, s, L)" value={cn.finHeight} onEdit={(v, r) => editCurve((c) => { c.finHeight = v; }, r)} />
+            <FormulaInput label="Twist ° (t)" value={cn.twist} onEdit={(v, r) => editCurve((c) => { c.twist = v; }, r)} />
+            <Choice label="Outer outline" value={cn.outerBoundary.kind} onPick={(k) => editCurve((c) => {
+              c.outerBoundary = k === "none" ? { kind: "none" } : k === "ellipse" ? { kind: "ellipse", w: 300, h: 220 } : { kind: "formula", expression: LEAF_CLOCK.outerBoundary.kind === "formula" ? LEAF_CLOCK.outerBoundary.expression : "120" };
+            }, true)} options={[
+              { v: "none", text: "None", title: "Fins keep their full length" },
+              { v: "ellipse", text: "Oval", title: "Fins are cut off at an oval" },
+              { v: "formula", text: "r = f(phi)", title: "Fins are cut off at a polar outline, such as a leaf" },
+            ]} />
+            {cn.outerBoundary.kind === "formula" && (
+              <FormulaInput label="Outline radius r(phi)" value={cn.outerBoundary.expression} onEdit={(v, r) => editCurve((c) => { if (c.outerBoundary.kind === "formula") c.outerBoundary.expression = v; }, r)} />
+            )}
+            <label className="chk"><input type="checkbox" checked={cn.backPlate} onChange={(e) => editCurve((c) => { c.backPlate = e.target.checked; }, true)} /> Back plate with a slot for every tab</label>
+            {cn.backPlate && (
+              <Choice label="Centre" value={cn.centerFeature} onPick={(f) => editCurve((c) => { c.centerFeature = f; }, true)} options={[
+                { v: "clock-insert", text: "Clock", title: "A round hole for a press-fit clock insert" },
+                { v: "opening", text: "Opening", title: "Cut out the inside of the guide" },
+                { v: "mirror", text: "Mirror", title: "An opening 3 mm smaller than the guide, for a mirror glued behind" },
+                { v: "none", text: "None" },
+              ]} />
+            )}
+            {cn.backPlate && cn.centerFeature === "clock-insert" && (
+              <label className="pe-pick">Clock insert
+                <select className="sel" aria-label="Clock insert" value={cn.clockInsertDia} onChange={(e) => editCurve((c) => { c.clockInsertDia = Number(e.target.value); }, true)}>
+                  {CLOCK_INSERTS.map((d) => <option key={d} value={d}>{d} mm</option>)}
+                </select>
+              </label>
+            )}
+            <p className="note">Fins stand square to the guide. t runs 0 to 1 round it, s is mm out along the fin, L its length, phi the angle round the centre.</p>
           </>
         ) : (
           <>
@@ -300,9 +415,9 @@ export function ParametricDock({
               <dt>Kind</dt><dd>{KIND_NAMES[part.kind] ?? part.kind}</dd>
               <dt>Size</dt><dd>{fmtLen(part.shape.bbox.x1 - part.shape.bbox.x0, units, true)} × {fmtLen(part.shape.bbox.y1 - part.shape.bbox.y0, units, true)}</dd>
               {part.tabs && <><dt>Tabs</dt><dd>{part.tabs.length}</dd></>}
-              {part.kind === "backboard" && <><dt>Slots</dt><dd>{part.innerCuts.length}</dd></>}
+              {(part.kind === "backboard" || part.kind === "hub") && <><dt>Slots</dt><dd>{part.innerCuts.length}</dd></>}
               {part.kind === "layer" && part.innerCuts.length > 0 && <><dt>Dowels</dt><dd>{part.innerCuts.length}</dd></>}
-              {part.plane >= 0 && result && <><dt>Plane</dt><dd>{fmtLen(result.planes[part.plane].offset, units, true)} along {axisName(result.planes[part.plane].normal)}</dd></>}
+              {part.plane >= 0 && result && !fannedPart(result, part) && onAxis(result.planes[part.plane].normal) && <><dt>Plane</dt><dd>{fmtLen(result.planes[part.plane].offset, units, true)} along {axisName(result.planes[part.plane].normal)}</dd></>}
               <dt>Next to</dt><dd>{part.neighbors.join(", ") || "—"}</dd>
             </dl>
             {partWarnings.length > 0 && <ul className="issues warn">{partWarnings.map((w, k) => <li key={k}>{w.message}</li>)}</ul>}

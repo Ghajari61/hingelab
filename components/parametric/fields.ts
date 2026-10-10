@@ -13,10 +13,15 @@ export interface ParamField extends BaseField {
 
 const formula = (p: ParametricParams) => (p.source.kind === "formula" ? p.source : null);
 const isHeightfield = (p: ParametricParams) => formula(p)?.type === "heightfield";
-const isParallel = (p: ParametricParams) => p.method !== "stacked" && p.method !== "waffle";
+const isRadialProfile = (p: ParametricParams) => formula(p)?.type === "radial-profile";
+const isParallel = (p: ParametricParams) => p.method === "parallel";
 const hasBoard = (p: ParametricParams) => isParallel(p) && p.parallel.backboard !== "none";
 const isStacked = (p: ParametricParams) => p.method === "stacked";
 const isWaffle = (p: ParametricParams) => p.method === "waffle";
+const isRadial = (p: ParametricParams) => p.method === "radial";
+const isCurve = (p: ParametricParams) => p.method === "curveNormal";
+const curveGuide = (p: ParametricParams) => p.curveNormal.guide;
+const curveBoundary = (p: ParametricParams) => p.curveNormal.outerBoundary;
 
 export const PARAM_FIELDS: ParamField[] = [
   { sec: "transform", id: "uniformScale", label: "Scale", step: 0.05, min: 0.01, max: 100, float: true, get: p => p.sourceSettings.transform.uniformScale, set: (p, v) => { p.sourceSettings.transform.uniformScale = v; }, show: p => !p.sourceSettings.targetSize },
@@ -27,7 +32,9 @@ export const PARAM_FIELDS: ParamField[] = [
 
   { sec: "formula", id: "fWidth", label: "Width", len: true, step: 5, min: 10, max: 2000, get: p => { const f = formula(p)!; return f.domain.x[1] - f.domain.x[0]; }, set: (p, v) => { const f = formula(p)!; f.domain.x = [-v / 2, v / 2]; }, show: isHeightfield },
   { sec: "formula", id: "fHeight", label: "Height", len: true, step: 5, min: 10, max: 2000, get: p => { const f = formula(p)!; return f.domain.y[1] - f.domain.y[0]; }, set: (p, v) => { const f = formula(p)!; f.domain.y = [-v / 2, v / 2]; }, show: isHeightfield },
-  { sec: "formula", id: "fBase", label: "Base", len: true, step: 1, min: 0.5, max: 200, get: p => formula(p)!.base, set: (p, v) => { formula(p)!.base = v; }, show: isHeightfield },
+  { sec: "formula", id: "fR0", label: "Inner r", len: true, step: 1, min: 1, max: 1500, get: p => formula(p)!.domain.x[0], set: (p, v) => { const f = formula(p)!; f.domain.x = [v, Math.max(f.domain.x[1], v + 2)]; }, show: isRadialProfile },
+  { sec: "formula", id: "fR1", label: "Outer r", len: true, step: 5, min: 3, max: 1500, get: p => formula(p)!.domain.x[1], set: (p, v) => { const f = formula(p)!; f.domain.x = [Math.min(f.domain.x[0], v - 2), v]; }, show: isRadialProfile },
+  { sec: "formula", id: "fBase", label: "Base", len: true, step: 1, min: 0.5, max: 200, get: p => formula(p)!.base, set: (p, v) => { formula(p)!.base = v; }, show: p => isHeightfield(p) || isRadialProfile(p) },
   { sec: "formula", id: "fLength", label: "Length", len: true, step: 5, min: 10, max: 2000, get: p => formula(p)!.height, set: (p, v) => { formula(p)!.height = v; }, show: p => formula(p)?.type === "revolution" },
   { sec: "formula", id: "fRes", label: "Samples", step: 8, min: 8, max: 512, get: p => formula(p)!.resolution, set: (p, v) => { formula(p)!.resolution = v; }, show: p => !!formula(p) },
 
@@ -41,6 +48,18 @@ export const PARAM_FIELDS: ParamField[] = [
   { sec: "method", id: "shell", label: "Wall", len: true, step: 1, min: 2, max: 100, get: p => p.stacked.shell, set: (p, v) => { p.stacked.shell = v; }, show: p => isStacked(p) && p.stacked.hollow },
   { sec: "method", id: "spacingA", label: "Spacing A", len: true, step: 1, min: 3, max: 500, get: p => p.waffle.spacingA, set: (p, v) => { p.waffle.spacingA = v; }, show: isWaffle },
   { sec: "method", id: "spacingB", label: "Spacing B", len: true, step: 1, min: 3, max: 500, get: p => p.waffle.spacingB, set: (p, v) => { p.waffle.spacingB = v; }, show: isWaffle },
+  { sec: "method", id: "radialCount", label: "Fins", step: 1, min: 2, max: 360, get: p => p.radial.count, set: (p, v) => { p.radial.count = Math.round(v); }, show: isRadial },
+  { sec: "method", id: "innerRadius", label: "Hub radius", len: true, step: 1, min: 1, max: 1000, get: p => p.radial.innerRadius, set: (p, v) => { p.radial.innerRadius = v; }, show: isRadial },
+  { sec: "method", id: "angleStart", label: "From °", step: 5, min: -360, max: 360, get: p => p.radial.angleRange[0], set: (p, v) => { p.radial.angleRange = [v, p.radial.angleRange[1]]; }, show: isRadial },
+  { sec: "method", id: "angleEnd", label: "To °", step: 5, min: -360, max: 720, get: p => p.radial.angleRange[1], set: (p, v) => { p.radial.angleRange = [p.radial.angleRange[0], v]; }, show: isRadial },
+  { sec: "method", id: "hubWidth", label: "Hub width", len: true, step: 1, min: 3, max: 200, get: p => p.radial.hubWidth, set: (p, v) => { p.radial.hubWidth = v; }, show: p => isRadial(p) && p.radial.hubPlates > 0 },
+  { sec: "method", id: "guideW", label: "Guide W", len: true, step: 5, min: 10, max: 2000, get: p => { const g = curveGuide(p); return g.kind === "ellipse" ? g.w : g.d; }, set: (p, v) => { const g = curveGuide(p); if (g.kind === "ellipse") g.w = v; else g.d = v; }, show: isCurve },
+  { sec: "method", id: "guideH", label: "Guide H", len: true, step: 5, min: 10, max: 2000, get: p => { const g = curveGuide(p); return g.kind === "ellipse" ? g.h : g.d; }, set: (p, v) => { const g = curveGuide(p); if (g.kind === "ellipse") g.h = v; }, show: p => isCurve(p) && curveGuide(p).kind === "ellipse" },
+  { sec: "method", id: "curveCount", label: "Fins", step: 1, min: 3, max: 600, get: p => p.curveNormal.count ?? 0, set: (p, v) => { p.curveNormal.count = Math.round(v); }, show: p => isCurve(p) && p.curveNormal.count !== null },
+  { sec: "method", id: "spacingAtGuide", label: "Spacing", len: true, step: 0.5, min: 1, max: 200, get: p => p.curveNormal.spacingAtGuide, set: (p, v) => { p.curveNormal.spacingAtGuide = v; }, show: p => isCurve(p) && p.curveNormal.count === null },
+  { sec: "method", id: "boundW", label: "Outline W", len: true, step: 5, min: 10, max: 3000, get: p => { const b = curveBoundary(p); return b.kind === "ellipse" ? b.w : 0; }, set: (p, v) => { const b = curveBoundary(p); if (b.kind === "ellipse") b.w = v; }, show: p => isCurve(p) && curveBoundary(p).kind === "ellipse" },
+  { sec: "method", id: "boundH", label: "Outline H", len: true, step: 5, min: 10, max: 3000, get: p => { const b = curveBoundary(p); return b.kind === "ellipse" ? b.h : 0; }, set: (p, v) => { const b = curveBoundary(p); if (b.kind === "ellipse") b.h = v; }, show: p => isCurve(p) && curveBoundary(p).kind === "ellipse" },
+  { sec: "method", id: "backMargin", label: "Plate border", len: true, step: 1, min: 0, max: 200, get: p => p.curveNormal.backMargin, set: (p, v) => { p.curveNormal.backMargin = v; }, show: p => isCurve(p) && p.curveNormal.backPlate && curveBoundary(p).kind === "none" },
 
   { sec: "material", id: "T", label: "Thickness", len: true, step: 0.1, min: 0.5, max: 25, mat: true, get: p => p.material.T, set: (p, v) => { p.material.T = v; } },
   { sec: "material", id: "K", label: "Kerf", len: true, step: 0.01, min: 0, max: 1, mat: true, get: p => p.material.K, set: (p, v) => { p.material.K = v; } },

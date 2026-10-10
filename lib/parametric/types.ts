@@ -33,10 +33,10 @@ export interface FormulaVariable {
 
 export interface FormulaSpec {
   kind: "formula";
-  type: "heightfield" | "revolution";
-  /** heightfield: z = f(x, y); revolution: r = f(h). */
+  type: "heightfield" | "revolution" | "radial-profile";
+  /** heightfield: z = f(x, y); revolution: r = f(h); radial-profile: height = f(theta, s). */
   expression: string;
-  /** heightfield domain in mm. */
+  /** heightfield domain in mm; radial-profile: x is the radius range [r0, r1] and s = r − r0. */
   domain: { x: [number, number]; y: [number, number] };
   /** revolution height H, mm (h runs 0..H). */
   height: number;
@@ -113,6 +113,46 @@ export interface WaffleParams {
   baseRibs: boolean;
 }
 
+export interface RadialParams {
+  /** The common axis of the fins (Z: a sunburst on the wall; Y: a lamp shade standing up). */
+  axis: "X" | "Y" | "Z";
+  /** A point on the axis, mm (null = centre of the model's bounding box). */
+  axisPoint: Vec3 | null;
+  count: number;
+  /** Degrees; a full turn spaces the fins evenly, a part turn includes both ends. */
+  angleRange: [number, number];
+  /** The hub opening, mm: fins start this far from the axis. */
+  innerRadius: number;
+  /** Hub rings at the low end (1) or both ends (2) of the axis. */
+  hubPlates: 0 | 1 | 2;
+  /** Radial width of the hub ring, mm. */
+  hubWidth: number;
+  /** 'formula' takes the fin outlines straight from a radial-profile formula. */
+  profileSource: "mesh" | "formula";
+}
+
+export type GuideCurve = { kind: "ellipse"; w: number; h: number } | { kind: "circle"; d: number };
+export type BoundaryCurve = { kind: "none" } | { kind: "ellipse"; w: number; h: number } | { kind: "formula"; expression: string };
+
+export interface CurveNormalParams {
+  /** The curve the fins stand square to, centred on the origin, on the wall. */
+  guide: GuideCurve;
+  /** null = as many as `spacingAtGuide` allows. */
+  count: number | null;
+  spacingAtGuide: number;
+  /** Formulas: finLength(t), finHeight(t, s, L), twist(t) in degrees; t runs 0..1 round the guide. */
+  finLength: string;
+  finHeight: string;
+  twist: string;
+  /** Clips the fins (the leaf outline); the formula gives the radius r(phi). */
+  outerBoundary: BoundaryCurve;
+  backPlate: boolean;
+  /** Border of the back plate around the fins when there is no outer boundary, mm. */
+  backMargin: number;
+  centerFeature: "none" | "clock-insert" | "mirror" | "opening";
+  clockInsertDia: number;
+}
+
 export interface MaterialSettings {
   id: string;
   T: number;
@@ -149,6 +189,8 @@ export interface ParametricParams {
   parallel: ParallelParams;
   stacked: StackedParams;
   waffle: WaffleParams;
+  radial: RadialParams;
+  curveNormal: CurveNormalParams;
   material: MaterialSettings;
   joints: JointSettings;
   quality: QualitySettings;
@@ -228,6 +270,8 @@ export interface Warning {
   code: WarningCode;
   message: string;
   partIds?: string[];
+  /** Numbers behind the message (e.g. maxCount and minRadius for FINS_COLLIDE_AT_HUB). */
+  data?: Record<string, number>;
 }
 
 export interface Stats {
@@ -244,6 +288,7 @@ export interface Stats {
 }
 
 export interface SliceResult {
+  method: MethodId;
   planes: Plane[];
   /** Cleaned section per plane (before splitting into parts), part-local mm. For the debug view. */
   sections: Shape[][];
@@ -255,10 +300,12 @@ export interface SliceResult {
   guide: string[];
   /** Waffle joints. */
   crossings?: Crossing[];
-  /** Model bounds after normalising, mm. */
+  /** Model bounds after normalising, mm (the generated parts' bounds when no model is sliced). */
   bounds: { min: Vec3; max: Vec3 };
   /** Which section algorithm ran. */
   engine: "manifold" | "fallback";
+  /** False when the parts come straight from formulas and the source model is not used. */
+  usesModel: boolean;
 }
 
 export interface SliceError {

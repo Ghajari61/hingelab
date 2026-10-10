@@ -17,6 +17,8 @@ export interface MethodOut {
   /** Method-specific assembly steps for the guide. */
   guide: string[];
   crossings?: Crossing[];
+  /** Set by methods that build parts from formulas instead of the model. */
+  bounds?: { min: Vec3; max: Vec3 };
 }
 
 export const finId = (i: number, n: number, prefix = "F") => `${prefix}${String(i + 1).padStart(Math.max(2, String(n).length), "0")}`;
@@ -71,6 +73,25 @@ export function tallyWarnings(p: ParametricParams, t: CleanTally): Warning[] {
   if (t.dropped) out.push({ code: "ISLAND_DROPPED", message: `${t.dropped} tiny pieces under ${p.quality.minIslandArea} mm² were left out.` });
   return out;
 }
+
+/** Model-space bounds of placed parts (outline points through the placement, ± T/2 off the plane). */
+export function partsBounds(parts: Part[], planes: Plane[], T: number): { min: Vec3; max: Vec3 } {
+  const min: Vec3 = [Infinity, Infinity, Infinity], max: Vec3 = [-Infinity, -Infinity, -Infinity];
+  for (const part of parts) {
+    const pl = planes[part.plane];
+    for (const [x, y] of part.shape.outer) for (const z of [-T / 2, T / 2]) {
+      for (let k = 0; k < 3; k++) {
+        const v = pl.u[k] * x + pl.w[k] * y + pl.normal[k] * (pl.offset + z);
+        if (v < min[k]) min[k] = v;
+        if (v > max[k]) max[k] = v;
+      }
+    }
+  }
+  return parts.length ? { min, max } : { min: [0, 0, 0], max: [1, 1, 1] };
+}
+
+export const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+export const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
 /** Range of an id list for the guide: "L01–L40". */
 export const idRange = (ids: string[]) => (!ids.length ? "" : ids.length === 1 ? ids[0] : `${ids[0]}–${ids[ids.length - 1]}`);

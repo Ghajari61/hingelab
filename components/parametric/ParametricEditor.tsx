@@ -336,7 +336,7 @@ export default function ParametricEditor({ onProduct }: { onProduct: (p: Product
           </div>
           {tab === "3d" ? (
             <div className="pe-3d">
-              <Viewport3D className="pe-view" mesh={mesh} result={result} T={params.material.T} show={show} explode={exploded} selected={selected} onSelect={(id) => setSelected(id ? [id] : [])} />
+              <Viewport3D className="pe-view" mesh={result && !result.usesModel ? null : mesh} result={result} T={params.material.T} show={show} explode={exploded} selected={selected} onSelect={(id) => setSelected(id ? [id] : [])} />
               <div className="pe-hud">
                 {(["model", "planes", "parts"] as const).map((k) => (
                   <label key={k} className="chk"><input type="checkbox" checked={show[k]} onChange={(e) => setShow((s) => ({ ...s, [k]: e.target.checked }))} /> {k === "model" ? "Model" : k === "planes" ? "Planes" : "Parts"}</label>

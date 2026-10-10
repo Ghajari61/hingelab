@@ -13,7 +13,7 @@ export const LIBRARY: { id: LibraryId; name: string; note: string }[] = [
   { id: "vase", name: "Vase", note: "Turned profile around Y" },
 ];
 
-class Builder {
+export class Builder {
   pos: number[] = [];
   idx: number[] = [];
   v(x: number, y: number, z: number) {
