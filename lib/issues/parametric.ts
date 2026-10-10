@@ -1,6 +1,6 @@
 /** Parametric checks: the slicer's warnings, one issue per kind, with fixes from their numbers. */
 import { LIMITS, finSpacingOf } from "@/lib/parametric/defaults";
-import { arcTable } from "@/lib/parametric/methods/curveNormal";
+import { arcTable } from "@/lib/parametric/methods/guide";
 import type { ParametricParams, SliceResult, WarningCode } from "@/lib/parametric/types";
 import type { Fix, Issue, IssueLevel } from "./index";
 

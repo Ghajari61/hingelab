@@ -22,7 +22,7 @@ import { ViewToggle, type ViewMode } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
 import { fitSummary } from "@/components/shell/SheetSection";
-import { arrangeLetters } from "@/lib/fit/products";
+import { arrangeLetters } from "@/lib/fit/letters";
 import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
 import type { Preset } from "@/lib/presets";
 import { useMyPresets } from "@/components/shell/useMyPresets";

@@ -4,7 +4,7 @@
  * (and the tests) decide where they come from.
  */
 import { exportLetterSVG, mergeLetterParams, type HarfBuzz, type LetterParams, type LoadedFont } from "@/lib/letters";
-import { arrangeLetters } from "@/lib/fit/products";
+import { arrangeLetters } from "@/lib/fit/letters";
 import { addWatermark, lettersLock, needsWatermark, type Plan } from "@/lib/plans";
 
 export type LettersExport = { ok: true; svg: string } | { ok: false; status: number; error: string };

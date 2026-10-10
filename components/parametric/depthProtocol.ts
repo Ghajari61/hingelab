@@ -1,4 +1,4 @@
-import { depthInputSize, type DepthMap } from "@/lib/parametric";
+import { depthInputSize, type DepthMap } from "@/lib/parametric/source/relief";
 
 export interface DepthRequest {
   id: number;

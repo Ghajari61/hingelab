@@ -1,5 +1,7 @@
 import type { BaseField } from "@/components/editor/fields";
-import { MAX_TABS, finSpacingOf, minFeatureOf, tabDepthOf, type ParametricParams } from "@/lib/parametric";
+import { finSpacingOf, minFeatureOf, tabDepthOf } from "@/lib/parametric/defaults";
+import { MAX_TABS } from "@/lib/parametric/joints";
+import type { ParametricParams } from "@/lib/parametric/types";
 
 export type ParamSection = "transform" | "formula" | "photo" | "text" | "method" | "material" | "sheet" | "joints" | "quality";
 

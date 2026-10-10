@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { r3, type LayerContent } from "@/lib/hinge";
-import {
-  IMAGE_DEFAULTS, PARAMETRIC_DEFAULTS, assemblyGuideSVG, exportZip, formatOf, mergeParametricParams, packDepth, packOutline, sheetFileName, sheetLayerContent, sheetSVG, slugName, toSheet, unpackDepth,
-  type MeshData, type ParametricParams, type Sheet, type SliceResult,
-} from "@/lib/parametric";
+import { IMAGE_DEFAULTS, PARAMETRIC_DEFAULTS, mergeParametricParams } from "@/lib/parametric/defaults";
+import { assemblyGuideSVG, exportZip, sheetFileName, sheetLayerContent, sheetSVG, slugName } from "@/lib/parametric/export";
+import { toSheet } from "@/lib/parametric/nest";
+import { formatOf } from "@/lib/parametric/source/mesh";
+import { packOutline } from "@/lib/parametric/source/outlineBytes";
+import { packDepth, unpackDepth } from "@/lib/parametric/source/relief";
+import type { MeshData, ParametricParams, Sheet, SliceResult } from "@/lib/parametric/types";
 import { syncShapes } from "@/lib/parametric/shapes";
-import { shapeText } from "@/lib/letters/shape";
-import { getLoadedFont, loadHarfBuzz } from "@/components/letters/runtime";
 import { clone } from "@/lib/hinge";
 import { parametricLock, parametricLocks } from "@/lib/plans";
 import { thumbnailSVG } from "@/lib/projects";
@@ -190,6 +191,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     if (!textSrc || !textKey) return;
     let live = true;
     (async () => {
+      const [{ getLoadedFont, loadHarfBuzz }, { shapeText }] = await Promise.all([import("@/components/letters/runtime"), import("@/lib/letters/shape")]);
       const hb = await loadHarfBuzz();
       const font = await getLoadedFont(hb, textSrc.font);
       const out = shapeText(hb, font, textSrc.text, { direction: "auto", size: textSrc.size, sizeMode: "capHeight", letterSpacing: textSrc.letterSpacing });

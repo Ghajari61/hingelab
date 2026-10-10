@@ -3,7 +3,7 @@
  * the "Made with HingeLab" mark. Runs on the server (/api/export) so the plan is checked there.
  */
 import { exportSVG, mergeParams, type Params } from "@/lib/hinge";
-import { arrangeHinge } from "@/lib/fit/products";
+import { arrangeHinge } from "@/lib/fit/hinge";
 import { addWatermark, hingeLocks, needsWatermark, type Plan } from "@/lib/plans";
 
 export type HingeExport = { ok: true; svg: string } | { ok: false; status: number; error: string };

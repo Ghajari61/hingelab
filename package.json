@@ -1,6 +1,7 @@
 {
   "name": "hingelab",
   "private": true,
+  "sideEffects": ["*.css"],
   "scripts": {
     "predev": "node scripts/copy-wasm.js",
     "dev": "next dev",
@@ -9,6 +10,8 @@
     "postinstall": "node scripts/copy-wasm.js",
     "start": "next start",
     "fetch:depth-model": "node scripts/fetch-depth-model.mjs",
+    "build:shape-icons": "vite-node -c vitest.config.ts scripts/shape-icons.ts",
+    "perf:budgets": "node scripts/perf/budgets.mjs",
     "test": "vitest run",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build -o storybook-static"

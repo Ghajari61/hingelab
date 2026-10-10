@@ -5,7 +5,7 @@ import {
   autoFit, clone, DEFAULTS, exportSVG, layerContent, MATERIALS, mergeParams,
   type CutStyle, type Params,
 } from "@/lib/hinge";
-import { arrangeHinge } from "@/lib/fit/products";
+import { arrangeHinge } from "@/lib/fit/hinge";
 import { autoFixAll, type Fix } from "@/lib/issues";
 import { hingeIssues } from "@/lib/issues/hinge";
 import { IssueList } from "@/components/shell/IssueList";

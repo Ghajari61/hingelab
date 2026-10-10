@@ -1,6 +1,6 @@
 /** Letters checks: missing glyphs, bends, and parts that do not fit, with fixes. */
 import { autoFit, cutWidth, r3 } from "@/lib/hinge";
-import { arrangeLetters, type LettersArranged } from "@/lib/fit/products";
+import { arrangeLetters, type LettersArranged } from "@/lib/fit/letters";
 import { cleanFit } from "@/lib/fit/fitToSheets";
 import { BUNDLED_FONTS, hingeParamsOf, wallHeightOf, type HarfBuzz, type LetterModel, type LetterParams, type LoadedFont } from "@/lib/letters";
 import type { Fix, Issue } from "./index";

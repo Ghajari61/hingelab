@@ -1,8 +1,8 @@
 /**
  * Cloud projects: product ids, default params, project-file parsing. Pure (no Supabase, no DOM).
  */
-import { clone, DEFAULTS } from "@/lib/hinge";
-import { LETTER_DEFAULTS } from "@/lib/letters";
+import { clone, DEFAULTS } from "@/lib/hinge/defaults";
+import { LETTER_DEFAULTS } from "@/lib/letters/defaults";
 import type { ProductId } from "@/lib/supabase/types";
 
 export type { ProductId };

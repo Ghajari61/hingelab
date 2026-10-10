@@ -4,16 +4,12 @@ import { NumberField } from "@/components/editor/NumberField";
 import type { BaseField } from "@/components/editor/fields";
 import type { Units } from "@/components/editor/format";
 import {
-  SHAPES, SHAPE_TARGETS, SLIDER_LIMITS, pickShape, recognise, shapeIconPath, shapeSliders, wavesLabel,
+  SHAPES, SHAPE_TARGETS, SLIDER_LIMITS, pickShape, recognise, shapeSliders, wavesLabel,
   type ShapeContext, type ShapeSlider, type ShapeSpec, type ShapeTargetId,
 } from "@/lib/parametric/shapes";
+import { SHAPE_ICONS } from "@/lib/parametric/shapeIcons.generated";
 
-const ICONS = new Map<string, string>();
-const iconOf = (id: ShapeSpec["shape"], polar: boolean) => {
-  const k = `${id}:${polar}`;
-  if (!ICONS.has(k)) ICONS.set(k, shapeIconPath(id, polar));
-  return ICONS.get(k)!;
-};
+const iconOf = (id: ShapeSpec["shape"], polar: boolean) => SHAPE_ICONS[`${id}:${polar}`];
 
 /**
  * Shape buttons and sliders for one formula field. They write the formula; the formula itself

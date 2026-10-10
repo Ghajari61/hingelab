@@ -1,4 +1,5 @@
-import { DEFAULTS as HINGE, bendAnalysis, clone } from "@/lib/hinge";
+import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
+import { bendAnalysis } from "@/lib/hinge/analysis";
 import type { Params } from "@/lib/hinge";
 import type { LetterParams } from "./types";
 

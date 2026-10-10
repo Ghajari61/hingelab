@@ -4,9 +4,11 @@ import { computeParametric, loadSource } from "../engine";
 import { boundaryPolygon } from "../methods/curveNormal";
 import { compileFormula } from "../source/formula";
 import {
-  SHAPES, SHAPE_SYMBOLS, SHAPE_TARGETS, applyShape, contextOf, fieldExpression, pickShape, recognise, shapeExpression, shapeIconPath, syncShapes,
+  SHAPES, SHAPE_SYMBOLS, SHAPE_TARGETS, applyShape, contextOf, fieldExpression, pickShape, recognise, shapeExpression, syncShapes,
   type ShapeContext, type ShapeSpec, type ShapeTargetId,
 } from "../shapes";
+import { allShapeIcons, shapeIconPath } from "../shapeIcons";
+import { SHAPE_ICONS } from "../shapeIcons.generated";
 import { manifold } from "./helpers";
 
 const TARGETS = Object.keys(SHAPE_TARGETS) as ShapeTargetId[];
@@ -119,6 +121,8 @@ describe("shape buttons write formulas", () => {
       expect(d.startsWith("M")).toBe(true);
       expect(d).not.toMatch(/NaN|Infinity/);
     }
+    // The picker ships a precomputed table; it must match the formulas (npm run build:shape-icons).
+    expect(SHAPE_ICONS).toEqual(allShapeIcons());
   });
 
   it("a leaf clock drawn only with shape buttons builds, and every outline shape clips the fins", async () => {

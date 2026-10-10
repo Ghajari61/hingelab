@@ -1,6 +1,6 @@
 /** Hinge Box checks: the model's own messages, with fixes where a setting change solves them. */
 import { autoFit, computeModel, cutWidth, r3, type Model, type Params } from "@/lib/hinge";
-import { arrangeHinge } from "@/lib/fit/products";
+import { arrangeHinge } from "@/lib/fit/hinge";
 import { cleanFit } from "@/lib/fit/fitToSheets";
 import type { Fix, Issue } from "./index";
 

@@ -3,9 +3,11 @@
 import { useRef } from "react";
 import { MATERIALS, polyD, r3, type LayerKey } from "@/lib/hinge";
 import {
-  CLOCK_INSERTS, FORMULA_DEFAULTS, IMAGE_DEFAULTS, LEAF_CLOCK, LIBRARY, PARAMETRIC_DEFAULTS, TEXT_DEFAULTS, cutSpeedOf, finSpacingOf, fmtMinutes, mergeParametricParams,
-  type CurveNormalParams, type FormulaSpec, type LibraryId, type ModelUnits, type ParametricParams, type Part, type SliceResult, type WarningCode,
-} from "@/lib/parametric";
+  CLOCK_INSERTS, FORMULA_DEFAULTS, IMAGE_DEFAULTS, LEAF_CLOCK, PARAMETRIC_DEFAULTS, TEXT_DEFAULTS, finSpacingOf, mergeParametricParams,
+} from "@/lib/parametric/defaults";
+import { cutSpeedOf, fmtMinutes } from "@/lib/parametric/cutTime";
+import { LIBRARY } from "@/lib/parametric/source/library";
+import type { CurveNormalParams, FormulaSpec, LibraryId, ModelUnits, ParametricParams, Part, SliceResult, WarningCode } from "@/lib/parametric/types";
 import { SHAPE_TARGETS, applyShape, contextOf } from "@/lib/parametric/shapes";
 import { BUNDLED_FONTS, fontInfo } from "@/lib/letters/fonts";
 import { ShapePicker } from "./ShapePicker";
