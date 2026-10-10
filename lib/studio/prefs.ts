@@ -12,6 +12,8 @@ export type ShortcutSet = "hingelab" | "corel" | "lightburn" | "inkscape";
 
 export interface Preferences {
   theme: Theme;
+  /** Set once the user picks a theme; until then the default (light) applies, even over an old saved "dark". */
+  themeChosen: boolean;
   accent: Accent;
   units: Units;
   shortcutSet: ShortcutSet;
@@ -28,7 +30,7 @@ export interface Preferences {
 }
 
 export const DEFAULT_PREFS: Preferences = {
-  theme: "dark", accent: "blue", units: "mm", shortcutSet: "hingelab", laser: "co2",
+  theme: "light", themeChosen: false, accent: "blue", units: "mm", shortcutSet: "hingelab", laser: "co2",
   machineId: DEFAULT_MACHINE, materialId: DEFAULT_MATERIAL, showStartScreen: true, resetTo: "default",
   onboarded: false, tourDone: false, dismissed: [], recentGenerators: [],
 };
@@ -40,7 +42,8 @@ export function normalizePrefs(raw: unknown): Preferences {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const d = DEFAULT_PREFS;
   return {
-    theme: pick(r.theme, ["dark", "darker", "light", "system"] as const, d.theme),
+    theme: r.themeChosen === true ? pick(r.theme, ["dark", "darker", "light", "system"] as const, d.theme) : d.theme,
+    themeChosen: r.themeChosen === true,
     accent: pick(r.accent, ["blue", "violet", "teal", "orange"] as const, d.accent),
     units: isUnits(r.units) ? r.units : d.units,
     shortcutSet: pick(r.shortcutSet, ["hingelab", "corel", "lightburn", "inkscape"] as const, d.shortcutSet),

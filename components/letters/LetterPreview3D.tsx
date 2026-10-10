@@ -15,7 +15,7 @@ interface Stage {
 }
 
 /** The assembled letters in three.js: drag to orbit, scroll to zoom. Renders only when something changes. */
-export default function LetterPreview3D({ model, params, explode }: { model: LetterModel | null; params: LetterParams; explode: number }) {
+export default function LetterPreview3D({ model, params, explode, className = "" }: { model: LetterModel | null; params: LetterParams; explode: number; className?: string }) {
   const host = useRef<HTMLDivElement>(null);
   const stage = useRef<Stage | null>(null);
   const shown = useRef<LetterScene | null>(null);
@@ -86,7 +86,7 @@ export default function LetterPreview3D({ model, params, explode }: { model: Let
       if (key !== framed.current) {
         framed.current = key;
         const r = Math.hypot(...sc.size) / 2 || 100;
-        const dist = r / Math.sin(THREE.MathUtils.degToRad(st.camera.fov / 2)) * 0.9;
+        const dist = r / Math.sin(THREE.MathUtils.degToRad(st.camera.fov / 2)) * 1.25;
         st.camera.position.set(0, dist * 0.55, dist * 0.84);
         st.camera.near = dist / 100;
         st.camera.far = dist * 10;
@@ -99,7 +99,7 @@ export default function LetterPreview3D({ model, params, explode }: { model: Let
   }, [model, params, explode]);
 
   return (
-    <div ref={host} id="preview3d" className="p3d" aria-label="Assembled letters preview, drag to rotate">
+    <div ref={host} id="preview3d" className={`p3d ${className}`} aria-label="Assembled letters preview, drag to rotate">
       {noGL ? <span className="note">3D preview needs WebGL, which this browser has turned off.</span> : null}
       <span className="hint3d">Drag to rotate · scroll to zoom</span>
     </div>

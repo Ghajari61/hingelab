@@ -22,13 +22,16 @@ import { readStored, useAutosave } from "@/hooks/useAutosave";
 import { PX_PER_MM, useCanvasView } from "@/hooks/useCanvasView";
 import { fmtLen, type Units } from "@/components/editor/format";
 import { MenuBar, type MenuEntry } from "@/components/editor/MenuBar";
-import type { Product } from "@/components/editor/ControlBar";
-import { ToolRail } from "@/components/editor/ToolRail";
+import { PRODUCT_INFO, type Product } from "@/components/editor/ControlBar";
+import { GalleryRail } from "@/components/shell/GalleryRail";
+import { ViewToggle } from "@/components/shell/ViewToggle";
+import { ViewTools } from "@/components/shell/ViewTools";
+import { DockColumn } from "@/components/shell/DockColumn";
 import { Canvas } from "@/components/editor/Canvas";
 import { rulerSvg } from "@/components/editor/Rulers";
 import { StatusBar } from "@/components/editor/StatusBar";
 import { Dialogs, type ModalState } from "@/components/editor/dialogs";
-import { ParametricControlBar } from "./ParametricControlBar";
+import { methodGroups } from "./ParametricControlBar";
 import { ParametricDock } from "./ParametricDock";
 import { depthPreview, estimateDepth } from "./depthProtocol";
 import { getStoredModel, getStoredPhoto, putStoredModel, putStoredPhoto, type StoredModel } from "./modelStore";
@@ -467,27 +470,20 @@ export default function ParametricEditor({ onProduct, cloud = null }: { onProduc
 
   return (
     <div className="app">
-      <MenuBar title={params.name} kind={`Parametric · ${result ? `${result.stats.partCount} parts` : "…"}`} menus={menus} onExport={exportZipNow} exportLabel="Export ZIP" />
-      <ParametricControlBar method={params.method} plan={account.plan} onMethod={(m) => edit((q) => { q.method = m; }, true)} onProduct={onProduct} />
+      <MenuBar
+        title={params.name} kind={`Parametric · ${result ? `${result.stats.partCount} parts` : "…"}`} menus={menus} product="parametric" onProduct={onProduct}
+        history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }} onSave={saveProject} onOpen={openProject}
+      />
       <div className="main">
-        <ToolRail
-          tool={tool}
-          showGrid={showGrid}
-          onTool={(t) => { setTool(t); setTab("sheets"); }}
-          onFit={() => (tab === "sheets" ? viewApi.fit() : setTab("sheets"))}
-          onGrid={() => setShowGrid((g) => !g)}
-          onSave={saveProject}
-          onOpen={openProject}
+        <GalleryRail
+          title={PRODUCT_INFO.parametric.name} icon={PRODUCT_INFO.parametric.icon}
+          groups={methodGroups({ method: params.method, plan: account.plan, onMethod: (m) => edit((q) => { q.method = m; }, true) })}
         />
-        <div className="pe-center">
-          <div className="pe-tabs" role="tablist" aria-label="View">
-            <button type="button" role="tab" aria-selected={tab === "3d"} onClick={() => setTab("3d")}>3D</button>
-            <button type="button" role="tab" aria-selected={tab === "sheets"} onClick={() => setTab("sheets")}>Sheets{result ? ` (${result.sheets.length})` : ""}</button>
-            <span className="pe-stage">{busy || depthBusy ? (stage ?? "Slicing…") : res ? `${result!.stats.partCount} parts · ${Math.round(res.ms)} ms` : ""}</span>
-            {(busy || depthBusy) && <span className="pe-progress" aria-hidden />}
-          </div>
-          {tab === "3d" ? (
-            <div className="pe-3d">
+        <div className={`stage pe-center${tab === "3d" ? " no-rulers" : ""}`}>
+          <ViewToggle value={tab} onChange={setTab} sheetsLabel={`Sheets${result ? ` (${result.sheets.length})` : ""}`} />
+          <div className="stage-chip"><span className="pe-stage">{busy || depthBusy ? (stage ?? "Slicing…") : res ? `${result!.stats.partCount} parts · ${Math.round(res.ms)} ms` : ""}</span>
+            {(busy || depthBusy) && <span className="pe-progress" aria-hidden />}</div>
+          <div className="pe-3d stage-3d" hidden={tab !== "3d"}>
               <Viewport3D className="pe-view" mesh={result && !result.usesModel ? null : mesh} result={result} T={params.material.T} show={show} explode={exploded} selected={selected} onSelect={(id) => setSelected(id ? [id] : [])} heat={showHeat && !!result?.deviation} />
               <div className="pe-hud">
                 {(["model", "planes", "parts"] as const).map((k) => (
@@ -508,7 +504,6 @@ export default function ParametricEditor({ onProduct, cloud = null }: { onProduc
               )}
               {error && <div className="canvas-error">{error}</div>}
             </div>
-          ) : (
             <section className="viewport" aria-label="Sheets">
               <div className="ruler-corner" />
               <div className="ruler h" ref={viewApi.rulerHRef} dangerouslySetInnerHTML={{ __html: rulerSvg(viewApi.rulerSize.w, true, viewApi.view, units) }} />
@@ -537,10 +532,11 @@ export default function ParametricEditor({ onProduct, cloud = null }: { onProduc
                 onZoomCenter={viewApi.zoomCenter}
                 onActual={() => viewApi.zoomCenter(PX_PER_MM / viewApi.viewRef.current.z)}
                 onFit={() => viewApi.fit()}
+                tools={<ViewTools tool={tool} showGrid={showGrid} onTool={setTool} onGrid={() => setShowGrid((g) => !g)} />}
               />
             </section>
-          )}
         </div>
+        <DockColumn onExport={exportZipNow} exportLabel="Export ZIP">
         <ParametricDock
           params={params}
           result={result}
@@ -564,6 +560,7 @@ export default function ParametricEditor({ onProduct, cloud = null }: { onProduc
           onExportZip={exportZipNow}
           onGuide={guideNow}
         />
+        </DockColumn>
       </div>
       <StatusBar
         x={cursor.x}

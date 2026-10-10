@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { RotateCcw } from "lucide-react";
 import { clamp } from "@/lib/hinge";
+import { Slider } from "@/components/shell/Slider";
 import type { BaseField } from "./fields";
 import { dispVal, stepMM, type Units } from "./format";
 
 export function NumberField({
-  field, value, units, label, hidden, defaultValue, onLive, onCommit,
+  field, value, units, label, hidden, defaultValue, slider = true, onLive, onCommit,
 }: {
   field: BaseField;
   value: number;
@@ -15,6 +17,8 @@ export function NumberField({
   hidden: boolean;
   /** Double-click on the label or the ↺ button restores it. */
   defaultValue?: number;
+  /** Show a slider between the name and the value box. */
+  slider?: boolean;
   onLive: (v: number) => void;
   onCommit: (v: number) => void;
 }) {
@@ -65,8 +69,10 @@ export function NumberField({
     if (differs) onCommit(defaultValue);
   }
 
+  const range = slider ? sliderRange(field, value, defaultValue) : null;
+
   return (
-    <div className={`fld${invalid ? " invalid" : ""}`} hidden={hidden} data-id={field.id}>
+    <div className={`fld${invalid ? " invalid" : ""}${range ? "" : " no-slider"}`} hidden={hidden} data-id={field.id}>
       <label
         htmlFor={`f_${field.id}`}
         title={canReset ? `Drag to change, double-click to reset to ${dispVal(!!field.len, defaultValue, units)}` : "Drag to change"}
@@ -102,6 +108,13 @@ export function NumberField({
       >
         {label}
       </label>
+      {range && (
+        <Slider
+          value={value} min={range[0]} max={range[1]} step={field.len || field.float ? field.step : Math.max(1, Math.round(field.step))} label={label}
+          onLive={(v) => { setText(dispVal(!!field.len, v, units)); setInvalid(false); onLive(v); }}
+          onCommit={(v) => { setText(dispVal(!!field.len, v, units)); setInvalid(false); onCommit(v); }}
+        />
+      )}
       <span className="in">
         <input
           ref={inputRef}
@@ -125,9 +138,20 @@ export function NumberField({
         <span className="u">{field.len ? units : ""}</span>
         {differs && (
           <button type="button" className="rst" aria-label={`Reset ${label}`} title={`Reset to ${dispVal(!!field.len, defaultValue!, units)}`}
-            onPointerDown={(e) => e.preventDefault()} onClick={reset}>↺</button>
+            onPointerDown={(e) => e.preventDefault()} onClick={reset}><RotateCcw size={12} strokeWidth={2.2} /></button>
         )}
       </span>
     </div>
   );
+}
+
+/** Slider span: the field's own limits, or (open-ended fields) up to three times the default. */
+function sliderRange(field: BaseField, value: number, def: number | undefined): [number, number] | null {
+  const lo = field.min ?? 0;
+  let hi = field.max;
+  if (hi === undefined) {
+    const base = Math.max(Math.abs(def ?? value), field.step * 10);
+    hi = Math.max(lo + field.step * 10, base * 3, value);
+  }
+  return hi > lo && value >= lo - 1e-9 ? [lo, hi] : null;
 }

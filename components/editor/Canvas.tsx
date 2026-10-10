@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { clamp, r3, type LayerContent, type LayerKey, type Layers } from "@/lib/hinge";
 import type { View } from "@/hooks/useCanvasView";
+import { Maximize, ZoomIn, ZoomOut } from "lucide-react";
 import { fmtLen, type Units } from "./format";
 
 /** The laser bed with the laid-out parts. Products pass ready-made layer content. */
 export function Canvas({
   canvasRef, view, viewRef, bedW, bedH, sheets, content, layers, labels, pitch = 0, overlay, error, notice, showGrid, tool, spaceDown, units,
-  onCursor, zoomAt, panBy, onZoomCenter, onActual, onFit,
+  onCursor, zoomAt, panBy, onZoomCenter, onActual, onFit, tools,
 }: {
   canvasRef: React.RefObject<HTMLDivElement | null>;
   view: View;
@@ -37,6 +38,8 @@ export function Canvas({
   onZoomCenter: (f: number) => void;
   onActual: () => void;
   onFit: () => void;
+  /** View tools (hand, zoom, grid) shown at the start of the zoom HUD. */
+  tools?: React.ReactNode;
 }) {
   const [dragging, setDragging] = useState(false);
   const drag = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
@@ -110,18 +113,18 @@ export function Canvas({
             <>
               {sheets ? sheets.map((s, i) => (
                 <g key={`s${i}`}>
-                  <rect x={s.x} y={s.y} width={s.w} height={s.h} fill="var(--sheet)" stroke={s.warn ? "var(--warn, #E8A33D)" : "var(--sheet-edge)"} strokeWidth={sw} />
+                  <rect x={s.x} y={s.y} width={s.w} height={s.h} fill="var(--sheet)" stroke={s.warn ? "var(--warn, #E8A33D)" : "var(--sheet-edge)"} strokeWidth={sw} className="sheet-rect" />
                   <text x={s.x} y={s.y - 6 / view.z} fontFamily="Source Sans 3, sans-serif" fontSize={11 / view.z} fill={s.warn ? "var(--warn, #E8A33D)" : "var(--fg-faint)"}>{s.label}</text>
                 </g>
               )) : (
                 <>
-                  <rect x={0} y={0} width={bedW} height={bedH} fill="var(--sheet)" stroke="var(--sheet-edge)" strokeWidth={sw} />
+                  <rect x={0} y={0} width={bedW} height={bedH} fill="var(--sheet)" stroke="var(--sheet-edge)" strokeWidth={sw} className="sheet-rect" />
                   <text x={0} y={-6 / view.z} fontFamily="Source Sans 3, sans-serif" fontSize={11 / view.z} fill="var(--fg-faint)">
                     {`Laser bed ${fmtLen(bedW, units)} × ${fmtLen(bedH, units)}`}
                   </text>
                 </>
               )}
-              {showGrid && <path d={grid} stroke="#2A2724" strokeWidth={sw * 0.8} fill="none" />}
+              {showGrid && <path d={grid} stroke="var(--canvas-grid)" strokeWidth={sw * 0.8} fill="none" />}
               {content.fills.map((d, i) => <path key={`f${i}`} d={d} fill="var(--wood)" fillOpacity={0.13} fillRule="evenodd" stroke="none" />)}
               {/* hairline hinge: thin enough that individual cuts stay readable when zoomed out */}
               {vis("hinge") && content.hinge.length > 0 && (
@@ -151,10 +154,12 @@ export function Canvas({
       {error && <div className="canvas-error">{error}</div>}
       {!error && notice && <div className="canvas-error notice">{notice}</div>}
       <div className="canvas-hud">
-        <button type="button" title="Zoom out" onClick={() => onZoomCenter(0.8)}>−</button>
-        <button type="button" title="Actual size" onClick={onActual}>{zoomPct}</button>
-        <button type="button" title="Zoom in" onClick={() => onZoomCenter(1.25)}>+</button>
-        <button type="button" title="Fit sheet" onClick={onFit}>Fit</button>
+        {tools}
+        {tools ? <span className="hud-sep" aria-hidden /> : null}
+        <button type="button" title="Zoom out" aria-label="Zoom out" onClick={() => onZoomCenter(0.8)}><ZoomOut size={16} /></button>
+        <button type="button" title="Actual size" className="hud-pct" onClick={onActual}>{zoomPct}</button>
+        <button type="button" title="Zoom in" aria-label="Zoom in" onClick={() => onZoomCenter(1.25)}><ZoomIn size={16} /></button>
+        <button type="button" title="Fit sheet" aria-label="Fit sheet" onClick={onFit}><Maximize size={15} /></button>
       </div>
     </div>
   );

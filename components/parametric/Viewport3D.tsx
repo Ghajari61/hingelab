@@ -36,16 +36,17 @@ export default function Viewport3D({ mesh, result, T, show, explode = 0, heat = 
 
   useEffect(() => {
     const el = host.current!;
-    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
-    renderer.setClearColor(0x1b1e23);
+    renderer.setClearColor(0x000000, 0);
     el.appendChild(renderer.domElement);
     const scene = new THREE.Scene();
     scene.add(new THREE.HemisphereLight(0xffffff, 0x404040, 1.6));
     const sun = new THREE.DirectionalLight(0xffffff, 1.8);
     sun.position.set(-1, 1.5, 2);
     scene.add(sun);
-    const wall = new THREE.GridHelper(600, 30, 0x3a4048, 0x2a2f36);
+    const dark = /dark/.test(document.documentElement.dataset.theme ?? "");
+    const wall = dark ? new THREE.GridHelper(600, 30, 0x3a4048, 0x2a2f36) : new THREE.GridHelper(600, 30, 0xb9bcc6, 0xd5d8de);
     wall.rotation.x = Math.PI / 2;
     scene.add(wall);
     const camera = new THREE.PerspectiveCamera(35, 1, 1, 20000);
@@ -74,6 +75,7 @@ export default function Viewport3D({ mesh, result, T, show, explode = 0, heat = 
 
     const ro = new ResizeObserver(() => {
       const w = el.clientWidth, h = el.clientHeight;
+      if (!w || !h) return;
       renderer.setSize(w, h);
       camera.aspect = w / Math.max(1, h);
       camera.updateProjectionMatrix();

@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { MATERIALS, type CutStyle, type LayerKey, type Pattern } from "@/lib/hinge";
 import { LETTER_DEFAULTS, bridgeWidthOf, cornerRadiusOf, wallMaxLengthOf, type LetterModel, type LetterParams } from "@/lib/letters";
 import { NumberField } from "@/components/editor/NumberField";
@@ -12,10 +11,6 @@ import { FontPicker } from "./FontPicker";
 import { LettersAnalysis } from "./LettersAnalysis";
 import type { StoredFontMeta } from "./fontStore";
 
-const LetterPreview3D = dynamic(() => import("./LetterPreview3D"), {
-  ssr: false,
-  loading: () => <div id="preview3d" className="p3d" />,
-});
 
 type Patch = (partial: Partial<LetterParams>, record: boolean) => void;
 
@@ -38,14 +33,12 @@ function Choice<T extends string>({ label, value, options, onPick }: {
 }
 
 export function LettersDock({
-  params, model, error, units, uploads, showZones, explode, onShowZones, onExplode, onAutoFit, onPatch, onField, onMaterial, onPick, onUpload, onDeleteFont,
+  params, model, error, units, uploads, showZones, onShowZones, onAutoFit, onPatch, onField, onMaterial, onPick, onUpload, onDeleteFont,
 }: {
   params: LetterParams;
   model: LetterModel | null;
   error: string | null;
   units: Units;
-  explode: number;
-  onExplode: (v: number) => void;
   uploads: StoredFontMeta[];
   showZones: boolean;
   onShowZones: (on: boolean) => void;
@@ -83,16 +76,9 @@ export function LettersDock({
   const layerVis = (key: LayerKey) => onPatch({ layers: { ...params.layers, [key]: { ...params.layers[key], vis: !params.layers[key].vis } } }, true);
   const layerExp = (key: LayerKey, exp: boolean) => onPatch({ layers: { ...params.layers, [key]: { ...params.layers[key], exp } } }, true);
 
-  const depthMeta = box ? `${Math.round(params.depth)} mm deep` : `${params.T} mm sheet`;
-
   return (
     <aside className="dock" aria-label="Panels">
-      <Sec title="3D Preview" meta={depthMeta} startOpen>
-        <LetterPreview3D model={model} params={params} explode={box && params.lid !== "open" ? explode : 0} />
-        {box && params.lid !== "open" && (
-          <label className="explode">Lift lid <input type="range" min={0} max={1} step={0.01} value={explode} onChange={(e) => onExplode(parseFloat(e.target.value))} /></label>
-        )}
-      </Sec>
+
       <Sec title="Text" meta={params.text.trim() ? `${[...params.text.trim()].length} chars` : undefined} startOpen>
         <textarea
           className="textin"

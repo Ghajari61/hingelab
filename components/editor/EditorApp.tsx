@@ -17,8 +17,12 @@ import { PX_PER_MM, useCanvasView } from "@/hooks/useCanvasView";
 import { fmtLen, type Units } from "./format";
 import type { NumericKey } from "./fields";
 import { MenuBar, type MenuEntry } from "./MenuBar";
-import { ControlBar, type Product } from "./ControlBar";
-import { ToolRail } from "./ToolRail";
+import { hingeGroups, PRODUCT_INFO, type Product } from "./ControlBar";
+import { Preview3D } from "./Preview3D";
+import { GalleryRail } from "@/components/shell/GalleryRail";
+import { ViewToggle, type ViewMode } from "@/components/shell/ViewToggle";
+import { ViewTools } from "@/components/shell/ViewTools";
+import { DockColumn } from "@/components/shell/DockColumn";
 import { Canvas } from "./Canvas";
 import { rulerSvg } from "./Rulers";
 import { PanelDock } from "./PanelDock";
@@ -50,6 +54,7 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
   const [spaceDown, setSpaceDown] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
   const [explode, setExplode] = useState(0.35);
+  const [viewMode, setViewMode] = useState<ViewMode>("sheets");
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
   const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
@@ -304,18 +309,25 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
 
   return (
     <div className="app">
-      <MenuBar title={meta.current.title} kind={meta.current.kind} menus={menus} onExport={exportNow} />
-      <ControlBar params={params} plan={account.plan} onShape={(v) => setChoice("shape", v)} onLid={(v) => setChoice("lid", v)} onPattern={(v) => setChoice("pattern", v)} onProduct={onProduct} />
+      <MenuBar
+        title={meta.current.title} kind={meta.current.kind} menus={menus} product="hinge" onProduct={onProduct}
+        history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }} onSave={saveProject} onOpen={openProject}
+      />
       <div className="main">
-        <ToolRail
-          tool={tool}
-          showGrid={showGrid}
-          onTool={setTool}
-          onFit={() => viewApi.fit()}
-          onGrid={() => setShowGrid((g) => !g)}
-          onSave={saveProject}
-          onOpen={openProject}
+        <GalleryRail
+          title={PRODUCT_INFO.hinge.name} icon={PRODUCT_INFO.hinge.icon}
+          groups={hingeGroups({ params, plan: account.plan, onShape: (v) => setChoice("shape", v), onLid: (v) => setChoice("lid", v), onPattern: (v) => setChoice("pattern", v) })}
         />
+        <div className="stage">
+        <ViewToggle value={viewMode} onChange={setViewMode} />
+        <div className="stage-3d" hidden={viewMode !== "3d"}>
+          <Preview3D model={model} params={params} explode={explode} />
+          {params.lid !== "open" && (
+            <div className="hud3d">
+              <label className="explode">Lift lid <input type="range" min={0} max={1} step={0.01} value={explode} aria-label="Lift lid" onChange={(e) => setExplode(parseFloat(e.target.value))} /></label>
+            </div>
+          )}
+        </div>
         <section className="viewport" aria-label="Canvas">
           <div className="ruler-corner" />
           <div className="ruler h" ref={viewApi.rulerHRef} dangerouslySetInnerHTML={{ __html: rulerSvg(viewApi.rulerSize.w, true, viewApi.view, units) }} />
@@ -341,14 +353,16 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
             onZoomCenter={viewApi.zoomCenter}
             onActual={() => viewApi.zoomCenter(PX_PER_MM / viewApi.viewRef.current.z)}
             onFit={() => viewApi.fit()}
+            tools={<ViewTools tool={tool} showGrid={showGrid} onTool={setTool} onGrid={() => setShowGrid((g) => !g)} />}
           />
         </section>
+        </div>
+        <DockColumn onExport={exportNow} exportLabel="Export SVG">
         <PanelDock
           params={params}
           model={model}
           error={error}
           units={units}
-          explode={explode}
           dimsMeta={meta.current.dims}
           patMeta={meta.current.pat}
           onLive={(id, v, mat) => setField(id, v, mat, false)}
@@ -372,8 +386,8 @@ export default function EditorApp({ onProduct, cloud = null }: { onProduct: (p: 
             patch({ ...params, layers }, true);
           }}
           onLabels={(on) => patch({ ...params, labels: on }, true)}
-          onExplode={setExplode}
         />
+        </DockColumn>
       </div>
       <StatusBar
         x={cursor.x}

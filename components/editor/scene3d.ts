@@ -76,7 +76,7 @@ export function sceneSVG(model: Model, p: Params, yaw: number, explode: number) 
   const ox = (VW - (maxX - minX) * sc) / 2 - minX * sc, oy = (VH - (maxY - minY) * sc) / 2 - minY * sc;
   const P2 = (q: Vec3) => `${r3(q[0] * sc + ox)},${r3(q[1] * sc + oy)}`;
   let svg = `<svg viewBox="0 0 ${VW} ${VH}" xmlns="http://www.w3.org/2000/svg">`;
-  svg += `<ellipse cx="${VW / 2}" cy="${r3(maxY * sc + oy + 4)}" rx="${r3((maxX - minX) * sc * 0.48)}" ry="7" fill="#000" fill-opacity=".35"/>`;
+  svg += `<ellipse cx="${VW / 2}" cy="${r3(maxY * sc + oy + 4)}" rx="${r3((maxX - minX) * sc * 0.48)}" ry="7" fill="#000" fill-opacity=".16"/>`;
   for (const it of items) {
     svg += `<polygon points="${it.q.map(P2).join(" ")}" fill="${it.fill}" stroke="rgba(60,40,20,.35)" stroke-width=".5" stroke-linejoin="round"/>`;
     if (it.line) svg += `<line x1="${P2(it.line[0]).split(",")[0]}" y1="${P2(it.line[0]).split(",")[1]}" x2="${P2(it.line[1]).split(",")[0]}" y2="${P2(it.line[1]).split(",")[1]}" stroke="rgba(50,30,10,.55)" stroke-width=".7"/>`;

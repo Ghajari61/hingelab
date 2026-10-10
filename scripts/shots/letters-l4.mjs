@@ -18,6 +18,7 @@ await withBrowser(async (page) => {
   await page.locator('[aria-label="Letters mode"] button[data-v="box"]').click();
   await page.fill('textarea[aria-label="Text"]', "Sam");
   await page.locator('textarea[aria-label="Text"]').blur();
+  await page.getByRole("tab", { name: "3D" }).click();
   await page.waitForSelector("#preview3d canvas", { timeout: 30000 });
   await settle(page);
   assert(await page.locator("#preview3d canvas").count() === 1, "the 3D preview renders one WebGL canvas");
@@ -27,7 +28,7 @@ await withBrowser(async (page) => {
     return !!gl;
   });
   assert(lit, "WebGL context is available");
-  await page.getByRole("button", { name: "Fit", exact: true }).click().catch(() => {});
+  await page.getByRole("button", { name: "Fit sheet" }).click().catch(() => {});
   await shot(page, "letters-4-box-3d");
   await el(page, "#preview3d", "letters-4-preview-sam");
 
@@ -40,7 +41,8 @@ await withBrowser(async (page) => {
   const analysis = await page.locator(".dock").innerText();
   assert(/light holes of 12 mm go through the lid/.test(analysis), "Analysis reports the light holes");
   await el(page, "#preview3d", "letters-4-preview-marquee");
-  await page.getByRole("button", { name: "Fit", exact: true }).click().catch(() => {});
+  await page.getByRole("tab", { name: /Sheets/ }).click();
+  await page.getByRole("button", { name: "Fit sheet" }).click().catch(() => {});
   await page.waitForTimeout(400);
   await shot(page, "letters-4-marquee-sheet");
 
@@ -53,6 +55,7 @@ await withBrowser(async (page) => {
   await page.locator('.fontpick > button[aria-haspopup="listbox"]').click();
   await page.locator('[aria-label="Fonts"] [role="option"]', { hasText: "Vazirmatn" }).first().click();
   await page.getByLabel(/Marquee light holes/).uncheck();
+  await page.getByRole("tab", { name: "3D" }).click();
   await page.locator(".explode input[type=range]").fill("0");
   await page.waitForTimeout(3000);
   await el(page, "#preview3d", "letters-4-preview-persian");

@@ -17,7 +17,9 @@ export function usePrefs(): [Preferences, (patch: Partial<Preferences> | ((p: Pr
     return () => { window.removeEventListener("hingelab-prefs", onChange); window.removeEventListener("storage", onStorage); };
   }, []);
   const update = useCallback((patch: Partial<Preferences> | ((p: Preferences) => Preferences)) => {
-    const next = typeof patch === "function" ? patch(loadPrefs()) : { ...loadPrefs(), ...patch };
+    const prev = loadPrefs();
+    const next = typeof patch === "function" ? patch(prev) : { ...prev, ...patch };
+    if (next.theme !== prev.theme) next.themeChosen = true;
     savePrefs(next);
   }, []);
   return [prefs, update, ready];

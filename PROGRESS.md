@@ -8,6 +8,15 @@
 
 **Accounts live (10 Oct 2026, D78):** Supabase project `hingelab` (ref `vwpuvormmxsydsbjimjs`, us-east-1, org PixiGift via the Vercel integration, Pro plan, about $10/month) with all migrations applied; its keys are in Vercel for every environment. Email and **Google** sign-up / sign-in work on https://hingelab.vercel.app (Google OAuth client "HingeLab web (Supabase)" in Google Cloud project `hingelab` owned by ghajari61@gmail.com, app published to production). Stripe keys are still absent, so billing pages show "not configured".
 
+## UX upgrade and generators (owner's 23-point list, plan U0–U9, G1–G6)
+
+| Phase | Status |
+|---|---|
+| U0 research (D79) | done |
+| U1 light theme + product shell (D80) | done |
+| U2–U9, G1–G6 | in progress, in order |
+
+**U1 (D80):** light Atomm-style theme by default (dark kept in Settings), Inter, shared shell in `components/shell/` (gallery rail with picture cards, Sheets / 3D view switch, view tools in the zoom HUD, sliders on every numeric field, Export pinned under the dock, Undo/Redo/Open/Save in the header) used by Hinge Box, Letters and Parametric. Tests 752 / 752, golden byte-for-byte, `tsc` clean, `next build` OK; `scripts/shots/ux-u1.mjs` and `reset-fields.mjs` pass. Screenshots `docs/screenshots/ux-u1-*.png`.
 **Requested additions (outside the phase plan):**
 - Field reset (`64f9baf`, deployed): double-click a field's name or click its ↺ to restore the default in the Hinge Box, Letters and Parametric editors; `scripts/shots/reset-fields.mjs`.
 - Parametric **Text** source (D76): "Model from → Text" slices a typed letter, word or name (Latin or Persian) with a bundled font, rounded (pillow) or flat profile, height, spacing, depth and rounding. Pro source, exported in the browser. Tests 749 / 749 (6 new in `lib/parametric/__tests__/text.test.ts`), golden byte-for-byte, `tsc` clean, `next build` OK; `scripts/shots/parametric-text.mjs` passes ("Sam" 71 parts, "سام" in Vazirmatn 45 parts). Screenshots `docs/screenshots/parametric-text-sam.png`, `parametric-text-persian.png`.

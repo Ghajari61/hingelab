@@ -15,13 +15,13 @@ await withBrowser(async (page) => {
   await page.waitForFunction(() => document.querySelector(".statusbar")?.textContent?.includes("Parts 1"), null, { timeout: 30000 });
   await page.waitForTimeout(800);
   assert(true, "stencil mode makes one part (the sheet)");
-  await page.getByRole("button", { name: "Fit", exact: true }).click().catch(() => {});
+  await page.getByRole("button", { name: "Fit sheet" }).click().catch(() => {});
   await page.waitForTimeout(400);
   await shot(page, "letters-2-stencil-abopqr8");
 
   await page.getByRole("button", { name: "Two" }).click();
   await page.waitForTimeout(1200);
-  await page.getByRole("button", { name: "Fit", exact: true }).click().catch(() => {});
+  await page.getByRole("button", { name: "Fit sheet" }).click().catch(() => {});
   await page.waitForTimeout(400);
   await shot(page, "letters-2-stencil-two-bridges");
 
@@ -32,7 +32,7 @@ await withBrowser(async (page) => {
   await page.waitForFunction(() => document.querySelector(".statusbar")?.textContent?.includes("Parts 1"), null, { timeout: 30000 });
   await page.waitForTimeout(1200);
   assert(true, "Persian stencil makes one sheet");
-  await page.getByRole("button", { name: "Fit", exact: true }).click().catch(() => {});
+  await page.getByRole("button", { name: "Fit sheet" }).click().catch(() => {});
   await page.waitForTimeout(400);
   await shot(page, "letters-2-stencil-persian");
 

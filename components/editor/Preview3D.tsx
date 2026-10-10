@@ -4,13 +4,14 @@ import { useRef, useState } from "react";
 import type { Model, Params } from "@/lib/hinge";
 import { sceneSVG } from "./scene3d";
 
-export function Preview3D({ model, params, explode }: { model: Model | null; params: Params; explode: number }) {
+export function Preview3D({ model, params, explode, className }: { model: Model | null; params: Params; explode: number; className?: string }) {
   const [yaw, setYaw] = useState(-0.6);
   const drag = useRef<{ x: number; yaw: number } | null>(null);
   const svg = model ? sceneSVG(model, params, yaw, explode) : "";
   return (
     <div
       id="preview3d"
+      className={className}
       aria-label="Assembled box preview, drag to rotate"
       onPointerDown={(e) => {
         drag.current = { x: e.clientX, yaw };

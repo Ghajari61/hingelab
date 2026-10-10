@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { autoFit, clone, MATERIALS } from "@/lib/hinge";
 import {
   baseOffset, computeLetterModel, exportLetterSVG, fontFamilyName, hingeParamsOf, LETTER_DEFAULTS, layoutLetters,
@@ -15,13 +16,16 @@ import { importIntoCloud, openNewCloudProject } from "@/components/editor/cloud"
 import { PX_PER_MM, useCanvasView } from "@/hooks/useCanvasView";
 import { fmtLen, type Units } from "@/components/editor/format";
 import { MenuBar, type MenuEntry } from "@/components/editor/MenuBar";
-import type { Product } from "@/components/editor/ControlBar";
-import { ToolRail } from "@/components/editor/ToolRail";
+import { PRODUCT_INFO, type Product } from "@/components/editor/ControlBar";
+import { GalleryRail } from "@/components/shell/GalleryRail";
+import { ViewToggle, type ViewMode } from "@/components/shell/ViewToggle";
+import { ViewTools } from "@/components/shell/ViewTools";
+import { DockColumn } from "@/components/shell/DockColumn";
 import { Canvas } from "@/components/editor/Canvas";
 import { rulerSvg } from "@/components/editor/Rulers";
 import { StatusBar } from "@/components/editor/StatusBar";
 import { Dialogs, type ModalState } from "@/components/editor/dialogs";
-import { LettersControlBar } from "./LettersControlBar";
+import { lettersGroups } from "./LettersControlBar";
 import { LettersDock } from "./LettersDock";
 import { MARQUEE_KEYS, isMarqueeKey, type LetterNumKey } from "./fields";
 import { deleteStoredFont, getStoredFont, listStoredFonts, putStoredFont, type StoredFontMeta } from "./fontStore";
@@ -30,6 +34,11 @@ import { lettersLock } from "@/lib/plans";
 import { MAX_UPLOAD_FONT_BYTES } from "@/lib/billing/exportLetters";
 import { usePlan } from "@/components/billing/usePlan";
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
+
+const LetterPreview3D = dynamic(() => import("./LetterPreview3D"), {
+  ssr: false,
+  loading: () => <div id="preview3d" className="p3d" />,
+});
 
 const KEY = "hingelab-letters-v2";
 /** Saved before Letter Box: its hinge settings were never chosen in Letters, so the letter defaults replace them. */
@@ -69,6 +78,7 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
   const [showGrid, setShowGrid] = useState(true);
   const [showZones, setShowZones] = useState(true);
   const [explode, setExplode] = useState(0);
+  const [viewMode, setViewMode] = useState<ViewMode>("sheets");
   const [upgrade, setUpgrade] = useState<string | null>(null);
   const account = usePlan();
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
@@ -362,27 +372,28 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
 
   return (
     <div className="app">
-      <MenuBar title={params.name} kind={`Letters · ${font?.name ?? "…"} · ${sizeLabel}`} menus={menus} onExport={exportNow} />
-      <LettersControlBar
-        mode={params.mode}
-        pro={account.plan === "pro"}
-        wallStyle={params.wallStyle}
-        lid={params.lid}
-        onMode={(m) => patch({ mode: m }, true)}
-        onWallStyle={(w) => patch({ wallStyle: w }, true)}
-        onLid={(l) => patch({ lid: l }, true)}
-        onProduct={onProduct}
+      <MenuBar
+        title={params.name} kind={`Letters · ${font?.name ?? "…"} · ${sizeLabel}`} menus={menus} product="letters" onProduct={onProduct}
+        history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }} onSave={saveProject} onOpen={openProject}
       />
       <div className="main">
-        <ToolRail
-          tool={tool}
-          showGrid={showGrid}
-          onTool={setTool}
-          onFit={() => viewApi.fit()}
-          onGrid={() => setShowGrid((g) => !g)}
-          onSave={saveProject}
-          onOpen={openProject}
+        <GalleryRail
+          title={PRODUCT_INFO.letters.name} icon={PRODUCT_INFO.letters.icon}
+          groups={lettersGroups({
+            mode: params.mode, pro: account.plan === "pro", wallStyle: params.wallStyle, lid: params.lid,
+            onMode: (m) => patch({ mode: m }, true), onWallStyle: (w) => patch({ wallStyle: w }, true), onLid: (l) => patch({ lid: l }, true),
+          })}
         />
+        <div className="stage">
+        <ViewToggle value={viewMode} onChange={setViewMode} />
+        <div className="stage-3d" hidden={viewMode !== "3d"}>
+          <LetterPreview3D model={model} params={params} explode={params.mode === "box" && params.lid !== "open" ? explode : 0} />
+          {params.mode === "box" && params.lid !== "open" && (
+            <div className="hud3d">
+              <label className="explode">Lift lid <input type="range" min={0} max={1} step={0.01} value={explode} aria-label="Lift lid" onChange={(e) => setExplode(parseFloat(e.target.value))} /></label>
+            </div>
+          )}
+        </div>
         <section className="viewport" aria-label="Canvas">
           <div className="ruler-corner" />
           <div className="ruler h" ref={viewApi.rulerHRef} dangerouslySetInnerHTML={{ __html: rulerSvg(viewApi.rulerSize.w, true, viewApi.view, units) }} />
@@ -410,8 +421,11 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
             onZoomCenter={viewApi.zoomCenter}
             onActual={() => viewApi.zoomCenter(PX_PER_MM / viewApi.viewRef.current.z)}
             onFit={() => viewApi.fit()}
+            tools={<ViewTools tool={tool} showGrid={showGrid} onTool={setTool} onGrid={() => setShowGrid((g) => !g)} />}
           />
         </section>
+        </div>
+        <DockColumn onExport={exportNow} exportLabel="Export SVG">
         <LettersDock
           params={params}
           model={model}
@@ -419,9 +433,7 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
           units={units}
           uploads={uploads}
           showZones={showZones}
-          explode={explode}
           onShowZones={setShowZones}
-          onExplode={setExplode}
           onAutoFit={runAutoFit}
           onPatch={patch}
           onField={setField}
@@ -435,6 +447,7 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
           onUpload={uploadFont}
           onDeleteFont={removeFont}
         />
+        </DockColumn>
       </div>
       <StatusBar
         x={cursor.x}

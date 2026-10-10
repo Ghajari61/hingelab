@@ -28,7 +28,7 @@ try {
     await page.getByRole("button", { name: "+ New letters" }).click();
     await page.waitForURL(/\/app\/editor\/[0-9a-f-]{36}$/);
     await page.waitForSelector('[aria-label="Letters mode"]');
-    await page.waitForSelector("#preview3d canvas", { timeout: 30000 });
+    await page.waitForSelector("#preview3d canvas", { state: "attached", timeout: 30000 });
     await page.waitForTimeout(1500);
     assert(await page.locator('[aria-label="Letters mode"] button.locked').count() === 2, "Free: Solid and Stencil show a lock");
     await shot(page, "letters-5-free-preview");

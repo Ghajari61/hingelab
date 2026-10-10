@@ -4,7 +4,6 @@ import { useRef } from "react";
 import { DEFAULTS, MATERIALS, type Params } from "@/lib/hinge";
 import { FIELDS, type NumericKey } from "./fields";
 import { NumberField } from "./NumberField";
-import { Preview3D } from "./Preview3D";
 import { AnalysisPanel } from "./AnalysisPanel";
 import { LayersPanel } from "./LayersPanel";
 import { HingeInspector } from "./HingeInspector";
@@ -38,15 +37,14 @@ export function Sec({ title, meta, startOpen, children }: { title: string; meta?
 }
 
 export function PanelDock({
-  params, model, error, units, explode, dimsMeta, patMeta,
+  params, model, error, units, dimsMeta, patMeta,
   onLive, onCommit, onMaterial, onSplit, onCutStyle, onAutoFit, onTestStrip,
-  onVis, onExp, onLabels, onExplode,
+  onVis, onExp, onLabels,
 }: {
   params: Params;
   model: Model | null;
   error: string | null;
   units: Units;
-  explode: number;
   dimsMeta: string;
   patMeta: string;
   onLive: (id: NumericKey, v: number, mat?: boolean) => void;
@@ -59,7 +57,6 @@ export function PanelDock({
   onVis: (key: keyof Params["layers"]) => void;
   onExp: (key: keyof Params["layers"], exp: boolean) => void;
   onLabels: (on: boolean) => void;
-  onExplode: (v: number) => void;
 }) {
   const fields = (sec: (typeof FIELDS)[number]["sec"]) => FIELDS.filter((f) => f.sec === sec).map((f) => (
     <NumberField
@@ -76,11 +73,8 @@ export function PanelDock({
   ));
   return (
     <aside className="dock" aria-label="Panels">
-      <Sec title="3D Preview" meta={dimsMeta} startOpen>
-        <Preview3D model={model} params={params} explode={explode} />
-        <label className="explode">Explode lid <input type="range" min={0} max={1} step={0.01} value={explode} onChange={(e) => onExplode(parseFloat(e.target.value))} /></label>
-      </Sec>
-      <Sec title="Dimensions" meta="outer" startOpen>
+      <Sec title="Dimensions" meta={dimsMeta} startOpen>
+
         <div className="grid2">{fields("secDims")}</div>
       </Sec>
       <Sec title="Material" startOpen>
