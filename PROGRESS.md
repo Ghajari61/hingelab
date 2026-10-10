@@ -4,7 +4,9 @@
 
 **Next step:** S3 — path operations & laser core (spec §5, §16): pathfinder (unite, subtract, intersect, exclude, divide via Clipper2 on flattened curves, then curve refit), offset / contour, arrays, clean-up, cut-layer settings in use, kerf compensation, tabs/bridges, cut order, cut preview, pre-flight checks, sheets & nesting v1, material/machine library in the Cut Layers panel, image place/trace/dither, import SVG/DXF (also SVG paste), export SVG/DXF/PDF/PNG/LBRN2. Pure functions in `lib/studio/` with Vitest tests first; add the new commands to `lib/studio/commands.ts` (registry + menus) and their handlers to `components/studio/editor/commandHandlers.ts`; browser script `scripts/shots/studio-s3.mjs`.
 
-**Deployed (at your request, 10 Oct 2026):** `main` up to `2141dd3` (Studio S2) is live on https://hingelab.vercel.app. The Vercel project has no environment variables yet, so it runs in guest mode (local projects only; sign-in and billing wait for SETUP.md). `studio-s2.mjs` passed against the live site.
+**Deployed (at your request, 10 Oct 2026):** `main` up to `2141dd3` (Studio S2) is live on https://hingelab.vercel.app. `studio-s2.mjs` passed against the live site.
+
+**Accounts live (10 Oct 2026, D78):** Supabase project `hingelab` (ref `vwpuvormmxsydsbjimjs`, us-east-1, org PixiGift via the Vercel integration, Pro plan, about $10/month) with all migrations applied; its keys are in Vercel for every environment. Email and **Google** sign-up / sign-in work on https://hingelab.vercel.app (Google OAuth client "HingeLab web (Supabase)" in Google Cloud project `hingelab` owned by ghajari61@gmail.com, app published to production). Stripe keys are still absent, so billing pages show "not configured".
 
 **Requested additions (outside the phase plan):**
 - Field reset (`64f9baf`, deployed): double-click a field's name or click its ↺ to restore the default in the Hinge Box, Letters and Parametric editors; `scripts/shots/reset-fields.mjs`.
