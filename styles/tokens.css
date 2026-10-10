@@ -1,0 +1,129 @@
+/* HingeLab design tokens (spec §15): the one source for colours, type, radii, spacing, motion and
+   elevation. Themes: dark (default), darker, light; accents: blue, violet, teal, orange.
+   The short legacy names at the bottom keep the single-product editors on the same tokens. */
+
+:root,
+:root[data-theme="dark"] {
+  --surface-pasteboard: #161616;
+  --surface-chrome: #1F1F1F;
+  --surface-panel: #262626;
+  --surface-raised: #2E2E2E;
+  --surface-field: #1B1B1B;
+  --surface-overlay: rgba(10, 10, 10, 0.62);
+  --surface-sheet: #1F1D1A;
+  --line-strong: #444444;
+  --line: #383838;
+  --line-soft: #2F2F2F;
+  --text-primary: #E3E3E3;
+  --text-secondary: #A3A3A3;
+  --text-disabled: #6E6E6E;
+  --canvas-grid: #262626;
+  --sheet-edge: #4A4440;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --shadow-3: 0 16px 40px rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
+
+:root[data-theme="darker"] {
+  --surface-pasteboard: #0B0B0B;
+  --surface-chrome: #121212;
+  --surface-panel: #171717;
+  --surface-raised: #1E1E1E;
+  --surface-field: #0F0F0F;
+  --surface-sheet: #15130F;
+  --line-strong: #363636;
+  --line: #2A2A2A;
+  --line-soft: #202020;
+  --text-primary: #D6D6D6;
+  --text-secondary: #959595;
+  --text-disabled: #5E5E5E;
+  --canvas-grid: #1A1A1A;
+  --sheet-edge: #3A3530;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --surface-pasteboard: #E4E4E4;
+  --surface-chrome: #F5F5F5;
+  --surface-panel: #FBFBFB;
+  --surface-raised: #FFFFFF;
+  --surface-field: #FFFFFF;
+  --surface-overlay: rgba(40, 40, 40, 0.35);
+  --surface-sheet: #FFFFFF;
+  --line-strong: #B9B9B9;
+  --line: #D4D4D4;
+  --line-soft: #E3E3E3;
+  --text-primary: #1D1D1D;
+  --text-secondary: #555555;
+  --text-disabled: #8A8A8A;
+  --canvas-grid: #D9D9D9;
+  --sheet-edge: #BDB6AE;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.12);
+  --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.14);
+  --shadow-3: 0 16px 40px rgba(0, 0, 0, 0.18);
+  color-scheme: light;
+}
+
+:root,
+:root[data-accent="blue"] { --accent: #3B8FF0; --accent-hi: #5AA2F5; --accent-ink: #FFFFFF; --accent-soft: rgba(59, 143, 240, 0.16); }
+:root[data-accent="violet"] { --accent: #8B5CF6; --accent-hi: #A07BF8; --accent-ink: #FFFFFF; --accent-soft: rgba(139, 92, 246, 0.16); }
+:root[data-accent="teal"] { --accent: #14A39A; --accent-hi: #2BBDB3; --accent-ink: #FFFFFF; --accent-soft: rgba(20, 163, 154, 0.16); }
+:root[data-accent="orange"] { --accent: #E07A1F; --accent-hi: #F08E35; --accent-ink: #FFFFFF; --accent-soft: rgba(224, 122, 31, 0.16); }
+/* Light theme needs darker accents for 4.5:1 text contrast on white. */
+:root[data-theme="light"][data-accent="blue"], :root[data-theme="light"]:not([data-accent]) { --accent: #1F6FD1; --accent-hi: #2F7FE0; }
+:root[data-theme="light"][data-accent="teal"] { --accent: #0B7F78; --accent-hi: #109189; }
+:root[data-theme="light"][data-accent="orange"] { --accent: #B85D0E; --accent-hi: #C96A16; }
+
+:root {
+  --success: #2FA37E;
+  --warning: #E58A1F;
+  --danger: #EC5157;
+  --info: #3B8FF0;
+  --focus-ring: 0 0 0 2px var(--accent);
+  --pro: #E0B341;
+
+  /* LightBurn layer palette C00–C29 (lib/studio/cutLayers.ts holds the same list). */
+  --c00: #000000; --c01: #0000FF; --c02: #FF0000; --c03: #00E000; --c04: #D0D000; --c05: #FF8000;
+  --c06: #00E0E0; --c07: #FF00FF; --c08: #B4B4B4; --c09: #0000A0; --c10: #A00000; --c11: #00A000;
+  --c12: #A0A000; --c13: #C08000; --c14: #00A0FF; --c15: #A000A0; --c16: #808080; --c17: #7D87B9;
+  --c18: #BB7784; --c19: #4A6FE3; --c20: #D33F6A; --c21: #8CD78C; --c22: #F0B98D; --c23: #F6C4E1;
+  --c24: #FA9ED4; --c25: #500A78; --c26: #B45A00; --c27: #004754; --c28: #86FA88; --c29: #FFDB66;
+
+  --radius-1: 2px; --radius-2: 4px; --radius-3: 6px; --radius-4: 10px;
+  --space-1: 2px; --space-2: 4px; --space-3: 6px; --space-4: 8px; --space-5: 12px; --space-6: 16px; --space-7: 24px; --space-8: 32px;
+
+  --font-ui: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-num: "Source Code Pro", ui-monospace, Menlo, Consolas, monospace;
+  --text-ui: 13px;
+  --text-small: 12px;
+  --text-label: 11px;
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-med: 180ms;
+
+  /* Legacy names used by the single-product editors. */
+  --pasteboard: var(--surface-pasteboard);
+  --canvas-dot: var(--canvas-grid);
+  --chrome: var(--surface-chrome);
+  --panel: var(--surface-panel);
+  --panel-2: var(--surface-raised);
+  --field: var(--surface-field);
+  --fg: var(--text-primary);
+  --fg-dim: var(--text-secondary);
+  --fg-faint: var(--text-disabled);
+  --ok: var(--success);
+  --warn: var(--warning);
+  --err: var(--danger);
+  --sheet: var(--surface-sheet);
+  --wood: #C9A36A;
+  --l-outline: #FF5252;
+  --l-slots: #3DDC6E;
+  --l-hinge: #4DA6FF;
+  --l-labels: #D8D8D8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur-med: 0ms; }
+}

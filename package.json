@@ -9,7 +9,9 @@
     "postinstall": "node scripts/copy-wasm.js",
     "start": "next start",
     "fetch:depth-model": "node scripts/fetch-depth-model.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build -o storybook-static"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -17,6 +19,8 @@
     "clipper-lib": "^6.4.2",
     "fflate": "^0.8.3",
     "harfbuzzjs": "^1.6.3",
+    "immer": "^11.1.21",
+    "lucide-react": "^1.55.0",
     "manifold-3d": "^3.5.4",
     "mathjs": "^15.2.0",
     "meshoptimizer": "^1.3.0",
@@ -27,16 +31,22 @@
     "react-dom": "^19.1.1",
     "server-only": "^0.0.1",
     "stripe": "^23.0.0",
-    "three": "^0.186.1"
+    "three": "^0.186.1",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@storybook/react-vite": "^10.6.1",
     "@types/clipper-lib": "^6.4.0",
     "@types/node": "^22.18.6",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@types/three": "^0.186.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "fake-indexeddb": "^6.2.5",
     "playwright": "^1.64.0",
+    "storybook": "^10.6.1",
     "typescript": "^5.9.2",
+    "vite": "^7.3.7",
     "vitest": "^3.2.4"
   }
 }

@@ -1,5 +1,49 @@
 # Progress
 
+## HingeLab Studio (master spec `CURSOR_STUDIO_PROMPT.md`, phases S0–S10)
+
+**Next step:** S2 — vector editor core in `/editor/[projectId]`: document store (zustand + immer, 200-step history with merged drags), SVG view of the node tree, selection and transform handles, shape tools (all `ShapeParams` kinds), pen / pencil / node editing, text (HarfBuzz outlines), Layers & Objects panel, guides / grid / snapping / smart guides, rulers, command registry driving menus, shortcuts and the command palette, reset system, preferences dialog. Pure geometry goes in `lib/studio/` with Vitest tests first.
+
+How the earlier work maps onto the studio phases:
+
+| Phase | Status | What already exists |
+|---|---|---|
+| S0 — foundation + Hinge Box port + golden | done (Main 1) | Next.js app, `lib/hinge`, golden test byte-for-byte |
+| S1 — design system, shell, start screen, local model | **done** — 692 / 692 tests | see "S1" below |
+| S2 — vector editor core | not started | — |
+| S3 — path ops & laser core, import/export | not started | per-product SVG/ZIP export only |
+| S4 — Google sign-in, cloud, versions, projects page | partly (Main 2–3) | email + Google auth, cloud projects with autosave, thumbnails, conflict handling |
+| S5 — generator framework + #1 #5 #6 #10 #7 | not started | Hinge Box exists as a standalone editor |
+| S6 — #2 #8 #9 | not started | — |
+| S7 — #3 Letters | done as a standalone product (L1–L5) | needs wrapping as a registered generator (S5 framework) |
+| S8 — #4 Parametric | done as a standalone product (P1–P6) | needs wrapping as a registered generator |
+| S9 — Stripe, trial, gates, billing, landing, templates | partly (Main 4–5, L5, P6) | Checkout, portal, webhooks, server-side gates, landing page |
+| S10 — polish, tour, help, perf, a11y, E2E | not started | — |
+
+### S1 — design system, app shell, start screen, local projects (done)
+
+Built:
+- **Tokens** (`styles/tokens.css`): dark (default), darker and light themes, four accents, the 30 LightBurn cut-layer colours, spacing, radii, type, motion (zero under reduced motion), plus aliases so the classic editors follow the theme. The theme is applied before first paint.
+- **Component library** (`components/ui/`): buttons, icon buttons with rich tooltips, badges, segmented control, slider, select, combobox, text field, colour swatch, tabs, progress bar, empty state, `NumberInput` (expressions, units, scrub, reset, lock), menus (menu bar, submenus, context menu, keyboard navigation), dialog (focus trap), sheet, toasts with Undo, toolbar with flyouts, collapsible panel sections, dock with draggable tabs, preset picker, command palette (fuzzy, recent first).
+- **Storybook**: `npm run storybook` / `npm run build-storybook`; eight stories covering every component, with Theme and Accent switches. The build passes.
+- **Routes** (`app/(studio)`): `/home` (start screen), `/editor/[projectId]`, `/projects`, `/presets`, `/account`, `/billing`, `/templates`, `/help`. Guests can use `/home`, local editors, `/templates` and `/help`; the others need an account.
+- **Start screen**: greeting, search (Ctrl+/) over generators and projects, Blank canvas + 10 generator cards (animated preview on hover, Pro badges, "Last used"), Open from computer / Import image, recent projects with a context menu (Open, Rename, Duplicate, Download, Delete with Undo), welcome card, What's new, Learn links.
+- **Dialogs**: New Document (sheet presets incl. "My machine bed", custom size, orientation, units, material, machine), New Project for a generator, Onboarding (laser, units, shortcut set, material; Skip at any time).
+- **Document model** (`lib/studio/types.ts`, `doc.ts`): sheets, 30 cut layers, node tree (groups, paths, shapes, text, images, generators, dimensions), guides, grid, snapping; schema version 1 with migrations.
+- **Local projects**: IndexedDB store, autosave 1.5 s after a change with a thumbnail; `.hingelab` files (deterministic ZIP) via File → Save to Computer and Open; legacy single-product files are recognised and sent to the classic editor.
+- **Editor shell (S1 level)**: menu bar (File, View, Help) with shortcuts, inline rename, sheet W/H, zoom/pan, Document and Generator panels, status bar with cursor position, zoom, units and save state.
+- **Libraries**: sheet presets, 8 materials, 8 machine profiles (marked as starting points), generator catalogue, preferences.
+
+Tests: 692 / 692 (25 new: expressions, names, documents, `.hingelab` round trip, library, catalogue, preferences, studio routes, local store, fuzzy search, shortcuts), golden byte-for-byte, `tsc` clean, `next build` OK, `build-storybook` OK. Browser script `scripts/shots/studio-s1.mjs`: 13 checks pass (onboarding saves choices, new document, expression in W, rename survives reload, download is a ZIP named after the project, reopen keeps name and size, generator project, theme persists, Projects asks guests to sign in).
+
+Screenshots: `docs/screenshots/studio-1-onboarding.png`, `studio-1-start.png`, `studio-1-search.png`, `studio-1-new-document.png`, `studio-1-editor.png`, `studio-1-file-menu.png`, `studio-1-recents.png`, `studio-1-new-project.png`, `studio-1-start-light.png`, `studio-1-projects.png`.
+
+Known limitations: the editor has no drawing tools yet (S2); the Generator panel only names the generator (S5); "Move to folder" is disabled until cloud folders (S4); Templates is an empty state (S9); `/app` is still the post-login page (moves to `/home` in S4, D60).
+
+---
+
+## Earlier run (CURSOR_PROMPT / LETTERS / PARAMETRIC briefs)
+
 **Run complete.** Every phase in scope is done and committed locally (nothing pushed): main brief 1–5, Letters L1–L5, Parametric P1–P6. Final gate: 667 / 667 tests including the Hinge Box golden test, `tsc` clean, `next build` OK, every browser script (`scripts/shots/*.mjs`) passing. No blockers (there is no BLOCKERS.md).
 
 **Next step (yours):** work through SETUP.md (hosted Supabase, Stripe test keys, Vercel variables, legal pages), review the commits with `git log`, then push when you are ready to deploy. Still out of scope: the Windows desktop app (main brief Phase 6). Decisions made on your behalf are in DECISIONS.md (D1–D59).

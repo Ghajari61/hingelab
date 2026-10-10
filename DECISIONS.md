@@ -320,3 +320,40 @@ Decisions taken without the owner during the autopilot run. Each entry: what, wh
 
 ### D59. Parametric P6: browser scripts
 - The P2–P5 scripts export waffles, radial and curve guides, photos and 3D files, which are Pro features once Supabase is configured. They now sign in as a fresh Pro user from the local stack (`signInAsPro` in `scripts/shots/lib.mjs`) and delete it at the end; what they check is unchanged. `parametric-p6.mjs` checks the Free and Pro gates and a cancel through a signed test-mode webhook.
+
+## HingeLab Studio (master spec `CURSOR_STUDIO_PROMPT.md`)
+
+### D60. Studio: the master spec takes over the phase order
+- `CURSOR_STUDIO_PROMPT.md` §19 (S0–S10) is the order from here on; the earlier briefs stay the detailed specs for their parts. Work already done is mapped onto the S phases at the top of PROGRESS.md: S0 is done, S7 (Letters) and S8 (Parametric) exist as standalone products that S5's generator framework will wrap, and S4/S9 are partly done.
+- The existing routes stay (`/app`, `/app/editor/[id]`, `/app/billing`, `/login`, …) because existing tests assert them and the rule is "fix the code, never the test". The studio lives next to them in the `app/(studio)` route group: `/home`, `/editor/[projectId]`, `/projects`, `/presets`, `/account`, `/billing`, `/templates`, `/help`. Moving the post-login target from `/app` to `/home` waits for S4, when cloud projects move into the studio.
+
+### D61. Studio: rendering with SVG and our own geometry, not paper.js
+- The editor draws the document as SVG from the JSON model; path operations will use Clipper (already a dependency) and our own Bézier code. Why: the JSON document stays the single source of truth, every operation is a pure function that Vitest can test without a canvas, and the existing generators already produce SVG paths. Alternative: paper.js (spec suggestion) — its scene graph would become a second model to keep in sync, and it needs a canvas in tests. Revisit only if S2 performance budgets fail with large documents (then: canvas rendering of the same model).
+
+### D62. Studio: animated SVG previews instead of video
+- Generator cards on the start screen show a looping CSS-animated inline SVG per generator (`GeneratorArt.tsx`) instead of WebM or Lottie files: no assets to produce or download, they follow the theme colours, and `prefers-reduced-motion` stops them. They animate only on hover or focus.
+
+### D63. Studio: plan rules in old tests vs the new pricing
+- The master spec makes Hinge Box a Pro generator and sets $12 / $99. The existing tests (`billing.test.ts`, `limits.integration.test.ts`) encode the old rules (Free Hinge Box exports with the mark; $9 / $79). Tests are not changed in this run, so the old rules stay in force until S9; the start screen already shows the new Free/Pro badges from `lib/generators/catalog.ts`. S9 resolves it by keeping the old products' rules for the classic editors and applying the new ones to studio generators, logged again there.
+
+### D64. Studio: languages
+- next-intl is not added yet: the UI is English only (standing rule) and every string is still in the components. Strings will be moved into message files when a second language is actually planned.
+
+### D65. Studio: Storybook with Vite
+- Storybook 10 with `@storybook/react-vite` (the Next.js framework adapter brings webpack and server-component handling we do not need for client-only UI components). `.storybook/main.ts` aliases `@` to the project root; `preview.tsx` loads the tokens and adds Theme and Accent toolbar switches. `@vitejs/plugin-react` is pinned to 5 because 6 needs Vite 8, which Storybook 10.6 does not support yet. `npm run build-storybook` writes `storybook-static/` (ignored by git).
+
+### D66. Studio: local projects
+- Projects that are not in the cloud live in IndexedDB (`hingelab-studio`: `projects` and `assets` stores) with ids prefixed `local-`, so `/editor/<id>` tells local from cloud projects without a lookup. They autosave 1.5 s after the last change, with a thumbnail. Guests can create and open local projects; the Projects page lists them too, and S4 adds cloud projects beside them.
+- `.hingelab` files are ZIPs (`document.json`, `assets/`, `thumbnail.png`, `manifest.json`) written with a fixed modification time so the same document always gives the same bytes. Opening checks the schema version, runs migrations, refuses files from a newer version with a readable message, and limits unzipped size to 300 MB.
+- Opening a legacy single-product project file (the earlier Hinge Box / Letters / Parametric JSON) does not convert it: a toast offers to open it in the classic editor, which already reads it. Conversion comes with the generator wrappers (S5, S7, S8).
+- Opening a file whose name already exists adds " (2)" instead of overwriting.
+
+### D67. Studio: thumbnails are built from numbers only
+- Thumbnails are SVG strings shown with `innerHTML`, so `documentThumbnail` forces every value it writes to a finite number and `assertDocument` refuses sheets whose position or size are not finite numbers. A crafted `.hingelab` file therefore cannot inject markup. The sheet colours use the theme variables with the dark colours as fallback (the PNG inside the file has no CSS).
+
+### D68. Studio: design tokens and the old editors
+- `styles/tokens.css` defines the three themes (dark default, darker, light) and four accents, the 30 cut-layer colours (LightBurn's C00–C29 palette, so files keep their meaning when moved between tools) and spacing, radii, type and motion. It also defines the old variable names (`--panel`, `--fg`, `--sheet`, …) as aliases, so the classic editors follow the chosen theme without being rewritten. A tiny inline script sets the theme before first paint to avoid a flash.
+
+### D69. Studio: number fields
+- Every numeric field (`NumberInput`) accepts expressions (`25.4*2`, `3in`, `+10`, `*=2`, `50%`), parsed by a small recursive-descent parser (no `eval`); a comma is read as a decimal point. Values are stored in mm and shown in the document's units. Arrow keys step (Shift ×10, Alt ×0.1), dragging the label scrubs, Alt+click or the ↺ button resets to the default, and the right-click menu offers reset, copy/paste and lock.
+- Changing the sheet width or height in the editor renames the sheet to "Custom size", so it is never labelled "A4" at a size that is not A4.
