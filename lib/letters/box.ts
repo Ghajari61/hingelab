@@ -7,6 +7,7 @@ import { concaveRadiusOf, cornerRadiusOf, hingeParamsOf, wallHeightOf } from "./
 import { facetContour, facetedWall } from "./facets";
 import { filletByContour, smoothShapes } from "./fillet";
 import { MIN_PIECE_AREA, differenceShapes, dropSpecks, makeShape, offsetShapes, pointInContour, pointInShape, shapeContours, signedArea, unionShapes } from "./polygon";
+import { marqueeCenters, marqueeHoles } from "./marquee";
 import { labelPoint } from "./solid";
 import { hingeWall } from "./strips";
 import type { BoxInfo, BoxLetterStat, Contour, LetterIssue, LetterParams, LetterPart, PanelPart, PartMark, PlatePart, Shape, StripPart, Wall } from "./types";
@@ -45,15 +46,17 @@ export function boxError(p: LetterParams): string | null {
  * Base, lid and lid lip. `shapes` is the letter's outer wall face; slots and marks are in the
  * same coordinates. Each kerf-compensated piece gets the slots and marks that fall inside it.
  */
-function boxPlates(shapes: Shape[], name: string, p: LetterParams, slots: Contour[], marks: PartMark[], join: "round" | "miter", issues: LetterIssue[]): PlatePart[] {
+function boxPlates(shapes: Shape[], name: string, p: LetterParams, slots: Contour[], marks: PartMark[], lights: Contour[], join: "round" | "miter", issues: LetterIssue[]): PlatePart[] {
   const out: PlatePart[] = [];
+  // marquee light holes go through the face: the lid, or the base of an open box
+  const lit = (label: string) => (p.lid === "open" ? label.includes("· base") : label.includes("· lid"));
   const make = (s: Shape, label: string, withSlots: boolean, withMarks: boolean): PlatePart => {
     const lp = labelPoint(s);
     return {
       kind: "plate",
       name: label,
       outer: s.outer,
-      holes: s.holes,
+      holes: lit(label) ? [...s.holes, ...lights.filter(h => pointInShape(centroid(h), s))] : s.holes,
       slots: withSlots ? slots.filter(sl => pointInShape(centroid(sl), s)) : [],
       marks: withMarks ? marks.filter(m => pointInShape([m.x, m.y], s)) : [],
       label: { x: lp[0], y: lp[1], size: Math.max(2.5, Math.min(6, Math.sqrt(s.area) / 10)) },
@@ -121,6 +124,7 @@ export function letterBoxes(letters: BoxLetter[], p: LetterParams): BoxResult {
   const filleted: Shape[] = [];
   const walls: Wall[] = [];
   const stats: BoxLetterStat[] = [];
+  let lights = 0;
 
   const used = new Map<string, number>();
   const unique = (base: string) => {
@@ -198,7 +202,12 @@ export function letterBoxes(letters: BoxLetter[], p: LetterParams): BoxResult {
         plateShapes = dropSpecks(unionShapes(shapeContours(offsetShapes(facetShapes, p.T / 2, "miter"))), MIN_PIECE_AREA);
       }
       filleted.push(...plateShapes);
-      plates.push(...boxPlates(plateShapes, name, p, slots, marks, hinge ? "round" : "miter", issues));
+      const lightCenters = p.marquee.enabled ? marqueeCenters(plateShapes, p) : [];
+      if (p.marquee.enabled && !lightCenters.length) {
+        issues.push({ lvl: "warn", msg: `“${name}” is too narrow for ${r1(p.marquee.holeDia)} mm light holes with a ${r1(p.marquee.margin)} mm margin. Use smaller holes, a smaller margin or a larger size.` });
+      }
+      lights += lightCenters.length;
+      plates.push(...boxPlates(plateShapes, name, p, slots, marks, marqueeHoles(lightCenters, p), hinge ? "round" : "miter", issues));
 
       const mine = walls.slice(before);
       const curves = mine.flatMap(w => w.zones.filter(z => z.kind === "curve" && !z.splice));
@@ -212,10 +221,15 @@ export function letterBoxes(letters: BoxLetter[], p: LetterParams): BoxResult {
         zones: curves.length,
         rTight: curves.reduce((r, z) => Math.min(r, z.rTight), Infinity),
         verdict: worst,
+        lights: lightCenters.length,
       });
     });
   }
 
+  if (lights) {
+    const face = p.lid === "open" ? "base" : p.lid === "removable" ? "lid and the lid lip" : "lid";
+    issues.push({ lvl: "info", msg: `${lights} light hole${lights > 1 ? "s" : ""} of ${r1(p.marquee.holeDia)} mm go through the ${face}.` });
+  }
   if (hinge) {
     for (const s of stats) {
       if (s.verdict === "crack") issues.push({ lvl: "warn", msg: `“${s.letter}” bends tighter (R ${r1(s.rTight)} mm) than this hinge allows (about ${r1(rMin)} mm). Use Auto-fit, a larger size or a larger corner radius.` });

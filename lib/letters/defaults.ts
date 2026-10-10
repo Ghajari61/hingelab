@@ -23,6 +23,7 @@ export const LETTER_DEFAULTS: LetterParams = {
   panelMin: 15,
   minCornerRadius: "auto",
   smallIslands: "flat",
+  stackIslands: false,
   islandArea: 400,
   marquee: { enabled: false, holeDia: 12, spacing: 40, margin: 6 },
   wallMaxLength: null,
@@ -77,6 +78,9 @@ export function hingeParamsOf(p: LetterParams): Params {
 
 /** Wall height between the plates. */
 export const wallHeightOf = (p: LetterParams) => (p.lid === "open" ? p.depth - p.T : p.depth - 2 * p.T);
+
+/** Layers each flat small piece is cut in: one, or enough to stack to the box depth. */
+export const stackLayersOf = (p: LetterParams) => (p.stackIslands ? Math.max(1, Math.round(p.depth / p.T)) : 1);
 
 /** Longest wall strip before it is split. */
 export const wallMaxLengthOf = (p: LetterParams) => p.wallMaxLength ?? p.bedW - 20;

@@ -4,11 +4,17 @@ import type { BaseField } from "@/components/editor/fields";
 export type LetterNumKey =
   | "size" | "letterSpacing" | "thicken" | "stencilBridge" | "sheetMargin" | "T" | "K" | "bedW" | "bedH" | "gap"
   | "depth" | "minCornerRadius" | "wallMaxLength" | "islandArea" | "facetTol" | "panelMin"
-  | "slotW" | "slit" | "bridge" | "pitch" | "overrun" | "stretch" | "tabW" | "slotClr" | "lidGap";
+  | "slotW" | "slit" | "bridge" | "pitch" | "overrun" | "stretch" | "tabW" | "slotClr" | "lidGap"
+  | "marqueeDia" | "marqueeSpacing" | "marqueeMargin";
+
+/** Marquee fields live in `params.marquee`. */
+export const MARQUEE_KEYS = { marqueeDia: "holeDia", marqueeSpacing: "spacing", marqueeMargin: "margin" } as const;
+export type MarqueeKey = keyof typeof MARQUEE_KEYS;
+export const isMarqueeKey = (id: LetterNumKey): id is MarqueeKey => id in MARQUEE_KEYS;
 
 export interface LetterField extends BaseField {
   id: LetterNumKey;
-  sec: "text" | "solid" | "box" | "hinge" | "joints" | "mat" | "sheet";
+  sec: "text" | "solid" | "box" | "marquee" | "hinge" | "joints" | "mat" | "sheet";
   show?: (p: LetterParams) => boolean;
 }
 
@@ -27,6 +33,9 @@ export const LETTER_FIELDS: LetterField[] = [
   { id: "panelMin", label: "Min panel", sec: "box", len: true, step: 1, min: 5, max: 200, show: faceted },
   { id: "wallMaxLength", label: "Max wall", sec: "box", len: true, step: 10, min: 50, max: 5000, show: hinge },
   { id: "islandArea", label: "Island mm²", sec: "box", step: 10, min: 0, max: 100000 },
+  { id: "marqueeDia", label: "Hole dia", sec: "marquee", len: true, step: 0.5, min: 2, max: 100 },
+  { id: "marqueeSpacing", label: "Spacing", sec: "marquee", len: true, step: 1, min: 4, max: 500 },
+  { id: "marqueeMargin", label: "Margin", sec: "marquee", len: true, step: 0.5, min: 1, max: 100 },
   { id: "slotW", label: "Slot width", sec: "hinge", len: true, step: 0.05, min: 0.2, show: p => p.cutStyle === "slot" },
   { id: "slit", label: "Slit", sec: "hinge", len: true, step: 0.5, min: 3, show: p => p.pattern !== "serpentine" },
   { id: "bridge", label: "Bridge", sec: "hinge", len: true, step: 0.25, min: 0.5 },

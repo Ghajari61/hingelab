@@ -1,6 +1,6 @@
 ﻿# Progress
 
-**Next step:** Letters L4 — polish (marquee holes, small islands, wall splitting, three.js preview, Analysis), per `CURSOR_LETTERS_PROMPT.md` (then L5, then Parametric P1–P6).
+**Next step:** Letters L5 — plan limits (Letters is Pro; Free users can preview and export only a single-letter box with the watermark), per `CURSOR_LETTERS_PROMPT.md` (then Parametric P1–P6).
 
 Order of the run: main brief Phases 1–5 (Phase 6 Tauri is out of scope) → Letters L2, L4, L5 (L1 and L3 were done earlier) → Parametric P1–P6.
 
@@ -17,7 +17,7 @@ How to check a phase: `npx supabase start` (local stack, see SETUP.md), `npm tes
 | Letters L1 — solid | done (earlier sessions) | |
 | Letters L2 — stencil | done | 597 / 597 |
 | Letters L3 — letter box | done (earlier sessions) | |
-| Letters L4 — polish | | |
+| Letters L4 — polish | done | 611 / 611 |
 | Letters L5 — plan limits | | |
 | Parametric P1–P6 | | |
 

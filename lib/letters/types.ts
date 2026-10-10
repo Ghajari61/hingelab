@@ -40,6 +40,8 @@ export interface LetterParams {
   panelMin: number;
   minCornerRadius: "auto" | number;
   smallIslands: "flat" | "drop";
+  /** Flat small pieces are cut round(depth / T) times, to glue into a stack as tall as the box. */
+  stackIslands: boolean;
   islandArea: number;
   marquee: { enabled: boolean; holeDia: number; spacing: number; margin: number };
   /** null = bed width - 20. */
@@ -222,6 +224,8 @@ export interface BoxLetterStat {
   zones: number;
   rTight: number;
   verdict: "ok" | "tight" | "crack" | null;
+  /** Marquee light holes in this letter's face. */
+  lights: number;
 }
 
 export interface BoxInfo {

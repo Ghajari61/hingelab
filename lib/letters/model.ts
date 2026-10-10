@@ -3,7 +3,7 @@
  */
 import type { HarfBuzz, LoadedFont } from "./fonts";
 import { boxError, letterBoxes } from "./box";
-import { bridgeWidthOf, minFeatureOf } from "./defaults";
+import { bridgeWidthOf, minFeatureOf, stackLayersOf } from "./defaults";
 import { MIN_PIECE_AREA, bboxOfContours, dropSpecks, offsetShapes, shapeContours, unionShapes } from "./polygon";
 import { shapeText } from "./shape";
 import { groupOutlines, shapeLabels, solidParts, thinFeatures, weldPieces } from "./solid";
@@ -75,8 +75,17 @@ export function computeLetterModel(p: LetterParams, font: LoadedFont, hb: HarfBu
     boxInfo = res.box;
     parts = [...res.walls, ...res.plates];
     if (small.length && p.smallIslands === "flat") {
-      parts.push(...solidParts(small.map(n => n.shape), small.map(n => `${n.name} · dot`), p.K));
-      issues.push({ lvl: "info", msg: `${small.length} small piece${small.length > 1 ? "s" : ""} (dots or accents) ${small.length > 1 ? "are" : "is"} cut flat. Glue ${small.length > 1 ? "them" : "it"} on top of the lid.` });
+      const layers = stackLayersOf(p);
+      const shapesOut = small.flatMap(n => Array.from({ length: layers }, () => n.shape));
+      const namesOut = small.flatMap(n => Array.from({ length: layers }, (_, k) => (layers > 1 ? `${n.name} · dot ${k + 1}/${layers}` : `${n.name} · dot`)));
+      parts.push(...solidParts(shapesOut, namesOut, p.K));
+      const these = small.length > 1 ? "them" : "it";
+      issues.push({
+        lvl: "info",
+        msg: layers > 1
+          ? `${small.length} small piece${small.length > 1 ? "s" : ""} (dots or accents) ${small.length > 1 ? "are" : "is"} cut ${layers} times each. Glue each stack together so it stands as tall as the box.`
+          : `${small.length} small piece${small.length > 1 ? "s" : ""} (dots or accents) ${small.length > 1 ? "are" : "is"} cut flat. Glue ${these} on top of the lid.`,
+      });
     } else if (small.length) {
       issues.push({ lvl: "info", msg: `${small.length} small piece${small.length > 1 ? "s" : ""} (dots or accents) ${small.length > 1 ? "were" : "was"} left out.` });
     }

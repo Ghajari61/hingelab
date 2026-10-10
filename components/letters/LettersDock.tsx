@@ -1,15 +1,21 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { MATERIALS, type CutStyle, type LayerKey, type Pattern } from "@/lib/hinge";
 import { bridgeWidthOf, cornerRadiusOf, wallMaxLengthOf, type LetterModel, type LetterParams } from "@/lib/letters";
 import { NumberField } from "@/components/editor/NumberField";
 import { LayersPanel } from "@/components/editor/LayersPanel";
 import { Sec } from "@/components/editor/PanelDock";
 import type { Units } from "@/components/editor/format";
-import { LETTER_FIELDS, type LetterField, type LetterNumKey } from "./fields";
+import { LETTER_FIELDS, MARQUEE_KEYS, isMarqueeKey, type LetterField, type LetterNumKey } from "./fields";
 import { FontPicker } from "./FontPicker";
 import { LettersAnalysis } from "./LettersAnalysis";
 import type { StoredFontMeta } from "./fontStore";
+
+const LetterPreview3D = dynamic(() => import("./LetterPreview3D"), {
+  ssr: false,
+  loading: () => <div id="preview3d" className="p3d" />,
+});
 
 type Patch = (partial: Partial<LetterParams>, record: boolean) => void;
 
@@ -32,12 +38,14 @@ function Choice<T extends string>({ label, value, options, onPick }: {
 }
 
 export function LettersDock({
-  params, model, error, units, uploads, showZones, onShowZones, onAutoFit, onPatch, onField, onMaterial, onPick, onUpload, onDeleteFont,
+  params, model, error, units, uploads, showZones, explode, onShowZones, onExplode, onAutoFit, onPatch, onField, onMaterial, onPick, onUpload, onDeleteFont,
 }: {
   params: LetterParams;
   model: LetterModel | null;
   error: string | null;
   units: Units;
+  explode: number;
+  onExplode: (v: number) => void;
   uploads: StoredFontMeta[];
   showZones: boolean;
   onShowZones: (on: boolean) => void;
@@ -52,6 +60,7 @@ export function LettersDock({
   const box = params.mode === "box";
   const hinge = box && params.wallStyle === "hinge";
   const value = (f: LetterField): number => {
+    if (isMarqueeKey(f.id)) return params.marquee[MARQUEE_KEYS[f.id]];
     if (f.id === "stencilBridge") return bridgeWidthOf(params);
     if (f.id === "minCornerRadius") return cornerRadiusOf(params);
     if (f.id === "wallMaxLength") return wallMaxLengthOf(params);
@@ -73,8 +82,16 @@ export function LettersDock({
   const layerVis = (key: LayerKey) => onPatch({ layers: { ...params.layers, [key]: { ...params.layers[key], vis: !params.layers[key].vis } } }, true);
   const layerExp = (key: LayerKey, exp: boolean) => onPatch({ layers: { ...params.layers, [key]: { ...params.layers[key], exp } } }, true);
 
+  const depthMeta = box ? `${Math.round(params.depth)} mm deep` : `${params.T} mm sheet`;
+
   return (
     <aside className="dock" aria-label="Panels">
+      <Sec title="3D Preview" meta={depthMeta} startOpen>
+        <LetterPreview3D model={model} params={params} explode={box && params.lid !== "open" ? explode : 0} />
+        {box && params.lid !== "open" && (
+          <label className="explode">Lift lid <input type="range" min={0} max={1} step={0.01} value={explode} onChange={(e) => onExplode(parseFloat(e.target.value))} /></label>
+        )}
+      </Sec>
       <Sec title="Text" meta={params.text.trim() ? `${[...params.text.trim()].length} chars` : undefined} startOpen>
         <textarea
           className="textin"
@@ -121,6 +138,19 @@ export function LettersDock({
             { v: "flat", text: "Cut flat", title: "Cut them as flat pieces to glue on top of the lid" },
             { v: "drop", text: "Leave out" },
           ]} />
+          {params.smallIslands === "flat" && (
+            <label className="chk">
+              <input type="checkbox" checked={params.stackIslands} onChange={(e) => onPatch({ stackIslands: e.target.checked }, true)} /> Stack to full height ({Math.max(1, Math.round(params.depth / params.T))} layers each)
+            </label>
+          )}
+          <label className="chk">
+            <input
+              type="checkbox"
+              checked={params.marquee.enabled}
+              onChange={(e) => onPatch({ marquee: { ...params.marquee, enabled: e.target.checked } }, true)}
+            /> Marquee light holes in the {params.lid === "open" ? "base" : "lid"}
+          </label>
+          {params.marquee.enabled && <div className="grid2">{fields("marquee")}</div>}
           <p className="note">
             {hinge
               ? "Each outline and counter gets one bendable wall strip. Sharp corners are rounded to the corner radius so the hinge can follow them; seams land on flat stretches."

@@ -116,4 +116,22 @@ Decisions taken without the owner during the autopilot run. Each entry: what, wh
 ### D22. Removed an obsolete test assertion
 - **What:** `letters.test.ts` checked that `mode: "stencil"` returns "not available yet". L2 makes stencil available, so that assertion was removed; the test now checks only that empty text returns an error. This is a change of behaviour, not a weakened test: stencil is covered by the new test 9 (`stencil.test.ts`, 9 cases, including a raster flood-fill check that no part of the sheet is floating).
 
+### D23. Marquee light holes follow the strokes
+- **What:** hole centres lie in the region where a hole keeps `margin` clear of the wall's inner face (the outer wall face inset by T + margin + hole radius). Walking along that region's edges, a centre is kept when it is at least `spacing` from every kept centre. In a thin stroke the region is a sliver, so the bulbs run down the middle of the stroke; in a fat stroke they follow its outline. Spacing is never less than the hole diameter + 2 mm, so a web is always left between holes.
+- **Where:** through the lid (and the lid lip of a removable lid, so light passes); through the base of an open tray. Hole paths run K/2 inside the nominal radius, like every other kerf-compensated cut.
+- **Too small:** a letter with no room for a single hole gets a warning naming it.
+- **Alternatives:** a hex grid clipped to the letter (misses thin strokes entirely), or a true medial axis (heavier, and the edge walk gives the same result on strokes).
+
+### D24. Small pieces can be cut as stacks
+- **What:** "Stack to full height" (off by default) cuts each flat small piece `round(depth / T)` times, named `… · dot k/n`, so the stack can be glued to stand as tall as the box. With "Leave out" it does nothing.
+- **Why:** the brief asks for it; off by default because it multiplies the part count.
+
+### D25. three.js preview: built in `lib`, rendered in a lazy client component
+- **What:** `lib/letters/scene3d.ts` builds a `THREE.Group` with no renderer: plates by `ExtrudeGeometry` from the real cut shapes (light holes included), walls as T-thick bands along the wall centerlines with vertex colours (wood on flats, wood blended 55% with the bend verdict colour on curves), small pieces stacked on the lid. `LetterPreview3D` renders it with `OrbitControls`, only when something changes (no animation loop), and is loaded with `next/dynamic` so three.js is not in the editor's first bundle. Solid and Stencil show the flat parts T thick. A "Lift lid" slider separates the lid.
+- **Not in `lib/letters/index.ts`:** the scene module is imported directly so server code that uses the letters library (export route) never pulls in three.js.
+- **Alternatives:** the Hinge Box's hand-drawn SVG projection (cannot draw arbitrary letter shapes with holes), `@react-three/fiber` (a second dependency for one small view).
+
+### D26. Analysis panel polish
+- Each letter shows its tightest radius next to the hinge limit and its light-hole count; the box lists the longest strip or panel and the total light holes. Warnings ("To check") and notes are separate lists. Stencil counts are labelled as letter cut-outs and stencil bridges.
+
 ## Parametric

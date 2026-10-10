@@ -23,7 +23,7 @@ import { StatusBar } from "@/components/editor/StatusBar";
 import { Dialogs, type ModalState } from "@/components/editor/dialogs";
 import { LettersControlBar } from "./LettersControlBar";
 import { LettersDock } from "./LettersDock";
-import type { LetterNumKey } from "./fields";
+import { MARQUEE_KEYS, isMarqueeKey, type LetterNumKey } from "./fields";
 import { deleteStoredFont, listStoredFonts, putStoredFont, type StoredFontMeta } from "./fontStore";
 import { forgetFont, getLoadedFont, loadHarfBuzz, UPLOAD_PREFIX } from "./runtime";
 
@@ -72,6 +72,7 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
   const [spaceDown, setSpaceDown] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
   const [showZones, setShowZones] = useState(true);
+  const [explode, setExplode] = useState(0);
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
   const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
@@ -132,6 +133,7 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
   }
 
   function setField(id: LetterNumKey, v: number, mat: boolean, record: boolean) {
+    if (isMarqueeKey(id)) { replace({ ...params, marquee: { ...params.marquee, [MARQUEE_KEYS[id]]: v } }, record); return; }
     const next: LetterParams = { ...params, [id]: v };
     if (mat && next.material !== "custom") next.material = "custom";
     replace(next, record);
@@ -376,7 +378,9 @@ export default function LettersEditor({ onProduct, cloud = null }: { onProduct: 
           units={units}
           uploads={uploads}
           showZones={showZones}
+          explode={explode}
           onShowZones={setShowZones}
+          onExplode={setExplode}
           onAutoFit={runAutoFit}
           onPatch={patch}
           onField={setField}
