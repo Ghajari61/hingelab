@@ -1,8 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Redo2, Undo2 } from "lucide-react";
+import { useContext } from "react";
+import { Lightbulb, Redo2, Undo2 } from "lucide-react";
 import { LockIcon } from "@/components/billing/Lock";
+import { HelpContext, HelpMark } from "@/components/help/HelpContext";
+import { TIPS_HELP } from "@/lib/help/sections";
 import type { Opt } from "@/components/editor/ControlBar";
 import { ART } from "./cardArt";
 
@@ -17,6 +20,12 @@ export type GalleryGroup = {
   options: Opt[];
   cols?: 2 | 3;
 };
+
+function TipsButton() {
+  const help = useContext(HelpContext);
+  if (!help) return null;
+  return <button type="button" className="hdr-btn" aria-label="Tips" title="Tips for this product" onClick={() => help.open(TIPS_HELP[help.product])}><Lightbulb size={16} /></button>;
+}
 
 export type History = { canUndo: boolean; canRedo: boolean; undo: () => void; redo: () => void };
 
@@ -33,6 +42,7 @@ export function GalleryRail({ title, icon, groups, history, children }: {
       <div className="gallery-head">
         {icon}<span>{title}</span>
         <span className="hist">
+          <TipsButton />
           <button type="button" className="hdr-btn" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!history.canUndo} onClick={history.undo}><Undo2 size={16} /></button>
           <button type="button" className="hdr-btn" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!history.canRedo} onClick={history.redo}><Redo2 size={16} /></button>
         </span>
@@ -41,7 +51,7 @@ export function GalleryRail({ title, icon, groups, history, children }: {
         {children}
         {groups.map((g) => (
           <section key={g.name} className="gallery-group">
-            <h3>{g.label}</h3>
+            <h3>{g.label}<HelpMark title={g.label} kind="rail" /></h3>
             <div className={`gcards c${g.cols ?? 2}`} role="group" aria-label={g.name}>
               {g.options.map((o) => (
                 <button

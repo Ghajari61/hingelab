@@ -12,6 +12,7 @@ import type { CutStyle, Model } from "@/lib/hinge";
 import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
 import type { FitInfo } from "@/lib/fit/arrange";
 import { SheetSection } from "@/components/shell/SheetSection";
+import { HelpMark } from "@/components/help/HelpContext";
 import type { Units } from "./format";
 
 /** What the Sheet section needs from the editor: the fit result and the two setters. */
@@ -49,6 +50,7 @@ export function Sec({ title, meta, startOpen, onReset, children }: {
       <summary>
         <Chevron />
         {title}
+        <HelpMark title={title} />
         {meta ? <span className="sum-meta">{meta}</span> : null}
         {onReset && (
           <button

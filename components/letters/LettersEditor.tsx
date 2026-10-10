@@ -38,6 +38,7 @@ import { forgetFont, getLoadedFont, isUploadId, loadHarfBuzz, UPLOAD_PREFIX } fr
 import { autoFixAll, type Fix } from "@/lib/issues";
 import { lettersIssues } from "@/lib/issues/letters";
 import { IssueList } from "@/components/shell/IssueList";
+import { HelpContext, useHelpPanel } from "@/components/help/HelpContext";
 import { lettersLock } from "@/lib/plans";
 import { MAX_UPLOAD_FONT_BYTES } from "@/lib/billing/exportLetters";
 import { usePlan } from "@/components/billing/usePlan";
@@ -101,6 +102,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
   const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
+  const help = useHelpPanel("letters");
   const [toast, setToast] = useState<string | null>(null);
   const [uploads, setUploads] = useState<StoredFontMeta[]>([]);
   const [hb, setHb] = useState<HarfBuzz | null>(null);
@@ -418,6 +420,8 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
       { label: "Units: inches", kbd: "", run: () => setUnits("in") },
     ],
     help: [
+      ...help.menu,
+      "-",
       { label: "Keyboard shortcuts", kbd: "", run: () => setModal({ type: "keys" }) },
     ],
   };
@@ -447,6 +451,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   const sizeLabel = `${params.sizeMode === "capHeight" ? "cap" : "total"} ${fmtLen(params.size, units)}`;
 
   return (
+    <HelpContext.Provider value={help.ctx}>
     <div className="app">
       <MenuBar
         title={params.name} kind={`Letters · ${font?.name ?? "…"} · ${sizeLabel}`} menus={menus} product="letters" onProduct={onProduct}
@@ -576,6 +581,8 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
           rd.readAsText(f);
         }}
       />
+      {help.drawer}
     </div>
+    </HelpContext.Provider>
   );
 }

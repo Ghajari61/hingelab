@@ -25,6 +25,7 @@ import { fmtLen, type Units } from "@/components/editor/format";
 import { MenuBar, type MenuEntry } from "@/components/editor/MenuBar";
 import { PRODUCT_INFO, type Product } from "@/components/editor/ControlBar";
 import { GalleryRail } from "@/components/shell/GalleryRail";
+import { HelpContext, useHelpPanel } from "@/components/help/HelpContext";
 import { ViewToggle } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
@@ -97,6 +98,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   const myPresets = useMyPresets();
   const thumbRef = useRef<() => string | null>(() => null);
   const [modal, setModal] = useState<ModalState>(null);
+  const help = useHelpPanel("parametric");
   const [toast, setToast] = useState<string | null>(null);
   const [model, setModel] = useState<StoredModel | null>(null);
   const [modelChecked, setModelChecked] = useState(false);
@@ -489,6 +491,8 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
       { label: "Units: inches", kbd: "", run: () => setUnits("in") },
     ],
     help: [
+      ...help.menu,
+      "-",
       { label: "Keyboard shortcuts", kbd: "", run: () => setModal({ type: "keys" }) },
     ],
   };
@@ -506,6 +510,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   const labelsVisible = params.layers.labels.vis && params.labels.enabled;
 
   return (
+    <HelpContext.Provider value={help.ctx}>
     <div className="app">
       <MenuBar
         title={params.name} kind={`Parametric · ${result ? `${result.stats.partCount} parts` : "…"}`} menus={menus} product="parametric" onProduct={onProduct}
@@ -652,6 +657,8 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
           rd.readAsText(f);
         }}
       />
+      {help.drawer}
     </div>
+    </HelpContext.Provider>
   );
 }

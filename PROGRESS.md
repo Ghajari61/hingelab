@@ -20,7 +20,8 @@
 | U5 shared 3D view (D84) | done |
 | U6 shape buttons (D85) | done |
 | U7 checks and fixes (D86) | done |
-| U8–U9, G1–G6 | in progress, in order |
+| U8 help centre (D87) | done |
+| U9, G1–G6 | in progress, in order |
 
 **U1 (D80):** light Atomm-style theme by default (dark kept in Settings), Inter, shared shell in `components/shell/` (gallery rail with picture cards, Sheets / 3D view switch, view tools in the zoom HUD, sliders on every numeric field, Export pinned under the dock, Undo/Redo/Open/Save in the header) used by Hinge Box, Letters and Parametric. Tests 752 / 752, golden byte-for-byte, `tsc` clean, `next build` OK; `scripts/shots/ux-u1.mjs` and `reset-fields.mjs` pass. Screenshots `docs/screenshots/ux-u1-*.png`.
 **U2 (D81):** the guest editor opens on a product and preset gallery (12 presets per product, each built by `lib/__tests__/presets.test.ts`), `?p=` keeps the open product, File → Start page; Undo/Redo on the gallery rail; units and an undoable Reset all (with confirmation) in the dock header; a reset on every section. Tests 777 / 777, golden byte-for-byte, `tsc` clean, `next build` OK; `scripts/shots/ux-u2.mjs`, `ux-u1.mjs`, `reset-fields.mjs`, `letters-l5.mjs` and `parametric-tabs.mjs` pass. Screenshots `docs/screenshots/ux-u2-*.png`.

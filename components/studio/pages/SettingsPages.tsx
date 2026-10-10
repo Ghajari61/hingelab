@@ -105,31 +105,3 @@ export function TemplatesPage() {
     </div>
   );
 }
-
-export function HelpPage() {
-  return (
-    <div className="studio-page">
-      <StudioHeader />
-      <main className="studio-main" style={{ maxWidth: 860 }}>
-        <h1>Help</h1>
-        <section className="info-card" id="first-cut">
-          <h3>Make your first cut</h3>
-          <ul>
-            <li>Pick a generator on the start screen (Finger-Joint Box is free), choose your material and machine, and create the project.</li>
-            <li>Adjust the size and options in the generator panel; the analysis box warns about anything that will not cut well.</li>
-            <li>Export SVG and open it in your laser software (LightBurn, xTool Creative Space, Glowforge, RDWorks, LaserGRBL or Inkscape). Colours map to LightBurn layers C00–C29.</li>
-            <li>Cut a test card first with the Test & Calibration generator: the settings shipped with each material are a starting point only.</li>
-          </ul>
-        </section>
-        <section className="info-card" id="kerf">
-          <h3>Measure your kerf</h3>
-          <p>The laser burns away a thin line of material, the kerf. Cut the kerf gauge from Test & Calibration, find the finger that fits snugly, and enter its value: HingeLab saves it in your material preset and uses it for every joint.</p>
-        </section>
-        <section className="info-card" id="shortcuts">
-          <h3>Keyboard shortcuts</h3>
-          <p>Every menu item shows its shortcut, and the command palette (Ctrl+/) finds every command. On macOS, Ctrl is ⌘ and Alt is ⌥. Some browsers keep Ctrl+N, Ctrl+W and Ctrl+T for themselves; use the File menu or the command palette for those.</p>
-        </section>
-      </main>
-    </div>
-  );
-}

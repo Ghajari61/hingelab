@@ -9,6 +9,7 @@ import { arrangeHinge } from "@/lib/fit/products";
 import { autoFixAll, type Fix } from "@/lib/issues";
 import { hingeIssues } from "@/lib/issues/hinge";
 import { IssueList } from "@/components/shell/IssueList";
+import { HelpContext, useHelpPanel } from "@/components/help/HelpContext";
 import { cleanFit } from "@/lib/fit/fitToSheets";
 import { fitSummary } from "@/components/shell/SheetSection";
 import { useHistory } from "@/hooks/useHistory";
@@ -80,6 +81,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
   const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
+  const help = useHelpPanel("hinge");
   const [toast, setToast] = useState<string | null>(null);
   const [upgrade, setUpgrade] = useState<string | null>(null);
   const account = usePlan();
@@ -362,6 +364,8 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
       { label: "Units: inches", kbd: "", run: () => setUnits("in") },
     ],
     help: [
+      ...help.menu,
+      "-",
       { label: "Living hinge guide", kbd: "", run: () => setModal({ type: "guide" }) },
       { label: "Keyboard shortcuts", kbd: "", run: () => setModal({ type: "keys" }) },
     ],
@@ -394,6 +398,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   const zoom = Math.round(viewApi.view.z / PX_PER_MM * 100) + "%";
 
   return (
+    <HelpContext.Provider value={help.ctx}>
     <div className="app">
       <MenuBar
         title={meta.current.title} kind={meta.current.kind} menus={menus} product="hinge" onProduct={onProduct}
@@ -492,6 +497,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
         }}
         onSavePreset={(name) => { setModal(null); void myPresets.save("hinge-box", name, params).then(toastMsg); }}
       />
+      {help.drawer}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
       <input
@@ -525,5 +531,6 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
         }}
       />
     </div>
+    </HelpContext.Provider>
   );
 }
