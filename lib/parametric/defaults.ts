@@ -1,5 +1,5 @@
 import { DEFAULTS as HINGE, MATERIALS, clone } from "@/lib/hinge";
-import type { FormulaSpec, ImageSource, ParametricParams } from "./types";
+import type { FormulaSpec, ImageSource, ParametricParams, TextSource } from "./types";
 
 export const PARAMETRIC_DEFAULTS: ParametricParams = {
   name: "Untitled sculpture",
@@ -49,6 +49,11 @@ export const IMAGE_DEFAULTS: Omit<ImageSource, "fileName"> = {
   subjectMask: "auto", baseThickness: 0, resolution: 192, width: 200,
 };
 
+/** Text settings for a newly chosen Text source. */
+export const TEXT_DEFAULTS: TextSource = {
+  kind: "text", text: "Sam", font: "fredoka", size: 150, letterSpacing: 0, depth: 40, profile: "rounded", round: 20,
+};
+
 /** Standard clock insert diameters, mm. */
 export const CLOCK_INSERTS = [30, 37, 50, 60] as const;
 
@@ -89,6 +94,7 @@ export function mergeParametricParams(partial?: Partial<ParametricParams> | null
   out.source = (partial.source as ParametricParams["source"]) ?? base.source;
   if (out.source.kind === "formula") out.source = { ...FORMULA_DEFAULTS[out.source.type], ...out.source };
   if (out.source.kind === "image") out.source = { ...IMAGE_DEFAULTS, ...out.source };
+  if (out.source.kind === "text") out.source = { ...TEXT_DEFAULTS, ...out.source };
   return out;
 }
 

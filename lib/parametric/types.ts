@@ -58,7 +58,27 @@ export type SourceSpec =
       upAxis: "Y" | "Z";
     }
   | ImageSource
+  | TextSource
   | FormulaSpec;
+
+/**
+ * Text to solid: shaped in the browser with HarfBuzz and the Letters fonts (Latin and Persian); the
+ * outlines go to the worker with the request, and the solid stands on the wall (z = 0).
+ */
+export interface TextSource {
+  kind: "text";
+  text: string;
+  /** Bundled font id (see `lib/letters/fonts`). */
+  font: string;
+  /** Cap height, mm. */
+  size: number;
+  letterSpacing: number;
+  /** Height off the wall, mm. */
+  depth: number;
+  /** Flat: straight sides. Rounded: a pillow that rises to `depth` over `round` mm from the edge. */
+  profile: "flat" | "rounded";
+  round: number;
+}
 
 /** Photo to relief: the depth map comes from Depth-Anything-V2-Small in the browser. */
 export interface ImageSource {

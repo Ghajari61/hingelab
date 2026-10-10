@@ -384,3 +384,10 @@ Decisions taken without the owner during the autopilot run. Each entry: what, wh
 ### D75. Studio editor: clipboard and revert
 - Copy writes our own JSON to localStorage and an SVG (mm, cut-layer colours as strokes) to the system clipboard, so pasting into Illustrator or Inkscape works. Pasting SVG from other programs into the editor waits for the S3 importer.
 - File → Revert goes back to the document as it was opened in this session, as an undoable step.
+
+### D76. Parametric: Text source
+- Text is shaped on the main thread with the Letters runtime (HarfBuzz + bundled fonts, cap height = the Height field, `direction: auto` so Persian is right-to-left) and sent to the slicing worker as packed outlines, so the worker needs no fonts. The outline key is the text, font, size and spacing; depth and profile changes re-slice without re-shaping.
+- Outlines are unioned (nonzero) so overlapping or joined glyphs make one solid; holes (the counter of "O", "a") are kept.
+- Two profiles: Flat (an extruded solid, every fin full depth) and Rounded (a pillow relief: height rises over the Rounding distance from the edge to the full depth, built on the photo-relief grid). Rounded is the default because it shows the fin rhythm best.
+- Missing glyphs are reported under the font picker instead of falling back to another font, as in Letters.
+- It is a Pro source like 3D file and Photo; the server export refuses it (422) because shaping happens on the device, so Pro exports it in the browser.

@@ -6,6 +6,10 @@
 
 **Deployed (at your request, 10 Oct 2026):** `main` up to `2141dd3` (Studio S2) is live on https://hingelab.vercel.app. The Vercel project has no environment variables yet, so it runs in guest mode (local projects only; sign-in and billing wait for SETUP.md). `studio-s2.mjs` passed against the live site.
 
+**Requested additions (outside the phase plan):**
+- Field reset (`64f9baf`, deployed): double-click a field's name or click its ↺ to restore the default in the Hinge Box, Letters and Parametric editors; `scripts/shots/reset-fields.mjs`.
+- Parametric **Text** source (D76): "Model from → Text" slices a typed letter, word or name (Latin or Persian) with a bundled font, rounded (pillow) or flat profile, height, spacing, depth and rounding. Pro source, exported in the browser. Tests 749 / 749 (6 new in `lib/parametric/__tests__/text.test.ts`), golden byte-for-byte, `tsc` clean, `next build` OK; `scripts/shots/parametric-text.mjs` passes ("Sam" 71 parts, "سام" in Vazirmatn 45 parts). Screenshots `docs/screenshots/parametric-text-sam.png`, `parametric-text-persian.png`.
+
 How the earlier work maps onto the studio phases:
 
 | Phase | Status | What already exists |

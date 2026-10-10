@@ -1,6 +1,6 @@
 export * from "./types";
 export {
-  PARAMETRIC_DEFAULTS, FORMULA_DEFAULTS, IMAGE_DEFAULTS, LIMITS, CLOCK_INSERTS, LEAF_CLOCK, minFeatureOf, finSpacingOf, tabDepthOf, bridgeWidthOf, mergeParametricParams,
+  PARAMETRIC_DEFAULTS, FORMULA_DEFAULTS, IMAGE_DEFAULTS, TEXT_DEFAULTS, LIMITS, CLOCK_INSERTS, LEAF_CLOCK, minFeatureOf, finSpacingOf, tabDepthOf, bridgeWidthOf, mergeParametricParams,
 } from "./defaults";
 export { LIBRARY, libraryMesh } from "./source/library";
 export { formatOf, bounds } from "./source/mesh";
@@ -10,3 +10,4 @@ export { sheetSVG, sheetPaths, sheetLayerContent, assemblyGuideSVG, exportZip, p
 export { toSheet } from "./nest";
 export { CUT_SPEEDS, CONTOUR_OVERHEAD, cutSpeedOf, estimateCutMinutes, fmtMinutes, type CutSpeed } from "./cutTime";
 export { depthInputSize, depthInput, normaliseDepth, packDepth, unpackDepth, type DepthMap } from "./source/relief";
+export { packOutline, unpackOutline, textMesh } from "./source/text";

@@ -218,7 +218,7 @@ export function reliefGrid(depth: DepthMap, o: ReliefOptions): ReliefGrid {
 }
 
 /** Two cells touching only at a corner would share a vertex but no edge: fill one of the gaps. */
-function removePinches(inside: Uint8Array, nx: number, ny: number) {
+export function removePinches(inside: Uint8Array, nx: number, ny: number) {
   for (let pass = 0, changed = true; changed && pass < 50; pass++) {
     changed = false;
     for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {

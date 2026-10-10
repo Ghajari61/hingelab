@@ -77,7 +77,7 @@ export function lettersLock(plan: Plan, p: { mode: string; text: string }): stri
   return "Letters is a Pro feature. Design anything here; on the Free plan you can export a Letter Box of a single letter, with the small HingeLab mark.";
 }
 
-const SOURCE_NAMES: Record<string, string> = { mesh: "Importing a 3D file", image: "Photo relief", formula: "Formula shapes" };
+const SOURCE_NAMES: Record<string, string> = { mesh: "Importing a 3D file", image: "Photo relief", text: "Text sculptures", formula: "Formula shapes" };
 const METHOD_NAMES: Record<string, string> = { stacked: "Stacked layers", waffle: "Waffle", radial: "Radial fins", curveNormal: "Fins along a curve" };
 
 /**

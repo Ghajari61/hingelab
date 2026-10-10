@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { r3, type LayerContent } from "@/lib/hinge";
 import {
-  IMAGE_DEFAULTS, PARAMETRIC_DEFAULTS, assemblyGuideSVG, exportZip, formatOf, mergeParametricParams, packDepth, sheetFileName, sheetLayerContent, sheetSVG, slugName, toSheet, unpackDepth,
+  IMAGE_DEFAULTS, PARAMETRIC_DEFAULTS, assemblyGuideSVG, exportZip, formatOf, mergeParametricParams, packDepth, packOutline, sheetFileName, sheetLayerContent, sheetSVG, slugName, toSheet, unpackDepth,
   type MeshData, type ParametricParams, type Sheet, type SliceResult,
 } from "@/lib/parametric";
+import { shapeText } from "@/lib/letters/shape";
+import { getLoadedFont, loadHarfBuzz } from "@/components/letters/runtime";
 import { clone } from "@/lib/hinge";
 import { parametricLock, parametricLocks } from "@/lib/plans";
 import { thumbnailSVG } from "@/lib/projects";
@@ -86,6 +88,7 @@ export default function ParametricEditor({ onProduct, cloud = null }: { onProduc
   const [model, setModel] = useState<StoredModel | null>(null);
   const [modelChecked, setModelChecked] = useState(false);
   const [photo, setPhoto] = useState<StoredModel | null>(null);
+  const [textFile, setTextFile] = useState<(StoredModel & { missing: string[] }) | null>(null);
   const [depthBusy, setDepthBusy] = useState(false);
   const [showHeat, setShowHeat] = useState(false);
   const [res, setRes] = useState<{ result: SliceResult; ms: number } | null>(null);
@@ -164,9 +167,26 @@ export default function ParametricEditor({ onProduct, cloud = null }: { onProduc
     }
   }, [modelChecked, model, photo, depthBusy, cloudFile, needsCloudFile, params, replace]);
 
-  const fileOf = (p: ParametricParams) => (p.source.kind === "mesh" ? model : p.source.kind === "image" ? photo : null);
+  // A Text source is shaped here (HarfBuzz and the font live on the main thread) and sent as outlines.
+  const textSrc = params.source.kind === "text" ? params.source : null;
+  const textKey = textSrc ? JSON.stringify([textSrc.text, textSrc.font, textSrc.size, textSrc.letterSpacing]) : null;
+  useEffect(() => {
+    if (!textSrc || !textKey) return;
+    let live = true;
+    (async () => {
+      const hb = await loadHarfBuzz();
+      const font = await getLoadedFont(hb, textSrc.font);
+      const out = shapeText(hb, font, textSrc.text, { direction: "auto", size: textSrc.size, sizeMode: "capHeight", letterSpacing: textSrc.letterSpacing });
+      if (live) setTextFile({ name: textKey, key: textKey, bytes: packOutline(out.glyphs.flatMap((g) => g.contours)), missing: out.shaped.missing });
+    })().catch((e: Error) => { if (live) setError(e.message || "The font could not be loaded"); });
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [textKey]);
+
+  const fileOf = (p: ParametricParams) => (p.source.kind === "mesh" ? model : p.source.kind === "image" ? photo : p.source.kind === "text" && textFile?.key === textKey ? textFile : null);
   const srcFile = fileOf(params);
-  const sourceReady = modelChecked && ((params.source.kind !== "mesh" && params.source.kind !== "image") || (!!srcFile && srcFile.name === params.source.fileName));
+  const sourceReady = modelChecked && (params.source.kind === "text" ? !!srcFile
+    : (params.source.kind !== "mesh" && params.source.kind !== "image") || (!!srcFile && srcFile.name === params.source.fileName));
 
   // Re-slice in the worker 250 ms after the last change; the previous result stays on screen meanwhile.
   useEffect(() => {
@@ -528,6 +548,7 @@ export default function ParametricEditor({ onProduct, cloud = null }: { onProduc
           busy={busy}
           units={units}
           selected={selected}
+          textMissing={textSrc && textFile?.key === textKey ? textFile.missing : []}
           fileName={model?.name ?? null}
           photo={photo}
           depthBusy={depthBusy}

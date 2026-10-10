@@ -1,7 +1,7 @@
 import type { BaseField } from "@/components/editor/fields";
 import { finSpacingOf, minFeatureOf, tabDepthOf, type ParametricParams } from "@/lib/parametric";
 
-export type ParamSection = "transform" | "formula" | "photo" | "method" | "material" | "sheet" | "joints" | "quality";
+export type ParamSection = "transform" | "formula" | "photo" | "text" | "method" | "material" | "sheet" | "joints" | "quality";
 
 export interface ParamField extends BaseField {
   sec: ParamSection;
@@ -13,6 +13,7 @@ export interface ParamField extends BaseField {
 
 const formula = (p: ParametricParams) => (p.source.kind === "formula" ? p.source : null);
 const image = (p: ParametricParams) => (p.source.kind === "image" ? p.source : null);
+const text = (p: ParametricParams) => (p.source.kind === "text" ? p.source : null);
 const isHeightfield = (p: ParametricParams) => formula(p)?.type === "heightfield";
 const isRadialProfile = (p: ParametricParams) => formula(p)?.type === "radial-profile";
 const isParallel = (p: ParametricParams) => p.method === "parallel";
@@ -45,6 +46,11 @@ export const PARAM_FIELDS: ParamField[] = [
   { sec: "photo", id: "iBlur", label: "Smoothing", step: 0.5, min: 0, max: 20, float: true, get: p => image(p)!.blur, set: (p, v) => { image(p)!.blur = v; } },
   { sec: "photo", id: "iGamma", label: "Contrast", step: 0.1, min: 0.2, max: 3, float: true, get: p => image(p)!.gamma, set: (p, v) => { image(p)!.gamma = v; } },
   { sec: "photo", id: "iRes", label: "Detail", step: 8, min: 8, max: 256, get: p => image(p)!.resolution, set: (p, v) => { image(p)!.resolution = v; } },
+
+  { sec: "text", id: "tSize", label: "Height", len: true, step: 5, min: 10, max: 2000, get: p => text(p)!.size, set: (p, v) => { text(p)!.size = v; } },
+  { sec: "text", id: "tSpacing", label: "Spacing", len: true, step: 1, min: -50, max: 500, get: p => text(p)!.letterSpacing, set: (p, v) => { text(p)!.letterSpacing = v; } },
+  { sec: "text", id: "tDepth", label: "Depth", len: true, step: 1, min: 2, max: 500, get: p => text(p)!.depth, set: (p, v) => { text(p)!.depth = v; } },
+  { sec: "text", id: "tRound", label: "Rounding", len: true, step: 1, min: 1, max: 300, get: p => text(p)!.round, set: (p, v) => { text(p)!.round = v; }, show: p => text(p)?.profile === "rounded" },
 
   { sec: "method", id: "spacing", label: "Spacing", len: true, step: 0.5, min: 1, max: 500, get: finSpacingOf, set: (p, v) => { p.parallel.spacing = v; }, show: isParallel },
   { sec: "method", id: "phase", label: "Phase", step: 0.05, min: 0, max: 1, float: true, get: p => p.parallel.phase, set: (p, v) => { p.parallel.phase = v; }, show: isParallel },

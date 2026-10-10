@@ -3,9 +3,10 @@
 import { useRef } from "react";
 import { MATERIALS, polyD, r3, type LayerKey } from "@/lib/hinge";
 import {
-  CLOCK_INSERTS, FORMULA_DEFAULTS, IMAGE_DEFAULTS, LEAF_CLOCK, LIBRARY, PARAMETRIC_DEFAULTS, cutSpeedOf, finSpacingOf, fmtMinutes, mergeParametricParams,
+  CLOCK_INSERTS, FORMULA_DEFAULTS, IMAGE_DEFAULTS, LEAF_CLOCK, LIBRARY, PARAMETRIC_DEFAULTS, TEXT_DEFAULTS, cutSpeedOf, finSpacingOf, fmtMinutes, mergeParametricParams,
   type CurveNormalParams, type FormulaSpec, type LibraryId, type ModelUnits, type ParametricParams, type Part, type SliceResult, type WarningCode,
 } from "@/lib/parametric";
+import { BUNDLED_FONTS, fontInfo } from "@/lib/letters/fonts";
 import { NumberField } from "@/components/editor/NumberField";
 import { LayersPanel } from "@/components/editor/LayersPanel";
 import { Sec } from "@/components/editor/PanelDock";
@@ -129,8 +130,10 @@ function PartDrawing({ part }: { part: Part }) {
 }
 
 export function ParametricDock({
-  params, result, error, busy, units, selected, fileName, photo, depthBusy, plan, locks, askUnits, onEdit, onSelect, onImport, onImportPhoto, onUpgrade, onExportSheet, onExportZip, onGuide,
+  params, result, error, busy, units, selected, fileName, photo, depthBusy, plan, locks, askUnits, textMissing = [], onEdit, onSelect, onImport, onImportPhoto, onUpgrade, onExportSheet, onExportZip, onGuide,
 }: {
+  /** Characters of a Text source that its font does not have. */
+  textMissing?: string[];
   plan: Plan;
   /** Pro features this design uses that the plan does not include (preview only). */
   locks: string[];
@@ -159,7 +162,8 @@ export function ParametricDock({
   const photoRef = useRef<HTMLInputElement>(null);
   const defaults = mergeParametricParams({
     source: params.source.kind === "formula" ? FORMULA_DEFAULTS[params.source.type]
-      : params.source.kind === "image" ? { ...IMAGE_DEFAULTS, fileName: params.source.fileName } : PARAMETRIC_DEFAULTS.source,
+      : params.source.kind === "image" ? { ...IMAGE_DEFAULTS, fileName: params.source.fileName }
+      : params.source.kind === "text" ? TEXT_DEFAULTS : PARAMETRIC_DEFAULTS.source,
   });
   const defaultOf = (f: ParamField) => { try { return f.get(defaults); } catch { return undefined; } };
   const field = (f: ParamField) => (
@@ -201,7 +205,7 @@ export function ParametricDock({
   const serious = [...groups.keys()].some((c) => SERIOUS.includes(c));
   const layerVis = (key: LayerKey) => onEdit((q) => { q.layers[key].vis = !q.layers[key].vis; }, true);
   const layerExp = (key: LayerKey, exp: boolean) => onEdit((q) => { q.layers[key].exp = exp; }, true);
-  const sourceMeta = kind === "library" ? LIBRARY.find((l) => l.id === src.id)?.name : kind === "mesh" || kind === "image" ? src.fileName : formula?.type === "revolution" ? "Turned formula" : formula?.type === "radial-profile" ? "Radial profile formula" : "Surface formula";
+  const sourceMeta = kind === "library" ? LIBRARY.find((l) => l.id === src.id)?.name : kind === "mesh" || kind === "image" ? src.fileName : kind === "text" ? `“${src.text}”` : formula?.type === "revolution" ? "Turned formula" : formula?.type === "radial-profile" ? "Radial profile formula" : "Surface formula";
   const sourceLocked = (k: string) => parametricLocks(plan, { source: { kind: k }, method: "parallel" }).length > 0;
   const speed = cutSpeedOf(params.material.id, params.material.T);
   const hubCrowd = result?.warnings.find((w) => w.code === "FINS_COLLIDE_AT_HUB")?.data;
@@ -215,13 +219,37 @@ export function ParametricDock({
         <Choice label="Model from" value={kind} onPick={(v) => {
           if (v === "mesh") { if (fileName) onEdit((q) => { q.source = { kind: "mesh", fileName, units: "auto", upAxis: "Y" }; }, true); else fileRef.current?.click(); return; }
           if (v === "image") { if (photo) onEdit((q) => { q.source = { ...structuredClone(IMAGE_DEFAULTS), fileName: photo.name }; }, true); else photoRef.current?.click(); return; }
+          if (v === "text") { onEdit((q) => { q.source = structuredClone(TEXT_DEFAULTS); }, true); return; }
           onEdit((q) => { q.source = v === "library" ? { kind: "library", id: "abstract-head-cc0" } : structuredClone(FORMULA_DEFAULTS.heightfield); }, true);
         }} options={[
           { v: "library", text: "Library" },
           { v: "mesh", text: "3D file", title: "Import an STL, OBJ or GLB model", locked: sourceLocked("mesh") },
           { v: "image", text: "Photo", title: "Turn a photo into a relief using estimated depth", locked: sourceLocked("image") },
+          { v: "text", text: "Text", title: "Type a letter, word or name (Latin or Persian) and slice it", locked: sourceLocked("text") },
           { v: "formula", text: "Formula", title: "A surface z = f(x, y) or a turned shape r = f(h)", locked: sourceLocked("formula") },
         ]} />
+        {kind === "text" && (
+          <>
+            <label className="pe-pick">Text
+              <input className="textin" aria-label="Text" dir="auto" spellCheck={false} value={src.text}
+                onChange={(e) => onEdit((q) => { if (q.source.kind === "text") q.source.text = e.target.value; }, false)}
+                onBlur={(e) => onEdit((q) => { if (q.source.kind === "text") q.source.text = e.target.value; }, true)} />
+            </label>
+            <label className="pe-pick">Font
+              <select className="sel" aria-label="Font" value={src.font} onChange={(e) => onEdit((q) => { if (q.source.kind === "text") q.source.font = e.target.value; }, true)}>
+                {BUNDLED_FONTS.map((f) => <option key={f.id} value={f.id}>{f.name}{f.scripts.includes("arabic") ? " (Persian)" : ""}</option>)}
+              </select>
+            </label>
+            {textMissing.length > 0 && (
+              <p className="note warn" role="status">{fontInfo(src.font)?.name ?? "This font"} has no {textMissing.map((c) => `“${c}”`).join(" ")}. Pick a font marked (Persian) for Persian text.</p>
+            )}
+            <Choice label="Profile" value={src.profile} onPick={(v) => onEdit((q) => { if (q.source.kind === "text") q.source.profile = v; }, true)} options={[
+              { v: "rounded", text: "Rounded", title: "Pillow letters: the fins rise from the edge to the full depth" },
+              { v: "flat", text: "Flat", title: "Straight-sided letters: every fin has the full depth" },
+            ]} />
+            <div className="grid2">{fields("text")}</div>
+          </>
+        )}
         {depthBusy && <p className="note" role="status">Reading depth from the photo. The first time downloads the 27 MB depth model.</p>}
         {kind === "image" && (
           <>

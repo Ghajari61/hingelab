@@ -17,6 +17,7 @@ import { nestParts } from "./nest";
 import { formulaHeightfield, formulaRadialProfile, formulaRevolution, radialProfileFn } from "./source/formula";
 import { libraryMesh } from "./source/library";
 import { reliefFromDepth, unpackDepth } from "./source/relief";
+import { textMesh, unpackOutline } from "./source/text";
 import { measureDeviation } from "./quality";
 import { bounds, formatOf, parseMeshFile, prepareMesh, type PreparedMesh } from "./source/mesh";
 import { fallbackSections, manifoldSections, tryManifold, type SectionSource } from "./slice/section";
@@ -43,6 +44,10 @@ export async function loadSource(p: ParametricParams, file?: ArrayBuffer): Promi
   if (s.kind === "image") {
     if (!file) throw new Error("The photo's depth map is missing. Load the photo again.");
     return prepareMesh(reliefFromDepth(unpackDepth(file), s), p.sourceSettings, { units: "mm", upAxis: "Y", anchor: "wall" });
+  }
+  if (s.kind === "text") {
+    if (!file) throw new Error("The text outline is not ready yet.");
+    return prepareMesh(textMesh(unpackOutline(file), s), p.sourceSettings, { units: "mm", upAxis: "Y", anchor: "wall" });
   }
   const fmt = formatOf(s.fileName);
   if (!fmt) throw new Error("Use an STL, OBJ or GLB file.");

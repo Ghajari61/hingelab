@@ -43,6 +43,9 @@ export async function exportParametricForPlan(p: ParametricParams, what: Paramet
   if (p.method !== "curveNormal" && (p.source.kind === "mesh" || p.source.kind === "image")) {
     return { ok: false, status: 422, error: "Imported models and photos stay on your device, so they are exported in the browser." };
   }
+  if (p.method !== "curveNormal" && p.source.kind === "text") {
+    return { ok: false, status: 422, error: "Text is shaped on your device, so it is exported in the browser." };
+  }
   let result;
   try {
     result = computeParametric(p, await loadSource(p), wasm);
