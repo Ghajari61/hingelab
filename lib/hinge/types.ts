@@ -43,6 +43,8 @@ export interface Params {
   gap: number;
   labels: boolean;
   testStrip: boolean;
+  /** Fit to sheet (lib/fit). Missing or "off": parts in rows on one bed. */
+  fit?: { mode: "off" | "sheets" | "auto"; sheets: number };
   layers: {
     outline: LayerFlags;
     slots: LayerFlags;

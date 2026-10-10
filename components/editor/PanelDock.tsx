@@ -9,7 +9,19 @@ import { AnalysisPanel } from "./AnalysisPanel";
 import { LayersPanel } from "./LayersPanel";
 import { HingeInspector } from "./HingeInspector";
 import type { CutStyle, Model } from "@/lib/hinge";
+import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
+import type { FitInfo } from "@/lib/fit/arrange";
+import { SheetSection } from "@/components/shell/SheetSection";
 import type { Units } from "./format";
+
+/** What the Sheet section needs from the editor: the fit result and the two setters. */
+export interface SheetProps {
+  info: FitInfo | null;
+  size: string | null;
+  meta?: string;
+  onSheet: (w: number, h: number) => void;
+  onFit: (f: FitSettings) => void;
+}
 
 function Chevron() {
   return <svg className="chev" width="8" height="8" viewBox="0 0 8 8"><path d="M2 1l4 3-4 3z" fill="currentColor" /></svg>;
@@ -53,7 +65,7 @@ export function Sec({ title, meta, startOpen, onReset, children }: {
 export function PanelDock({
   params, model, error, units, dimsMeta, patMeta,
   onLive, onCommit, onMaterial, onSplit, onCutStyle, onAutoFit, onTestStrip,
-  onVis, onExp, onLabels, onResetSection,
+  onVis, onExp, onLabels, onResetSection, sheet,
 }: {
   params: Params;
   model: Model | null;
@@ -72,6 +84,7 @@ export function PanelDock({
   onExp: (key: keyof Params["layers"], exp: boolean) => void;
   onLabels: (on: boolean) => void;
   onResetSection: (title: string, keys: (keyof Params)[]) => void;
+  sheet: SheetProps;
 }) {
   const fields = (sec: (typeof FIELDS)[number]["sec"]) => FIELDS.filter((f) => f.sec === sec).map((f) => (
     <NumberField
@@ -130,8 +143,13 @@ export function PanelDock({
       <Sec title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
         <LayersPanel layers={params.layers} labels={params.labels} onVis={onVis} onExp={onExp} onLabels={onLabels} />
       </Sec>
-      <Sec title="Sheet & Layout" onReset={() => onResetSection("Sheet & Layout", ["bedW", "bedH", "gap", "testStrip"])}>
-        <div className="grid2">{fields("secSheet")}</div>
+      <Sec title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "testStrip", "fit"])}>
+        <SheetSection
+          bedW={params.bedW} bedH={params.bedH} fit={cleanFit(params.fit)} info={sheet.info} size={sheet.size}
+          onSheet={sheet.onSheet} onFit={sheet.onFit}
+        >
+          <div className="grid2">{fields("secSheet")}</div>
+        </SheetSection>
         <label className="chk"><input type="checkbox" checked={!!params.testStrip} onChange={(e) => onTestStrip(e.target.checked)} /> Add a bend test strip</label>
         <p className="note">The test strip carries one corner&apos;s hinge with 15 mm of flat on each side. Cut it first to check the bend in your material.</p>
       </Sec>

@@ -4,7 +4,9 @@ import { MATERIALS, type CutStyle, type LayerKey, type Pattern } from "@/lib/hin
 import { LETTER_DEFAULTS, bridgeWidthOf, cornerRadiusOf, wallMaxLengthOf, type LetterModel, type LetterParams } from "@/lib/letters";
 import { NumberField } from "@/components/editor/NumberField";
 import { LayersPanel } from "@/components/editor/LayersPanel";
-import { Sec } from "@/components/editor/PanelDock";
+import { Sec, type SheetProps } from "@/components/editor/PanelDock";
+import { SheetSection } from "@/components/shell/SheetSection";
+import { cleanFit } from "@/lib/fit/fitToSheets";
 import type { Units } from "@/components/editor/format";
 import { LETTER_FIELDS, MARQUEE_KEYS, isMarqueeKey, type LetterField, type LetterNumKey } from "./fields";
 import { FontPicker } from "./FontPicker";
@@ -33,7 +35,7 @@ function Choice<T extends string>({ label, value, options, onPick }: {
 }
 
 export function LettersDock({
-  params, model, error, units, uploads, showZones, onShowZones, onAutoFit, onResetSection, onPatch, onField, onMaterial, onPick, onUpload, onDeleteFont,
+  params, model, error, units, uploads, showZones, onShowZones, onAutoFit, onResetSection, onPatch, onField, onMaterial, onPick, onUpload, onDeleteFont, sheet,
 }: {
   params: LetterParams;
   model: LetterModel | null;
@@ -50,6 +52,7 @@ export function LettersDock({
   onUpload: (file: File) => void;
   onDeleteFont: (id: string) => void;
   onResetSection: (title: string, keys: (keyof LetterParams)[]) => void;
+  sheet: SheetProps;
 }) {
   const box = params.mode === "box";
   const hinge = box && params.wallStyle === "hinge";
@@ -203,8 +206,13 @@ export function LettersDock({
       <Sec title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
         <LayersPanel layers={params.layers} labels={params.labels} only={hinge ? undefined : ["outline", "slots", "labels"]} onVis={layerVis} onExp={layerExp} onLabels={(on) => onPatch({ labels: on }, true)} />
       </Sec>
-      <Sec title="Sheet & Layout" onReset={() => onResetSection("Sheet & Layout", ["bedW", "bedH", "gap"])}>
-        <div className="grid2">{fields("sheet")}</div>
+      <Sec title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "fit"])}>
+        <SheetSection
+          bedW={params.bedW} bedH={params.bedH} fit={cleanFit(params.fit)} info={sheet.info} size={sheet.size}
+          onSheet={sheet.onSheet} onFit={sheet.onFit}
+        >
+          <div className="grid2">{fields("sheet")}</div>
+        </SheetSection>
         <p className="note">Parts are packed in reading order.</p>
       </Sec>
     </aside>

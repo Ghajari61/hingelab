@@ -52,6 +52,7 @@ export const LETTER_DEFAULTS: LetterParams = {
   bedH: HINGE.bedH,
   gap: HINGE.gap,
   labels: false,
+  fit: { mode: "off", sheets: 1 },
   layers: {
     outline: { vis: true, exp: true },
     slots: { vis: true, exp: true },

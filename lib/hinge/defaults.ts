@@ -20,6 +20,7 @@ export const DEFAULTS: Params = {
   slit: 28, bridge: 3, pitch: 2.5, overrun: 3, stretch: 0,
   tabW: 10, slotClr: 0.1, lidGap: 0.3, split: 1,
   bedW: 600, bedH: 400, gap: 5, labels: true, testStrip: false,
+  fit: { mode: "off", sheets: 1 },
   layers: { outline: { vis: true, exp: true }, slots: { vis: true, exp: true }, hinge: { vis: true, exp: true }, labels: { vis: true, exp: true } },
 };
 

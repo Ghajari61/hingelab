@@ -4,7 +4,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import dynamic from "next/dynamic";
 import { autoFit, clone, MATERIALS } from "@/lib/hinge";
 import {
-  baseOffset, computeLetterModel, exportLetterSVG, fontFamilyName, hingeParamsOf, LETTER_DEFAULTS, layoutLetters,
+  baseOffset, exportLetterSVG, fontFamilyName, hingeParamsOf, LETTER_DEFAULTS,
   letterLayerContent, loadFont, mergeLetterParams, wallHeightOf, zoneOverlay,
   type HarfBuzz, type LetterParams, type LoadedFont,
 } from "@/lib/letters";
@@ -21,6 +21,9 @@ import { GalleryRail } from "@/components/shell/GalleryRail";
 import { ViewToggle, type ViewMode } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
+import { fitSummary } from "@/components/shell/SheetSection";
+import { arrangeLetters } from "@/lib/fit/products";
+import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
 import type { Preset } from "@/lib/presets";
 import { useMyPresets } from "@/components/shell/useMyPresets";
 import { Canvas } from "@/components/editor/Canvas";
@@ -130,11 +133,14 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   // Typing and scrubbing stay responsive; the geometry follows a moment later.
   const deferred = useDeferredValue(params);
   const ready = !!hb && !!font && font.id === deferred.fontId;
-  const result = useMemo(() => (ready ? computeLetterModel(deferred, font!, hb!) : null), [ready, deferred, font, hb]);
+  const arranged = useMemo(() => (ready ? arrangeLetters(deferred, font!, hb!) : null), [ready, deferred, font, hb]);
+  const result = arranged?.result ?? null;
+  /** The settings actually built: the design, shrunk when Fit is on. */
+  const built = arranged?.params ?? deferred;
   const model = result && !("error" in result) ? result : null;
   const error = loadError ?? (result && "error" in result ? result.error : null);
-  const lay = useMemo(() => (model ? layoutLetters(model, deferred) : null), [model, deferred]);
-  const content = useMemo(() => (lay ? letterLayerContent(lay, deferred) : null), [lay, deferred]);
+  const lay = model ? arranged?.lay ?? null : null;
+  const content = useMemo(() => (lay ? letterLayerContent(lay, built) : null), [lay, built]);
   thumbSrc.current = { content, w: lay?.width ?? 0, h: lay?.height ?? 0 };
   const overlay = useMemo(
     () => (showZones && model?.box && lay ? zoneOverlay(model.box, (letter) => baseOffset(lay, letter)) : null),
@@ -192,11 +198,11 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
     if (!model || !lay) { toastMsg(error ? "Fix the settings before exporting" : "Still loading the font"); return null; }
     const lock = lettersLock(account.plan, deferred);
     if (lock) { setUpgrade(lock); return null; }
-    if (!account.configured) return exportLetterSVG(lay, deferred, font?.name);
+    if (!account.configured) return exportLetterSVG(lay, built, font?.name);
     try {
       const upload = await uploadForExport();
       if (upload && "error" in upload) {
-        if (account.plan === "pro") return exportLetterSVG(lay, deferred, font?.name);
+        if (account.plan === "pro") return exportLetterSVG(lay, built, font?.name);
         toastMsg(upload.error);
         return null;
       }
@@ -218,14 +224,14 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   async function exportNow() {
     const svg = await exportedSVG();
     if (!svg) return;
-    offerFile(baseName(params) + ".svg", svg, "image/svg+xml");
+    offerFile(baseName(built) + ".svg", svg, "image/svg+xml");
     if (svg.includes('id="watermark"')) toastMsg("Exported with the small “Made with HingeLab” mark (Free plan)");
   }
 
   async function copySVG() {
     const svg = await exportedSVG();
     if (!svg) return;
-    const name = baseName(params) + ".svg";
+    const name = baseName(built) + ".svg";
     try {
       navigator.clipboard.writeText(svg).then(() => toastMsg("SVG copied to clipboard"), () => setModal({ type: "code", name, data: svg }));
     } catch {
@@ -396,14 +402,27 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
     ],
   };
 
-  const fits = !!lay && lay.width <= params.bedW + 1e-6 && lay.height <= params.bedH + 1e-6;
+  const fitInfo = arranged?.fit ?? null;
+  const fitSet = cleanFit(params.fit);
+  const fits = fitInfo ? fitInfo.fits : !!lay && lay.width <= params.bedW + 1e-6 && lay.height <= params.bedH + 1e-6;
+  const sheetsText = fitInfo ? `${fitInfo.sheets} sheet${fitInfo.sheets === 1 ? "" : "s"}` : "";
   const fit = error
     ? { cls: "s-err" as const, text: "Fix the highlighted setting" }
     : !model
       ? { cls: "s-ok" as const, text: "Loading font" }
       : fits
-        ? { cls: "s-ok" as const, text: "Fits the bed" }
-        : { cls: "s-warn" as const, text: "Larger than the bed — lower the size or use a bigger bed" };
+        ? { cls: "s-ok" as const, text: fitInfo ? `Fits ${sheetsText}${fitInfo.scale < 1 ? ` at ${Math.round(fitInfo.scale * 1000) / 10} %` : ""}` : "Fits the bed" }
+        : { cls: "s-warn" as const, text: fitInfo ? "Larger than the sheet — use a larger sheet or more sheets" : "Larger than the bed — try Fit product to under Sheet" };
+  const sheetProps = {
+    info: fitInfo,
+    size: `${built.sizeMode === "capHeight" ? "cap" : "total"} ${fmtLen(built.size, units)}${built.mode === "box" ? `, depth ${fmtLen(built.depth, units)}` : ""}`,
+    meta: fitSet.mode === "off" ? undefined : fitSet.mode === "auto" ? `Auto · ${sheetsText}` : `Fit · ${fitSet.sheets} sheet${fitSet.sheets === 1 ? "" : "s"}`,
+    onSheet: (w: number, h: number) => patch({ bedW: w, bedH: h }, true),
+    onFit: (f: FitSettings) => {
+      patch({ fit: f }, true);
+      if (font && hb) toastMsg(fitSummary(f, arrangeLetters({ ...params, fit: f }, font, hb).fit, null));
+    },
+  };
   const zoom = Math.round(viewApi.view.z / PX_PER_MM * 100) + "%";
   const sizeLabel = `${params.sizeMode === "capHeight" ? "cap" : "total"} ${fmtLen(params.size, units)}`;
 
@@ -425,7 +444,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
         <div className="stage">
         <ViewToggle value={viewMode} onChange={setViewMode} />
         <div className="stage-3d" hidden={viewMode !== "3d"}>
-          <LetterPreview3D model={model} params={params} explode={params.mode === "box" && params.lid !== "open" ? explode : 0} />
+          <LetterPreview3D model={model} params={built} explode={params.mode === "box" && params.lid !== "open" ? explode : 0} />
           {params.mode === "box" && params.lid !== "open" && (
             <div className="hud3d">
               <label className="explode">Lift lid <input type="range" min={0} max={1} step={0.01} value={explode} aria-label="Lift lid" onChange={(e) => setExplode(parseFloat(e.target.value))} /></label>
@@ -442,6 +461,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
             viewRef={viewApi.viewRef}
             bedW={params.bedW}
             bedH={params.bedH}
+            sheets={arranged?.sheets ?? null}
             content={content}
             layers={hingeWalls ? params.layers : { ...params.layers, hinge: { ...params.layers.hinge, vis: false } }}
             labels={params.labels}
@@ -485,6 +505,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
           onUpload={uploadFont}
           onDeleteFont={removeFont}
           onResetSection={resetSection}
+          sheet={sheetProps}
         />
         </DockColumn>
       </div>

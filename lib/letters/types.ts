@@ -71,6 +71,8 @@ export interface LetterParams {
   bedH: number;
   gap: number;
   labels: boolean;
+  /** Fit to sheet (lib/fit). Missing or "off": parts in rows on one bed. */
+  fit?: { mode: "off" | "sheets" | "auto"; sheets: number };
   layers: Layers;
 }
 

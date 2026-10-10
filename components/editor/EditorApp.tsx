@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  autoFit, clone, computeModel, DEFAULTS, exportSVG, layerContent, layoutParts, MATERIALS, mergeParams,
+  autoFit, clone, DEFAULTS, exportSVG, layerContent, MATERIALS, mergeParams,
   type CutStyle, type Params,
 } from "@/lib/hinge";
+import { arrangeHinge } from "@/lib/fit/products";
+import { cleanFit } from "@/lib/fit/fitToSheets";
+import { fitSummary } from "@/components/shell/SheetSection";
 import { useHistory } from "@/hooks/useHistory";
 import { readStored, readUnits, useAutosave } from "@/hooks/useAutosave";
 import { useCloudAutosave, type CloudDoc } from "@/hooks/useCloudAutosave";
@@ -76,14 +79,15 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   const toastT = useRef<number>(0);
   const onStatus = useCallback((s: string) => setSaved(s), []);
 
-  const result = useMemo(() => computeModel(params), [params]);
+  const arranged = useMemo(() => arrangeHinge(params), [params]);
+  const result = arranged.result;
+  /** The settings actually built: the design, shrunk when Fit is on. */
+  const built = arranged.params;
   const model = "error" in result ? null : result;
   const error = "error" in result ? result.error : null;
-  const lay = useMemo(
-    () => (model ? layoutParts(model.parts, params.bedW, params.gap) : null),
-    [model, params.bedW, params.gap],
-  );
-  const content = useMemo(() => (model && lay ? layerContent(model, lay, params) : null), [model, lay, params]);
+  const lay = model ? arranged.lay : null;
+  const content = useMemo(() => (model && lay ? layerContent(model, lay, built) : null), [model, lay, built]);
+  const fitSet = cleanFit(params.fit);
 
   useAutosave(params, units, onStatus, undefined, !cloud);
   useCloudAutosave(cloud, params, () => (content && lay ? thumbnailSVG(content, lay.width, lay.height) : null), onStatus);
@@ -131,10 +135,10 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   }
 
   function applyFit(next: Params) {
-    const m = computeModel(next);
-    const packed = "error" in m ? null : layoutParts(m.parts, next.bedW, next.gap);
-    viewApi.fitArgs.current = { bedW: next.bedW, bedH: next.bedH, layW: packed?.width ?? 0, layH: packed?.height ?? 0 };
+    const a = arrangeHinge(next);
+    viewApi.fitArgs.current = { bedW: next.bedW, bedH: next.bedH, layW: a.lay?.width ?? 0, layH: a.lay?.height ?? 0 };
     viewApi.fit();
+    return a;
   }
 
   function patch(next: Params, record: boolean) {
@@ -168,7 +172,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   async function exportedSVG(): Promise<string | null> {
     if (!model || !lay) { toastMsg("Fix the settings before exporting"); return null; }
     if (locks.length) { setUpgrade(lockedReason()); return null; }
-    if (!account.configured) return exportSVG(model, lay, params);
+    if (!account.configured) return exportSVG(model, lay, built);
     try {
       const res = await fetch("/api/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ params }) });
       if (res.ok) return await res.text();
@@ -184,14 +188,14 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   async function exportNow() {
     const svg = await exportedSVG();
     if (!svg) return;
-    offerFile(baseName(params) + ".svg", svg, "image/svg+xml");
+    offerFile(baseName(built) + ".svg", svg, "image/svg+xml");
     if (svg.includes('id="watermark"')) toastMsg("Exported with the small “Made with HingeLab” mark (Free plan)");
   }
 
   async function copySVG() {
     const svg = await exportedSVG();
     if (!svg) return;
-    const name = baseName(params) + ".svg";
+    const name = baseName(built) + ".svg";
     try {
       navigator.clipboard.writeText(svg).then(() => toastMsg("SVG copied to clipboard"), () => setModal({ type: "code", name, data: svg }));
     } catch {
@@ -336,13 +340,29 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
     ],
   };
 
-  const fits = !!lay && lay.width <= params.bedW + 1e-6 && lay.height <= params.bedH + 1e-6;
+  const fitInfo = arranged.fit;
+  const fits = fitInfo ? fitInfo.fits : !!lay && lay.width <= params.bedW + 1e-6 && lay.height <= params.bedH + 1e-6;
   const longStrip = !!model && model.parts.some((pt) => pt.kind === "wall" && pt.w + 10 > params.bedW);
+  const sheetsText = fitInfo ? `${fitInfo.sheets} sheet${fitInfo.sheets === 1 ? "" : "s"}` : "";
   const fit = !model
     ? { cls: "s-err" as const, text: "Fix the highlighted setting" }
     : fits
-      ? { cls: "s-ok" as const, text: "Fits the bed" }
-      : { cls: "s-warn" as const, text: `Larger than the bed${longStrip && params.split === 1 ? " — try Two halves under Joints" : ""}` };
+      ? { cls: "s-ok" as const, text: fitInfo ? `Fits ${sheetsText}${fitInfo.scale < 1 ? ` at ${Math.round(fitInfo.scale * 1000) / 10} %` : ""}` : "Fits the bed" }
+      : { cls: "s-warn" as const, text: `Larger than the ${fitInfo ? "sheet" : "bed"}${longStrip && params.split === 1 ? " — try Two halves under Joints" : fitInfo ? "" : " — try Fit product to under Sheet"}` };
+  const fittedSize = built.shape === "cyl"
+    ? `Ø${fmtLen(built.dia, units)} × ${fmtLen(built.H, units)}`
+    : `${fmtLen(built.W, units)} × ${built.shape === "poly" ? built.sides + " sides" : fmtLen(built.D, units)} × ${fmtLen(built.H, units)}`;
+  const sheetProps = {
+    info: fitInfo,
+    size: fittedSize,
+    meta: fitSet.mode === "off" ? undefined : fitSet.mode === "auto" ? `Auto · ${sheetsText}` : `Fit · ${fitSet.sheets} sheet${fitSet.sheets === 1 ? "" : "s"}`,
+    onSheet: (w: number, h: number) => { const next = { ...params, bedW: w, bedH: h }; patch(next, true); applyFit(next); },
+    onFit: (f: { mode: "off" | "sheets" | "auto"; sheets: number }) => {
+      const next = { ...params, fit: f };
+      patch(next, true);
+      toastMsg(fitSummary(f, applyFit(next).fit, null));
+    },
+  };
 
   const zoom = Math.round(viewApi.view.z / PX_PER_MM * 100) + "%";
 
@@ -361,7 +381,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
         <div className="stage">
         <ViewToggle value={viewMode} onChange={setViewMode} />
         <div className="stage-3d" hidden={viewMode !== "3d"}>
-          <Preview3D model={model} params={params} explode={explode} />
+          <Preview3D model={model} params={built} explode={explode} />
           {params.lid !== "open" && (
             <div className="hud3d">
               <label className="explode">Lift lid <input type="range" min={0} max={1} step={0.01} value={explode} aria-label="Lift lid" onChange={(e) => setExplode(parseFloat(e.target.value))} /></label>
@@ -378,6 +398,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
             viewRef={viewApi.viewRef}
             bedW={params.bedW}
             bedH={params.bedH}
+            sheets={arranged.sheets}
             content={content}
             layers={params.layers}
             labels={params.labels}
@@ -427,6 +448,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
           }}
           onLabels={(on) => patch({ ...params, labels: on }, true)}
           onResetSection={resetSection}
+          sheet={sheetProps}
         />
         </DockColumn>
       </div>
