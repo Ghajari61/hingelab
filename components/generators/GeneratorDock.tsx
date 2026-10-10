@@ -161,7 +161,7 @@ export function GeneratorDock({
 
   return (
     <aside className="dock" aria-label="Panels">
-      {def.sections.map((s) => (s.show && !s.show(params) ? null : (
+      {def.sections.map((s) => ((s.show && !s.show(params)) || s.fields.every((f) => f.kind === "choice" && f.rail) ? null : (
         <Sec key={s.id} title={s.title} startOpen={s.open ?? true} onReset={() => onResetSection(s.title, s.fields.map((f) => f.key))}>
           {body(s.fields as FieldSpec<P>[])}
         </Sec>

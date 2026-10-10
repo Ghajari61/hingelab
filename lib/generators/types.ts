@@ -67,8 +67,14 @@ export interface GenPart {
   images?: GenImage[];
   /** The pieces the cuts make (puzzles): drawn separately in 3D. */
   pieces?: Contour[];
-  /** Where the part sits when assembled (3D): its frame is moved by (x, y), lifted to z, turned rot°. */
-  place?: { x: number; y: number; z: number; rot?: number; upright?: boolean };
+  /**
+   * Where the part sits when assembled (3D): its frame is moved by (x, y), lifted to z, turned rot° in
+   * its plane. Upright parts stand on edge: their frame's y points down from height -y, they sit at
+   * depth z and their thickness runs toward +y on plan. `tilt` leans an upright part (deg from
+   * horizontal, 90 = upright); `yaw` turns it about the vertical (deg; 90 runs its x along +y on plan
+   * with its thickness toward -x).
+   */
+  place?: { x: number; y: number; z: number; rot?: number; upright?: boolean; tilt?: number; yaw?: number };
   /** Thickness when it differs from the material (for example acrylic hands). */
   t?: number;
   /** Shade in 3D (1 = the material; lower is darker), for a contrasting layer. */

@@ -21,8 +21,9 @@ export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D 
     wrap.name = p.name;
     if (pl.upright) wrap.position.set(pl.x, -z, -pl.y);
     else wrap.position.set(pl.x, -pl.y, z);
+    if (pl.yaw) wrap.rotation.z = -(pl.yaw * Math.PI) / 180;
     const stand = new THREE.Group();
-    if (pl.upright) stand.rotation.x = Math.PI / 2;
+    if (pl.upright) stand.rotation.x = ((pl.tilt ?? 90) * Math.PI) / 180;
     const spin = new THREE.Group();
     spin.rotation.z = -((pl.rot ?? 0) * Math.PI) / 180;
     const tint = p.tone ?? (/hand/i.test(p.name) ? 0.72 : levels.indexOf(pl.z) % 2 ? 1.06 : 0.94);

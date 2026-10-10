@@ -25,7 +25,9 @@ export default function GeneratorView3D({ out, lay, T, material, frameKey }: {
     if (flat && lay) return flatScene(flatOf(lay), T);
     return generatorScene(out, T, explode);
   }, [out, lay, T, flat, explode]);
-  const key = flat && lay ? `flat|${Math.round(lay.width)}x${Math.round(lay.height)}` : frameKey;
+  // A different set of parts (another design) reframes; resizing the same parts does not.
+  const parts = useMemo(() => out?.parts.map((p) => p.id).join(",") ?? "", [out]);
+  const key = flat && lay ? `flat|${Math.round(lay.width)}x${Math.round(lay.height)}` : `${frameKey}|${parts}`;
   return (
     <Viewport3D scene={scene} look={lookOf(material)} frameKey={key} label="The design in 3D, drag to orbit">
       <View3DHud flat={flat} onFlat={setFlat} explode={explode} onExplode={setExplode} />
