@@ -1,9 +1,13 @@
 /** "Save as my preset": settings kept on this device, and in the account when signed in (user_presets). */
+import { GENERATOR_IDS, type GeneratorId } from "@/lib/generators/ids";
 import type { ProductId } from "@/lib/supabase/types";
+
+/** Generators' presets stay on this device, like their designs. */
+export type PresetProduct = ProductId | GeneratorId;
 
 export interface MyPreset {
   id: string;
-  product: ProductId;
+  product: PresetProduct;
   name: string;
   params: Record<string, unknown>;
   createdAt: string;
@@ -12,24 +16,30 @@ export interface MyPreset {
 }
 
 export const MY_PRESETS_KEY = "hingelab-my-presets";
+export const MY_GENERATOR_PRESETS_KEY = "hingelab-my-generator-presets";
 /** Per product on this device; the account keeps up to 200 in total. */
 export const MAX_LOCAL_PER_PRODUCT = 50;
-const PRODUCTS: ProductId[] = ["hinge-box", "letters", "parametric"];
+export const CLOUD_PRESET_PRODUCTS: readonly ProductId[] = ["hinge-box", "letters", "parametric"];
 
-const isPreset = (v: unknown): v is MyPreset => {
+export const isCloudPresetProduct = (p: PresetProduct): p is ProductId => (CLOUD_PRESET_PRODUCTS as readonly string[]).includes(p);
+
+const isPreset = (v: unknown, products: readonly string[]): v is MyPreset => {
   const p = v as MyPreset;
-  return !!p && typeof p === "object" && typeof p.id === "string" && PRODUCTS.includes(p.product)
+  return !!p && typeof p === "object" && typeof p.id === "string" && products.includes(p.product)
     && typeof p.name === "string" && !!p.params && typeof p.params === "object" && !Array.isArray(p.params);
 };
 
-export function parseMyPresets(raw: string | null): MyPreset[] {
+/** Reads a stored list, keeping only well-formed entries for the given products (the account's by default). */
+export function parseMyPresets(raw: string | null, products: readonly PresetProduct[] = CLOUD_PRESET_PRODUCTS): MyPreset[] {
   try {
     const v = JSON.parse(raw ?? "[]") as unknown;
-    return Array.isArray(v) ? v.filter(isPreset) : [];
+    return Array.isArray(v) ? v.filter((x): x is MyPreset => isPreset(x, products)) : [];
   } catch {
     return [];
   }
 }
+
+export const parseGeneratorPresets = (raw: string | null): MyPreset[] => parseMyPresets(raw, GENERATOR_IDS);
 
 export function cleanPresetName(name: string): string {
   return name.replace(/\s+/g, " ").trim().slice(0, 60);

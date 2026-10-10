@@ -3,6 +3,14 @@
 /* ---------- header ---------- */
 .hdr-center { display: flex; justify-content: center; flex: 1 1 auto; min-width: 0; }
 .product-tabs button { height: 30px; padding-inline: 12px; }
+.gen-menu { position: relative; display: inline-flex; }
+.gen-menu > button svg:last-child { margin-inline-start: -2px; opacity: .7; }
+.gen-dropdown { position: absolute; top: calc(100% + 8px); right: 0; z-index: 60; width: 320px; display: grid; gap: 2px; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-3); }
+.product-tabs .gen-dropdown button { height: auto; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px; text-align: start; border-radius: 8px; color: var(--fg); }
+.gen-dropdown button[aria-current="true"] { background: var(--surface-hover); }
+.gen-dropdown .gi { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; background: var(--surface-hover); }
+.gen-dropdown .gt { display: grid; gap: 2px; font-size: 13px; }
+.gen-dropdown .gt small { color: var(--fg-dim); font-size: 12px; line-height: 1.35; font-weight: 400; white-space: normal; }
 .doc-title { max-width: 260px; }
 .hdr-tools { display: flex; align-items: center; gap: 2px; margin-inline-start: 8px; }
 .hdr-btn { width: 34px; height: 34px; display: grid; place-items: center; border: 0; background: none; color: var(--fg-dim); border-radius: 8px; cursor: pointer; }
@@ -120,6 +128,15 @@ details.sec > summary:hover .sec-rst, .sec-rst:focus-visible { opacity: 1; }
 .start-tile .nm { font-size: 17px; font-weight: 650; }
 .start-tile .bl { font-size: 13px; color: var(--fg-dim); line-height: 1.4; }
 .start-tile .go { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--cta); }
+.start-gens { margin: -18px 0 36px; }
+.start-gens h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 16px; }
+.gen-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.gen-tile { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 4px 12px; align-items: start; text-align: start; padding: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; color: var(--fg); transition: border-color var(--dur-fast), box-shadow var(--dur-fast); }
+.gen-tile:hover { border-color: var(--select); box-shadow: var(--shadow-2); }
+.gen-tile .ico { grid-row: span 2; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--surface-hover); }
+.gen-tile .nm { font-size: 15px; font-weight: 650; }
+.gen-tile .bl { font-size: 12.5px; color: var(--fg-dim); line-height: 1.4; }
+.gen-tile .go { grid-column: 2; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--cta); }
 .start-presets { margin-bottom: 30px; }
 .start-presets h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 16px; }
 .preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 12px; }

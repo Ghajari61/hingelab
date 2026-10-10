@@ -8,7 +8,7 @@ import { fmtLen, type Units } from "./format";
 
 /** The laser bed with the laid-out parts. Products pass ready-made layer content. */
 export function Canvas({
-  canvasRef, view, viewRef, bedW, bedH, sheets, content, layers, labels, pitch = 0, overlay, error, notice, showGrid, tool, spaceDown, units,
+  canvasRef, view, viewRef, bedW, bedH, sheets, content, engrave, layers, labels, pitch = 0, overlay, error, notice, showGrid, tool, spaceDown, units,
   onCursor, zoomAt, panBy, onZoomCenter, onActual, onFit, tools,
 }: {
   canvasRef: React.RefObject<HTMLDivElement | null>;
@@ -19,6 +19,8 @@ export function Canvas({
   /** Several sheets laid out side by side, drawn instead of the single bed. */
   sheets?: { x: number; y: number; w: number; h: number; label: string; warn?: boolean }[] | null;
   content: LayerContent | null;
+  /** Engraved areas (filled, even-odd), on the labels layer. */
+  engrave?: string[];
   layers: Layers;
   labels: boolean;
   /** Hinge spacing, used to fade dense hinge cuts when zoomed out. */
@@ -126,6 +128,7 @@ export function Canvas({
               )}
               {showGrid && <path d={grid} stroke="var(--canvas-grid)" strokeWidth={sw * 0.8} fill="none" />}
               {content.fills.map((d, i) => <path key={`f${i}`} d={d} fill="var(--wood)" fillOpacity={0.13} fillRule="evenodd" stroke="none" />)}
+              {vis("labels") && engrave?.map((d, i) => <path key={`e${i}`} d={d} fill="var(--l-labels)" fillOpacity={0.72} fillRule="evenodd" stroke="none" className="engrave" />)}
               {/* hairline hinge: thin enough that individual cuts stay readable when zoomed out */}
               {vis("hinge") && content.hinge.length > 0 && (
                 <path

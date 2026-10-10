@@ -5,7 +5,6 @@ import { useContext } from "react";
 import { Lightbulb, Redo2, Undo2 } from "lucide-react";
 import { LockIcon } from "@/components/billing/Lock";
 import { HelpContext, HelpMark } from "@/components/help/HelpContext";
-import { TIPS_HELP } from "@/lib/help/sections";
 import type { Opt } from "@/components/editor/ControlBar";
 import { ART } from "./cardArt";
 
@@ -24,7 +23,7 @@ export type GalleryGroup = {
 function TipsButton() {
   const help = useContext(HelpContext);
   if (!help) return null;
-  return <button type="button" className="hdr-btn" aria-label="Tips" title="Tips for this product" onClick={() => help.open(TIPS_HELP[help.product])}><Lightbulb size={16} /></button>;
+  return <button type="button" className="hdr-btn" aria-label="Tips" title="Tips for this product" onClick={() => help.open(help.map.tips)}><Lightbulb size={16} /></button>;
 }
 
 export type History = { canUndo: boolean; canRedo: boolean; undo: () => void; redo: () => void };

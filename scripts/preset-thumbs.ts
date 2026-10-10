@@ -12,6 +12,9 @@ import { computeParametric, loadSource, mergeParametricParams } from "@/lib/para
 import { packOutline } from "@/lib/parametric/source/text";
 import { PARAMETRIC_PRESETS } from "@/lib/parametric/presets";
 import { lettersThumbSVG, partsThumbSVG } from "@/lib/presetThumbs";
+import { ALL_GENERATORS } from "@/lib/generators/all";
+import { makeTextFn } from "@/lib/generators/text";
+import { assembledSVG } from "@/lib/generators/thumb";
 
 const root = process.cwd();
 const out = (product: string, id: string, svg: string) => {
@@ -34,14 +37,28 @@ function font(id: string): LoadedFont {
   return f;
 }
 
-for (const preset of HINGE_PRESETS) {
+const only = process.env.THUMBS_ONLY?.split(",");
+const want = (product: string) => !only || only.includes(product);
+
+const genCtx = { text: makeTextFn(hb, (id) => (BUNDLED_FONTS.some((f) => f.id === id) ? font(id) : null)) };
+for (const def of ALL_GENERATORS) {
+  if (!want(def.id)) continue;
+  for (const preset of def.presets) {
+    const p = def.merge(preset.params);
+    const r = def.build(p, genCtx);
+    if (r.error) throw new Error(`${def.id}/${preset.id}: ${r.error}`);
+    out(def.id, preset.id, assembledSVG(r, p.T));
+  }
+}
+
+if (want("hinge")) for (const preset of HINGE_PRESETS) {
   const p = hingePresetParams(preset.params);
   const m = computeModel(p);
   if ("error" in m) throw new Error(`hinge/${preset.id}: ${m.error}`);
   out("hinge", preset.id, sceneSVG(m, p, -0.6, p.lid === "removable" ? 0.35 : 0).replace("<svg ", '<svg width="300" height="200" '));
 }
 
-for (const preset of LETTER_PRESETS) {
+if (want("letters")) for (const preset of LETTER_PRESETS) {
   const p = mergeLetterParams(preset.params);
   const r = computeLetterModel(p, font(p.fontId), hb);
   if ("error" in r) throw new Error(`letters/${preset.id}: ${r.error}`);
@@ -51,7 +68,7 @@ for (const preset of LETTER_PRESETS) {
 
 const wasm = await Module();
 wasm.setup();
-for (const preset of PARAMETRIC_PRESETS) {
+if (want("parametric")) for (const preset of PARAMETRIC_PRESETS) {
   const p = mergeParametricParams(preset.params);
   let file: ArrayBuffer | undefined;
   if (p.source.kind === "text") {

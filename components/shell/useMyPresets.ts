@@ -2,16 +2,24 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getBrowserClient } from "@/lib/supabase/client";
-import type { Json, ProductId } from "@/lib/supabase/types";
+import type { Json } from "@/lib/supabase/types";
 import {
-  MY_PRESETS_KEY, addMyPreset, cleanPresetName, mergeCloudPresets, parseMyPresets, removeMyPreset, type MyPreset,
+  MY_GENERATOR_PRESETS_KEY, MY_PRESETS_KEY, addMyPreset, cleanPresetName, isCloudPresetProduct, mergeCloudPresets,
+  parseGeneratorPresets, parseMyPresets, removeMyPreset, type MyPreset, type PresetProduct,
 } from "@/lib/userPresets";
 
 function readLocal(): MyPreset[] {
-  try { return parseMyPresets(localStorage.getItem(MY_PRESETS_KEY)); } catch { return []; }
+  try {
+    return [...parseMyPresets(localStorage.getItem(MY_PRESETS_KEY)), ...parseGeneratorPresets(localStorage.getItem(MY_GENERATOR_PRESETS_KEY))]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  } catch { return []; }
 }
 function writeLocal(list: MyPreset[]) {
-  try { localStorage.setItem(MY_PRESETS_KEY, JSON.stringify(list.map(({ cloud: _c, ...p }) => p))); } catch { /* storage full or blocked */ }
+  const plain = list.map(({ cloud: _c, ...p }) => p);
+  try {
+    localStorage.setItem(MY_PRESETS_KEY, JSON.stringify(plain.filter((p) => isCloudPresetProduct(p.product))));
+    localStorage.setItem(MY_GENERATOR_PRESETS_KEY, JSON.stringify(plain.filter((p) => !isCloudPresetProduct(p.product))));
+  } catch { /* storage full or blocked */ }
 }
 
 async function signedInClient() {
@@ -41,11 +49,12 @@ export function useMyPresets() {
   }, []);
 
   /** Saves a preset and says where it went. */
-  const save = useCallback(async (product: ProductId, name: string, params: object): Promise<string> => {
+  const save = useCallback(async (product: PresetProduct, name: string, params: object): Promise<string> => {
     const item: MyPreset = { id: crypto.randomUUID(), product, name: cleanPresetName(name) || "My preset", params: JSON.parse(JSON.stringify(params)), createdAt: new Date().toISOString() };
     const local = addMyPreset(readLocal(), item);
     writeLocal(local);
     setList((l) => addMyPreset(l, item));
+    if (!isCloudPresetProduct(product)) return `Saved “${item.name}” on this device`;
     const db = await signedInClient();
     if (!db) return `Saved “${item.name}” on this device`;
     const { error } = await db.from("user_presets").insert({ id: item.id, product, name: item.name, params: item.params as Json });

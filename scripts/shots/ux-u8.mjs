@@ -7,7 +7,7 @@ const check = (ok, msg) => { if (!ok) throw new Error("FAILED: " + msg); console
 await withBrowser(async (page) => {
   await page.goto(`${BASE}/help`);
   await page.getByRole("searchbox", { name: "Search help" }).waitFor();
-  check(await page.locator(".help-groups section").count() === 4, "articles are grouped by product");
+  check(await page.locator(".help-groups section").count() >= 5 && await page.locator(".help-groups section").filter({ hasText: "Clock" }).count() === 1, "articles are grouped by product, generators included");
   await page.getByRole("searchbox", { name: "Search help" }).fill("kerf");
   const first = page.getByRole("region", { name: "Search results" }).locator(".help-list li").first();
   check(/Material, thickness and kerf/.test(await first.textContent()), "searching kerf finds the material article first");

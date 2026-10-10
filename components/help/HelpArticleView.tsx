@@ -38,7 +38,7 @@ export function HelpArticleView({ article, linkBase = "/help/" }: { article: Hel
               <dl>
                 {g.entries.map((f) => (
                   <div key={f.id} className="help-field" data-field={f.id}>
-                    <dt><strong>{f.label}</strong><span>{f.range}{f.range !== "any" ? ` · step ${f.step}` : ""}</span></dt>
+                    <dt><strong>{f.label}</strong><span>{f.range}{f.range !== "any" && f.step ? ` · step ${f.step}` : ""}</span></dt>
                     <dd>{f.help}</dd>
                   </div>
                 ))}

@@ -1,0 +1,13 @@
+/* Generators (G1): the shared editor's few extra pieces. */
+.gen-app .gcard .art img { width: 66px; height: 44px; object-fit: contain; }
+.gen-app .gcards.c3 .gcard .art img { width: 52px; height: 36px; }
+.gen-choice, .gen-font, .gen-text { display: grid; gap: 6px; margin-block: 4px 8px; }
+.gen-choice .rowlabel, .gen-font .rowlabel, .gen-text .rowlabel { margin: 0; }
+.gen-text textarea.textin { font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; }
+.gen-stats { display: grid; gap: 4px; margin: 0 0 10px; font-size: 12.5px; }
+.gen-stats > div { display: flex; justify-content: space-between; gap: 12px; }
+.gen-stats dt { color: var(--fg-dim); }
+.gen-stats dd { margin: 0; text-align: end; font-variant-numeric: tabular-nums; }
+.gen-assembly { margin-top: 10px; font-size: 12.5px; }
+.gen-assembly summary { cursor: pointer; color: var(--fg-dim); font-weight: 500; }
+.gen-assembly ol { margin: 8px 0 0; padding-inline-start: 18px; display: grid; gap: 4px; line-height: 1.45; }

@@ -21,6 +21,8 @@ const LAZY_BUDGETS = {
   "Letters editor": { key: /Workspace\.tsx -> @\/components\/letters\/LettersEditor$/, kb: 145 },
   "Parametric editor": { key: /Workspace\.tsx -> @\/components\/parametric\/ParametricEditor$/, kb: 330 },
   "3D view (three.js)": { key: /EditorApp\.tsx -> \.\/HingeView3D$/, kb: 195 },
+  "Generator editor": { key: /Workspace\.tsx -> @\/components\/generators\/GeneratorEditor$/, kb: 125 },
+  "Clock generator": { key: /registry\.ts -> \.\/clock$/, kb: 15 },
 };
 
 const gz = new Map();

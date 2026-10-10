@@ -1,4 +1,5 @@
 /** The help centre's articles. Option lists come from the field definitions (`fieldEntries`). */
+import { GENERATOR_IDS, GENERATOR_INFO, type GeneratorId } from "@/lib/generators/ids";
 import type { HelpProduct } from "./sections";
 
 export type HelpBlock = { h?: string; p?: string; list?: string[] };
@@ -12,7 +13,7 @@ export interface HelpImage {
 
 /** The number fields of these panel sections, listed with their units, range and help. */
 export interface FieldGroupRef {
-  product: HelpProduct;
+  product: HelpProduct | GeneratorId;
   secs: string[];
   title?: string;
   /** Other products with the same fields (same ids and meaning). */
@@ -21,7 +22,7 @@ export interface FieldGroupRef {
 
 export interface HelpArticle {
   slug: string;
-  product: HelpProduct | "general";
+  product: HelpProduct | GeneratorId | "general";
   title: string;
   summary: string;
   blocks: HelpBlock[];
@@ -37,6 +38,7 @@ export const PRODUCT_NAMES: Record<HelpArticle["product"], string> = {
   hinge: "Hinge Box",
   letters: "Letters",
   parametric: "Parametric",
+  ...(Object.fromEntries(GENERATOR_IDS.map((id) => [id, GENERATOR_INFO[id].name])) as Record<GeneratorId, string>),
 };
 
 const shot = (name: string, alt: string, caption?: string): HelpImage => ({ src: `/help/shots/${name}.jpg`, alt, caption });

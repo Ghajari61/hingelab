@@ -2,20 +2,27 @@
 import { FIELDS, type BaseField } from "@/components/editor/fields";
 import { LETTER_FIELDS } from "@/components/letters/fields";
 import { PARAM_FIELDS } from "@/components/parametric/fields";
-import { ARTICLES, PRODUCT_NAMES, type FieldGroupRef, type HelpArticle } from "./articles";
+import { ALL_GENERATORS } from "@/lib/generators/all";
+import type { GeneratorId } from "@/lib/generators/ids";
+import { ARTICLES as BASE_ARTICLES, PRODUCT_NAMES, type FieldGroupRef, type HelpArticle } from "./articles";
 import { HINGE_FIELD_HELP, LETTER_FIELD_HELP, PARAM_FIELD_HELP } from "./fieldHelp";
+import { generatorArticles, generatorFields } from "./generators";
 import type { HelpIndexEntry } from "./search";
 import type { HelpProduct } from "./sections";
 
-export { ARTICLES, PRODUCT_NAMES };
+export { PRODUCT_NAMES };
 export type { HelpArticle };
 
-type AnyField = BaseField & { sec: string };
+/** Every article: the written ones, then one overview and one tips article per generator. */
+export const ARTICLES: HelpArticle[] = [...BASE_ARTICLES, ...generatorArticles()];
 
-export const FIELD_SOURCES: Record<HelpProduct, { fields: AnyField[]; help: Record<string, string> }> = {
+type AnyField = BaseField & { sec: string; range?: string };
+
+export const FIELD_SOURCES: Record<HelpProduct | GeneratorId, { fields: AnyField[]; help: Record<string, string> }> = {
   hinge: { fields: FIELDS, help: HINGE_FIELD_HELP },
   letters: { fields: LETTER_FIELDS, help: LETTER_FIELD_HELP },
   parametric: { fields: PARAM_FIELDS, help: PARAM_FIELD_HELP },
+  ...(Object.fromEntries(ALL_GENERATORS.map((d) => [d.id, generatorFields(d)])) as Record<GeneratorId, { fields: AnyField[]; help: Record<string, string> }>),
 };
 
 export interface FieldEntry {
@@ -24,6 +31,7 @@ export interface FieldEntry {
   /** "mm", or "" for counts and ratios. */
   unit: string;
   range: string;
+  /** Empty for choices, switches and text. */
   step: string;
   help: string;
 }
@@ -33,6 +41,7 @@ const num = (v: number) => String(Math.round(v * 1000) / 1000);
 export function fieldEntry(f: AnyField, help: string): FieldEntry {
   const unit = f.len ? "mm" : "";
   const u = unit ? ` ${unit}` : "";
+  if (f.range) return { id: f.id, label: f.label, unit, range: f.range, step: "", help };
   const range = f.min != null && f.max != null ? `${num(f.min)} to ${num(f.max)}${u}`
     : f.min != null ? `${num(f.min)}${u} or more`
       : f.max != null ? `up to ${num(f.max)}${u}` : "any";

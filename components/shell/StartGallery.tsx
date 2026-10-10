@@ -1,33 +1,40 @@
 "use client";
 
 import { useMemo } from "react";
-import { ArrowRight, Bookmark, Trash2 } from "lucide-react";
-import type { ProductId } from "@/lib/supabase/types";
+import { ArrowRight, Bookmark, Shapes, Trash2 } from "lucide-react";
+import type { PresetProduct } from "@/lib/userPresets";
 import { useMyPresets } from "./useMyPresets";
 import { LogoMark } from "@/components/site/LogoMark";
 import { UserMenu } from "@/components/auth/UserMenu";
-import { PRODUCT_INFO, type Product } from "@/components/editor/ControlBar";
+import { ALL_PRODUCTS, CORE_PRODUCTS, PRODUCT_INFO, type Product } from "@/components/editor/ControlBar";
 import { HINGE_KEY, readStored } from "@/hooks/useAutosave";
 import { HINGE_PRESETS, hingePresetParams } from "@/lib/hinge/presets";
 import { LETTER_PRESETS } from "@/lib/letters/presets";
 import { PARAMETRIC_PRESETS } from "@/lib/parametric/presets";
+import { GENERATOR_IDS, GENERATOR_INFO, isGeneratorId } from "@/lib/generators/ids";
+import { GENERATOR_PRESETS } from "@/lib/generators/presets";
 import { hingeLocks, lettersLock, parametricLocks } from "@/lib/plans";
 import type { Preset } from "@/lib/presets";
 
-export const PRODUCT_KEYS: Record<Product, string> = { hinge: HINGE_KEY, letters: "hingelab-letters-v2", parametric: "hingelab-parametric-v1" };
+export const PRODUCT_KEYS: Record<Product, string> = {
+  hinge: HINGE_KEY, letters: "hingelab-letters-v2", parametric: "hingelab-parametric-v1",
+  ...(Object.fromEntries(GENERATOR_IDS.map((id) => [id, GENERATOR_INFO[id].storageKey])) as Record<(typeof GENERATOR_IDS)[number], string>),
+};
 
 const BLURB: Record<Product, string> = {
   hinge: "Rounded, round and many-sided boxes with living-hinge walls.",
   letters: "Letter boxes, solid signs and stencils from any text.",
   parametric: "Sliced sculptures: fins, layers, waffles and clocks.",
+  ...(Object.fromEntries(GENERATOR_IDS.map((id) => [id, GENERATOR_INFO[id].blurb])) as Record<(typeof GENERATOR_IDS)[number], string>),
 };
 
-const FROM_ID: Record<ProductId, Product> = { "hinge-box": "hinge", letters: "letters", parametric: "parametric" };
+const fromPresetProduct = (id: PresetProduct): Product => (id === "hinge-box" ? "hinge" : id);
 
 type AnyPreset = Preset<Record<string, unknown>>;
 export type StartChoice = { product: Product; preset?: AnyPreset };
 
 function isPro(product: Product, p: AnyPreset): boolean {
+  if (isGeneratorId(product)) return false;
   const q = p.params as Record<string, unknown>;
   if (product === "hinge") return hingeLocks("free", hingePresetParams(q)).length > 0;
   if (product === "letters") return lettersLock("free", { mode: (q.mode as string) ?? "solid", text: (q.text as string) ?? "" }) !== null;
@@ -38,7 +45,7 @@ function isPro(product: Product, p: AnyPreset): boolean {
 export function StartGallery({ onPick }: { onPick: (choice: StartChoice) => void }) {
   const saved = useMemo(() => {
     const out = {} as Record<Product, string | null>;
-    for (const k of Object.keys(PRODUCT_KEYS) as Product[]) {
+    for (const k of ALL_PRODUCTS) {
       const s = readStored<{ name?: string }>(PRODUCT_KEYS[k]);
       out[k] = s?.params ? (s.params.name as string | undefined) ?? "Untitled" : null;
     }
@@ -48,8 +55,10 @@ export function StartGallery({ onPick }: { onPick: (choice: StartChoice) => void
     ["hinge", HINGE_PRESETS as unknown as AnyPreset[]],
     ["letters", LETTER_PRESETS as unknown as AnyPreset[]],
     ["parametric", PARAMETRIC_PRESETS as unknown as AnyPreset[]],
+    ...GENERATOR_IDS.map((id) => [id, GENERATOR_PRESETS[id] as unknown as AnyPreset[]] as [Product, AnyPreset[]]),
   ];
   const mine = useMyPresets();
+  const go = (k: Product) => (saved[k] ? <>Continue “{saved[k]}”</> : "Start designing");
 
   return (
     <div className="start">
@@ -61,21 +70,34 @@ export function StartGallery({ onPick }: { onPick: (choice: StartChoice) => void
         <h1>What would you like to make?</h1>
         <p className="start-sub">Pick a product to continue where you left off, or start from a preset below.</p>
         <div className="start-products">
-          {(Object.keys(PRODUCT_INFO) as Product[]).map((k) => (
+          {CORE_PRODUCTS.map((k) => (
             <button key={k} type="button" className="start-tile" aria-label={PRODUCT_INFO[k].name} onClick={() => onPick({ product: k })}>
               <span className="ico" aria-hidden>{PRODUCT_INFO[k].icon}</span>
               <span className="nm">{PRODUCT_INFO[k].name}</span>
               <span className="bl">{BLURB[k]}</span>
-              <span className="go">{saved[k] ? <>Continue “{saved[k]}”</> : "Start designing"}<ArrowRight size={14} aria-hidden /></span>
+              <span className="go">{go(k)}<ArrowRight size={14} aria-hidden /></span>
             </button>
           ))}
         </div>
+        <section className="start-gens" aria-label="Generators">
+          <h2><Shapes size={16} aria-hidden />Generators</h2>
+          <div className="gen-tiles">
+            {GENERATOR_IDS.map((k) => (
+              <button key={k} type="button" className="gen-tile" aria-label={PRODUCT_INFO[k].name} onClick={() => onPick({ product: k })}>
+                <span className="ico" aria-hidden>{PRODUCT_INFO[k].icon}</span>
+                <span className="nm">{PRODUCT_INFO[k].name}</span>
+                <span className="bl">{BLURB[k]}</span>
+                <span className="go">{go(k)}<ArrowRight size={13} aria-hidden /></span>
+              </button>
+            ))}
+          </div>
+        </section>
         {mine.list.length > 0 && (
           <section className="start-presets" aria-label="My presets">
             <h2><Bookmark size={16} aria-hidden />My presets</h2>
             <div className="preset-grid">
               {mine.list.map((m) => {
-                const product = FROM_ID[m.product];
+                const product = fromPresetProduct(m.product);
                 return (
                   <div key={m.id} className="preset-card mine">
                     <button type="button" className="pick" data-my-preset={m.name} onClick={() => onPick({ product, preset: { id: m.id, name: m.name, note: "", params: m.params } })}>

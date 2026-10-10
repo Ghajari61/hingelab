@@ -7,25 +7,36 @@ import type { MenuEntry } from "@/components/editor/MenuBar";
 
 const NAMES: Record<HelpProduct, string> = { hinge: "the Hinge Box", letters: "Letters", parametric: "Parametric" };
 
+/** Where a product's help lives: section and rail headings to article slugs, and its tips article. */
+export interface HelpMap {
+  name: string;
+  section: Record<string, string>;
+  rail: Record<string, string>;
+  tips: string;
+}
+
+const mapOf = (p: HelpProduct): HelpMap => ({ name: NAMES[p], section: SECTION_HELP[p], rail: RAIL_HELP[p], tips: TIPS_HELP[p] });
+
 /** The editor's help panel: the context for "?" marks, Help menu entries and the drawer itself. */
-export function useHelpPanel(product: HelpProduct) {
+export function useHelpPanel(product: HelpProduct | HelpMap) {
   const [slug, setSlug] = useState<string | null>(null);
-  const ctx = useMemo(() => ({ product, open: setSlug }), [product]);
+  const map = useMemo(() => (typeof product === "string" ? mapOf(product) : product), [product]);
+  const ctx = useMemo(() => ({ map, open: setSlug }), [map]);
   const close = useCallback(() => setSlug(null), []);
   const menu: MenuEntry[] = [
     { label: "Help centre", kbd: "", run: () => { window.open("/help", "_blank", "noopener"); } },
-    { label: `Tips for ${NAMES[product]}`, kbd: "", run: () => setSlug(TIPS_HELP[product]) },
+    { label: `Tips for ${map.name}`, kbd: "", run: () => setSlug(map.tips) },
   ];
   return { ctx, menu, drawer: slug ? <HelpDrawer slug={slug} onClose={close} /> : null };
 }
 
 /** Set by each editor, so panel sections can open their help article. */
-export const HelpContext = createContext<{ product: HelpProduct; open: (slug: string) => void } | null>(null);
+export const HelpContext = createContext<{ map: HelpMap; open: (slug: string) => void } | null>(null);
 
 /** A "?" that opens the article for a dock section (`kind: "section"`) or a left-rail group. */
 export function HelpMark({ title, kind = "section" }: { title: string; kind?: "section" | "rail" }) {
   const help = useContext(HelpContext);
-  const slug = help && (kind === "rail" ? RAIL_HELP : SECTION_HELP)[help.product][title];
+  const slug = help && help.map[kind][title];
   if (!help || !slug) return null;
   return (
     <button

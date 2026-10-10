@@ -1,0 +1,307 @@
+/**
+ * Clock geometry: a face (round, square, polygon, sunburst, gear, scalloped or a custom outline),
+ * optionally layered (back plate + ring, + centre disc), hour markers, hands with holes for a
+ * standard quartz movement, a keyhole hanger and a slot-in desk stand. mm, y down, centre (0, 0).
+ */
+import { intersectShapes, makeShape, offsetShapes, unionShapes } from "@/lib/letters/polygon";
+import {
+  TAU, arc, bboxOf, circle, customOutline, deg, distToContour, pointInContour, rect, regularPolygon, roundCorners,
+  roundedRect, signedArea, stadium, transform,
+} from "../geom";
+import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
+import { MOVEMENT_BOX, type ClockParams } from "./params";
+
+const ROMAN = ["XII", "I", "II", "III", "IIII", "V", "VI", "VII", "VIII", "IX", "X", "XI"];
+const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
+export const persianNumber = (n: number) => String(n).replace(/\d/g, (d) => PERSIAN_DIGITS[Number(d)]);
+
+/** The label for hour h (0 = twelve). */
+export function numeral(set: ClockParams["markers"]["numerals"], h: number): string {
+  const n = h === 0 ? 12 : h;
+  return set === "roman" ? ROMAN[h] : set === "persian" ? persianNumber(n) : String(n);
+}
+
+/** The face outline, centred on (0, 0), or null when a custom outline cannot be read. */
+export function faceOutline(p: ClockParams): Contour | null {
+  const f = p.face, R = f.size / 2;
+  switch (f.shape) {
+    case "square": return roundedRect(-R, -R, f.size, f.size, f.corner);
+    case "polygon": {
+      const n = Math.max(3, Math.round(f.sides));
+      return roundCorners(regularPolygon(n, R, 180 / n), f.corner);
+    }
+    case "sunburst": {
+      const n = Math.max(3, Math.round(f.rays)), pts: Contour = [];
+      for (let i = 0; i < 2 * n; i++) {
+        const a = -Math.PI / 2 + (Math.PI * i) / n, r = i % 2 ? R - f.depth : R;
+        pts.push([r * Math.cos(a), r * Math.sin(a)]);
+      }
+      return roundCorners(pts, Math.min(f.corner, 4));
+    }
+    case "gear": {
+      const n = Math.max(6, Math.round(f.rays)), w = TAU / n, root = R - f.depth, out: Contour = [];
+      for (let i = 0; i < n; i++) {
+        const a0 = -Math.PI / 2 + i * w - w / 4;
+        out.push(...arc(0, 0, root, a0, a0 + w * 0.25, 0.05, false));
+        out.push(...arc(0, 0, R, a0 + w * 0.35, a0 + w * 0.65, 0.05));
+        out.push(...arc(0, 0, root, a0 + w * 0.75, a0 + w, 0.05, false));
+      }
+      return out;
+    }
+    case "scallop": {
+      const n = Math.max(3, Math.round(f.rays)), m = Math.max(360, n * 24), out: Contour = [];
+      for (let i = 0; i < m; i++) {
+        const t = (TAU * i) / m, r = R - f.depth * (1 - Math.abs(Math.cos((n * t) / 2)));
+        out.push([r * Math.sin(t), -r * Math.cos(t)]);
+      }
+      return out;
+    }
+    case "custom": return f.path.trim() ? customOutline(f.path, f.size, f.size) : null;
+    default: return circle(0, 0, R);
+  }
+}
+
+/** Unit vector for a clock angle (degrees clockwise from twelve), y down. */
+const dirOf = (a: number): Pt => [Math.sin(deg(a)), -Math.cos(deg(a))];
+
+/** Distance from the centre to the outline along a clock angle. */
+export function edgeDistance(outline: Contour, a: number): number {
+  const [dx, dy] = dirOf(a);
+  let best = Infinity;
+  for (let i = 0, j = outline.length - 1; i < outline.length; j = i++) {
+    const [x1, y1] = outline[j], [x2, y2] = outline[i];
+    const ex = x2 - x1, ey = y2 - y1, den = dx * ey - dy * ex;
+    if (Math.abs(den) < 1e-12) continue;
+    const t = (x1 * ey - y1 * ex) / den, u = (x1 * dy - y1 * dx) / den;
+    if (t > 0 && u >= 0 && u <= 1) best = Math.min(best, t);
+  }
+  return Number.isFinite(best) ? best : 0;
+}
+
+/** How far from the edge markers can sit: the inner radius for pointed outlines, else the edge. */
+function markerEdge(p: ClockParams, outline: Contour, a: number): number {
+  const f = p.face;
+  if (f.shape === "sunburst" || f.shape === "gear" || f.shape === "scallop") return f.size / 2 - f.depth;
+  return edgeDistance(outline, a);
+}
+
+/** Radial depth of the marker band (ticks, dots or numerals), mm. */
+export function markerDepth(p: ClockParams): number {
+  const m = p.markers;
+  const tick = m.style === "ticks" || m.style === "mixed" ? m.tickLength * 1.25 : 0;
+  const dot = m.style === "dots" ? m.dot * 1.4 : 0;
+  const num = m.style === "numerals" || m.style === "mixed" ? m.size * 1.3 : 0;
+  const min = m.minutes ? m.tickLength * 0.45 : 0;
+  return Math.max(tick, dot, num, min);
+}
+
+const rot = (c: Contour, a: number) => transform(c, { rot: a });
+
+interface Markers { engrave: Contour[]; holes: Contour[]; missing: string[]; loading: boolean }
+
+function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext): Markers {
+  const m = p.markers, res: Markers = { engrave: [], holes: [], missing: [], loading: false };
+  if (m.style === "none" && !m.minutes) return res;
+  const put = (c: Contour) => (m.cut ? res.holes : res.engrave).push(c);
+  const anchor = (a: number) => markerEdge(p, outline, a) - m.inset;
+  const numeralHours = m.style === "numerals" ? (m.quarters ? [0, 3, 6, 9] : [...Array(12).keys()]) : m.style === "mixed" ? [0, 3, 6, 9] : [];
+  const tickHours = m.style === "ticks" ? [...Array(12).keys()] : m.style === "mixed" ? [1, 2, 4, 5, 7, 8, 10, 11] : m.style === "numerals" && m.quarters ? [1, 2, 4, 5, 7, 8, 10, 11] : [];
+  const dotHours = m.style === "dots" ? [...Array(12).keys()] : [];
+
+  for (const h of tickHours) {
+    const a = h * 30, r = anchor(a), q = h % 3 === 0 && m.style === "ticks";
+    const w = m.tickWidth * (q ? 1.6 : 1), l = m.tickLength * (q ? 1.25 : 1);
+    put(rot(rect(-w / 2, -r, w, l), a));
+  }
+  for (const h of dotHours) {
+    const a = h * 30, d = m.dot * (h % 3 === 0 ? 1.4 : 1), r = anchor(a) - d / 2, [dx, dy] = dirOf(a);
+    put(circle(dx * r, dy * r, d / 2, 0.02));
+  }
+  if (m.minutes) {
+    const w = Math.max(m.tickWidth * 0.4, m.cut ? 1.2 : 0.6), l = m.tickLength * 0.45;
+    for (let i = 0; i < 60; i++) {
+      if (i % 5 === 0) continue;
+      const a = i * 6;
+      put(rot(rect(-w / 2, -anchor(a), w, l), a));
+    }
+  }
+  if (numeralHours.length) {
+    if (!ctx.text) { res.loading = true; return res; }
+    for (const h of numeralHours) {
+      const s = numeral(m.numerals, h), shape = ctx.text(s, m.fontId, m.size);
+      if (!shape) { res.loading = true; continue; }
+      for (const c of shape.missing) if (!res.missing.includes(c)) res.missing.push(c);
+      const a = h * 30, [dx, dy] = dirOf(a);
+      const extent = Math.abs(shape.width * dx) + Math.abs(shape.height * dy);
+      const r = anchor(a) - extent / 2;
+      for (const c of shape.contours) res.engrave.push(c.map(([x, y]) => [x + dx * r, y + dy * r] as Pt));
+    }
+  }
+  return res;
+}
+
+/** The movement's minute-hand hole: a circle with two flats. */
+function doubleFlat(w: number, h: number): Contour {
+  if (h >= w - 0.05) return circle(0, 0, w / 2, 0.01);
+  const s = intersectShapes([circle(0, 0, w / 2, 0.01)], [rect(-h / 2, -w, h, 2 * w)]);
+  return s[0]?.outer ?? circle(0, 0, w / 2, 0.01);
+}
+
+const largestOuter = (cs: Contour[]): Contour => {
+  const shapes = unionShapes(cs);
+  return shapes.reduce((a, b) => (b.area > a.area ? b : a), shapes[0]).outer;
+};
+
+/** A hand pointing up from (0, 0): length L to the tip, widest w, counterweight tail. */
+export function handOutline(style: ClockParams["hands"]["style"], L: number, w: number, tail: number, holeD: number): Contour {
+  const hub = circle(0, 0, Math.max(holeD / 2 + 2.5, w * 0.55), 0.02);
+  const arm = (k: number, to: number) => rect((-w * k) / 2, -to, w * k, to + tail);
+  switch (style) {
+    case "baton": return largestOuter([hub, roundedRect(-w / 2, -L, w, L + tail, w * 0.45)]);
+    case "classic": return largestOuter([hub, [[w / 2, tail], [w * 0.1, -L + w * 0.3], [0, -L], [-w * 0.1, -L + w * 0.3], [-w / 2, tail]]]);
+    case "leaf": {
+      const pts: Contour = [];
+      for (let i = 0; i <= 40; i++) { const t = i / 40; pts.push([(w / 2) * Math.pow(Math.sin(Math.PI * t), 0.8), -t * L]); }
+      for (let i = 39; i > 0; i--) { const t = i / 40; pts.push([-(w / 2) * Math.pow(Math.sin(Math.PI * t), 0.8), -t * L]); }
+      return largestOuter([hub, pts, rect(-w * 0.15, 0, w * 0.3, tail)]);
+    }
+    case "arrow": return largestOuter([hub, arm(0.3, L * 0.78), [[-w / 2, -L * 0.76], [w / 2, -L * 0.76], [0, -L]], circle(0, tail, w * 0.45, 0.02)]);
+    default: // spade
+      return largestOuter([
+        hub, arm(0.3, L * 0.66),
+        transform(circle(0, 0, 1, 0.002), { x: 0, y: -L * 0.72, sx: w / 2, sy: L * 0.11 }),
+        [[-w * 0.4, -L * 0.74], [w * 0.4, -L * 0.74], [0, -L]],
+      ]);
+  }
+}
+
+/** Narrowest part of a hand's arm, mm (what breaks first). */
+export function handNeck(style: ClockParams["hands"]["style"], w: number): number {
+  return style === "spade" || style === "arrow" ? w * 0.3 : style === "leaf" ? w * 0.3 : style === "classic" ? w * 0.2 : w;
+}
+
+/** Layers that cover the centre (the shaft clamps through all of them). */
+export const centreLayers = (p: ClockParams) => (p.face.layers === "stack" ? 2 : 1);
+
+export interface ClockGeometry {
+  outline: Contour;
+  /** Inner edge of the ring layer (null for a single face). */
+  ringInner: Contour | null;
+  markersOn: "face" | "ring" | "back";
+  /** Markers cross the inner edge of the ring. */
+  straddle: boolean;
+  keyholeFits: boolean;
+  /** The hanger is behind the ring (or there is none), so it does not show from the front. */
+  hangerHidden: boolean;
+  missing: string[];
+  loading: boolean;
+}
+
+/**
+ * Hanger cut-out on the back-most plate, or null. On a layered face it sits under the ring, where
+ * the ring hides it; on a single face the keyhole goes just above the movement.
+ */
+function hangerOf(p: ClockParams, outline: Contour): Contour | null {
+  const top = edgeDistance(outline, 0);
+  const layered = p.face.layers !== "single";
+  if (p.hanger === "keyhole") {
+    const y = layered ? -(top - p.face.ring / 2 - 5) : -(MOVEMENT_BOX / 2 + 10);
+    const shapes = unionShapes([circle(0, y, 4.75, 0.02), stadium(0, y, 0, y - 10, 4.6)]);
+    return shapes[0]?.outer ?? null;
+  }
+  if (p.hanger === "hole") return circle(0, -(top - (layered ? p.face.ring / 2 : 10)), 2.5, 0.02);
+  return null;
+}
+
+export function clockGeometry(p: ClockParams, ctx: BuildContext = {}): (ClockGeometry & { parts: GenPart[] }) | { error: string } {
+  const outline0 = faceOutline(p);
+  if (!outline0 || outline0.length < 3) return { error: p.face.shape === "custom" ? "Paste the path data of a closed outline (SVG d attribute) under Face → Custom outline." : "The face outline could not be built." };
+  const outline = signedArea(outline0) < 0 ? outline0.slice().reverse() : outline0;
+  const T = p.T, f = p.face, mv = p.movement;
+  const parts: GenPart[] = [];
+  const shaft = circle(0, 0, mv.shaft / 2, 0.01);
+  const hanger = hangerOf(p, outline);
+  const keyholeFits = !hanger || (hanger.every((q) => pointInContour(q, outline)) && Math.min(...hanger.map((q) => distToContour(q, outline))) >= 5);
+  const markers = buildMarkers(p, outline, ctx);
+  const depth = markerDepth(p);
+  const layered = f.layers !== "single";
+
+  let ringInner: Contour | null = null;
+  if (layered) {
+    const inner = offsetShapes([makeShape(outline, [])], -f.ring);
+    if (!inner.length) return { error: "The ring is wider than the face. Make the ring narrower or the face larger." };
+    ringInner = inner.reduce((a, b) => (b.area > a.area ? b : a)).outer;
+  }
+  const onRing = layered && p.markers.inset + depth <= f.ring - 1.5;
+  const straddle = layered && !onRing && p.markers.inset < f.ring + 1.5;
+  const markersOn: ClockGeometry["markersOn"] = !layered ? "face" : onRing ? "ring" : "back";
+  const hangerHidden = !hanger || p.stand || (!!ringInner && hanger.every((q) => !pointInContour(q, ringInner!) && distToContour(q, ringInner!) >= 1.5));
+
+  // The stand: a tab under the back plate that pushes through a slot in the base.
+  const yb = bboxOf([outline]).y1;
+  const tabW = Math.min(90, Math.max(30, f.size * 0.3));
+  const backOuter = p.stand ? largestOuter([outline, rect(-tabW / 2, yb - 3, tabW, T + 3)]) : outline;
+
+  const upright = p.stand;
+  const placeAt = (z: number) => (upright ? { x: 0, y: -(yb + T), z: z - T / 2, upright: true } : { x: 0, y: 0, z });
+
+  const backHoles = [shaft, ...(hanger ? [hanger] : [])];
+  if (!layered) {
+    parts.push({
+      id: "face", name: "Face", outer: backOuter, holes: [...backHoles, ...(markers.holes)], engrave: markers.engrave, place: placeAt(0),
+    });
+  } else {
+    parts.push({
+      id: "back", name: "Back plate", outer: backOuter,
+      holes: [...backHoles, ...(markersOn === "back" ? markers.holes : [])],
+      engrave: markersOn === "back" ? markers.engrave : [],
+      place: placeAt(0),
+    });
+    parts.push({
+      id: "ring", name: "Ring", outer: outline, holes: [ringInner!, ...(markersOn === "ring" ? markers.holes : [])],
+      engrave: markersOn === "ring" ? markers.engrave : [], place: placeAt(T),
+    });
+    if (f.layers === "stack") {
+      parts.push({ id: "centre", name: "Centre disc", outer: circle(0, 0, f.centre / 2), holes: [circle(0, 0, mv.shaft / 2, 0.01)], place: placeAt(T) });
+    }
+  }
+  const handZ = (layered ? 2 * T : T) + 0.5;
+  if (p.hands.style !== "none") {
+    const h = p.hands;
+    parts.push({ id: "hour", name: "Hour hand", outer: handOutline(h.style, h.hour, h.width * 1.25, h.tail * 0.8, mv.hourHole), holes: [circle(0, 0, mv.hourHole / 2, 0.01)], place: { ...placeAt(handZ), rot: 305 } });
+    parts.push({ id: "minute", name: "Minute hand", outer: handOutline(h.style, h.minute, h.width, h.tail, mv.minuteW), holes: [doubleFlat(mv.minuteW, mv.minuteH)], place: { ...placeAt(handZ + T + 0.5), rot: 60 } });
+  }
+  if (p.stand) {
+    const bw = Math.max(tabW + 50, f.size * 0.55), bd = Math.max(60, Math.min(110, f.size * 0.3)), clr = 0.1;
+    parts.push({
+      id: "base", name: "Stand base", outer: roundedRect(-bw / 2, -bd / 2, bw, bd, 8),
+      holes: [rect(-(tabW + clr) / 2, -(T + clr) / 2, tabW + clr, T + clr)], place: { x: 0, y: 0, z: 0 },
+    });
+  }
+  return { parts, outline, ringInner, markersOn, straddle, keyholeFits, hangerHidden, missing: markers.missing, loading: markers.loading };
+}
+
+export function buildClock(p: ClockParams, ctx: BuildContext): GenOutput {
+  const g = clockGeometry(p, ctx);
+  if ("error" in g) return { parts: [], stats: [], error: g.error };
+  const thick = centreLayers(p) * p.T;
+  const assembly = [
+    p.face.layers === "single" ? "Engrave and cut the face." : `Glue the ring${p.face.layers === "stack" ? " and the centre disc" : ""} onto the back plate, lining up the outlines.`,
+    `Push the movement's shaft through the centre hole from the back and tighten its nut (face ${thick} mm at the centre, the movement takes up to ${p.movement.maxDial} mm).`,
+    ...(p.hands.style !== "none" ? ["Press the hour hand on at 12, then the minute hand at 12, then the second hand if the movement has one."] : []),
+    ...(p.stand ? ["Push the tab under the face into the slot in the stand base; a drop of glue keeps it upright."] : []),
+    ...(p.hanger === "keyhole" ? ["Hang the clock on a screw through the keyhole on the back."] : []),
+  ];
+  return {
+    parts: g.parts,
+    stats: [
+      { label: "Face", value: `${p.face.size} mm ${p.face.shape}` },
+      { label: "Parts", value: String(g.parts.length) },
+      { label: "At the centre", value: `${thick} mm (movement up to ${p.movement.maxDial} mm)` },
+      ...(p.hands.style !== "none" ? [{ label: "Hands", value: `hour ${p.hands.hour} mm, minute ${p.hands.minute} mm` }] : []),
+    ],
+    assembly,
+    notice: g.loading ? "Loading the numeral font…" : undefined,
+    missing: g.missing,
+  };
+}

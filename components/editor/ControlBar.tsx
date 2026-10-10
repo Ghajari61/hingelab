@@ -1,32 +1,70 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { Layers, Package, Type } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Box, ChevronDown, Clock, Layers, Package, Puzzle, QrCode, Shapes, Type } from "lucide-react";
 import type { Params } from "@/lib/hinge";
 import { HINGE_VARIANTS, hingeVariantOf, type HingeVariant } from "@/lib/hinge/presets";
+import { GENERATOR_IDS, GENERATOR_INFO, isGeneratorId, type GeneratorId, type GeneratorInfo } from "@/lib/generators/ids";
 import { canUsePattern, canUseShape, type Plan } from "@/lib/plans";
 import type { GalleryGroup } from "@/components/shell/GalleryRail";
 
 /** `locked`: a Pro feature the current plan can preview but not export or save. */
 export type Opt = { v: string; text: string; title?: string; icon?: ReactNode; onClick: () => void; disabled?: boolean; soon?: string; locked?: boolean };
 
-export type Product = "hinge" | "letters" | "parametric";
+export type CoreProduct = "hinge" | "letters" | "parametric";
+export type Product = CoreProduct | GeneratorId;
+export const CORE_PRODUCTS: CoreProduct[] = ["hinge", "letters", "parametric"];
+export const ALL_PRODUCTS: Product[] = [...CORE_PRODUCTS, ...GENERATOR_IDS];
+
+const GEN_ICON: Record<GeneratorInfo["icon"], ReactNode> = {
+  clock: <Clock size={16} aria-hidden />,
+  puzzle: <Puzzle size={16} aria-hidden />,
+  qr: <QrCode size={16} aria-hidden />,
+  box: <Box size={16} aria-hidden />,
+};
 
 export const PRODUCT_INFO: Record<Product, { name: string; icon: ReactNode }> = {
   hinge: { name: "Hinge Box", icon: <Package size={16} aria-hidden /> },
   letters: { name: "Letters", icon: <Type size={16} aria-hidden /> },
   parametric: { name: "Parametric", icon: <Layers size={16} aria-hidden /> },
+  ...(Object.fromEntries(GENERATOR_IDS.map((id) => [id, { name: GENERATOR_INFO[id].name, icon: GEN_ICON[GENERATOR_INFO[id].icon] }])) as Record<GeneratorId, { name: string; icon: ReactNode }>),
 };
 
-/** Product switcher in the header. */
+/** Product switcher in the header: the three core products, then the generators in a menu. */
 export function ProductTabs({ product, onProduct }: { product: Product; onProduct: (p: Product) => void }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("pointerdown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+  const gen = isGeneratorId(product) ? product : null;
   return (
     <div className="iconseg product-tabs" role="group" aria-label="Product">
-      {(Object.keys(PRODUCT_INFO) as Product[]).map((p) => (
+      {CORE_PRODUCTS.map((p) => (
         <button key={p} type="button" aria-pressed={product === p} onClick={() => onProduct(p)}>
           {PRODUCT_INFO[p].icon}{PRODUCT_INFO[p].name}
         </button>
       ))}
+      <div className="gen-menu" ref={box}>
+        <button type="button" aria-pressed={!!gen} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          {gen ? PRODUCT_INFO[gen].icon : <Shapes size={16} aria-hidden />}{gen ? PRODUCT_INFO[gen].name : "Generators"}<ChevronDown size={13} aria-hidden />
+        </button>
+        {open && (
+          <div className="gen-dropdown" role="menu" aria-label="Generators">
+            {GENERATOR_IDS.map((id) => (
+              <button key={id} type="button" role="menuitem" aria-current={product === id || undefined} onClick={() => { setOpen(false); onProduct(id); }}>
+                <span className="gi">{PRODUCT_INFO[id].icon}</span>
+                <span className="gt"><b>{GENERATOR_INFO[id].name}</b><small>{GENERATOR_INFO[id].blurb}</small></span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
