@@ -402,3 +402,28 @@ Decisions taken without the owner during the autopilot run. Each entry: what, wh
 - Google OAuth client lives in Google Cloud project `hingelab` under ghajari61@gmail.com (the owner's choice). Web application, origin `https://hingelab.vercel.app`, redirect `https://vwpuvormmxsydsbjimjs.supabase.co/auth/v1/callback`. Only the basic scopes (email, profile, openid) are used and there is no logo, so the app is published to production without Google verification. The client secret exists only in Supabase.
 - Supabase auth: Site URL `https://hingelab.vercel.app`; redirect allow list `https://hingelab.vercel.app/**` and `http://localhost:3000/**` (the app sends `/auth/callback?next=…`). Email confirmation stays on. Storage upload limit 100 MB (SETUP.md).
 - `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_CONTACT_EMAIL` (ghajari61@gmail.com, already public as the consent screen's support email) set for Production. No app code changed.
+
+## UX upgrade and new generators (owner's 23-point list, 10 Oct 2026)
+
+Order chosen by the owner: UX of the three products first (U1–U9), then new generators (G1–G6). Light theme modelled on Atomm's pattern generator becomes the default; the app opens empty on a gallery; every phase is deployed when its tests pass.
+
+### D79. Research: what we take from xTool Studio, lamina and Boxes.py
+- **Licences.** lamina is AGPL-3.0 and Boxes.py is GPL-3.0. HingeLab is a closed web service, so nothing is copied from either: ideas and public behaviour only, every line written here.
+- **xTool Studio** (support.xtool.com, Studio overview and release notes). Relevant to an SVG generator:
+  - Templates/Projects gallery to start from a ready design → U2 gallery + U3 presets.
+  - Material library with properties and tips → U3 (material presets get notes) and the existing material list.
+  - Applications: grid array, circular array, material test array, code generation (QR/barcode), batch fill → G3 (QR), G6 (arrays and a material test array in the calibration set).
+  - Offset (inner/outer, corner style), text on path (inside/on/outside), text warp/arch, weld, convert text to path → G6 (offset outline and text on a circle are added to the generators that need them: clock numerals on a circle, sign borders).
+  - Trace image (auto / centre line) → G6 is limited to the existing Parametric photo path; a general tracer belongs to Studio S3.
+  - Out of scope (machine side): camera positioning, AI material recognition, scan angle, ramp, offset fill — these are machine/job settings, not SVG geometry.
+- **lamina** (README of marcelfarres/lamina). Ideas taken:
+  - Checks with one-click fixes and an "auto-fix" pass that lists what it did → U7.
+  - A calibration bar (100 mm) on every exported sheet, so scale can be checked before cutting → G5.
+  - Nesting that lets small parts sit inside the holes and concave areas of big ones → G5 (outline nesting, rectangle packer kept as fallback).
+  - Engraved part labels and an assembly key → G5 (labels exist in Parametric; extended).
+  - "Fold" (papercraft unfolding with joints) → G5 as a Folded method in Parametric for low-poly shapes.
+  - Ideas not taken now: assembly video, 3D-print prototyping set, multiple radial axes.
+- **Boxes.py** gallery: categories Boxes, Boxes with flex, Trays and drawer inserts, Shelves, Wall mounted, Hole patterns, Parts and samples, Misc. Taken as preset/sample ideas:
+  - Hinge Box presets (U3): flex box, heart box, rounded box, regular (polygon) box, bread-box style tall lid.
+  - G4 generators: finger-joint box (closed/open/sliding lid), divider tray, desk sign, photo frame, phone stand, key holder, bird house.
+  - Calibration/test samples (BurnTest, FlexTest) fold into G5's calibration bar and the existing hinge test strip.
