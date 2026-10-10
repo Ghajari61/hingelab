@@ -58,6 +58,19 @@ export function formatShortcut(s: string, mac = false): string {
   return `${c.ctrl ? "⌘" : ""}${c.alt ? "⌥" : ""}${c.shift ? "⇧" : ""}${key}`;
 }
 
+const NAMED: Record<string, string> = {
+  " ": "Space", escape: "Escape", enter: "Enter", tab: "Tab", backspace: "Backspace", delete: "Delete", insert: "Insert", home: "Home", end: "End",
+  pageup: "PageUp", pagedown: "PageDown", arrowup: "ArrowUp", arrowdown: "ArrowDown", arrowleft: "ArrowLeft", arrowright: "ArrowRight",
+};
+
+/** The shortcut a key press means ("Ctrl+Shift+K"), or null for a lone modifier. Used by the shortcut recorder. */
+export function shortcutFromEvent(e: KeyEventLike): string | null {
+  if (["control", "shift", "alt", "meta", "os", "altgraph"].includes(e.key.toLowerCase())) return null;
+  const k = eventKey(e);
+  const key = NAMED[k] ?? (/^f\d{1,2}$/.test(k) ? k.toUpperCase() : k.length === 1 ? k.toUpperCase() : k[0].toUpperCase() + k.slice(1));
+  return [(e.ctrlKey || e.metaKey) && "Ctrl", e.altKey && "Alt", e.shiftKey && "Shift", key].filter(Boolean).join("+");
+}
+
 /** True when a single-key shortcut must not fire: the user is typing in a field. */
 export function isTypingTarget(t: EventTarget | null): boolean {
   if (!t || typeof (t as HTMLElement).tagName !== "string") return false;

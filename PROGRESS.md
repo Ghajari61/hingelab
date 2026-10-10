@@ -2,7 +2,7 @@
 
 ## HingeLab Studio (master spec `CURSOR_STUDIO_PROMPT.md`, phases S0–S10)
 
-**Next step:** S2 — vector editor core in `/editor/[projectId]`: document store (zustand + immer, 200-step history with merged drags), SVG view of the node tree, selection and transform handles, shape tools (all `ShapeParams` kinds), pen / pencil / node editing, text (HarfBuzz outlines), Layers & Objects panel, guides / grid / snapping / smart guides, rulers, command registry driving menus, shortcuts and the command palette, reset system, preferences dialog. Pure geometry goes in `lib/studio/` with Vitest tests first.
+**Next step:** S3 — path operations & laser core (spec §5, §16): pathfinder (unite, subtract, intersect, exclude, divide via Clipper2 on flattened curves, then curve refit), offset / contour, arrays, clean-up, cut-layer settings in use, kerf compensation, tabs/bridges, cut order, cut preview, pre-flight checks, sheets & nesting v1, material/machine library in the Cut Layers panel, image place/trace/dither, import SVG/DXF (also SVG paste), export SVG/DXF/PDF/PNG/LBRN2. Pure functions in `lib/studio/` with Vitest tests first; add the new commands to `lib/studio/commands.ts` (registry + menus) and their handlers to `components/studio/editor/commandHandlers.ts`; browser script `scripts/shots/studio-s3.mjs`.
 
 How the earlier work maps onto the studio phases:
 
@@ -10,7 +10,7 @@ How the earlier work maps onto the studio phases:
 |---|---|---|
 | S0 — foundation + Hinge Box port + golden | done (Main 1) | Next.js app, `lib/hinge`, golden test byte-for-byte |
 | S1 — design system, shell, start screen, local model | **done** — 692 / 692 tests | see "S1" below |
-| S2 — vector editor core | not started | — |
+| S2 — vector editor core | **done** — 743 / 743 tests | see "S2" below |
 | S3 — path ops & laser core, import/export | not started | per-product SVG/ZIP export only |
 | S4 — Google sign-in, cloud, versions, projects page | partly (Main 2–3) | email + Google auth, cloud projects with autosave, thumbnails, conflict handling |
 | S5 — generator framework + #1 #5 #6 #10 #7 | not started | Hinge Box exists as a standalone editor |
@@ -19,6 +19,23 @@ How the earlier work maps onto the studio phases:
 | S8 — #4 Parametric | done as a standalone product (P1–P6) | needs wrapping as a registered generator |
 | S9 — Stripe, trial, gates, billing, landing, templates | partly (Main 4–5, L5, P6) | Checkout, portal, webhooks, server-side gates, landing page |
 | S10 — polish, tour, help, perf, a11y, E2E | not started | — |
+
+### S2 — vector editor core (done)
+
+Built:
+- **Model and history** (`lib/studio/`): `geom.ts` (matrices, boxes, Bézier helpers, shape outlines for all 12 live shapes), `scene.ts` (find/locate, add/remove/move, group/ungroup, duplicate, transform, align/distribute, hit testing), `history.ts` (inverse patches, 200 steps, merged drags and typing), `snap.ts` (grid, points, guides, smart guides with alignment and equal spacing), `pathOps.ts` (reverse, close, join, add anchors, compound paths, break apart, clipping masks, reset bounding box), `text.ts` (HarfBuzz layout: Latin and Persian, RTL, tracking, leading, alignment, area text wrap), `clipboard.ts`, `keymap.ts`, `workspace.ts`, `commands.ts` (113 commands, four shortcut sets, menus).
+- **Canvas** (`components/studio/editor/Canvas.tsx`): SVG view of sheets, grid, guides and objects (cut-layer colours, fill/score modes, clip groups); selection box with scale and rotate handles (Shift, Alt); move with smart guides, Alt to duplicate, Ctrl to skip snapping; marquee; rulers with draggable guides; HUD with distances and sizes; zoom/pan (wheel, Ctrl+wheel, Space, Hand and Zoom tools).
+- **Tools**: Selection, Direct Selection (anchors and handles, smooth/corner, add anchor by double-click), Pen (click/drag, close on the first anchor, Enter/Esc, Backspace), Pencil (smoothed, closes near the start), Line, 12 shapes (rectangle, ellipse, polygon, star, arc, slot, gear, arrow, speech bubble, heart, grid, spiral), Type (point and area text, edited in place), Rotate, Scale, Reflect.
+- **Panels and bars**: control bar (X/Y/W/H/angle, cut layer, live-shape and text options, tool defaults), Properties, Layers & Objects (tree, show/lock, rename, drag to reorder or nest), Cut Layers (output/show, speed, power, passes, interval, kerf, air), Align, History (click to jump), Document (sheet, material, machine, grid & snapping, units). Workspaces: Essentials, Laser, Typography, Minimal.
+- **Commands**: full menu bar (File, Edit, Object, Type, Select, Path, Laser, View, Window, Help), context menu, command palette (Ctrl+/, commands, generators, recent projects, recently used first), Keyboard Shortcuts dialog (four sets, record a key, conflict prompt with Reassign, export/import JSON, restore defaults with undo), Preferences (General / Shortcuts / Laser, restore defaults per tab with undo), Move… and Document Setup dialogs.
+- **Reset system**: Alt+click or ↺ on any field label, section "…" menus (Transform, Shape, Grid & Snapping, cut-layer settings), Edit → Reset Field / Reset Section; every reset shows a toast with Undo.
+- Autosave (1.5 s, flushed on leave), Save a Copy, Revert, copy as SVG to the system clipboard.
+
+Tests: 743 / 743 (51 new: geometry, scene ops, history merging, snapping, shapes, path ops, clipboard, custom shortcuts, workspaces, command registry and shortcut-set conflicts, HarfBuzz text layout incl. Persian and wrapping, fuzzy palette matching), golden byte-for-byte, `tsc` clean, `next build` OK, `build-storybook` OK. Browser script `scripts/shots/studio-s2.mjs`: 20 checks pass (Rectangle tool by M, draw, control-bar options, Shift circle, smart guides and HUD while moving, Ctrl+Z / Ctrl+Shift+Z, palette → Star, text "Hello سام" outlined with no missing glyphs, pen closes a path, ruler guide, Ctrl+G and the Layers tree, Alt+click reset and Undo from the toast, reassigning Ctrl+G to Lock, reload keeps every object). `studio-s1.mjs` still passes.
+
+Screenshots: `docs/screenshots/studio-2-smart-guides.png`, `studio-2-palette.png`, `studio-2-nodes.png`, `studio-2-layers.png`, `studio-2-object-menu.png`, `studio-2-context-menu.png`, `studio-2-shortcuts.png`, `studio-2-preferences.png`, `studio-2-editor.png`.
+
+Known limitations: path operations (pathfinder, offset, outline stroke) and image commands are not in the menus yet (S3); pasting SVG from other programs waits for the S3 importer; text has no automatic font fallback (missing glyphs are reported, D72); the selection box is axis-aligned for rotated objects (D71); panels dock in one column, no floating panels yet (D74); custom shortcuts and workspaces are stored per browser until S4.
 
 ### S1 — design system, app shell, start screen, local projects (done)
 

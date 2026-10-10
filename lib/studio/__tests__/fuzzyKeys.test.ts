@@ -18,6 +18,12 @@ describe("fuzzy", () => {
     expect(sub.ranges).toEqual([[6, 9]]);
   });
 
+  it("rejects letters scattered across the middle of unrelated words", () => {
+    expect(fuzzyMatch("star", "Assign to C00 Laser")).toBeNull();
+    expect(fuzzyMatch("star", "Tool: Star Tool")).not.toBeNull();
+    expect(fuzzyMatch("dupl", "Duplicate")).not.toBeNull();
+  });
+
   it("merges consecutive ranges", () => {
     expect(fuzzyMatch("finbx", "Finger-Joint Box")!.ranges[0]).toEqual([0, 3]);
   });

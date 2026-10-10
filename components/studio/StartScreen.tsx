@@ -48,6 +48,12 @@ export default function StartScreen() {
   const refresh = useCallback(() => { listLocalProjects().then((l) => setRecents(l.slice(0, 12))).catch(() => setRecents([])); }, []);
   useEffect(refresh, [refresh]);
   useEffect(() => { if (prefsReady && !prefs.onboarded) setOnboarding(true); }, [prefsReady, prefs.onboarded]);
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const g = p.get("generator");
+    if (g && GENERATORS.some((x) => x.id === g)) setGen(g);
+    else if (p.get("new") === "blank") setBlank(true);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

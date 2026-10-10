@@ -83,6 +83,13 @@
   --focus-ring: 0 0 0 2px var(--accent);
   --pro: #E0B341;
 
+  /* Editor canvas overlays. */
+  --grid-minor: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  --grid-major: color-mix(in srgb, var(--text-primary) 13%, transparent);
+  --guide: #22B8F0;
+  --smart-guide: #FF2DAA;
+  --ink: var(--text-primary);
+
   /* LightBurn layer palette C00–C29 (lib/studio/cutLayers.ts holds the same list). */
   --c00: #000000; --c01: #0000FF; --c02: #FF0000; --c03: #00E000; --c04: #D0D000; --c05: #FF8000;
   --c06: #00E0E0; --c07: #FF00FF; --c08: #B4B4B4; --c09: #0000A0; --c10: #A00000; --c11: #00A000;

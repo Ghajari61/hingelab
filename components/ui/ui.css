@@ -141,8 +141,8 @@
 /* Panels & dock */
 .ui-dock { display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--surface-panel); border-left: 1px solid var(--line); min-width: 0; min-height: 0; }
 .ui-dock-body { overflow-y: auto; min-height: 0; }
-.ui-dock-tabs { display: flex; align-items: center; padding-inline: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
-.ui-dock-tabs .ui-tab { padding: 8px 8px; }
+.ui-dock-tabs { display: flex; flex-wrap: wrap; align-items: center; padding-inline: 4px; border-bottom: 1px solid var(--line); }
+.ui-dock-tabs .ui-tab { padding: 8px 7px; white-space: nowrap; flex: none; }
 .ui-dock-tabs .ui-tab.drop-before { box-shadow: inset 2px 0 0 var(--accent); }
 .ui-section { border-bottom: 1px solid var(--line-soft); }
 .ui-section > header { display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 10px; min-height: 32px; }

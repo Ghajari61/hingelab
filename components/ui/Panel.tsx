@@ -1,20 +1,33 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, MoreHorizontal } from "lucide-react";
 import { MenuButton, type MenuItem } from "./Menu";
+
+/** Dispatched on a section (from a focused element inside it) by Edit → Reset ▸ Section. */
+export const RESET_SECTION_EVENT = "hingelab:reset-section";
 
 /** A collapsible panel section with a ⋯ menu (Reset section lives there, spec §10). */
 export function PanelSection({ title, meta, children, defaultOpen = true, menu, onReset, testId }: {
   title: string; meta?: ReactNode; children: ReactNode; defaultOpen?: boolean; menu?: MenuItem[]; onReset?: () => void; testId?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const ref = useRef<HTMLElement>(null);
+  const resetRef = useRef(onReset);
+  resetRef.current = onReset;
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const on = (e: Event) => { if (resetRef.current) { e.stopPropagation(); resetRef.current(); } };
+    el.addEventListener(RESET_SECTION_EVENT, on);
+    return () => el.removeEventListener(RESET_SECTION_EVENT, on);
+  }, []);
   const items: MenuItem[] = [
     ...(onReset ? [{ id: "reset-section", label: "Reset section", run: onReset } as MenuItem] : []),
     ...(menu ?? []),
   ];
   return (
-    <section className={`ui-section${open ? "" : " collapsed"}`} data-testid={testId}>
+    <section ref={ref} className={`ui-section${open ? "" : " collapsed"}`} data-testid={testId}>
       <header>
         <button type="button" className="toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
           <ChevronDown size={14} className="chev" aria-hidden />

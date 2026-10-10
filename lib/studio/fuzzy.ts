@@ -1,6 +1,7 @@
 /**
  * Fuzzy matching for the command palette and the start-screen search: every query character must
- * appear in order; consecutive runs, word starts and an early first match score higher.
+ * appear in order, and each scattered piece must begin a word or stay inside the previous piece's
+ * word; consecutive runs, word starts and an early first match score higher.
  */
 export interface FuzzyMatch { score: number; ranges: [number, number][] }
 
@@ -20,6 +21,8 @@ export function fuzzyMatch(query: string, text: string): FuzzyMatch | null {
     const at = t.indexOf(ch, ti);
     if (at < 0) return null;
     const wordStart = at === 0 || /[\s\-_/(▸]/.test(t[at - 1]);
+    const sameWord = ranges.length > 0 && !/[\s\-_/(▸]/.test(t.slice(ti, at));
+    if (!(at === ti && ranges.length) && !wordStart && !sameWord) return null;
     run = at === ti && ranges.length ? run + 1 : 0;
     score += 10 + run * 15 + (wordStart ? 25 : 0) - Math.min(at - ti, 10);
     const last = ranges[ranges.length - 1];

@@ -7,6 +7,9 @@ import { fromMM, toMM } from "@/lib/studio/units";
 import type { Units } from "@/lib/studio/types";
 import { ContextMenu, type MenuItem } from "./Menu";
 
+/** Dispatched on a focused field's input by Edit → Reset ▸ Selected Field. */
+export const RESET_FIELD_EVENT = "hingelab:reset-field";
+
 /**
  * Numeric field (spec §4.4, §10): math, units, relative and percent input; arrow keys (Shift ×10,
  * Alt ×0.1); scrubbing on the label; ↺ when the value differs from its default (Alt+click on the label
@@ -76,6 +79,16 @@ export function NumberInput({
   }
 
   const differs = defaultValue !== undefined && Math.abs(defaultValue - value) > 1e-9;
+
+  const resetRef = useRef(() => {});
+  resetRef.current = () => reset(defaultValue, "");
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const on = () => resetRef.current();
+    el.addEventListener(RESET_FIELD_EVENT, on);
+    return () => el.removeEventListener(RESET_FIELD_EVENT, on);
+  }, []);
 
   const items: MenuItem[] = [
     { id: "reset-default", label: "Reset to default", disabled: defaultValue === undefined || !differs || locked, run: () => reset(defaultValue, "") },

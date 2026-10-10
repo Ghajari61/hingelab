@@ -357,3 +357,30 @@ Decisions taken without the owner during the autopilot run. Each entry: what, wh
 ### D69. Studio: number fields
 - Every numeric field (`NumberInput`) accepts expressions (`25.4*2`, `3in`, `+10`, `*=2`, `50%`), parsed by a small recursive-descent parser (no `eval`); a comma is read as a decimal point. Values are stored in mm and shown in the document's units. Arrow keys step (Shift ×10, Alt ×0.1), dragging the label scrubs, Alt+click or the ↺ button resets to the default, and the right-click menu offers reset, copy/paste and lock.
 - Changing the sheet width or height in the editor renames the sheet to "Custom size", so it is never labelled "A4" at a size that is not A4.
+
+### D70. Studio editor: the document store and history
+- One zustand store per open document holds the document, selection, tool, view and UI toggles; edits are immer recipes, and history keeps the inverse patches of the last 200 steps (`lib/studio/history.ts`). Drags and scrubbing preview from a frozen base and become one step when released; typing and arrow nudges merge by key. Alternative: snapshots of the whole document per step (simpler, but large documents would use too much memory).
+- Some state is a cache, not an edit: text outlines, and the grid / snapping toggles. These change the document without an undo step (`quiet`), so Undo never just "un-shapes" a word or flips a view toggle.
+
+### D71. Studio editor: geometry conventions
+- Matrices are `[a, b, c, d, e, f]` in mm with y pointing down. The selection box is axis-aligned in document space even for rotated objects (rotated boxes like Illustrator's "bounding box follows object" come later if users ask). Live shapes keep their parameters; editing a shape's anchors with Direct Selection converts it to a plain path first and says so in a toast.
+- A star's inner radius is stored as a ratio of the outer radius (shown as %), so scaling the star keeps its look.
+- A compound path is one path node with several subpaths filled even-odd; a clipping mask is a group with role "clip" whose first child is the mask. Both stay plain JSON that every exporter already understands.
+
+### D72. Studio editor: text
+- Text size is the em size in mm, tracking is in 1/1000 em (never added between joined Arabic-script letters), and outlines come from HarfBuzz + opentype.js as Bézier curves. Outlines are saved with the document so files open without fonts; any change to text or settings re-shapes them in the background.
+- Characters the font lacks are reported in a toast (letters brief: missing glyph = `.notdef`) rather than silently substituted from another font. Typing Persian needs a font that has the glyphs (Vazirmatn, Lalezar, Noto Arabic); automatic per-run font fallback is a possible later improvement.
+- With the Type tool active and no text selected, the control bar shows the Type tool's defaults (font, size, …) even if another object is selected, as in Illustrator.
+
+### D73. Studio editor: shortcuts
+- Every command lives in one registry (`lib/studio/commands.ts`) that drives the menus, shortcuts, context menu and command palette, with four sets (HingeLab/Illustrator-compatible, CorelDRAW, LightBurn, Inkscape). Ctrl+N, Ctrl+T and Ctrl+W belong to the browser and cannot be overridden reliably, so no command uses them and New is Ctrl+Alt+N; Redo is Ctrl+Shift+Z only (Ctrl+Y opens history in some browsers).
+- Custom shortcuts and workspaces are kept in localStorage (`hingelab-keymap`, `hingelab-workspace`) until cloud preferences exist (S4). Assigning a key that is in use asks before moving it; the file format for export/import is `{format: "hingelab-shortcuts", version: 1, set, bindings}`.
+- The palette's fuzzy match only accepts scattered letters when each piece starts a word or continues inside the previous piece's word, so "star" no longer matches "Assign to C00".
+
+### D74. Studio editor: layout
+- The dock is one tabbed column (tabs reorderable, wrapping onto a second row when narrow); floating and split panels are deferred to S10. Workspaces (Essentials, Laser, Typography, Minimal) choose which panels are shown.
+- New objects go on cut layer C02 ("Cut", red) so they are visible and cut by default; C00 is black and is drawn in the theme's ink colour so it stays visible on the dark canvas.
+
+### D75. Studio editor: clipboard and revert
+- Copy writes our own JSON to localStorage and an SVG (mm, cut-layer colours as strokes) to the system clipboard, so pasting into Illustrator or Inkscape works. Pasting SVG from other programs into the editor waits for the S3 importer.
+- File → Revert goes back to the document as it was opened in this session, as an undoable step.
