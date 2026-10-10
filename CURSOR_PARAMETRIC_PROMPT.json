@@ -1,0 +1,297 @@
+{
+  "meta": {
+    "document": "HingeLab — Parametric Slicer tool — build brief for Cursor",
+    "version": "1.0",
+    "language_of_app_ui": "English only",
+    "read_together_with": ["CURSOR_PROMPT.md", "CURSOR_LETTERS_PROMPT.md", "hingelab-prototype.html"],
+    "precondition": "Do not start until Phase 1 of CURSOR_PROMPT.md is finished and all its tests (including the Hinge Box golden test) pass.",
+    "how_to_work": [
+      "Work phase by phase (see 'phases'). After each phase: stop, list what was built, show the requested screenshots, list anything the owner must do, and wait for 'go'.",
+      "Before each phase, propose a file-by-file plan and wait for approval.",
+      "All geometry in millimetres, right-handed 3D coordinates (X right, Y up, Z toward the viewer), 2D part drawings in SVG convention (y down).",
+      "Every geometry module is pure TypeScript with no DOM access, runs inside a Web Worker, and has unit tests before any UI is built on top of it.",
+      "Never silently drop geometry. Any part that is removed, merged, split or clamped must be reported in the Analysis panel with a reason."
+    ]
+  },
+
+  "product_goal": {
+    "summary": "A third product in HingeLab called 'Parametric'. It turns any 3D form into a set of flat parts that a laser cutter can cut from sheet material and that assemble back into the form: sliced wall sculptures (faces, busts, animals), radial and fan sculptures (wall clocks, lamps), stacked contour models, and interlocking waffle structures.",
+    "reference_products": [
+      "A human face built from ~40 parallel vertical fins of equal thickness, each fin's front edge following the face profile, the fins standing out of the wall.",
+      "The same face mounted on a backboard covered with straight vertical slats, the fins continuing the slat rhythm.",
+      "A leaf-shaped wall clock whose fins fan out around an oval opening; each fin's height and length vary smoothly so the fins form a twisting, flowing surface."
+    ],
+    "promise_to_the_user": "Bring any shape (a 3D file, a photo, or a formula), choose how to slice it, and get numbered, nested, kerf-compensated SVG sheets plus an assembly guide."
+  },
+
+  "tech_stack": {
+    "inherits": "Everything in CURSOR_PROMPT.md (Next.js App Router, TypeScript, React, Supabase, Stripe, Vercel, Vitest).",
+    "add_libraries": [
+      { "name": "three", "use": "3D viewport, model display, slice preview, gizmos (TransformControls, OrbitControls)." },
+      { "name": "three/examples loaders: STLLoader, OBJLoader, GLTFLoader, PLYLoader, 3MFLoader", "use": "Import user models." },
+      { "name": "manifold-3d (WASM)", "use": "Robust mesh repair/validation, booleans (subtract the backboard plane, cut the model behind z=0), and plane cross-sections (Manifold.slice / project). Primary slicing engine." },
+      { "name": "three-mesh-bvh", "use": "Fast ray casts for picking, depth sampling and deviation measurement." },
+      { "name": "meshoptimizer (WASM)", "use": "Simplify meshes above the triangle budget before slicing." },
+      { "name": "clipper2-js", "use": "2D polygon clean-up, union, difference, offsets (kerf, clearances, bridges). Integer units: 1 unit = 0.001 mm." },
+      { "name": "onnxruntime-web + Depth-Anything-V2-Small (ONNX)", "use": "Photo → depth map for the Image-to-Relief source. Use ONLY the Small model (Apache-2.0). The Base/Large weights are non-commercial and must not be used.", "license_check": "Record the model license in /public/models/LICENSES.md." },
+      { "name": "mathjs (expression parser only)", "use": "Safe evaluation of user formulas for the Formula source. Never use eval or new Function on user input." },
+      { "name": "potpack or a custom maxrects packer", "use": "Fast nesting of parts onto sheets in v1." }
+    ],
+    "workers": "All slicing, nesting and export run in a dedicated Web Worker (comlink is fine). The UI thread only renders and edits parameters.",
+    "budgets": {
+      "max_input_triangles": 2000000,
+      "slice_triangle_budget": 300000,
+      "target_slice_time_ms": 1500,
+      "target_full_regenerate_ms": 4000,
+      "behaviour_when_over_budget": "Simplify with meshoptimizer to the slice budget, report the achieved error in mm."
+    }
+  },
+
+  "architecture": {
+    "folders": {
+      "lib/parametric/types.ts": "ParametricParams, SourceSpec, MethodSpec, Slice, Part, Sheet, AssemblyGuide, Report.",
+      "lib/parametric/defaults.ts": "Defaults per method and material.",
+      "lib/parametric/source/mesh.ts": "Load, validate, repair, normalise (units, orientation, scale), simplify.",
+      "lib/parametric/source/relief.ts": "Depth map (from image or heightfield) → watertight relief mesh.",
+      "lib/parametric/source/formula.ts": "Formula and preset surfaces → mesh.",
+      "lib/parametric/source/library.ts": "Built-in procedural sample shapes.",
+      "lib/parametric/slice/planes.ts": "Generate slicing planes for each method.",
+      "lib/parametric/slice/section.ts": "Mesh ∩ plane → closed 2D polygons in the plane's local frame.",
+      "lib/parametric/slice/clean.ts": "Simplify, smooth, minimum-feature enforcement, island handling.",
+      "lib/parametric/methods/parallel.ts": "Parallel fins on a backboard (face sculpture).",
+      "lib/parametric/methods/stacked.ts": "Stacked contour layers with dowel holes.",
+      "lib/parametric/methods/waffle.ts": "Two orthogonal interlocking families with half-lap slots.",
+      "lib/parametric/methods/radial.ts": "Fins rotated around an axis, held by hub plates.",
+      "lib/parametric/methods/curveNormal.ts": "Fins placed normal to a guide curve (leaf clock).",
+      "lib/parametric/joints.ts": "Tabs, slots, half-laps, dowel holes, backboard slots — all with kerf and clearance.",
+      "lib/parametric/backboard.ts": "Backboard / hub / spine plates, optional decorative slat field.",
+      "lib/parametric/label.ts": "Part ids, orientation arrows, engrave text paths (single-line font).",
+      "lib/parametric/nest.ts": "Nest parts onto sheets.",
+      "lib/parametric/export.ts": "Layered SVG per sheet, ZIP of all sheets, assembly guide SVG.",
+      "lib/parametric/quality.ts": "Deviation, fidelity score, structural checks.",
+      "lib/parametric/__tests__/": "Unit, analytic and golden tests.",
+      "components/parametric/": "ParametricEditor, Viewport3D, SourcePanel, MethodPanel, SliceInspector, SheetsView, AssemblyView."
+    },
+    "reuse_from_lib_hinge": ["MATERIALS", "kerf conventions", "layer colors and export layer scheme (C03 inner → C01 → C02 outline, C00 engrave)", "layoutParts as a fallback packer", "UI shell components (MenuBar, ToolRail, PanelDock, NumberField with label scrubbing, StatusBar, units mm/in, undo/redo, autosave)"]
+  },
+
+  "data_model": {
+    "ParametricParams": {
+      "source": {
+        "kind": "'mesh' | 'image' | 'formula' | 'library'",
+        "mesh": { "fileId": "string (Supabase storage)", "units": "'mm'|'cm'|'m'|'in'|'auto'", "upAxis": "'Y'|'Z'", "transform": { "position": "[x,y,z] mm", "rotation": "[rx,ry,rz] degrees", "uniformScale": "number" }, "targetSize": { "axis": "'width'|'height'|'depth'", "value": "mm" } },
+        "image": { "fileId": "string", "depthModel": "'depth-anything-v2-small'", "invert": "boolean", "maxReliefDepth": "mm, default 60", "blur": "px, default 2", "subjectMask": "'auto'|'none'|'brush'", "baseThickness": "mm, default 0", "resolution": "max 256x256 samples default 192" },
+        "formula": { "type": "'heightfield'|'revolution'|'radial-profile'|'loft'", "expression": "string, e.g. '12*sin(x/18)*cos(y/25)'", "domain": { "x": "[min,max] mm", "y": "[min,max] mm" }, "variables": "user sliders {name: {min,max,value}}", "resolution": "grid samples per axis, default 160" },
+        "library": { "id": "'wave-panel'|'ripple'|'dune'|'vortex-disc'|'leaf-fan'|'sphere'|'torus'|'vase'|'mountain'|'abstract-head-cc0'" }
+      },
+      "method": "'parallel'|'stacked'|'waffle'|'radial'|'curveNormal'",
+      "material": { "id": "MATERIALS key", "T": "mm", "K": "kerf mm", "sheetW": "mm", "sheetH": "mm", "sheetMargin": "mm, default 5", "partGap": "mm, default 3", "grain": "'any'|'along-x'|'along-y'" },
+      "joints": { "slotClearance": "mm, default 0.1", "tabDepth": "mm, default = backboard thickness", "tabWidth": "mm, default 10", "dowelDia": "mm, default 6", "halfLapClearance": "mm, default 0.1" },
+      "quality": { "chordTolerance": "mm, default 0.1", "smoothing": "0..1, default 0.25", "minFeature": "mm, default max(1.5*T, 3)", "minIslandArea": "mm², default 25" },
+      "labels": { "enabled": "boolean", "style": "'engrave'|'score'", "position": "'auto-hidden-face'|'center'", "prefix": "string" },
+      "per_method": "see 'methods' section"
+    },
+    "Part": { "id": "string like 'F07' or 'L12' or 'R03-A'", "kind": "'fin'|'layer'|'rib-x'|'rib-y'|'radial-fin'|'backboard'|'hub'|'spine'|'slat'|'spacer'", "outline": "Clipper paths (outer + holes) in part-local mm", "innerCuts": "paths cut before the outline (slots, dowel holes)", "engrave": "paths for labels and alignment marks", "placement3D": "4x4 matrix mapping part-local 2D (z=0 plane) to model space, so the 3D preview shows the cut part exactly where it will be assembled", "neighbors": "ids of adjacent parts (for the assembly guide)", "area": "mm²", "bbox": "mm" },
+    "Report": { "warnings": "[{code, message, partIds?}]", "stats": { "partCount": "", "sheetCount": "", "cutLength": "mm", "engraveLength": "mm", "estimatedCutTime": "min, from material speed presets", "materialUsage": "%", "maxDeviation": "mm", "meanDeviation": "mm" } }
+  },
+
+  "sources": {
+    "mesh_import": {
+      "formats": ["STL (binary+ascii)", "OBJ", "GLB/GLTF", "PLY", "3MF"],
+      "steps": [
+        "Parse with the matching three loader inside the worker; merge all meshes into one indexed geometry; drop normals/UVs.",
+        "Units: if 'auto', assume mm when the bounding box diagonal is 5–5000, otherwise ask the user with a one-line prompt in the panel.",
+        "Repair with manifold-3d: merge vertices within 1e-4 of the bbox diagonal, remove degenerate triangles, close small holes; if the mesh is still not manifold, slice it anyway with the fallback section algorithm and show warning NON_MANIFOLD with the count of open edges.",
+        "Simplify above the slice budget with meshoptimizer; report the error.",
+        "Normalise: centre on the origin; the user then orients it with a gizmo and a 'Lay flat on face' tool (click a face to make it the back plane)."
+      ]
+    },
+    "image_to_relief": {
+      "purpose": "Make a relief sculpture (like the face) from a single photo.",
+      "steps": [
+        "Run Depth-Anything-V2-Small in onnxruntime-web (WebGPU if available, otherwise WASM) on the image resized to 518 px on the long side.",
+        "Normalise relative depth to 0..1; optional subject mask: 'auto' keeps the largest connected foreground region above the 35th depth percentile; 'brush' lets the user paint.",
+        "Smooth with a Gaussian of 'blur' px, then apply a user curve (gamma 0.5–2) so noses and lips read clearly.",
+        "Build a watertight heightfield mesh: top surface = depth × maxReliefDepth on a grid of 'resolution', flat back at z=0, side walls along the mask boundary.",
+        "Show a warning that monocular depth is approximate and that a 3D scan or model gives better faces."
+      ]
+    },
+    "formula": {
+      "types": {
+        "heightfield": "z = f(x, y) over the domain; mesh as in image_to_relief.",
+        "revolution": "r = f(h) for h in [0, H]; revolve around the Y axis (vases, lamps).",
+        "radial-profile": "fin profile as a function of angle θ: height = f(θ, s) where s is distance along the fin; used to drive the radial and curveNormal methods directly without a mesh.",
+        "loft": "two or more closed 2D curves at given heights, linearly lofted."
+      },
+      "safety": "Parse with mathjs in a restricted scope: allowed symbols are x, y, h, theta, s, user variables, pi, e, and functions sin cos tan asin acos atan atan2 sqrt abs exp log pow min max floor ceil mod noise2 noise3 smoothstep clamp. Reject anything else with a clear message. Limit evaluation to 5 million samples.",
+      "noise": "Provide deterministic simplex noise2(x,y) and noise3(x,y,z) with a 'seed' variable."
+    },
+    "library": "Procedurally generated samples only (no third-party models), plus one CC0-licensed abstract head mesh whose source and license are recorded in /public/library/LICENSES.md."
+  },
+
+  "slicing_core": {
+    "plane_section_algorithm": [
+      "Primary: manifold-3d slice at the plane (returns cross-section polygons).",
+      "Fallback (non-manifold input): for every triangle that straddles the plane compute the intersection segment; quantise endpoints to 1e-4 mm and stitch segments into loops with a hash map; discard open chains shorter than 1 mm and report the rest as NON_MANIFOLD_SECTION.",
+      "Transform the loops into the plane's local 2D frame (u along the plane's first in-plane axis, v along the second), then into Clipper2 integer paths."
+    ],
+    "cleanup_per_section": [
+      "Union with nonzero fill rule to resolve overlaps; orientation: outers CCW in math frame.",
+      "Simplify with Ramer–Douglas–Peucker at chordTolerance.",
+      "Smooth: Chaikin corner cutting, iterations = round(smoothing × 3), then re-simplify.",
+      "Minimum feature: morphological opening by minFeature/2 (offset −r then +r, round joins). Parts of a section thinner than minFeature disappear here; report MIN_FEATURE_REMOVED with the lost area.",
+      "Drop islands smaller than minIslandArea (report ISLAND_DROPPED). Other islands are handled by each method's island rule."
+    ],
+    "kerf": "Every outline is offset outward by K/2 and every inner cut inward by K/2 at the very end, after all joints are added, never earlier.",
+    "deviation": "quality.ts measures, for the assembled stack of extruded parts, the distance from 2,000 random points on the original surface to the nearest part surface (three-mesh-bvh). Report max and mean in mm and a fidelity score = clamp(1 − mean / (2·spacing), 0, 1)."
+  },
+
+  "methods": {
+    "parallel": {
+      "what": "Equal fins parallel to each other, all perpendicular to a backboard (the face sculpture). The fin's front edge follows the model profile.",
+      "params": { "axis": "'X'|'Y' (direction the slicing planes are stacked along), default X", "spacing": "centre-to-centre mm, default 2.5·T, min T + 1", "phase": "0..1 offset of the first plane", "backboard": "'none'|'plate'|'slats'", "backboardMargin": "mm", "slatWidth": "mm (for 'slats' backboard, default = T)", "fillEmptySlots": "boolean: fins outside the model continue as plain slats (the reference photo with the slat wall)", "finDepthBehind": "mm the fin extends into the backboard as tabs, default = backboard thickness", "minFinHeight": "mm; shorter fins are dropped, default 3" },
+      "algorithm": [
+        "Cut the model with the half-space z ≥ 0 (z = 0 is the backboard plane) using manifold-3d.",
+        "Planes: normal = axis, positions p_i = x_min + phase·spacing + i·spacing for every plane intersecting the model.",
+        "Section each plane. A fin is the section's polygons in the (v = height along the wall, w = depth out of the wall) frame.",
+        "Island rule: every polygon of a section must touch z = 0 (the wall). Polygons that float (e.g. the tip of the nose separated from the cheek in one slice) are connected to the wall by a vertical bridge strip of width max(minFeature, 4 mm) unioned along the shortest straight path to w = 0 that stays inside the convex hull of the section; report BRIDGE_ADDED.",
+        "Tabs: along the fin edge that lies on w = 0, add rectangular tabs of width tabWidth and depth finDepthBehind every ~60 mm (at least 2 per fin, 1 if the fin is shorter than 2.5·tabWidth).",
+        "Backboard: a plate covering the model's projection plus backboardMargin, with one slot per tab at (p_i, v) sized (T + slotClearance − K) × (tabWidth + slotClearance − K). For 'slats': slats of slatWidth at the same pitch as the fins, with fins replacing slats where the model is present; slats get no profile.",
+        "Ids: F01..Fn from the first plane; engrave the id and an arrow pointing to the wall edge on one face."
+      ]
+    },
+    "stacked": {
+      "what": "Horizontal layers of the full sheet thickness stacked to rebuild the form (topographic model).",
+      "params": { "axis": "'Y'|'Z'", "layerHeight": "= T (fixed)", "dowels": "boolean, default true", "dowelCount": "1..4, default 2", "registrationMarks": "boolean: engrave the outline of the next layer on each layer, default true", "hollow": "boolean: hollow each layer leaving wall thickness 'shell' mm to save material", "shell": "mm, default 8" },
+      "algorithm": [
+        "Planes at the centre of each layer: h_i = h_min + (i + 0.5)·T.",
+        "Each section is one layer. Multiple polygons per layer are allowed (they are separate pieces glued at the same height) but each gets id Lxx-a, Lxx-b.",
+        "Dowel holes: find points that lie inside the section of every layer between the bottom and the top of a dowel chain: intersect all layer polygons eroded by dowelDia/2 + 2 mm; choose dowelCount points from the result with maximum mutual distance; if the intersection is empty, split the stack into chains where it is not empty and report DOWEL_CHAIN_SPLIT.",
+        "Hollow: subtract the layer polygon offset by −shell, but keep a solid ring around each dowel hole (radius dowelDia/2 + 3 mm)."
+      ]
+    },
+    "waffle": {
+      "what": "Two families of ribs (along X and along Z, or along X and Y for vertical forms) that slot into each other with half-lap joints (egg-crate).",
+      "params": { "spacingA": "mm", "spacingB": "mm", "familyAxes": "['X','Z'] default", "lapDirection": "'A-from-top'|'A-from-bottom'", "baseRibs": "boolean: add a flat base frame" },
+      "algorithm": [
+        "Section the model with both families of planes.",
+        "For every pair (rib a, rib b), the intersection line of their planes crosses both sections; the overlap interval [h0, h1] along that line is where the two ribs physically cross (compute as the intersection of the two section polygons with the common line).",
+        "Half-lap: rib a gets a slot from h0 up to the midpoint m = (h0 + h1)/2, rib b gets a slot from m up to h1 (or the reverse per lapDirection). Slot width = T + halfLapClearance − K, ends rounded with a radius of K/2 (dog-bone optional for CNC, off for laser).",
+        "If a crossing overlap interval contains a gap (non-convex section), handle each sub-interval separately.",
+        "Reject crossings with overlap < 2·T (report CROSSING_TOO_SHORT) — those ribs simply pass each other without a joint.",
+        "Ids: A01.., B01..; engrave the matching partner id next to each slot."
+      ],
+      "invariant": "For every crossing, the slot depths of the two ribs add up to the overlap length exactly (±1e-6 mm)."
+    },
+    "radial": {
+      "what": "Fins rotated around a common axis, like a lamp shade or a radial wall clock.",
+      "params": { "axisPoint": "[x,y,z]", "axisDirection": "[x,y,z]", "count": "number of fins", "angleRange": "[start, end] degrees, default [0, 360)", "innerRadius": "mm: the hub opening (clock hole)", "hubPlates": "1|2 (front and back hubs)", "hubWidth": "mm", "profileSource": "'mesh'|'formula'" },
+      "algorithm": [
+        "For each angle θ_i the plane contains the axis; take only the half-plane on one side of the axis (fins are half-sections).",
+        "Remove material inside innerRadius; the fin's inner edge gets two tabs that enter slots in the hub plate(s).",
+        "Spacing check: at radius innerRadius, arc spacing = innerRadius·Δθ must be ≥ T + 1 mm; otherwise report FINS_COLLIDE_AT_HUB and offer to reduce count or increase innerRadius (show the exact max count).",
+        "Hub plate: a ring (or the clock face) with one radial slot per fin.",
+        "With profileSource 'formula', the fin outline is generated directly from radial-profile f(θ, s) without slicing a mesh."
+      ]
+    },
+    "curveNormal": {
+      "what": "Fins placed perpendicular to a 2D guide curve (the leaf clock: fins fanning around an oval opening, each fin's length and height varying so the tops form a twisting surface).",
+      "params": { "guideCurve": "closed or open 2D curve: 'ellipse'|'circle'|'imported SVG path'|'spline drawn in the editor'", "count": "number of fins, or 'auto' from spacing", "spacingAtGuide": "mm, minimum T + 1", "finLength": "function of curve parameter t (0..1): constant | formula | from mesh", "finHeightProfile": "function of (t, s) where s = distance from the guide along the fin; default a smooth bump", "twist": "degrees of fin tilt around its own length as a function of t, default 0", "outerBoundary": "optional closed curve (the leaf outline) that clips fin length", "backPlate": "boolean: a plate in the shape of outerBoundary with one slot per fin", "centerFeature": "'none'|'clock-insert'|'mirror'|'opening'", "clockInsertDia": "mm (standard insert diameters offered: 30, 37, 50, 60)" },
+      "algorithm": [
+        "Sample the guide curve by arc length; place fin i at parameter t_i with its plane containing the curve normal and the back-plate normal.",
+        "Fin length = min(finLength(t_i), distance along the normal to outerBoundary).",
+        "Fin outline in its plane: bottom edge on the back plate (with tabs), top edge = finHeightProfile(t_i, s) sampled at chordTolerance and smoothed.",
+        "Collision check: fins diverge on convex guide sections but converge on concave ones; compute the minimum distance between neighbouring fin footprints on the back plate; if it is < T + 0.5 mm anywhere, report FINS_COLLIDE with the t range and auto-trim the fins there.",
+        "Back plate slots follow each fin footprint (they are not all parallel, so each slot is a rotated rectangle).",
+        "Clock insert: a centred hole of clockInsertDia with a 0.2 mm press-fit allowance."
+      ]
+    }
+  },
+
+  "nesting": {
+    "v1": "Sort parts by bounding-box area, rotate by 0°/90° (and free rotation for slim parts if it reduces the bounding box by >10%), pack with maxrects into sheets of sheetW × sheetH minus sheetMargin, keeping partGap. Respect 'grain' by disallowing rotations that break it.",
+    "ordering": "Keep consecutive ids together when the loss in material usage is < 5%, because it makes sorting parts after cutting much easier.",
+    "later": "True-shape nesting (no-fit polygon) in a later version; design the API so it can be swapped in."
+  },
+
+  "export": {
+    "per_sheet_svg": "Same layer scheme as Hinge Box: C03 inner cuts (slots, dowel holes, half-laps) → C00 engrave (labels, registration marks, arrows) → C02 outline. Width/height in mm, 0.1 mm stroke, Inkscape layer attributes.",
+    "zip": "All sheets as sheet-01.svg … sheet-NN.svg plus assembly-guide.svg and project.hingelab.json.",
+    "assembly_guide": "One SVG page per method: the backboard / hub / base drawn at scale with every slot labelled by the part id that goes into it, an exploded isometric thumbnail rendered from the 3D view, and a numbered list of steps (e.g. 'Insert F01–F40 into the backboard from left to right; the engraved arrow points to the wall').",
+    "labels": "Use a single-line (stroke) font for engraving ids so the laser scores one line instead of filling glyphs; put labels on hidden faces (back of fins, underside of layers) when 'auto-hidden-face'."
+  },
+
+  "ui": {
+    "entry": "Product switcher in the control bar: Hinge Box | Letters | Parametric.",
+    "layout": "Same shell as Hinge Box. The central area has two tabs: '3D' (three.js viewport with the source model, the slicing planes and the assembled parts) and 'Sheets' (the 2D nested sheets with rulers, pan, zoom, layers).",
+    "panels": [
+      "Source: Import 3D file | Photo to relief | Formula | Library; transform gizmo; target size; 'Lay flat on face'.",
+      "Method: Parallel fins | Stacked layers | Waffle | Radial | Along a curve; method-specific parameters with live preview of the planes in 3D.",
+      "Material: shared material presets (thickness, kerf), sheet size.",
+      "Joints & Fit: tab width, clearances, dowels.",
+      "Quality: chord tolerance, smoothing, minimum feature, island size; fidelity score and deviation heat-map toggle in the 3D view.",
+      "Slice Inspector: scrub through slices with a slider, see each part's outline, its id, warnings, and its position highlighted in 3D.",
+      "Analysis: part count, sheets, cut length, estimated time, material usage, warnings grouped by code with 'Show' buttons.",
+      "Layers and Export: same as Hinge Box plus 'Export all sheets (ZIP)' and 'Assembly guide'."
+    ],
+    "3d_view_features": ["Orbit/pan/zoom", "Toggle: original model, slicing planes, assembled parts (extruded to T), exploded view slider", "Deviation heat-map", "Click a part to select it in the Slice Inspector and on the sheets"],
+    "performance": "Regenerate in the worker on parameter change with a 250 ms debounce; show a progress bar for long jobs; keep the previous result on screen until the new one is ready."
+  },
+
+  "warnings_catalog": [
+    { "code": "NON_MANIFOLD", "message": "The model has {n} open edges. Slicing still works, but some slices may have gaps. Repair the model or check the highlighted slices." },
+    { "code": "MIN_FEATURE_REMOVED", "message": "{area} mm² of thin detail was removed from {parts} because it is thinner than {minFeature} mm." },
+    { "code": "ISLAND_DROPPED", "message": "{n} tiny pieces under {minIslandArea} mm² were left out." },
+    { "code": "BRIDGE_ADDED", "message": "{n} floating pieces were connected to the wall with support bridges." },
+    { "code": "DOWEL_CHAIN_SPLIT", "message": "No dowel position runs through all layers, so the stack is split into {n} dowel groups." },
+    { "code": "CROSSING_TOO_SHORT", "message": "{n} rib crossings are too short for a joint and were left unjoined." },
+    { "code": "FINS_COLLIDE_AT_HUB", "message": "Fins overlap at the hub. Use at most {maxCount} fins or a hub radius of at least {minRadius} mm." },
+    { "code": "FINS_COLLIDE", "message": "Fins touch between t = {t0} and {t1}. They were trimmed there." },
+    { "code": "PART_TOO_BIG", "message": "{id} is larger than the sheet. Scale the model down, use a bigger sheet, or enable splitting." },
+    { "code": "TOO_MANY_PARTS", "message": "This would make {n} parts. Increase spacing or reduce size (limit {limit})." }
+  ],
+
+  "limits": { "maxParts": 600, "maxSheets": 40, "minSpacingFactor": "spacing ≥ T + 1 mm for fins", "maxModelExtent": "3000 mm" },
+
+  "tests": {
+    "principle": "Geometry is verified analytically on shapes whose sections are known exactly, then by invariants on real models. All tests run in Vitest (Node) with manifold-3d WASM.",
+    "analytic": [
+      { "name": "sphere parallel", "setup": "Sphere radius 100 (icosphere subdivision 6), method parallel, spacing 10, K = 0, smoothing 0", "assert": "Fin i is a half-disc (cut at z = 0) whose radius equals sqrt(100² − d_i²) within 0.15 mm, where d_i is the plane distance from the centre." },
+      { "name": "sphere stacked", "setup": "Same sphere, stacked along Y, T = 3", "assert": "Layer i outline radius = sqrt(100² − h_i²) within 0.15 mm; dowel holes exist in every layer of each chain and are concentric across layers within 1e-6." },
+      { "name": "box waffle", "setup": "Box 200×100×150, waffle X/Z, spacing 50", "assert": "Every rib is a rectangle; every crossing has slot depths summing to the overlap height exactly; slot widths = T + clearance − K." },
+      { "name": "cylinder radial", "setup": "Cylinder radius 80 height 120 around Y, radial count 24, innerRadius 20", "assert": "Every fin is a rectangle 60 × 120 (minus tabs); fins are rotated exactly 15° apart; no FINS_COLLIDE_AT_HUB at T = 3." },
+      { "name": "hub collision", "setup": "radial count 80, innerRadius 20, T = 3", "assert": "Reports FINS_COLLIDE_AT_HUB with maxCount = floor(2π·20 / (T + 1)) = 31." },
+      { "name": "ellipse curveNormal", "setup": "Guide ellipse 120×70, constant fin length 60, constant height 20, count 48", "assert": "Fin footprints are normal to the ellipse within 0.01°; no fin crosses another; back-plate slots match fin footprints within 1e-6 mm." },
+      { "name": "formula heightfield", "setup": "z = 10·sin(x/20), domain 200×100, parallel along Y", "assert": "Each fin's top edge matches the sine within chordTolerance + 0.05 mm." }
+    ],
+    "invariants_on_every_result": [
+      "Every part outline is a simple polygon set (no self-intersections; holes inside outers).",
+      "Every part is one connected piece (rasterise at 10 px/mm, one component, as in the Hinge Box verification).",
+      "Every tab has exactly one matching slot of the right size and position (parallel, radial, curveNormal).",
+      "No part exceeds the sheet; no two nested parts overlap (polygon intersection area = 0) and gaps ≥ partGap − 1e-6.",
+      "Kerf is applied once: outline offset = +K/2, inner cuts = −K/2 (check on a 100×100 test plate).",
+      "Exported SVG: mm units, no NaN, required layer groups present, ids unique."
+    ],
+    "regression": "Keep golden JSON snapshots of part outlines for the analytic cases; any change must be explained in the PR description.",
+    "hinge_box_safety": "The Hinge Box golden test must still pass byte-for-byte."
+  },
+
+  "phases": [
+    { "id": "P1", "name": "Core slicing", "build": ["types, defaults", "source/mesh.ts with STL+OBJ+GLB", "slice/planes.ts, section.ts, clean.ts", "methods/parallel.ts without backboard", "debug page /app/parametric-debug showing planes and raw sections"], "tests": ["sphere parallel", "invariants 1–2"], "stop_and_show": "The sphere and the library 'abstract-head-cc0' sliced into fins in the 3D view." },
+    { "id": "P2", "name": "Parallel fins complete", "build": ["tabs, backboard plate and slat mode, island bridges", "labels", "nesting v1", "export per sheet + ZIP", "Parametric editor UI with 3D and Sheets tabs"], "tests": ["formula heightfield", "invariants 3–6"], "stop_and_show": "A face-style sculpture with a slat backboard, its sheets and its assembly guide." },
+    { "id": "P3", "name": "Stacked + Waffle", "build": ["methods/stacked.ts with dowels, registration marks, hollowing", "methods/waffle.ts with half-laps"], "tests": ["sphere stacked", "box waffle"], "stop_and_show": "A stacked mountain and a waffle vase." },
+    { "id": "P4", "name": "Radial + Along a curve", "build": ["methods/radial.ts with hubs", "methods/curveNormal.ts with guide curves, outer boundary, clock insert", "formula radial-profile source"], "tests": ["cylinder radial", "hub collision", "ellipse curveNormal"], "stop_and_show": "A leaf-shaped wall clock in the spirit of the reference photo, built with curveNormal from formulas only." },
+    { "id": "P5", "name": "Photo to relief + quality", "build": ["source/relief.ts with Depth-Anything-V2-Small", "deviation heat-map and fidelity score", "Slice Inspector polish"], "tests": ["relief mesh is watertight; heightfield sampling matches the depth map within 1 grid step"], "stop_and_show": "A portrait photo turned into a fin sculpture." },
+    { "id": "P6", "name": "Productisation", "build": ["save projects to Supabase (model files in storage, params in the projects table with product = 'parametric')", "plan limits: Free = library shapes and parallel method with ≤ 30 parts and watermark; Pro = everything", "cut-time estimate from material speed presets"], "stop_and_show": "Pricing gates working in Stripe test mode." }
+  ],
+
+  "acceptance_criteria": [
+    "A user can import an STL of a head, choose Parallel fins, set the sculpture width to 400 mm, and download nested SVG sheets plus an assembly guide in under one minute of interaction.",
+    "Every exported part cuts out as one piece and every tab fits its slot when cut with the chosen kerf.",
+    "The leaf clock can be built without any 3D file, from the Along-a-curve method and formulas alone.",
+    "All warnings are explained in plain English with the affected part ids and a way to fix them.",
+    "All tests in 'tests' pass in CI."
+  ],
+
+  "first_action": "Read this file, CURSOR_PROMPT.md and the existing lib/hinge code. Then propose the file-by-file plan for phase P1 and wait for 'go'."
+}

@@ -1,15 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { LogoMark } from "@/components/site/LogoMark";
+import { UserMenu } from "@/components/auth/UserMenu";
 
 export type MenuAction = { label: string; kbd: string; run: () => void; disabled?: boolean };
 export type MenuEntry = MenuAction | "-";
-
-const LOGO = (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#fff" strokeWidth="1.4" strokeLinecap="round">
-    <path d="M2 2v10M4.7 2v4M4.7 8v4M7.4 2v10M10.1 2v4M10.1 8v4M12.6 2v10" />
-  </svg>
-);
 
 export function MenuBar({
   title, kind, menus, onExport,
@@ -44,7 +40,7 @@ export function MenuBar({
   return (
     <header className="menubar">
       <div className="logo">
-        <span className="logo-mark" aria-hidden="true">{LOGO}</span>
+        <LogoMark />
         HingeLab
       </div>
       <nav className="menus" aria-label="Main menu">
@@ -84,6 +80,7 @@ export function MenuBar({
       </nav>
       <div className="doc-title">{title ? <><b>{title}</b> · {kind}</> : null}</div>
       <button className="btn-export" type="button" onClick={onExport}>Export SVG</button>
+      <UserMenu />
     </header>
   );
 }
