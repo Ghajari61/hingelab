@@ -12,8 +12,8 @@ export const RESET_FIELD_EVENT = "hingelab:reset-field";
 
 /**
  * Numeric field (spec §4.4, §10): math, units, relative and percent input; arrow keys (Shift ×10,
- * Alt ×0.1); scrubbing on the label; ↺ when the value differs from its default (Alt+click on the label
- * resets too); right-click for reset, copy, paste and lock.
+ * Alt ×0.1); scrubbing on the label; ↺ when the value differs from its default (double-click or
+ * Alt+click on the label resets too); right-click for reset, copy, paste and lock.
  * `length` fields hold millimetres and show `units`; other fields are shown as they are.
  */
 export function NumberInput({
@@ -105,7 +105,8 @@ export function NumberInput({
       <label
         htmlFor={id}
         className={hideLabel ? "ui-sr" : undefined}
-        title="Drag to change, Alt+click to reset"
+        title={defaultValue !== undefined ? "Drag to change, double-click or Alt+click to reset" : "Drag to change"}
+        onDoubleClick={() => { if (differs) reset(defaultValue, ""); }}
         onPointerDown={(e) => {
           if (e.button !== 0) return;
           if (e.altKey) { e.preventDefault(); reset(defaultValue, ""); return; }

@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { MATERIALS, polyD, r3, type LayerKey } from "@/lib/hinge";
 import {
-  CLOCK_INSERTS, FORMULA_DEFAULTS, IMAGE_DEFAULTS, LEAF_CLOCK, LIBRARY, cutSpeedOf, finSpacingOf, fmtMinutes,
+  CLOCK_INSERTS, FORMULA_DEFAULTS, IMAGE_DEFAULTS, LEAF_CLOCK, LIBRARY, PARAMETRIC_DEFAULTS, cutSpeedOf, finSpacingOf, fmtMinutes, mergeParametricParams,
   type CurveNormalParams, type FormulaSpec, type LibraryId, type ModelUnits, type ParametricParams, type Part, type SliceResult, type WarningCode,
 } from "@/lib/parametric";
 import { NumberField } from "@/components/editor/NumberField";
@@ -157,11 +157,17 @@ export function ParametricDock({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
+  const defaults = mergeParametricParams({
+    source: params.source.kind === "formula" ? FORMULA_DEFAULTS[params.source.type]
+      : params.source.kind === "image" ? { ...IMAGE_DEFAULTS, fileName: params.source.fileName } : PARAMETRIC_DEFAULTS.source,
+  });
+  const defaultOf = (f: ParamField) => { try { return f.get(defaults); } catch { return undefined; } };
   const field = (f: ParamField) => (
     <NumberField
       key={f.id}
       field={f}
       value={f.get(params)}
+      defaultValue={defaultOf(f)}
       units={units}
       label={f.label}
       hidden={f.show ? !f.show(params) : false}

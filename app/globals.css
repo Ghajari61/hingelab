@@ -83,6 +83,8 @@ details.sec > summary .sum-meta { margin-inline-start: auto; font-weight: 400; c
 .fld .in { display: flex; align-items: center; min-width: 0; }
 .fld input { width: 100%; min-width: 0; background: none; border: 0; color: var(--fg); font-family: var(--font-num); font-size: 12.5px; padding: 5px 2px; text-align: right; outline: none; }
 .fld .u { color: var(--fg-faint); font-family: var(--font-num); font-size: 10.5px; padding-inline: 3px 7px; }
+.fld .rst { border: 0; background: none; color: var(--accent); font-size: 12px; line-height: 1; padding: 0 6px 0 0; margin-left: -4px; cursor: pointer; }
+.fld .rst:hover { color: var(--fg); }
 .fld.wide { grid-column: 1 / -1; }
 .fld[hidden] { display: none; }
 .fld.invalid { border-color: var(--err); }

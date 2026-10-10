@@ -6,13 +6,15 @@ import type { BaseField } from "./fields";
 import { dispVal, stepMM, type Units } from "./format";
 
 export function NumberField({
-  field, value, units, label, hidden, onLive, onCommit,
+  field, value, units, label, hidden, defaultValue, onLive, onCommit,
 }: {
   field: BaseField;
   value: number;
   units: Units;
   label: string;
   hidden: boolean;
+  /** Double-click on the label or the ↺ button restores it. */
+  defaultValue?: number;
   onLive: (v: number) => void;
   onCommit: (v: number) => void;
 }) {
@@ -53,10 +55,22 @@ export function NumberField({
     onCommit(v);
   }
 
+  const canReset = defaultValue !== undefined && isFinite(defaultValue)
+    && defaultValue >= (field.min ?? -1e9) && defaultValue <= (field.max ?? 1e9);
+  const differs = canReset && Math.abs(defaultValue - value) > 1e-9;
+  function reset() {
+    if (!canReset) return;
+    setText(dispVal(!!field.len, defaultValue, units));
+    setInvalid(false);
+    if (differs) onCommit(defaultValue);
+  }
+
   return (
     <div className={`fld${invalid ? " invalid" : ""}`} hidden={hidden} data-id={field.id}>
       <label
         htmlFor={`f_${field.id}`}
+        title={canReset ? `Drag to change, double-click to reset to ${dispVal(!!field.len, defaultValue, units)}` : "Drag to change"}
+        onDoubleClick={reset}
         onPointerDown={(e) => {
           e.preventDefault();
           scrub.current = { x: e.clientX, v: value, moved: false, current: value };
@@ -109,6 +123,10 @@ export function NumberField({
           }}
         />
         <span className="u">{field.len ? units : ""}</span>
+        {differs && (
+          <button type="button" className="rst" aria-label={`Reset ${label}`} title={`Reset to ${dispVal(!!field.len, defaultValue!, units)}`}
+            onPointerDown={(e) => e.preventDefault()} onClick={reset}>↺</button>
+        )}
       </span>
     </div>
   );

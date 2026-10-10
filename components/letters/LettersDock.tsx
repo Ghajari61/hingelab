@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { MATERIALS, type CutStyle, type LayerKey, type Pattern } from "@/lib/hinge";
-import { bridgeWidthOf, cornerRadiusOf, wallMaxLengthOf, type LetterModel, type LetterParams } from "@/lib/letters";
+import { LETTER_DEFAULTS, bridgeWidthOf, cornerRadiusOf, wallMaxLengthOf, type LetterModel, type LetterParams } from "@/lib/letters";
 import { NumberField } from "@/components/editor/NumberField";
 import { LayersPanel } from "@/components/editor/LayersPanel";
 import { Sec } from "@/components/editor/PanelDock";
@@ -59,18 +59,19 @@ export function LettersDock({
 }) {
   const box = params.mode === "box";
   const hinge = box && params.wallStyle === "hinge";
-  const value = (f: LetterField): number => {
-    if (isMarqueeKey(f.id)) return params.marquee[MARQUEE_KEYS[f.id]];
-    if (f.id === "stencilBridge") return bridgeWidthOf(params);
-    if (f.id === "minCornerRadius") return cornerRadiusOf(params);
-    if (f.id === "wallMaxLength") return wallMaxLengthOf(params);
-    return params[f.id];
+  const value = (f: LetterField, p: LetterParams = params): number => {
+    if (isMarqueeKey(f.id)) return p.marquee[MARQUEE_KEYS[f.id]];
+    if (f.id === "stencilBridge") return bridgeWidthOf(p);
+    if (f.id === "minCornerRadius") return cornerRadiusOf(p);
+    if (f.id === "wallMaxLength") return wallMaxLengthOf(p);
+    return p[f.id];
   };
   const fields = (sec: LetterField["sec"]) => LETTER_FIELDS.filter((f) => f.sec === sec).map((f) => (
     <NumberField
       key={f.id}
       field={f}
       value={value(f)}
+      defaultValue={value(f, LETTER_DEFAULTS)}
       units={units}
       label={f.label}
       hidden={f.show ? !f.show(params) : false}

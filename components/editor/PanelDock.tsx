@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { MATERIALS, type Params } from "@/lib/hinge";
+import { DEFAULTS, MATERIALS, type Params } from "@/lib/hinge";
 import { FIELDS, type NumericKey } from "./fields";
 import { NumberField } from "./NumberField";
 import { Preview3D } from "./Preview3D";
@@ -66,6 +66,7 @@ export function PanelDock({
       key={f.id}
       field={f}
       value={params[f.id]}
+      defaultValue={DEFAULTS[f.id]}
       units={units}
       label={f.lab ? f.lab(params) : f.label}
       hidden={f.show ? !f.show(params) : false}
