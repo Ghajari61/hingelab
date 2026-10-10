@@ -8,6 +8,8 @@ import { finSpacingOf, LIMITS } from "./defaults";
 import { kerfPart } from "./joints";
 import { polylineLength } from "./label";
 import { sliceParallel } from "./methods/parallel";
+import { sliceStacked } from "./methods/stacked";
+import { sliceWaffle } from "./methods/waffle";
 import { nestParts } from "./nest";
 import { formulaHeightfield, formulaRevolution } from "./source/formula";
 import { libraryMesh } from "./source/library";
@@ -71,8 +73,9 @@ export function computeParametric(p: ParametricParams, src: PreparedMesh, wasm: 
   };
 
   try {
-    if (p.method !== "parallel") warnings.push({ code: "METHOD_NOT_READY", message: "This method is not available yet; showing parallel fins." });
-    const out = sliceParallel(p, { bounds: b, sections, projection });
+    const ctx = { bounds: b, sections };
+    if (p.method === "radial" || p.method === "curveNormal") warnings.push({ code: "METHOD_NOT_READY", message: "This method is not available yet; showing parallel fins." });
+    const out = p.method === "stacked" ? sliceStacked(p, ctx) : p.method === "waffle" ? sliceWaffle(p, ctx) : sliceParallel(p, { ...ctx, projection });
     warnings.push(...out.warnings);
     if (out.parts.length > LIMITS.maxParts) warnings.push({ code: "TOO_MANY_PARTS", message: `This would make ${out.parts.length} parts. Increase spacing or reduce size (limit ${LIMITS.maxParts}).` });
 
@@ -91,7 +94,7 @@ export function computeParametric(p: ParametricParams, src: PreparedMesh, wasm: 
       partArea,
       materialUsage: nest.sheets.length ? partArea / nest.sheets.reduce((a, s) => a + s.width * s.height, 0) : 0,
     };
-    return { planes: out.planes, sections: out.sections, parts: out.parts, sheets: nest.sheets, warnings, stats, bounds: b, engine };
+    return { planes: out.planes, sections: out.sections, parts: out.parts, sheets: nest.sheets, warnings, stats, guide: out.guide, crossings: out.crossings, bounds: b, engine };
   } finally {
     solid?.delete();
   }

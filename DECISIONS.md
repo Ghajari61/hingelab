@@ -218,3 +218,26 @@ Decisions taken without the owner during the autopilot run. Each entry: what, wh
 ### D42. Parametric P2: export files
 - One SVG per sheet (`sheet-01.svg` ...), width and height in mm, Inkscape layer groups in cut order slots (C03) then labels (C00) then outline (C02), each respecting the layer's export switch. The ZIP holds every sheet, `assembly-guide.svg` and `project.hingelab.json`; the imported mesh file is not included (it can be large and the user already has it).
 - The assembly guide has an exploded isometric line drawing (drawn from the part placements, not a WebGL screenshot, so it also works on the server later), the backboard at full size with the part id in every slot, and numbered steps generated from the result (insertion order and direction, slats, parts to glue, fixing to the wall).
+
+### D43. Parametric P3: stacked layers
+- Layers are sections at the centre of every T-thick slab, from the bottom of the model: h_i = min + (i + 1/2)·T, as long as h_i is inside the model. Axis Y gives horizontal layers (a topographic model); axis Z gives layers parallel to the wall (a relief built up from the back). Layer ids L01...; when one layer falls apart into several pieces they are L07-a, L07-b, ... (largest first).
+- **Dowels** are placed greedily from the bottom: a chain grows upward while the layers still share room for a dowel (every layer eroded by dowel radius + 2 mm, intersected). When the shared room runs out, the chain is closed and a new one starts (DOWEL_CHAIN_SPLIT). Positions inside a chain are spread as far apart as possible (up to `dowelCount`, at least 2·r + 4 mm apart), so they are concentric through every layer of the chain. Layers with no room at all are reported as NO_DOWEL (new code). Holes are cut at dowel Ø + slot play. Alternatives considered: one global dowel set (fails on any overhang) and a dowel per adjacent pair only (no alignment over the whole stack).
+- **Registration marks:** the outline of the layer above is engraved on each layer, clipped 0.5 mm inside the piece (only the part of the next outline that actually lies on this layer).
+- **Hollowing** removes only what the layers above and below both cover, offset inwards by the wall thickness `shell`, so no hole ever shows on the outside. A ring (dowel radius + 3 mm) is kept round every dowel and a spoke from each ring to the nearest outline, so no island comes loose. The first and last layer are never hollowed.
+- **Labels** go on the covered (hidden) area of a layer first, where the next layer will hide them; then anywhere on the piece.
+
+### D44. Parametric P3: waffle
+- Two families of parallel planes along two of X/Y/Z (`familyAxes`, default X and Z: a standing egg-crate). Both families use the same frame rule: W runs along the common line, U = W × N, so a crossing is a vertical line x = const in each rib's own drawing.
+- At every crossing the overlap [t0, t1] of the two ribs along the common line is split at its midpoint m. With "A from below", rib A gets a slot from its lower edge up to m and rib B from m to its upper edge (and the reverse for "A from above"). The slot runs 1 mm past the rib's edge so it opens cleanly, and is T + lap play wide. Crossings shorter than 2·T are left unjoined (CROSSING_TOO_SHORT); rib pieces that cross nothing are reported as NO_JOINT (new code).
+- The partner's id is engraved beside every slot (rotated along it), and the rib's own id where it still fits. Ids: A01..., B01...; pieces A03-a, A03-b.
+- `baseRibs` is kept in the params but not used yet (no extra base frame).
+
+### D45. Parametric P3: section clean-up keeps corners
+- Found while checking the stacked mountain: the smoothing step ran Chaikin on the already simplified outline, whose long straight edges let one pass cut 40-50 mm off a rectangle's corners. Edges are now split to at most 2 mm before smoothing, so a pass cuts at most 0.5 mm off a corner and only facet noise is smoothed.
+- The minimum-feature opening now uses miter joins instead of round ones, so it no longer rounds every convex corner by half the minimum feature (a box rib is a true rectangle). Thin features are still removed exactly as before.
+- Both are tested: a 200 x 150 rectangle survives smoothing 0 / 0.5 / 1 with less than 4 mm² lost, and the box waffle ribs are exact notched rectangles.
+- Label search speed-up (same placements): before the sampled "rectangle inside" check, a candidate centre must lie in the intersection of the shape shifted by the label's four corners. Hollowed layers (thin rings) went from about 3.2 s to 0.3 s for a 33-layer sphere, which also removed an intermittent test timeout.
+
+### D46. Parametric P3: methods write their own guide steps; regression snapshots
+- Every method returns its assembly steps (`SliceResult.guide`); the guide SVG only adds "Cut all N sheets" in front. The subtitle names the method.
+- The brief's "regression" item is covered by file snapshots of the part outlines (rounded to 0.01 mm) for the analytic cases: sphere parallel, sphere stacked, box waffle (`lib/parametric/__tests__/__snapshots__/*.json`). They were first written in P3; they are not a golden for the Hinge Box.

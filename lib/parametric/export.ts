@@ -103,30 +103,23 @@ function isoThumbnail(result: SliceResult, T: number, w: number, h: number): str
 
 const finSpacingOfResult = (r: SliceResult) => (r.planes.length > 1 ? Math.abs(r.planes[1].offset - r.planes[0].offset) : 10);
 
-function idRange(ids: string[]) {
-  if (!ids.length) return "";
-  return ids.length === 1 ? ids[0] : `${ids[0]}–${ids[ids.length - 1]}`;
+const METHOD_NAMES: Record<ParametricParams["method"], string> = {
+  parallel: "parallel fins", stacked: "stacked layers", waffle: "waffle ribs", radial: "radial fins", curveNormal: "fins along a curve",
+};
+
+function methodLine(p: ParametricParams): string {
+  if (p.method === "stacked") return `layers ${p.material.T} mm thick stacked along ${p.stacked.axis}`;
+  if (p.method === "waffle") return `ribs every ${r3(p.waffle.spacingA)} / ${r3(p.waffle.spacingB)} mm across ${p.waffle.familyAxes.join(" and ")}`;
+  return `fins every ${r3(finSpacingOf(p))} mm along ${p.parallel.axis}`;
 }
 
 export function assemblyGuideSVG(result: SliceResult, p: ParametricParams): string {
   const board = result.parts.find(q => q.kind === "backboard");
-  const fins = result.parts.filter(q => q.kind === "fin");
-  const slats = result.parts.filter(q => q.kind === "slat");
-  const along = p.parallel.axis === "X" ? "from left to right" : "from bottom to top";
   const bb = board ? board.shape.bbox : null;
   const boardW = bb ? bb.x1 - bb.x0 : 0, boardH = bb ? bb.y1 - bb.y0 : 0;
   const W = Math.max(420, boardW + 40, 300);
   const thumbW = Math.min(260, W - 40), thumbH = 180;
-  const steps: string[] = [];
-  steps.push(`Cut all ${result.sheets.length} sheet${result.sheets.length === 1 ? "" : "s"}. Every part is engraved with its id; on fins the arrow points to the wall edge.`);
-  if (board) steps.push(`Lay the backboard ${board.id} face up with the engraved TOP arrow pointing up.`);
-  if (fins.length) steps.push(`Insert ${idRange(fins.map(f => f.id).filter(id => !id.includes("-")))} into the backboard ${along}${board ? ", tabs into the slots" : ""}; the engraved arrow points to the wall.`);
-  const pieces = fins.filter(f => f.id.includes("-"));
-  if (pieces.length) steps.push(`Fins cut in several pieces (${pieces.map(f => f.id).join(", ")}) go into the same row as their number.`);
-  if (slats.length) steps.push(`Fill the remaining slots with the plain slats ${idRange(slats.map(s => s.id))} ${along}.`);
-  const glue = result.warnings.filter(w => w.code === "NO_TAB" || w.code === "FLOATING_PIECE").flatMap(w => w.partIds ?? []);
-  if (glue.length) steps.push(`Glue ${glue.join(", ")} in place: ${glue.length === 1 ? "it has" : "they have"} no tab.`);
-  steps.push(board ? "Fix the backboard to the wall (screws or a French cleat behind it)." : "Glue the fins to the wall or a board you supply, spaced by the plane positions.");
+  const steps = [`Cut all ${result.sheets.length} sheet${result.sheets.length === 1 ? "" : "s"}. Every part is engraved with its id.`, ...result.guide];
 
   const lineH = 7;
   const top = 34;
@@ -136,7 +129,7 @@ export function assemblyGuideSVG(result: SliceResult, p: ParametricParams): stri
   let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${r3(W)}mm" height="${r3(H)}mm" viewBox="0 0 ${r3(W)} ${r3(H)}" font-family="Arial, Helvetica, sans-serif">\n`;
   s += `<rect width="100%" height="100%" fill="#FFFFFF"/>\n`;
   s += `<text x="20" y="18" font-size="8" font-weight="bold">${escapeXml(p.name)} · assembly guide</text>\n`;
-  s += `<text x="20" y="27" font-size="4.2" fill="#444">${result.parts.length} parts on ${result.sheets.length} sheet${result.sheets.length === 1 ? "" : "s"} · ${p.material.T} mm material, kerf ${p.material.K} mm · fins every ${r3(finSpacingOf(p))} mm along ${p.parallel.axis}</text>\n`;
+  s += `<text x="20" y="27" font-size="4.2" fill="#444">${escapeXml(METHOD_NAMES[p.method])}: ${result.parts.length} parts on ${result.sheets.length} sheet${result.sheets.length === 1 ? "" : "s"} · ${p.material.T} mm material, kerf ${p.material.K} mm · ${escapeXml(methodLine(p))}</text>\n`;
   s += `<g id="thumbnail" transform="translate(20 ${top})">${isoThumbnail(result, p.material.T, thumbW, thumbH)}</g>\n`;
   if (board && bb) {
     s += `<text x="20" y="${r3(boardY - 6)}" font-size="4.5" font-weight="bold">Backboard ${board.id} at full size (front view)</text>\n`;

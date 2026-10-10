@@ -89,6 +89,30 @@ export interface ParallelParams {
   finDepthBehind: number | null;
 }
 
+export interface StackedParams {
+  /** Stacking direction: Y = horizontal layers of a standing model, Z = layers parallel to the wall. */
+  axis: "Y" | "Z";
+  dowels: boolean;
+  /** Dowels per chain, 1..4. */
+  dowelCount: number;
+  /** Engrave the outline of the layer above on each layer. */
+  registrationMarks: boolean;
+  /** Hollow the inside of each layer, leaving `shell` mm of wall. */
+  hollow: boolean;
+  shell: number;
+}
+
+export interface WaffleParams {
+  /** Rib spacing of family A and family B, mm. */
+  spacingA: number;
+  spacingB: number;
+  /** Plane normals of the two rib families. */
+  familyAxes: ["X", "Z"] | ["X", "Y"];
+  /** Which family gets the slot from the low end of each crossing. */
+  lapDirection: "A-from-bottom" | "A-from-top";
+  baseRibs: boolean;
+}
+
 export interface MaterialSettings {
   id: string;
   T: number;
@@ -123,6 +147,8 @@ export interface ParametricParams {
   sourceSettings: SourceSettings;
   method: MethodId;
   parallel: ParallelParams;
+  stacked: StackedParams;
+  waffle: WaffleParams;
   material: MaterialSettings;
   joints: JointSettings;
   quality: QualitySettings;
@@ -181,10 +207,22 @@ export interface Sheet {
   oversize?: boolean;
 }
 
+/** A waffle half-lap: ribs `a` and `b` cross on the line x = xa (in a) / x = xb (in b); they overlap over [t0, t1] along it and meet at m. */
+export interface Crossing {
+  a: string;
+  b: string;
+  xa: number;
+  xb: number;
+  t0: number;
+  t1: number;
+  m: number;
+}
+
 export type WarningCode =
   | "NON_MANIFOLD" | "NON_MANIFOLD_SECTION" | "MIN_FEATURE_REMOVED" | "ISLAND_DROPPED" | "BRIDGE_ADDED" | "SHORT_FIN_DROPPED"
   | "DOWEL_CHAIN_SPLIT" | "CROSSING_TOO_SHORT" | "FINS_COLLIDE_AT_HUB" | "FINS_COLLIDE" | "PART_TOO_BIG" | "TOO_MANY_PARTS"
-  | "SIMPLIFIED" | "METHOD_NOT_READY" | "FLOATING_PIECE" | "LABEL_SKIPPED" | "TOO_MANY_SHEETS" | "NO_TAB";
+  | "SIMPLIFIED" | "METHOD_NOT_READY" | "FLOATING_PIECE" | "LABEL_SKIPPED" | "TOO_MANY_SHEETS" | "NO_TAB"
+  | "NO_DOWEL" | "NO_JOINT";
 
 export interface Warning {
   code: WarningCode;
@@ -213,6 +251,10 @@ export interface SliceResult {
   sheets: Sheet[];
   warnings: Warning[];
   stats: Stats;
+  /** Assembly steps written by the method, for the guide. */
+  guide: string[];
+  /** Waffle joints. */
+  crossings?: Crossing[];
   /** Model bounds after normalising, mm. */
   bounds: { min: Vec3; max: Vec3 };
   /** Which section algorithm ran. */

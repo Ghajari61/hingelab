@@ -11,8 +11,10 @@ export function ParametricControlBar({ method, onMethod, onProduct }: {
   const methods: Opt[] = [
     { v: "parallel", text: "Parallel fins", title: "Slices standing out of the wall, side by side", onClick: () => onMethod("parallel"),
       icon: <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M3 13V5M7 13V2M11 13V3M15 13V6M1.5 13h15" /></svg> },
-    { v: "stacked", text: "Stacked layers", title: "Horizontal layers glued on top of each other", onClick: () => onMethod("stacked"), disabled: true, soon: "soon" },
-    { v: "waffle", text: "Waffle", title: "Two crossing sets of ribs with half-lap joints", onClick: () => onMethod("waffle"), disabled: true, soon: "soon" },
+    { v: "stacked", text: "Stacked layers", title: "Layers glued on top of each other, lined up with dowels", onClick: () => onMethod("stacked"),
+      icon: <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M6 2.5h6M4 5.5h10M2.5 8.5h13M1.5 11.5h15" /></svg> },
+    { v: "waffle", text: "Waffle", title: "Two crossing sets of ribs with half-lap joints", onClick: () => onMethod("waffle"),
+      icon: <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M5 1.5v11M9 1.5v11M13 1.5v11M1.5 4.5h15M1.5 9.5h15" /></svg> },
     { v: "radial", text: "Radial", title: "Fins around a central axis", onClick: () => onMethod("radial"), disabled: true, soon: "soon" },
     { v: "curveNormal", text: "Along a curve", title: "Fins square to a curve", onClick: () => onMethod("curveNormal"), disabled: true, soon: "soon" },
   ];

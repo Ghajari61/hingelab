@@ -71,6 +71,22 @@ export function simplifyClosed(c: Contour, tol: number): Contour {
   return out.length >= 3 ? out : c;
 }
 
+/** Longest edge fed to Chaikin, mm: each pass then cuts at most a quarter of it off a corner. */
+const SMOOTH_SPAN = 2;
+
+/** Split edges longer than `maxLen` (closed contours wrap round; open runs keep their end). */
+export function densify(c: Point[], maxLen: number, closed: boolean): Point[] {
+  const out: Point[] = [];
+  const n = closed ? c.length : c.length - 1;
+  for (let i = 0; i < n; i++) {
+    const p = c[i], q = c[(i + 1) % c.length];
+    const k = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / maxLen));
+    for (let j = 0; j < k; j++) out.push([p[0] + ((q[0] - p[0]) * j) / k, p[1] + ((q[1] - p[1]) * j) / k]);
+  }
+  if (!closed) out.push(c[c.length - 1]);
+  return out;
+}
+
 /** Chaikin corner cutting on a closed contour. */
 export function chaikin(c: Contour, iterations: number): Contour {
   let cur = c;
@@ -110,7 +126,7 @@ export function tidyContour(c: Contour, tol: number, iterations: number, pinned:
   c.forEach((q, i) => { if (pinned(q)) pins.push(i); });
   if (pins.length < 2) {
     let r = simplifyClosed(c, tol);
-    if (iterations > 0) r = simplifyClosed(chaikin(r, iterations), tol);
+    if (iterations > 0) r = simplifyClosed(chaikin(densify(r, SMOOTH_SPAN, true), iterations), tol);
     return r;
   }
   const out: Contour = [];
@@ -118,7 +134,7 @@ export function tidyContour(c: Contour, tol: number, iterations: number, pinned:
     const a = pins[k], b = pins[(k + 1) % pins.length];
     const run = b > a ? c.slice(a, b + 1) : [...c.slice(a), ...c.slice(0, b + 1)];
     let r = tol > 0 ? rdpOpen(run, tol) : run;
-    if (iterations > 0 && r.length > 2) r = tol > 0 ? rdpOpen(chaikinOpen(r, iterations), tol) : chaikinOpen(r, iterations);
+    if (iterations > 0 && r.length > 2) { const d = chaikinOpen(densify(r, SMOOTH_SPAN, false), iterations); r = tol > 0 ? rdpOpen(d, tol) : d; }
     out.push(...r.slice(0, -1));
   }
   return out;
@@ -139,8 +155,9 @@ export function cleanSection(loops: Contour[], o: CleanOptions): CleanResult {
   if (o.minFeature > 0 && shapes.length) {
     const r = o.minFeature / 2;
     // Grow back a hair past r and clip to the input, so straight edges (the wall edge) stay exact.
-    const eroded = offsetShapes(shapes, -r);
-    const opened = eroded.length ? intersectShapes(shapeContours(offsetShapes(eroded, r + 0.01)), shapeContours(shapes)) : [];
+    // Miter joins keep convex corners sharp; round joins would round every corner by r.
+    const eroded = offsetShapes(shapes, -r, "miter");
+    const opened = eroded.length ? intersectShapes(shapeContours(offsetShapes(eroded, r + 0.01, "miter")), shapeContours(shapes)) : [];
     const lost = differenceShapes(shapeContours(shapes), shapeContours(opened));
     featuresRemoved = lost.filter(s => s.area >= o.minFeature * o.minFeature).length;
     shapes = opened;

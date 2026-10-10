@@ -13,7 +13,10 @@ export interface ParamField extends BaseField {
 
 const formula = (p: ParametricParams) => (p.source.kind === "formula" ? p.source : null);
 const isHeightfield = (p: ParametricParams) => formula(p)?.type === "heightfield";
-const hasBoard = (p: ParametricParams) => p.parallel.backboard !== "none";
+const isParallel = (p: ParametricParams) => p.method !== "stacked" && p.method !== "waffle";
+const hasBoard = (p: ParametricParams) => isParallel(p) && p.parallel.backboard !== "none";
+const isStacked = (p: ParametricParams) => p.method === "stacked";
+const isWaffle = (p: ParametricParams) => p.method === "waffle";
 
 export const PARAM_FIELDS: ParamField[] = [
   { sec: "transform", id: "uniformScale", label: "Scale", step: 0.05, min: 0.01, max: 100, float: true, get: p => p.sourceSettings.transform.uniformScale, set: (p, v) => { p.sourceSettings.transform.uniformScale = v; }, show: p => !p.sourceSettings.targetSize },
@@ -28,12 +31,16 @@ export const PARAM_FIELDS: ParamField[] = [
   { sec: "formula", id: "fLength", label: "Length", len: true, step: 5, min: 10, max: 2000, get: p => formula(p)!.height, set: (p, v) => { formula(p)!.height = v; }, show: p => formula(p)?.type === "revolution" },
   { sec: "formula", id: "fRes", label: "Samples", step: 8, min: 8, max: 512, get: p => formula(p)!.resolution, set: (p, v) => { formula(p)!.resolution = v; }, show: p => !!formula(p) },
 
-  { sec: "method", id: "spacing", label: "Spacing", len: true, step: 0.5, min: 1, max: 500, get: finSpacingOf, set: (p, v) => { p.parallel.spacing = v; } },
-  { sec: "method", id: "phase", label: "Phase", step: 0.05, min: 0, max: 1, float: true, get: p => p.parallel.phase, set: (p, v) => { p.parallel.phase = v; } },
-  { sec: "method", id: "minFinHeight", label: "Min fin", len: true, step: 1, min: 0, max: 200, get: p => p.parallel.minFinHeight, set: (p, v) => { p.parallel.minFinHeight = v; } },
+  { sec: "method", id: "spacing", label: "Spacing", len: true, step: 0.5, min: 1, max: 500, get: finSpacingOf, set: (p, v) => { p.parallel.spacing = v; }, show: isParallel },
+  { sec: "method", id: "phase", label: "Phase", step: 0.05, min: 0, max: 1, float: true, get: p => p.parallel.phase, set: (p, v) => { p.parallel.phase = v; }, show: isParallel },
+  { sec: "method", id: "minFinHeight", label: "Min fin", len: true, step: 1, min: 0, max: 200, get: p => p.parallel.minFinHeight, set: (p, v) => { p.parallel.minFinHeight = v; }, show: isParallel },
   { sec: "method", id: "backboardMargin", label: "Margin", len: true, step: 1, min: 0, max: 200, get: p => p.parallel.backboardMargin, set: (p, v) => { p.parallel.backboardMargin = v; }, show: hasBoard },
-  { sec: "method", id: "slatDepth", label: "Slat depth", len: true, step: 1, min: 2, max: 200, get: p => p.parallel.slatDepth, set: (p, v) => { p.parallel.slatDepth = v; }, show: p => p.parallel.backboard === "slats" },
+  { sec: "method", id: "slatDepth", label: "Slat depth", len: true, step: 1, min: 2, max: 200, get: p => p.parallel.slatDepth, set: (p, v) => { p.parallel.slatDepth = v; }, show: p => isParallel(p) && p.parallel.backboard === "slats" },
   { sec: "method", id: "tabDepth", label: "Tab depth", len: true, step: 0.5, min: 0.5, max: 50, get: tabDepthOf, set: (p, v) => { p.parallel.finDepthBehind = v; }, show: hasBoard },
+  { sec: "method", id: "dowelCount", label: "Dowels", step: 1, min: 1, max: 4, get: p => p.stacked.dowelCount, set: (p, v) => { p.stacked.dowelCount = v; }, show: p => isStacked(p) && p.stacked.dowels },
+  { sec: "method", id: "shell", label: "Wall", len: true, step: 1, min: 2, max: 100, get: p => p.stacked.shell, set: (p, v) => { p.stacked.shell = v; }, show: p => isStacked(p) && p.stacked.hollow },
+  { sec: "method", id: "spacingA", label: "Spacing A", len: true, step: 1, min: 3, max: 500, get: p => p.waffle.spacingA, set: (p, v) => { p.waffle.spacingA = v; }, show: isWaffle },
+  { sec: "method", id: "spacingB", label: "Spacing B", len: true, step: 1, min: 3, max: 500, get: p => p.waffle.spacingB, set: (p, v) => { p.waffle.spacingB = v; }, show: isWaffle },
 
   { sec: "material", id: "T", label: "Thickness", len: true, step: 0.1, min: 0.5, max: 25, mat: true, get: p => p.material.T, set: (p, v) => { p.material.T = v; } },
   { sec: "material", id: "K", label: "Kerf", len: true, step: 0.01, min: 0, max: 1, mat: true, get: p => p.material.K, set: (p, v) => { p.material.K = v; } },
@@ -43,8 +50,10 @@ export const PARAM_FIELDS: ParamField[] = [
   { sec: "sheet", id: "sheetMargin", label: "Margin", len: true, step: 1, min: 0, max: 50, get: p => p.material.sheetMargin, set: (p, v) => { p.material.sheetMargin = v; } },
   { sec: "sheet", id: "partGap", label: "Part gap", len: true, step: 0.5, min: 0, max: 50, get: p => p.material.partGap, set: (p, v) => { p.material.partGap = v; } },
 
-  { sec: "joints", id: "tabWidth", label: "Tab width", len: true, step: 1, min: 3, max: 100, get: p => p.joints.tabWidth, set: (p, v) => { p.joints.tabWidth = v; } },
-  { sec: "joints", id: "slotClearance", label: "Slot play", len: true, step: 0.02, min: -0.5, max: 2, get: p => p.joints.slotClearance, set: (p, v) => { p.joints.slotClearance = v; } },
+  { sec: "joints", id: "tabWidth", label: "Tab width", len: true, step: 1, min: 3, max: 100, get: p => p.joints.tabWidth, set: (p, v) => { p.joints.tabWidth = v; }, show: hasBoard },
+  { sec: "joints", id: "slotClearance", label: "Slot play", len: true, step: 0.02, min: -0.5, max: 2, get: p => p.joints.slotClearance, set: (p, v) => { p.joints.slotClearance = v; }, show: p => !isWaffle(p) },
+  { sec: "joints", id: "dowelDia", label: "Dowel Ø", len: true, step: 0.5, min: 1, max: 30, get: p => p.joints.dowelDia, set: (p, v) => { p.joints.dowelDia = v; }, show: p => isStacked(p) && p.stacked.dowels },
+  { sec: "joints", id: "halfLapClearance", label: "Lap play", len: true, step: 0.02, min: -0.5, max: 2, get: p => p.joints.halfLapClearance, set: (p, v) => { p.joints.halfLapClearance = v; }, show: isWaffle },
 
   { sec: "quality", id: "chordTolerance", label: "Tolerance", len: true, step: 0.05, min: 0.01, max: 5, get: p => p.quality.chordTolerance, set: (p, v) => { p.quality.chordTolerance = v; } },
   { sec: "quality", id: "smoothing", label: "Smoothing", step: 0.05, min: 0, max: 1, float: true, get: p => p.quality.smoothing, set: (p, v) => { p.quality.smoothing = v; } },

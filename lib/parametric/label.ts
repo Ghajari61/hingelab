@@ -5,7 +5,7 @@
  * Glyphs live on a 4 × 6 grid with y up from the baseline. Output paths are in part-local mm in
  * SVG orientation (y down), so the text reads correctly on the top face of the sheet.
  */
-import { pointInShape } from "@/lib/letters/polygon";
+import { intersectShapes, pointInShape, shapeContours } from "@/lib/letters/polygon";
 import type { Contour, Point, Shape } from "./types";
 
 type Glyph = number[][][];
@@ -91,7 +91,8 @@ export function wallArrow(x: number, y: number, len: number): Contour[] {
   return [[[x, bot], [x, top]], [[x - head * 0.8, top + head], [x, top], [x + head * 0.8, top + head]]];
 }
 
-function rectInside(s: Shape, x0: number, y0: number, x1: number, y1: number) {
+/** Whether the rectangle lies inside the shape (sampled every 1 mm). */
+export function rectInside(s: Shape, x0: number, y0: number, x1: number, y1: number) {
   const nx = Math.max(2, Math.ceil((x1 - x0) / 1)), ny = Math.max(2, Math.ceil((y1 - y0) / 1));
   for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {
     if (!pointInShape([x0 + ((x1 - x0) * i) / nx, y0 + ((y1 - y0) * j) / ny], s)) return false;
@@ -111,6 +112,14 @@ export function finLabel(s: Shape, text: string, opts: { arrow: boolean; nearWal
     const pad = 1;
     const { x0, x1, y1 } = s.bbox;
     const top = s.bbox.y0;
+    // A rectangle fits only if its four corners do: its centre lies in the shape shifted by each corner
+    // (corners pulled in 0.5 mm, below the 1 mm sampling of rectInside).
+    const hx = Math.max(0, bw / 2 + pad - 0.5), hy = Math.max(0, bh / 2 + pad - 0.5);
+    const shifted = (dx: number, dy: number) => shapeContours([s]).map(c => c.map(([x, y]) => [x + dx, y + dy] as Point));
+    let core = intersectShapes(shifted(-hx, -hy), shifted(hx, -hy));
+    if (core.length) core = intersectShapes(shapeContours(core), shifted(hx, hy));
+    if (core.length) core = intersectShapes(shapeContours(core), shifted(-hx, hy));
+    if (!core.length) continue;
     const xs: number[] = [];
     const mid = (x0 + x1) / 2;
     for (let d = 0; d <= (x1 - x0) / 2; d += 2) { xs.push(mid - d); if (d) xs.push(mid + d); }
@@ -118,6 +127,7 @@ export function finLabel(s: Shape, text: string, opts: { arrow: boolean; nearWal
     if (opts.nearWall) for (let y = top + pad + bh / 2; y <= y1 - pad - bh / 2; y += 1) ys.push(y);
     else { const c = (top + y1) / 2; for (let d = 0; d <= (y1 - top) / 2; d += 1) { ys.push(c - d); if (d) ys.push(c + d); } }
     for (const cy of ys) for (const cx of xs) {
+      if (!core.some(k => k.bbox.x0 <= cx && cx <= k.bbox.x1 && k.bbox.y0 <= cy && cy <= k.bbox.y1 && pointInShape([cx, cy], k))) continue;
       if (!rectInside(s, cx - bw / 2 - pad, cy - bh / 2 - pad, cx + bw / 2 + pad, cy + bh / 2 + pad)) continue;
       const tx = cx - bw / 2 + aw + textWidth(text, h) / 2;
       const paths = strokeText(text, h, tx, cy);

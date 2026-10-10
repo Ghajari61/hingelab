@@ -24,10 +24,13 @@ export function planesObject(r: SliceResult): THREE.Group {
   const edge = new THREE.LineBasicMaterial({ color: 0x4da6ff, transparent: true, opacity: 0.5 });
   const { min, max } = r.bounds;
   for (const pl of r.planes) {
-    const [u0, u1] = uRange(pl, min, max);
-    const w1 = Math.max(1, max[2]);
-    const g = new THREE.PlaneGeometry(u1 - u0, w1);
-    g.translate((u0 + u1) / 2, w1 / 2, 0);
+    const [u0, u1] = range(pl.u, min, max);
+    let [w0, w1] = range(pl.w, min, max);
+    // Wall-mounted frames (W out of the wall) start at the wall.
+    if (pl.w[2] > 0.5) w0 = Math.max(0, w0);
+    w1 = Math.max(w0 + 1, w1);
+    const g = new THREE.PlaneGeometry(u1 - u0, w1 - w0);
+    g.translate((u0 + u1) / 2, (w0 + w1) / 2, 0);
     const mx = new THREE.Matrix4().fromArray(placementOf(pl));
     const mesh = new THREE.Mesh(g, mat);
     mesh.applyMatrix4(mx);
@@ -38,10 +41,10 @@ export function planesObject(r: SliceResult): THREE.Group {
   return grp;
 }
 
-function uRange(pl: Plane, min: number[], max: number[]) {
+function range(axis: Plane["u"], min: number[], max: number[]) {
   let lo = 0, hi = 0;
   for (let k = 0; k < 3; k++) {
-    const a = pl.u[k] * min[k], b = pl.u[k] * max[k];
+    const a = axis[k] * min[k], b = axis[k] * max[k];
     lo += Math.min(a, b);
     hi += Math.max(a, b);
   }
@@ -61,13 +64,19 @@ export function partsObject(r: SliceResult, T: number, explode = 0): THREE.Group
   const grp = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color: PART_COLOR, roughness: 0.75 });
   const edge = new THREE.LineBasicMaterial({ color: 0x5a4220 });
-  const mid = (r.planes.length - 1) / 2;
+  // Each family of parallel planes spreads about its own middle.
+  const famKey = (pl: Plane) => pl.normal.join(",");
+  const fam = new Map<string, number[]>();
+  r.planes.forEach((pl, i) => fam.set(famKey(pl), [...(fam.get(famKey(pl)) ?? []), i]));
   for (const part of r.parts) {
     const g = partGeometry(part, T);
     const mx = new THREE.Matrix4().fromArray(part.placement);
     if (explode && part.plane >= 0) {
-      const n = r.planes[part.plane].normal;
-      mx.premultiply(new THREE.Matrix4().makeTranslation(n[0] * (part.plane - mid) * explode, n[1] * (part.plane - mid) * explode, n[2] * (part.plane - mid) * explode));
+      const pl = r.planes[part.plane];
+      const ids = fam.get(famKey(pl))!;
+      const d = (ids.indexOf(part.plane) - (ids.length - 1) / 2) * explode;
+      const n = pl.normal;
+      mx.premultiply(new THREE.Matrix4().makeTranslation(n[0] * d, n[1] * d, n[2] * d));
     }
     const mesh = new THREE.Mesh(g, mat);
     mesh.applyMatrix4(mx);

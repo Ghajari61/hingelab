@@ -47,8 +47,22 @@ const WARNING_TITLES: Partial<Record<WarningCode, string>> = {
   LABEL_SKIPPED: "Labels skipped",
   SIMPLIFIED: "Model simplified",
   METHOD_NOT_READY: "Method not ready",
+  DOWEL_CHAIN_SPLIT: "Dowels split into groups",
+  NO_DOWEL: "Layers without dowels",
+  CROSSING_TOO_SHORT: "Crossings too short",
+  NO_JOINT: "Ribs without a joint",
 };
 const SERIOUS: WarningCode[] = ["PART_TOO_BIG", "TOO_MANY_SHEETS", "TOO_MANY_PARTS", "NON_MANIFOLD", "FLOATING_PIECE", "METHOD_NOT_READY"];
+
+const KIND_NAMES: Partial<Record<Part["kind"], string>> = { backboard: "Backboard", slat: "Slat", fin: "Fin", layer: "Layer", "rib-x": "Rib (A)", "rib-y": "Rib (B)" };
+
+const axisName = (n: readonly number[]) => (Math.abs(n[0]) > 0.5 ? "X" : Math.abs(n[1]) > 0.5 ? "Y" : "Z");
+
+function methodMeta(p: ParametricParams, units: Units) {
+  if (p.method === "stacked") return `Layers along ${p.stacked.axis}, ${fmtLen(p.material.T, units, true)} each`;
+  if (p.method === "waffle") return `Waffle ${p.waffle.familyAxes.join(" × ")}, ${fmtLen(p.waffle.spacingA, units, true)} / ${fmtLen(p.waffle.spacingB, units, true)}`;
+  return `Parallel fins every ${fmtLen(finSpacingOf(p), units, true)}`;
+}
 
 /** The part as it will be cut (sheet orientation), with its inner cuts and engraving. */
 function PartDrawing({ part }: { part: Part }) {
@@ -202,22 +216,50 @@ export function ParametricDock({
         <input ref={fileRef} type="file" accept=".stl,.obj,.glb" hidden aria-label="Import model" onChange={(e) => { const f = e.target.files?.[0]; if (f) onImport(f); e.target.value = ""; }} />
       </Sec>
 
-      <Sec title="Method" meta={`Parallel fins every ${fmtLen(finSpacingOf(params), units, true)}`} startOpen>
-        <Choice label="Fins stacked along" value={params.parallel.axis} onPick={(a) => onEdit((q) => { q.parallel.axis = a; }, true)} options={[
-          { v: "X", text: "Left to right (X)" }, { v: "Y", text: "Bottom to top (Y)" },
-        ]} />
-        <Choice label="Backboard" value={params.parallel.backboard} onPick={(b) => onEdit((q) => { q.parallel.backboard = b; }, true)} options={[
-          { v: "plate", text: "Plate", title: "One board behind the fins, shaped like the model, with a slot for every tab" },
-          { v: "slats", text: "Slats", title: "A rectangular board; every fin row continues as a plain slat across it" },
-          { v: "none", text: "None", title: "Fins only, to glue to a wall or your own board" },
-        ]} />
-        <div className="grid2">{fields("method")}</div>
-        {params.parallel.backboard === "slats" && (
-          <label className="chk">
-            <input type="checkbox" checked={params.parallel.fillEmptySlots} onChange={(e) => onEdit((q) => { q.parallel.fillEmptySlots = e.target.checked; }, true)} /> Fill the whole board with slats
-          </label>
+      <Sec title="Method" meta={methodMeta(params, units)} startOpen>
+        {params.method === "stacked" ? (
+          <>
+            <Choice label="Layers stacked along" value={params.stacked.axis} onPick={(a) => onEdit((q) => { q.stacked.axis = a; }, true)} options={[
+              { v: "Y", text: "Bottom to top (Y)", title: "Horizontal layers, like a topographic model" },
+              { v: "Z", text: "Out of the wall (Z)", title: "Layers parallel to the wall, a relief built up from the back" },
+            ]} />
+            <label className="chk"><input type="checkbox" checked={params.stacked.dowels} onChange={(e) => onEdit((q) => { q.stacked.dowels = e.target.checked; }, true)} /> Dowel holes to line up the layers</label>
+            <label className="chk"><input type="checkbox" checked={params.stacked.registrationMarks} onChange={(e) => onEdit((q) => { q.stacked.registrationMarks = e.target.checked; }, true)} /> Engrave the outline of the next layer</label>
+            <label className="chk"><input type="checkbox" checked={params.stacked.hollow} onChange={(e) => onEdit((q) => { q.stacked.hollow = e.target.checked; }, true)} /> Hollow the inside to save material</label>
+            <div className="grid2">{fields("method")}</div>
+            <p className="note">Each layer is one sheet thick. Glue them in order; the dowels and engraved outlines keep them aligned.</p>
+          </>
+        ) : params.method === "waffle" ? (
+          <>
+            <Choice label="Rib families" value={params.waffle.familyAxes.join("")} onPick={(v) => onEdit((q) => { q.waffle.familyAxes = v === "XY" ? ["X", "Y"] : ["X", "Z"]; }, true)} options={[
+              { v: "XZ", text: "Standing grid (X × Z)", title: "Vertical ribs: an egg-crate that stands on a table" },
+              { v: "XY", text: "Wall grid (X × Y)", title: "Ribs square to the wall, crossing in a grid" },
+            ]} />
+            <Choice label="A ribs slotted from" value={params.waffle.lapDirection} onPick={(d) => onEdit((q) => { q.waffle.lapDirection = d; }, true)} options={[
+              { v: "A-from-bottom", text: "Below" }, { v: "A-from-top", text: "Above" },
+            ]} />
+            <div className="grid2">{fields("method")}</div>
+            <p className="note">Every crossing is a half-lap: each rib is slotted half way, and the partner&apos;s id is engraved beside the slot.</p>
+          </>
+        ) : (
+          <>
+            <Choice label="Fins stacked along" value={params.parallel.axis} onPick={(a) => onEdit((q) => { q.parallel.axis = a; }, true)} options={[
+              { v: "X", text: "Left to right (X)" }, { v: "Y", text: "Bottom to top (Y)" },
+            ]} />
+            <Choice label="Backboard" value={params.parallel.backboard} onPick={(b) => onEdit((q) => { q.parallel.backboard = b; }, true)} options={[
+              { v: "plate", text: "Plate", title: "One board behind the fins, shaped like the model, with a slot for every tab" },
+              { v: "slats", text: "Slats", title: "A rectangular board; every fin row continues as a plain slat across it" },
+              { v: "none", text: "None", title: "Fins only, to glue to a wall or your own board" },
+            ]} />
+            <div className="grid2">{fields("method")}</div>
+            {params.parallel.backboard === "slats" && (
+              <label className="chk">
+                <input type="checkbox" checked={params.parallel.fillEmptySlots} onChange={(e) => onEdit((q) => { q.parallel.fillEmptySlots = e.target.checked; }, true)} /> Fill the whole board with slats
+              </label>
+            )}
+            <p className="note">Each fin is a slice of the model standing out of the wall. Tabs on the wall edge fit slots in the backboard.</p>
+          </>
         )}
-        <p className="note">Each fin is a slice of the model standing out of the wall. Tabs on the wall edge fit slots in the backboard.</p>
       </Sec>
 
       <Sec title="Material" meta={`${fmtLen(params.material.T, units, true)} · ${fmtLen(params.material.sheetW, units)} × ${fmtLen(params.material.sheetH, units)}`}>
@@ -255,11 +297,12 @@ export function ParametricDock({
             </label>
             <PartDrawing part={part} />
             <dl className="stats">
-              <dt>Kind</dt><dd>{part.kind === "backboard" ? "Backboard" : part.kind === "slat" ? "Slat" : "Fin"}</dd>
+              <dt>Kind</dt><dd>{KIND_NAMES[part.kind] ?? part.kind}</dd>
               <dt>Size</dt><dd>{fmtLen(part.shape.bbox.x1 - part.shape.bbox.x0, units, true)} × {fmtLen(part.shape.bbox.y1 - part.shape.bbox.y0, units, true)}</dd>
               {part.tabs && <><dt>Tabs</dt><dd>{part.tabs.length}</dd></>}
               {part.kind === "backboard" && <><dt>Slots</dt><dd>{part.innerCuts.length}</dd></>}
-              {part.plane >= 0 && result && <><dt>Plane</dt><dd>{fmtLen(result.planes[part.plane].offset, units, true)} along {params.parallel.axis}</dd></>}
+              {part.kind === "layer" && part.innerCuts.length > 0 && <><dt>Dowels</dt><dd>{part.innerCuts.length}</dd></>}
+              {part.plane >= 0 && result && <><dt>Plane</dt><dd>{fmtLen(result.planes[part.plane].offset, units, true)} along {axisName(result.planes[part.plane].normal)}</dd></>}
               <dt>Next to</dt><dd>{part.neighbors.join(", ") || "—"}</dd>
             </dl>
             {partWarnings.length > 0 && <ul className="issues warn">{partWarnings.map((w, k) => <li key={k}>{w.message}</li>)}</ul>}

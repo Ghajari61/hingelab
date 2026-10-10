@@ -5,31 +5,19 @@
  */
 import { intersectShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { backboardPart, boardOutline, boardRangeAlong, convexHull, slotFor, type BoardSlot } from "../backboard";
-import { bridgeWidthOf, finSpacingOf, minFeatureOf, tabDepthOf } from "../defaults";
+import { bridgeWidthOf, finSpacingOf, tabDepthOf } from "../defaults";
 import { finTabs, rect, withTabs } from "../joints";
 import { finLabel } from "../label";
-import { cleanSection } from "../slice/clean";
 import { parallelPlanes, placementOf } from "../slice/planes";
-import type { SectionSource } from "../slice/section";
-import type { Contour, ParametricParams, Part, Plane, Point, Shape, Vec3, Warning } from "../types";
+import type { Contour, ParametricParams, Part, Plane, Point, Shape, Warning } from "../types";
+import { finId, idRange, newTally, pieceSuffix, sliceFamily, tallyWarnings, type MethodContext, type MethodOut } from "./common";
 
-export interface ParallelOut {
-  planes: Plane[];
-  sections: Shape[][];
-  parts: Part[];
-  warnings: Warning[];
-}
+export { finId, pieceSuffix };
 
-export interface ParallelContext {
-  bounds: { min: Vec3; max: Vec3 };
-  sections: (frame: Plane) => SectionSource;
+export interface ParallelContext extends MethodContext {
   /** The model's footprint on the wall (z ≥ 0 part projected onto XY), model mm. */
   projection: (planes: Plane[], sections: Shape[][]) => Contour[];
 }
-
-export const finId = (i: number, n: number, prefix = "F") => `${prefix}${String(i + 1).padStart(Math.max(2, String(n).length), "0")}`;
-/** Suffixes for extra pieces of one fin: a, b, …, z, aa, ab, … */
-export const pieceSuffix = (k: number): string => (k < 26 ? String.fromCharCode(97 + k) : pieceSuffix(Math.floor(k / 26) - 1) + pieceSuffix(k % 26));
 
 const grounded = (s: Shape) => s.bbox.y0 <= 1e-3;
 
@@ -60,37 +48,17 @@ export function bridgeIslands(shapes: Shape[], bw: number): { shapes: Shape[]; a
   return { shapes: out, added: Math.max(0, islands.length - floating), floating };
 }
 
-export function sliceParallel(p: ParametricParams, ctx: ParallelContext): ParallelOut {
+export function sliceParallel(p: ParametricParams, ctx: ParallelContext): MethodOut {
   const axis = p.parallel.axis;
   const k = axis === "X" ? 0 : 1;
   const spacing = finSpacingOf(p);
   const T = p.material.T;
   const modelPlanes = parallelPlanes(axis, ctx.bounds.min[k], ctx.bounds.max[k], spacing, Math.min(1, Math.max(0, p.parallel.phase)));
   const warnings: Warning[] = [];
-  if (!modelPlanes.length) return { planes: [], sections: [], parts: [], warnings };
+  if (!modelPlanes.length) return { planes: [], sections: [], parts: [], warnings, guide: [] };
 
-  const src = ctx.sections(modelPlanes[0]);
-  const raw = src.slice(modelPlanes.map(pl => pl.offset));
-  src.dispose();
-
-  const minFeature = minFeatureOf(p);
-  let removed = 0, dropped = 0, openChains = 0;
-  const removedIds: string[] = [];
-  const modelSections = raw.map((r, i) => {
-    openChains += r.openChains;
-    const c = cleanSection(r.loops, {
-      evenOdd: src.engine === "fallback",
-      clipToWall: true,
-      chordTolerance: p.quality.chordTolerance,
-      smoothing: p.quality.smoothing,
-      minFeature,
-      minIslandArea: p.quality.minIslandArea,
-    });
-    if (c.featuresRemoved) removedIds.push(finId(i, modelPlanes.length));
-    removed += c.featuresRemoved;
-    dropped += c.islandsDropped;
-    return c.shapes;
-  });
+  const tally = newTally();
+  const modelSections = sliceFamily(p, ctx, modelPlanes, modelPlanes.map((_, i) => finId(i, modelPlanes.length)), true, tally);
 
   const mode = p.parallel.backboard;
   const projection = mode === "none" ? [] : ctx.projection(modelPlanes, modelSections);
@@ -179,16 +147,28 @@ export function sliceParallel(p: ParametricParams, ctx: ParallelContext): Parall
     }
   }
 
-  if (openChains) warnings.push({ code: "NON_MANIFOLD_SECTION", message: `${openChains} open section outlines were closed with a straight edge; check those fins.` });
-  if (removed) warnings.push({ code: "MIN_FEATURE_REMOVED", message: `${removed} details thinner than ${minFeature.toFixed(1)} mm were removed.`, partIds: [...new Set(removedIds)] });
-  if (dropped) warnings.push({ code: "ISLAND_DROPPED", message: `${dropped} tiny pieces under ${p.quality.minIslandArea} mm² were left out.` });
+  warnings.push(...tallyWarnings(p, tally));
   if (shortIds.length) warnings.push({ code: "SHORT_FIN_DROPPED", message: `${shortIds.length} fin pieces lower than ${p.parallel.minFinHeight} mm were left out.`, partIds: [...new Set(shortIds)] });
   if (bridges) warnings.push({ code: "BRIDGE_ADDED", message: `${bridges} floating pieces were connected to the wall with support bridges.` });
   if (floatingIds.length) warnings.push({ code: "FLOATING_PIECE", message: `${floatingIds.length} pieces could not be bridged to the wall; glue them in place.`, partIds: floatingIds });
   if (noTabIds.length) warnings.push({ code: "NO_TAB", message: `${noTabIds.length} pieces touch the wall over too short a length for a tab; glue them to the backboard.`, partIds: noTabIds });
   if (labelSkipped) warnings.push({ code: "LABEL_SKIPPED", message: `${labelSkipped} labels did not fit on their parts; the assembly guide still lists every part.` });
 
+  const board = parts.find(q => q.kind === "backboard");
+  const fins = parts.filter(q => q.kind === "fin");
+  const slats = parts.filter(q => q.kind === "slat");
+  const along = axis === "X" ? "from left to right" : "from bottom to top";
+  const guide: string[] = [];
+  if (board) guide.push(`Lay the backboard ${board.id} face up with the engraved TOP arrow pointing up.`);
+  if (fins.length) guide.push(`Insert ${idRange(fins.map(f => f.id).filter(id => !id.includes("-")))} into the backboard ${along}${board ? ", tabs into the slots" : ""}; the engraved arrow on each fin points to the wall.`);
+  const split = fins.filter(f => f.id.includes("-"));
+  if (split.length) guide.push(`Fins cut in several pieces (${split.map(f => f.id).join(", ")}) go into the same row as their number.`);
+  if (slats.length) guide.push(`Fill the remaining slots with the plain slats ${idRange(slats.map(s => s.id))} ${along}.`);
+  const glue = [...new Set([...noTabIds, ...floatingIds])];
+  if (glue.length) guide.push(`Glue ${glue.join(", ")} in place: ${glue.length === 1 ? "it has" : "they have"} no tab.`);
+  guide.push(board ? "Fix the backboard to the wall (screws or a French cleat behind it)." : "Glue the fins to the wall or a board you supply, spaced by the plane positions.");
+
   const planes = entries.map(e => e.plane);
   const sections = entries.map(e => e.shapes);
-  return { planes, sections, parts, warnings };
+  return { planes, sections, parts, warnings, guide };
 }

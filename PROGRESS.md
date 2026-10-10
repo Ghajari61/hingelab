@@ -1,6 +1,6 @@
-﻿# Progress
+# Progress
 
-**Next step:** Parametric P3 — `lib/parametric/methods/stacked.ts` (layers along an axis, dowel holes through every layer of a chain, registration marks, hollowing) and `methods/waffle.ts` (two rib sets with half-lap joints), wired into `engine.ts` and the Method control (remove "soon" from Stacked layers and Waffle); tests "sphere stacked" and "box waffle" from `CURSOR_PARAMETRIC_PROMPT.json`; screenshots of a stacked mountain and a waffle vase. Then P4–P6.
+**Next step:** Parametric P4 - `lib/parametric/methods/radial.ts` (fins around a central axis, with hubs) and `methods/curveNormal.ts` (fins square to a guide curve, outer boundary, clock insert), plus the radial-profile formula source; wire both into `engine.ts` (remove METHOD_NOT_READY) and the Method control (remove "soon"); tests "cylinder radial", "hub collision" (maxCount 31) and "ellipse curveNormal" from `CURSOR_PARAMETRIC_PROMPT.json`; screenshot of a leaf-shaped wall clock built with curveNormal from formulas only. Then P5-P6.
 
 Order of the run: main brief Phases 1–5 (Phase 6 Tauri is out of scope) → Letters L2, L4, L5 (L1 and L3 were done earlier) → Parametric P1–P6.
 
@@ -21,7 +21,25 @@ How to check a phase: `npx supabase start` (local stack, see SETUP.md), `npm tes
 | Letters L5 — plan limits | done | 619 / 619 |
 | Parametric P1 — core slicing | done | 632 / 632 |
 | Parametric P2 — parallel fins complete | done | 640 / 640 |
-| Parametric P3–P6 | | |
+| Parametric P3 — stacked + waffle | done | 645 / 645 |
+| Parametric P4–P6 | | |
+
+---
+
+## Parametric P3 — Stacked + Waffle
+
+**Built**
+- `lib/parametric/methods/stacked.ts` (D43): layers T thick along Y (topographic) or Z (relief from the back); dowel holes through every layer of a chain, with chains split where no common position exists; the outline of the next layer engraved on each layer; optional hollowing with a shell, rings round the dowels and spokes; labels on the hidden area first.
+- `lib/parametric/methods/waffle.ts` (D44): two rib families (X × Z standing grid or X × Y wall grid) with half-lap slots split at the middle of every overlap, lap direction choice, the partner id engraved beside every slot, `crossings` in the result.
+- Shared pieces moved to `methods/common.ts` (ids, slicing a plane family, clean-up warnings); every method writes its own assembly steps (D46).
+- Section clean-up fix (D45): smoothing no longer cuts big corners off long straight edges, and the minimum-feature opening keeps convex corners sharp.
+- Editor: Stacked layers and Waffle are live in the Method control; the Method panel shows per-method controls (stack axis, dowels / registration / hollow, dowel count, wall; rib families, lap side, spacing A / B), Joints & Fit shows dowel Ø or lap play as needed, the inspector names layers and ribs, and the 3D planes and explode work for every frame (each family spreads about its own middle).
+
+**Tests:** 645 / 645, including the Hinge Box golden test. New `stacked-waffle.test.ts` (5 cases): "sphere stacked" (r = 100, T = 3: 67 layers, every outline vertex within 0.15 mm of √(100² − h²), one dowel chain, holes concentric through all layers within 1e-6 mm in model space, hole Ø = dowel + play, registration marks present, invariants 1–2), stacked hollow (same parts, under 60 % of the area, invariants hold), "box waffle" (200 × 100 × 150 box, spacing 50: 4 + 3 ribs, 12 crossings, each rib a notched rectangle of area w·h − slots·(T + c)·50, at every crossing the two ribs' material along the crossing line is disjoint and fills the overlap within 1e-6 mm, kerfed slots = T + c − K), square corners survive clean-up, and regression snapshots of the part outlines (sphere parallel, sphere stacked, box waffle). `tsc` clean, `next build` OK. Browser runs: `scripts/shots/parametric-p3.mjs` (mountain stacked out of the wall: 34 parts on 2 sheets, layer L01 with dowels; vase waffle: 18 parts on 2 sheets, guide saved) and `parametric-p2.mjs` again (all checks pass after the clean-up change).
+
+**Screenshots:** `parametric-3-stacked-mountain-3d.png`, `parametric-3-stacked-mountain-sheets.png`, `parametric-3-waffle-vase-3d.png`, `parametric-3-waffle-vase-sheets.png`, `parametric-3-waffle-guide.png`.
+
+**Known limitations:** dowel chains are greedy from the bottom (not globally optimal). Waffle `baseRibs` is not implemented. Small rib pieces that cross nothing are only reported (NO_JOINT), not tied in. Hollowing is never applied to the first and last layer.
 
 ---
 
