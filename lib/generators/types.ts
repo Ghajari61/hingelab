@@ -71,6 +71,8 @@ export interface GenPart {
   place?: { x: number; y: number; z: number; rot?: number; upright?: boolean };
   /** Thickness when it differs from the material (for example acrylic hands). */
   t?: number;
+  /** Shade in 3D (1 = the material; lower is darker), for a contrasting layer. */
+  tone?: number;
 }
 
 export interface GenStat {

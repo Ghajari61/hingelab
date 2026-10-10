@@ -52,7 +52,7 @@ export function assembledSVG(out: GenOutput, T: number, w = 300, h = 200): strin
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${vb.join(" ")}">`;
   drawn.forEach(({ p, f }, i) => {
     const hand = /hand/i.test(p.name);
-    const fill = hand ? "#5A4130" : WOODS[i % WOODS.length];
+    const fill = hand || (p.tone ?? 1) < 0.6 ? "#5A4130" : WOODS[i % WOODS.length];
     s += `<path d="${f.cs.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${fill}" fill-rule="evenodd" stroke="${EDGE}" stroke-width="${sw}"/>`;
     if (f.cuts.length) s += `<path d="${f.cuts.map((c) => thumbD(c, false, tol)).join(" ")}" fill="none" stroke="${EDGE}" stroke-width="${sw}" stroke-linejoin="round"/>`;
     if (f.engrave.length) s += `<path d="${f.engrave.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${INK}" fill-rule="evenodd"/>`;

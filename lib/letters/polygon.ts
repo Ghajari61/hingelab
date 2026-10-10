@@ -151,8 +151,9 @@ function treeToShapes(tree: ClipperLib.PolyTree): Shape[] {
   return out;
 }
 
-function clip(type: ClipperLib.ClipType, subject: Contour[], clipPaths: Contour[], evenOdd = false): Shape[] {
+function clip(type: ClipperLib.ClipType, subject: Contour[], clipPaths: Contour[], evenOdd = false, strict = false): Shape[] {
   const c = new ClipperLib.Clipper();
+  c.StrictlySimple = strict;
   c.AddPaths(toPaths(subject), ClipperLib.PolyType.ptSubject, true);
   if (clipPaths.length) c.AddPaths(toPaths(clipPaths), ClipperLib.PolyType.ptClip, true);
   const tree = new ClipperLib.PolyTree();
@@ -163,10 +164,11 @@ function clip(type: ClipperLib.ClipType, subject: Contour[], clipPaths: Contour[
 
 /**
  * Union with the nonzero fill rule (overlapping contours must share an orientation to merge),
- * or even-odd for loops of unknown orientation.
+ * or even-odd for loops of unknown orientation. `strict` splits loops that touch at a point, so a hole
+ * that touches its outer (blocks of squares) comes back as a hole rather than a slit in the outer.
  */
-export function unionShapes(contours: Contour[], clips: Contour[] = [], evenOdd = false): Shape[] {
-  return clip(ClipperLib.ClipType.ctUnion, contours, clips, evenOdd);
+export function unionShapes(contours: Contour[], clips: Contour[] = [], evenOdd = false, strict = false): Shape[] {
+  return clip(ClipperLib.ClipType.ctUnion, contours, clips, evenOdd, strict);
 }
 
 /** Subject minus clip, both filled with the nonzero rule. */

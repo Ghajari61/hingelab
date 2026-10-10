@@ -25,7 +25,7 @@ export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D 
     if (pl.upright) stand.rotation.x = Math.PI / 2;
     const spin = new THREE.Group();
     spin.rotation.z = -((pl.rot ?? 0) * Math.PI) / 180;
-    const tint = /hand/i.test(p.name) ? 0.72 : levels.indexOf(pl.z) % 2 ? 1.06 : 0.94;
+    const tint = p.tone ?? (/hand/i.test(p.name) ? 0.72 : levels.indexOf(pl.z) % 2 ? 1.06 : 0.94);
     if (p.pieces?.length) {
       // Pieces drift apart from the middle as the view explodes.
       let cx = 0, cy = 0, n = 0;
@@ -41,9 +41,13 @@ export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D 
         spin.add(m);
       });
     } else {
-      const mesh = slab(p.outer, p.holes, 0, t, p.name);
-      mesh.userData.tint = tint;
-      spin.add(mesh);
+      // Holes can hold islands (QR cut-outs): each filled region is its own slab.
+      const shapes = p.holes.length ? unionShapes([p.outer, ...p.holes], [], true) : [{ outer: p.outer, holes: [] }];
+      shapes.forEach((s, i) => {
+        const mesh = slab(s.outer, s.holes, 0, t, i ? `${p.name} piece ${i}` : p.name);
+        mesh.userData.tint = tint;
+        spin.add(mesh);
+      });
     }
     for (const s of p.engrave?.length && !(p.pieces?.length && explode > 0) ? unionShapes(p.engrave, [], true) : []) {
       const e = slab(s.outer, s.holes, t, 0.2, `${p.name} engraving`);

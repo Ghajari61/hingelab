@@ -24,6 +24,7 @@ const LAZY_BUDGETS = {
   "Generator editor": { key: /Workspace\.tsx -> @\/components\/generators\/GeneratorEditor$/, kb: 125 },
   "Clock generator": { key: /registry\.ts -> \.\/clock$/, kb: 15 },
   "Puzzle generator": { key: /registry\.ts -> \.\/puzzle$/, kb: 15 },
+  "QR Code generator": { key: /registry\.ts -> \.\/qr$/, kb: 25 },
 };
 
 const gz = new Map();
