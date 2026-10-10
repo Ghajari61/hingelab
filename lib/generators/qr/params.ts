@@ -1,6 +1,6 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
-import type { GenBase } from "../types";
+import { SHEET_EXTRAS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 
 export type ContentKind = "url" | "text" | "wifi" | "vcard" | "email" | "sms" | "phone";
@@ -92,6 +92,7 @@ export const QR_DEFAULTS: QrParams = {
   bedH: 400,
   gap: 4,
   fit: { ...FIT_OFF },
+  sheet: { ...SHEET_EXTRAS },
   layers: clone(HINGE.layers),
   content: {
     kind: "url", url: "https://hingelab.vercel.app", text: "",

@@ -4,6 +4,8 @@
  * than 10 %), unless the grain forbids it. The API takes outlines and returns placements, so a
  * true-shape nester can replace it later.
  */
+import { CAL_H, CAL_STRIP } from "@/lib/fit/calibration";
+import { nestOutlines } from "@/lib/nest/outline";
 import { convexHull } from "./backboard";
 import type { Contour, MaterialSettings, Point, Sheet, SheetItem } from "./types";
 
@@ -141,4 +143,37 @@ export function nestParts(parts: NestPart[], o: MaterialSettings): NestResult {
     sheets.push({ index: sheets.length, width: w, height: h, items: [{ partId: p.id, angle: a, x: o.sheetMargin - b.x0, y: o.sheetMargin - b.y0 }], usage: p.area / (w * h), oversize: true });
   }
   return { sheets, tooBig: pick.tooBig.map(t => t.p.id) };
+}
+
+/** Turns for true-shape nesting: any quarter turn, or the two that keep the grain. */
+const outlineAngles = (grain: MaterialSettings["grain"]) => (grain === "along-x" ? [0, 180] : grain === "along-y" ? [90, 270] : [0, 90, 180, 270]);
+
+/** Nest by the parts' outlines (true shape), so parts fill each other's notches and holes. */
+export function nestPartsByOutline(parts: NestPart[], o: MaterialSettings): NestResult {
+  const res = nestOutlines(parts.map(p => ({ id: p.id, outline: p.outline, angles: outlineAngles(o.grain) })), { w: o.sheetW, h: o.sheetH, margin: o.sheetMargin, gap: o.partGap });
+  const area = new Map(parts.map(p => [p.id, p.area]));
+  const sheets: Sheet[] = res.sheets.map((sh, i) => ({
+    index: i, width: sh.w, height: sh.h, oversize: sh.oversize || undefined,
+    items: sh.items.map(it => ({ partId: it.id, angle: it.angle, x: it.x, y: it.y })),
+    usage: sh.items.reduce((a, it) => a + (area.get(it.id) ?? 0), 0) / (sh.w * sh.h),
+  }));
+  return { sheets, tooBig: res.tooBig };
+}
+
+/**
+ * Nest with the material's settings: by outline or by box, keeping a strip free along the bottom
+ * of every sheet for the calibration bar when it is on.
+ */
+export function nestSheets(parts: NestPart[], o: MaterialSettings, mode: "box" | "outline" = o.nest ?? "box"): NestResult {
+  const cal = !!o.calibration;
+  const m = cal ? { ...o, sheetH: o.sheetH - CAL_STRIP } : o;
+  const res = mode === "outline" ? nestPartsByOutline(parts, m) : nestParts(parts, m);
+  if (!cal) return res;
+  const area = new Map(parts.map(p => [p.id, p.area]));
+  for (const sh of res.sheets) {
+    sh.height += CAL_STRIP;
+    sh.calibration = { x: o.sheetMargin, y: sh.height - o.sheetMargin - CAL_H, w: sh.width - 2 * o.sheetMargin };
+    sh.usage = sh.items.reduce((a, it) => a + (area.get(it.partId) ?? 0), 0) / (sh.width * sh.height);
+  }
+  return res;
 }

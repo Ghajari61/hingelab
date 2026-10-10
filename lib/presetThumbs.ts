@@ -59,6 +59,20 @@ type V3 = [number, number, number];
 /** A flat cut part placed in model space: its outline in part-local mm and the 4×4 column-major placement. */
 export interface PlacedPart { outer: Contour; placement: number[] }
 
+/** Folded nets as one placed triangle per face (a unit triangle mapped onto each face). */
+export function facesAsPlaced(faces3d: number[]): PlacedPart[] {
+  const out: PlacedPart[] = [];
+  for (let i = 0; i + 8 < faces3d.length; i += 9) {
+    const a: V3 = [faces3d[i], faces3d[i + 1], faces3d[i + 2]];
+    const u: V3 = [faces3d[i + 3] - a[0], faces3d[i + 4] - a[1], faces3d[i + 5] - a[2]];
+    const v: V3 = [faces3d[i + 6] - a[0], faces3d[i + 7] - a[1], faces3d[i + 8] - a[2]];
+    const n: V3 = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    const l = Math.hypot(...n) || 1;
+    out.push({ outer: [[0, 0], [1, 0], [0, 1]], placement: [...u, 0, ...v, 0, n[0] / l, n[1] / l, n[2] / l, 0, ...a, 1] });
+  }
+  return out;
+}
+
 /** Parts in a three-quarter view (model Y up, Z toward the viewer), filled with a light-dependent shade. */
 export function partsThumbSVG(parts: PlacedPart[], view: { yaw?: number; elev?: number } = {}): string {
   if (!parts.length) return "";

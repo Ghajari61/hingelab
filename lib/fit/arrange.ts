@@ -42,8 +42,17 @@ const pid = (i: number) => String(i).padStart(4, "0");
 const boxesOf = (parts: { bbox: BBox }[]): FitBox[] =>
   parts.map((pt, i) => ({ id: pid(i), w: pt.bbox.x1 - pt.bbox.x0, h: pt.bbox.y1 - pt.bbox.y0 }));
 
+export interface ArrangeOptions<P> {
+  /** Packs instead of the bounding-box packer. */
+  pack?: (parts: P[], sheet: SheetSpec) => Packed;
+  /** A copy of the part turned by `angle` degrees (for packers that turn parts). */
+  turn?: (part: P, angle: number) => P;
+  /** Strip kept free along the bottom of every sheet, mm. */
+  reserve?: number;
+}
+
 /** One layout for packed sheets stacked vertically, plus the sheet outlines for the canvas. */
-export function stackSheets<P extends { bbox: BBox }>(parts: P[], packed: Packed): { lay: Layout<P>; sheets: SheetRect[] } {
+export function stackSheets<P extends { bbox: BBox }>(parts: P[], packed: Packed, turn?: (part: P, angle: number) => P): { lay: Layout<P>; sheets: SheetRect[] } {
   const items: Layout<P>["items"] = [];
   const sheets: SheetRect[] = [];
   let y = 0, width = 0;
@@ -51,7 +60,7 @@ export function stackSheets<P extends { bbox: BBox }>(parts: P[], packed: Packed
   packed.sheets.forEach((sh, si) => {
     sheets.push({ x: 0, y, w: sh.w, h: sh.h, label: sh.oversize ? `Sheet ${si + 1} of ${n} · part larger than the sheet` : `Sheet ${si + 1} of ${n}`, warn: sh.oversize });
     for (const it of sh.items) {
-      const i = Number(it.id), pt = parts[i];
+      const i = Number(it.id), pt = it.angle && turn ? turn(parts[i], it.angle) : parts[i];
       items.push({ pt, i, w: pt.bbox.x1 - pt.bbox.x0, h: pt.bbox.y1 - pt.bbox.y0, ox: it.x - pt.bbox.x0, oy: y + it.y - pt.bbox.y0 });
     }
     width = Math.max(width, sh.w);
@@ -68,26 +77,30 @@ export function arrangeFit<Q, M extends { parts: P[] }, P extends { bbox: BBox }
   fitIn: FitSettings,
   spec: { w: number; h: number; gap: number },
   build: (scale: number) => { params: Q; result: M | { error: string } },
+  opts: ArrangeOptions<P> = {},
 ): Arranged<Q, M, P> {
   const fit = cleanFit(fitIn);
-  const sheet: SheetSpec = { w: spec.w, h: spec.h, margin: SHEET_EDGE, gap: spec.gap };
+  const reserve = opts.reserve ?? 0;
+  const sheet: SheetSpec = { w: spec.w, h: spec.h - reserve, margin: SHEET_EDGE, gap: spec.gap };
   const trial = (s: number) => {
     const b = build(s);
     return "error" in b.result ? null : { value: b as { params: Q; result: M }, boxes: boxesOf(b.result.parts) };
   };
+  const pack = opts.pack;
   let scale = 1, value: { params: Q; result: M } | null = null, packed: Packed | null = null, fits = true;
   if (fit.mode === "sheets") {
-    const r = fitToSheets({ build: trial, sheet, sheets: fit.sheets });
+    const r = fitToSheets<{ params: Q; result: M }>({ build: trial, sheet, sheets: fit.sheets, pack: pack && ((v) => pack(v.result.parts, sheet)) });
     if (r) ({ scale, value, packed, fits } = r);
   } else {
     const t = trial(1);
-    if (t) { value = t.value; packed = packBoxes(t.boxes, sheet); fits = packed.tooBig.length === 0; }
+    if (t) { value = t.value; packed = pack ? pack(t.value.result.parts, sheet) : packBoxes(t.boxes, sheet); fits = packed.tooBig.length === 0; }
   }
   if (!value || !packed) {
     const b = build(1);
     return { params: b.params, result: b.result, lay: null, sheets: null, fit: null };
   }
-  const { lay, sheets } = stackSheets(value.result.parts, packed);
+  if (reserve) packed = { ...packed, sheets: packed.sheets.map((sh) => ({ ...sh, h: sh.h + reserve })) };
+  const { lay, sheets } = stackSheets(value.result.parts, packed, opts.turn);
   return {
     params: value.params, result: value.result, lay, sheets,
     fit: { mode: fit.mode, scale, sheets: packed.sheets.length, target: fit.mode === "sheets" ? fit.sheets : packed.sheets.length, fits },

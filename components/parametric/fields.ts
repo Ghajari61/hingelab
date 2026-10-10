@@ -79,6 +79,9 @@ export const PARAM_FIELDS: ParamField[] = [
   { sec: "method", id: "boundH", label: "Outline H", len: true, step: 5, min: 10, max: 3000, get: p => { const b = curveBoundary(p); return b.kind === "ellipse" ? b.h : 0; }, set: (p, v) => { const b = curveBoundary(p); if (b.kind === "ellipse") b.h = v; }, show: p => isCurve(p) && curveBoundary(p).kind === "ellipse" },
   { sec: "method", id: "backMargin", label: "Plate border", len: true, step: 1, min: 0, max: 200, get: p => p.curveNormal.backMargin, set: (p, v) => { p.curveNormal.backMargin = v; }, show: p => isCurve(p) && p.curveNormal.backPlate && curveBoundary(p).kind === "none" },
 
+  { sec: "method", id: "foldFaces", label: "Faces", step: 10, min: 4, max: 1000, get: p => p.folded.faces, set: (p, v) => { p.folded.faces = Math.round(v); }, show: p => p.method === "folded" },
+  { sec: "method", id: "foldTab", label: "Tab height", len: true, step: 0.5, min: 2, max: 30, get: p => p.folded.tabWidth, set: (p, v) => { p.folded.tabWidth = v; }, show: p => p.method === "folded" && p.folded.tabs },
+
   { sec: "material", id: "T", label: "Thickness", len: true, step: 0.1, min: 0.5, max: 25, mat: true, get: p => p.material.T, set: (p, v) => { p.material.T = v; } },
   { sec: "material", id: "K", label: "Kerf", len: true, step: 0.01, min: 0, max: 1, mat: true, get: p => p.material.K, set: (p, v) => { p.material.K = v; } },
 

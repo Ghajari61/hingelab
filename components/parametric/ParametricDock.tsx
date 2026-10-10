@@ -45,7 +45,7 @@ function Choice<T extends string>({ label, value, options, onPick }: {
 }
 
 const KIND_NAMES: Partial<Record<Part["kind"], string>> = {
-  backboard: "Backboard", slat: "Slat", fin: "Fin", layer: "Layer", "rib-x": "Rib (A)", "rib-y": "Rib (B)", "radial-fin": "Radial fin", hub: "Hub ring",
+  backboard: "Backboard", slat: "Slat", fin: "Fin", layer: "Layer", "rib-x": "Rib (A)", "rib-y": "Rib (B)", "radial-fin": "Radial fin", hub: "Hub ring", net: "Net",
 };
 
 const axisName = (n: readonly number[]) => (Math.abs(n[0]) > 0.5 ? "X" : Math.abs(n[1]) > 0.5 ? "Y" : "Z");
@@ -65,6 +65,7 @@ function methodMeta(p: ParametricParams, units: Units, result: SliceResult | nul
     const n = p.curveNormal.count ?? result?.parts.filter((q) => q.kind === "fin").length;
     return `${n ?? "Auto"} fins round ${guideText(p.curveNormal.guide, units)}`;
   }
+  if (p.method === "folded") return `About ${p.folded.faces} faces${result ? ` in ${result.parts.length} net${result.parts.length === 1 ? "" : "s"}` : ""}`;
   return `Parallel fins every ${fmtLen(finSpacingOf(p), units, true)}`;
 }
 
@@ -437,6 +438,22 @@ export function ParametricDock({
             )}
             <p className="note">Fins stand square to the guide curve and fan out from it.</p>
           </>
+        ) : params.method === "folded" ? (
+          <>
+            <div className="grid2">{fields("method")}</div>
+            <label className="chk"><input type="checkbox" checked={params.folded.tabs} onChange={(e) => onEdit((q) => { q.folded.tabs = e.target.checked; }, true)} /> Glue tabs on one side of every cut edge</label>
+            <label className="chk"><input type="checkbox" checked={params.folded.numbers} onChange={(e) => onEdit((q) => { q.folded.numbers = e.target.checked; }, true)} /> Number both sides of every cut edge</label>
+            {params.material.T > 1 && (
+              <div className="verdict warn pe-units">
+                <span className="dot" />
+                <span>
+                  Folding needs card or paper.
+                  <button type="button" onClick={() => onEdit((q) => { q.material = { ...q.material, id: "custom", T: 0.3, K: 0.05 }; }, true)}>Use 0.3 mm card</button>
+                </span>
+              </div>
+            )}
+            <p className="note">The model is simplified to flat faces and unfolded into nets. Solid score lines fold away from you, dashed ones toward you; the engraved side is the outside.</p>
+          </>
         ) : (
           <>
             <Choice label="Fins stacked along" value={params.parallel.axis} onPick={(a) => onEdit((q) => { q.parallel.axis = a; }, true)} options={[
@@ -472,6 +489,15 @@ export function ParametricDock({
           { v: "along-x", text: "Along sheet width" },
           { v: "along-y", text: "Along sheet height" },
         ]} />
+        {params.method !== "folded" && (
+          <Choice label="Nesting" value={params.material.nest ?? "box"} onPick={(n) => onEdit((q) => { q.material.nest = n; }, true)} options={[
+            { v: "box", text: "By box", title: "Pack the parts' bounding boxes: fast, keeps parts in order" },
+            { v: "outline", text: "By outline", title: "Pack the true shapes, so parts fill each other's notches and holes" },
+          ]} />
+        )}
+        <label className="chk" title="A scored 100 mm scale and a 10 mm test square along the bottom of every sheet, to check the cut size and the kerf">
+          <input type="checkbox" checked={!!params.material.calibration} onChange={(e) => onEdit((q) => { q.material.calibration = e.target.checked; }, true)} /> Calibration bar on every sheet
+        </label>
       </Sec>
 
       <Sec title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["joints"])}>
@@ -572,7 +598,7 @@ export function ParametricDock({
       </Sec>
 
       <Sec title="Layers & Export" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
-        <LayersPanel layers={params.layers} labels={params.labels.enabled} only={["outline", "slots", "labels"]} onVis={layerVis} onExp={layerExp} onLabels={(on) => onEdit((q) => { q.labels.enabled = on; }, true)} />
+        <LayersPanel layers={params.layers} labels={params.labels.enabled} only={params.method === "folded" || params.material.calibration ? ["outline", "slots", "hinge", "labels"] : ["outline", "slots", "labels"]} names={{ hinge: "Score lines" }} onVis={layerVis} onExp={layerExp} onLabels={(on) => onEdit((q) => { q.labels.enabled = on; }, true)} />
         <div className="pe-export">
           <button type="button" className="btn-auto" disabled={!result?.sheets.length} onClick={onExportZip}>Export all sheets (ZIP)</button>
           <button type="button" className="btn-auto" disabled={!result?.sheets.length} onClick={onExportSheet}>Export this sheet (SVG)</button>

@@ -11,7 +11,7 @@ import { LETTER_PRESETS } from "@/lib/letters/presets";
 import { computeParametric, loadSource, mergeParametricParams } from "@/lib/parametric";
 import { packOutline } from "@/lib/parametric/source/text";
 import { PARAMETRIC_PRESETS } from "@/lib/parametric/presets";
-import { lettersThumbSVG, partsThumbSVG } from "@/lib/presetThumbs";
+import { facesAsPlaced, lettersThumbSVG, partsThumbSVG } from "@/lib/presetThumbs";
 import { ALL_GENERATORS } from "@/lib/generators/all";
 import { makeTextFn } from "@/lib/generators/text";
 import { assembledSVG } from "@/lib/generators/thumb";
@@ -77,5 +77,5 @@ if (want("parametric")) for (const preset of PARAMETRIC_PRESETS) {
     file = packOutline(contours);
   }
   const r = computeParametric(p, await loadSource(p, file), wasm);
-  out("parametric", preset.id, partsThumbSVG(r.parts.map((pt) => ({ outer: pt.shape.outer, placement: pt.placement }))));
+  out("parametric", preset.id, partsThumbSVG(r.parts.flatMap((pt) => (pt.faces3d ? facesAsPlaced(pt.faces3d) : [{ outer: pt.shape.outer, placement: pt.placement }]))));
 }

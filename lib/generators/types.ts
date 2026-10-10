@@ -46,8 +46,21 @@ export interface GenBase {
   bedH: number;
   gap: number;
   fit: FitSettings;
+  /** Sheet extras the shell adds (missing in old saves: all off). */
+  sheet?: SheetExtras;
   layers: Layers;
 }
+
+export interface SheetExtras {
+  /** Pack by bounding box (parts upright) or by outline (true shape, quarter turns). */
+  nest: "box" | "outline";
+  /** A scored 100 mm scale and a 10 mm test square along the bottom of every sheet. */
+  calibration: boolean;
+  /** Each part's name scored on it. */
+  labels: boolean;
+}
+
+export const SHEET_EXTRAS: SheetExtras = { nest: "box", calibration: false, labels: false };
 
 /** One flat part, in its own frame: mm, y down. Geometry is nominal; the shell applies the kerf. */
 export interface GenPart {

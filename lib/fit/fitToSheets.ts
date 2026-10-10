@@ -35,8 +35,8 @@ export interface PackedSheet {
   w: number;
   h: number;
   oversize: boolean;
-  /** Top-left corner of each part's box on the sheet. */
-  items: { id: string; x: number; y: number }[];
+  /** Top-left corner of each part's box on the sheet; `angle` (degrees) turns the part first. */
+  items: { id: string; x: number; y: number; angle?: number }[];
 }
 
 export interface Packed {
@@ -72,6 +72,8 @@ export interface FitOptions<T> {
   sheet: SheetSpec;
   /** Target sheet count N. */
   sheets: number;
+  /** Packs the product instead of the bounding-box packer (for example by outline). */
+  pack?: (value: T) => Packed;
   /** Scale range searched; the default only shrinks. */
   min?: number;
   max?: number;
@@ -93,7 +95,7 @@ export function fitToSheets<T>(o: FitOptions<T>): FitResult<T> | null {
     const b = o.build(s);
     let t: { value: T; packed: Packed; ok: boolean; area: number } | null = null;
     if (b) {
-      const packed = packBoxes(b.boxes, o.sheet);
+      const packed = o.pack ? o.pack(b.value) : packBoxes(b.boxes, o.sheet);
       t = { value: b.value, packed, ok: packed.tooBig.length === 0 && packed.sheets.length <= n, area: b.boxes.reduce((a, x) => a + x.w * x.h, 0) };
     }
     cache.set(s, t);

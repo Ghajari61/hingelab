@@ -77,7 +77,26 @@ export function partsObject(r: SliceResult, T: number, explode = 0): THREE.Group
   const famKey = (pl: Plane) => pl.normal.join(",");
   const fam = new Map<string, number[]>();
   r.planes.forEach((pl, i) => fam.set(famKey(pl), [...(fam.get(famKey(pl)) ?? []), i]));
+  const card = new THREE.MeshStandardMaterial({ color: PART_COLOR, roughness: 0.85, side: THREE.DoubleSide, flatShading: true });
   for (const part of r.parts) {
+    if (part.faces3d) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(part.faces3d), 3));
+      g.computeVertexNormals();
+      const mesh = new THREE.Mesh(g, card);
+      // Nets move apart along their average normal.
+      if (explode) {
+        const n = new THREE.Vector3();
+        const nm = g.getAttribute("normal");
+        for (let i = 0; i < nm.count; i++) n.add(new THREE.Vector3(nm.getX(i), nm.getY(i), nm.getZ(i)));
+        if (n.lengthSq() > 0) mesh.position.copy(n.normalize().multiplyScalar(explode));
+      }
+      mesh.userData.partId = part.id;
+      const line = new THREE.LineSegments(new THREE.EdgesGeometry(g, 1), edge);
+      line.position.copy(mesh.position);
+      grp.add(mesh, line);
+      continue;
+    }
     const g = partGeometry(part, T);
     const mx = new THREE.Matrix4().fromArray(part.placement);
     if (explode && part.plane >= 0) {

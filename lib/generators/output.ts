@@ -2,15 +2,19 @@
  * What the shell does with any generator's output: kerf (once), sheets, canvas layers, the layered
  * SVG and the sheet checks. Generators only return nominal parts.
  */
-import { arrangeFit, type Arranged } from "@/lib/fit/arrange";
+import { arrangeFit, SHEET_EDGE, type Arranged } from "@/lib/fit/arrange";
+import { outlinePacker } from "@/lib/fit/outlinePack";
+import { CAL_H, CAL_STRIP, calibrationBar } from "@/lib/fit/calibration";
 import { cleanFit } from "@/lib/fit/fitToSheets";
 import { EXPORT_LAYERS } from "@/lib/hinge/export";
 import type { BBox, LayerContent, LayerKey, Layout } from "@/lib/hinge/types";
 import { r3 } from "@/lib/hinge/util";
 import type { Issue } from "@/lib/issues";
-import { offsetShapes, unionShapes } from "@/lib/letters/polygon";
+import { differenceShapes, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
+import { rotatePoint } from "@/lib/nest/outline";
+import { finLabel } from "@/lib/parametric/label";
 import { bboxOf, pathD } from "./geom";
-import type { BuildContext, Contour, GenBase, GenImage, GenOutput, GenPart, GeneratorDef } from "./types";
+import type { BuildContext, Contour, GenBase, GenImage, GenOutput, GenPart, GeneratorDef, SheetExtras } from "./types";
 
 /** Layer names in the generators' panels and SVG files (keys and colours shared with every product). */
 export const GEN_LAYER_NAMES: Record<LayerKey, string> = {
@@ -33,6 +37,8 @@ export interface CutPart {
   engrave: Contour[];
   images: GenImage[];
   bbox: BBox;
+  /** Set on copies turned for outline nesting, degrees. */
+  turned?: number;
 }
 
 /** Kerf applied once: the part grows by K/2, so outlines move out and holes shrink. */
@@ -57,16 +63,63 @@ export interface GenModel {
 
 export type GenArranged<P> = Arranged<P, GenModel, CutPart>;
 
+/** A copy of the part turned by `angle` degrees about its origin (pictures cannot turn: such parts stay upright). */
+export function turnCutPart(pt: CutPart, angle: number): CutPart {
+  if (!angle) return pt;
+  const r = (cs: Contour[]) => cs.map((c) => c.map((q) => rotatePoint(q, angle)));
+  const outline = r(pt.outline);
+  return { ...pt, outline, inner: r(pt.inner), cuts: r(pt.cuts), score: r(pt.score), engrave: r(pt.engrave), bbox: bboxOf(outline), turned: angle };
+}
+
+/** Saved sheet extras, cleaned (old saves have none). */
+export function cleanExtras(x: unknown): SheetExtras {
+  const q = (x && typeof x === "object" ? x : {}) as Partial<SheetExtras>;
+  return { nest: q.nest === "outline" ? "outline" : "box", calibration: q.calibration === true, labels: q.labels === true };
+}
+
+/** The part's name in the single-stroke font, placed where it fits clear of cuts and engraving. */
+export function partLabel(pt: CutPart): Contour[] {
+  if (pt.cuts.length) return [];
+  let shapes = unionShapes([...pt.outline, ...pt.inner], [], true);
+  if (pt.engrave.length) shapes = differenceShapes(shapeContours(shapes), pt.engrave);
+  if (!shapes.length) return [];
+  const s = shapes.reduce((a, b) => (b.area > a.area ? b : a));
+  return finLabel(s, pt.name, { arrow: false, nearWall: false }) ?? [];
+}
+
 /** Build at a scale and lay the parts out on sheets (Fit "off" packs at design size, like Auto). */
 export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, ctx: BuildContext): GenArranged<P> {
   const fit = cleanFit(p.fit);
+  const x = cleanExtras(p.sheet);
   const mode = fit.mode === "sheets" && def.scale ? "sheets" : "auto";
-  return arrangeFit<P, GenModel, CutPart>({ mode, sheets: fit.sheets }, { w: p.bedW, h: p.bedH, gap: p.gap }, (s) => {
+  const a = arrangeFit<P, GenModel, CutPart>({ mode, sheets: fit.sheets }, { w: p.bedW, h: p.bedH, gap: p.gap }, (s) => {
     const q = s === 1 || !def.scale ? p : def.scale(p, s);
     const out = def.build(q, ctx);
     if (out.error) return { params: q, result: { error: out.error } };
     return { params: q, result: { parts: out.parts.map((pt) => cutPart(pt, q.K)), out } };
+  }, {
+    pack: x.nest === "outline" ? outlinePacker<CutPart>((pt) => (pt.images.length ? [0] : [0, 90, 180, 270])) : undefined,
+    turn: turnCutPart,
+    reserve: x.calibration ? CAL_STRIP : 0,
   });
+  if (!a.lay || !a.sheets || "error" in a.result) return a;
+  if (x.labels) {
+    a.lay = { ...a.lay, items: a.lay.items.map((it) => ({ ...it, pt: { ...it.pt, score: [...it.pt.score, ...partLabel(it.pt)] } })) };
+  }
+  if (x.calibration) {
+    const items = [...a.lay.items];
+    for (const sh of a.sheets) {
+      const bar = calibrationBar(0, 0, sh.w - 2 * SHEET_EDGE, a.params.K);
+      if (!bar.cut.length) continue;
+      const pt: CutPart = {
+        src: { id: "calibration", name: "Calibration bar", outer: bar.cut[0], holes: [] }, id: "calibration", name: "Calibration bar",
+        outline: bar.cut, inner: [], cuts: [], score: bar.score, engrave: [], images: [], bbox: bboxOf([...bar.cut, ...bar.score]),
+      };
+      items.push({ pt, i: -1, w: pt.bbox.x1 - pt.bbox.x0, h: pt.bbox.y1 - pt.bbox.y0, ox: sh.x + SHEET_EDGE, oy: sh.y + sh.h - SHEET_EDGE - CAL_H });
+    }
+    a.lay = { ...a.lay, items };
+  }
+  return a;
 }
 
 export interface SheetImage { href: string; x: number; y: number; w: number; h: number; clip?: string }

@@ -10,7 +10,7 @@ import { FontPicker } from "@/components/letters/FontPicker";
 import type { BaseField } from "@/components/editor/fields";
 import type { Units } from "@/components/editor/format";
 import { cleanFit } from "@/lib/fit/fitToSheets";
-import { GEN_LAYER_NAMES } from "@/lib/generators/output";
+import { cleanExtras, GEN_LAYER_NAMES } from "@/lib/generators/output";
 import { getPath, setPath } from "@/lib/generators/path";
 import { Dices } from "lucide-react";
 import { ImagePicker } from "./ImagePicker";
@@ -156,6 +156,7 @@ export function GeneratorDock({
     return out;
   };
 
+  const extras = cleanExtras(params.sheet);
   const layerVis = (key: LayerKey) => onSet(`layers.${key}.vis`, !params.layers[key].vis, true);
   const layerExp = (key: LayerKey, exp: boolean) => onSet(`layers.${key}.exp`, exp, true);
 
@@ -189,13 +190,26 @@ export function GeneratorDock({
       <Sec title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers"])}>
         <LayersPanel layers={params.layers} labels={false} only={layerKeys} names={GEN_LAYER_NAMES} onVis={layerVis} onExp={layerExp} />
       </Sec>
-      <Sec title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "fit"])}>
+      <Sec title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "fit", "sheet"])}>
         <SheetSection
           bedW={params.bedW} bedH={params.bedH} fit={cleanFit(params.fit)} info={sheet.info} size={sheet.size}
           onSheet={sheet.onSheet} onFit={sheet.onFit}
         >
           <div className="grid2">{SHEET_FIELDS.map((f) => num(f, params[f.id as "bedW"], defaults[f.id as "bedW"]))}</div>
         </SheetSection>
+        <div className="gen-choice">
+          <div className="rowlabel">Nesting</div>
+          <div className="iconseg full" role="group" aria-label="Nesting">
+            <button type="button" title="Pack the parts' bounding boxes, parts upright" aria-pressed={extras.nest === "box"} onClick={() => onSet("sheet.nest", "box", true)}>By box</button>
+            <button type="button" title="Pack the true shapes, turning parts by quarter turns, so they fill each other's notches and holes" aria-pressed={extras.nest === "outline"} onClick={() => onSet("sheet.nest", "outline", true)}>By outline</button>
+          </div>
+        </div>
+        <label className="chk" title="A scored 100 mm scale and a 10 mm test square along the bottom of every sheet, to check the cut size and the kerf">
+          <input type="checkbox" checked={extras.calibration} onChange={(e) => onSet("sheet.calibration", e.target.checked, true)} /> Calibration bar on every sheet
+        </label>
+        <label className="chk" title="Score each part's name on it, where it fits clear of cuts and engraving">
+          <input type="checkbox" checked={extras.labels} onChange={(e) => onSet("sheet.labels", e.target.checked, true)} /> Part labels
+        </label>
         <p className="note">{def.scale ? "Fit to sheets scales the design; holes for hardware keep their size." : "Parts are packed at their real size."}</p>
       </Sec>
     </aside>

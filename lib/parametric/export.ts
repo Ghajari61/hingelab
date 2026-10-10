@@ -5,6 +5,7 @@
 import { strToU8, zipSync } from "fflate";
 import { EXPORT_LAYERS, r3, type LayerContent, type Layers } from "@/lib/hinge";
 import { signedArea } from "@/lib/letters/polygon";
+import { calibrationBar } from "@/lib/fit/calibration";
 import { addWatermark } from "@/lib/plans";
 import { fmtMinutes } from "./cutTime";
 import { finSpacingOf } from "./defaults";
@@ -19,12 +20,14 @@ export interface SheetPaths {
   outline: string[];
   inner: string[];
   engrave: string[];
+  /** Scored lines: fold lines and the calibration scale. */
+  score: string[];
   fills: string[];
 }
 
 /** Paths of one sheet in sheet mm, by layer. Outer contours go to the outline layer, holes and slots to inner cuts. */
-export function sheetPaths(sheet: Sheet, parts: Map<string, Part>): SheetPaths {
-  const out: SheetPaths = { outline: [], inner: [], engrave: [], fills: [] };
+export function sheetPaths(sheet: Sheet, parts: Map<string, Part>, K = 0): SheetPaths {
+  const out: SheetPaths = { outline: [], inner: [], engrave: [], score: [], fills: [] };
   for (const it of sheet.items) {
     const part = parts.get(it.partId);
     if (!part?.cut) continue;
@@ -34,36 +37,46 @@ export function sheetPaths(sheet: Sheet, parts: Map<string, Part>): SheetPaths {
     out.outline.push(...outers.map(closedD));
     out.inner.push(...holes.map(closedD), ...part.cut.inner.map(c => closedD(tf(c))));
     out.engrave.push(...part.engrave.map(c => openD(tf(c))));
+    out.score.push(...(part.score ?? []).map(c => openD(tf(c))));
     out.fills.push([...outers, ...holes].map(closedD).join(""));
+  }
+  if (sheet.calibration) {
+    const { x, y, w } = sheet.calibration;
+    const bar = calibrationBar(x, y, w, K);
+    out.outline.push(...bar.cut.map(closedD));
+    out.score.push(...bar.score.map(openD));
   }
   return out;
 }
 
-/** Sheet paths in the shared LayerContent shape, for the editor canvas (engrave goes to `hinge`, drawn as hairlines). */
-export function sheetLayerContent(sheet: Sheet, parts: Map<string, Part>, ox: number, oy: number): LayerContent {
-  const s = sheetPaths({ ...sheet, items: sheet.items.map(it => ({ ...it, x: it.x + ox, y: it.y + oy })) }, parts);
-  return { outline: s.outline, slots: s.inner, hinge: s.engrave, labels: [], fills: s.fills };
+/** Sheet paths in the shared LayerContent shape, for the editor canvas (engrave and score go to `hinge`, drawn as hairlines). */
+export function sheetLayerContent(sheet: Sheet, parts: Map<string, Part>, ox: number, oy: number, K = 0): LayerContent {
+  const cal = sheet.calibration && { ...sheet.calibration, x: sheet.calibration.x + ox, y: sheet.calibration.y + oy };
+  const s = sheetPaths({ ...sheet, calibration: cal, items: sheet.items.map(it => ({ ...it, x: it.x + ox, y: it.y + oy })) }, parts, K);
+  return { outline: s.outline, slots: s.inner, hinge: [...s.engrave, ...s.score], labels: [], fills: s.fills };
 }
 
-const LAYER = (key: "outline" | "slots" | "labels") => EXPORT_LAYERS.find(l => l.key === key)!;
+const LAYER = (key: "outline" | "slots" | "labels" | "hinge") => EXPORT_LAYERS.find(l => l.key === key)!;
 
 export function sheetSVG(result: SliceResult, sheetIndex: number, p: ParametricParams, opts: { watermark?: boolean } = {}): string {
   const sheet = result.sheets[sheetIndex];
   const parts = new Map(result.parts.map(q => [q.id, q]));
-  const S = sheetPaths(sheet, parts);
+  const S = sheetPaths(sheet, parts, p.material.K);
   const W = r3(sheet.width), H = r3(sheet.height);
   const ids = sheet.items.map(it => it.partId).join(", ");
-  const comment = `HingeLab Parametric: ${p.name}, sheet ${sheetIndex + 1} of ${result.sheets.length}${sheet.oversize ? " (OVERSIZE: larger than the material)" : ""}. Material ${p.material.T} mm, kerf ${p.material.K} mm (compensated). Parts: ${ids}. Cut order: inner cuts, engrave, outline.`;
+  const comment = `HingeLab Parametric: ${p.name}, sheet ${sheetIndex + 1} of ${result.sheets.length}${sheet.oversize ? " (OVERSIZE: larger than the material)" : ""}. Material ${p.material.T} mm, kerf ${p.material.K} mm (compensated). Parts: ${ids}. Cut order: inner cuts, ${S.score.length ? "score, " : ""}engrave, outline.`;
   let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">\n`;
   s += `<!-- ${comment.replace(/--/g, "- -")} -->\n`;
-  const layer = (key: "outline" | "slots" | "labels", paths: string[]) => {
+  const layer = (key: "outline" | "slots" | "labels" | "hinge", paths: string[], name = LAYER(key).name) => {
     const def = LAYER(key);
-    if (!p.layers[key].exp || (key === "labels" && !p.labels.enabled)) return;
-    s += `<g id="${key}" inkscape:groupmode="layer" inkscape:label="${def.code} ${def.name}" fill="none" stroke="${def.color}" stroke-width="0.1">\n`;
+    // Folded nets keep their edge numbers when part labels are off.
+    if (!p.layers[key].exp || (key === "labels" && !p.labels.enabled && p.method !== "folded") || (key === "hinge" && !paths.length)) return;
+    s += `<g id="${key}" inkscape:groupmode="layer" inkscape:label="${def.code} ${name}" fill="none" stroke="${def.color}" stroke-width="0.1">\n`;
     for (const d of paths) if (d) s += `  <path d="${d}"/>\n`;
     s += `</g>\n`;
   };
   layer("slots", S.inner);
+  layer("hinge", S.score, "Score lines");
   layer("labels", S.engrave);
   layer("outline", S.outline);
   s += `</svg>\n`;
@@ -87,6 +100,14 @@ function isoThumbnail(result: SliceResult, T: number, w: number, h: number): str
   const gap = Math.max(4, finSpacingOfResult(result) * 0.8);
   const polys: { pts: [number, number][]; depth: number; board: boolean }[] = [];
   for (const part of result.parts) {
+    if (part.faces3d) {
+      const f = part.faces3d;
+      for (let i = 0; i + 8 < f.length; i += 9) {
+        const pts3 = [0, 3, 6].map(k => view([f[i + k], f[i + k + 1], f[i + k + 2]]));
+        polys.push({ pts: pts3.map(q => [q[0], -q[1]]), depth: pts3.reduce((a, q) => a + q[2], 0) / 3, board: false });
+      }
+      continue;
+    }
     const board = part.kind === "backboard";
     const n = part.plane >= 0 ? result.planes[part.plane].normal : ([0, 0, 1] as V3);
     const fanned = (result.method === "radial" || result.method === "curveNormal") && part.plane >= 0 && part.kind !== "backboard" && part.kind !== "hub";
@@ -108,7 +129,7 @@ function isoThumbnail(result: SliceResult, T: number, w: number, h: number): str
 const finSpacingOfResult = (r: SliceResult) => (r.planes.length > 1 ? Math.abs(r.planes[1].offset - r.planes[0].offset) : 10);
 
 const METHOD_NAMES: Record<ParametricParams["method"], string> = {
-  parallel: "parallel fins", stacked: "stacked layers", waffle: "waffle ribs", radial: "radial fins", curveNormal: "fins along a curve",
+  parallel: "parallel fins", stacked: "stacked layers", waffle: "waffle ribs", radial: "radial fins", curveNormal: "fins along a curve", folded: "folded nets",
 };
 
 /** Distance between neighbouring slots on the board, for the slot label size. */
@@ -122,6 +143,7 @@ function methodLine(p: ParametricParams): string {
     const g = p.curveNormal.guide;
     return `fins square to ${g.kind === "circle" ? `a ${r3(g.d)} mm circle` : `a ${r3(g.w)} × ${r3(g.h)} mm oval`}`;
   }
+  if (p.method === "folded") return `about ${p.folded.faces} faces${p.folded.tabs ? `, ${r3(p.folded.tabWidth)} mm glue tabs` : ""}`;
   return `fins every ${r3(finSpacingOf(p))} mm along ${p.parallel.axis}`;
 }
 

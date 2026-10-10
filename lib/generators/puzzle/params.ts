@@ -1,6 +1,6 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
-import type { GenBase } from "../types";
+import { SHEET_EXTRAS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 
 export type PuzzleShape = "rect" | "circle" | "heart" | "custom";
@@ -67,6 +67,7 @@ export const PUZZLE_DEFAULTS: PuzzleParams = {
   bedH: 400,
   gap: 4,
   fit: { ...FIT_OFF },
+  sheet: { ...SHEET_EXTRAS },
   layers: clone(HINGE.layers),
   shape: { kind: "rect", width: 300, height: 200, corner: 0, path: "" },
   pieces: { auto: true, count: 48, cols: 8, rows: 6 },

@@ -1,6 +1,6 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
-import type { GenBase } from "../types";
+import { SHEET_EXTRAS, type GenBase } from "../types";
 import { isObj, mergeInto } from "../util";
 
 export type FaceShape = "round" | "square" | "polygon" | "sunburst" | "gear" | "scallop" | "custom";
@@ -88,6 +88,7 @@ export const CLOCK_DEFAULTS: ClockParams = {
   bedH: 400,
   gap: 4,
   fit: { ...FIT_OFF },
+  sheet: { ...SHEET_EXTRAS },
   layers: clone(HINGE.layers),
   face: { shape: "round", size: 300, sides: 6, corner: 6, rays: 24, depth: 22, path: "", layers: "ring", ring: 40, centre: 60 },
   markers: { style: "numerals", numerals: "roman", quarters: false, fontId: "archivo-black", size: 20, inset: 8, minutes: true, tickLength: 10, tickWidth: 3, dot: 8, cut: false },

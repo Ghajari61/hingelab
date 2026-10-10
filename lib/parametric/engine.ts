@@ -12,8 +12,9 @@ import { sliceParallel } from "./methods/parallel";
 import { sliceCurveNormal } from "./methods/curveNormal";
 import { sliceRadial } from "./methods/radial";
 import { sliceStacked } from "./methods/stacked";
+import { sliceFolded } from "./methods/folded";
 import { sliceWaffle } from "./methods/waffle";
-import { nestParts } from "./nest";
+import { nestSheets } from "./nest";
 import { formulaHeightfield, formulaRadialProfile, formulaRevolution, radialProfileFn } from "./source/formula";
 import { libraryMesh } from "./source/library";
 import { reliefFromDepth, unpackDepth } from "./source/relief";
@@ -98,19 +99,22 @@ export function computeParametric(p: ParametricParams, src: PreparedMesh, wasm: 
       : p.method === "waffle" ? sliceWaffle(p, ctx)
       : p.method === "radial" ? sliceRadial(p, ctx, profile)
       : p.method === "curveNormal" ? sliceCurveNormal(p)
+      : p.method === "folded" ? sliceFolded(p, src.mesh)
       : sliceParallel(p, { ...ctx, projection });
     warnings.push(...out.warnings);
     if (out.parts.length > LIMITS.maxParts) warnings.push({ code: "TOO_MANY_PARTS", message: `This would make ${out.parts.length} parts. Increase spacing or reduce size (limit ${LIMITS.maxParts}).` });
 
     for (const part of out.parts) part.cut = kerfPart(part, p.material.K);
-    const nest = nestParts(out.parts.map(q => ({ id: q.id, outline: q.cut!.outline, area: q.shape.area })), p.material);
+    // Folded nets are irregular, so they always nest by outline.
+    const nest = nestSheets(out.parts.map(q => ({ id: q.id, outline: q.cut!.outline, area: q.shape.area })), p.material, p.method === "folded" ? "outline" : undefined);
     for (const id of nest.tooBig) warnings.push({ code: "PART_TOO_BIG", message: `${id} is larger than the sheet. Scale the model down, use a bigger sheet, or enable splitting.`, partIds: [id] });
     if (nest.sheets.length > LIMITS.maxSheets) warnings.push({ code: "TOO_MANY_SHEETS", message: `This needs ${nest.sheets.length} sheets; the limit is ${LIMITS.maxSheets}. Use bigger sheets or a smaller model.` });
 
     const partArea = out.parts.reduce((a, q) => a + q.shape.area, 0);
     const cutLength = out.parts.reduce((a, q) => a + q.cut!.outline.reduce((h, c) => h + perimeter(c), 0) + q.cut!.inner.reduce((h, c) => h + perimeter(c), 0), 0);
-    const engraveLength = out.parts.reduce((a, q) => a + q.engrave.reduce((h, c) => h + polylineLength(c), 0), 0);
-    const contours = out.parts.reduce((a, q) => a + q.cut!.outline.length + q.cut!.inner.length + q.engrave.length, 0);
+    const marks = (q: SliceResult["parts"][number]) => [...q.engrave, ...(q.score ?? [])];
+    const engraveLength = out.parts.reduce((a, q) => a + marks(q).reduce((h, c) => h + polylineLength(c), 0), 0);
+    const contours = out.parts.reduce((a, q) => a + q.cut!.outline.length + q.cut!.inner.length + marks(q).length, 0);
     const stats: Stats = {
       partCount: out.parts.length,
       planeCount: out.planes.length,
@@ -122,7 +126,7 @@ export function computeParametric(p: ParametricParams, src: PreparedMesh, wasm: 
       estimatedCutTime: estimateCutMinutes(cutLength, engraveLength, contours, cutSpeedOf(p.material.id, p.material.T)),
     };
     const result: SliceResult = { method: p.method, planes: out.planes, sections: out.sections, parts: out.parts, sheets: nest.sheets, warnings, stats, guide: out.guide, crossings: out.crossings, bounds: out.bounds ?? b, engine, usesModel };
-    const dev = opts.deviation && usesModel ? measureDeviation(result, src.mesh, p) : null;
+    const dev = opts.deviation && usesModel && p.method !== "folded" ? measureDeviation(result, src.mesh, p) : null;
     if (dev) {
       result.deviation = dev.deviation;
       stats.maxDeviation = dev.max;

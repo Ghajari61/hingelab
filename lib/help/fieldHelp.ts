@@ -96,6 +96,8 @@ export const PARAM_FIELD_HELP: Record<string, string> = {
   boundW: "The width of the oval outline that trims the fins.",
   boundH: "The height of the oval outline that trims the fins.",
   backMargin: "The border of back plate left round the fins.",
+  foldFaces: "How many flat faces the folded model has. Fewer faces are quicker to fold; more follow the model more closely.",
+  foldTab: "The height of each glue tab; tabs on short edges are made smaller.",
   T: "The measured thickness of your sheet. Fins, slots and tabs all follow it, so measure the real sheet.",
   K: "The width of the line the laser burns away; outlines are offset by half of it.",
   sheetW: "The width of each sheet the parts are packed on.",

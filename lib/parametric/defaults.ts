@@ -21,7 +21,8 @@ export const PARAMETRIC_DEFAULTS: ParametricParams = {
     finLength: "60", finHeight: "5 + 15*sin(pi*s/L)", twist: "0",
     outerBoundary: { kind: "none" }, backPlate: true, backMargin: 8, centerFeature: "clock-insert", clockInsertDia: 60,
   },
-  material: { id: HINGE.material, T: HINGE.T, K: HINGE.K, sheetW: HINGE.bedW, sheetH: HINGE.bedH, sheetMargin: 5, partGap: 3, grain: "any" },
+  folded: { faces: 150, tabs: true, tabWidth: 6, numbers: true },
+  material: { id: HINGE.material, T: HINGE.T, K: HINGE.K, sheetW: HINGE.bedW, sheetH: HINGE.bedH, sheetMargin: 5, partGap: 3, grain: "any", nest: "box", calibration: false },
   joints: { slotClearance: 0.1, tabDepth: null, tabWidth: 10, tabCount: null, tabPitch: 60, dowelDia: 6, halfLapClearance: 0.1 },
   quality: { chordTolerance: 0.1, smoothing: 0.25, minFeature: null, minIslandArea: 25 },
   labels: { enabled: true, style: "engrave", position: "auto-hidden-face", prefix: "" },
@@ -87,7 +88,7 @@ export function mergeParametricParams(partial?: Partial<ParametricParams> | null
   const base = clone(PARAMETRIC_DEFAULTS);
   if (!partial) return base;
   const out: ParametricParams = { ...base, ...partial } as ParametricParams;
-  for (const k of ["sourceSettings", "parallel", "stacked", "waffle", "radial", "curveNormal", "material", "joints", "quality", "labels"] as const) {
+  for (const k of ["sourceSettings", "parallel", "stacked", "waffle", "radial", "curveNormal", "folded", "material", "joints", "quality", "labels"] as const) {
     (out as unknown as Record<string, unknown>)[k] = { ...(base[k] as object), ...((partial[k] as object) ?? {}) };
   }
   out.layers = { ...base.layers, ...(partial.layers ?? {}) };

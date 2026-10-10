@@ -237,11 +237,11 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     if (!result?.sheets.length) return null;
     const all: LayerContent = { outline: [], slots: [], hinge: [], labels: [], fills: [] };
     result.sheets.forEach((sh, i) => {
-      const c = sheetLayerContent(sh, partsById, layout.rects[i].x, layout.rects[i].y);
+      const c = sheetLayerContent(sh, partsById, layout.rects[i].x, layout.rects[i].y, params.material.K);
       all.outline.push(...c.outline); all.slots.push(...c.slots); all.hinge.push(...c.hinge); all.fills.push(...c.fills);
     });
     return all;
-  }, [result, partsById, layout]);
+  }, [result, partsById, layout, params.material.K]);
   thumbRef.current = () => (content && layout.W > 0 ? thumbnailSVG(content, layout.W, layout.H) : null);
   const sheetRects = useMemo(() => (result?.sheets ?? []).map((sh, i) => ({
     ...layout.rects[i],
@@ -521,7 +521,11 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
       <div className="main">
         <GalleryRail
           title={PRODUCT_INFO.parametric.name} icon={PRODUCT_INFO.parametric.icon}
-          groups={methodGroups({ method: params.method, plan: account.plan, onMethod: (m) => edit((q) => { q.method = m; }, true) })}
+          groups={methodGroups({ method: params.method, plan: account.plan, onMethod: (m) => edit((q) => {
+            q.method = m;
+            // Folding needs card or paper.
+            if (m === "folded" && q.material.T > 1) q.material = { ...q.material, id: "custom", T: 0.3, K: 0.05 };
+          }, true) })}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
         />
         <div className={`stage pe-center${tab === "3d" ? " no-rulers" : ""}`}>

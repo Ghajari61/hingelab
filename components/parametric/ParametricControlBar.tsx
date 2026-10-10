@@ -17,6 +17,7 @@ export function methodGroups({ method, plan, onMethod }: {
     { v: "waffle", text: "Waffle", title: "Two crossing sets of ribs with half-lap joints", onClick: () => onMethod("waffle") },
     { v: "radial", text: "Radial", title: "Fins round a central axis, held by slotted hub rings", onClick: () => onMethod("radial") },
     { v: "curveNormal", text: "Along a curve", title: "Fins square to an oval or circle, built from formulas", onClick: () => onMethod("curveNormal") },
+    { v: "folded", text: "Folded", title: "Papercraft: the model's faces unfolded into nets of card with glue tabs", onClick: () => onMethod("folded") },
   ].map((o) => ({ ...o, locked: parametricLocks(plan, { source: { kind: "library" }, method: o.v }).length > 0 }));
   return [{ label: "Method", name: "Slicing method", art: "method", value: method, options: methods }];
 }

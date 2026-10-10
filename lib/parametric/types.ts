@@ -107,7 +107,19 @@ export interface SourceSettings {
   targetSize: { axis: "width" | "height" | "depth"; value: number } | null;
 }
 
-export type MethodId = "parallel" | "stacked" | "waffle" | "radial" | "curveNormal";
+export type MethodId = "parallel" | "stacked" | "waffle" | "radial" | "curveNormal" | "folded";
+
+/** Folded (papercraft): the model's faces unfolded into flat nets of card or paper. */
+export interface FoldedParams {
+  /** The model is simplified to about this many triangles. */
+  faces: number;
+  /** A glue tab on one side of every cut edge. */
+  tabs: boolean;
+  /** Tab height, mm (shorter on short edges). */
+  tabWidth: number;
+  /** Engrave matching numbers on both sides of every cut edge. */
+  numbers: boolean;
+}
 
 export interface ParallelParams {
   /** Direction the slicing planes are stacked along. */
@@ -204,6 +216,10 @@ export interface MaterialSettings {
   sheetMargin: number;
   partGap: number;
   grain: "any" | "along-x" | "along-y";
+  /** Pack parts by their bounding boxes or by their outlines (true shape). */
+  nest?: "box" | "outline";
+  /** A scored 100 mm scale and a 10 mm test square along the bottom of every sheet. */
+  calibration?: boolean;
 }
 
 export interface JointSettings {
@@ -237,6 +253,7 @@ export interface ParametricParams {
   waffle: WaffleParams;
   radial: RadialParams;
   curveNormal: CurveNormalParams;
+  folded: FoldedParams;
   material: MaterialSettings;
   joints: JointSettings;
   quality: QualitySettings;
@@ -255,7 +272,7 @@ export interface Plane {
   w: Vec3;
 }
 
-export type PartKind = "fin" | "layer" | "rib-x" | "rib-y" | "radial-fin" | "backboard" | "hub" | "spine" | "slat" | "spacer";
+export type PartKind = "fin" | "layer" | "rib-x" | "rib-y" | "radial-fin" | "backboard" | "hub" | "spine" | "slat" | "spacer" | "net";
 
 export interface Part {
   id: string;
@@ -276,6 +293,10 @@ export interface Part {
   tabDepth?: number;
   /** Kerf-compensated cut paths in part-local mm: outline contours (outer + holes) and inner cuts. */
   cut?: { outline: Contour[]; inner: Contour[] };
+  /** Scored lines (open), such as fold lines. */
+  score?: Contour[];
+  /** Folded nets: the model-space triangles the net folds into (9 numbers per face); `placement` is unused. */
+  faces3d?: number[];
 }
 
 export interface SheetItem {
@@ -295,6 +316,8 @@ export interface Sheet {
   usage: number;
   /** A part larger than the sheet, placed alone on an oversized sheet. */
   oversize?: boolean;
+  /** Top-left corner and room (width) of the calibration bar, sheet mm. */
+  calibration?: { x: number; y: number; w: number };
 }
 
 /** A waffle half-lap: ribs `a` and `b` cross on the line x = xa (in a) / x = xb (in b); they overlap over [t0, t1] along it and meet at m. */
