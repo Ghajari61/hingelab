@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Layers, Package, Type } from "lucide-react";
 import type { Params } from "@/lib/hinge";
+import { HINGE_VARIANTS, hingeVariantOf, type HingeVariant } from "@/lib/hinge/presets";
 import { canUsePattern, canUseShape, type Plan } from "@/lib/plans";
 import type { GalleryGroup } from "@/components/shell/GalleryRail";
 
@@ -37,12 +38,13 @@ export const LID_OPTS = (onLid: (v: string) => void): Opt[] => [
 ];
 
 /** Hinge Box gallery: shape, lid and hinge pattern. */
-export function hingeGroups({ params, plan = "pro", onShape, onLid, onPattern }: {
+export function hingeGroups({ params, plan = "pro", onShape, onLid, onPattern, onVariant }: {
   params: Params;
   plan?: Plan;
   onShape: (v: string) => void;
   onLid: (v: string) => void;
   onPattern: (v: string) => void;
+  onVariant?: (v: HingeVariant) => void;
 }): GalleryGroup[] {
   const shape: Opt[] = [
     { v: "rect", text: "Rounded", title: "Rounded rectangle", onClick: () => onShape("rect") },
@@ -60,5 +62,9 @@ export function hingeGroups({ params, plan = "pro", onShape, onLid, onPattern }:
     { label: "Shape", name: "Box shape", art: "shape", value: params.shape, options: shape },
     { label: "Lid", name: "Lid type", art: "lid", value: params.lid, options: LID_OPTS(onLid), cols: 3 },
     { label: "Hinge pattern", name: "Hinge pattern", art: "pattern", value: params.pattern, options: pattern },
+    ...(onVariant ? [{
+      label: "Hinge style", name: "Hinge style", art: "variant", value: hingeVariantOf(params), cols: 3 as const,
+      options: HINGE_VARIANTS.map((v) => ({ v: v.id, text: v.name, title: v.title, onClick: () => onVariant(v) })),
+    }] : []),
   ];
 }

@@ -5,21 +5,24 @@ import { useEffect, useRef } from "react";
 export type ModalState =
   | null
   | { type: "rename"; name: string }
+  | { type: "preset"; name: string }
   | { type: "guide" }
   | { type: "keys" }
   | { type: "code"; name: string; data: string };
 
 export function Dialogs({
-  modal, onClose, onRename, noun = "box",
+  modal, onClose, onRename, onSavePreset, noun = "box",
 }: {
   modal: ModalState;
   onClose: () => void;
   onRename: (name: string) => void;
+  onSavePreset?: (name: string) => void;
   /** What the project is called in the rename title. */
   noun?: string;
 }) {
   if (!modal) return null;
   const title = modal.type === "rename" ? `Rename ${noun}`
+    : modal.type === "preset" ? "Save as my preset"
     : modal.type === "guide" ? "Living hinge guide"
     : modal.type === "keys" ? "Keyboard shortcuts"
     : "Copy your file";
@@ -29,6 +32,7 @@ export function Dialogs({
         <header>{title}<button type="button" aria-label="Close" onClick={onClose}>×</button></header>
         <div className="mb">
           {modal.type === "rename" && <Rename name={modal.name} onRename={onRename} />}
+          {modal.type === "preset" && <><p>Keep these settings to start from later. They appear under My presets on the start page, and in your account when you are signed in.</p><Rename name={modal.name} onRename={(n) => onSavePreset?.(n)} action="Save preset" /></>}
           {modal.type === "code" && <Code name={modal.name} data={modal.data} />}
           {modal.type === "guide" && <Guide />}
           {modal.type === "keys" && <Keys />}
@@ -38,13 +42,13 @@ export function Dialogs({
   );
 }
 
-function Rename({ name, onRename }: { name: string; onRename: (name: string) => void }) {
+function Rename({ name, onRename, action = "Rename" }: { name: string; onRename: (name: string) => void; action?: string }) {
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => { ref.current?.focus(); ref.current?.select(); }, []);
   return (
     <>
       <input ref={ref} className="sel" defaultValue={name} maxLength={60} onKeyDown={(e) => { if (e.key === "Enter") onRename((e.target as HTMLInputElement).value); }} />
-      <div className="rename-row"><button type="button" className="btn-export" onClick={() => onRename(ref.current?.value ?? "")}>Rename</button></div>
+      <div className="rename-row"><button type="button" className="btn-export" onClick={() => onRename(ref.current?.value ?? "")}>{action}</button></div>
     </>
   );
 }

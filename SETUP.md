@@ -21,7 +21,7 @@ Supabase CLI stack and (once you add test keys) Stripe test mode. Variable names
 ## Supabase (hosted)
 
 1. Create a project at https://supabase.com (region close to your users).
-2. Link and push the schema: `npx supabase link --project-ref <ref>` then `npx supabase db push`. This creates the tables, policies and triggers from `supabase/migrations/`, and the private Storage bucket `models` (files behind Parametric cloud projects) with its policies.
+2. Link and push the schema: `npx supabase link --project-ref <ref>` then `npx supabase db push`. This creates the tables, policies and triggers from `supabase/migrations/`, the private Storage bucket `models` (files behind Parametric cloud projects) with its policies, and the `user_presets` table behind "Save as my preset". Run `npx supabase db push` again whenever a new file appears in `supabase/migrations/`.
 3. Storage → Settings: raise the global upload limit to at least **100 MB**, the size of the largest 3D file the Parametric editor accepts (the bucket itself is set to 100 MB, but the project-wide limit caps it; on the Free Supabase plan the cap is 50 MB, so larger models would stay on the device only).
 4. Authentication → URL Configuration: Site URL = your production URL; add `https://<your-domain>/**` and `http://localhost:3000/**` to Redirect URLs.
 5. Authentication → Providers → Email: keep "Confirm email" on.

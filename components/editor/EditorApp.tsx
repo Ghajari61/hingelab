@@ -24,6 +24,8 @@ import { ViewToggle, type ViewMode } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
 import type { Preset } from "@/lib/presets";
+import { hingePresetParams } from "@/lib/hinge/presets";
+import { useMyPresets } from "@/components/shell/useMyPresets";
 import { Canvas } from "./Canvas";
 import { rulerSvg } from "./Rulers";
 import { PanelDock } from "./PanelDock";
@@ -68,6 +70,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   const [toast, setToast] = useState<string | null>(null);
   const [upgrade, setUpgrade] = useState<string | null>(null);
   const account = usePlan();
+  const myPresets = useMyPresets();
   const locks = hingeLocks(account.plan, params);
   const fileRef = useRef<HTMLInputElement>(null);
   const toastT = useRef<number>(0);
@@ -250,7 +253,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   useEffect(() => {
     if (!start || started.current) return;
     started.current = true;
-    const next = mergeParams(start.params as Partial<Params>);
+    const next = hingePresetParams(start.params as Partial<Params>);
     patch(next, true);
     applyFit(next);
     toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
@@ -303,6 +306,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
       { label: "Start page", kbd: "", run: onHome },
       { label: "Open project…", kbd: "Ctrl+O", run: openProject },
       { label: "Save project", kbd: "Ctrl+S", run: saveProject },
+      { label: "Save as my preset…", kbd: "", run: () => setModal({ type: "preset", name: params.name }) },
       "-",
       { label: "Export SVG…", kbd: "Ctrl+E", run: exportNow },
       { label: "Copy SVG code", kbd: "", run: copySVG },
@@ -351,7 +355,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
       <div className="main">
         <GalleryRail
           title={PRODUCT_INFO.hinge.name} icon={PRODUCT_INFO.hinge.icon}
-          groups={hingeGroups({ params, plan: account.plan, onShape: (v) => setChoice("shape", v), onLid: (v) => setChoice("lid", v), onPattern: (v) => setChoice("pattern", v) })}
+          groups={hingeGroups({ params, plan: account.plan, onShape: (v) => setChoice("shape", v), onLid: (v) => setChoice("lid", v), onPattern: (v) => setChoice("pattern", v), onVariant: (v) => { patch({ ...params, ...v.params }, true); toastMsg(`${v.name} hinge style`); } })}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
         />
         <div className="stage">
@@ -441,6 +445,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
           patch({ ...params, name: name.trim() || "Untitled box" }, true);
           setModal(null);
         }}
+        onSavePreset={(name) => { setModal(null); void myPresets.save("hinge-box", name, params).then(toastMsg); }}
       />
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}

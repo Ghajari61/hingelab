@@ -28,6 +28,7 @@ import { ViewToggle } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
 import type { Preset } from "@/lib/presets";
+import { useMyPresets } from "@/components/shell/useMyPresets";
 import { Canvas } from "@/components/editor/Canvas";
 import { rulerSvg } from "@/components/editor/Rulers";
 import { StatusBar } from "@/components/editor/StatusBar";
@@ -92,6 +93,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   /** idle → loading → done | failed: fetching a cloud project's model or photo onto this device. */
   const [cloudFile, setCloudFile] = useState<"idle" | "loading" | "done" | "failed">("idle");
   const account = usePlan();
+  const myPresets = useMyPresets();
   const thumbRef = useRef<() => string | null>(() => null);
   const [modal, setModal] = useState<ModalState>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -457,6 +459,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
       { label: "Start page", kbd: "", run: onHome },
       { label: "Open project…", kbd: "Ctrl+O", run: openProject },
       { label: "Save project", kbd: "Ctrl+S", run: saveProject },
+      { label: "Save as my preset…", kbd: "", run: () => setModal({ type: "preset", name: params.name }) },
       { label: "Import 3D model…", kbd: "", run: () => { const i = document.querySelector<HTMLInputElement>('input[aria-label="Import model"]'); i?.click(); } },
       "-",
       { label: "Export all sheets (ZIP)", kbd: "Ctrl+E", run: exportZipNow },
@@ -612,6 +615,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
           edit((q) => { q.name = name.trim() || PARAMETRIC_DEFAULTS.name; }, true);
           setModal(null);
         }}
+        onSavePreset={(name) => { setModal(null); void myPresets.save("parametric", name, params).then(toastMsg); }}
       />
       {toast && <div className="toast" role="status">{toast}</div>}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}

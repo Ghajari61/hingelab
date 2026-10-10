@@ -1,0 +1,64 @@
+// Run through scripts/build-preset-thumbs.mjs (vite-node, so the "@/" alias and wasm packages resolve).
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import * as hb from "harfbuzzjs";
+import Module from "manifold-3d";
+import { computeModel } from "@/lib/hinge";
+import { HINGE_PRESETS, hingePresetParams } from "@/lib/hinge/presets";
+import { sceneSVG } from "@/components/editor/scene3d";
+import { BUNDLED_FONTS, computeLetterModel, loadFont, mergeLetterParams, shapeText, type LoadedFont } from "@/lib/letters";
+import { LETTER_PRESETS } from "@/lib/letters/presets";
+import { computeParametric, loadSource, mergeParametricParams } from "@/lib/parametric";
+import { packOutline } from "@/lib/parametric/source/text";
+import { PARAMETRIC_PRESETS } from "@/lib/parametric/presets";
+import { lettersThumbSVG, partsThumbSVG } from "@/lib/presetThumbs";
+
+const root = process.cwd();
+const out = (product: string, id: string, svg: string) => {
+  if (!svg) throw new Error(`${product}/${id}: empty thumbnail`);
+  const dir = join(root, "public", "presets", product);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, `${id}.svg`), svg);
+  console.log(`${product}/${id}.svg ${(svg.length / 1024).toFixed(1)} kB`);
+};
+
+const fonts = new Map<string, LoadedFont>();
+function font(id: string): LoadedFont {
+  const hit = fonts.get(id);
+  if (hit) return hit;
+  const meta = BUNDLED_FONTS.find((f) => f.id === id);
+  if (!meta) throw new Error(`unknown font ${id}`);
+  const b = readFileSync(join(root, "public", "fonts", meta.file));
+  const f = loadFont(hb, meta.id, meta.name, b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer);
+  fonts.set(id, f);
+  return f;
+}
+
+for (const preset of HINGE_PRESETS) {
+  const p = hingePresetParams(preset.params);
+  const m = computeModel(p);
+  if ("error" in m) throw new Error(`hinge/${preset.id}: ${m.error}`);
+  out("hinge", preset.id, sceneSVG(m, p, -0.6, p.lid === "removable" ? 0.35 : 0).replace("<svg ", '<svg width="300" height="200" '));
+}
+
+for (const preset of LETTER_PRESETS) {
+  const p = mergeLetterParams(preset.params);
+  const r = computeLetterModel(p, font(p.fontId), hb);
+  if ("error" in r) throw new Error(`letters/${preset.id}: ${r.error}`);
+  const depth = p.mode === "box" ? p.depth : p.mode === "solid" ? 8 : 3;
+  out("letters", preset.id, lettersThumbSVG(r.shapes, { depth, stencil: p.mode === "stencil", margin: p.sheetMargin }));
+}
+
+const wasm = await Module();
+wasm.setup();
+for (const preset of PARAMETRIC_PRESETS) {
+  const p = mergeParametricParams(preset.params);
+  let file: ArrayBuffer | undefined;
+  if (p.source.kind === "text") {
+    const s = p.source;
+    const contours = shapeText(hb, font(s.font), s.text, { direction: "auto", size: s.size, sizeMode: "capHeight", letterSpacing: s.letterSpacing }).glyphs.flatMap((g) => g.contours);
+    file = packOutline(contours);
+  }
+  const r = computeParametric(p, await loadSource(p, file), wasm);
+  out("parametric", preset.id, partsThumbSVG(r.parts.map((pt) => ({ outer: pt.shape.outer, placement: pt.placement }))));
+}

@@ -22,6 +22,7 @@ import { ViewToggle, type ViewMode } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
 import type { Preset } from "@/lib/presets";
+import { useMyPresets } from "@/components/shell/useMyPresets";
 import { Canvas } from "@/components/editor/Canvas";
 import { rulerSvg } from "@/components/editor/Rulers";
 import { StatusBar } from "@/components/editor/StatusBar";
@@ -88,6 +89,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   const [viewMode, setViewMode] = useState<ViewMode>("sheets");
   const [upgrade, setUpgrade] = useState<string | null>(null);
   const account = usePlan();
+  const myPresets = useMyPresets();
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
   const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
@@ -366,6 +368,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
       { label: "Start page", kbd: "", run: onHome },
       { label: "Open project…", kbd: "Ctrl+O", run: openProject },
       { label: "Save project", kbd: "Ctrl+S", run: saveProject },
+      { label: "Save as my preset…", kbd: "", run: () => setModal({ type: "preset", name: params.name }) },
       "-",
       { label: "Export SVG…", kbd: "Ctrl+E", run: exportNow },
       { label: "Copy SVG code", kbd: "", run: copySVG },
@@ -501,6 +504,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
           patch({ name: name.trim() || LETTER_DEFAULTS.name }, true);
           setModal(null);
         }}
+        onSavePreset={(name) => { setModal(null); void myPresets.save("letters", name, params).then(toastMsg); }}
       />
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}

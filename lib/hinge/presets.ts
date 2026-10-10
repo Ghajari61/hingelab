@@ -1,5 +1,26 @@
 import type { Preset } from "@/lib/presets";
+import { clone, DEFAULTS } from "./defaults";
 import type { Params } from "./types";
+
+/** A preset over today's defaults (not `mergeParams`, which reads a missing `cutStyle` as an old project). */
+export const hingePresetParams = (partial: Partial<Params>): Params => ({ ...clone(DEFAULTS), ...clone(partial) });
+
+export type HingeVariant = { id: string; name: string; title: string; params: Partial<Params> };
+
+/** Ready-made lattice settings shown as cards beside the pattern (each works with every pattern). */
+export const HINGE_VARIANTS: HingeVariant[] = [
+  { id: "standard", name: "Standard", title: "Default slit length, bridge and spacing", params: { slit: DEFAULTS.slit, bridge: DEFAULTS.bridge, pitch: DEFAULTS.pitch, cutStyle: "slot" } },
+  { id: "fine", name: "Fine", title: "Shorter slits closer together: a smoother bend, more cutting", params: { slit: 20, bridge: 2.5, pitch: 2, cutStyle: "slot" } },
+  { id: "flexible", name: "Flexible", title: "Long slits and thin bridges for tighter bends", params: { slit: 40, bridge: 2, pitch: 2.5, cutStyle: "slot" } },
+  { id: "stiff", name: "Stiff", title: "Short slits and wide bridges for a firmer wall", params: { slit: 20, bridge: 4.5, pitch: 3.5, cutStyle: "slot" } },
+  { id: "line", name: "Single line", title: "Each slit is one cut line instead of a slot (keeps the other settings)", params: { cutStyle: "line" } },
+];
+
+/** The variant the current settings match, or "" when they are custom. */
+export function hingeVariantOf(p: Params): string {
+  const hit = HINGE_VARIANTS.find((v) => Object.entries(v.params).every(([k, val]) => p[k as keyof Params] === val));
+  return hit?.id ?? "";
+}
 
 export const HINGE_PRESETS: Preset<Params>[] = [
   { id: "gift-box", name: "Gift box", note: "140 × 90 × 70 mm, lift-off lid", params: { name: "Gift box" } },

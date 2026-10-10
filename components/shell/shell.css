@@ -138,3 +138,10 @@ details.sec > summary:hover .sec-rst, .sec-rst:focus-visible { opacity: 1; }
 .pro-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: var(--pro); color: #fff; letter-spacing: .02em; }
 :root[data-theme="dark"] .preset-card, :root[data-theme="darker"] .preset-card { --card-fill: #4A3F2E; --card-fill-2: #3A3124; --card-ink: #E3E3E3; --card-ink-soft: #C9A36A; }
 @media (max-width: 760px) { .start-products { grid-template-columns: minmax(0, 1fr); } }
+.preset-card.mine { position: relative; padding: 0; }
+.preset-card.mine .pick { display: grid; gap: 3px; text-align: start; padding: 8px 8px 10px; background: none; border: 0; color: inherit; cursor: pointer; border-radius: 12px; }
+.preset-card.mine .mine-ico svg { width: 34px; height: 34px; color: var(--fg-dim); }
+.preset-card.mine .del { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--fg-dim); cursor: pointer; opacity: 0; transition: opacity var(--dur-fast); }
+.preset-card.mine:hover .del, .preset-card.mine .del:focus-visible { opacity: 1; }
+.preset-card.mine .del:hover { color: var(--error-ink, #c0392b); }
+@media (hover: none) { .preset-card.mine .del { opacity: 1; } }

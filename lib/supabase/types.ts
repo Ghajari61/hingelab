@@ -29,9 +29,24 @@ export type ProjectRow = {
   updated_at: string | null;
 };
 
+export type UserPresetRow = {
+  id: string;
+  user_id: string;
+  product: ProductId;
+  name: string;
+  params: Json;
+  created_at: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
+      user_presets: {
+        Row: UserPresetRow;
+        Insert: Partial<UserPresetRow> & { product: ProductId; name: string; params: Json };
+        Update: Partial<UserPresetRow>;
+        Relationships: [];
+      };
       profiles: {
         Row: ProfileRow;
         Insert: Partial<ProfileRow> & { id: string };

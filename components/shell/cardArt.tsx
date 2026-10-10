@@ -33,6 +33,7 @@ function box(lift: number, open: boolean) {
 }
 
 const slits = (d: string) => <path d={d} strokeWidth="1.2" />;
+const slots = (d: string) => <path d={d} strokeWidth="2.2" strokeLinecap="round" />;
 
 export const ART: Record<string, ReactNode> = {
   "shape:rect": <Art><rect x="10" y="7" width="44" height="30" rx="9" fill={W} />{slits("M12 13v3M12 28v3M52 13v3M52 28v3")}</Art>,
@@ -47,6 +48,11 @@ export const ART: Record<string, ReactNode> = {
   "pattern:straight": <Art><rect x="6" y="6" width="52" height="32" rx="3" fill={W} />{slits("M14 9v11M14 24v11M22 9v26M30 9v11M30 24v11M38 9v26M46 9v11M46 24v11M54 9v26")}</Art>,
   "pattern:wave": <Art><rect x="6" y="6" width="52" height="32" rx="3" fill={W} />{slits("M15 9c-4 4 4 8 0 13s4 9 0 13M27 9c-4 4 4 8 0 13s4 9 0 13M39 9c-4 4 4 8 0 13s4 9 0 13M51 9c-4 4 4 8 0 13s4 9 0 13")}</Art>,
   "pattern:relief": <Art><rect x="6" y="6" width="52" height="32" rx="3" fill={W} />{slits("M18 12v20M30 6v10M30 28v10M42 12v20")}<circle cx="18" cy="11" r="1.6" /><circle cx="18" cy="33" r="1.6" /><circle cx="30" cy="17" r="1.6" /><circle cx="30" cy="27" r="1.6" /><circle cx="42" cy="11" r="1.6" /><circle cx="42" cy="33" r="1.6" /></Art>,
+  "variant:standard": <Art><rect x="6" y="6" width="52" height="32" rx="3" fill={W} />{slots("M18 9v12M18 25v10M26 9v4M26 17v12M26 33v2M34 9v12M34 25v10M42 9v4M42 17v12M42 33v2")}</Art>,
+  "variant:fine": <Art><rect x="6" y="6" width="52" height="32" rx="3" fill={W} />{slots("M14 9v8M14 21v8M14 33v2M19 9v2M19 15v8M19 27v8M24 9v8M24 21v8M24 33v2M29 9v2M29 15v8M29 27v8M34 9v8M34 21v8M34 33v2M39 9v2M39 15v8M39 27v8M44 9v8M44 21v8M44 33v2M49 9v2M49 15v8M49 27v8")}</Art>,
+  "variant:flexible": <Art><rect x="6" y="6" width="52" height="32" rx="3" fill={W} />{slots("M18 9v17M18 29v6M26 9v3M26 15v17M34 9v17M34 29v6M42 9v3M42 15v17M50 9v17M50 29v6")}</Art>,
+  "variant:stiff": <Art><rect x="6" y="6" width="52" height="32" rx="3" fill={W} />{slots("M20 9v9M20 25v10M36 9v2M36 16v13M52 9v9M52 25v10")}</Art>,
+  "variant:line": <Art><rect x="6" y="6" width="52" height="32" rx="3" fill={W} /><path d="M18 9v12M18 25v10M26 9v4M26 17v12M26 33v2M34 9v12M34 25v10M42 9v4M42 17v12M42 33v2" strokeWidth=".8" /></Art>,
   "pattern:serpentine": <Art><rect x="6" y="6" width="52" height="32" rx="3" fill={W} />{slits("M14 6v24M22 14v24M30 6v24M38 14v24M46 6v24M54 14v24")}</Art>,
 
   "mode:box": <Art><path d="M20 36l10-27h6l10 27h-6l-2.5-7h-9l-2.5 7z" fill={W2} transform="translate(4 -3)" /><path d="M20 36l10-27h6l10 27h-6l-2.5-7h-9l-2.5 7zM28.5 23.5l4.5-12.5 4.5 12.5z" fill={W} /></Art>,

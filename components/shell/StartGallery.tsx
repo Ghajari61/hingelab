@@ -1,19 +1,18 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
-import { ArrowRight } from "lucide-react";
+import { useMemo } from "react";
+import { ArrowRight, Bookmark, Trash2 } from "lucide-react";
+import type { ProductId } from "@/lib/supabase/types";
+import { useMyPresets } from "./useMyPresets";
 import { LogoMark } from "@/components/site/LogoMark";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { PRODUCT_INFO, type Product } from "@/components/editor/ControlBar";
-import { sceneSVG } from "@/components/editor/scene3d";
 import { HINGE_KEY, readStored } from "@/hooks/useAutosave";
-import { computeModel, mergeParams } from "@/lib/hinge";
-import { HINGE_PRESETS } from "@/lib/hinge/presets";
+import { HINGE_PRESETS, hingePresetParams } from "@/lib/hinge/presets";
 import { LETTER_PRESETS } from "@/lib/letters/presets";
 import { PARAMETRIC_PRESETS } from "@/lib/parametric/presets";
 import { hingeLocks, lettersLock, parametricLocks } from "@/lib/plans";
 import type { Preset } from "@/lib/presets";
-import { ART } from "./cardArt";
 
 export const PRODUCT_KEYS: Record<Product, string> = { hinge: HINGE_KEY, letters: "hingelab-letters-v2", parametric: "hingelab-parametric-v1" };
 
@@ -23,24 +22,14 @@ const BLURB: Record<Product, string> = {
   parametric: "Sliced sculptures: fins, layers, waffles and clocks.",
 };
 
+const FROM_ID: Record<ProductId, Product> = { "hinge-box": "hinge", letters: "letters", parametric: "parametric" };
+
 type AnyPreset = Preset<Record<string, unknown>>;
 export type StartChoice = { product: Product; preset?: AnyPreset };
 
-function hingeThumb(p: AnyPreset): string {
-  const params = mergeParams(p.params as Parameters<typeof mergeParams>[0]);
-  const m = computeModel(params);
-  return "error" in m ? "" : sceneSVG(m, params, -0.6, params.lid === "removable" ? 0.35 : 0);
-}
-
-function artFor(product: Product, p: AnyPreset): ReactNode {
-  const q = p.params as Record<string, unknown>;
-  if (product === "letters") return ART[`mode:${(q.mode as string) ?? "box"}`];
-  return ART[`method:${(q.method as string) ?? "parallel"}`];
-}
-
 function isPro(product: Product, p: AnyPreset): boolean {
   const q = p.params as Record<string, unknown>;
-  if (product === "hinge") return hingeLocks("free", mergeParams(q)).length > 0;
+  if (product === "hinge") return hingeLocks("free", hingePresetParams(q)).length > 0;
   if (product === "letters") return lettersLock("free", { mode: (q.mode as string) ?? "solid", text: (q.text as string) ?? "" }) !== null;
   return parametricLocks("free", { source: (q.source as { kind: string }) ?? { kind: "library" }, method: (q.method as string) ?? "parallel" }).length > 0;
 }
@@ -60,7 +49,7 @@ export function StartGallery({ onPick }: { onPick: (choice: StartChoice) => void
     ["letters", LETTER_PRESETS as unknown as AnyPreset[]],
     ["parametric", PARAMETRIC_PRESETS as unknown as AnyPreset[]],
   ];
-  const thumbs = useMemo(() => Object.fromEntries(HINGE_PRESETS.map((p) => [p.id, hingeThumb(p as unknown as AnyPreset)])), []);
+  const mine = useMyPresets();
 
   return (
     <div className="start">
@@ -81,15 +70,33 @@ export function StartGallery({ onPick }: { onPick: (choice: StartChoice) => void
             </button>
           ))}
         </div>
+        {mine.list.length > 0 && (
+          <section className="start-presets" aria-label="My presets">
+            <h2><Bookmark size={16} aria-hidden />My presets</h2>
+            <div className="preset-grid">
+              {mine.list.map((m) => {
+                const product = FROM_ID[m.product];
+                return (
+                  <div key={m.id} className="preset-card mine">
+                    <button type="button" className="pick" data-my-preset={m.name} onClick={() => onPick({ product, preset: { id: m.id, name: m.name, note: "", params: m.params } })}>
+                      <span className="thumb art" aria-hidden><span className="mine-ico">{PRODUCT_INFO[product].icon}</span></span>
+                      <span className="nm">{m.name}</span>
+                      <span className="nt">{PRODUCT_INFO[product].name}{m.cloud ? " · in your account" : " · this device"}</span>
+                    </button>
+                    <button type="button" className="del" aria-label={`Delete preset ${m.name}`} title="Delete preset" onClick={() => void mine.remove(m.id)}><Trash2 size={14} /></button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
         {lists.map(([product, list]) => (
           <section key={product} className="start-presets" aria-label={`${PRODUCT_INFO[product].name} presets`}>
             <h2>{PRODUCT_INFO[product].icon}{PRODUCT_INFO[product].name} presets</h2>
             <div className="preset-grid">
               {list.map((p) => (
                 <button key={p.id} type="button" className="preset-card" data-preset={p.id} onClick={() => onPick({ product, preset: p })}>
-                  {product === "hinge"
-                    ? <span className="thumb" aria-hidden dangerouslySetInnerHTML={{ __html: thumbs[p.id] }} />
-                    : <span className="thumb art" aria-hidden>{artFor(product, p)}</span>}
+                  <span className="thumb" aria-hidden><img src={`/presets/${product}/${p.id}.svg`} alt="" loading="lazy" width={300} height={200} /></span>
                   <span className="nm">{p.name}{isPro(product, p) && <span className="pro-badge">Pro</span>}</span>
                   <span className="nt">{p.note}</span>
                 </button>
