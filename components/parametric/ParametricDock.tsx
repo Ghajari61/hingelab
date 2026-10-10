@@ -16,6 +16,9 @@ import { fmtLen, type Units } from "@/components/editor/format";
 import { PARAM_FIELDS, hasTabs, type ParamField, type ParamSection } from "./fields";
 import type { StoredModel } from "./modelStore";
 import { LockIcon } from "@/components/billing/Lock";
+import { IssueList } from "@/components/shell/IssueList";
+import { applySafeFixes, type Fix } from "@/lib/issues";
+import { SERIOUS, parametricIssues } from "@/lib/issues/parametric";
 import { FREE_PARAMETRIC_PARTS, parametricLocks, type Plan } from "@/lib/plans";
 
 type Edit = (f: (q: ParametricParams) => void, record: boolean) => void;
@@ -38,30 +41,6 @@ function Choice<T extends string>({ label, value, options, onPick }: {
     </>
   );
 }
-
-const WARNING_TITLES: Partial<Record<WarningCode, string>> = {
-  PART_TOO_BIG: "Larger than the sheet",
-  TOO_MANY_SHEETS: "Too many sheets",
-  TOO_MANY_PARTS: "Too many parts",
-  NON_MANIFOLD: "Open mesh",
-  NON_MANIFOLD_SECTION: "Open sections",
-  MIN_FEATURE_REMOVED: "Thin detail removed",
-  ISLAND_DROPPED: "Tiny pieces left out",
-  SHORT_FIN_DROPPED: "Short fins left out",
-  BRIDGE_ADDED: "Bridges added",
-  FLOATING_PIECE: "Floating pieces",
-  NO_TAB: "Pieces without a tab",
-  LABEL_SKIPPED: "Labels skipped",
-  SIMPLIFIED: "Model simplified",
-  METHOD_NOT_READY: "Method not ready",
-  DOWEL_CHAIN_SPLIT: "Dowels split into groups",
-  NO_DOWEL: "Layers without dowels",
-  CROSSING_TOO_SHORT: "Crossings too short",
-  NO_JOINT: "Ribs without a joint",
-  FINS_COLLIDE_AT_HUB: "Fins crowd the hub",
-  FINS_COLLIDE: "Fins touch",
-};
-const SERIOUS: WarningCode[] = ["PART_TOO_BIG", "TOO_MANY_SHEETS", "TOO_MANY_PARTS", "NON_MANIFOLD", "FLOATING_PIECE", "METHOD_NOT_READY", "FINS_COLLIDE_AT_HUB", "FINS_COLLIDE"];
 
 const KIND_NAMES: Partial<Record<Part["kind"], string>> = {
   backboard: "Backboard", slat: "Slat", fin: "Fin", layer: "Layer", "rib-x": "Rib (A)", "rib-y": "Rib (B)", "radial-fin": "Radial fin", hub: "Hub ring",
@@ -189,14 +168,9 @@ export function ParametricDock({
     onSelect([parts[i].id]);
   };
 
-  const groups = new Map<WarningCode, { messages: string[]; ids: string[] }>();
-  for (const w of result?.warnings ?? []) {
-    const g = groups.get(w.code) ?? { messages: [], ids: [] };
-    g.messages.push(w.message);
-    g.ids.push(...(w.partIds ?? []));
-    groups.set(w.code, g);
-  }
-  const serious = [...groups.keys()].some((c) => SERIOUS.includes(c));
+  const issues = parametricIssues(params, result);
+  const serious = issues.some((i) => SERIOUS.includes(i.code as WarningCode));
+  const applyFix = (fix: Fix<ParametricParams>) => onEdit((q) => { Object.assign(q, fix.apply(params)); }, true);
   const layerVis = (key: LayerKey) => onEdit((q) => { q.layers[key].vis = !q.layers[key].vis; }, true);
   const layerExp = (key: LayerKey, exp: boolean) => onEdit((q) => { q.layers[key].exp = exp; }, true);
   const sourceMeta = kind === "library" ? LIBRARY.find((l) => l.id === src.id)?.name : kind === "mesh" || kind === "image" ? src.fileName : kind === "text" ? `“${src.text}”` : formula?.type === "revolution" ? "Turned formula" : formula?.type === "radial-profile" ? "Radial profile formula" : "Surface formula";
@@ -585,22 +559,12 @@ export function ParametricDock({
               )}
             </dl>
             {result.stats.fidelity !== undefined && result.deviation && <p className="note">Fidelity compares the model with the parts at {result.deviation.values.length} surface points; turn on Deviation in the 3D view to see where they differ.</p>}
-            {groups.size > 0 && (
-              <>
-                <p className="issues-title">To check</p>
-                <ul className="pe-warnings">
-                  {[...groups].map(([code, g]) => (
-                    <li key={code} className={SERIOUS.includes(code) ? "warn" : undefined}>
-                      <div>
-                        <strong>{WARNING_TITLES[code] ?? code}</strong>
-                        {g.ids.length > 0 && <button type="button" onClick={() => onSelect([...new Set(g.ids)])}>Show</button>}
-                      </div>
-                      <span>{g.messages.join(" ")}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
+            <IssueList
+              issues={issues}
+              onFix={applyFix}
+              onAutoFix={() => onEdit((q) => { Object.assign(q, applySafeFixes(params, issues)); }, true)}
+              onShow={onSelect}
+            />
           </>
         )}
       </Sec>

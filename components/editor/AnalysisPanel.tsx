@@ -26,9 +26,6 @@ export function AnalysisPanel({ model, error, units }: { model: Model | null; er
         <dt>Torsion bar length × width</dt><dd>{fmtLen(a.barLen, units, true)} × {fmtLen(a.barW, units, true)}</dd>
         <dt>Hinge columns</dt><dd>{a.columns}</dd>
       </dl>
-      {model.issues.length > 0 && (
-        <ul className="issues">{model.issues.map((issue) => <li key={issue.msg}>{issue.msg}</li>)}</ul>
-      )}
       <p className="note">The minimum radius is an engineering estimate from torsion-bar strain. Always cut a test piece in your own material.</p>
     </>
   );

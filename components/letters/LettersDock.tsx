@@ -35,8 +35,10 @@ function Choice<T extends string>({ label, value, options, onPick }: {
 }
 
 export function LettersDock({
-  params, model, error, units, uploads, showZones, onShowZones, onAutoFit, onResetSection, onPatch, onField, onMaterial, onPick, onUpload, onDeleteFont, sheet,
+  params, model, error, units, uploads, showZones, onShowZones, onAutoFit, onResetSection, onPatch, onField, onMaterial, onPick, onUpload, onDeleteFont, sheet, checks,
 }: {
+  /** The checks list with its fixes (under Analysis). */
+  checks?: React.ReactNode;
   params: LetterParams;
   model: LetterModel | null;
   error: string | null;
@@ -196,6 +198,7 @@ export function LettersDock({
       )}
       <Sec title="Analysis" startOpen>
         <LettersAnalysis model={model} error={error} units={units} showZones={showZones} onShowZones={onShowZones} />
+        {checks}
       </Sec>
       {box && (
         <Sec title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["tabW", "slotClr", "lidGap"])}>

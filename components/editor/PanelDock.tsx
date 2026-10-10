@@ -65,8 +65,10 @@ export function Sec({ title, meta, startOpen, onReset, children }: {
 export function PanelDock({
   params, model, error, units, dimsMeta, patMeta,
   onLive, onCommit, onMaterial, onSplit, onCutStyle, onAutoFit, onTestStrip,
-  onVis, onExp, onLabels, onResetSection, sheet,
+  onVis, onExp, onLabels, onResetSection, sheet, checks,
 }: {
+  /** The checks list with its fixes (under Bend Analysis). */
+  checks?: React.ReactNode;
   params: Params;
   model: Model | null;
   error: string | null;
@@ -130,6 +132,7 @@ export function PanelDock({
       </Sec>
       <Sec title="Bend Analysis" startOpen>
         <AnalysisPanel model={model} error={error} units={units} />
+        {checks}
       </Sec>
       <Sec title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["tabW", "slotClr", "lidGap", "split"])}>
         <div className="grid2">{fields("secJoints")}</div>

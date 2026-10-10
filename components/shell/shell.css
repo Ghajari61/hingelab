@@ -182,3 +182,21 @@ details.sec > summary:hover .sec-rst, .sec-rst:focus-visible { opacity: 1; }
 .shape-grid svg path { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
 .shape-adv summary { cursor: pointer; font-size: 12px; color: var(--fg-dim); padding: 2px 0; }
 .shape-adv[open] { display: grid; gap: 6px; }
+
+/* U7: checks with fixes */
+.checks { display: grid; gap: 4px; }
+.checks-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.checks-head .issues-title { margin-bottom: 0; }
+.btn-autofix { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; padding: 3px 10px; border-radius: 8px; border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--panel)); color: var(--fg); font: 600 12px/1.4 var(--font-ui); cursor: pointer; }
+.btn-autofix:hover { background: color-mix(in srgb, var(--accent) 22%, var(--panel)); }
+.issue-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 12px; color: var(--fg-dim); }
+.issue { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 7px; align-items: start; padding: 6px 8px; border-radius: 8px; background: var(--field); border-inline-start: 3px solid var(--line); }
+.issue-icon { margin-top: 1px; }
+.issue.error { border-inline-start-color: var(--err); } .issue.error .issue-icon { color: var(--err); }
+.issue.warn { border-inline-start-color: var(--warn); } .issue.warn .issue-icon { color: var(--warn); }
+.issue.info .issue-icon { color: var(--fg-faint); }
+.issue > div { display: grid; gap: 5px; min-width: 0; }
+.issue-fixes { display: flex; flex-wrap: wrap; gap: 4px; }
+.issue-fixes button { padding: 2px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font: 500 11.5px/1.5 var(--font-ui); cursor: pointer; }
+.issue-fixes button:hover { border-color: var(--accent); }
+.issue-fixes button.safe { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }

@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   autoFit, clone, DEFAULTS, exportSVG, layerContent, MATERIALS, mergeParams,
   type CutStyle, type Params,
 } from "@/lib/hinge";
 import { arrangeHinge } from "@/lib/fit/products";
+import { autoFixAll, type Fix } from "@/lib/issues";
+import { hingeIssues } from "@/lib/issues/hinge";
+import { IssueList } from "@/components/shell/IssueList";
 import { cleanFit } from "@/lib/fit/fitToSheets";
 import { fitSummary } from "@/components/shell/SheetSection";
 import { useHistory } from "@/hooks/useHistory";
@@ -95,6 +98,8 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   const lay = model ? arranged.lay : null;
   const content = useMemo(() => (model && lay ? layerContent(model, lay, built) : null), [model, lay, built]);
   const fitSet = cleanFit(params.fit);
+  const checked = useDeferredValue(params);
+  const issues = useMemo(() => hingeIssues(checked), [checked]);
 
   useAutosave(params, units, onStatus, undefined, !cloud);
   useCloudAutosave(cloud, params, () => (content && lay ? thumbnailSVG(content, lay.width, lay.height) : null), onStatus);
@@ -232,6 +237,21 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
 
   function resetPattern() {
     patch({ ...params, pattern: DEFAULTS.pattern, slit: DEFAULTS.slit, bridge: DEFAULTS.bridge, pitch: DEFAULTS.pitch, overrun: DEFAULTS.overrun, stretch: DEFAULTS.stretch, cutStyle: DEFAULTS.cutStyle, slotW: DEFAULTS.slotW }, true);
+  }
+
+  function applyIssueFix(fix: Fix<Params>) {
+    const next = fix.apply(params);
+    patch(next, true);
+    applyFit(next);
+    toastMsg(`${fix.label}. Ctrl+Z undoes it.`);
+  }
+
+  function autoFixEverything() {
+    const res = autoFixAll(params, hingeIssues);
+    if (!res.applied.length) { toastMsg("Nothing to fix automatically"); return; }
+    patch(res.params, true);
+    applyFit(res.params);
+    toastMsg(`Auto-fix: ${res.applied.join(", ")}. Ctrl+Z undoes it.`);
   }
 
   function runAutoFit() {
@@ -451,6 +471,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
           onLabels={(on) => patch({ ...params, labels: on }, true)}
           onResetSection={resetSection}
           sheet={sheetProps}
+          checks={<IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} />}
         />
         </DockColumn>
       </div>

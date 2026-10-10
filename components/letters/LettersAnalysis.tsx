@@ -52,7 +52,6 @@ export function LettersAnalysis({ model, error, units, showZones, onShowZones }:
     return error ? <div className="verdict err"><span className="dot" /><span>{error}</span></div> : <p className="note">Loading…</p>;
   }
   const warns = model.issues.filter((i) => i.lvl === "warn");
-  const notes = model.issues.filter((i) => i.lvl === "info");
   const holes = model.parts.reduce((n, p) => n + (p.kind === "solid" ? p.holes.length : 0), 0);
   const w = model.bbox.x1 - model.bbox.x0, h = model.bbox.y1 - model.bbox.y0;
   const n = model.parts.length;
@@ -103,18 +102,6 @@ export function LettersAnalysis({ model, error, units, showZones, onShowZones }:
               )}
             </ul>
           )}
-        </>
-      )}
-      {warns.length > 0 && (
-        <>
-          <p className="issues-title">To check</p>
-          <ul className="issues warn">{warns.map((i, k) => <li key={k}>{i.msg}</li>)}</ul>
-        </>
-      )}
-      {notes.length > 0 && (
-        <>
-          <p className="issues-title">Notes</p>
-          <ul className="issues">{notes.map((i, k) => <li key={k}>{i.msg}</li>)}</ul>
         </>
       )}
     </>

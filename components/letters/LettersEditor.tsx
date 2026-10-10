@@ -35,6 +35,9 @@ import { LettersDock } from "./LettersDock";
 import { MARQUEE_KEYS, isMarqueeKey, type LetterNumKey } from "./fields";
 import { deleteStoredFont, getStoredFont, listStoredFonts, putStoredFont, type StoredFontMeta } from "./fontStore";
 import { forgetFont, getLoadedFont, isUploadId, loadHarfBuzz, UPLOAD_PREFIX } from "./runtime";
+import { autoFixAll, type Fix } from "@/lib/issues";
+import { lettersIssues } from "@/lib/issues/letters";
+import { IssueList } from "@/components/shell/IssueList";
 import { lettersLock } from "@/lib/plans";
 import { MAX_UPLOAD_FONT_BYTES } from "@/lib/billing/exportLetters";
 import { usePlan } from "@/components/billing/usePlan";
@@ -149,12 +152,27 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
     [showZones, model, lay],
   );
   const hingeWalls = deferred.mode === "box" && deferred.wallStyle === "hinge";
+  const fontsOf = useCallback((id: string) => (font && font.id === id ? font : null), [font]);
+  const issues = useMemo(() => (ready && arranged ? lettersIssues(deferred, fontsOf, hb!, arranged) : []), [ready, arranged, deferred, fontsOf, hb]);
 
   const viewApi = useCanvasView();
   viewApi.fitArgs.current = { bedW: params.bedW, bedH: params.bedH, layW: lay?.width ?? 0, layH: lay?.height ?? 0 };
 
   function patch(partial: Partial<LetterParams>, record: boolean) {
     replace({ ...params, ...partial }, record);
+  }
+
+  function applyIssueFix(fix: Fix<LetterParams>) {
+    replace(fix.apply(params), true);
+    toastMsg(`${fix.label}. Ctrl+Z undoes it.`);
+  }
+
+  function autoFixEverything() {
+    if (!hb) return;
+    const res = autoFixAll(params, (q) => lettersIssues(q, fontsOf, hb));
+    if (!res.applied.length) { toastMsg("Nothing to fix automatically"); return; }
+    replace(res.params, true);
+    toastMsg(`Auto-fix: ${res.applied.join(", ")}. Ctrl+Z undoes it.`);
   }
 
   function setField(id: LetterNumKey, v: number, mat: boolean, record: boolean) {
@@ -503,6 +521,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
           onDeleteFont={removeFont}
           onResetSection={resetSection}
           sheet={sheetProps}
+          checks={<IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} />}
         />
         </DockColumn>
       </div>
