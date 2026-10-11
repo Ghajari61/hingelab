@@ -554,3 +554,38 @@ X-DNS-Prefetch-Control: off
 PRODUCTION SECURITY STATUS: READY AFTER MANUAL CONFIGURATION
 
 Reason: every CRITICAL and HIGH vulnerability found was fixed in code, covered by tests, verified on a production build with real attack requests and a CSP check, and deployed. The database changes are applied to the hosted project. No unresolved CRITICAL issue remains. What remains is external configuration only the owner can do: Supabase Auth hardening (leaked-password protection, secure password change, redirect allow-list, SMTP), 2FA on provider accounts, and the full Stripe production setup before payments are taken. There is also one accepted MEDIUM risk (Pro geometry computed in the browser for the live preview). The status is not READY because those dashboard settings cannot be verified or changed from the repository. It is not based on the build passing.
+
+
+## 33. Windows Desktop App (D96, 11 October 2026)
+
+Scope: `desktop/` (Tauri 2 app), `/api/desktop/*`, `/desktop/authorize`, `private.desktop_*` and the update system. Design: `DESKTOP_ARCHITECTURE.md`, `DESKTOP_UPDATE_SYSTEM.md`.
+
+**Threat model.** The installed EXE, its WebView and everything on the user's PC are untrusted: they can be read, patched, scripted or replayed. The website and database stay the only authority for identity, plan, generation and updates.
+
+| Area | Control | Verified by |
+|---|---|---|
+| Secrets in the app | None shipped: no Supabase keys, Stripe keys, database URL, OAuth secret or updater private key; only the public site URL and the updater public key. | `scripts/desktop/scan.mjs` on `desktop/dist`, `HingeLab.exe` and the installer (clean; positive control flags planted keys); staged-file scan before commit |
+| Geometry / IP | Generators run only on the server; the catalog is data; the UI bundle contains no generator code or server-only text. | scan (server-code strings), `desktop.test.ts` (parity with the website export) |
+| Entitlements | Plan decided per request on the server (paid period + 3 days' grace); Pro designs on Free return 403 with no SVG; Free output carries the mark. | integration test, E2E "Pro shape locked", "expired period falls back to Free" |
+| Sign-in | System browser, PKCE S256, state, loopback port 1024-65535 built by the server, consent page, one-time hashed codes (120 s). The password never passes through the app. | PKCE RFC vector, loopback tests, Next URL normalization test, E2E sign-in |
+| Tokens | Opaque 256-bit tokens, SHA-256 hashed in the database, Windows Credential Manager on the PC, never in the WebView; 15 min access, 30 day rotating refresh, reuse revokes the session; sign-out and revoke-all on the server. | integration tests, E2E "tokens never reach the web page", "revoked session signs the app out", "sign out" |
+| Database | Tables in `private` (not exposed by PostgREST); security-definer functions with `search_path = ''`, executable by `service_role` only. | integration test "keeps the desktop tables away from API roles", `supabase db lint --linked` (no errors) |
+| Abuse | 120 generates/min per user, 30 token requests per 10 min per IP (shared Postgres limiter), 256 KB bodies, 64 MB answer cap in the app. | E2E 429, request-size check |
+| WebView | Strict CSP (no remote content; injected inline script blocked), navigation locked to the app, no fs/shell/http/opener permissions, SVG shown as `<img src=blob:>`, context menu and drops off, single instance. | E2E "navigation blocked", "commands outside the capability are denied"; release smoke test (remote fetch and inline script blocked) |
+| Files | Save/Export write only the last server SVG by id, with a sanitised Windows file name; reveal only files saved this session. | Rust tests, E2E unknown-id and arbitrary-path checks |
+| Transport | HTTPS only in release builds (http only to 127.0.0.1 in debug/e2e builds); redirects not followed; TLS verification never disabled. | `config.rs` tests |
+| Updates | Official Tauri updater; minisign signature with the public key in the app; `requireSignedVersion`; HTTPS endpoint; no downgrades; Git-reviewed manifest with a host allowlist; passive install only after the user's click; forced updates via 426 without loops. | `desktop.test.ts`, `minisign.test.ts`, `update-e2e.mjs` 10/10 with real installers |
+| Version gate | Apps below the minimum get 426; minimum raised by `DESKTOP_MIN_VERSION`. | integration test, E2E 426, live check |
+
+**Finding fixed during the audit (high).** Next.js rewrites the first `127.x.x.x` anywhere in a request URL to `localhost` (`next/dist/server/web/next-url.js`), including query values. On the live site this changed the app's `redirect_uri` while sending a signed-out user through `/login`, so desktop sign-in would have failed after login (and the Google path through `/auth/callback` would have done the same). Fixed by sending only the loopback port and building the URI on the server (commit `717674c`); regression test runs Next's URL class on the link; live redirect checked.
+
+**Live checks (production, after deploy).** `/api/desktop/update/windows/x86_64/1.0.0` 204; `/api/desktop/me` 400 without the client header, 401 without a session, 426 for `desktop/0.9.0`; `/api/desktop/token` with an unknown code `invalid_grant` (the new database functions answer); `/desktop/authorize` keeps `port` through the login redirect. The release installer (1.0.0) installed per user, started, reached the live API (401 signed out), found no update over HTTPS, and uninstalled cleanly.
+
+**Not verified / remaining risks.**
+- A full sign-in against the **live** site with a real account was not automated (no production test account was created); it is verified end to end against a local production build. Owner check: install, Sign in with your browser, Allow, build a design, export, sign out.
+- Installers are **not Authenticode-signed** (no certificate yet): SmartScreen warns, and users can't tell a genuine first installer from a look-alike except by the website link and published SHA-256. Updates are still protected by the updater signature.
+- The updater private key exists on one PC only (`%USERPROFILE%\.hingelab\updater`). Back it up; losing it means no automatic updates for installed apps.
+- Local caches (recent designs, last settings) are per Windows user, not per HingeLab account.
+- A determined user can still save anything the server sends to their own plan (by design: the server never sends Pro output to Free accounts).
+
+**Credentials.** No credential was created, printed or exposed beyond the new updater key pair (private part outside the repository, folder limited to the owner). Nothing needs rotation.
