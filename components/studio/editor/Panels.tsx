@@ -2,8 +2,8 @@
 
 import { useState, type ReactElement } from "react";
 import {
-  AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignHorizontalDistributeCenter, AlignStartHorizontal,
-  AlignStartVertical, AlignVerticalDistributeCenter, ChevronDown, ChevronRight, Eye, EyeOff, FlipHorizontal2, FlipVertical2, Link2, Lock, LockOpen,
+  AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignHorizontalDistributeCenter, AlignHorizontalSpaceAround, AlignStartHorizontal,
+  AlignStartVertical, AlignVerticalDistributeCenter, AlignVerticalSpaceAround, ChevronDown, ChevronRight, Eye, EyeOff, FlipHorizontal2, FlipVertical2, Link2, Lock, LockOpen,
   RotateCcw, RotateCw, Unlink2,
 } from "lucide-react";
 import { MACHINE_PROFILES, MATERIAL_PRESETS } from "@/lib/studio/library";
@@ -354,9 +354,17 @@ export function CutLayersPanel({ toast }: { toast: Toast }) {
 // ---------- Align ----------
 
 export function AlignPanel({ handlers }: { handlers: Record<string, Handler> }) {
+  const api = useEditorApi();
+  const alignTo = useEditor((s) => s.alignTo);
+  const gap = useEditor((s) => s.alignGap);
+  const units = useEditor((s) => s.doc.units);
   const btn = (id: string, label: string, icon: ReactElement) => {
     const h = handlers[id];
     return <IconButton key={id} label={label} description={h?.enabled === false ? h.reason : undefined} icon={icon} disabled={!h || h.enabled === false} onClick={h?.run} testId={`align-${id}`} />;
+  };
+  const action = (id: string) => {
+    const h = handlers[id];
+    return <button key={id} type="button" className="ui-btn small" disabled={!h || h.enabled === false} title={h?.enabled === false ? h.reason : COMMAND_BY_ID.get(id)?.description} onClick={h?.run}>{COMMAND_BY_ID.get(id)?.label.replace("…", "") ?? id}</button>;
   };
   return (
     <>
@@ -369,13 +377,24 @@ export function AlignPanel({ handlers }: { handlers: Record<string, Handler> }) 
           {btn("object.align.vcenter", "Align Vertical Centres", <AlignCenterHorizontal size={16} />)}
           {btn("object.align.bottom", "Align Bottom", <AlignEndHorizontal size={16} />)}
         </div>
-        <p className="pn-empty">One object aligns to the sheet; several align to their combined bounds.</p>
+        <SegmentedControl label="Align to" value={alignTo} onChange={(v) => api.getState().set({ alignTo: v })} full
+          options={[{ value: "selection", label: "Selection", title: "The bounds of everything selected" }, { value: "key", label: "Key Object", title: "The last object you clicked stays put" }, { value: "artboard", label: "Artboard", title: "The sheet" }]} />
+        <p className="pn-empty">{alignTo === "key" ? "The last object you clicked stays put; the others line up with it." : alignTo === "artboard" ? "Objects line up with the sheet edges and centre." : "One object aligns to the sheet; several align to their combined bounds."}</p>
       </PanelSection>
       <PanelSection title="Distribute">
         <div className="pn-btns">
-          {btn("object.distribute.x", "Distribute Horizontally", <AlignHorizontalDistributeCenter size={16} />)}
-          {btn("object.distribute.y", "Distribute Vertically", <AlignVerticalDistributeCenter size={16} />)}
+          {btn("object.distribute.x", "Distribute Horizontal Centres", <AlignHorizontalDistributeCenter size={16} />)}
+          {btn("object.distribute.y", "Distribute Vertical Centres", <AlignVerticalDistributeCenter size={16} />)}
+          {btn("object.distribute.spaceX", "Distribute Spacing Horizontally", <AlignHorizontalSpaceAround size={16} />)}
+          {btn("object.distribute.spaceY", "Distribute Spacing Vertically", <AlignVerticalSpaceAround size={16} />)}
         </div>
+        <div className="pn-gap">
+          <label className="pn-check"><input type="checkbox" checked={gap !== null} onChange={(e) => api.getState().set({ alignGap: e.target.checked ? 3 : null })} data-testid="align-gap-on" /> Exact gap</label>
+          {gap !== null && <NumberInput label="Gap" value={gap} length units={units} min={0} max={1000} defaultValue={3} onChange={(v) => api.getState().set({ alignGap: v })} testId="align-gap" />}
+        </div>
+      </PanelSection>
+      <PanelSection title="Repeat">
+        <div className="pn-actions">{["object.stepRepeat", "object.array.grid", "object.array.circular", "object.array.path", "object.transformEach"].map(action)}</div>
       </PanelSection>
     </>
   );

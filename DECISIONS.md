@@ -693,3 +693,12 @@ The neon-look sign is cut as one solid piece grown around the letters (holes fil
 - The Eraser and Knife work on the selection when there is one and on every visible, unlocked object otherwise (Illustrator's behaviour). The Shape Builder needs a selection, because the regions come from the selected shapes.
 - Magic Wand and Eyedropper use the cut layer, not colour: in HingeLab the layer is what decides how a line is cut.
 - Scissors keep the clicked path's id for the first piece so layer names and history stay readable; the second piece is a new path just above it.
+
+## D114. Arrays as plain copies
+
+- Step and Repeat, Grid, Circular and Path arrays create ordinary copies, not a live array object: a laser job needs independent parts that can be nested, welded or deleted one by one, and plain copies keep the document model, export and pre-flight unchanged. Live repetition belongs to the Live Effects stack (Rotate Copies, Mirror) planned in the parity work.
+- Grid gaps are measured edge to edge between bounding boxes, not centre to centre, because the gap is the material left between cut parts.
+- The Circular Array centre is a fixed distance below the selection so the first copy stays where the user put it.
+- Repeat Along Path spaces copies by arc length, so copies stay evenly spaced on curves with uneven node spacing.
+- Transform Each's random mode uses a seed stored in the dialog, so the preview and the applied result are identical and Shuffle is repeatable.
+- Align to Key Object uses the last-selected object (Illustrator's key object); Distribute Spacing with an exact gap keeps the first object fixed and lays the rest out from it.

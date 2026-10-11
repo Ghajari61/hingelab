@@ -5,6 +5,7 @@ import { newId } from "@/lib/studio/doc";
 import { boxCenter, emptyBox, isEmptyBox, rotateAt, scaleAt, translate, unionBox } from "@/lib/studio/geom";
 import { clipToSvg, copyNodes, loadClip, storeClip } from "@/lib/studio/clipboard";
 import { addAnchorNodes, breakApartNodes, closeNodes, joinNodes, makeClip, makeCompound, releaseClip, resetBoxNodes, reverseNodes } from "@/lib/studio/pathOps";
+import { distributeSpacing } from "@/lib/studio/arrays";
 import { BOOLEAN_LABELS, booleanOp, cleanupForLaser, editPaths, smoothSubpath, type BooleanOp } from "@/lib/studio/pathfinder";
 import {
   alignNodes, arrangeNodes, distributeNodes, duplicateNodes, expandNodes, findNode, groupNodes, isEditable, pasteNodes, removeNodes, selectionBox,
@@ -20,7 +21,8 @@ import type { EditorState } from "./store";
 
 export interface Handler { run: () => void; enabled?: boolean; reason?: string; checked?: boolean }
 
-export type EditorDialog = "documentSetup" | "move" | "shortcuts" | "preferences" | "palette" | "resetPrefs" | "offset" | "simplify" | "corners";
+export type EditorDialog = "documentSetup" | "move" | "shortcuts" | "preferences" | "palette" | "resetPrefs" | "offset" | "simplify" | "corners"
+  | "stepRepeat" | "transformEach" | "gridArray" | "circularArray" | "pathArray";
 
 export interface CommandContext {
   api: StoreApi<EditorState>;
@@ -184,14 +186,26 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   for (const a of ["front", "forward", "backward", "back"] as const) set(`object.${a}`, editSel("Arrange", (d, ids) => arrangeNodes(d, ids, a)), one, NEED_ONE);
   for (const m of ["left", "hcenter", "right", "top", "vcenter", "bottom"] as AlignMode[]) {
     set(`object.align.${m}`, () => {
-      const ids = selected(st());
-      const sheet = st().doc.sheets[0];
-      const to = ids.length === 1 && sheet ? { minX: sheet.x, minY: sheet.y, maxX: sheet.x + sheet.w, maxY: sheet.y + sheet.h } : undefined;
+      const s1 = st();
+      const ids = selected(s1);
+      const sheet = s1.doc.sheets[0];
+      const sheetBox = sheet ? { minX: sheet.x, minY: sheet.y, maxX: sheet.x + sheet.w, maxY: sheet.y + sheet.h } : undefined;
+      const key = s1.selection.filter((id) => ids.includes(id)).at(-1);
+      const to = s1.alignTo === "artboard" || ids.length === 1 ? sheetBox
+        : s1.alignTo === "key" && key ? selectionBox(s1.doc, [key]) : undefined;
       st().edit("Align", (d) => alignNodes(d, ids, m, to));
     }, one, NEED_ONE);
   }
   set("object.distribute.x", editSel("Distribute", (d, ids) => distributeNodes(d, ids, "x")), three, NEED_THREE);
   set("object.distribute.y", editSel("Distribute", (d, ids) => distributeNodes(d, ids, "y")), three, NEED_THREE);
+  const spacingOk = s.alignGap === null ? three : two;
+  set("object.distribute.spaceX", editSel("Distribute Spacing", (d, ids) => distributeSpacing(d, ids, "x", st().alignGap)), spacingOk, s.alignGap === null ? NEED_THREE : NEED_TWO);
+  set("object.distribute.spaceY", editSel("Distribute Spacing", (d, ids) => distributeSpacing(d, ids, "y", st().alignGap)), spacingOk, s.alignGap === null ? NEED_THREE : NEED_TWO);
+  set("object.stepRepeat", () => ctx.dialog("stepRepeat"), one, NEED_ONE);
+  set("object.transformEach", () => ctx.dialog("transformEach"), one, NEED_ONE);
+  set("object.array.grid", () => ctx.dialog("gridArray"), one, NEED_ONE);
+  set("object.array.circular", () => ctx.dialog("circularArray"), one, NEED_ONE);
+  set("object.array.path", () => ctx.dialog("pathArray"), two, "Select the objects and, on top, a path to follow");
   set("object.group", () => { const ids = selected(st()); let g: string | null = null; st().edit("Group", (d) => { g = groupNodes(d, ids); }); if (g) st().select([g]); }, two, NEED_TWO);
   set("object.ungroup", () => { let out: string[] = []; st().edit("Ungroup", (d) => { out = ungroupNodes(d, groups); }); st().select(out); }, groups.length > 0, "Select a group");
   set("object.lock", () => {

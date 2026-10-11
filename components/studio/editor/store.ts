@@ -42,6 +42,10 @@ export interface EditorState {
   eraserSize: number;
   /** The Measure tool's last measurement (document space). */
   measure: { a: Vec; b: Vec } | null;
+  /** What Align lines objects up with; the key object is the last one clicked. */
+  alignTo: "selection" | "key" | "artboard";
+  /** Distribute Spacing gap in mm, or null for equal gaps between the outer objects. */
+  alignGap: number | null;
 
   edit: <T = void>(label: string, recipe: (d: Document) => T, o?: { mergeKey?: string; select?: string[] }) => T;
   begin: () => void;
@@ -60,7 +64,7 @@ export interface EditorState {
   setTool: (t: ToolId) => void;
   setView: (v: Partial<ViewState> | ((v: ViewState) => ViewState)) => void;
   setUi: (u: Partial<UiState>) => void;
-  set: (p: Partial<Pick<EditorState, "shapeDefaults" | "textDefaults" | "lastTransform" | "textEditing" | "currentLayer" | "refPoint" | "lockRatio" | "eraserSize" | "measure">>) => void;
+  set: (p: Partial<Pick<EditorState, "shapeDefaults" | "textDefaults" | "lastTransform" | "textEditing" | "currentLayer" | "refPoint" | "lockRatio" | "eraserSize" | "measure" | "alignTo" | "alignGap">>) => void;
 }
 
 const keepExisting = (doc: Document, ids: string[]) => {
@@ -91,6 +95,8 @@ export function createEditorStore(doc: Document): StoreApi<EditorState> {
     lockRatio: false,
     eraserSize: 4,
     measure: null,
+    alignTo: "selection",
+    alignGap: null,
 
     edit: (label, recipe, o = {}) => {
       const s = get();

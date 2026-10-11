@@ -34,8 +34,8 @@ export function CommandPalette({ open, onClose, handlers, bindings, navigate }: 
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!open) return;
-    setQ(""); setAct(0); setRecent(loadRecent());
+    if (!open) { setQ(""); setAct(0); return; }
+    setRecent(loadRecent());
     listLocalProjects().then((l) => setProjects(l.slice(0, 10).map((p) => ({ id: p.id, name: p.name })))).catch(() => setProjects([]));
   }, [open]);
 

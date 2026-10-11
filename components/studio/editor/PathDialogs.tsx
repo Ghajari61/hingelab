@@ -13,7 +13,7 @@ type Recipe = (d: Document, ids: string[]) => void;
  * A dialog that previews its result on the canvas while it is open. Cancel (or Esc) restores the
  * document; OK commits one undo step.
  */
-function useLivePreview(open: boolean, label: string) {
+export function useLivePreview(open: boolean, label: string) {
   const api = useEditorApi();
   const ids = useRef<string[]>([]);
   const live = useRef(false);
@@ -43,7 +43,7 @@ function useLivePreview(open: boolean, label: string) {
   };
 }
 
-function Footer({ onCancel, onOk, okLabel = "OK", preview, setPreview }: { onCancel: () => void; onOk: () => void; okLabel?: string; preview: boolean; setPreview: (v: boolean) => void }) {
+export function Footer({ onCancel, onOk, okLabel = "OK", preview, setPreview }: { onCancel: () => void; onOk: () => void; okLabel?: string; preview: boolean; setPreview: (v: boolean) => void }) {
   return (
     <>
       <label className="pn-check"><input type="checkbox" checked={preview} onChange={(e) => setPreview(e.target.checked)} data-testid="dlg-preview" /> Preview</label>
