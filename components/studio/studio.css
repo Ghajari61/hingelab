@@ -297,6 +297,9 @@
 .pn-layer button.nm { background: none; border: 0; color: var(--text-primary); text-align: left; font: inherit; cursor: pointer; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .pn-btns { display: flex; flex-wrap: wrap; gap: 4px; }
+.pn-pf { gap: 2px; padding: 3px; background: var(--surface-field); border: 1px solid var(--line-soft); border-radius: var(--radius-2); width: fit-content; }
+.pn-pf .ui-icon-btn:not(:disabled):hover svg { transform: scale(1.08); }
+.pn-pf svg { transition: transform 120ms ease; }
 .pn-hist { display: grid; font-size: var(--text-small); }
 .pn-hist button { text-align: left; background: none; border: 0; color: var(--text-primary); font: inherit; padding: 4px 8px; border-radius: var(--radius-2); cursor: pointer; }
 .pn-hist button:hover { background: var(--surface-raised); }

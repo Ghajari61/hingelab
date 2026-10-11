@@ -677,3 +677,11 @@ The neon-look sign is cut as one solid piece grown around the letters (holes fil
 - The artboard is white on every theme and objects with the black layer colour draw in near-black there: laser users judge cut lines against the material, not against the chrome. The editor greys are scoped with `:root[data-theme=dark]:has(.st-app)` so dialogs rendered outside the editor element match.
 - X/Y, W/H, rotation, shear and flips all use one reference point (`refPoint`, default top-left so the numbers mean what they meant before). For one object rotation and shear are absolute (read from its matrix); for several they turn or shear the group by the typed amount.
 - Workspaces moved to `hingelab-workspace-2`: the two-column toolbar, the 320 px dock and the collapsible dock are new defaults, and old stored layouts would have kept the one-column toolbar.
+
+## D112. Pathfinder on Clipper polygons
+
+- Boolean operations, Offset Path and the overlap tests use the Clipper library already used by the letter tools (integer units of 1/1000 mm). Curves are flattened at 0.01 mm before the operation, so results are polylines that are within 0.01 mm of the true outline — far below a laser kerf. Refitting curves afterwards would make results look like Illustrator's, but it can move corners; Simplify… is there for users who want fewer points.
+- Each object counts by its own filled area (even-odd), and stacking order follows the document. Divide, Trim and Crop return a group named after the operation so the pieces can be moved together or ungrouped; one piece is returned as a plain path.
+- Offset Path keeps the originals (as Illustrator and CorelDRAW's contour do) and puts each result just above its source.
+- Dialogs with numbers preview through the store's `begin`/`preview`/`end`, so the preview never enters the history and OK commits exactly one step.
+- Clean Up for Laser only treats exact duplicates on the same cut layer as double cuts; overlapping but different paths are left for the user.

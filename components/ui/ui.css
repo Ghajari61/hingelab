@@ -154,6 +154,10 @@
 .ui-rail-btn[aria-pressed="true"] { color: var(--accent-hi); background: var(--surface-raised); }
 .ui-rail-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .ui-dock-tabs .ui-tab { padding: 8px 7px; white-space: nowrap; flex: none; }
+.ui-dock-tabs:has(.icon-only) { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.ui-dock-tabs .ui-tab.icon-only { padding-inline: 6px; }
+.ui-tab-icon { display: inline-grid; place-items: center; }
+.ui-tab-icon svg { width: 15px; height: 15px; }
 .ui-dock-tabs .ui-tab.drop-before { box-shadow: inset 2px 0 0 var(--accent); }
 .ui-section { border-bottom: 1px solid var(--line-soft); }
 .ui-section > header { display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 10px; min-height: 32px; }

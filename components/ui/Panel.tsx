@@ -92,8 +92,10 @@ export function Dock({ tabs, active, onActive, onReorder, label = "Panels", widt
               key={t.id}
               type="button"
               role="tab"
-              className={`ui-tab${over === t.id && drag && drag !== t.id ? " drop-before" : ""}`}
+              className={`ui-tab${over === t.id && drag && drag !== t.id ? " drop-before" : ""}${t.icon && t.id !== cur?.id ? " icon-only" : ""}`}
               aria-selected={t.id === cur?.id}
+              aria-label={t.label}
+              title={t.icon && t.id !== cur?.id ? t.label : undefined}
               draggable={!!onReorder}
               onClick={() => onActive(t.id)}
               onDragStart={(e) => { setDrag(t.id); e.dataTransfer.effectAllowed = "move"; }}
@@ -110,7 +112,8 @@ export function Dock({ tabs, active, onActive, onReorder, label = "Panels", widt
               }}
               onDragEnd={() => { setDrag(null); setOver(null); }}
             >
-              {t.label}
+              {t.icon && <span className="ui-tab-icon" aria-hidden>{t.icon}</span>}
+              {(!t.icon || t.id === cur?.id) && t.label}
             </button>
           ))}
         </div>

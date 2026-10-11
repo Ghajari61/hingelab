@@ -135,11 +135,16 @@ export function PropertiesPanel({ toast, handlers }: { toast: Toast; handlers: R
           <RenameField node={n} />
         </PanelSection>
       )}
+      {ids.length > 1 && (
+        <PanelSection title="Pathfinder" testId="props-pathfinder">
+          <ShapeModeButtons handlers={handlers} />
+        </PanelSection>
+      )}
       <QuickActions handlers={handlers} ids={ids.length > 1
         ? ["object.group", "object.align.left", "object.align.hcenter", "object.align.top", "object.distribute.x", "object.compound.make", "object.clip.make", "edit.duplicate", "object.lock"]
-        : n?.type === "group" ? ["object.ungroup", "object.expand", "edit.duplicate", "object.front", "object.back", "object.lock"]
-          : n?.type === "text" ? ["type.outlines", "edit.duplicate", "object.front", "object.back", "object.lock", "object.hide"]
-            : ["object.expand", "path.reverse", "path.breakApart", "edit.duplicate", "object.front", "object.back", "object.lock", "object.hide"]} />
+        : n?.type === "group" ? ["object.ungroup", "object.expand", "path.pf.divide", "edit.duplicate", "object.front", "object.back", "object.lock"]
+          : n?.type === "text" ? ["type.outlines", "path.offset", "edit.duplicate", "object.front", "object.back", "object.lock", "object.hide"]
+            : ["path.offset", "path.roundCorners", "path.simplify", "object.expand", "path.reverse", "path.breakApart", "edit.duplicate", "object.lock"]} />
     </>
   );
 }
@@ -371,6 +376,64 @@ export function AlignPanel({ handlers }: { handlers: Record<string, Handler> }) 
           {btn("object.distribute.x", "Distribute Horizontally", <AlignHorizontalDistributeCenter size={16} />)}
           {btn("object.distribute.y", "Distribute Vertically", <AlignVerticalDistributeCenter size={16} />)}
         </div>
+      </PanelSection>
+    </>
+  );
+}
+
+// ---------- Pathfinder ----------
+
+/** Two overlapping squares: back (2,2)–(13,13), front (7,7)–(18,18). */
+const PF_BACK = "M2 2h11v11H2z", PF_FRONT = "M7 7h11v11H7z";
+const PF_ICONS: Record<string, ReactElement> = {
+  unite: <path d="M2 2h11v5h5v11H7v-5H2z" fill="currentColor" />,
+  minusFront: <><path d="M2 2h11v5H7v6H2z" fill="currentColor" /><path d={PF_FRONT} fill="none" stroke="currentColor" strokeDasharray="1.5 1.5" opacity={0.6} /></>,
+  minusBack: <><path d="M13 7h5v11H7v-5h6z" fill="currentColor" /><path d={PF_BACK} fill="none" stroke="currentColor" strokeDasharray="1.5 1.5" opacity={0.6} /></>,
+  intersect: <><path d={`${PF_BACK}${PF_FRONT}`} fill="none" stroke="currentColor" opacity={0.5} /><path d="M7 7h6v6H7z" fill="currentColor" /></>,
+  exclude: <path d={`${PF_BACK}${PF_FRONT}`} fill="currentColor" fillRule="evenodd" />,
+  divide: <><path d="M2 2h11v5H7v6H2z" fill="currentColor" /><path d="M7.8 7.8h4.4v4.4H7.8z" fill="currentColor" opacity={0.55} /><path d="M13 7h5v11H7v-5h6z" fill="currentColor" /><path d="M7 7h6v6H7z" fill="none" stroke="var(--surface-panel, #2d2d2d)" strokeWidth={1.2} /></>,
+  trim: <><path d="M2 2h11v5H7v6H2z" fill="currentColor" opacity={0.55} /><path d={PF_FRONT} fill="currentColor" /></>,
+  crop: <><path d={PF_FRONT} fill="none" stroke="currentColor" strokeDasharray="1.5 1.5" opacity={0.6} /><path d="M7 7h6v6H7z" fill="currentColor" /><path d={PF_BACK} fill="none" stroke="currentColor" opacity={0.35} /></>,
+};
+const pfIcon = (op: string) => <svg width={20} height={20} viewBox="0 0 20 20" aria-hidden>{PF_ICONS[op]}</svg>;
+
+function OpButtons({ handlers, ops }: { handlers: Record<string, Handler>; ops: string[] }) {
+  return (
+    <div className="pn-btns pn-pf">
+      {ops.map((op) => {
+        const id = `path.pf.${op}`, h = handlers[id], def = COMMAND_BY_ID.get(id);
+        return <IconButton key={op} label={def?.label ?? op} description={h?.enabled === false ? h.reason : def?.description} icon={pfIcon(op)} disabled={!h || h.enabled === false} onClick={h?.run} testId={`pf-${op}`} />;
+      })}
+    </div>
+  );
+}
+
+const ShapeModeButtons = ({ handlers }: { handlers: Record<string, Handler> }) => <OpButtons handlers={handlers} ops={["unite", "minusFront", "minusBack", "intersect", "exclude"]} />;
+
+export function PathfinderPanel({ handlers }: { handlers: Record<string, Handler> }) {
+  const action = (id: string) => {
+    const h = handlers[id];
+    return (
+      <button key={id} type="button" className="ui-btn small" disabled={!h || h.enabled === false} title={h?.enabled === false ? h.reason : COMMAND_BY_ID.get(id)?.description} onClick={h?.run} data-testid={`pf-${id}`}>
+        {COMMAND_BY_ID.get(id)?.label ?? id}
+      </button>
+    );
+  };
+  return (
+    <>
+      <PanelSection title="Shape Modes" testId="pathfinder-panel">
+        <ShapeModeButtons handlers={handlers} />
+      </PanelSection>
+      <PanelSection title="Pathfinders">
+        <OpButtons handlers={handlers} ops={["divide", "trim", "crop"]} />
+        <p className="pn-empty">Results are plain paths that keep their cut layers. Divide and Trim also work on a single group.</p>
+      </PanelSection>
+      <PanelSection title="Path">
+        <div className="pn-actions">{["path.offset", "path.roundCorners", "path.simplify", "path.smooth", "path.join", "path.close", "path.breakApart", "path.reverse"].map(action)}</div>
+      </PanelSection>
+      <PanelSection title="Laser Ready">
+        <div className="pn-actions">{action("path.cleanup")}</div>
+        <p className="pn-empty">Closes near-closed paths, removes stray points, empty paths and double cuts on the same layer. Works on the selection, or the whole document when nothing is selected.</p>
       </PanelSection>
     </>
   );

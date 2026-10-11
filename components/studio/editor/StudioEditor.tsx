@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStore } from "zustand";
-import { AlignCenterHorizontal, FileText, Flame, History, Layers, LayoutGrid, Search, SlidersHorizontal, Wand2 } from "lucide-react";
+import { AlignCenterHorizontal, FileText, Flame, History, Layers, LayoutGrid, Search, SlidersHorizontal, SquaresUnite, Wand2 } from "lucide-react";
 import { LogoMark } from "@/components/site/LogoMark";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { ContextMenu, Dock, MenuBar, PanelSection, Toolbar, isMac, useToast, type MenuItem } from "@/components/ui";
@@ -24,10 +24,11 @@ import type { Document, Units } from "@/lib/studio/types";
 import { downloadProject, editorPath, importProjectFile } from "../projectActions";
 import { usePrefs } from "../usePrefs";
 import { Canvas, PX_PER_MM, pointerStore, type CanvasApi } from "./Canvas";
-import { buildHandlers, type CommandContext, type Handler } from "./commandHandlers";
+import { buildHandlers, type CommandContext, type EditorDialog, type Handler } from "./commandHandlers";
 import { ControlBar } from "./ControlBar";
 import { CommandPalette, DocumentSetupDialog, MoveDialog, PreferencesDialog, ResetPrefsDialog, ShortcutsDialog } from "./EditorDialogs";
-import { AlignPanel, CutLayersPanel, DocumentPanel, HistoryPanel, LayersPanel, PropertiesPanel } from "./Panels";
+import { AlignPanel, CutLayersPanel, DocumentPanel, HistoryPanel, LayersPanel, PathfinderPanel, PropertiesPanel } from "./Panels";
+import { CornersDialog, OffsetDialog, SimplifyDialog } from "./PathDialogs";
 import { createEditorStore, EditorContext, useEditor, useEditorApi, type EditorState } from "./store";
 import { toolSlots } from "./tools";
 import { ToolFooter } from "./ToolFooter";
@@ -37,11 +38,11 @@ import { Dialog } from "@/components/ui";
 
 const PANEL_ICONS: Record<PanelId, ReactNode> = {
   properties: <SlidersHorizontal size={16} />, layers: <Layers size={16} />, cutLayers: <Flame size={16} />,
-  align: <AlignCenterHorizontal size={16} />, history: <History size={16} />, document: <FileText size={16} />,
+  align: <AlignCenterHorizontal size={16} />, pathfinder: <SquaresUnite size={16} />, history: <History size={16} />, document: <FileText size={16} />,
 };
 
 type SaveState = "saved" | "saving" | "error";
-type DialogId = "documentSetup" | "move" | "shortcuts" | "preferences" | "palette" | "resetPrefs" | "revert";
+type DialogId = EditorDialog | "revert";
 const AUTOSAVE_MS = 1500;
 /** Shortcuts that still work while the focus is in a text field. */
 const WHILE_TYPING = new Set(["file.save", "edit.preferences", "window.palette"]);
@@ -248,6 +249,7 @@ function EditorShell({ opened }: { opened: Document }) {
       case "layers": return <LayersPanel />;
       case "cutLayers": return <CutLayersPanel toast={toast} />;
       case "align": return <AlignPanel handlers={handlers} />;
+      case "pathfinder": return <PathfinderPanel handlers={handlers} />;
       case "history": return <HistoryPanel />;
       case "document": return <DocumentPanel toast={toast} />;
     }
@@ -312,6 +314,9 @@ function EditorShell({ opened }: { opened: Document }) {
       <ShortcutsDialog open={dialog === "shortcuts"} onClose={() => setDialog(null)} set={prefs.shortcutSet} onSet={(shortcutSet) => setPrefs({ shortcutSet })} keymap={keymap} onKeymap={setKeymap} toast={toastAction} />
       <PreferencesDialog open={dialog === "preferences"} onClose={() => setDialog(null)} prefs={prefs} setPrefs={setPrefs} openShortcuts={() => setDialog("shortcuts")} toast={toastAction} />
       <MoveDialog open={dialog === "move"} onClose={() => setDialog(null)} />
+      <OffsetDialog open={dialog === "offset"} onClose={() => setDialog(null)} />
+      <SimplifyDialog open={dialog === "simplify"} onClose={() => setDialog(null)} />
+      <CornersDialog open={dialog === "corners"} onClose={() => setDialog(null)} />
       <DocumentSetupDialog open={dialog === "documentSetup"} onClose={() => setDialog(null)} />
       <ResetPrefsDialog open={dialog === "resetPrefs"} onClose={() => setDialog(null)} onConfirm={() => {
         const prev = { prefs, keymap, ws };

@@ -5,6 +5,7 @@ import { newId } from "@/lib/studio/doc";
 import { boxCenter, emptyBox, isEmptyBox, rotateAt, scaleAt, translate, unionBox } from "@/lib/studio/geom";
 import { clipToSvg, copyNodes, loadClip, storeClip } from "@/lib/studio/clipboard";
 import { addAnchorNodes, breakApartNodes, closeNodes, joinNodes, makeClip, makeCompound, releaseClip, resetBoxNodes, reverseNodes } from "@/lib/studio/pathOps";
+import { BOOLEAN_LABELS, booleanOp, cleanupForLaser, editPaths, smoothSubpath, type BooleanOp } from "@/lib/studio/pathfinder";
 import {
   alignNodes, arrangeNodes, distributeNodes, duplicateNodes, expandNodes, findNode, groupNodes, isEditable, pasteNodes, removeNodes, selectionBox,
   topLevel, transformNodes, ungroupNodes, walk, type AlignMode,
@@ -19,6 +20,8 @@ import type { EditorState } from "./store";
 
 export interface Handler { run: () => void; enabled?: boolean; reason?: string; checked?: boolean }
 
+export type EditorDialog = "documentSetup" | "move" | "shortcuts" | "preferences" | "palette" | "resetPrefs" | "offset" | "simplify" | "corners";
+
 export interface CommandContext {
   api: StoreApi<EditorState>;
   canvas: () => CanvasApi | null;
@@ -30,7 +33,7 @@ export interface CommandContext {
   download: () => void;
   rename: () => void;
   revert: () => void;
-  dialog: (d: "documentSetup" | "move" | "shortcuts" | "preferences" | "palette" | "resetPrefs") => void;
+  dialog: (d: EditorDialog) => void;
   showPanel: (p: PanelId) => void;
   workspace: string;
   setWorkspace: (id: string) => void;
@@ -263,6 +266,34 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   set("path.reverse", editSel("Reverse Direction", (d) => reverseNodes(d, paths)), paths.length > 0, "Select a path");
   set("path.breakApart", () => { let out: string[] = []; st().edit("Break Apart", (d) => { out = breakApartNodes(d, paths); }); st().select(out); }, paths.length > 0, "Select a path");
   set("path.addAnchors", editSel("Add Anchor Points", (d) => addAnchorNodes(d, paths)), paths.length > 0, "Select a path");
+  const outlines = sel.filter((id) => { const t = findNode(s.doc.root, id)?.type; return t === "path" || t === "shape" || t === "text" || t === "group"; });
+  const anyOutline = outlines.length > 0, twoOutlines = outlines.length >= 2 || groups.length > 0;
+  set("path.offset", () => ctx.dialog("offset"), anyOutline, "Select a path, shape or text");
+  set("path.simplify", () => ctx.dialog("simplify"), anyOutline, "Select a path, shape or text");
+  set("path.roundCorners", () => ctx.dialog("corners"), anyOutline, "Select a path, shape or text");
+  set("path.smooth", () => { const ids = selected(st()); st().edit("Smooth", (d) => { editPaths(d, ids, smoothSubpath); }); }, anyOutline, "Select a path, shape or text");
+  for (const op of Object.keys(BOOLEAN_LABELS) as BooleanOp[]) {
+    const single = op === "divide" || op === "trim";
+    set(`path.pf.${op}`, () => {
+      const ids = selected(st());
+      let r: { ids: string[]; error?: string } = { ids: [] };
+      st().edit(BOOLEAN_LABELS[op], (d) => { r = booleanOp(d, ids, op); });
+      if (r.error) ctx.toast(r.error);
+      else st().select(r.ids);
+    }, single ? anyOutline : twoOutlines, single ? "Select shapes to split" : "Select two or more closed shapes");
+  }
+  set("path.cleanup", () => {
+    const ids = selected(st());
+    let r = { points: 0, closed: 0, removed: 0, duplicates: 0 };
+    st().edit("Clean Up for Laser", (d) => { r = cleanupForLaser(d, ids.length ? ids : null); });
+    const parts = [
+      r.closed && `${r.closed} path${r.closed === 1 ? "" : "s"} closed`,
+      r.duplicates && `${r.duplicates} double cut${r.duplicates === 1 ? "" : "s"} removed`,
+      r.removed && `${r.removed} empty path${r.removed === 1 ? "" : "s"} removed`,
+      r.points && `${r.points} stray point${r.points === 1 ? "" : "s"} removed`,
+    ].filter(Boolean);
+    ctx.toast(parts.length ? `Clean up: ${parts.join(", ")}` : "Nothing to clean up — the paths are ready to cut", parts.length > 0);
+  }, s.doc.root.children.length > 0, "The document is empty");
   // Laser
   for (let k = 0; k < 30; k++) {
     set(`laser.assign.${k}`, () => {
@@ -297,7 +328,7 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   set("view.presentation", () => { st().setUi({ presentation: !st().ui.presentation }); requestAnimationFrame(() => ctx.canvas()?.fit("artboard")); }, true, undefined, s.ui.presentation);
   for (const t of ["dark", "darker", "light", "system"] as const) set(`view.theme.${t}`, () => ctx.setTheme(t), true, undefined, ctx.theme === t);
   // Window
-  const panels: [string, PanelId][] = [["properties", "properties"], ["layers", "layers"], ["cutLayers", "cutLayers"], ["align", "align"], ["history", "history"], ["document", "document"]];
+  const panels: [string, PanelId][] = [["properties", "properties"], ["layers", "layers"], ["cutLayers", "cutLayers"], ["align", "align"], ["pathfinder", "pathfinder"], ["history", "history"], ["document", "document"]];
   for (const [id, p] of panels) set(`window.panel.${id}`, () => ctx.showPanel(p));
   for (const w of ["essentials", "laser", "typography", "minimal"]) set(`window.workspace.${w}`, () => ctx.setWorkspace(w), true, undefined, ctx.workspace === w);
   set("window.workspace.reset", ctx.resetWorkspace);
