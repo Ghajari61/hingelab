@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react";
 import {
-  ArrowRight, ChartPie, Circle, Cog, Eraser, Grid3x3, Hand, Heart, Hexagon, Lasso, MessageSquare, MousePointer, MousePointer2, Pencil, PenTool, Pill, Pipette,
-  RotateCw, RulerDimensionLine, Scaling, Scissors, Shell, Slash, Slice, Spline, Square, Star, Type, WandSparkles, ZoomIn,
+  ArrowRight, ChartPie, Circle, Cog, Eraser, Feather, Grid3x3, Hand, Heart, Hexagon, Lasso, MessageSquare, MousePointer, MousePointer2, PaintBucket, Pencil, PenTool, Pill, Pipette,
+  RotateCw, RulerDimensionLine, Scaling, Scissors, Shell, Slash, Slice, Spline, SprayCan, Square, Star, Type, WandSparkles, ZoomIn,
 } from "lucide-react";
 import { TOOL_INFO, type ToolId } from "@/lib/studio/commands";
 import type { ToolDef, ToolSlot } from "@/components/ui";
@@ -14,6 +14,7 @@ const Svg = ({ children }: { children: ReactNode }) => (
 const Reflect = () => <Svg><path d="M12 3v18" strokeDasharray="2 3" /><path d="M9 7 3 17h6z" /><path d="m15 7 6 10h-6z" /></Svg>;
 const Shear = () => <Svg><path d="M8 5h12l-4 14H4z" /><path d="M3 21h18" strokeDasharray="2 3" opacity={0.6} /></Svg>;
 const ShapeBuilder = () => <Svg><circle cx="9" cy="10" r="6" /><circle cx="15" cy="14" r="6" /><path d="M5 20 19 6" strokeWidth={2.4} /></Svg>;
+const Tweak = () => <Svg><circle cx="12" cy="11" r="7" strokeDasharray="2 2.6" opacity={0.7} /><path d="M2 19c5 0 6-8 10-8s5 8 10 8" /></Svg>;
 
 export const TOOL_ICONS: Record<ToolId, ReactNode> = {
   select: <MousePointer2 size={18} />, direct: <MousePointer size={18} />, pen: <PenTool size={18} />, pencil: <Pencil size={18} />,
@@ -23,16 +24,16 @@ export const TOOL_ICONS: Record<ToolId, ReactNode> = {
   scale: <Scaling size={18} />, reflect: <Reflect />, hand: <Hand size={18} />, zoom: <ZoomIn size={18} />,
   lasso: <Lasso size={18} />, magicWand: <WandSparkles size={18} />, curvature: <Spline size={18} />, scissors: <Scissors size={18} />,
   knife: <Slice size={18} />, eraser: <Eraser size={18} />, shear: <Shear />, shapeBuilder: <ShapeBuilder />, eyedropper: <Pipette size={18} />,
-  measure: <RulerDimensionLine size={18} />,
+  measure: <RulerDimensionLine size={18} />, fill: <PaintBucket size={18} />, calligraphy: <Feather size={18} />, tweak: <Tweak />, spray: <SprayCan size={18} />,
 };
 
 const GROUPS: (ToolId | { group: string; tools: ToolId[] } | "-")[] = [
   "select", "direct", "magicWand", "lasso", "-",
   { group: "Pen", tools: ["pen", "curvature"] }, "text",
   "line", { group: "Shapes", tools: ["rect", "ellipse", "polygon", "star", "arc", "slot", "gear", "arrow", "bubble", "heart", "grid", "spiral"] },
-  "pencil", { group: "Eraser", tools: ["eraser", "scissors", "knife"] }, "-",
-  { group: "Rotate", tools: ["rotate", "reflect"] }, { group: "Scale", tools: ["scale", "shear"] },
-  "shapeBuilder", { group: "Eyedropper", tools: ["eyedropper", "measure"] }, "-",
+  { group: "Pencil", tools: ["pencil", "calligraphy"] }, { group: "Eraser", tools: ["eraser", "scissors", "knife"] }, "-",
+  { group: "Rotate", tools: ["rotate", "reflect"] }, { group: "Scale", tools: ["scale", "shear"] }, { group: "Tweak", tools: ["tweak", "spray"] },
+  { group: "Shape Builder", tools: ["shapeBuilder", "fill"] }, { group: "Eyedropper", tools: ["eyedropper", "measure"] }, "-",
   "hand", "zoom",
 ];
 

@@ -29,10 +29,11 @@ export const TOOL_IDS = [
   "select", "direct", "pen", "pencil", "line", "rect", "ellipse", "polygon", "star", "arc", "slot", "gear", "arrow", "bubble", "heart",
   "grid", "spiral", "text", "rotate", "scale", "reflect", "hand", "zoom",
   "lasso", "magicWand", "curvature", "scissors", "knife", "eraser", "shear", "shapeBuilder", "eyedropper", "measure",
+  "fill", "calligraphy", "tweak", "spray",
 ] as const;
 export type ToolId = (typeof TOOL_IDS)[number];
 
-export const TOOL_INFO: Record<ToolId, { label: string; description: string }> = {
+export const TOOL_INFO: Record<ToolId, { label: string; description: string; keywords?: string }> = {
   select: { label: "Selection", description: "Select, move, scale and rotate objects." },
   direct: { label: "Direct Selection", description: "Select objects inside groups and edit path nodes." },
   pen: { label: "Pen", description: "Click for corners, drag for curves. Click the first node to close." },
@@ -61,11 +62,15 @@ export const TOOL_INFO: Record<ToolId, { label: string; description: string }> =
   curvature: { label: "Curvature", description: "Click points and the curve flows through them. Alt+click for a corner, click the first point to close, Enter to finish." },
   scissors: { label: "Scissors", description: "Click a path to cut it there: closed paths open, open paths split in two." },
   knife: { label: "Knife", description: "Drag across shapes to slice them into pieces. Hold Alt for a straight cut, Shift for 45° steps." },
-  eraser: { label: "Eraser", description: "Drag to erase parts of shapes and lines; set the size in the control bar. Works on the selection, or everything." },
+  eraser: { label: "Eraser", description: "Drag to erase: cut away what the brush covers, or delete every object it touches. Works on the selection, or everything.", keywords: "rubber delete objects cut away" },
   shear: { label: "Shear", description: "Drag sideways to slant the selection horizontally, up or down to slant it vertically." },
   shapeBuilder: { label: "Shape Builder", description: "Select overlapping shapes, then drag across regions to merge them. Alt+click a region to delete it." },
   eyedropper: { label: "Eyedropper", description: "Click an object to give the selection its cut layer (and font, for text)." },
-  measure: { label: "Measure", description: "Drag to measure distance and angle; snaps to points." },
+  measure: { label: "Measure", description: "Drag to measure distance, angle and the lengths of the paths it crosses; Enter keeps it as a dimension.", keywords: "ruler distance dimension length" },
+  fill: { label: "Fill Bounded Area", description: "Click inside an area closed by any mix of paths to fill it with a new shape. Shift+click adds to the last fill, Alt+click removes.", keywords: "paint bucket live paint flood fill region" },
+  calligraphy: { label: "Calligraphy", description: "Draw with a flat nib: the stroke becomes a filled outline whose width follows the nib angle, speed and pressure.", keywords: "brush nib ink lettering pen" },
+  tweak: { label: "Tweak", description: "Brush over objects or nodes to push, shrink, attract, roughen, move, scale or rotate them. Alt inverts.", keywords: "sculpt push brush warp" },
+  spray: { label: "Spray", description: "Spray copies or clones of the selection around the brush, or one combined path. Optional no-overlap for laser parts.", keywords: "scatter spray can copies" },
 };
 
 const TOOL_KEYS: Partial<Record<ToolId, { keys?: string; sets?: CommandDef["sets"] }>> = {
@@ -93,6 +98,10 @@ const TOOL_KEYS: Partial<Record<ToolId, { keys?: string; sets?: CommandDef["sets
   shapeBuilder: { keys: "Shift+M", sets: { inkscape: ["X"] } },
   eyedropper: { keys: "I", sets: { inkscape: ["D", "F7"] } },
   measure: { sets: { inkscape: ["M"] } },
+  fill: { sets: { inkscape: ["U", "Shift+F7"] } },
+  calligraphy: { sets: { inkscape: ["C", "Ctrl+F6"] } },
+  tweak: { sets: { inkscape: ["W", "Shift+F2"] } },
+  spray: { sets: { inkscape: ["A", "Shift+F3"] } },
 };
 
 const LAYER_KEYS = Array.from({ length: 30 }, (_, k) =>
@@ -298,7 +307,7 @@ export const COMMANDS: CommandDef[] = [
   c("help.whatsNew", "What's New", "Help"),
   c("help.about", "About HingeLab", "Help"),
   // Tools
-  ...TOOL_IDS.map((t) => c(`tool.${t}`, TOOL_INFO[t].label, "Tool", TOOL_KEYS[t]?.keys, TOOL_KEYS[t]?.sets, TOOL_INFO[t].description)),
+  ...TOOL_IDS.map((t) => c(`tool.${t}`, TOOL_INFO[t].label, "Tool", TOOL_KEYS[t]?.keys, TOOL_KEYS[t]?.sets, TOOL_INFO[t].description, TOOL_INFO[t].keywords)),
 ];
 
 export const COMMAND_BY_ID = new Map(COMMANDS.map((d) => [d.id, d]));

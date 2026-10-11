@@ -4,7 +4,12 @@ import { createContext, useContext } from "react";
 import { produce } from "immer";
 import { createStore, useStore, type StoreApi } from "zustand";
 import type { AlignTo } from "@/lib/studio/alignOps";
+import { CALLIGRAPHY_DEFAULTS, type CalligraphyParams } from "@/lib/studio/calligraphy";
 import type { ToolId } from "@/lib/studio/commands";
+import { FILL_DEFAULTS, type FillOptions } from "@/lib/studio/fillArea";
+import type { MeasureResult } from "@/lib/studio/measure";
+import { SPRAY_DEFAULTS, type SprayParams } from "@/lib/studio/spray";
+import { TWEAK_DEFAULTS, type TweakParams } from "@/lib/studio/tweak";
 import { commit, emptyHistory, jumpTo, redo, seal, undo, type History } from "@/lib/studio/history";
 import { linkPasses, syncLinks } from "@/lib/studio/links";
 import { allIds } from "@/lib/studio/scene";
@@ -21,6 +26,7 @@ export interface UiState {
   nodeHandles: boolean; pathDirection: boolean;
 }
 
+export type EraserMode = "cut" | "delete";
 export type TextDefaults = Pick<TextNode, "font" | "size" | "tracking" | "lineHeight" | "align" | "direction">;
 
 export interface EditorState {
@@ -47,8 +53,15 @@ export interface EditorState {
   lockRatio: boolean;
   /** Eraser tool diameter, mm. */
   eraserSize: number;
-  /** The Measure tool's last measurement (document space). */
-  measure: { a: Vec; b: Vec } | null;
+  /** Eraser: cut away what the brush covers, or delete every object it touches. */
+  eraserMode: EraserMode;
+  /** The Measure tool's last measurement (document space) and what it crossed. */
+  measure: { a: Vec; b: Vec; result?: MeasureResult } | null;
+  /** Fill Bounded Area options. */
+  fill: FillOptions;
+  calligraphy: CalligraphyParams;
+  tweak: TweakParams;
+  spray: SprayParams;
   /** What Align lines objects up with; the key object is the last one clicked. */
   alignTo: AlignTo;
   /** Distribute Spacing gap in mm, or null for equal gaps between the outer objects. */
@@ -81,8 +94,8 @@ export interface EditorState {
   setTool: (t: ToolId) => void;
   setView: (v: Partial<ViewState> | ((v: ViewState) => ViewState)) => void;
   setUi: (u: Partial<UiState>) => void;
-  set: (p: Partial<Pick<EditorState, "shapeDefaults" | "textDefaults" | "lastTransform" | "textEditing" | "currentLayer" | "refPoint" | "lockRatio" | "eraserSize" | "measure" | "alignTo" | "alignGap"
-    | "penMode" | "penShape" | "brushWidth" | "pencilSmoothing" | "pencilPressure" | "pencilMode">>) => void;
+  set: (p: Partial<Pick<EditorState, "shapeDefaults" | "textDefaults" | "lastTransform" | "textEditing" | "currentLayer" | "refPoint" | "lockRatio" | "eraserSize" | "eraserMode" | "measure" | "alignTo" | "alignGap"
+    | "fill" | "calligraphy" | "tweak" | "spray" | "penMode" | "penShape" | "brushWidth" | "pencilSmoothing" | "pencilPressure" | "pencilMode">>) => void;
 }
 
 const keepExisting = (doc: Document, ids: string[]) => {
@@ -113,7 +126,12 @@ export function createEditorStore(doc: Document): StoreApi<EditorState> {
     refPoint: [0, 0],
     lockRatio: false,
     eraserSize: 4,
+    eraserMode: "cut",
     measure: null,
+    fill: { ...FILL_DEFAULTS },
+    calligraphy: { ...CALLIGRAPHY_DEFAULTS },
+    tweak: { ...TWEAK_DEFAULTS },
+    spray: { ...SPRAY_DEFAULTS },
     alignTo: "selection",
     alignGap: null,
     penMode: "bezier",

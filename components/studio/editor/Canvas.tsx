@@ -19,9 +19,12 @@ import { fmtLength, fromMM } from "@/lib/studio/units";
 import type { Anchor, Document, Mat, PathNode, SceneNode, ShapeKind, Subpath, TextNode, Vec } from "@/lib/studio/types";
 import type { ToolId } from "@/lib/studio/commands";
 import { layerCode } from "@/lib/studio/cutLayers";
-import { builderFaces, buildShapes, curvaturePath, eraseAlong, faceAt, knifeCut, lassoHits, scissorsAt, shearAt } from "@/lib/studio/toolOps";
-import { useEditor, useEditorApi, type AnchorRef } from "./store";
+import { builderFaces, buildShapes, curvaturePath, eraseAlong, eraseTouching, faceAt, knifeCut, lassoHits, scissorsAt, shearAt } from "@/lib/studio/toolOps";
+import { measureAcross, measureTargets, type MeasureTarget } from "@/lib/studio/measure";
+import { useEditor, useEditorApi, type AnchorRef, type EraserMode } from "./store";
 import { TextEditor } from "./TextEditor";
+import { fillClick, measureToItem, startCalligraphy, startSpray, startTweak, type ToolPointer, type ToolSession } from "./tools/brushTools";
+import { MeasureOverlay } from "./tools/MeasureOverlay";
 
 export const PX_PER_MM = 96 / 25.4;
 const RULER = 20;
@@ -51,10 +54,11 @@ type Drag =
   | { kind: "text"; start: Vec; cur: Vec }
   | { kind: "lasso"; pts: Vec[]; mode: "set" | "add" | "remove" }
   | { kind: "knife"; pts: Vec[]; straight: boolean; ids: string[] }
-  | { kind: "erase"; pts: Vec[]; ids: string[] }
+  | { kind: "erase"; pts: Vec[]; ids: string[]; mode: EraserMode }
   | { kind: "shear"; center: Vec; start: Vec; ids: string[]; half: Vec }
   | { kind: "build"; faces: number[]; remove: boolean; ids: string[] }
-  | { kind: "measure"; a: Vec; targets: SnapTargets };
+  | { kind: "measure"; a: Vec; targets: SnapTargets; crossed: MeasureTarget[] }
+  | { kind: "session"; session: ToolSession };
 
 interface Hud { x: number; y: number; text: string }
 
@@ -73,6 +77,12 @@ function snapSettings(doc: Document): SnapSettings {
 
 /** Pen pressure 0–1; a mouse (or a device without pressure) counts as a steady half press. */
 const penPressure = (e: React.PointerEvent) => (e.pointerType === "mouse" || !e.pressure ? 0.5 : e.pressure);
+const toolPointer = (e: React.PointerEvent, p: Vec): ToolPointer => ({ p, shift: e.shiftKey, alt: e.altKey, pressure: penPressure(e), t: e.timeStamp });
+
+/** Eraser preview/commit in either mode. */
+const erase = (d: Document, mode: EraserMode, ids: string[], pts: Vec[], size: number) => {
+  if (mode === "delete") eraseTouching(d, ids, pts, size); else eraseAlong(d, ids, pts, size);
+};
 
 /** Pencil smoothing 0–100 as the curve-fit tolerance in screen pixels (25 is the classic 1.5 px). */
 const pencilTolerance = (smoothing: number) => 0.25 + Math.max(0, Math.min(100, smoothing)) * 0.05;
@@ -255,6 +265,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         return;
       }
       if (e.key === "Enter" && (pen.current || curve.current)) { finishPen(); stop(); return; }
+      if (e.key === "Enter" && s.tool === "measure" && s.measure && !drag.current && !e.ctrlKey && !e.altKey) { measureToItem(api, onToast); stop(); return; }
       if ((e.key === "Backspace" || e.key === "Delete") && pen.current) {
         pen.current.nodes.pop();
         if (!pen.current.nodes.length) pen.current = null;
@@ -594,8 +605,18 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       case "knife": drag.current = { kind: "knife", pts: [p], straight: e.altKey, ids: s.selection.filter((id) => isEditable(s.doc.root, id)) }; return;
       case "eraser": {
         s.begin();
-        drag.current = { kind: "erase", pts: [p], ids: s.selection.filter((id) => isEditable(s.doc.root, id)) };
-        s.preview((d) => { eraseAlong(d, (drag.current as { ids: string[] }).ids, [p], s.eraserSize); });
+        const dr = { kind: "erase" as const, pts: [p], ids: s.selection.filter((id) => isEditable(s.doc.root, id)), mode: s.eraserMode };
+        drag.current = dr;
+        s.preview((d) => erase(d, dr.mode, dr.ids, [p], s.eraserSize));
+        rerender();
+        return;
+      }
+      case "fill": fillClick(api, toolPointer(e, p), onToast); return;
+      case "calligraphy": drag.current = { kind: "session", session: startCalligraphy(api, toolPointer(e, p), { zoom: s.view.zoom, widthMm: size.w / s.view.zoom }) }; return;
+      case "tweak": drag.current = { kind: "session", session: startTweak(api, toolPointer(e, p)) }; rerender(); return;
+      case "spray": {
+        const session = startSpray(api, toolPointer(e, p), onToast);
+        if (session) drag.current = { kind: "session", session };
         rerender();
         return;
       }
@@ -629,8 +650,9 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       case "measure": {
         const targets = snapTargets(s.doc, new Set(), settings);
         const a = snapPoint(p, targets, 6 / s.view.zoom, settings).p;
-        drag.current = { kind: "measure", a, targets };
-        s.set({ measure: { a, b: a } });
+        const crossed = measureTargets(s.doc);
+        drag.current = { kind: "measure", a, targets, crossed };
+        s.set({ measure: { a, b: a, result: measureAcross(crossed, a, a) } });
         return;
       }
       default:
@@ -775,10 +797,11 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       case "erase": {
         dr.pts.push(p);
         const size = s.eraserSize;
-        s.preview((d) => { eraseAlong(d, dr.ids, dr.pts, size); });
+        s.preview((d) => erase(d, dr.mode, dr.ids, dr.pts, size));
         rerender();
         return;
       }
+      case "session": dr.session.move(toolPointer(e, p)); rerender(); return;
       case "shear": {
         const dx = p.x - dr.start.x, dy = p.y - dr.start.y;
         const axis: "x" | "y" = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
@@ -801,7 +824,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       case "measure": {
         let b = snapPoint(p, dr.targets, tol, settings).p;
         if (e.shiftKey) b = constrain45(dr.a, b);
-        s.set({ measure: { a: dr.a, b } });
+        s.set({ measure: { a: dr.a, b, result: measureAcross(dr.crossed, dr.a, b) } });
         const dx = b.x - dr.a.x, dy = b.y - dr.a.y;
         setHud({ x: sp.x, y: sp.y, text: `D ${fmt(Math.hypot(dx, dy))} ${doc.units}  ${Math.round((Math.atan2(-dy, dx) * 1800) / Math.PI) / 10}°` });
         return;
@@ -946,10 +969,11 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       }
       case "erase": {
         const size = s.eraserSize;
-        s.end("Erase", (d) => { eraseAlong(d, dr.ids, dr.pts, size); });
+        s.end(dr.mode === "delete" ? "Erase Objects" : "Erase", (d) => erase(d, dr.mode, dr.ids, dr.pts, size));
         rerender();
         return;
       }
+      case "session": dr.session.up(toolPointer(e, p)); rerender(); return;
       case "build": {
         let out: string[] = [];
         s.edit(dr.remove ? "Shape Builder: Delete" : "Shape Builder", (d) => { out = buildShapes(d, dr.ids, dr.remove ? [] : dr.faces, dr.remove ? dr.faces : []); });
@@ -1123,6 +1147,16 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
     if (n.type === "image") {
       return <rect key={n.id} x={-n.w / 2} y={-n.h / 2} width={n.w} height={n.h} transform={matStr(n.transform)} fill="url(#hl-hatch)" stroke={outline ? "var(--text-secondary)" : layerColor(n)} vectorEffect="non-scaling-stroke" opacity={dim} />;
     }
+    if (n.type === "dimension" && n.points.length >= 2) {
+      const m = n.transform, [a, b] = n.points;
+      const len = Math.hypot(b.x - a.x, b.y - a.y) * Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2]));
+      return (
+        <g key={n.id} transform={matStr(n.transform)} data-id={n.id} opacity={dim}>
+          <path d={localD(n)} fill="none" stroke={outline ? "var(--ink)" : layerColor(n)} strokeWidth={1} vectorEffect="non-scaling-stroke" strokeDasharray="2 2" />
+          <text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 4 / zoom} fontSize={11 / zoom} textAnchor="middle" fill={outline ? "var(--ink)" : layerColor(n)} fontFamily="var(--font-num)" data-testid="dimension-label">{fmt(len)} {doc.units}</text>
+        </g>
+      );
+    }
     const fillMode = !outline && layer?.mode === "fill" && n.type !== "dimension";
     return (
       <path
@@ -1174,7 +1208,8 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
   }, [dr, dr && "cur" in dr ? dr.cur : null, dr && "pts" in dr ? dr.pts.length : 0, dr && "pts" in dr ? dr.pts[dr.pts.length - 1] : null]);
   const curveState = curve.current;
   const measure = useEditor((s) => s.measure);
-  const eraserSize = useEditor((s) => s.eraserSize);
+  const brushRadius = useEditor((s) => (s.tool === "eraser" ? s.eraserSize / 2 : s.tool === "tweak" ? s.tweak.radius : s.tool === "spray" ? s.spray.radius : null));
+  const sessionDraft = dr?.kind === "session" && dr.session.draft ? dr.session.draft() : null;
 
   const box = (b: Box) => { const a = S({ x: b.minX, y: b.minY }), c = S({ x: b.maxX, y: b.maxY }); return { x: a.x, y: a.y, w: c.x - a.x, h: c.y - a.y }; };
   const selRect = !isEmptyBox(selBox) ? box(selBox) : null;
@@ -1232,6 +1267,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
               stroke={dr?.kind === "knife" ? "var(--danger, #e5484d)" : "var(--accent)"} strokeWidth={dr?.kind === "knife" ? 1.5 : 1}
               strokeDasharray={dr?.kind === "lasso" ? "4 3" : undefined} />
           )}
+          {sessionDraft && <path d={sessionDraft} fill="var(--accent)" fillOpacity={0.55} fillRule="nonzero" stroke="none" data-testid="calligraphy-draft" />}
         </g>
         {curveState && curveState.pts.length > 0 && (() => {
           const pts = curveState.pts.map(S);
@@ -1245,27 +1281,8 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
             </g>
           );
         })()}
-        {tool === "eraser" && pointer && (() => { const q = S(pointer); return <circle cx={q.x} cy={q.y} r={Math.max(2, (eraserSize / 2) * zoom)} fill="color-mix(in srgb, var(--accent) 12%, transparent)" stroke="var(--accent)" pointerEvents="none" data-testid="eraser-brush" />; })()}
-        {tool === "measure" && measure && (() => {
-          const a = S(measure.a), b = S(measure.b);
-          const dx = measure.b.x - measure.a.x, dy = measure.b.y - measure.a.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist < 1e-9) return null;
-          const label = `${fmt(dist)} ${doc.units} · ${Math.round((Math.atan2(-dy, dx) * 1800) / Math.PI) / 10}°`;
-          const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-          return (
-            <g data-testid="measure-overlay" pointerEvents="none">
-              <path d={`M${a.x} ${a.y}H${b.x}V${b.y}`} fill="none" stroke="var(--smart-guide)" strokeDasharray="2 3" opacity={0.7} />
-              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="var(--smart-guide)" strokeWidth={1.5} />
-              <circle cx={a.x} cy={a.y} r={3.5} fill="var(--handle-fill)" stroke="var(--smart-guide)" />
-              <circle cx={b.x} cy={b.y} r={3.5} fill="var(--handle-fill)" stroke="var(--smart-guide)" />
-              <g transform={`translate(${mx} ${my - 14})`}>
-                <rect x={-label.length * 3.4 - 6} y={-10} width={label.length * 6.8 + 12} height={20} rx={4} fill="var(--smart-guide)" />
-                <text textAnchor="middle" y={4} fontSize={11} fill="#fff" fontFamily="var(--font-num)">{label}</text>
-              </g>
-            </g>
-          );
-        })()}
+        {brushRadius !== null && pointer && (() => { const q = S(pointer); return <circle cx={q.x} cy={q.y} r={Math.max(2, brushRadius * zoom)} fill={tool === "eraser" ? "color-mix(in srgb, var(--accent) 12%, transparent)" : "none"} stroke="var(--accent)" strokeDasharray={tool === "eraser" ? undefined : "4 3"} pointerEvents="none" data-testid={`${tool}-brush`} />; })()}
+        {tool === "measure" && measure && <MeasureOverlay a={measure.a} b={measure.b} result={measure.result} S={S} zoom={zoom} fmt={(mm) => `${fmt(mm)} ${doc.units}`} />}
         {/* screen-space overlay */}
         {selection.map((id) => {
           const l = locate(doc.root, id);

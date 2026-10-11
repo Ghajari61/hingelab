@@ -157,6 +157,61 @@ export function eraseAlong(d: Document, ids: string[] | null, stroke: Vec[], wid
   return changed;
 }
 
+/** Open polylines that lie inside an area (Clipper open-path clipping). */
+function clipOpenInside(lines: Path[], area: Paths): Path[] {
+  if (!lines.length) return [];
+  const c = new ClipperLib.Clipper();
+  c.AddPaths(lines, ClipperLib.PolyType.ptSubject, false);
+  c.AddPaths(area, ClipperLib.PolyType.ptClip, true);
+  const tree = new ClipperLib.PolyTree();
+  c.Execute(ClipperLib.ClipType.ctIntersection, tree, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+  return ClipperLib.Clipper.OpenPathsFromPolyTree(tree) as Path[];
+}
+
+/**
+ * Eraser "Delete objects": every visible, unlocked object (or one under `ids`) whose outline or filled
+ * area a round brush `width` mm wide along `stroke` touches. Leaves inside groups count one by one.
+ */
+export function touchedBy(d: Document, ids: string[] | null, stroke: Vec[], width: number): string[] {
+  if (!stroke.length) return [];
+  const brush = strip(stroke, Math.max(width, 0.01) / 2, true);
+  const bb = pathsBox(brush);
+  const scope = ids && ids.length ? new Set(ids) : null;
+  const inScope = new Set<string>();
+  const out: string[] = [];
+  walk(d.root, (l) => {
+    if (l.node.hidden || l.node.locked) return "skip";
+    const mine = !scope || scope.has(l.node.id) || inScope.has(l.parent.id);
+    if (l.node.type === "group") { if (mine) inScope.add(l.node.id); return; }
+    if (!mine) return;
+    const world = transformSubpaths(nodePaths(l.node), l.world);
+    const lines = world.filter((s) => !s.closed && s.nodes.length > 1).map((s) => toPath(flatten(s, FLAT_TOL)));
+    const region = regionOf(world);
+    const ob = pathsBox([...region, ...lines]);
+    if (ob.maxX < bb.minX || ob.minX > bb.maxX || ob.maxY < bb.minY || ob.minY > bb.maxY) return;
+    if ((region.length && Math.abs(areaOfPaths(inter(region, brush))) > 0) || clipOpenInside(lines, brush).length) out.push(l.node.id);
+  });
+  return out;
+}
+
+/** Deletes what `touchedBy` finds, and groups left empty. Returns the deleted ids. */
+export function eraseTouching(d: Document, ids: string[] | null, stroke: Vec[], width: number): string[] {
+  const hit = touchedBy(d, ids, stroke, width);
+  if (hit.length) removeEmptied(d, hit);
+  return hit;
+}
+
+/** Removes nodes and then any group they leave empty. */
+export function removeEmptied(d: Document, ids: string[]) {
+  removeNodes(d, ids);
+  for (let again = true; again;) {
+    const empty: string[] = [];
+    walk(d.root, (l) => { if (l.node.type === "group" && !l.node.children.length) empty.push(l.node.id); });
+    again = empty.length > 0;
+    if (again) removeNodes(d, empty);
+  }
+}
+
 // ---------- Shape Builder ----------
 
 export interface BuilderFace extends AreaOut { d: string }

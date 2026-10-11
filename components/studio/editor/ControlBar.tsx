@@ -14,9 +14,9 @@ import { currentRotation, moveRefTo, refAt, resizeTo, rotateTo } from "@/lib/stu
 import type { CornerType, Document, ShapeKind, ShapeParams, TextNode } from "@/lib/studio/types";
 import { IconButton, NumberInput, SegmentedControl, Select, Slider } from "@/components/ui";
 import { TOOL_INFO } from "@/lib/studio/commands";
-import { fmtLength } from "@/lib/studio/units";
 import { DEFAULT_TEXT, useEditor, useEditorApi, type TextDefaults } from "./store";
 import type { Handler } from "./commandHandlers";
+import { OPTION_TOOLS, ToolOptions } from "./tools/ToolOptions";
 
 const displayColor = (c: string) => (c === "#000000" ? "var(--ink)" : c);
 
@@ -69,8 +69,6 @@ export function ControlBar({ onResetToast, handlers }: { onResetToast: (m: strin
   const tool = useEditor((s) => s.tool);
   const shapeDefaults = useEditor((s) => s.shapeDefaults);
   const textDefaults = useEditor((s) => s.textDefaults);
-  const eraserSize = useEditor((s) => s.eraserSize);
-  const measure = useEditor((s) => s.measure);
   const anchors = useEditor((s) => s.anchors);
   const penMode = useEditor((s) => s.penMode);
   const penShape = useEditor((s) => s.penShape);
@@ -158,27 +156,7 @@ export function ControlBar({ onResetToast, handlers }: { onResetToast: (m: strin
     );
   }
 
-  if (tool === "eraser" || tool === "measure") {
-    const m = measure;
-    const dx = m ? m.b.x - m.a.x : 0, dy = m ? m.b.y - m.a.y : 0;
-    const read = (label: string, v: string) => <span className="ctl-read"><span className="k">{label}</span> <span className="v">{v}</span></span>;
-    return (
-      <div className="st-control" aria-label="Control bar" data-testid="control-bar">
-        <div className="grp"><span className="lbl">{TOOL_INFO[tool].label}</span></div>
-        {tool === "eraser"
-          ? <div className="grp"><NumberInput label="Size" value={eraserSize} length min={0.1} max={100} defaultValue={4} {...common} onChange={(v) => api.getState().set({ eraserSize: v })} testId="eraser-size" /></div>
-          : (
-            <div className="grp sep" data-testid="measure-read">
-              {read("D", m ? fmtLength(Math.hypot(dx, dy), units, true) : "—")}
-              {read("ΔX", m ? fmtLength(Math.abs(dx), units) : "—")}
-              {read("ΔY", m ? fmtLength(Math.abs(dy), units) : "—")}
-              {read("Angle", m && Math.hypot(dx, dy) > 1e-9 ? `${Math.round((Math.atan2(-dy, dx) * 1800) / Math.PI) / 10}°` : "—")}
-            </div>
-          )}
-        <div className="grp"><span className="hint">{TOOL_INFO[tool].description}{ids.length && tool === "eraser" ? " Only the selection is erased." : ""}</span></div>
-      </div>
-    );
-  }
+  if (OPTION_TOOLS.has(tool)) return <ToolOptions tool={tool} {...common} />;
 
   if (ids.length && !isEmptyBox(box) && !typeDefaults) {
     const W = box.maxX - box.minX, H = box.maxY - box.minY;
