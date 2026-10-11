@@ -4,6 +4,7 @@ import { CLOCK_PRESETS } from "./clock/presets";
 import { KEYRACK_PRESETS } from "./keyrack/presets";
 import { PUZZLE_PRESETS } from "./puzzle/presets";
 import { QR_PRESETS } from "./qr/presets";
+import { SIGN_PRESETS } from "./sign/presets";
 import { TOPPER_PRESETS } from "./topper/presets";
 import type { GeneratorId } from "./ids";
 import type { GenPreset } from "./types";
@@ -15,4 +16,5 @@ export const GENERATOR_PRESETS: Record<GeneratorId, GenPreset<unknown>[]> = {
   boxes: BOXES_PRESETS as GenPreset<unknown>[],
   topper: TOPPER_PRESETS as GenPreset<unknown>[],
   keyrack: KEYRACK_PRESETS as GenPreset<unknown>[],
+  sign: SIGN_PRESETS as GenPreset<unknown>[],
 };

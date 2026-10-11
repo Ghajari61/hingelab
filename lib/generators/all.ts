@@ -4,7 +4,8 @@ import { CLOCK } from "./clock";
 import { KEYRACK } from "./keyrack";
 import { PUZZLE } from "./puzzle";
 import { QR } from "./qr";
+import { SIGN } from "./sign";
 import { TOPPER } from "./topper";
 import type { AnyGenerator } from "./types";
 
-export const ALL_GENERATORS: AnyGenerator[] = [CLOCK, PUZZLE, QR, BOXES, TOPPER, KEYRACK];
+export const ALL_GENERATORS: AnyGenerator[] = [CLOCK, PUZZLE, QR, BOXES, TOPPER, KEYRACK, SIGN];

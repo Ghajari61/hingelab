@@ -636,3 +636,9 @@ Party sets and plate toppers are Pro; single toppers and cupcake sets are free.
 Hooks are separate parts whose tab is exactly the material thickness deep and passes through a slot in the board, so the arm's back rests on the board's face and glue holds the tab flush at the back. This needs no hardware, nests well, and the same profile function draws the rail picture, so the card matches the cut part. For heavy loads or thin sheets the same row can instead be holes for dowel pegs or pilot holes for cup hooks; picking the hook type sets a sensible hole size (8 mm dowel, 3 mm pilot) through the choice's `apply`, which the desktop app also honours.
 
 Shaped boards (house, heart, cloud, arch) can put a hook slot or mounting hole outside the outline; that is an error with fixes rather than a silent clip, because a slot cut across the edge leaves a notch and a loose hook.
+
+## D106. Sign inlays rely on kerf for the fit
+
+An inlay is three cuts from two materials: the top board with the letters as holes, the letters themselves in the second material, and the letters' counters cut from the main material to drop back into them, all glued onto a backer. Because every hole shrinks and every outer grows by half the kerf, the inlay letters come out about one kerf larger than their holes and press in snugly without a separate clearance setting; the check warns when strokes are under 2.5 mm, which snap, and when the two materials differ in thickness. Keyholes on an inlay go only in the backer so the face stays clean.
+
+Mounting holes are placed from the outline's real top edge at their x, not from the bounding box, so clouds, scallops, hearts and circles keep holes inside the board; a hole that still lands outside is an error, and one that cuts into the lettering is a warning with a bigger-margin fix.
