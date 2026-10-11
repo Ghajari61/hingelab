@@ -110,6 +110,92 @@ export interface LivingHingeParams {
   keepOutline: boolean;
 }
 
+/**
+ * An effect that reads another object: `link` is its id; links.ts `syncLinks` keeps `linkCache` (that
+ * object's geometry after its own effects, in the space named by effects/meta.ts LINK_SPACE) current.
+ * `linkError` says why the link is off ("missing": the object was deleted; "cycle": it depends on this one).
+ */
+export interface LinkedParams { link?: string; linkCache?: Subpath[]; linkError?: "missing" | "cycle" }
+
+export type PatternMode = "single" | "singleStretched" | "repeated" | "repeatedStretched";
+export interface PatternAlongPathParams extends LinkedParams {
+  mode: PatternMode;
+  /** Gap between copies along the path, mm. */
+  spacing: number;
+  /** Shifts the pattern across the path (along its normal), mm. */
+  normalOffset: number;
+  /** Scales the pattern across the path. */
+  widthScale: number;
+  rotate90: boolean;
+}
+
+export interface BendParams {
+  /** The guide the artwork follows, in the object's own coordinates. */
+  guide: Subpath;
+  /** Scales the artwork across the guide. */
+  widthScale: number;
+  /** The width also scales with the guide's length / the artwork's length (keeps proportions). */
+  widthInLength: boolean;
+  /** The artwork runs top to bottom: it is bent along its height instead of its width. */
+  vertical: boolean;
+}
+
+export interface EnvelopeParams {
+  mode: "bilinear" | "perspective";
+  /** Where the corners of the artwork's box go (object coordinates): top left, top right, bottom right, bottom left. */
+  tl: Vec; tr: Vec; br: Vec; bl: Vec;
+}
+
+export interface RoughenParams {
+  subdivide: "length" | "count";
+  /** Longest piece after splitting, mm ("length"). */
+  maxSegment: number;
+  /** Pieces per segment ("count"). */
+  segments: number;
+  direction: "xy" | "normal";
+  /** Largest displacement along x and y ("xy") or along the normal ("normal"), mm. */
+  maxX: number; maxY: number; maxNormal: number;
+  smooth: boolean;
+  seed: number;
+}
+
+export interface InterpolateParams extends LinkedParams {
+  /** Shapes between the two ends. */
+  steps: number;
+  /** "time": equal steps of the blend; "size": steps enclose equal increments of area. */
+  spacing: "time" | "size";
+}
+
+export interface TaperStrokeParams {
+  width: number;
+  /** Taper lengths, % of the path length. */
+  start: number;
+  end: number;
+  /** 0: straight taper; 1: rounded (smoothstep) taper ends. */
+  smoothing: number;
+}
+
+export interface PowerStrokeParams {
+  /** Width control points: position 0–1 along the path and width in mm. */
+  points: { t: number; w: number }[];
+  interpolation: "linear" | "smooth";
+}
+
+export interface MeasureSegmentsParams {
+  decimals: number;
+  prefix: string;
+  suffix: string;
+  showUnit: boolean;
+  /** Distance of the dimension line from the path, mm (negative: other side). */
+  offset: number;
+  ends: "arrows" | "ticks" | "none";
+  /** Label height on the page, mm. */
+  fontSize: number;
+}
+
+export type LiveBooleanOp = "union" | "difference" | "intersection" | "exclusion" | "division" | "cut";
+export interface LiveBooleanParams extends LinkedParams { op: LiveBooleanOp }
+
 export interface EffectParamsMap {
   corners: CornersParams;
   offset: OffsetParams;
@@ -117,6 +203,15 @@ export interface EffectParamsMap {
   rotateCopies: RotateCopiesParams;
   mirror: MirrorParams;
   livingHinge: LivingHingeParams;
+  patternAlongPath: PatternAlongPathParams;
+  bend: BendParams;
+  envelope: EnvelopeParams;
+  roughen: RoughenParams;
+  interpolate: InterpolateParams;
+  taperStroke: TaperStrokeParams;
+  powerStroke: PowerStrokeParams;
+  measureSegments: MeasureSegmentsParams;
+  liveBoolean: LiveBooleanParams;
 }
 
 export type EffectKind = keyof EffectParamsMap;

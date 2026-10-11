@@ -315,6 +315,14 @@
 .fx-body .ui-num { width: 84px; flex: none; }
 .fx-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 6px; }
 .fx-note { color: var(--text-secondary); font-size: var(--text-small); margin: 0; }
+.fx-link { display: flex; align-items: center; gap: 4px; color: var(--text-primary); }
+.fx-link svg { flex: none; }
+.fx-warn { color: var(--warning); }
+.fx-points { display: grid; gap: 4px; list-style: none; margin: 0; padding: 0; }
+.fx-points .fx-row { grid-template-columns: auto auto 1fr; }
+.fx-handle { fill: var(--surface-sheet); stroke: var(--smart-guide); stroke-width: 1.5; cursor: move; }
+.fx-handle:hover { fill: var(--smart-guide); }
+.fx-guides text { font-family: var(--font-num); paint-order: stroke; stroke: var(--surface-sheet); stroke-linejoin: round; }
 .fx-analysis { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; margin: 0; font-size: var(--text-small); }
 .fx-analysis dt { color: var(--text-secondary); }
 .fx-analysis dd { margin: 0; font-family: var(--font-num); text-align: end; }

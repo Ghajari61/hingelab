@@ -76,6 +76,8 @@ export interface EditorState {
   /** Pencil: pen pressure varies the width of a filled outline. */
   pencilPressure: boolean;
   pencilMode: CurveMode;
+  /** Live Effects whose on-canvas handles are shown (their cards are open in the Live Effects panel). */
+  fxHandles: { node: string; effects: string[] } | null;
 
   edit: <T = void>(label: string, recipe: (d: Document) => T, o?: { mergeKey?: string; select?: string[] }) => T;
   begin: () => void;
@@ -95,7 +97,7 @@ export interface EditorState {
   setView: (v: Partial<ViewState> | ((v: ViewState) => ViewState)) => void;
   setUi: (u: Partial<UiState>) => void;
   set: (p: Partial<Pick<EditorState, "shapeDefaults" | "textDefaults" | "lastTransform" | "textEditing" | "currentLayer" | "refPoint" | "lockRatio" | "eraserSize" | "eraserMode" | "measure" | "alignTo" | "alignGap"
-    | "fill" | "calligraphy" | "tweak" | "spray" | "penMode" | "penShape" | "brushWidth" | "pencilSmoothing" | "pencilPressure" | "pencilMode">>) => void;
+    | "fill" | "calligraphy" | "tweak" | "spray" | "penMode" | "penShape" | "brushWidth" | "pencilSmoothing" | "pencilPressure" | "pencilMode" | "fxHandles">>) => void;
 }
 
 const keepExisting = (doc: Document, ids: string[]) => {
@@ -140,6 +142,7 @@ export function createEditorStore(doc: Document): StoreApi<EditorState> {
     pencilSmoothing: DEFAULT_PENCIL_SMOOTHING,
     pencilPressure: false,
     pencilMode: "bezier",
+    fxHandles: null,
 
     edit: (label, recipe, o = {}) => {
       const s = get();

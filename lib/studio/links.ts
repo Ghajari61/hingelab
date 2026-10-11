@@ -3,12 +3,15 @@
  * (after the source's Live Effects, in the source's parent space) in `cache`, so `nodePaths` stays a
  * pure function of the node; `syncLinks` brings every cache up to date after each edit. A clone whose
  * source is gone becomes a plain path, and clones that feed into each other in a loop are unlinked.
+ * Live Effects that read another object (LinkedParams) get the same treatment: their `linkCache` is
+ * refreshed in the same passes; a deleted source or a loop clears the cache and records `linkError`.
  */
 import { produce } from "immer";
 import { newId } from "./doc";
 import { I, invert, mul, nodePaths, transformSubpaths } from "./geom";
+import { LINK_SPACE } from "./effects/meta";
 import { findNode, locate, removeNodes, topLevel, type IdFactory } from "./scene";
-import type { CloneNode, Document, GroupNode, Mat, PathNode, SceneNode, Subpath } from "./types";
+import type { CloneNode, Document, GroupNode, LinkedParams, LiveEffect, Mat, PathNode, SceneNode, Subpath } from "./types";
 
 /** What a clone of `src` shows before its own transform: the source's paths in the source's parent space. */
 export function sourceGeometry(src: SceneNode): Subpath[] {
@@ -31,37 +34,63 @@ function sameSubs(a: Subpath[], b: Subpath[]): boolean {
 
 /** cache array → the source node object it was computed from (immer keeps unchanged nodes identical). */
 const made = new WeakMap<object, object>();
+/** Linked-effect cache array → the source node object and the placement it was computed for. */
+const madeFx = new WeakMap<object, { src: object; key: string }>();
 
-interface Index { byId: Map<string, SceneNode>; clones: CloneNode[] }
+type FxNode = Extract<SceneNode, { type: "path" | "shape" | "text" | "clone" }>;
+/** An effect that reads another object (Pattern Along Path, Interpolate, Live Boolean). */
+interface FxLink { node: FxNode; world: Mat; effect: LiveEffect; params: LinkedParams; space: "page" | "local" }
+
+interface Index { byId: Map<string, SceneNode>; world: Map<string, Mat>; clones: CloneNode[]; links: FxLink[] }
 
 function indexDoc(root: GroupNode): Index {
   const byId = new Map<string, SceneNode>();
+  const world = new Map<string, Mat>();
   const clones: CloneNode[] = [];
-  const rec = (n: SceneNode) => {
+  const links: FxLink[] = [];
+  const rec = (n: SceneNode, pw: Mat) => {
+    const w = mul(pw, n.transform);
     byId.set(n.id, n);
+    world.set(n.id, w);
     if (n.type === "clone") clones.push(n);
-    else if (n.type === "group") n.children.forEach(rec);
+    if ((n.type === "path" || n.type === "shape" || n.type === "text" || n.type === "clone") && n.effects) {
+      for (const e of n.effects) {
+        const space = LINK_SPACE[e.kind];
+        const params = e.params as LinkedParams;
+        if (space && typeof params.link === "string" && params.link) links.push({ node: n, world: w, effect: e, params, space });
+      }
+    }
+    if (n.type === "group") n.children.forEach((c) => rec(c, w));
   };
-  root.children.forEach(rec);
-  return { byId, clones };
+  root.children.forEach((c) => rec(c, root.transform));
+  return { byId, world, clones, links };
 }
 
-/** Clones whose geometry feeds into clone `c`: its source if that is a clone, or every clone inside a group source. */
-function deps(c: CloneNode, ix: Index): string[] {
-  const src = ix.byId.get(c.source);
-  if (!src) return [];
-  if (src.type === "clone") return [src.id];
-  const out: string[] = [];
-  const rec = (n: SceneNode) => { if (n.type === "clone") out.push(n.id); else if (n.type === "group") n.children.forEach(rec); };
-  if (src.type === "group") rec(src);
+/** Ids a node reads its geometry from: a clone's source and the objects its linked effects use. */
+function refsOf(n: SceneNode): string[] {
+  const out: string[] = n.type === "clone" ? [n.source] : [];
+  if ((n.type === "path" || n.type === "shape" || n.type === "text" || n.type === "clone") && n.effects) {
+    for (const e of n.effects) { const l = (e.params as LinkedParams).link; if (LINK_SPACE[e.kind] && typeof l === "string" && l) out.push(l); }
+  }
   return out;
 }
 
-/** Ids of clones that sit on a dependency loop (a clone of itself, of its own group, or clones of each other). */
+/** Nodes with links that feed into `targetId`: the target itself if it has links, or every such node inside a group target. */
+function linkedWithin(targetId: string, ix: Index): string[] {
+  const src = ix.byId.get(targetId);
+  if (!src) return [];
+  const out: string[] = [];
+  const rec = (n: SceneNode) => { if (refsOf(n).length) out.push(n.id); if (n.type === "group") n.children.forEach(rec); };
+  rec(src);
+  return out;
+}
+
+/** Ids of linking nodes that sit on a dependency loop (a clone of itself or of its own group, objects reading each other…). */
 function cyclic(ix: Index): Set<string> {
   const state = new Map<string, 1 | 2>();
   const out = new Set<string>();
-  const graph = new Map(ix.clones.map((c) => [c.id, deps(c, ix)]));
+  const nodes = [...new Set([...ix.clones.map((c) => c.id), ...ix.links.map((l) => l.node.id)])];
+  const graph = new Map(nodes.map((id) => [id, refsOf(ix.byId.get(id)!).flatMap((r) => linkedWithin(r, ix))]));
   const visit = (id: string, stack: string[]) => {
     const s = state.get(id);
     if (s === 2) return;
@@ -72,16 +101,24 @@ function cyclic(ix: Index): Set<string> {
     stack.pop();
     state.set(id, 2);
   };
-  for (const c of ix.clones) visit(c.id, []);
+  for (const id of nodes) visit(id, []);
   return out;
 }
 
-type Action = { id: string; cache: Subpath[] } | { id: string; unlink: true };
+type Action = { id: string; cache: Subpath[] } | { id: string; unlink: true }
+  | { id: string; fx: string; linkCache?: Subpath[]; linkError?: LinkedParams["linkError"] };
 
-/** One pass of updates for `doc`, or null when every clone is current. */
+const matKey = (m: Mat) => m.map((v) => v.toPrecision(12)).join(",");
+
+/** A linked effect's view of its source: in page space, or in the coordinates of the node carrying the effect. */
+export function linkGeometry(src: SceneNode, srcWorld: Mat, nodeWorld: Mat, space: "page" | "local"): Subpath[] {
+  return copySubs(transformSubpaths(nodePaths(src), space === "page" ? srcWorld : mul(invert(nodeWorld), srcWorld)));
+}
+
+/** One pass of updates for `doc`, or null when every clone and linked effect is current. */
 function plan(doc: Document): Action[] | null {
   const ix = indexDoc(doc.root);
-  if (!ix.clones.length) return null;
+  if (!ix.clones.length && !ix.links.length) return null;
   const loops = cyclic(ix);
   const out: Action[] = [];
   for (const c of ix.clones) {
@@ -93,18 +130,41 @@ function plan(doc: Document): Action[] | null {
     made.set(geo, src);
     out.push({ id: c.id, cache: geo });
   }
+  for (const l of ix.links) {
+    const p = l.params, src = ix.byId.get(p.link!);
+    const off = (err: "missing" | "cycle") => { if (p.linkCache || p.linkError !== err) out.push({ id: l.node.id, fx: l.effect.id, linkError: err }); };
+    if (!src) { off("missing"); continue; }
+    if (src.id === l.node.id || (loops.has(l.node.id) && linkedWithin(src.id, ix).some((id) => loops.has(id)))) { off("cycle"); continue; }
+    const srcWorld = ix.world.get(src.id)!;
+    const key = l.space === "page" ? matKey(srcWorld) : `${matKey(srcWorld)}|${matKey(l.world)}`;
+    const seen = p.linkCache && madeFx.get(p.linkCache);
+    if (seen && seen.src === src && seen.key === key && !p.linkError) continue;
+    const geo = linkGeometry(src, srcWorld, l.world, l.space);
+    if (p.linkCache && !p.linkError && sameSubs(p.linkCache, geo)) { madeFx.set(p.linkCache, { src, key }); continue; }
+    madeFx.set(geo, { src, key });
+    out.push({ id: l.node.id, fx: l.effect.id, linkCache: geo });
+  }
   return out.length ? out : null;
 }
 
 function applyPlan(d: Document, actions: Action[]) {
-  const want = new Map(actions.map((a) => [a.id, a]));
+  const want = new Map<string, Action[]>();
+  for (const a of actions) want.set(a.id, [...(want.get(a.id) ?? []), a]);
   const rec = (g: GroupNode) => {
     g.children.forEach((n, k) => {
       if (n.type === "group") { rec(n); return; }
-      const a = want.get(n.id);
-      if (!a || n.type !== "clone") return;
-      if ("unlink" in a) g.children[k] = toPath(n);
-      else n.cache = a.cache;
+      for (const a of want.get(n.id) ?? []) {
+        if ("fx" in a) {
+          const node = g.children[k];
+          const e = (node.type === "path" || node.type === "shape" || node.type === "text" || node.type === "clone") ? node.effects?.find((x) => x.id === a.fx) : undefined;
+          if (!e) continue;
+          const params = e.params as LinkedParams;
+          if (a.linkCache) { params.linkCache = a.linkCache; delete params.linkError; } else { delete params.linkCache; params.linkError = a.linkError; }
+        } else if (n.type === "clone") {
+          if ("unlink" in a) g.children[k] = toPath(n);
+          else n.cache = a.cache;
+        }
+      }
     });
   };
   rec(d.root);
@@ -146,7 +206,10 @@ export function syncLinks(doc: Document): Document {
 
 // ---------- commands (mutate a draft) ----------
 
-/** True when `cloneId` showing `sourceId` would make a loop (the source is the clone, contains it, or shows it). */
+/**
+ * True when `cloneId` showing `sourceId` would make a loop (the source is the clone, contains it, or
+ * shows it). Also used for linked effects: `cloneId` is then the object carrying the effect.
+ */
 export function wouldCycle(d: Document, cloneId: string, sourceId: string): boolean {
   const ix = indexDoc(d.root);
   const seen = new Set<string>();
@@ -158,9 +221,9 @@ export function wouldCycle(d: Document, cloneId: string, sourceId: string): bool
     seen.add(id);
     const n = ix.byId.get(id);
     if (!n) continue;
-    if (n.type === "clone") stack.push(n.source);
-    else if (n.type === "group") {
-      const rec = (x: SceneNode) => { if (x.id === cloneId) stack.push(x.id); if (x.type === "clone") stack.push(x.source); else if (x.type === "group") x.children.forEach(rec); };
+    stack.push(...refsOf(n));
+    if (n.type === "group") {
+      const rec = (x: SceneNode) => { if (x.id === cloneId) stack.push(x.id); stack.push(...refsOf(x)); if (x.type === "group") x.children.forEach(rec); };
       n.children.forEach(rec);
     }
   }

@@ -10,7 +10,8 @@ import {
 import { cutPathNodes, flattenNodes, fractureNodes, insetOutsetNodes, removeDuplicateNodesIn, splitPathNodes } from "@/lib/studio/pathMenu";
 import { clipToSvg, copyNodes, loadClip, storeClip } from "@/lib/studio/clipboard";
 import { canHaveEffects, EFFECT_KINDS, EFFECTS, hasEffects } from "@/lib/studio/effects";
-import { addEffect } from "@/lib/studio/effects/ops";
+import { LINK_SPACE } from "@/lib/studio/effects/meta";
+import { addEffect, addLinkedEffect, stackOrder } from "@/lib/studio/effects/ops";
 import { addAnchorNodes, breakApartNodes, closeNodes, joinNodes, makeClip, makeCompound, releaseClip, resetBoxNodes, reverseNodes } from "@/lib/studio/pathOps";
 import { distributeSpacing } from "@/lib/studio/arrays";
 import { alignAnchors, alignTarget, exchangePositions, removeOverlaps } from "@/lib/studio/alignOps";
@@ -374,6 +375,16 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   const canFx = fxTargets(s).length > 0;
   for (const k of EFFECT_KINDS) {
     set(`path.effect.add.${k}`, () => {
+      const two = selected(st());
+      if (LINK_SPACE[k] && two.length === 2) {
+        const [bottom, top] = stackOrder(st().doc, two);
+        const b = findNode(st().doc.root, bottom);
+        if (b && canHaveEffects(b)) {
+          st().edit(`Add Live Effect: ${EFFECTS[k].label}`, (d) => { addLinkedEffect(d, bottom, top, k); }, { select: [bottom] });
+          ctx.showPanel("liveEffects");
+          return;
+        }
+      }
       const ids = fxTargets(st());
       if (!ids.length) return;
       st().edit(`Add Live Effect: ${EFFECTS[k].label}`, (d) => { addEffect(d, ids, k); });

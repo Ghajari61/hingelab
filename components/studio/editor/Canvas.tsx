@@ -7,7 +7,8 @@ import {
   apply, boxCenter, cubicAt, emptyBox, insertAnchor, isEmptyBox, nearestOnSubpaths, nodeBasePaths, nodeBox, nodePaths, normBox, pathD, rotateAt, scaleAt, segments, shapeForBox,
   shapePaths, transformSubpaths, translate, type Box,
 } from "@/lib/studio/geom";
-import { hasEffects } from "@/lib/studio/effects";
+import { canHaveEffects, EFFECTS, effectDragPatch, effectGuides, effectHandleOutline, effectHandles, hasEffects, type EffectGuides } from "@/lib/studio/effects";
+import { setEffectParams } from "@/lib/studio/effects/ops";
 import { refreshAuto, snapToOutlines } from "@/lib/studio/nodeOps";
 import { brushOutline, brushProfile, freehandPath, paraxialAppend, penSubpath } from "@/lib/studio/strokes";
 import {
@@ -58,6 +59,7 @@ type Drag =
   | { kind: "shear"; center: Vec; start: Vec; ids: string[]; half: Vec }
   | { kind: "build"; faces: number[]; remove: boolean; ids: string[] }
   | { kind: "measure"; a: Vec; targets: SnapTargets; crossed: MeasureTarget[] }
+  | { kind: "fxHandle"; node: string; effect: string; index: number; world: Mat; moved: boolean }
   | { kind: "session"; session: ToolSession };
 
 interface Hud { x: number; y: number; text: string }
@@ -132,6 +134,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
   const view = useEditor((s) => s.view);
   const ui = useEditor((s) => s.ui);
   const textEditing = useEditor((s) => s.textEditing);
+  const fxHandles = useEditor((s) => s.fxHandles);
   const stageRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 800, h: 600 });
   const drag = useRef<Drag | null>(null);
@@ -408,7 +411,39 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
     return out;
   }, [tool, ui.pathDirection, selection, doc, S]);
 
+  /** Handles of the Live Effects open in the panel (page coordinates), with their guide lines. */
+  const fxView = useMemo(() => {
+    if (!fxHandles || (tool !== "select" && tool !== "direct")) return [];
+    const l = locate(doc.root, fxHandles.node);
+    if (!l) return [];
+    return fxHandles.effects.map((effect) => ({
+      effect, world: l.world,
+      pts: effectHandles(l.node, effect).map((q) => apply(l.world, q)),
+      outline: transformSubpaths(effectHandleOutline(l.node, effect), l.world),
+    }));
+  }, [doc, fxHandles, tool]);
+
+  /** Canvas-only Live Effect marks (Measure Segments labels) of every visible object. */
+  const fxGuides = useMemo(() => {
+    const out: { id: string; g: EffectGuides }[] = [];
+    walk(doc.root, (l) => {
+      if (l.node.hidden) return "skip";
+      if (!canHaveEffects(l.node) || !l.node.effects?.some((e) => e.enabled && e.kind === "measureSegments")) return;
+      const g = effectGuides(l.node, l.world, doc.units);
+      if (g) out.push({ id: l.node.id, g });
+    });
+    return out;
+  }, [doc]);
+
   // ---------- hit helpers ----------
+
+  function fxHandleAt(sp: Vec): { effect: string; index: number; world: Mat } | null {
+    for (let k = fxView.length - 1; k >= 0; k--) {
+      const v = fxView[k];
+      for (let j = v.pts.length - 1; j >= 0; j--) { const q = S(v.pts[j]); if (Math.hypot(sp.x - q.x, sp.y - q.y) <= 7) return { effect: v.effect, index: j, world: v.world }; }
+    }
+    return null;
+  }
 
   const selBox = useMemo(() => (selection.length && tool !== "direct" ? selectionBox(doc, selection) : emptyBox()), [doc, selection, tool]);
 
@@ -476,6 +511,14 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       return;
     }
     const settings = snapSettings(s.doc);
+    if ((s.tool === "select" || s.tool === "direct") && s.fxHandles) {
+      const fh = fxHandleAt(sp);
+      if (fh) {
+        s.begin();
+        drag.current = { kind: "fxHandle", node: s.fxHandles.node, effect: fh.effect, index: fh.index, world: fh.world, moved: false };
+        return;
+      }
+    }
     switch (s.tool) {
       case "select": {
         const h = handleAt(sp);
@@ -720,14 +763,23 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         curve.current.hoverClose = curve.current.pts.length >= 2 && Math.hypot(sp.x - f.x, sp.y - f.y) <= 7;
       }
       if (s.tool === "shapeBuilder") setHoverFace(faceAt(faces, p));
+      const overFx = (s.tool === "select" || s.tool === "direct") && !space.current && fxView.length > 0 && !!fxHandleAt(sp);
       if (s.tool === "select" && !space.current) {
         const h = handleAt(sp);
-        setCursor(h ? (h.kind === "scale" ? HANDLE_CURSOR[h.h] : "alias") : guideAt(p) >= 0 && !hitTest(s.doc, p, 4 / s.view.zoom) ? (s.doc.guides[guideAt(p)].axis === "x" ? "ew-resize" : "ns-resize") : null);
-      }
+        setCursor(overFx ? "move" : h ? (h.kind === "scale" ? HANDLE_CURSOR[h.h] : "alias") : guideAt(p) >= 0 && !hitTest(s.doc, p, 4 / s.view.zoom) ? (s.doc.guides[guideAt(p)].axis === "x" ? "ew-resize" : "ns-resize") : null);
+      } else if (s.tool === "direct" && !space.current) setCursor(overFx ? "move" : null);
       return;
     }
     switch (dr.kind) {
       case "pan": s.setView({ x: dr.vx + e.clientX - dr.sx, y: dr.vy + e.clientY - dr.sy }); return;
+      case "fxHandle": {
+        const patch = fxHandlePatch(dr, p);
+        if (!patch) return;
+        dr.moved = true;
+        s.preview((d) => { setEffectParams(d, dr.node, dr.effect, patch as never); });
+        setHud({ x: sp.x, y: sp.y, text: `X ${fmt(p.x)}  Y ${fmt(p.y)} ${doc.units}` });
+        return;
+      }
       case "guide": {
         const at = dr.axis === "x" ? p.x : p.y;
         s.preview((d) => { if (d.guides[dr.index]) d.guides[dr.index].at = at; else d.guides.push({ axis: dr.axis, at }); });
@@ -913,6 +965,13 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
     return [m[3] / det, -m[1] / det, -m[2] / det, m[0] / det, (m[2] * m[5] - m[3] * m[4]) / det, (m[1] * m[4] - m[0] * m[5]) / det];
   }
 
+  /** Parameters for a dragged effect handle, always computed from the document before the drag. */
+  function fxHandlePatch(dr: Extract<Drag, { kind: "fxHandle" }>, p: Vec) {
+    const s = api.getState();
+    const n = findNode((s.base ?? s.doc).root, dr.node);
+    return n ? effectDragPatch(n, dr.effect, dr.index, apply(invertWorld(dr.world), p)) : null;
+  }
+
   function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
     const s = api.getState();
     const dr = drag.current;
@@ -923,6 +982,13 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
     const p = toDoc(e.clientX, e.clientY);
     switch (dr.kind) {
       case "pan": setCursor(space.current ? "grab" : null); return;
+      case "fxHandle": {
+        const patch = dr.moved ? fxHandlePatch(dr, p) : null;
+        const n = findNode((s.base ?? s.doc).root, dr.node);
+        const kind = n && canHaveEffects(n) ? n.effects?.find((f) => f.id === dr.effect)?.kind : undefined;
+        s.end(`Move ${kind ? EFFECTS[kind].label : "Effect"} Handle`, patch ? (d) => { setEffectParams(d, dr.node, dr.effect, patch as never); } : null);
+        return;
+      }
       case "guide": {
         const sp = screenPoint(e);
         const off = s.ui.rulers && ((dr.axis === "x" && sp.x < RULER) || (dr.axis === "y" && sp.y < RULER));
@@ -1244,6 +1310,19 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
           ))}
           {gridLines && <g clipPath={doc.sheets.length ? "url(#hl-sheets)" : undefined}>{gridLines}</g>}
           <g data-testid="scene">{doc.root.children.map(renderNode)}</g>
+          {fxGuides.length > 0 && !ui.presentation && (
+            <g className="fx-guides" data-testid="effect-guides" pointerEvents="none">
+              {fxGuides.map(({ id, g }) => (
+                <g key={id}>
+                  <path d={pathD(g.lines)} fill="none" stroke="var(--guide)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                  {g.labels.map((t, k) => (
+                    <text key={k} x={t.x} y={t.y} fontSize={t.size} textAnchor="middle" dominantBaseline="central" fill="var(--guide)"
+                      transform={`rotate(${t.angle} ${t.x} ${t.y})`} style={{ strokeWidth: 3 / zoom }} data-testid="effect-guide-label">{t.text}</text>
+                  ))}
+                </g>
+              ))}
+            </g>
+          )}
           {ui.guidesShown && doc.guides.map((g, k) => g.axis === "x"
             ? <line key={k} x1={g.at} x2={g.at} y1={vb.minY} y2={vb.maxY} stroke="var(--guide)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
             : <line key={k} y1={g.at} y2={g.at} x1={vb.minX} x2={vb.maxX} stroke="var(--guide)" strokeWidth={1} vectorEffect="non-scaling-stroke" />)}
@@ -1300,6 +1379,19 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
             <rect x={selRect.x} y={selRect.y} width={selRect.w} height={selRect.h} fill="none" stroke="var(--accent)" strokeWidth={1} />
             {tool === "select" && HANDLES.map((h) => { const q = handlePos({ minX: selRect.x, minY: selRect.y, maxX: selRect.x + selRect.w, maxY: selRect.y + selRect.h }, h); return <rect key={h} x={q.x - 3.5} y={q.y - 3.5} width={7} height={7} fill="var(--handle-fill)" stroke="var(--accent)" strokeWidth={1} />; })}
             {tool === "select" && <circle cx={selRect.x + selRect.w / 2} cy={selRect.y + selRect.h / 2} r={2.5} fill="none" stroke="var(--accent)" strokeWidth={1} opacity={0.8} />}
+          </g>
+        )}
+        {fxView.length > 0 && (
+          <g data-testid="effect-handles">
+            {fxView.map((v) => (
+              <g key={v.effect} data-effect={v.effect}>
+                {v.outline.length > 0 && (
+                  <path d={pathD(v.outline)} transform={`translate(${view.x} ${view.y}) scale(${zoom})`} fill="none" stroke="var(--smart-guide)"
+                    strokeWidth={1} strokeDasharray="5 3" vectorEffect="non-scaling-stroke" pointerEvents="none" />
+                )}
+                {v.pts.map((q, k) => { const a = S(q); return <rect key={k} className="fx-handle" x={a.x - 4} y={a.y - 4} width={8} height={8} transform={`rotate(45 ${a.x} ${a.y})`} data-testid="effect-handle" />; })}
+              </g>
+            ))}
           </g>
         )}
         {directionMarks.map((m, k) => (
