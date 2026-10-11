@@ -3,6 +3,7 @@
   "private": true,
   "sideEffects": [
     "*.css",
+    "./components/ui/index.ts",
     "./desktop/src/harden.ts"
   ],
   "scripts": {
