@@ -7,6 +7,7 @@ import { QR } from "./qr";
 import { SIGN } from "./sign";
 import { TABLENUM } from "./tablenum";
 import { TOPPER } from "./topper";
+import { TROPHY } from "./trophy";
 import type { AnyGenerator } from "./types";
 
-export const ALL_GENERATORS: AnyGenerator[] = [CLOCK, PUZZLE, QR, BOXES, TOPPER, KEYRACK, SIGN, TABLENUM];
+export const ALL_GENERATORS: AnyGenerator[] = [CLOCK, PUZZLE, QR, BOXES, TOPPER, KEYRACK, SIGN, TABLENUM, TROPHY];

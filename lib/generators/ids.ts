@@ -1,5 +1,5 @@
 /** Generator ids and the little the shell needs before a generator's code loads. */
-export const GENERATOR_IDS = ["clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum"] as const;
+export const GENERATOR_IDS = ["clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy"] as const;
 export type GeneratorId = (typeof GENERATOR_IDS)[number];
 
 export const isGeneratorId = (v: unknown): v is GeneratorId => typeof v === "string" && (GENERATOR_IDS as readonly string[]).includes(v);
@@ -22,4 +22,5 @@ export const GENERATOR_INFO: Record<GeneratorId, GeneratorInfo> = {
   keyrack: { name: "Key Holder", blurb: "Wall key holders in 18 shapes with slot-in hooks, dowel pegs or cup hooks, names above each hook and an optional shelf.", icon: "key", storageKey: "hingelab-gen-keyrack-v1" },
   sign: { name: "Sign", blurb: "Wall, door, shop and desk signs in wood, acrylic or both: engraved, layered letters, cut-out words or flush inlays, with frames and stands.", icon: "sign", storageKey: "hingelab-gen-sign-v1" },
   tablenum: { name: "Table Numbers", blurb: "A whole set of table numbers in one file: stands in slotted bases, living-hinge tent cards or plaques, with labels, names and Persian digits.", icon: "hash", storageKey: "hingelab-gen-tablenum-v1" },
+  trophy: { name: "Trophy", blurb: "Awards that stand up: a star, cup, shield, medal, flame, laurel or motif with a name plate, slotted into a stepped base in wood, acrylic or both.", icon: "trophy", storageKey: "hingelab-gen-trophy-v1" },
 };

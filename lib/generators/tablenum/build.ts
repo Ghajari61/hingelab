@@ -5,7 +5,7 @@ import { material2 } from "../material2";
 import { isMotifId, motif, motifSize } from "../motifs";
 import { orient, shapeOutline, type ShapeKind } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
-import { bottomAt, textBlock, weld, withSticks } from "../weld";
+import { tabsUnder, textBlock, weld, withSticks } from "../weld";
 import { MAX_TABLES, tableList, type TablenumParams } from "./params";
 
 export interface TablenumInfo {
@@ -55,18 +55,6 @@ export function hingeSlits(w: number, y0: number, y1: number, h: TablenumParams[
     }
   }
   return cuts;
-}
-
-/**
- * Tab centres under a plate: two tabs as far apart as `spread` allows while the bottom edge there is
- * within a few mm of the lowest point, else one wider tab in the middle (hearts, diamonds, stars).
- */
-export function tabsFor(face: Contour, W: number, H: number, spread: number): { xs: number[]; w: number } {
-  const flat = (x: number) => [x - TAB_W / 2, x, x + TAB_W / 2].every((u) => (bottomAt(face, u) ?? 0) >= H - Math.max(3, H * 0.04));
-  for (let s = spread; s >= TAB_W; s -= 1) {
-    if (flat(W / 2 - s) && flat(W / 2 + s)) return { xs: [W / 2 - s, W / 2 + s], w: TAB_W };
-  }
-  return { xs: [W / 2], w: TAB_W + 6 };
 }
 
 export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOutput {
@@ -161,7 +149,7 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
   const tabLen = layers === 1 ? T : T * (layers - 1);
   info.tab = tabLen;
   const baseL = Math.max(p.base.width, 2 * TAB_W + 30);
-  const tabs = tabsFor(face, W, H, Math.min(W * 0.28, baseL * 0.3));
+  const tabs = tabsUnder(face, W, H, Math.min(W * 0.28, baseL * 0.3), TAB_W);
   const tabXs = tabs.xs;
   const plates = p.build.double ? 2 : 1;
   const slotW = plates * T + CLEAR;

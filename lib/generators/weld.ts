@@ -145,6 +145,19 @@ export function bottomAt(c: Contour, x: number): number | null {
   return y;
 }
 
+/**
+ * Tab centres under an outline W wide whose lowest point is at H: two tabs `w` wide as far apart as
+ * `spread` (from the centre) allows while the edge above them is within a few mm of the lowest point,
+ * else one wider tab in the middle (hearts, diamonds, stars).
+ */
+export function tabsUnder(outer: Contour, W: number, H: number, spread: number, w: number): { xs: number[]; w: number } {
+  const flat = (x: number) => [x - w / 2, x, x + w / 2].every((u) => (bottomAt(outer, u) ?? -Infinity) >= H - Math.max(3, H * 0.04));
+  for (let s = spread; s >= w; s -= 1) {
+    if (flat(W / 2 - s) && flat(W / 2 + s)) return { xs: [W / 2 - s, W / 2 + s], w };
+  }
+  return { xs: [W / 2], w: w + 6 };
+}
+
 export interface StickSpec {
   /** Centre line, mm. */
   x: number;

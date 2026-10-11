@@ -648,3 +648,9 @@ Mounting holes are placed from the outline's real top edge at their x, not from 
 A set of table numbers is made at once, so the batch is a parameter rather than a copy-and-edit loop: a range or a list produces one plate per table in the same file, and the plate is sized to the widest table so the set matches on the day. The cap is 60 tables per file, which keeps the build and the nesting fast; above that the check offers to cut the range and suggests a second project.
 
 Tabs sit where the plate's bottom edge is within a few millimetres of its lowest point, as far apart as the base allows; pointed shapes (hearts, diamonds, stars) get one wider centre tab instead of long legs. With two or three base layers the bottom one is solid, so the tabs are T × (layers − 1) long and never show underneath. Tent cards reuse the living-hinge idea of the Hinge Box: alternating slit rows across a band at the fold, solid at both edges, with the back half rotated 180° so both faces read upright once folded; acrylic cannot bend and is an error.
+
+## D108. A trophy is one figure in a slot sized from its own material
+
+The emblem, stem and name plate are unioned into one upright figure, so it cuts as one piece and cannot come apart; the stem starts from the emblem's real bottom on the centre line (a star's notch, a cup's foot), not its bounding box, and anything still separate is bridged. The figure's tabs follow the same rule as the table-number stands (D107): two where the bottom edge is flat, one wider tab under a point.
+
+In a mixed build the figure is cut from the second material, so the slot width is the second material's thickness plus the clearance, not the base's. That is what lets a 5 mm acrylic figure stand snugly in a 3 mm plywood base. The clearance is a setting (0.1 mm by default, 0.05 mm suits acrylic) because the right push fit depends on the material and the laser, and the kerf compensation already makes the nominal sizes come out true.

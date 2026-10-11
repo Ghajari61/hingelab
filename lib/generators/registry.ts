@@ -14,4 +14,5 @@ export const loadGenerator: Record<GeneratorId, () => Promise<AnyGenerator>> = {
   keyrack: () => import("./keyrack").then((m) => m.KEYRACK as AnyGenerator),
   sign: () => import("./sign").then((m) => m.SIGN as AnyGenerator),
   tablenum: () => import("./tablenum").then((m) => m.TABLENUM as AnyGenerator),
+  trophy: () => import("./trophy").then((m) => m.TROPHY as AnyGenerator),
 };
