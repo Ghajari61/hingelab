@@ -311,6 +311,7 @@ export const BOXES: GeneratorDef<BoxesParams> = {
   check: (p, out) => checkBoxes(p, out as BoxesOutput),
   fonts: (p) => (p.design === "sign" && p.sign.text.trim() ? [p.sign.fontId] : p.design === "keys" && p.keys.text.trim() ? [p.keys.fontId] : engraved(p) && hasArt(p) && p.engrave.text.trim() ? [p.engrave.fontId] : []),
   art,
+  batch: (p) => (p.design === "sign" ? "sign.text" : p.design === "keys" ? "keys.text" : engraved(p) ? "engrave.text" : null),
   fileName: (p) => namedFile(p.design === "bird" ? "birdhouse" : p.design, p.name, fileTail(p)),
   summary: (p) => `${DESIGN_NAMES[p.design]}, ${size(p)}`,
   help: {

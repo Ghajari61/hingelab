@@ -3,13 +3,15 @@ import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { fitArt, namedFile } from "../util";
 import { buildPuzzle, puzzleOutline, tabEdge, type PuzzleOutput } from "./build";
 import { checkPuzzle } from "./check";
-import { FREE_PIECES, PUZZLE_DEFAULTS, mergePuzzle, type PuzzleParams } from "./params";
+import { CORNERED_PUZZLES, FREE_PIECES, PUZZLE_DEFAULTS, mergePuzzle, type PuzzleParams } from "./params";
 import { PUZZLE_PRESETS } from "./presets";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const engraves = (k: PuzzleParams["engrave"]["kind"]) => (p: PuzzleParams) => p.engrave.kind === k;
 
-const SHAPE_NAMES: Record<PuzzleParams["shape"]["kind"], string> = { rect: "Rectangle", circle: "Circle", heart: "Heart", custom: "Custom" };
+const SHAPE_NAMES: Record<PuzzleParams["shape"]["kind"], string> = {
+  rect: "Rectangle", circle: "Circle", oval: "Oval", heart: "Heart", hexagon: "Hexagon", cloud: "Cloud", house: "House", arch: "Arch", shield: "Shield", custom: "Custom",
+};
 const STYLE_NAMES: Record<PuzzleParams["tabs"]["style"], string> = { classic: "classic", kids: "kids", wavy: "wavy", straight: "straight-cut" };
 
 const sections: SectionSpec<PuzzleParams>[] = [
@@ -20,11 +22,11 @@ const sections: SectionSpec<PuzzleParams>[] = [
       {
         kind: "choice", key: "shape.kind", label: "Puzzle shape", rail: true,
         help: "The outline of the whole puzzle; Custom takes the path data of any closed outline.",
-        options: [{ v: "rect", text: "Rectangle" }, { v: "circle", text: "Circle" }, { v: "heart", text: "Heart" }, { v: "custom", text: "Custom" }],
+        options: (Object.keys(SHAPE_NAMES) as PuzzleParams["shape"]["kind"][]).map((v) => ({ v, text: SHAPE_NAMES[v] })),
       },
       { kind: "number", key: "shape.width", label: "Width", unit: "mm", min: 40, max: 1200, step: 5, help: "Width of the puzzle; a circle's diameter." },
-      { kind: "number", key: "shape.height", label: "Height", unit: "mm", min: 40, max: 1200, step: 5, show: (p) => p.shape.kind !== "circle", help: "Height of the puzzle; a heart or custom outline keeps its proportions inside width × height." },
-      { kind: "number", key: "shape.corner", label: "Corner radius", unit: "mm", min: 0, max: 100, step: 1, show: (p) => p.shape.kind === "rect", help: "Rounds the puzzle's corners; 0 keeps them square." },
+      { kind: "number", key: "shape.height", label: "Height", unit: "mm", min: 40, max: 1200, step: 5, show: (p) => p.shape.kind !== "circle", help: "Height of the puzzle; the outline stretches to fill width × height." },
+      { kind: "number", key: "shape.corner", label: "Corner radius", unit: "mm", min: 0, max: 100, step: 1, show: (p) => CORNERED_PUZZLES.includes(p.shape.kind), help: "Rounds the puzzle's corners; 0 keeps them sharp." },
       { kind: "text", key: "shape.path", label: "Custom outline", multiline: true, placeholder: "M 0 0 C …", show: (p) => p.shape.kind === "custom", help: "SVG path data (the d attribute) of a closed outline; it is scaled to fit the width and height." },
     ],
   },
@@ -88,7 +90,7 @@ const sections: SectionSpec<PuzzleParams>[] = [
 /** Rail pictures, drawn with the real tab curves. */
 function art(key: string, v: string): { d: string; fill?: boolean }[] {
   if (key === "shape.kind") {
-    const o = puzzleOutline(mergePuzzle({ shape: { kind: v, width: v === "rect" ? 150 : 100, height: v === "heart" ? 90 : 100, path: v === "custom" ? "M 50 0 L 61 35 L 98 35 L 68 57 L 79 92 L 50 70 L 21 92 L 32 57 L 2 35 L 39 35 Z" : "" } }));
+    const o = puzzleOutline(mergePuzzle({ shape: { kind: v, width: v === "rect" ? 150 : 100, height: v === "heart" ? 90 : v === "oval" || v === "cloud" ? 70 : v === "arch" ? 120 : 100, path: v === "custom" ? "M 50 0 L 61 35 L 98 35 L 68 57 L 79 92 L 50 70 L 21 92 L 32 57 L 2 35 L 39 35 Z" : "" } }));
     return o ? [{ d: fitArt([o])[0], fill: true }] : [];
   }
   if (key === "tabs.style") {
@@ -148,6 +150,7 @@ export const PUZZLE: GeneratorDef<PuzzleParams> = {
   fonts: (p) => (p.engrave.kind === "text" && p.engrave.text.trim()) || p.engrave.kind === "numbers" ? [p.engrave.fontId] : [],
   scale: scalePuzzle,
   art,
+  batch: (p) => (p.engrave.kind === "text" ? "engrave.text" : null),
   fileName: (p) => namedFile("puzzle", p.name, `${Math.round(p.shape.width)}mm`),
   summary: (p) => {
     const size = p.shape.kind === "circle" ? `${p.shape.width} mm` : `${p.shape.width} × ${p.shape.height} mm`;
@@ -156,7 +159,7 @@ export const PUZZLE: GeneratorDef<PuzzleParams> = {
   },
   help: {
     intro: [
-      "The Puzzle generator cuts a jigsaw from a rectangle, circle, heart or any closed outline, with classic, kids, wavy or straight cuts, an optional frame or tray, and a picture, text or piece numbers engraved on top.",
+      "The Puzzle generator cuts a jigsaw from a rectangle, circle, oval, heart, hexagon, cloud, house, arch, shield or any closed outline, with classic, kids, wavy or straight cuts, an optional frame or tray, and a picture, text or piece numbers engraved on top.",
       "Every edge between two pieces is drawn once, as a single line joined along each row and column, so the laser never cuts the same line twice. The cuts run half a millimetre past the outline (plus half the kerf), so no piece stays attached.",
       `Free accounts export puzzles of up to ${FREE_PIECES} pieces; larger puzzles need Pro.`,
     ],

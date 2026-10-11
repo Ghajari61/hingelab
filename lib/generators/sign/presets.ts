@@ -118,4 +118,27 @@ export const SIGN_PRESETS: GenPreset<SignParams>[] = [
       border: { kind: "none" }, mount: { kind: "hanging", hole: 4 }, mat: { mat2: "acrylic-red", T2: 3 },
     },
   },
+  {
+    id: "neon-love", name: "Neon-look love", note: "Glowing script outlines on clear acrylic, on a desk stand",
+    params: {
+      name: "Neon love", material: "acr3", T: 3, K: 0.1, style: { kind: "neon", border: 6 },
+      text: { text: "love", fontId: "pacifico", size: 70, spacing: -1 }, motif: { kind: "heart", side: "right", size: 34, gap: 2 },
+      mount: { kind: "stand", depth: 50 },
+    },
+  },
+  {
+    id: "paint-stencil", name: "Paint stencil", note: "Letters cut through with bridges, for crates and walls",
+    params: {
+      name: "Paint stencil", material: "card2", T: 2, K: 0.2, style: { kind: "stencil" },
+      board: { shape: "rect", auto: true, pad: 20, corner: 0 }, text: { text: "GARDEN", fontId: "archivo-black", size: 50, spacing: 2 },
+      motif: { kind: "none" }, border: { kind: "none" }, mount: { kind: "none" },
+    },
+  },
+  {
+    id: "neon-open", name: "Neon-look OPEN", note: "A shop-window OPEN sign for an LED base",
+    params: {
+      name: "Neon open", material: "acr5", T: 5, K: 0.12, style: { kind: "neon", border: 8 },
+      text: { text: "OPEN", fontId: "archivo-black", size: 60, spacing: 2 }, motif: { kind: "none" }, mount: { kind: "none" },
+    },
+  },
 ];

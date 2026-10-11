@@ -8,6 +8,16 @@ export const MATERIALS: Record<string, { name: string; T: number | null; K: numb
   mdf3:    { name: "MDF 3 mm",                   T: 3,     K: 0.18, gamma: 0.012 },
   card2:   { name: "Chipboard / cardboard 2 mm", T: 2,     K: 0.20, gamma: 0.030 },
   acr3:    { name: "Acrylic 3 mm (brittle)",     T: 3,     K: 0.10, gamma: 0.008 },
+  bass3:   { name: "Basswood plywood 3 mm",      T: 3,     K: 0.14, gamma: 0.022 },
+  walnut3: { name: "Walnut plywood 3 mm",        T: 3,     K: 0.16, gamma: 0.018 },
+  birch6:  { name: "Baltic birch plywood 6 mm", T: 6,     K: 0.20, gamma: 0.018 },
+  mdf6:    { name: "MDF 6 mm",                   T: 6,     K: 0.22, gamma: 0.010 },
+  acr2:    { name: "Acrylic 2 mm (brittle)",     T: 2,     K: 0.10, gamma: 0.008 },
+  acr5:    { name: "Acrylic 5 mm (brittle)",     T: 5,     K: 0.12, gamma: 0.006 },
+  mirror3: { name: "Mirror acrylic 3 mm",        T: 3,     K: 0.10, gamma: 0.006 },
+  leather2:{ name: "Veg-tan leather 2 mm",       T: 2,     K: 0.20, gamma: 0.050 },
+  felt3:   { name: "Wool felt 3 mm",             T: 3,     K: 0.25, gamma: 0.060 },
+  cork3:   { name: "Cork sheet 3 mm",            T: 3,     K: 0.20, gamma: 0.040 },
   custom:  { name: "Custom material",            T: null,  K: null, gamma: 0.018 },
 };
 

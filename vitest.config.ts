@@ -7,6 +7,8 @@ export default defineConfig({
     include: ["lib/**/*.test.ts"],
     // .env.local gives the integration tests the local Supabase stack; they skip themselves when it is down.
     env: loadEnv("test", process.cwd(), ""),
+    // The 3D overlap checks take a second or two alone and several times that with every worker busy.
+    testTimeout: 20_000,
   },
   resolve: {
     alias: {

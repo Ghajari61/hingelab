@@ -10,11 +10,11 @@ import { FontPicker } from "@/components/letters/FontPicker";
 import type { BaseField } from "@/components/editor/fields";
 import type { Units } from "@/components/editor/format";
 import { cleanFit } from "@/lib/fit/fitToSheets";
-import { cleanExtras, GEN_LAYER_NAMES } from "@/lib/generators/output";
+import { cleanExtras, cleanJob, GEN_LAYER_NAMES } from "@/lib/generators/output";
 import { getPath, setPath } from "@/lib/generators/path";
 import { Dices } from "lucide-react";
 import { ImagePicker } from "./ImagePicker";
-import { MAX_COPIES, SHEET_EXTRAS, type AnyGenerator, type FieldSpec, type GenBase, type GenOutput, type NumberSpec } from "@/lib/generators/types";
+import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, SHEET_EXTRAS, type AnyGenerator, type FieldSpec, type GenBase, type GenOutput, type NumberSpec } from "@/lib/generators/types";
 
 type P = GenBase & Record<string, unknown>;
 
@@ -158,6 +158,8 @@ export function GeneratorDock({
   };
 
   const extras = cleanExtras(params.sheet);
+  const job = cleanJob(params.job);
+  const batchKey = def.batch?.(params as never) ?? null;
   const layerVis = (key: LayerKey) => onSet(`layers.${key}.vis`, !params.layers[key].vis, true);
   const layerExp = (key: LayerKey, exp: boolean) => onSet(`layers.${key}.exp`, exp, true);
 
@@ -191,7 +193,7 @@ export function GeneratorDock({
       <Sec title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers"])}>
         <LayersPanel layers={params.layers} labels={false} only={layerKeys} names={GEN_LAYER_NAMES} onVis={layerVis} onExp={layerExp} />
       </Sec>
-      <Sec title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "fit", "sheet"])}>
+      <Sec title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "fit", "sheet", "job"])}>
         <SheetSection
           bedW={params.bedW} bedH={params.bedH} fit={cleanFit(params.fit)} info={sheet.info} size={sheet.size}
           onSheet={sheet.onSheet} onFit={sheet.onFit}
@@ -212,6 +214,22 @@ export function GeneratorDock({
         <label className="chk" title="Score each part's name on it, where it fits clear of cuts and engraving">
           <input type="checkbox" checked={extras.labels} onChange={(e) => onSet("sheet.labels", e.target.checked, true)} /> Part labels
         </label>
+        <label className="chk" title="Flip every part left to right, so engraving on the back of clear acrylic reads the right way from the front">
+          <input type="checkbox" checked={job.mirror} onChange={(e) => onSet("job.mirror", e.target.checked, true)} /> Mirror (engrave the back of clear acrylic)
+        </label>
+        {batchKey && (
+          <div className="gen-text">
+            <div className="rowlabel">Names, one per line</div>
+            <textarea
+              className="textin" rows={4} aria-label="Batch names" spellCheck={false} maxLength={MAX_BATCH_TEXT}
+              placeholder={"One set of parts per line,\nwith that line as the text"}
+              value={String(getPath(params, "job.names") ?? "")}
+              onChange={(e) => onSet("job.names", e.target.value, false)}
+              onBlur={(e) => onSet("job.names", e.target.value, true)}
+            />
+            {job.names.length > 0 && <p className="note">{job.names.length} set{job.names.length > 1 ? "s" : ""}, one per line (up to {MAX_BATCH}).</p>}
+          </div>
+        )}
         <p className="note">{def.scale ? "Fit to sheets scales the design; holes for hardware keep their size." : "Parts are packed at their real size."}</p>
       </Sec>
     </aside>

@@ -1,10 +1,13 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
-import { SHEET_EXTRAS, type GenBase } from "../types";
+import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
 import { isImageDataURL } from "@/lib/security/svg";
 import { mergeInto } from "../util";
 
-export type PuzzleShape = "rect" | "circle" | "heart" | "custom";
+export type PuzzleShape = "rect" | "circle" | "oval" | "heart" | "hexagon" | "cloud" | "house" | "arch" | "shield" | "custom";
+/** Outlines drawn by the shared plate shapes; `corner` rounds the straight-sided ones. */
+export const PLATE_PUZZLES = ["oval", "hexagon", "cloud", "house", "arch", "shield"] as const;
+export const CORNERED_PUZZLES: PuzzleShape[] = ["rect", "hexagon", "house", "arch", "shield"];
 export type TabStyle = "classic" | "kids" | "wavy" | "straight";
 export type FrameKind = "none" | "frame" | "tray";
 export type EngraveKind = "none" | "image" | "text" | "numbers";
@@ -69,6 +72,7 @@ export const PUZZLE_DEFAULTS: PuzzleParams = {
   gap: 4,
   fit: { ...FIT_OFF },
   sheet: { ...SHEET_EXTRAS },
+  job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   shape: { kind: "rect", width: 300, height: 200, corner: 0, path: "" },
   pieces: { auto: true, count: 48, cols: 8, rows: 6 },

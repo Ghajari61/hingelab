@@ -22,7 +22,7 @@ export function Canvas({
   /** Engraved areas (filled, even-odd), on the labels layer. */
   engrave?: string[];
   /** Engraved pictures (sheet coordinates), clipped to `clip`, on the labels layer. */
-  images?: { href: string; x: number; y: number; w: number; h: number; clip?: string }[];
+  images?: { href: string; x: number; y: number; w: number; h: number; clip?: string; flip?: boolean }[];
   layers: Layers;
   labels: boolean;
   /** Hinge spacing, used to fade dense hinge cuts when zoomed out. */
@@ -133,7 +133,9 @@ export function Canvas({
               {vis("labels") && images?.map((im, i) => (
                 <g key={`im${i}`}>
                   {im.clip && <clipPath id={`gen-clip-${i}`}><path d={im.clip} /></clipPath>}
-                  <image href={im.href} x={im.x} y={im.y} width={im.w} height={im.h} preserveAspectRatio="none" opacity={0.85} clipPath={im.clip ? `url(#gen-clip-${i})` : undefined} className="engrave-image" />
+                  <g clipPath={im.clip ? `url(#gen-clip-${i})` : undefined}>
+                    <image href={im.href} x={im.x} y={im.y} width={im.w} height={im.h} preserveAspectRatio="none" opacity={0.85} transform={im.flip ? `translate(${2 * im.x + im.w} 0) scale(-1 1)` : undefined} className="engrave-image" />
+                  </g>
                 </g>
               ))}
               {vis("labels") && engrave?.map((d, i) => <path key={`e${i}`} d={d} fill="var(--l-labels)" fillOpacity={0.72} fillRule="evenodd" stroke="none" className="engrave" />)}

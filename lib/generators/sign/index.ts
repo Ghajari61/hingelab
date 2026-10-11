@@ -10,7 +10,7 @@ import { SIGN_DEFAULTS, mergeSign, type SignParams } from "./params";
 import { SIGN_PRESETS } from "./presets";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
-const boarded = (p: SignParams) => p.style.kind !== "word";
+const boarded = (p: SignParams) => p.style.kind !== "word" && p.style.kind !== "neon";
 const twoMaterials = (p: SignParams) => p.style.kind === "layered" || p.style.kind === "inlay" || (boarded(p) && p.border.kind === "raised");
 
 const sections: SectionSpec<SignParams>[] = [
@@ -20,17 +20,18 @@ const sections: SectionSpec<SignParams>[] = [
     fields: [
       {
         kind: "choice", key: "style.kind", label: "Build", rail: true,
-        help: "Engraved marks one board; Layered glues letters from the second material onto it; Word cuts the letters as one piece; Inlay cuts the letters out and fills them with the second material.",
-        options: [{ v: "engraved", text: "Engraved" }, { v: "layered", text: "Layered", title: "Two materials" }, { v: "word", text: "Cut-out word" }, { v: "inlay", text: "Inlay", title: "Two materials" }],
+        help: "Engraved marks one board; Layered glues letters from the second material onto it; Word cuts the letters as one piece; Inlay cuts the letters out and fills them with the second material; Neon look engraves glowing outlines on an acrylic piece cut around the letters; Stencil cuts the letters through, with bridges that hold their middles, for painting.",
+        options: [{ v: "engraved", text: "Engraved" }, { v: "layered", text: "Layered", title: "Two materials" }, { v: "word", text: "Cut-out word" }, { v: "inlay", text: "Inlay", title: "Two materials" }, { v: "neon", text: "Neon look", title: "Glowing outlines on acrylic" }, { v: "stencil", text: "Stencil", title: "Letters cut through, with bridges" }],
       },
       {
         kind: "choice", key: "style.mark", label: "Mark", show: (p) => p.style.kind === "engraved",
         help: "Engrave fills the letters; Score traces their outlines, which is quick on a diode laser.",
         options: [{ v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }],
       },
-      { kind: "toggle", key: "style.mirror", label: "Mirror for back engraving", show: (p) => p.style.kind === "engraved", help: "Mirrors the marks so clear acrylic can be engraved from the back and read from the front." },
+      { kind: "toggle", key: "style.mirror", label: "Mirror for back engraving", show: (p) => p.style.kind === "engraved" || p.style.kind === "neon", help: "Mirrors the marks so clear acrylic can be engraved from the back and read from the front." },
       { kind: "toggle", key: "style.join", label: "One piece", show: (p) => p.style.kind === "layered", help: "Bridges the letters into one piece that is easy to line up; turn it off to cut every letter on its own." },
       { kind: "number", key: "style.weld", label: "Weld", unit: "mm", min: 0.2, max: 4, step: 0.1, show: (p) => p.style.kind === "word" || p.style.kind === "layered", help: "How much the letters grow so neighbours fuse into one piece." },
+      { kind: "number", key: "style.border", label: "Backer margin", unit: "mm", min: 2, max: 40, step: 0.5, show: (p) => p.style.kind === "neon", help: "How far the acrylic reaches past the letters; it is cut as one solid piece around them." },
     ],
   },
   {
@@ -112,6 +113,14 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
   if (key === "motif.kind") return motifArt(v);
   if (key === "style.kind") {
     if (v === "word") return [{ d: fitArt(HI, 34).join(" "), fill: true }];
+    if (v === "stencil") {
+      const [o, ...m] = fitArt([roundedRect(-10, -8, 51, 42, 6), ...HI], 38);
+      return [{ d: [o, ...m].join(" "), fill: true }];
+    }
+    if (v === "neon") {
+      const [o, ...m] = fitArt([roundedRect(-6, -6, 43, 38, 12), ...HI], 38);
+      return [{ d: o, fill: true }, ...m.map((d) => ({ d }))];
+    }
     const [o, ...m] = fitArt([roundedRect(-10, -8, 51, 42, 6), ...HI], 38);
     if (v === "engraved") return [{ d: o, fill: true }, ...m.map((d) => ({ d }))];
     if (v === "layered") return [{ d: o }, { d: m.join(" "), fill: true }];
@@ -131,7 +140,7 @@ function scaleSign(p: SignParams, s: number): SignParams {
   };
 }
 
-const BUILD_NAMES = { engraved: "Engraved", layered: "Layered", word: "Cut-out word", inlay: "Inlay" } as const;
+const BUILD_NAMES = { engraved: "Engraved", layered: "Layered", word: "Cut-out word", inlay: "Inlay", neon: "Neon-look", stencil: "Stencil" } as const;
 
 export const SIGN: GeneratorDef<SignParams> = {
   id: "sign",
@@ -147,6 +156,7 @@ export const SIGN: GeneratorDef<SignParams> = {
   fonts: (p) => (p.text.text.trim() ? [p.text.fontId] : []),
   scale: scaleSign,
   art,
+  batch: () => "text.text",
   fileName: (p) => namedFile("sign", p.name, p.style.kind),
   summary: (p) => {
     const first = p.text.text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean).join(" ");
@@ -154,7 +164,7 @@ export const SIGN: GeneratorDef<SignParams> = {
   },
   help: {
     intro: [
-      "The Sign generator makes wall, door, shop and desk signs in wood, acrylic or both: text and a motif engraved or scored on a shaped board, letters from a second material layered on top, the word cut out on its own, or letters inlaid flush in a contrasting material.",
+      "The Sign generator makes wall, door, shop and desk signs in wood, acrylic or both: text and a motif engraved or scored on a shaped board, letters from a second material layered on top, the word cut out on its own, letters inlaid flush in a contrasting material, a neon-look acrylic piece with glowing engraved outlines, or a paint stencil whose bridges hold the middles of the letters.",
       "Pick any of 18 board shapes or let the board size itself around the text; add a scored, engraved or raised frame; and hang it on keyhole slots, screws, a cord or standoffs, or stand it on a slotted base.",
       "Clear acrylic can be engraved from the back: mirror the engraving and the sign reads correctly from the front with a smooth, glossy face.",
     ],
@@ -163,8 +173,10 @@ export const SIGN: GeneratorDef<SignParams> = {
       "Mirror acrylic and coloured acrylic make striking layered letters on walnut or birch boards.",
       "Engrave with masking tape on the wood to stop smoke stains, then peel it after.",
       "Outdoor signs need exterior plywood or acrylic and a coat of clear varnish.",
+      "Neon-look signs glow best in 5 mm cast acrylic on an LED base; engrave from the back with Mirror on.",
+      "For a stencil, card or thin acrylic works; a bold font keeps the bridges short.",
     ],
-    keywords: ["sign", "wall sign", "door sign", "name sign", "shop sign", "welcome", "acrylic", "wood", "layered", "inlay", "desk sign"],
+    keywords: ["sign", "wall sign", "door sign", "name sign", "shop sign", "welcome", "acrylic", "wood", "layered", "inlay", "desk sign", "neon", "stencil"],
   },
 };
 

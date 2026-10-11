@@ -7,8 +7,9 @@
 import { intersectShapes, offsetShapes, unionShapes } from "@/lib/letters/polygon";
 import { bboxOf, circle, customOutline, distToContour, pointInContour, rect, roundedRect, signedArea } from "../geom";
 import type { BuildContext, Contour, GenImage, GenOutput, GenPart, Pt } from "../types";
+import { shapeOutline, type ShapeKind } from "../shapes";
 import { HEART_PATH } from "../util";
-import { FREE_PIECES, OVERSHOOT, type PuzzleParams, type TabStyle } from "./params";
+import { FREE_PIECES, OVERSHOOT, PLATE_PUZZLES, type PuzzleParams, type TabStyle } from "./params";
 
 /** Seeded random numbers in [0, 1) (mulberry32). */
 export function rng(seed: number): () => number {
@@ -26,6 +27,10 @@ export function puzzleOutline(p: PuzzleParams): Contour | null {
   const { kind, width: W, height: H, corner } = p.shape;
   if (kind === "rect") return corner > 0 ? roundedRect(0, 0, W, H, corner) : rect(0, 0, W, H);
   if (kind === "circle") return circle(W / 2, W / 2, W / 2, 0.05);
+  if ((PLATE_PUZZLES as readonly string[]).includes(kind)) {
+    const c = shapeOutline(kind === "oval" ? "circle" : (kind as ShapeKind), W, H, corner);
+    return signedArea(c) < 0 ? c.slice().reverse() : c;
+  }
   const c = customOutline(kind === "heart" ? HEART_PATH : p.shape.path, W, H);
   if (!c) return null;
   const bb = bboxOf([c]);

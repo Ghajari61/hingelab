@@ -32,6 +32,8 @@ export interface GenImage {
   w: number;
   h: number;
   clip?: Contour;
+  /** Drawn mirrored left to right. */
+  flip?: boolean;
 }
 
 /** Settings every generator has; the shell owns their panels. */
@@ -48,8 +50,22 @@ export interface GenBase {
   fit: FitSettings;
   /** Sheet extras the shell adds (missing in old saves: all off). */
   sheet?: SheetExtras;
+  /** Job options the shell applies to every part (missing in old saves: off). */
+  job?: JobExtras;
   layers: Layers;
 }
+
+export interface JobExtras {
+  /** Mirror every part, for engraving or painting the back of clear acrylic. */
+  mirror: boolean;
+  /** One set of parts per line, each with the line in the generator's batch text field. */
+  names: string;
+}
+
+export const JOB_EXTRAS: JobExtras = { mirror: false, names: "" };
+/** Most names a batch takes, and the longest list text. */
+export const MAX_BATCH = 60;
+export const MAX_BATCH_TEXT = 3000;
 
 export interface SheetExtras {
   /** Pack by bounding box (parts upright) or by outline (true shape, quarter turns). */
@@ -215,6 +231,8 @@ export interface GeneratorDef<P extends GenBase> {
   defaults(): P;
   /** Defaults filled in under a stored or partial value (old saves, presets). */
   merge(raw: unknown): P;
+  /** The text field a names batch fills (a dot path), or null when this design has none. */
+  batch?(p: P): string | null;
   /** Brings params saved at an older `version` up to date (before `merge`). */
   migrate?(raw: unknown, from: number): unknown;
   sections: SectionSpec<P>[];

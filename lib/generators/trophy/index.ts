@@ -126,6 +126,7 @@ export const TROPHY: GeneratorDef<TrophyParams> = {
   fonts: (p) => [...(p.emblem.text.trim() ? [p.emblem.fontId] : []), ...(p.plate.on ? [p.plate.fontId, p.plate.titleFont] : []), ...(p.base.text.trim() ? [p.plate.fontId] : [])],
   scale: scaleTrophy,
   art,
+  batch: (p) => (p.plate.on ? "plate.name" : "emblem.text"),
   fileName: (p) => namedFile("trophy", p.name, p.emblem.kind),
   summary: (p) => `${EMBLEM_NAMES[p.emblem.kind]} trophy${p.plate.on && p.plate.name.trim() ? ` for ${p.plate.name.trim()}` : ""} · ${p.base.tiers}-tier base`,
   help: {

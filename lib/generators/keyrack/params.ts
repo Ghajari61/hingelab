@@ -4,7 +4,7 @@ import { clamp } from "../common";
 import { isMotifId } from "../motifs";
 import { isShapeKind, type ShapeKind } from "../shapes";
 import { SECOND_MATERIALS } from "../material2";
-import { SHEET_EXTRAS, type GenBase } from "../types";
+import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 
 export type Mark = "engrave" | "score" | "raised" | "none";
@@ -50,6 +50,7 @@ export const KEYRACK_DEFAULTS: KeyrackParams = {
   gap: 4,
   fit: { ...FIT_OFF },
   sheet: { ...SHEET_EXTRAS },
+  job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   board: { shape: "rounded", width: 260, height: 120, corner: 8, frame: false },
   text: { text: "Home Sweet Home", fontId: "pacifico", size: 20, spacing: 0, mark: "engrave", y: 30 },

@@ -23,7 +23,7 @@ const withHands = (p: ClockParams, h: Partial<ClockParams["hands"]>): ClockParam
 /** Rough widest numeral, in cap heights (Archivo-like proportions). */
 function widestNumeral(p: ClockParams): number {
   const hours = p.markers.quarters || p.markers.style === "mixed" ? [0, 3, 6, 9] : [...Array(12).keys()];
-  const k = p.markers.numerals === "roman" ? 0.62 : 0.68;
+  const k = p.markers.numerals.startsWith("roman") ? 0.62 : 0.68;
   return Math.max(...hours.map((h) => numeral(p.markers.numerals, h).length)) * k * p.markers.size;
 }
 
@@ -199,8 +199,9 @@ export function checkClock(p: ClockParams, out: GenOutput): CIssue[] {
   }
 
   if (out.missing?.length) {
-    const font = m.numerals === "persian" ? "vazirmatn" : "archivo-black";
-    const fixes: Fix<ClockParams>[] = [{ id: "font", label: m.numerals === "persian" ? "Use Vazirmatn" : "Use Archivo Black", safe: true, apply: (q) => withMarkers(q, { fontId: font }) }];
+    const arabicScript = m.numerals === "persian" || m.numerals === "eastern";
+    const font = arabicScript ? "vazirmatn" : "archivo-black";
+    const fixes: Fix<ClockParams>[] = [{ id: "font", label: arabicScript ? "Use Vazirmatn" : "Use Archivo Black", safe: true, apply: (q) => withMarkers(q, { fontId: font }) }];
     if (p.inscription.text.trim()) fixes.push({ id: "text-font", label: "Use Vazirmatn for the text on the dial", safe: true, apply: (q) => withInscription(q, { fontId: "vazirmatn" }) });
     issues.push({
       code: "MISSING_GLYPHS", level: "error",

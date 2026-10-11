@@ -1,5 +1,5 @@
 /**
- * Clock geometry: a face (round, square, polygon, sunburst, gear, scalloped or a custom outline),
+ * Clock geometry: a face (round, square, polygon, sunburst, gear, scalloped, flower, heart, cloud or a custom outline),
  * optionally layered (back plate + ring, + centre disc), hour markers, hands with holes for a
  * standard quartz movement, a keyhole hanger and a slot-in desk stand. mm, y down, centre (0, 0).
  */
@@ -8,6 +8,7 @@ import {
   TAU, arc, bboxOf, circle, customOutline, deg, distToContour, pointInContour, rect, regularPolygon, roundCorners,
   roundedRect, signedArea, stadium, transform,
 } from "../geom";
+import { shapeOutline } from "../shapes";
 import { arcSpan, bendAround } from "../textPath";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { MOVEMENT_BOX, type ClockParams } from "./params";
@@ -15,11 +16,18 @@ import { MOVEMENT_BOX, type ClockParams } from "./params";
 const ROMAN = ["XII", "I", "II", "III", "IIII", "V", "VI", "VII", "VIII", "IX", "X", "XI"];
 const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
 export const persianNumber = (n: number) => String(n).replace(/\d/g, (d) => PERSIAN_DIGITS[Number(d)]);
+const EASTERN_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 
 /** The label for hour h (0 = twelve). */
 export function numeral(set: ClockParams["markers"]["numerals"], h: number): string {
   const n = h === 0 ? 12 : h;
-  return set === "roman" ? ROMAN[h] : set === "persian" ? persianNumber(n) : String(n);
+  switch (set) {
+    case "roman": return ROMAN[h];
+    case "roman-iv": return h === 4 ? "IV" : ROMAN[h];
+    case "persian": return persianNumber(n);
+    case "eastern": return String(n).replace(/\d/g, (d) => EASTERN_DIGITS[Number(d)]);
+    default: return String(n);
+  }
 }
 
 /** The face outline, centred on (0, 0), or null when a custom outline cannot be read. */
@@ -57,6 +65,18 @@ export function faceOutline(p: ClockParams): Contour | null {
       }
       return out;
     }
+    case "flower": {
+      const n = Math.max(3, Math.round(f.rays)), pr = Math.min(f.depth, R * 0.45);
+      const petals = [circle(0, 0, R - pr, 0.05)];
+      for (let i = 0; i < n; i++) {
+        const a = -Math.PI / 2 + (TAU * i) / n;
+        petals.push(circle((R - pr) * Math.cos(a), (R - pr) * Math.sin(a), pr, 0.05));
+      }
+      const u = unionShapes(petals);
+      return u.reduce((a, b) => (b.area > a.area ? b : a), u[0]).outer;
+    }
+    case "heart": return transform(shapeOutline("heart", f.size, f.size * 0.9), { x: -R, y: -f.size * 0.42 });
+    case "cloud": return transform(shapeOutline("cloud", f.size, f.size * 0.7), { x: -R, y: -f.size * 0.38 });
     case "custom": return f.path.trim() ? customOutline(f.path, f.size, f.size) : null;
     default: return circle(0, 0, R);
   }
@@ -83,6 +103,7 @@ export function edgeDistance(outline: Contour, a: number): number {
 function markerEdge(p: ClockParams, outline: Contour, a: number): number {
   const f = p.face;
   if (f.shape === "sunburst" || f.shape === "gear" || f.shape === "scallop") return f.size / 2 - f.depth;
+  if (f.shape === "flower") return f.size / 2 - Math.min(f.depth, f.size * 0.225);
   return edgeDistance(outline, a);
 }
 

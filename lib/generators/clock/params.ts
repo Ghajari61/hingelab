@@ -1,12 +1,12 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
-import { SHEET_EXTRAS, type GenBase } from "../types";
+import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
 import { isObj, mergeInto } from "../util";
 
-export type FaceShape = "round" | "square" | "polygon" | "sunburst" | "gear" | "scallop" | "custom";
+export type FaceShape = "round" | "square" | "polygon" | "sunburst" | "gear" | "scallop" | "flower" | "heart" | "cloud" | "custom";
 export type FaceLayers = "single" | "ring" | "stack";
 export type MarkerStyle = "ticks" | "dots" | "numerals" | "mixed" | "none";
-export type NumeralSet = "arabic" | "roman" | "persian";
+export type NumeralSet = "arabic" | "roman" | "roman-iv" | "persian" | "eastern";
 export type HandStyle = "baton" | "classic" | "spade" | "leaf" | "arrow" | "none";
 export type Hanger = "none" | "keyhole" | "hole";
 export type MovementId = "m8-5" | "m8-8" | "m8-13" | "custom";
@@ -100,6 +100,7 @@ export const CLOCK_DEFAULTS: ClockParams = {
   gap: 4,
   fit: { ...FIT_OFF },
   sheet: { ...SHEET_EXTRAS },
+  job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   face: { shape: "round", size: 300, sides: 6, corner: 6, rays: 24, depth: 22, path: "", layers: "ring", ring: 40, centre: 60 },
   markers: { style: "numerals", numerals: "roman", quarters: false, fontId: "archivo-black", size: 20, inset: 8, minutes: true, tickLength: 10, tickWidth: 3, dot: 8, cut: false, follow: false },

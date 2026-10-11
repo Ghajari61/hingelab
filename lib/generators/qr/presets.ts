@@ -63,4 +63,24 @@ export const QR_PRESETS: GenPreset<QrParams>[] = [
       plate: { shape: "rect", padding: 15, corner: 6 },
     },
   },
+  {
+    id: "scan-me", name: "Scan me sign", note: "Viewfinder corners and a SCAN ME bar",
+    params: {
+      name: "Scan me",
+      content: { kind: "url", url: "https://example.com" },
+      code: { ecc: "Q", style: "rounded", size: 60, quiet: 2 },
+      plate: { shape: "rect", padding: 8, corner: 6, frame: true, frameWidth: 1.6, frameStyle: "corners" },
+      label: { text: "SCAN ME", position: "below", fontId: "archivo-black", size: 7, style: "bar" },
+    },
+  },
+  {
+    id: "menu-stand", name: "Table menu", note: "Scan for the menu, in a bar above the code",
+    params: {
+      name: "Menu QR",
+      content: { kind: "url", url: "https://example.com/menu" },
+      code: { ecc: "M", style: "dots", size: 55, quiet: 2, dot: 85 },
+      plate: { shape: "rect", padding: 7, corner: 8, frame: true, frameWidth: 1.2 },
+      label: { text: "Scan for the menu", position: "above", fontId: "fredoka", size: 6, style: "bar" },
+    },
+  },
 ];

@@ -3,7 +3,7 @@ import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import { isMotifId } from "../motifs";
 import { isShapeKind, type ShapeKind } from "../shapes";
 import { SECOND_MATERIALS } from "../material2";
-import { SHEET_EXTRAS, type GenBase } from "../types";
+import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 
 export type TableBuild = "stand" | "tent" | "plaque";
@@ -54,6 +54,7 @@ export const TABLENUM_DEFAULTS: TablenumParams = {
   gap: 4,
   fit: { ...FIT_OFF },
   sheet: { ...SHEET_EXTRAS },
+  job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   batch: { mode: "range", from: 1, to: 6, pad: 0, digits: "latin", list: "", names: "" },
   build: { kind: "stand", double: false },

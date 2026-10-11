@@ -80,4 +80,41 @@ export const CLOCK_PRESETS: GenPreset<ClockParams>[] = [
       hands: { style: "spade", hour: 70, minute: 105, width: 10, tail: 20 },
     },
   },
+  {
+    id: "flower", name: "Flower clock", note: "Eight petals, four big numbers",
+    params: {
+      name: "Flower clock",
+      face: { shape: "flower", size: 340, rays: 8, depth: 50, layers: "single" },
+      markers: { style: "numerals", numerals: "arabic", quarters: true, fontId: "fredoka", size: 30, inset: 8, minutes: false, tickLength: 12, tickWidth: 4 },
+      hands: { style: "leaf", hour: 65, minute: 95, width: 12, tail: 16 },
+    },
+  },
+  {
+    id: "heart", name: "Heart clock", note: "Dots and pointer hands, a gift clock",
+    params: {
+      name: "Heart clock",
+      face: { shape: "heart", size: 320, layers: "single" },
+      markers: { style: "dots", dot: 8, inset: 12, minutes: false },
+      hands: { style: "classic", hour: 42, minute: 58, width: 14, tail: 12 },
+      hanger: "none",
+    },
+  },
+  {
+    id: "cloud-nursery", name: "Cloud, nursery", note: "Soft cloud outline, four big numbers",
+    params: {
+      name: "Cloud clock",
+      face: { shape: "cloud", size: 360, layers: "single" },
+      markers: { style: "numerals", numerals: "arabic", quarters: true, fontId: "fredoka", size: 30, inset: 10, minutes: false },
+      hands: { style: "arrow", hour: 55, minute: 80, width: 12, tail: 14 },
+    },
+  },
+  {
+    id: "roman-iv", name: "Modern Roman", note: "IV instead of IIII, numerals follow the dial",
+    params: {
+      name: "Roman clock",
+      face: { shape: "polygon", sides: 12, size: 300, corner: 4, layers: "single" },
+      markers: { style: "numerals", numerals: "roman-iv", fontId: "archivo-black", size: 20, inset: 8, minutes: true, follow: true },
+      hands: { style: "baton", hour: 65, minute: 95, width: 6, tail: 14 },
+    },
+  },
 ];

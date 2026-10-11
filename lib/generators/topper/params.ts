@@ -3,7 +3,7 @@ import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import { isMotifId } from "../motifs";
 import { isShapeKind, type ShapeKind } from "../shapes";
 import { SECOND_MATERIALS } from "../material2";
-import { SHEET_EXTRAS, type GenBase } from "../types";
+import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 
 export type KitKind = "topper" | "cupcake" | "set";
@@ -63,6 +63,7 @@ export const TOPPER_DEFAULTS: TopperParams = {
   gap: 4,
   fit: { ...FIT_OFF },
   sheet: { ...SHEET_EXTRAS },
+  job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   kit: { kind: "topper" },
   text: { text: "Happy\nBirthday", fontId: "pacifico", size: 34, spacing: -0.5, lead: 1.25 },

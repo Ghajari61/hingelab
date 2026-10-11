@@ -11,7 +11,7 @@ export function checkSign(p: SignParams, out: SignOutput): Issue<SignParams>[] {
   issues.push(...missingGlyphs<SignParams>(out.missing, p.text.fontId, (q, f) => ({ ...q, text: { ...q.text, fontId: f } })));
   const info = out.info;
   if (!info) return issues;
-  const word = p.style.kind === "word";
+  const word = p.style.kind === "word" || p.style.kind === "neon";
 
   if (!word && (info.contentW > info.roomW + 0.5 || info.contentH > info.roomH + 0.5)) {
     const k = Math.min(info.roomW / Math.max(1, info.contentW), info.roomH / Math.max(1, info.contentH));
@@ -48,7 +48,7 @@ export function checkSign(p: SignParams, out: SignOutput): Issue<SignParams>[] {
   if (word && p.mount.kind !== "none" && p.mount.kind !== "stand") {
     issues.push({
       code: "WORD_MOUNT", level: "info",
-      message: "A cut-out word has no board to drill; hang it with adhesive pads or stand it on a base.",
+      message: `A ${p.style.kind === "neon" ? "neon-look sign" : "cut-out word"} has no board to drill; hang it with adhesive pads or stand it on a base.`,
       fixes: [{ id: "stand", label: "Stand on a base", safe: true, apply: (q) => ({ ...q, mount: { ...q.mount, kind: "stand" } }) }],
     });
   }
@@ -71,7 +71,7 @@ export function checkSign(p: SignParams, out: SignOutput): Issue<SignParams>[] {
       });
     }
   }
-  if (p.style.kind === "engraved" && !p.style.mirror && p.material.startsWith("acr")) {
+  if ((p.style.kind === "engraved" || p.style.kind === "neon") && !p.style.mirror && p.material.startsWith("acr")) {
     issues.push({
       code: "BACK_ENGRAVE", level: "info",
       message: "Clear acrylic looks best engraved from the back: mirror the engraving and flip the sheet.",

@@ -169,6 +169,7 @@ export const TOPPER: GeneratorDef<TopperParams> = {
   fonts: (p) => [...(p.kit.kind !== "cupcake" && p.text.text.trim() ? [p.text.fontId] : []), ...(p.kit.kind !== "topper" && p.cupcake.text.trim() ? [p.cupcake.fontId] : [])],
   scale: scaleTopper,
   art,
+  batch: (p) => (p.kit.kind === "cupcake" ? null : "text.text"),
   fileName: (p) => namedFile("topper", p.name, p.kit.kind),
   summary: (p) => {
     const first = p.text.text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean).join(" ");

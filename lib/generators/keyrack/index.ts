@@ -131,6 +131,7 @@ export const KEYRACK: GeneratorDef<KeyrackParams> = {
   fonts: (p) => [...(p.text.text.trim() ? [p.text.fontId] : []), ...(p.hooks.labels.trim() ? [p.hooks.labelFont] : [])],
   scale: scaleKeyrack,
   art,
+  batch: () => "text.text",
   fileName: (p) => namedFile("key-holder", p.name, `${Math.round(p.board.width)}mm`),
   summary: (p) => `${SHAPE_NAMES[p.board.shape]} board ${p.board.width} × ${p.board.height} mm · ${p.hooks.count} ${HOOK_NAMES[p.hooks.style]}${p.shelf.on ? " · shelf" : ""}`,
   help: {

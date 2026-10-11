@@ -89,6 +89,10 @@ const sections: SectionSpec<QrParams>[] = [
       { kind: "number", key: "plate.corner", label: "Corner radius", unit: "mm", min: 0, max: 50, step: 0.5, show: (p) => p.plate.shape === "rect", help: "Rounds the plate's corners." },
       { kind: "toggle", key: "plate.frame", label: "Frame", show: (p) => p.output.kind !== "stencil", help: "A thin line around the plate, in its border." },
       { kind: "number", key: "plate.frameWidth", label: "Frame width", unit: "mm", min: 0.3, max: 5, step: 0.1, show: (p) => p.plate.frame && p.output.kind !== "stencil", help: "Width of the frame line." },
+      {
+        kind: "choice", key: "plate.frameStyle", label: "Frame style", show: (p) => p.plate.frame && p.output.kind !== "stencil",
+        help: "A line all the way round, or only the four corners, like a scanner's viewfinder.", options: [{ v: "line", text: "Full line" }, { v: "corners", text: "Corners" }],
+      },
     ],
   },
   {
@@ -102,6 +106,10 @@ const sections: SectionSpec<QrParams>[] = [
       },
       { kind: "font", key: "label.fontId", label: "Font", show: (p) => !!p.label.text.trim() || p.logo.kind === "text", sample: (p) => `${p.label.text}${p.logo.kind === "text" ? p.logo.text : ""}` || "Aa", help: "Typeface of the label and a text logo (the same fonts as Letters)." },
       { kind: "number", key: "label.size", label: "Text height", unit: "mm", min: 2, max: 40, step: 0.5, show: (p) => !!p.label.text.trim(), help: "Cap height of the label." },
+      {
+        kind: "choice", key: "label.style", label: "Label style", show: (p) => !!p.label.text.trim() && p.output.kind === "engrave",
+        help: "Plain engraved text, or a solid engraved bar with the text left bare, like a “Scan me” banner.", options: [{ v: "plain", text: "Plain" }, { v: "bar", text: "Bar" }],
+      },
     ],
   },
   {
@@ -188,6 +196,7 @@ export const QR: GeneratorDef<QrParams> = {
   fonts: (p) => (p.label.text.trim() || (p.logo.kind === "text" && p.logo.text.trim()) ? [p.label.fontId] : []),
   scale: scaleQr,
   art,
+  batch: (p) => (p.content.kind === "url" ? "content.url" : p.content.kind === "text" ? "content.text" : null),
   fileName: (p) => namedFile("qr", p.name, `${Math.round(p.code.size)}mm`),
   summary: (p) => `${CONTENT_NAMES[p.content.kind]}, ${p.code.size} mm, ${OUTPUT_NAMES[p.output.kind]}`,
   help: {

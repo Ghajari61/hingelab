@@ -1,6 +1,6 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
-import { SHEET_EXTRAS, type GenBase } from "../types";
+import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 
 export type ContentKind = "url" | "text" | "wifi" | "vcard" | "email" | "sms" | "phone";
@@ -9,6 +9,8 @@ export type ModuleStyle = "square" | "rounded" | "dots" | "connected";
 export type OutputKind = "engrave" | "cutout" | "stencil";
 export type PlateShape = "rect" | "circle";
 export type LabelPos = "below" | "above" | "right";
+export type LabelStyle = "plain" | "bar";
+export type FrameStyle = "line" | "corners";
 export type LogoKind = "none" | "heart" | "star" | "wifi" | "text";
 export type KeyringKind = "none" | "top" | "corner";
 
@@ -64,12 +66,16 @@ export interface QrParams extends GenBase {
     corner: number;
     frame: boolean;
     frameWidth: number;
+    /** A full line, or only the four corners (a scanner's viewfinder). */
+    frameStyle: FrameStyle;
   };
   label: {
     text: string;
     position: LabelPos;
     fontId: string;
     size: number;
+    /** Plain text, or the text knocked out of an engraved bar. */
+    style: LabelStyle;
   };
   logo: {
     kind: LogoKind;
@@ -93,6 +99,7 @@ export const QR_DEFAULTS: QrParams = {
   gap: 4,
   fit: { ...FIT_OFF },
   sheet: { ...SHEET_EXTRAS },
+  job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   content: {
     kind: "url", url: "https://hingelab.vercel.app", text: "",
@@ -102,8 +109,8 @@ export const QR_DEFAULTS: QrParams = {
   },
   code: { ecc: "M", style: "square", size: 50, quiet: 2, dot: 85, invert: false },
   output: { kind: "engrave", bridge: 20 },
-  plate: { shape: "rect", padding: 5, corner: 4, frame: false, frameWidth: 1.2 },
-  label: { text: "", position: "below", fontId: "fredoka", size: 6 },
+  plate: { shape: "rect", padding: 5, corner: 4, frame: false, frameWidth: 1.2, frameStyle: "line" },
+  label: { text: "", position: "below", fontId: "fredoka", size: 6, style: "plain" },
   logo: { kind: "none", size: 20, text: "HL" },
   keyring: { kind: "none", diameter: 5 },
 };

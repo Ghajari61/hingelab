@@ -3,10 +3,10 @@ import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import { isMotifId } from "../motifs";
 import { isShapeKind, type ShapeKind } from "../shapes";
 import { SECOND_MATERIALS } from "../material2";
-import { SHEET_EXTRAS, type GenBase } from "../types";
+import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 
-export type SignStyle = "engraved" | "layered" | "word" | "inlay";
+export type SignStyle = "engraved" | "layered" | "word" | "inlay" | "neon" | "stencil";
 export type SignMark = "engrave" | "score";
 export type BorderKind = "none" | "score" | "engrave" | "raised";
 export type SignMount = "none" | "holes" | "keyhole" | "hanging" | "standoff" | "stand";
@@ -32,6 +32,7 @@ export const SIGN_DEFAULTS: SignParams = {
   gap: 4,
   fit: { ...FIT_OFF },
   sheet: { ...SHEET_EXTRAS },
+  job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   style: { kind: "engraved", mark: "engrave", weld: 1, border: 5, mirror: false, join: true },
   board: { shape: "arch", auto: true, pad: 18, width: 300, height: 200, corner: 6 },
@@ -42,7 +43,7 @@ export const SIGN_DEFAULTS: SignParams = {
   mat: { mat2: "acrylic-gold", T2: 3 },
 };
 
-const STYLES: SignStyle[] = ["engraved", "layered", "word", "inlay"];
+const STYLES: SignStyle[] = ["engraved", "layered", "word", "inlay", "neon", "stencil"];
 const MARKS: SignMark[] = ["engrave", "score"];
 const BORDERS: BorderKind[] = ["none", "score", "engrave", "raised"];
 const MOUNTS: SignMount[] = ["none", "holes", "keyhole", "hanging", "standoff", "stand"];

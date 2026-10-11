@@ -2,7 +2,7 @@ import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import { isMotifId } from "../motifs";
 import { SECOND_MATERIALS } from "../material2";
-import { SHEET_EXTRAS, type GenBase } from "../types";
+import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 
 export const EMBLEMS = ["star", "cup", "shield", "medal", "flame", "laurel", "motif", "custom"] as const;
@@ -58,6 +58,7 @@ export const TROPHY_DEFAULTS: TrophyParams = {
   gap: 4,
   fit: { ...FIT_OFF },
   sheet: { ...SHEET_EXTRAS },
+  job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   build: { kind: "single" },
   emblem: { kind: "star", motif: "crown", path: "", width: 110, height: 105, points: 5, text: "1", fontId: "archivo-black", size: 30, laurel: false },

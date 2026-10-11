@@ -24,6 +24,16 @@ export const CUT_SPEEDS: Record<string, CutSpeed> = {
   mdf3: { cut: 10, passes: 1, engrave: 150 },
   card2: { cut: 30, passes: 1, engrave: 200 },
   acr3: { cut: 8, passes: 1, engrave: 120 },
+  bass3: { cut: 16, passes: 1, engrave: 160 },
+  walnut3: { cut: 11, passes: 1, engrave: 150 },
+  birch6: { cut: 5, passes: 1, engrave: 150 },
+  mdf6: { cut: 4, passes: 1, engrave: 150 },
+  acr2: { cut: 12, passes: 1, engrave: 120 },
+  acr5: { cut: 4, passes: 1, engrave: 120 },
+  mirror3: { cut: 7, passes: 1, engrave: 120 },
+  leather2: { cut: 20, passes: 1, engrave: 200 },
+  felt3: { cut: 35, passes: 1, engrave: 250 },
+  cork3: { cut: 30, passes: 1, engrave: 250 },
 };
 
 /** The preset for a material id; custom materials scale the plywood speed by thickness. */

@@ -6,7 +6,7 @@
  */
 import { isImageDataURL } from "@/lib/security/svg";
 import { getPath, setPath } from "./path";
-import { MAX_COPIES, type GenBase, type GeneratorDef } from "./types";
+import { MAX_BATCH_TEXT, MAX_COPIES, type GenBase, type GeneratorDef } from "./types";
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
@@ -41,6 +41,13 @@ export function sanitizeGeneratorParams<P extends GenBase>(def: GeneratorDef<P>,
   }
   if (typeof q.name !== "string") set("name", d.name);
   else if (q.name.length > MAX_NAME) set("name", q.name.slice(0, MAX_NAME));
+  if (getPath(q, "job") !== undefined) {
+    const mirror = getPath(q, "job.mirror");
+    if (typeof mirror !== "boolean") set("job.mirror", false);
+    const names = getPath(q, "job.names");
+    if (typeof names !== "string") set("job.names", "");
+    else if (names.length > MAX_BATCH_TEXT) set("job.names", names.slice(0, MAX_BATCH_TEXT));
+  }
   for (const s of def.sections) {
     for (const f of s.fields) {
       const cur = getPath(q, f.key);

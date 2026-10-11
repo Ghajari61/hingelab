@@ -15,7 +15,8 @@ import { rotatePoint } from "@/lib/nest/outline";
 import { finLabel } from "@/lib/parametric/label";
 import { isImageDataURL, xmlCommentText } from "@/lib/security/svg";
 import { bboxOf, pathD } from "./geom";
-import { MAX_COPIES, type BuildContext, type Contour, type GenBase, type GenImage, type GenOutput, type GenPart, type GeneratorDef, type SheetExtras } from "./types";
+import { setPath } from "./path";
+import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, type BuildContext, type Contour, type GenBase, type GenImage, type GenOutput, type GenPart, type GeneratorDef, type JobExtras, type SheetExtras } from "./types";
 
 /** Layer names in the generators' panels and SVG files (keys and colours shared with every product). */
 export const GEN_LAYER_NAMES: Record<LayerKey, string> = {
@@ -74,6 +75,24 @@ export function turnCutPart(pt: CutPart, angle: number): CutPart {
   return { ...pt, outline, inner: r(pt.inner), cuts: r(pt.cuts), score: r(pt.score), engrave: r(pt.engrave), bbox: bboxOf(outline), turned: angle };
 }
 
+/** A part mirrored left to right (for engraving the back of clear acrylic). */
+export function mirrorCutPart(pt: CutPart): CutPart {
+  const m = (cs: Contour[]) => cs.map((c) => c.map(([x, y]) => [-x, y] as [number, number]).reverse());
+  const outline = m(pt.outline);
+  return {
+    ...pt, outline, inner: m(pt.inner), cuts: m(pt.cuts), score: m(pt.score), engrave: m(pt.engrave),
+    images: pt.images.map((im) => ({ ...im, x: -(im.x + im.w), clip: im.clip ? m([im.clip])[0] : undefined, flip: !im.flip })),
+    bbox: bboxOf(outline),
+  };
+}
+
+/** Saved job options, cleaned: the batch as a list of names. */
+export function cleanJob(x: unknown): { mirror: boolean; names: string[] } {
+  const q = (x && typeof x === "object" ? x : {}) as Partial<JobExtras>;
+  const names = typeof q.names === "string" ? q.names.slice(0, MAX_BATCH_TEXT).split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(0, MAX_BATCH) : [];
+  return { mirror: q.mirror === true, names };
+}
+
 /** Saved sheet extras, cleaned (old saves have none). */
 export function cleanExtras(x: unknown): SheetExtras {
   const q = (x && typeof x === "object" ? x : {}) as Partial<SheetExtras>;
@@ -121,24 +140,54 @@ export function byMaterial(base: Packer): Packer {
   };
 }
 
+const MAX_BATCH_PARTS = 2000;
+
 const boxPacker: Packer = (parts, s) => packBoxes(parts.map((pt, i) => ({ id: pid(i), w: pt.bbox.x1 - pt.bbox.x0, h: pt.bbox.y1 - pt.bbox.y0 })), s);
+
+/**
+ * The design built once, or once per name of a batch (each name in the generator's batch text
+ * field): the parts of every build together, named after their line, with the first build's stats.
+ */
+export function buildBatch<P extends GenBase>(def: GeneratorDef<P>, q: P, ctx: BuildContext, names: string[]): GenOutput {
+  const key = names.length ? def.batch?.(q) : null;
+  if (!key) return def.build(q, ctx);
+  const head = def.build(setPath(q, key, names[0]), ctx);
+  if (head.error) return head;
+  if (head.parts.length * names.length > MAX_BATCH_PARTS) {
+    return { ...head, parts: [], error: `A batch of ${names.length} would cut ${head.parts.length * names.length} parts; the limit is ${MAX_BATCH_PARTS}. Use fewer names or a simpler design.` };
+  }
+  const outs = [head, ...names.slice(1).map((n) => def.build(setPath(q, key, n), ctx))];
+  const bad = outs.find((o) => o.error);
+  if (bad) return bad;
+  const first = outs[0];
+  const missing = [...new Set(outs.flatMap((o) => o.missing ?? []))];
+  return {
+    ...first,
+    parts: outs.flatMap((o, k) => o.parts.map((pt) => ({ ...pt, id: `${pt.id}~n${k + 1}`, name: `${pt.name} (${names[k]})`, place: pt.place }))),
+    stats: [...first.stats, { label: "Batch", value: `${names.length} name${names.length > 1 ? "s" : ""}, one set each` }],
+    notice: outs.find((o) => o.notice)?.notice,
+    missing,
+  };
+}
 
 /** Build at a scale and lay the parts out on sheets (Fit "off" packs at design size, like Auto). */
 export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, ctx: BuildContext): GenArranged<P> {
   const fit = cleanFit(p.fit);
   const x = cleanExtras(p.sheet);
+  const job = cleanJob(p.job);
   const mode = fit.mode === "sheets" && def.scale ? "sheets" : "auto";
   const a = arrangeFit<P, GenModel, CutPart>({ mode, sheets: fit.sheets }, { w: p.bedW, h: p.bedH, gap: p.gap }, (s) => {
     const q = s === 1 || !def.scale ? p : def.scale(p, s);
-    const out = def.build(q, ctx);
+    const out = buildBatch(def, q, ctx, job.names);
     if (out.error) return { params: q, result: { error: out.error } };
     const mixed = out.parts.some((pt) => pt.material === "second");
     const names = { main: out.materials?.main ?? `Main material ${q.T} mm`, second: out.materials?.second ?? "Second material" };
-    const parts = out.parts.map((pt) => {
+    let parts = out.parts.map((pt) => {
       if (!mixed) return cutPart(pt, q.K);
       const two = pt.material === "second";
       return { ...cutPart(pt, two && out.materials?.secondK != null ? out.materials.secondK : q.K), tag: two ? names.second : names.main };
     });
+    if (job.mirror) parts = parts.map(mirrorCutPart);
     return { params: q, result: { parts: x.copies > 1 ? copiesOf(parts, x.copies) : parts, out } };
   }, {
     pack: byMaterial(x.nest === "outline" ? outlinePacker<CutPart>((pt) => (pt.images.length ? [0] : [0, 90, 180, 270])) : boxPacker),
@@ -165,7 +214,9 @@ export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, 
   return a;
 }
 
-export interface SheetImage { href: string; x: number; y: number; w: number; h: number; clip?: string }
+export interface SheetImage { href: string; x: number; y: number; w: number; h: number; clip?: string; flip?: boolean }
+/** SVG transform that mirrors a picture in place. */
+export const flipTransform = (im: SheetImage) => `translate(${r3(2 * im.x + im.w)} 0) scale(-1 1)`;
 export type GenContent = LayerContent & { engrave: string[]; images: SheetImage[] };
 
 /** Canvas layers plus the engraved fills and pictures, in sheet coordinates. */
@@ -178,7 +229,7 @@ export function genContent(lay: Layout<CutPart>): GenContent {
     for (const c of pt.score) L.hinge.push(pathD(c, false, ox, oy));
     L.fills.push([...pt.outline, ...pt.inner].map((c) => pathD(c, true, ox, oy)).join(" "));
     if (pt.engrave.length) L.engrave.push(pt.engrave.map((c) => pathD(c, true, ox, oy)).join(" "));
-    for (const im of pt.images) if (isImageDataURL(im.href)) L.images.push({ href: im.href, x: r3(im.x + ox), y: r3(im.y + oy), w: r3(im.w), h: r3(im.h), clip: im.clip ? pathD(im.clip, true, ox, oy) : undefined });
+    for (const im of pt.images) if (isImageDataURL(im.href)) L.images.push({ href: im.href, x: r3(im.x + ox), y: r3(im.y + oy), w: r3(im.w), h: r3(im.h), clip: im.clip ? pathD(im.clip, true, ox, oy) : undefined, ...(im.flip ? { flip: true } : {}) });
   }
   return L;
 }
@@ -214,7 +265,9 @@ export function genSVG<P extends GenBase>(def: GeneratorDef<P>, p: P, lay: Layou
     s += `<defs>\n${C.images.map((im, i) => (im.clip ? `  <clipPath id="engrave-clip-${i}"><path d="${im.clip}"/></clipPath>\n` : "")).join("")}</defs>\n`;
     s += `<g id="labels-images" inkscape:groupmode="layer" inkscape:label="${def.code} ${GEN_LAYER_NAMES.labels} (picture)">\n`;
     C.images.forEach((im, i) => {
-      s += `  <image x="${im.x}" y="${im.y}" width="${im.w}" height="${im.h}" preserveAspectRatio="none"${im.clip ? ` clip-path="url(#engrave-clip-${i})"` : ""} href="${esc(im.href)}" xlink:href="${esc(im.href)}"/>\n`;
+      if (!im.flip) s += `  <image x="${im.x}" y="${im.y}" width="${im.w}" height="${im.h}" preserveAspectRatio="none"${im.clip ? ` clip-path="url(#engrave-clip-${i})"` : ""} href="${esc(im.href)}" xlink:href="${esc(im.href)}"/>\n`;
+      // A clip on the image itself would be mirrored with it, so it goes on a group.
+      else s += `  <g${im.clip ? ` clip-path="url(#engrave-clip-${i})"` : ""}><image x="${im.x}" y="${im.y}" width="${im.w}" height="${im.h}" preserveAspectRatio="none" transform="${flipTransform(im)}" href="${esc(im.href)}" xlink:href="${esc(im.href)}"/></g>\n`;
     });
     s += `</g>\n`;
   }

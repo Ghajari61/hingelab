@@ -12,7 +12,7 @@ import { arrangeGenerator, genSVG, sheetIssues } from "@/lib/generators/output";
 import { getPath, setPath } from "@/lib/generators/path";
 import { loadGenerator } from "@/lib/generators/registry";
 import { sanitizeGeneratorParams } from "@/lib/generators/sanitize";
-import { MAX_COPIES, type AnyGenerator, type FieldSpec, type GenBase } from "@/lib/generators/types";
+import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, type AnyGenerator, type FieldSpec, type GenBase } from "@/lib/generators/types";
 import { HINGE_FIELD_HELP } from "@/lib/help/fieldHelp";
 import { clone, DEFAULTS, exportSVG, MATERIALS, mergeParams, type Params } from "@/lib/hinge";
 import { HINGE_PRESETS, hingePresetParams } from "@/lib/hinge/presets";
@@ -104,6 +104,11 @@ const GEN_SHEET: DSection = {
     { kind: "choice", key: "sheet.nest", label: "Packing", options: [{ v: "box", text: "Upright" }, { v: "outline", text: "True shape" }] },
     { kind: "toggle", key: "sheet.labels", label: "Score part names" },
     { kind: "toggle", key: "sheet.calibration", label: "Calibration bar" },
+    { kind: "toggle", key: "job.mirror", label: "Mirror", help: "Flip every part left to right, so engraving on the back of clear acrylic reads the right way from the front." },
+    {
+      kind: "text", key: "job.names", label: "Batch names", multiline: true, maxLength: MAX_BATCH_TEXT,
+      placeholder: "One name per line", help: `One set of parts for each line, with that line as the design's text (up to ${MAX_BATCH} lines).`,
+    },
   ],
 };
 
@@ -138,6 +143,7 @@ function genForm(def: AnyGenerator, p: GenBase): DForm {
     if (s.show && !s.show(p)) hiddenSections.push(s.id);
     for (const f of s.fields) if (f.show && !f.show(p)) hidden.push(f.key);
   }
+  if (!def.batch?.(p)) hidden.push("job.names");
   return { hidden, hiddenSections, labels: {} };
 }
 

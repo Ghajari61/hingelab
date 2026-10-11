@@ -7,13 +7,13 @@ import { CLOCK_DEFAULTS, MOVEMENTS, mergeClock, type ClockParams, type MovementI
 import { CLOCK_PRESETS } from "./presets";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
-const pointed = (p: ClockParams) => ["sunburst", "gear", "scallop"].includes(p.face.shape);
+const pointed = (p: ClockParams) => ["sunburst", "gear", "scallop", "flower"].includes(p.face.shape);
 const hasNumerals = (p: ClockParams) => p.markers.style === "numerals" || p.markers.style === "mixed";
 const hasInscription = (p: ClockParams) => !!p.inscription.text.trim();
 const hasTicks = (p: ClockParams) => p.markers.style === "ticks" || p.markers.style === "mixed" || p.markers.minutes;
 
 const SHAPE_NAMES: Record<ClockParams["face"]["shape"], string> = {
-  round: "Round", square: "Square", polygon: "Polygon", sunburst: "Sunburst", gear: "Gear", scallop: "Scalloped", custom: "Custom",
+  round: "Round", square: "Square", polygon: "Polygon", sunburst: "Sunburst", gear: "Gear", scallop: "Scalloped", flower: "Flower", heart: "Heart", cloud: "Cloud", custom: "Custom",
 };
 const MARKER_NAMES: Record<ClockParams["markers"]["style"], string> = {
   numerals: "Numerals", mixed: "Numerals and ticks", ticks: "Ticks", dots: "Dots", none: "No markers",
@@ -30,14 +30,14 @@ const sections: SectionSpec<ClockParams>[] = [
         options: [
           { v: "round", text: "Round" }, { v: "square", text: "Square" }, { v: "polygon", text: "Polygon" },
           { v: "sunburst", text: "Sunburst" }, { v: "gear", text: "Gear" }, { v: "scallop", text: "Scalloped" },
-          { v: "custom", text: "Custom" },
+          { v: "flower", text: "Flower" }, { v: "heart", text: "Heart" }, { v: "cloud", text: "Cloud" }, { v: "custom", text: "Custom" },
         ],
       },
       { kind: "number", key: "face.size", label: "Size", unit: "mm", min: 80, max: 1200, step: 5, help: "Width of the face across its widest point (corners or ray tips)." },
       { kind: "number", key: "face.sides", label: "Sides", unit: "", min: 3, max: 24, step: 1, int: true, show: (p) => p.face.shape === "polygon", help: "Number of sides of the polygon face." },
       { kind: "number", key: "face.corner", label: "Corner radius", unit: "mm", min: 0, max: 120, step: 1, show: (p) => ["square", "polygon", "sunburst"].includes(p.face.shape), help: "Rounds the corners of the face; 0 keeps them sharp." },
-      { kind: "number", key: "face.rays", label: "Rays", unit: "", min: 6, max: 72, step: 1, int: true, show: pointed, help: "Number of rays, teeth or scallops around the edge." },
-      { kind: "number", key: "face.depth", label: "Ray depth", unit: "mm", min: 2, max: 200, step: 1, show: pointed, help: "How far the rays, teeth or scallops reach in from the outer edge." },
+      { kind: "number", key: "face.rays", label: "Rays", unit: "", min: 6, max: 72, step: 1, int: true, show: pointed, help: "Number of rays, teeth, scallops or petals around the edge." },
+      { kind: "number", key: "face.depth", label: "Ray depth", unit: "mm", min: 2, max: 200, step: 1, show: pointed, help: "How far the rays, teeth or scallops reach in from the outer edge; for a flower, the petal radius." },
       { kind: "text", key: "face.path", label: "Custom outline", multiline: true, placeholder: "M 0 0 C …", show: (p) => p.face.shape === "custom", help: "SVG path data (the d attribute) of a closed outline; it is scaled to the face size." },
       {
         kind: "choice", key: "face.layers", label: "Layers", rail: true,
@@ -62,11 +62,11 @@ const sections: SectionSpec<ClockParams>[] = [
       },
       {
         kind: "choice", key: "markers.numerals", label: "Numerals", show: hasNumerals,
-        help: "Arabic (1–12), Roman (I–XII, with the clockmaker's IIII) or Persian (۱–۱۲) numerals.",
-        options: [{ v: "roman", text: "Roman" }, { v: "arabic", text: "Arabic" }, { v: "persian", text: "Persian" }],
+        help: "Arabic (1–12), Roman (I–XII, with the clockmaker's IIII or the modern IV), Persian (۱–۱۲) or Eastern Arabic (١–١٢) numerals.",
+        options: [{ v: "roman", text: "Roman (IIII)" }, { v: "roman-iv", text: "Roman (IV)" }, { v: "arabic", text: "Arabic" }, { v: "persian", text: "Persian" }, { v: "eastern", text: "Eastern Arabic" }],
       },
       { kind: "toggle", key: "markers.quarters", label: "Only 12, 3, 6 and 9", show: (p) => p.markers.style === "numerals", help: "Shows four numerals and ticks for the other hours." },
-      { kind: "font", key: "markers.fontId", label: "Font", show: hasNumerals, sample: (p) => (p.markers.numerals === "persian" ? "۱۲۳۴۵۶۷۸۹" : p.markers.numerals === "roman" ? "XIIV" : "123456789"), help: "The typeface of the numerals (the same fonts as Letters)." },
+      { kind: "font", key: "markers.fontId", label: "Font", show: hasNumerals, sample: (p) => (p.markers.numerals === "persian" ? "۱۲۳۴۵۶۷۸۹" : p.markers.numerals === "eastern" ? "١٢٣٤٥٦٧٨٩" : p.markers.numerals.startsWith("roman") ? "XIIV" : "123456789"), help: "The typeface of the numerals (the same fonts as Letters)." },
       { kind: "number", key: "markers.size", label: "Numeral height", unit: "mm", min: 4, max: 200, step: 1, show: hasNumerals, help: "Cap height of the numerals." },
       { kind: "number", key: "markers.inset", label: "Edge gap", unit: "mm", min: 0, max: 200, step: 1, show: (p) => p.markers.style !== "none" || p.markers.minutes, help: "Gap between the edge of the face and the outer end of the markers." },
       { kind: "number", key: "markers.tickLength", label: "Tick length", unit: "mm", min: 2, max: 100, step: 1, show: hasTicks, help: "Length of the hour ticks; minute ticks are a little under half as long." },
@@ -149,7 +149,7 @@ const sections: SectionSpec<ClockParams>[] = [
 
 function art(key: string, v: string): { d: string; fill?: boolean }[] {
   if (key === "face.shape") {
-    const p = mergeClock({ face: { shape: v, size: 100, sides: 6, rays: v === "gear" ? 12 : v === "scallop" ? 10 : 16, depth: v === "sunburst" ? 14 : 8, corner: v === "square" ? 14 : 6, path: v === "custom" ? HEART : "" } });
+    const p = mergeClock({ face: { shape: v, size: 100, sides: 6, rays: v === "gear" ? 12 : v === "scallop" ? 10 : v === "flower" ? 8 : 16, depth: v === "sunburst" ? 14 : v === "flower" ? 16 : 8, corner: v === "square" ? 14 : 6, path: v === "custom" ? HEART : "" } });
     const o = faceOutline(p);
     return o ? [{ d: fit([o])[0], fill: true }] : [];
   }
@@ -205,12 +205,13 @@ export const CLOCK: GeneratorDef<ClockParams> = {
   fonts: (p) => [...new Set([...(hasNumerals(p) ? [p.markers.fontId] : []), ...(hasInscription(p) ? [p.inscription.fontId] : [])])],
   scale: scaleClock,
   art,
+  batch: () => "inscription.text",
   fileName: (p) => namedFile("clock", p.name, `${Math.round(p.face.size)}mm`),
 
   summary: (p) => `${p.face.size} mm ${SHAPE_NAMES[p.face.shape].toLowerCase()} face, ${MARKER_NAMES[p.markers.style].toLowerCase()}`,
   help: {
     intro: [
-      "The Clock generator draws a wall or desk clock to fit a standard quartz movement: the face, hour markers, hands with the right holes, a hanger and an optional stand.",
+      "The Clock generator draws a wall or desk clock to fit a standard quartz movement: the face, hour markers, hands with the right holes, a hanger and an optional stand. Faces come round, square, polygonal, sunburst, gear, scalloped, flower, heart, cloud or any outline you paste.",
       "Buy the movement first and check its shaft length: the face must be no thicker at the centre than the thread can clamp. Measure the hand holes if your movement's hands are not the usual size and enter them under Movement → Custom sizes.",
     ],
     tips: [

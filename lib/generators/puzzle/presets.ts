@@ -59,4 +59,26 @@ export const PUZZLE_PRESETS: GenPreset<PuzzleParams>[] = [
       pieces: { auto: true, count: 6 }, tabs: { style: "wavy", size: 24, seed: 2 },
     },
   },
+  {
+    id: "cloud-kids", name: "Cloud, kids", note: "A soft cloud in 9 chunky pieces, in a tray",
+    params: {
+      name: "Cloud puzzle", shape: { kind: "cloud", width: 240, height: 160 },
+      pieces: { auto: true, count: 9 }, tabs: { style: "kids", size: 22, seed: 4 }, frame: { kind: "tray", border: 15 },
+    },
+  },
+  {
+    id: "house-family", name: "Family house", note: "A house in 16 pieces with the family's name",
+    params: {
+      name: "Family house", shape: { kind: "house", width: 220, height: 220, corner: 6 },
+      pieces: { auto: true, count: 16 }, tabs: { style: "classic", size: 20, jitter: 4, seed: 7 },
+      engrave: { kind: "text", text: "The Smiths", fontId: "pacifico", size: 26 },
+    },
+  },
+  {
+    id: "hexagon-coaster", name: "Hexagon coaster", note: "A 110 mm hexagon coaster in 7 pieces",
+    params: {
+      name: "Hexagon coaster", shape: { kind: "hexagon", width: 110, height: 96, corner: 4 },
+      pieces: { auto: true, count: 7 }, tabs: { style: "classic", size: 22, jitter: 3, seed: 5 },
+    },
+  },
 ];

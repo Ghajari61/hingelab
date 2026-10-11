@@ -88,7 +88,8 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
   const mot = isMotifId(p.motif.kind) ? placeMotif(p.motif.kind, p.motif, t.width, t.height, hasText) : [];
   const behind = hasText && mot.length > 0 && p.motif.side === "behind";
   const all = [...t.contours, ...mot];
-  if (!all.length && p.style.kind === "word") return { parts: [], stats: [], error: "Type some text or pick a motif." };
+  const cutout = p.style.kind === "word" || p.style.kind === "neon";
+  if (!all.length && cutout) return { parts: [], stats: [], error: "Type some text or pick a motif." };
   const cb = all.length ? bboxOf(all) : { x0: 0, y0: 0, x1: 0, y1: 0 };
   const contentW = cb.x1 - cb.x0, contentH = cb.y1 - cb.y0;
   const ccx = (cb.x0 + cb.x1) / 2, ccy = (cb.y0 + cb.y1) / 2;
@@ -106,8 +107,11 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
   let boardHoles: Contour[] = [];
   let content: Contour[];
   let W: number, H: number;
-  if (p.style.kind === "word") {
-    let s = weld(all, { border: Math.max(0.2, p.style.weld), minHole: 2, bridge: Math.max(2.5, p.style.weld * 2.5) });
+  if (cutout) {
+    const neon = p.style.kind === "neon";
+    let s = neon
+      ? weld(all, { border: Math.max(2, p.style.border), solid: true, bridge: Math.max(4, p.style.border) })
+      : weld(all, { border: Math.max(0.2, p.style.weld), minHole: 2, bridge: Math.max(2.5, p.style.weld * 2.5) });
     if (!s) return { parts: [], stats: [], error: "The letters are too thin to cut. Raise the weld." };
     if (stand) {
       const b = bboxOf([s.outer]);
@@ -119,7 +123,7 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
     W = b.x1 - b.x0; H = b.y1 - b.y0;
     outline = transform(s.outer, { x: -b.x0, y: -b.y0 });
     boardHoles = s.holes.map((h) => transform(h, { x: -b.x0, y: -b.y0 }));
-    content = [];
+    content = neon ? move(all, -b.x0, -b.y0) : [];
   } else {
     const auto = p.board.auto && all.length > 0;
     const arch = p.board.shape === "arch" ? 0.14 : 0;
@@ -134,13 +138,13 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
     content = move(all, W / 2 - ccx, cy - ccy);
   }
   info.W = W; info.H = H;
-  const pad = p.style.kind === "word" ? 0 : Math.max(6, p.board.pad * 0.6);
+  const pad = cutout ? 0 : Math.max(6, p.board.pad * 0.6);
   info.roomW = W - 2 * pad;
   info.roomH = H - 2 * pad;
   const inside = (pt: Pt) => pointInContour(pt, outline);
 
   // Stand tabs, under the board.
-  const square = p.style.kind === "word" || ["rect", "rounded", "house", "banner", "ticket", "tag", "arch", "shield"].includes(p.board.shape);
+  const square = cutout || ["rect", "rounded", "house", "banner", "ticket", "tag", "arch", "shield"].includes(p.board.shape);
   const tabXs = square ? [W * 0.22, W * 0.78] : [W * 0.32, W * 0.68];
   if (stand) {
     const s = withSticks(makeShape(orient(outline), boardHoles.map(orient)), tabXs.map((x) => ({ x, length: T, width: tabW, tip: 0 })));
@@ -164,7 +168,7 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
   // Border.
   const bw = Math.max(1, p.border.width), inset = Math.max(1, p.border.inset);
   const base = makeShape(outline, []);
-  const rimOut = p.style.kind === "word" ? [] : offsetShapes([base], -inset);
+  const rimOut = cutout ? [] : offsetShapes([base], -inset);
   const rimIn = rimOut.length ? offsetShapes(rimOut, -bw) : [];
   const rim = rimOut.length ? differenceShapes(shapeContours(rimOut), shapeContours(rimIn)) : [];
   if (p.border.kind === "score" && rimOut.length) score.push(...shapeContours(rimOut).map(closed));
@@ -172,7 +176,7 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
 
   // Mounting.
   const mk = p.mount.kind;
-  if (p.style.kind !== "word" && (mk === "holes" || mk === "keyhole" || mk === "hanging" || mk === "standoff")) {
+  if (!cutout && (mk === "holes" || mk === "keyhole" || mk === "hanging" || mk === "standoff")) {
     const e = Math.max(10, Math.min(W, H) * 0.08);
     const top = (x: number) => (topAt(outline, x) ?? 0) + e;
     const low = (x: number) => (bottomAt(outline, x) ?? H) - e;
@@ -221,6 +225,29 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
       parts.push({ id: "board", name: "Word", outer: outline, holes: boardHoles, place: place(z0) });
       break;
     }
+    case "stencil": {
+      const bw = Math.max(1.5, p.text.size * 0.06), cuts: Contour[] = [];
+      for (const s of markShapes) {
+        if (!s.holes.length) { cuts.push(s.outer); continue; }
+        const sb = bboxOf([s.outer]);
+        const strips = s.holes.map((h) => {
+          const b = bboxOf([h]), cx = (b.x0 + b.x1) / 2;
+          return orient(rect(cx - bw / 2, sb.y0 - 1, bw, sb.y1 - sb.y0 + 2));
+        });
+        for (const q of differenceShapes(shapeContours([s]), strips)) if (q.area >= 1) cuts.push(q.outer);
+      }
+      parts.push({ id: "board", name: "Stencil", outer: outline, holes: [...boardHoles, ...holes, ...cuts], engrave, score, place: place(z0) });
+      break;
+    }
+    case "neon": {
+      const g = Math.max(0.8, p.text.size * 0.03), tw = Math.max(0.8, p.text.size * 0.035);
+      const inner = offsetShapes(markShapes, g), outer = offsetShapes(markShapes, g + tw);
+      let tube = shapeContours(differenceShapes(shapeContours(outer), shapeContours(inner)));
+      if (p.style.mirror) tube = mirrorX(tube, W / 2);
+      engrave.push(...tube);
+      parts.push({ id: "board", name: "Sign", outer: outline, holes: [...boardHoles, ...holes], engrave, place: place(z0) });
+      break;
+    }
     case "inlay": {
       const letters = markShapes.length ? markShapes : [];
       const cutHoles = letters.map((s) => s.outer);
@@ -260,16 +287,18 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
   ];
   const assembly = [
     ...(mixed ? [`Cut the ${mat} sheets, then the ${m2.name} sheets.`] : []),
-    ...(p.style.kind === "engraved" && p.style.mirror ? ["The engraving is mirrored: lay the acrylic face down and engrave the back, then paint or leave it frosted."] : []),
+    ...((p.style.kind === "engraved" || p.style.kind === "neon") && p.style.mirror ? ["The engraving is mirrored: lay the acrylic face down and engrave the back, then paint or leave it frosted."] : []),
     ...(p.style.kind === "engraved" && !p.style.mirror && engrave.length ? ["Engrave first, then cut without moving the sheet."] : []),
     ...(p.style.kind === "layered" ? ["Glue the letters onto the board with dots of clear epoxy or double-sided tape; press flat for an hour."] : []),
+    ...(p.style.kind === "stencil" ? ["Tape the stencil flat and dab or spray light coats; the bridges hold the middles of letters such as O and A in place."] : []),
+    ...(p.style.kind === "neon" ? ["Engrave the outlines on clear or frosted acrylic, then cut the outline without moving the sheet.", "Stand the sign in an LED base or light it from the edge; the engraved lines glow like neon tubes."] : []),
     ...(p.style.kind === "inlay" ? ["Glue the top board onto the backer, then press each inlay letter into its hole and each counter back into its letter. A drop of thin glue holds them; sand the face flush."] : []),
     ...(p.border.kind === "raised" ? ["Glue the frame around the edge."] : []),
     ...(stand ? ["Push the sign's two tabs into the base's slots; a drop of glue makes it permanent."] : []),
-    ...(mk === "keyhole" && p.style.kind !== "word" ? ["Drive two screws into the wall at the keyhole spacing, leave the heads 3 mm proud, and hang the sign on them."] : []),
-    ...(mk === "holes" && p.style.kind !== "word" ? ["Screw the sign to the wall through the two holes."] : []),
-    ...(mk === "hanging" && p.style.kind !== "word" ? ["Thread a cord or chain through the two top holes to hang the sign."] : []),
-    ...(mk === "standoff" && p.style.kind !== "word" ? [`Mount the sign on four ${p.mount.hole} mm standoffs through the corner holes.`] : []),
+    ...(mk === "keyhole" && !cutout ? ["Drive two screws into the wall at the keyhole spacing, leave the heads 3 mm proud, and hang the sign on them."] : []),
+    ...(mk === "holes" && !cutout ? ["Screw the sign to the wall through the two holes."] : []),
+    ...(mk === "hanging" && !cutout ? ["Thread a cord or chain through the two top holes to hang the sign."] : []),
+    ...(mk === "standoff" && !cutout ? [`Mount the sign on four ${p.mount.hole} mm standoffs through the corner holes.`] : []),
   ];
   return {
     parts, stats, assembly, info,

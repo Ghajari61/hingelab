@@ -4,7 +4,7 @@
  * Three outputs: engraved; cut through a light top plate glued on a contrasting backplate; or a paint
  * stencil whose holes are row runs with bridges between the rows, so no part of it falls out.
  */
-import { differenceShapes, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
+import { differenceShapes, intersectShapes, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import type { Shape } from "@/lib/letters/types";
 import { arc, bboxOf, circle, customOutline, deg, rect, reverse, roundedRect, stadium, transform } from "../geom";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
@@ -220,25 +220,31 @@ export function buildQr(p: QrParams, ctx: BuildContext): QrOutput {
       lines.push({ cs: t.contours, w: t.width });
     }
   }
-  const lw = lines.reduce((a, l) => Math.max(a, l.w), 0);
-  const lh = lines.length ? ls + (lines.length - 1) * lead : 0;
+  const bar = lines.length > 0 && p.label.style === "bar" && out === "engrave";
+  const bp = bar ? ls * 0.45 : 0;
+  const lw = lines.reduce((a, l) => Math.max(a, l.w), 0) + 2 * bp;
+  const lh = lines.length ? ls + (lines.length - 1) * lead + 2 * bp : 0;
   const pos = p.label.position;
   const gap = lines.length ? (pos === "right" ? Math.max(ls * 0.8, 2) : Math.max(ls * 0.5, 1)) : 0;
 
   // Content box: the code with its quiet zone, and the label.
   let cw: number, ch: number, qx: number, qy: number;
-  const label: Contour[] = [];
+  let label: Contour[] = [];
+  let labelBox: Contour | null = null;
   if (!lines.length) { cw = W; ch = W; qx = 0; qy = 0; }
   else if (pos === "right") {
     cw = W + gap + lw; ch = Math.max(W, lh); qx = 0; qy = (ch - W) / 2;
     const y0 = (ch - lh) / 2;
-    lines.forEach((l, k) => label.push(...move(l.cs, W + gap + l.w / 2, y0 + ls / 2 + k * lead)));
+    lines.forEach((l, k) => label.push(...move(l.cs, W + gap + bp + l.w / 2, y0 + bp + ls / 2 + k * lead)));
+    labelBox = roundedRect(W + gap, y0, lw, lh, bp * 1.2);
   } else {
     cw = Math.max(W, lw); ch = W + gap + lh; qx = (cw - W) / 2;
     qy = pos === "above" ? lh + gap : 0;
     const y0 = pos === "above" ? 0 : W + gap;
-    lines.forEach((l, k) => label.push(...move(l.cs, cw / 2, y0 + ls / 2 + k * lead)));
+    lines.forEach((l, k) => label.push(...move(l.cs, cw / 2, y0 + bp + ls / 2 + k * lead)));
+    labelBox = roundedRect((cw - lw) / 2, y0, lw, lh, bp * 1.2);
   }
+  if (bar && labelBox) label = shapeContours(differenceShapes([labelBox], label));
   const ox = qx + q, oy = qy + q;
 
   // Centre logo: modules under it are cleared.
@@ -281,6 +287,11 @@ export function buildQr(p: QrParams, ctx: BuildContext): QrOutput {
     const base = unionShapes([plate]);
     const o = offsetShapes(base, -inset), i = offsetShapes(base, -inset - fw);
     ring = shapeContours(differenceShapes(shapeContours(o), [...shapeContours(i), ...(keyClear ? [keyClear] : [])]));
+    if (p.plate.frameStyle === "corners") {
+      const b = bboxOf([plate]), k = Math.min(b.x1 - b.x0, b.y1 - b.y0) * 0.24;
+      const boxes = [rect(b.x0, b.y0, k, k), rect(b.x1 - k, b.y0, k, k), rect(b.x0, b.y1 - k, k, k), rect(b.x1 - k, b.y1 - k, k, k)];
+      ring = shapeContours(intersectShapes(ring, shapeContours(unionShapes(boxes))));
+    }
   }
   const inverted = out === "engrave" && p.code.invert;
   const margin = inverted ? q : q + Math.min(framed ? Math.max(0.5, (pad - fw) / 2) : pad, lines.length ? gap : Infinity);
