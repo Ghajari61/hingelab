@@ -96,7 +96,10 @@ function projectedSVG(out: GenOutput, T: number, w: number, h: number): string {
       if (v > 0.01) ahead = true;
       if (v < B.t - 0.01) past = true;
     }
-    return !behind && beyond ? 1 : !ahead && past ? -1 : 0;
+    if (!behind && beyond) return 1;
+    if (!ahead && past) return -1;
+    // Tabs through a top seen from above: everything of A is under B's upper face.
+    return B.near && Math.abs(B.normal[2]) > 0.99 && behind && !beyond ? -1 : 0;
   };
   const after = items.map((A) => items.filter((B) => B !== A && (side(A, B) > 0 || side(B, A) < 0)));
   const order: It[] = [];

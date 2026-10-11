@@ -215,6 +215,8 @@ export interface GeneratorDef<P extends GenBase> {
   defaults(): P;
   /** Defaults filled in under a stored or partial value (old saves, presets). */
   merge(raw: unknown): P;
+  /** Brings params saved at an older `version` up to date (before `merge`). */
+  migrate?(raw: unknown, from: number): unknown;
   sections: SectionSpec<P>[];
   presets: GenPreset<P>[];
   build(p: P, ctx: BuildContext): GenOutput;

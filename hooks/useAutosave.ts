@@ -9,28 +9,28 @@ export const HINGE_KEY = "hingelab-v1";
 export const UNITS_KEY = "hingelab-units";
 
 /** Debounced localStorage save of the guest editor. Cloud projects use useCloudAutosave instead. */
-export function useAutosave<T>(params: T, units: Units, onStatus: (status: string) => void, key = HINGE_KEY, enabled = true) {
-  const latest = useRef({ params, units, key, enabled });
-  latest.current = { params, units, key, enabled };
+export function useAutosave<T>(params: T, units: Units, onStatus: (status: string) => void, key = HINGE_KEY, enabled = true, version?: number) {
+  const latest = useRef({ params, units, key, enabled, version });
+  latest.current = { params, units, key, enabled, version };
 
   useEffect(() => {
     if (!enabled) return;
     const saveT = window.setTimeout(() => {
       try {
-        localStorage.setItem(key, JSON.stringify({ params, units }));
+        localStorage.setItem(key, JSON.stringify({ params, units, ...(version ? { v: version } : {}) }));
         onStatus("Autosaved locally");
       } catch {
         onStatus("Local autosave unavailable");
       }
     }, 300);
     return () => window.clearTimeout(saveT);
-  }, [params, units, onStatus, key, enabled]);
+  }, [params, units, onStatus, key, enabled, version]);
 
   // Flush on unmount (switching products) so the last edit is not lost to the debounce.
   useEffect(() => () => {
     const l = latest.current;
     if (!l.enabled) return;
-    try { localStorage.setItem(l.key, JSON.stringify({ params: l.params, units: l.units })); } catch { /* storage full or blocked */ }
+    try { localStorage.setItem(l.key, JSON.stringify({ params: l.params, units: l.units, ...(l.version ? { v: l.version } : {}) })); } catch { /* storage full or blocked */ }
   }, []);
 
   // Cloud projects remember only the units choice on this device.
@@ -40,9 +40,9 @@ export function useAutosave<T>(params: T, units: Units, onStatus: (status: strin
   }, [enabled, units]);
 }
 
-export function readStored<T>(key = HINGE_KEY): { params?: Partial<T>; units?: string } | null {
+export function readStored<T>(key = HINGE_KEY): { params?: Partial<T>; units?: string; v?: number } | null {
   try {
-    const s = JSON.parse(localStorage.getItem(key) || "null") as { params?: Partial<T>; units?: string } | null;
+    const s = JSON.parse(localStorage.getItem(key) || "null") as { params?: Partial<T>; units?: string; v?: number } | null;
     if (!s || typeof s !== "object") return null;
     return s;
   } catch {

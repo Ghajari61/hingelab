@@ -8,7 +8,9 @@ export const MIN_COMPARTMENT = 20;
 /** Closest hooks that still take a bunch of keys each, mm. */
 export const MIN_HOOK_SPACING = 30;
 
-const jointed = (p: BoxesParams) => p.design === "box" || p.design === "tray" || p.design === "bird";
+const jointed = (p: BoxesParams) => ["box", "tray", "bird", "drawer", "money", "stack"].includes(p.design);
+/** Lowest drawer that still holds something, mm inside. */
+export const MIN_DRAWER = 20;
 
 export function checkBoxes(p: BoxesParams, out: BoxesOutput): Issue<BoxesParams>[] {
   const issues: Issue<BoxesParams>[] = [];
@@ -45,6 +47,67 @@ export function checkBoxes(p: BoxesParams, out: BoxesOutput): Issue<BoxesParams>
       message: `Compartments are only ${info.compartment.toFixed(0)} mm across; fingers need ${MIN_COMPARTMENT} mm or more.`,
       fixes: [{ id: "fewer", label: `${Math.min(cols, Math.round(t.cols))} × ${Math.min(rows, Math.round(t.rows))} compartments`, safe: true, apply: (q) => ({ ...q, tray: { ...q.tray, cols: Math.min(cols, Math.round(q.tray.cols)), rows: Math.min(rows, Math.round(q.tray.rows)) } }) }],
     });
+  }
+
+  if (p.design === "insert" && info.compartment !== undefined && info.compartment < MIN_COMPARTMENT) {
+    const s = p.insert;
+    const cols = Math.max(1, Math.floor((s.width + T) / (MIN_COMPARTMENT + T))), rows = Math.max(1, Math.floor((s.depth + T) / (MIN_COMPARTMENT + T)));
+    issues.push({
+      code: "SMALL_COMPARTMENTS", level: "warn",
+      message: `Compartments are only ${info.compartment.toFixed(0)} mm across; little fits in less than ${MIN_COMPARTMENT} mm.`,
+      fixes: [{ id: "fewer", label: `${Math.min(cols, Math.round(s.cols))} × ${Math.min(rows, Math.round(s.rows))} compartments`, safe: true, apply: (q) => ({ ...q, insert: { ...q.insert, cols: Math.min(cols, Math.round(q.insert.cols)), rows: Math.min(rows, Math.round(q.insert.rows)) } }) }],
+    });
+  }
+
+  const lidArt = p.design !== "sign" && p.design !== "keys";
+  if (lidArt && info.textWidth && info.textRoom && info.textWidth > info.textRoom + 0.5) {
+    const k = info.textRoom / info.textWidth;
+    const size = Math.max(4, Math.floor(p.engrave.size * k)), motifSize = Math.max(8, Math.floor(p.engrave.motifSize * k));
+    issues.push({
+      code: "LID_ART_WIDE", level: "warn",
+      message: `The engraving is ${info.textWidth.toFixed(0)} mm wide and runs off the ${p.design === "money" ? "front" : "lid"}.`,
+      fixes: [{ id: "smaller", label: "Smaller engraving", safe: true, apply: (q) => ({ ...q, engrave: { ...q.engrave, size: Math.min(q.engrave.size, size), motifSize: Math.min(q.engrave.motifSize, motifSize) } }) }],
+    });
+  } else if (lidArt && info.artHeight && info.artRoom && info.artHeight > info.artRoom + 0.5) {
+    const k = info.artRoom / info.artHeight;
+    const size = Math.max(4, Math.floor(p.engrave.size * k)), motifSize = Math.max(8, Math.floor(p.engrave.motifSize * k));
+    issues.push({
+      code: "LID_ART_TALL", level: "warn",
+      message: `The engraving is ${info.artHeight.toFixed(0)} mm tall and does not fit the ${p.design === "money" ? "front" : "lid"}.`,
+      fixes: [{ id: "smaller", label: "Smaller engraving", safe: true, apply: (q) => ({ ...q, engrave: { ...q.engrave, size: Math.min(q.engrave.size, size), motifSize: Math.min(q.engrave.motifSize, motifSize) } }) }],
+    });
+  }
+
+  if (p.design === "drawer" && info.drawerH !== undefined && info.drawerH < MIN_DRAWER) {
+    const Hi = (p.joint.outside ? p.drawer.height - 2 * T : p.drawer.height);
+    const drawers = Math.max(1, Math.min(Math.round(p.drawer.drawers) - 1, Math.floor(Hi / (MIN_DRAWER + T + p.drawer.clearance + 0.5))));
+    issues.push({
+      code: "DRAWER_LOW", level: "warn",
+      message: `Each drawer is only ${info.drawerH.toFixed(0)} mm deep inside.`,
+      fixes: [{ id: "fewer", label: `${drawers} drawer${drawers > 1 ? "s" : ""}`, safe: true, apply: (q) => ({ ...q, drawer: { ...q.drawer, drawers } }) }],
+    });
+  }
+
+  if (p.design === "money" && info.slotRoom !== undefined && p.money.slot > info.slotRoom) {
+    const slot = Math.max(15, Math.floor(info.slotRoom));
+    issues.push({ code: "COIN_SLOT", level: "warn", message: `A ${p.money.slot} mm coin slot does not fit the top.`, fixes: [{ id: "slot", label: `Slot ${slot} mm`, safe: true, apply: (q) => ({ ...q, money: { ...q.money, slot } }) }] });
+  }
+  if (p.design === "money" && info.plugRoom !== undefined && p.money.plug > info.plugRoom) {
+    const plug = Math.max(20, Math.floor(info.plugRoom));
+    issues.push({ code: "PLUG_BIG", level: "warn", message: `A ${p.money.plug} mm plug cuts into the joints of the bottom.`, fixes: [{ id: "plug", label: `Plug ${plug} mm`, safe: true, apply: (q) => ({ ...q, money: { ...q.money, plug } }) }] });
+  }
+
+  if (info.pinNeed !== undefined && info.pinRoom !== undefined && info.pinNeed > info.pinRoom) {
+    const key = p.design === "tray" ? "tray" : "box";
+    const depth = Math.ceil(p[key].depth + info.pinNeed - info.pinRoom);
+    issues.push({ code: "PIN_DEPTH", level: "error", message: "The box is too shallow from front to back for a pin hinge.", fixes: [{ id: "deeper", label: `Depth ${depth} mm`, safe: true, apply: (q) => ({ ...q, [key]: { ...q[key], depth } }) }] });
+  }
+
+  if (p.design === "hex") {
+    const a = (p.joint.outside ? p.hex.width - 2 * T : p.hex.width) / Math.sqrt(3);
+    if (a < 25) {
+      issues.push({ code: "HEX_SMALL", level: "warn", message: `The walls are only ${a.toFixed(0)} mm wide, too narrow for their tabs.`, fixes: [{ id: "wider", label: "Width 60 mm", safe: true, apply: (q) => ({ ...q, hex: { ...q.hex, width: Math.max(q.hex.width, 60) } }) }] });
+    }
   }
 
   if ((p.design === "sign" || p.design === "keys") && info.textWidth && info.textRoom && info.textWidth > info.textRoom) {
@@ -92,7 +155,7 @@ export function checkBoxes(p: BoxesParams, out: BoxesOutput): Issue<BoxesParams>
   if (out.missing?.length) {
     const persian = out.missing.some((c) => /[\u0600-\u06FF]/.test(c));
     const font = persian ? "vazirmatn" : "fredoka";
-    const key = p.design === "keys" ? "keys" : "sign";
+    const key = p.design === "keys" ? "keys" : p.design === "sign" ? "sign" : "engrave";
     issues.push({
       code: "MISSING_GLYPHS", level: "error",
       message: `The font has no ${out.missing.map((c) => `“${c}”`).join(" ")}.`,

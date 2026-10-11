@@ -85,7 +85,8 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const defaults = useMemo(() => def.defaults() as P, [def]);
   const boot = useState(() => {
     const stored = readStored<P>(KEY);
-    return { params: def.merge(stored?.params) as P, units: (stored?.units === "in" ? "in" : "mm") as Units };
+    const from = typeof stored?.v === "number" ? stored.v : 1;
+    return { params: def.merge(def.migrate && stored?.params ? def.migrate(stored.params, from) : stored?.params) as P, units: (stored?.units === "in" ? "in" : "mm") as Units };
   })[0];
   const { params, replace, undo, redo, canUndo, canRedo } = useHistory<P>(boot.params);
   const [units, setUnits] = useState<Units>(boot.units);
@@ -107,7 +108,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const toastT = useRef<number>(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const onStatus = useCallback((s: string) => setSaved(s), []);
-  useAutosave(params, units, onStatus, KEY, true);
+  useAutosave(params, units, onStatus, KEY, true, def.version);
 
   function toastMsg(msg: string) {
     setToast(msg);
@@ -524,12 +525,12 @@ function GenEditor({ def, onProduct, onHome, start }: {
           const rd = new FileReader();
           rd.onload = () => {
             try {
-              const j = JSON.parse(String(rd.result)) as { product?: string; params?: unknown };
+              const j = JSON.parse(String(rd.result)) as { product?: string; version?: number; params?: unknown };
               if (j.product !== def.id || !j.params) {
                 toastMsg(j.params ? `That is not a ${noun} project. Switch to its product to open it.` : "That file is not a HingeLab project");
                 return;
               }
-              replace(def.merge(j.params) as P, true);
+              replace(def.merge(def.migrate ? def.migrate(j.params, typeof j.version === "number" ? j.version : 1) : j.params) as P, true);
               window.setTimeout(() => viewApi.fit(), 50);
               toastMsg(`Opened ${f.name}`);
             } catch {

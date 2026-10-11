@@ -1,20 +1,25 @@
-import { circle, rect, roundedRect } from "../geom";
+import { circle, rect, regularPolygon, roundedRect } from "../geom";
+import { MOTIF_OPTIONS, isMotifId } from "../motifs";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { fitArt, namedFile } from "../util";
 import { buildBoxes, type BoxesOutput } from "./build";
 import { checkBoxes } from "./check";
 import { fingerPanel } from "./joints";
-import { BOXES_DEFAULTS, DESIGN_NAMES, mergeBoxes, type BoxesParams, type Design } from "./params";
+import { hasArt } from "./more";
+import { BOXES_DEFAULTS, BOXES_VERSION, DESIGN_NAMES, LID_NAMES, migrateBoxes, mergeBoxes, type BoxesParams, type Design, type LidKind } from "./params";
 import { BOXES_PRESETS } from "./presets";
 
 const is = (...d: Design[]) => (p: BoxesParams) => d.includes(p.design);
+/** Designs with an engraved face: a lid, the cabinet top, or the money box's front. */
+const engraved = (p: BoxesParams) =>
+  (p.design === "box" && p.box.lid !== "open") || (p.design === "tray" && p.tray.lid !== "none") || p.design === "drawer" || (p.design === "hex" && p.hex.lid === "liftoff") || p.design === "money" || (p.design === "stack" && p.stack.lid);
 /** Names a design switch may replace: the user has not named the piece yet. */
 const BUILT_IN_NAMES = new Set<string>([BOXES_DEFAULTS.name, ...Object.values(DESIGN_NAMES), ...BOXES_PRESETS.map((p) => p.params.name ?? "")]);
 
 const sections: SectionSpec<BoxesParams>[] = [
   {
     id: "design", title: "Design", open: true,
-    help: "What to make: a finger-jointed box, a tray with dividers, a desk sign, a photo frame, a phone stand, a key holder or a bird house.",
+    help: "What to make: a finger-jointed box, a tray with dividers, a drawer box, a hexagon box, a divider insert, a money box, stacking trays, a desk sign, a photo frame, a phone stand, a key holder or a bird house.",
     fields: [
       {
         kind: "choice", key: "design", label: "Design", rail: true,
@@ -25,9 +30,14 @@ const sections: SectionSpec<BoxesParams>[] = [
     ],
   },
   {
-    id: "joint", title: "Finger joints", open: true, show: is("box", "tray", "bird"),
+    id: "joint", title: "Joints", open: true, show: is("box", "tray", "bird", "drawer", "money", "stack"),
     help: "How the panels lock together at the corners.",
     fields: [
+      {
+        kind: "choice", key: "joint.style", label: "Joint style", show: is("box", "tray", "money"),
+        help: "Fingers joins every edge with interlocking fingers; Tab and slot stands the walls on a bottom that overhangs them, with tabs through slots, and keeps fingers at the corners.",
+        options: [{ v: "fingers", text: "Fingers" }, { v: "tabs", text: "Tab and slot" }],
+      },
       { kind: "number", key: "joint.finger", label: "Finger width", unit: "mm", min: 3, max: 40, step: 0.5, help: "Target width of each finger; it is adjusted so every edge gets an odd number of equal fingers." },
       { kind: "toggle", key: "joint.outside", label: "Outside sizes", help: "Turn on to enter the outside size; otherwise the sizes are inside, so things you measured will fit." },
     ],
@@ -38,13 +48,15 @@ const sections: SectionSpec<BoxesParams>[] = [
     fields: [
       { kind: "number", key: "box.width", label: "Width", unit: "mm", min: 20, max: 1000, step: 1, help: "Size from left to right." },
       { kind: "number", key: "box.depth", label: "Depth", unit: "mm", min: 20, max: 1000, step: 1, help: "Size from front to back." },
-      { kind: "number", key: "box.height", label: "Height", unit: "mm", min: 15, max: 1000, step: 1, help: "Height of the walls, without a lift-off lid." },
+      { kind: "number", key: "box.height", label: "Height", unit: "mm", min: 15, max: 1000, step: 1, help: "Height inside, from the bottom to the underside of the lid (the outside height with Outside sizes)." },
       {
-        kind: "choice", key: "box.lid", label: "Lid",
-        help: "Closed adds a jointed top, Open leaves it off, and Lift-off adds a loose lid with a lip that drops inside the walls.",
-        options: [{ v: "closed", text: "Closed" }, { v: "open", text: "Open" }, { v: "liftoff", text: "Lift-off" }],
+        kind: "choice", key: "box.lid", label: "Lid", rail: true,
+        help: "Closed adds a jointed top and Open leaves it off. Lift-off drops a lip inside the walls, Sliding runs in a groove built on the walls, Pin hinge turns on two pins, and Inset sits flush inside the walls with a knob.",
+        options: (Object.keys(LID_NAMES) as LidKind[]).map((v) => ({ v, text: LID_NAMES[v] })),
       },
-      { kind: "number", key: "box.clearance", label: "Lid clearance", unit: "mm", min: 0, max: 2, step: 0.05, show: (p) => p.box.lid === "liftoff", help: "Gap between the lip and the walls, each side, so the lid lifts off easily." },
+      { kind: "number", key: "box.clearance", label: "Lid clearance", unit: "mm", min: 0, max: 2, step: 0.05, show: (p) => p.box.lid !== "closed" && p.box.lid !== "open", help: "Gap between the lid and the walls, each side, so the lid moves easily." },
+      { kind: "number", key: "box.pin", label: "Pin diameter", unit: "mm", min: 1.5, max: 8, step: 0.1, show: (p) => p.box.lid === "pin" || (p.design === "tray" && p.tray.lid === "pin"), help: "Diameter of the hinge pins: a dowel, a nail, or 1.75 mm or 3 mm printer filament." },
+      { kind: "toggle", key: "box.notch", label: "Finger notch", show: (p) => p.box.lid === "open" || p.box.lid === "sliding" || p.box.lid === "pin", help: "Cuts a half-round notch for a finger: in the front wall of an open or hinged box, or in the front of a sliding lid." },
     ],
   },
   {
@@ -57,6 +69,80 @@ const sections: SectionSpec<BoxesParams>[] = [
       { kind: "number", key: "tray.cols", label: "Columns", unit: "", min: 1, max: 12, step: 1, int: true, help: "Compartments from left to right." },
       { kind: "number", key: "tray.rows", label: "Rows", unit: "", min: 1, max: 12, step: 1, int: true, help: "Compartments from front to back." },
       { kind: "number", key: "tray.dividers", label: "Divider height", unit: "%", min: 30, max: 100, step: 1, help: "Height of the dividers as a share of the inside height; lower dividers make things easier to pick out." },
+      {
+        kind: "choice", key: "tray.lid", label: "Lid",
+        help: "A lid turns the tray into a tea, card or jewellery box; the dividers stay below the lid and its fittings.",
+        options: [{ v: "none", text: "None" }, { v: "liftoff", text: "Lift-off" }, { v: "sliding", text: "Sliding" }, { v: "pin", text: "Pin hinge" }, { v: "inset", text: "Inset with knob" }],
+      },
+    ],
+  },
+  {
+    id: "drawer", title: "Drawer box", open: true, show: is("drawer"),
+    help: "A finger-jointed cabinet, open at the front, with drawers stacked inside.",
+    fields: [
+      { kind: "number", key: "drawer.width", label: "Width", unit: "mm", min: 60, max: 600, step: 1, help: "Size of the cabinet from left to right." },
+      { kind: "number", key: "drawer.depth", label: "Depth", unit: "mm", min: 50, max: 600, step: 1, help: "Size of the cabinet from front to back." },
+      { kind: "number", key: "drawer.height", label: "Height", unit: "mm", min: 30, max: 600, step: 1, help: "Height of the cabinet; it is shared by the drawers." },
+      { kind: "number", key: "drawer.drawers", label: "Drawers", unit: "", min: 1, max: 4, step: 1, int: true, help: "Drawers stacked in the cabinet, each the same height." },
+      { kind: "choice", key: "drawer.pull", label: "Pull", help: "How to open a drawer: a finger hole in the front, a half-round notch at the top, or a round knob.", options: [{ v: "hole", text: "Finger hole" }, { v: "notch", text: "Notch" }, { v: "knob", text: "Knob" }] },
+      { kind: "number", key: "drawer.clearance", label: "Drawer clearance", unit: "mm", min: 0.1, max: 3, step: 0.1, help: "Gap around each drawer so it slides; raise it for plywood that is not flat." },
+    ],
+  },
+  {
+    id: "hex", title: "Hexagon box", open: true, show: is("hex"),
+    help: "Six walls with tabs through a hexagonal bottom, with or without a lift-off lid.",
+    fields: [
+      { kind: "number", key: "hex.width", label: "Width", unit: "mm", min: 40, max: 500, step: 1, help: "Size across the flat sides, inside the walls." },
+      { kind: "number", key: "hex.height", label: "Height", unit: "mm", min: 15, max: 400, step: 1, help: "Height inside, from the bottom to the top of the walls." },
+      { kind: "choice", key: "hex.lid", label: "Lid", help: "Lift-off adds a hexagonal lid with a lip that drops inside the walls.", options: [{ v: "liftoff", text: "Lift-off" }, { v: "open", text: "Open" }] },
+      { kind: "number", key: "hex.clearance", label: "Lid clearance", unit: "mm", min: 0, max: 2, step: 0.05, show: (p) => p.hex.lid === "liftoff", help: "Gap between the lip and the walls, each side." },
+    ],
+  },
+  {
+    id: "insert", title: "Divider insert", open: true, show: is("insert"),
+    help: "A grid of half-lap dividers that drops into a box or drawer you already have.",
+    fields: [
+      { kind: "number", key: "insert.width", label: "Inside width", unit: "mm", min: 30, max: 1000, step: 1, help: "Inside width of the box the insert goes into." },
+      { kind: "number", key: "insert.depth", label: "Inside depth", unit: "mm", min: 30, max: 1000, step: 1, help: "Inside depth of the box the insert goes into." },
+      { kind: "number", key: "insert.height", label: "Divider height", unit: "mm", min: 10, max: 400, step: 1, help: "Height of the dividers; keep it below the lid." },
+      { kind: "number", key: "insert.cols", label: "Columns", unit: "", min: 1, max: 12, step: 1, int: true, help: "Compartments from left to right." },
+      { kind: "number", key: "insert.rows", label: "Rows", unit: "", min: 1, max: 12, step: 1, int: true, help: "Compartments from front to back." },
+      { kind: "number", key: "insert.clearance", label: "Clearance", unit: "mm", min: 0, max: 3, step: 0.1, help: "Gap left at each wall so the grid drops in." },
+    ],
+  },
+  {
+    id: "money", title: "Money box", open: true, show: is("money"),
+    help: "A closed box with a coin slot in the top and a plug in the bottom to empty it.",
+    fields: [
+      { kind: "number", key: "money.width", label: "Width", unit: "mm", min: 50, max: 400, step: 1, help: "Size from left to right." },
+      { kind: "number", key: "money.depth", label: "Depth", unit: "mm", min: 50, max: 400, step: 1, help: "Size from front to back." },
+      { kind: "number", key: "money.height", label: "Height", unit: "mm", min: 50, max: 400, step: 1, help: "Height inside." },
+      { kind: "number", key: "money.slot", label: "Coin slot", unit: "mm", min: 15, max: 90, step: 1, help: "Length of the slot; 32 mm takes every euro, pound and dollar coin, 70 mm folded notes." },
+      { kind: "number", key: "money.plug", label: "Plug", unit: "mm", min: 20, max: 120, step: 1, help: "Diameter of the plug in the bottom; make it wide enough for a hand or at least for the coins." },
+    ],
+  },
+  {
+    id: "stack", title: "Stacking trays", open: true, show: is("stack"),
+    help: "Open trays of the same size; a ring under each one keeps the stack in line.",
+    fields: [
+      { kind: "number", key: "stack.width", label: "Width", unit: "mm", min: 50, max: 600, step: 1, help: "Size from left to right." },
+      { kind: "number", key: "stack.depth", label: "Depth", unit: "mm", min: 50, max: 600, step: 1, help: "Size from front to back." },
+      { kind: "number", key: "stack.height", label: "Tray height", unit: "mm", min: 15, max: 200, step: 1, help: "Height inside each tray." },
+      { kind: "number", key: "stack.trays", label: "Trays", unit: "", min: 1, max: 5, step: 1, int: true, help: "Number of trays in the stack." },
+      { kind: "toggle", key: "stack.lid", label: "Lid", help: "Adds a lid with a ring, which closes the top tray." },
+      { kind: "number", key: "stack.clearance", label: "Ring clearance", unit: "mm", min: 0, max: 2, step: 0.05, help: "Gap between each ring and the walls of the tray below." },
+    ],
+  },
+  {
+    id: "engrave", title: "Engraving", open: false, show: engraved,
+    help: "Text, a motif and a border engraved on the lid (the cabinet top of a drawer box, the front of a money box).",
+    fields: [
+      { kind: "text", key: "engrave.text", label: "Text", multiline: true, maxLength: 80, placeholder: "Tea", help: "Words engraved on the lid; each line is centred." },
+      { kind: "font", key: "engrave.fontId", label: "Font", show: (p) => !!p.engrave.text.trim(), sample: (p) => p.engrave.text || "Aa", help: "Typeface of the text (the same fonts as Letters)." },
+      { kind: "number", key: "engrave.size", label: "Text height", unit: "mm", min: 4, max: 80, step: 0.5, show: (p) => !!p.engrave.text.trim(), help: "Cap height of the text." },
+      { kind: "choice", key: "engrave.motif", label: "Motif", help: "A picture engraved above the text.", options: MOTIF_OPTIONS },
+      { kind: "number", key: "engrave.motifSize", label: "Motif size", unit: "mm", min: 8, max: 200, step: 1, show: (p) => isMotifId(p.engrave.motif), help: "Larger side of the motif." },
+      { kind: "number", key: "engrave.border", label: "Border inset", unit: "mm", min: 0, max: 40, step: 0.5, help: "Engraves a line this far in from the edge; 0 leaves it off." },
     ],
   },
   {
@@ -128,10 +214,34 @@ const sections: SectionSpec<BoxesParams>[] = [
 
 /** Rail pictures, drawn from the same shapes the build uses. */
 function art(key: string, v: string): { d: string; fill?: boolean }[] {
-  if (key !== "design") return [];
   const open = (cs: Contour[], o: boolean[] = []) => fitArt(cs, 36, o).map((d) => ({ d }));
+  const solid = (cs: Contour[], box = 38) => [{ d: fitArt(cs, box).join(" "), fill: true }];
+  if (key === "box.lid") {
+    // The box from the side, with its lid.
+    const body = rect(0, 10, 48, 26);
+    switch (v as LidKind) {
+      case "closed": return solid([rect(0, 6, 48, 30)]);
+      case "open": return open([[[0, 6], [0, 36], [48, 36], [48, 6]]], [true]);
+      case "liftoff": return solid([body, rect(0, 4, 48, 4), rect(4, 8, 40, 2)]);
+      case "sliding": return [...solid([body, rect(0, 4, 40, 3), rect(0, 0, 48, 3)]), { d: fitArt([[[40, 5.5], [52, 5.5]], [[48, 3.5], [52, 5.5], [48, 7.5]]], 38, [true, true]).join(" ") }];
+      case "pin": return solid([body, [[0, 8], [48, 8], [48, 10], [10, 10], [4, 2], [6, 0]], circle(44, 12, 1.5)]);
+      case "inset": return solid([rect(0, 6, 48, 30), rect(20, 1, 8, 2), rect(16, -2, 16, 3)]);
+    }
+    return [];
+  }
+  if (key !== "design") return [];
   const E = { mate: true, ends: true };
   switch (v as Design) {
+    case "drawer":
+      return [{ d: fitArt([rect(0, 0, 44, 40), rect(4, 4, 36, 15), rect(4, 21, 36, 15), circle(22, 11.5, 2.5), circle(22, 28.5, 2.5)], 38).join(" "), fill: true }];
+    case "hex":
+      return [{ d: fitArt([regularPolygon(6, 22, 90), regularPolygon(6, 16, 90)], 38).join(" "), fill: true }];
+    case "insert":
+      return open([[[0, 14], [48, 14]], [[0, 28], [48, 28]], [[12, 0], [12, 42]], [[24, 0], [24, 42]], [[36, 0], [36, 42]]], [true, true, true, true, true]);
+    case "money":
+      return [{ d: fitArt([rect(0, 6, 40, 34), rect(14, 0, 12, 3), circle(20, 23, 6)], 38).join(" "), fill: true }];
+    case "stack":
+      return [{ d: fitArt([rect(0, 0, 48, 11), rect(0, 14, 48, 11), rect(0, 28, 48, 11)], 38).join(" "), fill: true }];
     case "box": {
       const p = fingerPanel(48, 30, 3, 6, [E, E, E, E], [true, true, true, true]);
       return [{ d: fitArt([p], 38)[0], fill: true }];
@@ -162,6 +272,11 @@ function size(p: BoxesParams): string {
     case "stand": return `${p.stand.width} mm wide, ${p.stand.angle}°`;
     case "keys": return `${Math.round(p.keys.hooks)} hooks`;
     case "bird": return `${p.bird.hole} mm entrance`;
+    case "drawer": return `${Math.round(p.drawer.drawers)} drawers, ${o(p.drawer.width)} × ${o(p.drawer.height)} mm`;
+    case "hex": return `${p.hex.width} mm across, ${p.hex.height} mm deep`;
+    case "insert": return `${Math.round(p.insert.cols)} × ${Math.round(p.insert.rows)} for ${p.insert.width} × ${p.insert.depth} mm`;
+    case "money": return `${o(p.money.width)} × ${o(p.money.depth)} × ${o(p.money.height)} mm`;
+    case "stack": return `${Math.round(p.stack.trays)} trays, ${o(p.stack.width)} × ${o(p.stack.depth)} mm`;
   }
 }
 
@@ -175,26 +290,33 @@ function fileTail(p: BoxesParams): string {
     case "stand": return `${Math.round(p.stand.angle)}deg`;
     case "keys": return `${Math.round(p.keys.hooks)}-hooks`;
     case "bird": return `${Math.round(p.bird.hole)}mm`;
+    case "drawer": return `${Math.round(p.drawer.drawers)}-drawers`;
+    case "hex": return `${Math.round(p.hex.width)}mm`;
+    case "insert": return `${Math.round(p.insert.cols)}x${Math.round(p.insert.rows)}`;
+    case "money": return `${o(p.money.width)}x${o(p.money.depth)}x${o(p.money.height)}mm`;
+    case "stack": return `${Math.round(p.stack.trays)}-trays`;
   }
 }
 
 export const BOXES: GeneratorDef<BoxesParams> = {
   id: "boxes",
   name: "Boxes",
-  version: 1,
+  version: BOXES_VERSION,
   defaults: () => mergeBoxes({}),
   merge: mergeBoxes,
+  migrate: migrateBoxes,
   sections,
   presets: BOXES_PRESETS,
   build: buildBoxes,
   check: (p, out) => checkBoxes(p, out as BoxesOutput),
-  fonts: (p) => (p.design === "sign" && p.sign.text.trim() ? [p.sign.fontId] : p.design === "keys" && p.keys.text.trim() ? [p.keys.fontId] : []),
+  fonts: (p) => (p.design === "sign" && p.sign.text.trim() ? [p.sign.fontId] : p.design === "keys" && p.keys.text.trim() ? [p.keys.fontId] : engraved(p) && hasArt(p) && p.engrave.text.trim() ? [p.engrave.fontId] : []),
   art,
   fileName: (p) => namedFile(p.design === "bird" ? "birdhouse" : p.design, p.name, fileTail(p)),
   summary: (p) => `${DESIGN_NAMES[p.design]}, ${size(p)}`,
   help: {
     intro: [
-      "The Boxes generator makes classic laser-cut pieces that slot together: finger-jointed boxes with a closed, open or lift-off lid, trays with half-lap dividers, desk signs, three-layer photo frames, phone and tablet stands, key holders and bird houses.",
+      "The Boxes generator makes classic laser-cut pieces that slot together: finger-jointed boxes with a closed, open, lift-off, sliding, pin-hinged or inset lid, trays with half-lap dividers (with a lid they make tea and card boxes), drawer boxes with up to four drawers, hexagon boxes, divider inserts for boxes you already have, money boxes, stacking trays, desk signs, three-layer photo frames, phone and tablet stands, key holders and bird houses.",
+      "Boxes can use tab-and-slot joints instead of fingers on the bottom and top, and lids can carry engraved text, a motif and a border.",
       "Finger joints are worked out per edge: each edge gets an odd number of equal fingers, and every finger belongs to exactly one panel, so the panels always mate. Enter inside sizes for things you have measured, or outside sizes to fit a space.",
       "The kerf setting tightens every finger, tab and slot by the same amount; cut a small box from scrap first, then adjust the kerf until the joints press together by hand.",
     ],
@@ -204,7 +326,7 @@ export const BOXES: GeneratorDef<BoxesParams> = {
       "Dry-fit everything before gluing, and glue with a thin bead; squeeze-out is hard to clean between fingers.",
       "Open the 3D view to check how the parts go together before cutting.",
     ],
-    keywords: ["box", "finger joint", "tray", "organiser", "divider", "sign", "photo frame", "phone stand", "key holder", "bird house", "boxes.py"],
+    keywords: ["box", "finger joint", "tab and slot", "sliding lid", "hinged lid", "drawer", "hexagon box", "insert", "money box", "piggy bank", "pencil box", "tea box", "wine box", "stacking trays", "tray", "organiser", "divider", "sign", "photo frame", "phone stand", "key holder", "bird house", "boxes.py"],
   },
 };
 
