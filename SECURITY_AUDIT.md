@@ -602,3 +602,14 @@ Scope: `desktop/` (Tauri 2 app), `/api/desktop/*`, `/desktop/authorize`, `privat
 | Prototype freeze | Moved from Tauri's `freezePrototype` (injected into every view, which broke a website library) to the first module of the app's UI. | E2E checks the app UI is frozen and the website view is not |
 
 Residual risk: a valid desktop access token (15 minutes) can now also be turned into a website session for the same account. Tokens never leave Rust or Windows Credential Manager, and the website session gives nothing beyond what the same account already has.
+
+**Addendum: new generators and job options (D104–D110, desktop 1.0.4).** Five new generators and the batch and mirror options run on the server like the others; the EXE still holds no geometry code.
+
+| Area | Control | Verified by |
+|---|---|---|
+| Batch names | `job.names` is capped at 3000 characters by the server sanitiser; a batch builds at most 60 lines and 2000 parts, checked after the first build, so a heavy design can't be multiplied into a slow request. | `job.test.ts` (text cap through the sanitiser, 60-line cap); the 2000-part limit by review |
+| Mirror | `job.mirror` is forced to a yes or no on the server. | `job.test.ts` (every generator) |
+| New generators | Same contract as the others: every field resolved against the defaults, the sanitiser drops unknown keys, plan gating unchanged. | contract tests over every registered generator |
+| EXE contents | The installer and `desktop/dist` were scanned for secrets and server code (clean); the update is signed with the existing updater key and verified against the public key before publishing. | `scripts/desktop/build.mjs`, `scan.mjs`, E2E 24 / 24 |
+
+No credentials were created or rotated.
