@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.1",
-    "pub_date": "2026-10-11T06:08:18.621Z",
-    "notes": "A new Dashboard with pictures: product tiles, ready-made designs and previews of your recent designs. Preset pictures in Generators and Favorites. Design settings now sit on the right of the canvas.",
+    "version": "1.0.2",
+    "pub_date": "2026-10-11T06:28:04.362Z",
+    "notes": "The sidebar can be collapsed to icons and expanded again (button at the top, or Ctrl+B), so designs get more room. HingeLab remembers your choice.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.1_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnZuanJyRlhXZWdLcElFUHFJVTNqV2pIOHNuVWJQVUhRT2FEZ3ZWZDJWbXJoSkY4MndQRmpudWVhUGx5Q0dkeDk1OWM0aVBDcFdmeHJCQndDcmNNRHdBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxNjk4Nzc0CWZpbGU6SGluZ2VMYWJfMS4wLjFfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMC4xCmxKUzRsK0srdnVzVGFNS3gyT3ZkQWNtUkkrbzl1cHhHNThUZ3E4Rmx1TjZnUVlmVFIzQUh0THFGbFA2WTlzZXJ4QTM1SkxRZ3FoQXc1NGdtSi9TQURnPT0K",
-        "size": 2372036
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.2_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm0vR1NtOU5EOW1OSXIzWnFsempGb1VaM2ZxKzB1cFNyQWlGZDRwSlNVQTl6eCtSaDluWElmaGhqa2QxZXJ1MjNiVmNoSEtkbzhJY1dMc1dGdUNCeHd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxNjk5OTYwCWZpbGU6SGluZ2VMYWJfMS4wLjJfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMC4yCnh6NjNJWHNMRHA3U2IvQ3BVT2FTemtwYWsram5BSmFkcmZoNUhRc25QeHhFWDhoMzVRSjFNMFRDS1dTcjFKdWhuU3cyL2NyV3lIbHdKWU1iVnFhZEF3PT0K",
+        "size": 2372123
       }
     }
   }
