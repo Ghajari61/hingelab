@@ -612,3 +612,11 @@ Shipped as desktop 1.0.3 through the usual signed update.
 The owner asked for a more professional and modern look and reported the profile icon as broken: it was a 26 px circle with one letter on a flat slate colour, so most accounts showed a lone "D" or "G" that read as an error. The avatar is now built from two initials (name first, else the email's local part split on dots, dashes, underscores and digits), on a gradient whose hue is a hash of the email so it is stable per person, with the profile picture when Google provides one and a fall back to the initials when the picture fails to load. The desktop app imports the same pure helper.
 
 The brand moves from flat blue to an indigo-violet-pink gradient, used sparingly: the logo mark, icon badges, the app's active sidebar item and update pill, and primary buttons. The accent id stays `blue` (saved preferences keep working) and is labelled Indigo; light themes use `#4F46E5` for text contrast. The editors' graphite primary (Export) is kept: one strong call to action per screen.
+
+## D103. A landing page for every product
+
+The owner called the information website "very bad": it still sold only living-hinge boxes while the app had grown to seven products. The page is now generated from the product list (`lib/site/products.ts`: core products plus `GENERATOR_IDS` with their presets), so each new generator gets a card, a menu entry and a design count without editing the page. Pictures are the existing preset renders in `public/presets`, so the page stays static with no new client code beyond the existing hinge demo; the mosaic animation is CSS only and stops under reduced motion.
+
+The Windows section reads the release manifest and hashes the installer in `public/downloads` at build time, so the published version, size and SHA-256 cannot drift from what the updater offers. If the file is missing the hash is left out rather than failing the build.
+
+Occasion links use a new `preset=` query parameter that the guest editor reads once for generators and then removes from the address, so a reload continues the autosave instead of resetting to the preset.

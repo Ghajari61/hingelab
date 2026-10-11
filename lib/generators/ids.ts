@@ -8,7 +8,7 @@ export interface GeneratorInfo {
   name: string;
   blurb: string;
   /** Lucide icon name, resolved by the shell. */
-  icon: "clock" | "puzzle" | "qr" | "box";
+  icon: "clock" | "puzzle" | "qr" | "box" | "cake" | "key" | "sign" | "hash" | "trophy";
   /** Autosave key on this device. */
   storageKey: string;
 }

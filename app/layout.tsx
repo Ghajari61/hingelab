@@ -11,16 +11,16 @@ export const metadata: Metadata = {
   title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
-  keywords: ["living hinge", "laser cut box", "kerf bending", "LightBurn", "SVG generator", "plywood box", "laser cutter"],
+  keywords: ["laser cut generator", "living hinge box", "finger joint box", "cake topper SVG", "acrylic sign", "table numbers", "laser trophy", "key holder", "LightBurn", "xTool", "SVG generator", "laser cutter"],
   openGraph: {
     type: "website",
     siteName: SITE_NAME,
-    title: "HingeLab: living-hinge boxes, ready for your laser",
+    title: "HingeLab: laser-cut generators for boxes, toppers, signs and more",
     description: SITE_DESCRIPTION,
     url: "/",
     locale: "en_US",
   },
-  twitter: { card: "summary_large_image", title: "HingeLab: living-hinge boxes, ready for your laser", description: SITE_DESCRIPTION },
+  twitter: { card: "summary_large_image", title: "HingeLab: laser-cut generators for boxes, toppers, signs and more", description: SITE_DESCRIPTION },
 };
 
 export const viewport: Viewport = { themeColor: "#FFFFFF", colorScheme: "light dark" };

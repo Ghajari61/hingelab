@@ -13,7 +13,7 @@ await withBrowser(async (page) => {
   await page.waitForTimeout(2600);
   await shot(page, "main-5-hero");
 
-  assert((await page.locator("h1").textContent()) === "Living-hinge boxes, ready for your laser", "hero headline");
+  assert((await page.locator("h1").textContent()) === "Laser-ready designs, made in seconds", "hero headline");
   const before = await page.locator(".hero-readout").textContent();
   await page.getByRole("button", { name: "Cylinder" }).click();
   await page.locator(".hero-range input").nth(1).fill("100");

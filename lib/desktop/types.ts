@@ -30,7 +30,7 @@ export interface DProduct {
   id: DesktopProductId;
   name: string;
   blurb: string;
-  icon: "box" | "clock" | "puzzle" | "qr";
+  icon: "box" | "clock" | "puzzle" | "qr" | "cake" | "key" | "sign" | "hash" | "trophy";
   sections: DSection[];
   presets: DPreset[];
 }

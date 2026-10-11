@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import EditorApp from "./EditorApp";
 import { ALL_PRODUCTS, type CoreProduct, type Product } from "./ControlBar";
@@ -9,6 +9,7 @@ import { chooseInitial } from "@/lib/projects/sync";
 import { openNewCloudProject } from "./cloud";
 import type { ProductId } from "@/lib/supabase/types";
 import { isGeneratorId } from "@/lib/generators/ids";
+import { GENERATOR_PRESETS } from "@/lib/generators/presets";
 import { StartGallery, type StartChoice } from "@/components/shell/StartGallery";
 
 const LettersEditor = dynamic(() => import("@/components/letters/LettersEditor"), {
@@ -42,8 +43,21 @@ function urlProduct(): Product | null {
   }
 }
 
+/** `?p=<generator>&preset=<id>` (links from the site) opens that built-in preset once. */
+function urlPreset(p: Product | null): StartChoice | null {
+  if (!p || !isGeneratorId(p)) return null;
+  try {
+    const id = new URLSearchParams(window.location.search).get("preset");
+    const preset = id ? GENERATOR_PRESETS[p].find((x) => x.id === id) : undefined;
+    return preset ? { product: p, preset: preset as StartChoice["preset"] } : null;
+  } catch {
+    return null;
+  }
+}
+
 function setUrlProduct(p: Product | null) {
   const u = new URL(window.location.href);
+  u.searchParams.delete("preset");
   if (p) u.searchParams.set("p", p); else u.searchParams.delete("p");
   window.history.replaceState(window.history.state, "", u.pathname + u.search + u.hash);
 }
@@ -64,7 +78,8 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
     return { ...cloud, params: choice.params, push: choice.push };
   });
   const [product, setProduct] = useState<Product | null>(() => (doc ? fromId(doc.product) : urlProduct()));
-  const [start, setStart] = useState<StartChoice | null>(null);
+  const [start, setStart] = useState<StartChoice | null>(() => (doc ? null : urlPreset(product)));
+  useEffect(() => { if (start && !doc) setUrlProduct(start.product); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const choose = (p: Product) => {
     if (doc) {
