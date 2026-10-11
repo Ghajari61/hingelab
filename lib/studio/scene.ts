@@ -5,7 +5,7 @@
  */
 import { newId } from "./doc";
 import {
-  apply, boxCenter, boxContains, boxesTouch, emptyBox, hitPaths, I, invert, isEmptyBox, mul, nodeBox, nodePaths,
+  apply, boxCenter, boxContains, boxesTouch, emptyBox, hitPaths, I, invert, isEmptyBox, mul, nodeBasePaths, nodeBox, nodePaths,
   transformSubpaths, translate, unionBox, type Box,
 } from "./geom";
 import type { Document, GroupNode, Mat, PathNode, SceneNode, Vec } from "./types";
@@ -281,15 +281,23 @@ export function distributeNodes(d: Document, ids: string[], axis: "x" | "y") {
   }
 }
 
-/** Live shapes and text become plain paths (same id, transform and layer). */
-export function expandNodes(d: Document, ids: string[]): string[] {
+/**
+ * Live shapes and text become plain paths (same id, transform and layer), and Live Effects are applied
+ * (baked into the path). With `keepEffects` the node's own geometry becomes the path and its effects
+ * stay live (used before editing nodes); paths are then left alone.
+ */
+export function expandNodes(d: Document, ids: string[], keepEffects = false): string[] {
   const out: string[] = [];
   for (const id of ids) {
     const l = locate(d.root, id);
-    if (!l || !(l.node.type === "shape" || l.node.type === "text" || l.node.type === "generator")) continue;
-    const subpaths = nodePaths(l.node);
+    if (!l) continue;
+    const n = l.node;
+    const baked = !keepEffects && (n.type === "path" || n.type === "shape" || n.type === "text") && !!n.effects?.length;
+    if (!(n.type === "shape" || n.type === "text" || n.type === "generator" || baked)) continue;
+    const subpaths = keepEffects ? nodeBasePaths(n) : nodePaths(n);
     if (!subpaths.length) continue;
-    const path: PathNode = { id: l.node.id, type: "path", transform: l.node.transform, layer: l.node.layer, subpaths: JSON.parse(JSON.stringify(subpaths)), ...(l.node.name ? { name: l.node.name } : {}) };
+    const effects = keepEffects && (n.type === "shape" || n.type === "text") && n.effects?.length ? { effects: JSON.parse(JSON.stringify(n.effects)) } : {};
+    const path: PathNode = { id: n.id, type: "path", transform: n.transform, layer: n.layer, subpaths: JSON.parse(JSON.stringify(subpaths)), ...(n.name ? { name: n.name } : {}), ...effects };
     l.parent.children[l.index] = path;
     out.push(id);
   }

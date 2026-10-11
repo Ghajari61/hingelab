@@ -9,6 +9,8 @@ import {
 } from "@/lib/studio/nodeOps";
 import { cutPathNodes, flattenNodes, fractureNodes, insetOutsetNodes, removeDuplicateNodesIn, splitPathNodes } from "@/lib/studio/pathMenu";
 import { clipToSvg, copyNodes, loadClip, storeClip } from "@/lib/studio/clipboard";
+import { canHaveEffects, EFFECT_KINDS, EFFECTS, hasEffects } from "@/lib/studio/effects";
+import { addEffect } from "@/lib/studio/effects/ops";
 import { addAnchorNodes, breakApartNodes, closeNodes, joinNodes, makeClip, makeCompound, releaseClip, resetBoxNodes, reverseNodes } from "@/lib/studio/pathOps";
 import { distributeSpacing } from "@/lib/studio/arrays";
 import { BOOLEAN_LABELS, booleanOp, cleanupForLaser, editPaths, smoothSubpath, type BooleanOp } from "@/lib/studio/pathfinder";
@@ -99,7 +101,8 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   const texts = nodesOf(s, (n) => n.type === "text");
   const groups = nodesOf(s, (n) => n.type === "group");
   const clipGroups = nodesOf(s, (n) => n.type === "group" && n.role === "clip");
-  const live = nodesOf(s, (n) => n.type === "shape" || n.type === "text" || n.type === "generator");
+  const live = nodesOf(s, (n) => n.type === "shape" || n.type === "text" || n.type === "generator" || hasEffects(n));
+  const withFx = nodesOf(s, hasEffects);
   const h: Record<string, Handler> = {};
   const set = (id: string, run: () => void, enabled = true, reason?: string, checked?: boolean) => {
     h[id] = { run, enabled, ...(enabled ? {} : { reason }), ...(checked === undefined ? {} : { checked }) };
@@ -237,7 +240,7 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   set("object.compound.release", () => { let out: string[] = []; st().edit("Release Compound Path", (d) => { out = breakApartNodes(d, paths); }); st().select(out); }, paths.some((id) => ((findNode(s.doc.root, id) as { subpaths?: unknown[] })?.subpaths?.length ?? 0) > 1), "Select a compound path");
   set("object.clip.make", () => { let id: string | null = null; st().edit("Make Clipping Mask", (d) => { id = makeClip(d, selected(st())); }); if (id) st().select([id]); }, two, NEED_TWO);
   set("object.clip.release", () => { let out: string[] = []; st().edit("Release Clipping Mask", (d) => { out = releaseClip(d, clipGroups); }); st().select(out); }, clipGroups.length > 0, "Select a clipping group");
-  set("object.expand", () => st().edit("Expand", (d) => { expandNodes(d, live); }), live.length > 0, "Select a live shape or text");
+  set("object.expand", () => st().edit("Expand", (d) => { expandNodes(d, live); }), live.length > 0, "Select a live shape, text or an object with Live Effects");
   set("object.sheets.fit", () => {
     const d0 = st().doc;
     const b = selectionBox(d0, d0.root.children.filter((n) => !n.hidden).map((n) => n.id));
@@ -292,6 +295,17 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   set("path.offset", () => ctx.dialog("offset"), anyOutline, "Select a path, shape or text");
   set("path.simplify", () => ctx.dialog("simplify"), anyOutline, "Select a path, shape or text");
   set("path.roundCorners", () => ctx.dialog("corners"), anyOutline, "Select a path, shape or text");
+  const fxTargets = (state: EditorState) => selected(state).filter((id) => { const n = findNode(state.doc.root, id); return !!n && canHaveEffects(n); });
+  const canFx = fxTargets(s).length > 0;
+  for (const k of EFFECT_KINDS) {
+    set(`path.effect.add.${k}`, () => {
+      const ids = fxTargets(st());
+      if (!ids.length) return;
+      st().edit(`Add Live Effect: ${EFFECTS[k].label}`, (d) => { addEffect(d, ids, k); });
+      ctx.showPanel("liveEffects");
+    }, canFx, "Select a path, shape or text");
+  }
+  set("path.effect.expand", () => st().edit("Expand Live Effects", (d) => { expandNodes(d, withFx); }), withFx.length > 0, "Select an object with Live Effects");
   set("path.smooth", () => { const ids = selected(st()); st().edit("Smooth", (d) => { editPaths(d, ids, smoothSubpath); }); }, anyOutline, "Select a path, shape or text");
   for (const op of Object.keys(BOOLEAN_LABELS) as BooleanOp[]) {
     const single = op === "divide" || op === "trim";
@@ -420,7 +434,7 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   set("view.presentation", () => { st().setUi({ presentation: !st().ui.presentation }); requestAnimationFrame(() => ctx.canvas()?.fit("artboard")); }, true, undefined, s.ui.presentation);
   for (const t of ["dark", "darker", "light", "system"] as const) set(`view.theme.${t}`, () => ctx.setTheme(t), true, undefined, ctx.theme === t);
   // Window
-  const panels: [string, PanelId][] = [["properties", "properties"], ["layers", "layers"], ["cutLayers", "cutLayers"], ["align", "align"], ["pathfinder", "pathfinder"], ["history", "history"], ["document", "document"]];
+  const panels: [string, PanelId][] = [["properties", "properties"], ["layers", "layers"], ["cutLayers", "cutLayers"], ["align", "align"], ["pathfinder", "pathfinder"], ["history", "history"], ["document", "document"], ["liveEffects", "liveEffects"]];
   for (const [id, p] of panels) set(`window.panel.${id}`, () => ctx.showPanel(p));
   for (const w of ["essentials", "laser", "typography", "minimal"]) set(`window.workspace.${w}`, () => ctx.setWorkspace(w), true, undefined, ctx.workspace === w);
   set("window.workspace.reset", ctx.resetWorkspace);

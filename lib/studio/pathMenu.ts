@@ -157,7 +157,7 @@ export function cutPathNodes(d: Document, ids: string[]): BooleanResult {
       return parts;
     });
     if (!any) continue;
-    if (it.l.node.type === "path") it.l.node.subpaths = next;
+    if (it.l.node.type === "path" && !it.l.node.effects?.length) it.l.node.subpaths = next;
     else replaceInPlace(it.l, next, it.l.node.transform);
     out.push(it.l.node.id);
   }
@@ -310,7 +310,7 @@ export function removeDuplicateNodesIn(d: Document, ids: string[], tol = 0.01): 
 export function joinNearbyEndpoints(d: Document, ids: string[], tol: number): number {
   const items: Item[] = areaItems(d, ids).filter((it) => it.l.node.type === "path");
   type E = { s: Subpath; owner: number; local: Subpath | null };
-  const list: E[] = items.flatMap((it, k) => (it.l.node as PathNode).subpaths.map((local, j) => ({ s: it.subs[j], owner: k, local })));
+  const list: E[] = items.flatMap((it, k) => (it.l.node as PathNode).subpaths.map((local) => ({ s: transformSubpaths([local], it.l.world)[0], owner: k, local })));
   const touched = new Set<number>();
   let joined = 0;
   for (;;) {

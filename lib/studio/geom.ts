@@ -2,6 +2,8 @@
  * Studio geometry: affine matrices, cubic Bézier paths, live shapes as paths, bounds, flattening,
  * hit testing. Pure functions over the document model; y points down (SVG), angles in degrees.
  */
+import { isDraft } from "immer";
+import { applyEffects } from "./effects";
 import type { Anchor, Mat, SceneNode, ShapeParams, Subpath, Vec } from "./types";
 
 export const EPS = 1e-9;
@@ -511,8 +513,33 @@ export function shapeForBox(kind: ShapeParams["kind"], w: number, h: number, pre
 
 // ---------- scene nodes ----------
 
-/** Paths of a node in its own space (before its transform). Groups return their children's paths. */
+/**
+ * Paths of a node in its own space (before its transform), after its Live Effects. Groups return
+ * their children's paths. Everything that draws, hits, measures or exports geometry uses this.
+ */
 export function nodePaths(n: SceneNode): Subpath[] {
+  if ((n.type === "path" || n.type === "shape" || n.type === "text") && n.effects?.some((e) => e.enabled)) return effectPaths(n);
+  return nodeBasePaths(n);
+}
+
+type EffectNode = Extract<SceneNode, { type: "path" | "shape" | "text" }>;
+/**
+ * Effect output per node object. Immer gives a changed node a new object, so the node is the key; the
+ * base geometry and the effects array are compared as well, for plain objects edited in place.
+ * Drafts (inside an edit recipe) are never cached.
+ */
+const fxCache = new WeakMap<object, { base: unknown; fx: unknown; out: Subpath[] }>();
+function effectPaths(n: EffectNode): Subpath[] {
+  const base = n.type === "path" ? n.subpaths : n.type === "shape" ? n.shape : n.outline;
+  const hit = fxCache.get(n);
+  if (hit && hit.base === base && hit.fx === n.effects) return hit.out;
+  const out = applyEffects(nodeBasePaths(n), n.effects ?? [], n);
+  if (!isDraft(n)) fxCache.set(n, { base, fx: n.effects, out });
+  return out;
+}
+
+/** The node's own geometry without Live Effects: what the node editor edits and what the effects start from. */
+export function nodeBasePaths(n: SceneNode): Subpath[] {
   switch (n.type) {
     case "path": return n.subpaths;
     case "shape": return shapePaths(n.shape);

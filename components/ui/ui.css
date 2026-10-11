@@ -140,7 +140,7 @@
 
 /* Panels & dock */
 .ui-toolbar-foot { grid-column: 1 / -1; display: grid; justify-items: center; gap: 6px; padding-top: 6px; margin-top: 4px; border-top: 1px solid var(--line); }
-.ui-dock { position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--surface-panel); border-left: 1px solid var(--line); min-width: 0; min-height: 0; }
+.ui-dock { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); background: var(--surface-panel); border-left: 1px solid var(--line); min-width: 0; min-height: 0; }
 .ui-dock-body { overflow-y: auto; min-height: 0; scrollbar-width: thin; }
 .ui-dock-head { display: flex; align-items: flex-start; border-bottom: 1px solid var(--line); background: var(--surface-chrome); }
 .ui-dock-head > .ui-rail-btn { margin: 5px 4px 0 auto; flex: none; }

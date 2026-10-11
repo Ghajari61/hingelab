@@ -4,9 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { createStore } from "zustand";
 import { newId } from "@/lib/studio/doc";
 import {
-  apply, boxCenter, cubicAt, emptyBox, insertAnchor, isEmptyBox, nearestOnSubpaths, nodeBox, nodePaths, normBox, pathD, rotateAt, scaleAt, segments, shapeForBox,
+  apply, boxCenter, cubicAt, emptyBox, insertAnchor, isEmptyBox, nearestOnSubpaths, nodeBasePaths, nodeBox, nodePaths, normBox, pathD, rotateAt, scaleAt, segments, shapeForBox,
   shapePaths, transformSubpaths, translate, type Box,
 } from "@/lib/studio/geom";
+import { hasEffects } from "@/lib/studio/effects";
 import { refreshAuto, snapToOutlines } from "@/lib/studio/nodeOps";
 import { brushOutline, brushProfile, freehandPath, paraxialAppend, penSubpath } from "@/lib/studio/strokes";
 import {
@@ -288,7 +289,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
   function ensurePath(d: Document, id: string): PathNode | null {
     const n = findNode(d.root, id);
     if (!n) return null;
-    if (n.type === "shape") expandNodes(d, [id]);
+    if (n.type === "shape") expandNodes(d, [id], true);
     const p = findNode(d.root, id);
     return p && p.type === "path" ? p : null;
   }
@@ -1266,10 +1267,16 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
           );
         })()}
         {/* screen-space overlay */}
-        {tool === "direct" && selection.map((id) => {
+        {selection.map((id) => {
           const l = locate(doc.root, id);
           if (!l || l.node.type === "group") return null;
-          return <path key={"h" + id} d={pathD(transformSubpaths(nodePaths(l.node), l.world))} transform={`translate(${view.x} ${view.y}) scale(${zoom})`} fill="none" stroke="var(--accent)" strokeWidth={1} vectorEffect="non-scaling-stroke" />;
+          const fx = hasEffects(l.node);
+          if (tool !== "direct" && !fx) return null;
+          return (
+            <path key={"h" + id} d={pathD(transformSubpaths(nodeBasePaths(l.node), l.world))} transform={`translate(${view.x} ${view.y}) scale(${zoom})`}
+              fill="none" stroke="var(--accent)" strokeWidth={1} vectorEffect="non-scaling-stroke" pointerEvents="none"
+              {...(fx ? { strokeDasharray: "4 3", opacity: tool === "direct" ? 1 : 0.75, "data-testid": "effect-base-outline" } : {})} />
+          );
         })}
         {selRect && (
           <g data-testid="selection-box">

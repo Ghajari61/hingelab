@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStore } from "zustand";
-import { AlignCenterHorizontal, FileText, Flame, History, Layers, LayoutGrid, Search, SlidersHorizontal, SquaresUnite, Wand2 } from "lucide-react";
+import { AlignCenterHorizontal, FileText, Flame, History, Layers, LayoutGrid, Search, SlidersHorizontal, Sparkles, SquaresUnite, Wand2 } from "lucide-react";
 import { LogoMark } from "@/components/site/LogoMark";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { ContextMenu, Dock, MenuBar, PanelSection, Toolbar, isMac, useToast, type MenuItem } from "@/components/ui";
@@ -29,6 +29,7 @@ import { ControlBar } from "./ControlBar";
 import { CommandPalette, DocumentSetupDialog, MoveDialog, PreferencesDialog, ResetPrefsDialog, ShortcutsDialog } from "./EditorDialogs";
 import { AlignPanel, CutLayersPanel, DocumentPanel, HistoryPanel, LayersPanel, PathfinderPanel, PropertiesPanel } from "./Panels";
 import { CornersDialog, JoinNearbyDialog, OffsetDialog, SimplifyDialog, StrokeToPathDialog } from "./PathDialogs";
+import { LiveEffectsPanel } from "./LiveEffectsPanel";
 import { CircularArrayDialog, GridArrayDialog, PathArrayDialog, StepRepeatDialog, TransformEachDialog } from "./ArrayDialogs";
 import { createEditorStore, EditorContext, useEditor, useEditorApi, type EditorState } from "./store";
 import { toolSlots } from "./tools";
@@ -39,7 +40,7 @@ import { Dialog } from "@/components/ui";
 
 const PANEL_ICONS: Record<PanelId, ReactNode> = {
   properties: <SlidersHorizontal size={16} />, layers: <Layers size={16} />, cutLayers: <Flame size={16} />,
-  align: <AlignCenterHorizontal size={16} />, pathfinder: <SquaresUnite size={16} />, history: <History size={16} />, document: <FileText size={16} />,
+  align: <AlignCenterHorizontal size={16} />, pathfinder: <SquaresUnite size={16} />, history: <History size={16} />, document: <FileText size={16} />, liveEffects: <Sparkles size={16} />,
 };
 
 type SaveState = "saved" | "saving" | "error";
@@ -254,6 +255,7 @@ function EditorShell({ opened }: { opened: Document }) {
       case "pathfinder": return <PathfinderPanel handlers={handlers} />;
       case "history": return <HistoryPanel />;
       case "document": return <DocumentPanel toast={toast} />;
+      case "liveEffects": return <LiveEffectsPanel toast={toast} />;
     }
   };
   const dockTabs = [

@@ -3,7 +3,7 @@
  * segment, delete segment, straighten / curve segments and transforms of a node selection. Pure
  * functions over subpaths; selected anchors are carried through each edit as a mark on the anchor.
  */
-import { apply, boxCenter, emptyBox, addPoint, insertAnchor, invert, isEmptyBox, mul, nearestOnSubpaths, nodePaths, type Box } from "./geom";
+import { apply, boxCenter, emptyBox, addPoint, insertAnchor, invert, isEmptyBox, mul, nearestOnSubpaths, nodeBasePaths, type Box } from "./geom";
 import { expandNodes, findNode, locate, removeNodes } from "./scene";
 import type { Anchor, Document, Mat, NodeKind, PathNode, Subpath, Vec } from "./types";
 
@@ -286,7 +286,7 @@ export function anchorsBox(d: Document, refs: NodeRef[]): Box {
   for (const r of refs) {
     const l = locate(d.root, r.id);
     if (!l || (l.node.type !== "path" && l.node.type !== "shape")) continue;
-    const a = nodePaths(l.node)[r.sub]?.nodes[r.idx];
+    const a = nodeBasePaths(l.node)[r.sub]?.nodes[r.idx];
     if (a) addPoint(b, apply(l.world, a));
   }
   return b;
@@ -307,9 +307,9 @@ export function editAnchors(d: Document, refs: NodeRef[], fn: (ms: MSub[], world
   for (const [id, rs] of byId) {
     const l = locate(d.root, id);
     if (!l || (l.node.type !== "path" && l.node.type !== "shape")) continue;
-    const res = fn(mark(nodePaths(l.node), rs), l.world);
+    const res = fn(mark(nodeBasePaths(l.node), rs), l.world);
     if (!res) { out.push(...rs); continue; }
-    if (l.node.type === "shape") expandNodes(d, [id]);
+    if (l.node.type === "shape") expandNodes(d, [id], true);
     const n = findNode(d.root, id) as PathNode;
     const u = unmark(res.filter((s) => s.nodes.length > 0));
     n.subpaths = u.subs;
@@ -325,7 +325,7 @@ function refSubs(d: Document, refs: NodeRef[]): Map<string, Subpath[]> {
   for (const r of refs) {
     if (out.has(r.id)) continue;
     const n = findNode(d.root, r.id);
-    if (n && (n.type === "path" || n.type === "shape")) out.set(r.id, nodePaths(n));
+    if (n && (n.type === "path" || n.type === "shape")) out.set(r.id, nodeBasePaths(n));
   }
   return out;
 }
@@ -351,7 +351,7 @@ export function canJoinEnds(d: Document, refs: NodeRef[]): boolean {
 
 /** Moves every subpath of the path `from` into the path `into` (same place on the page) and deletes `from`; returns the subpath offset. */
 export function mergePathInto(d: Document, into: string, from: string): number | null {
-  for (const id of [into, from]) if (findNode(d.root, id)?.type === "shape") expandNodes(d, [id]);
+  for (const id of [into, from]) if (findNode(d.root, id)?.type === "shape") expandNodes(d, [id], true);
   const a = locate(d.root, into), b = locate(d.root, from);
   if (!a || !b || a.node.type !== "path" || b.node.type !== "path") return null;
   const m = mul(invert(a.world), b.world);

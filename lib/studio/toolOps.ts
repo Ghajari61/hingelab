@@ -27,10 +27,10 @@ function candidates(d: Document, ids: string[] | null): Located[] {
   return out;
 }
 
-/** Replaces a live shape or text with a path of the same outline (same id, transform and layer). */
+/** Replaces a live shape or text with a path of the same outline (same id, transform and layer); Live Effects are applied. */
 function asPath(l: Located): PathNode {
   const n = l.node;
-  if (n.type === "path") return n;
+  if (n.type === "path" && !n.effects?.length) return n;
   const p: PathNode = { id: n.id, type: "path", transform: n.transform, layer: n.layer, subpaths: nodePaths(n), ...(n.name ? { name: n.name } : {}) };
   l.parent.children[l.parent.children.indexOf(n)] = p;
   return p;

@@ -49,7 +49,80 @@ export interface GroupNode extends NodeBase {
 export interface PathNode extends NodeBase {
   type: "path";
   subpaths: Subpath[];
+  effects?: LiveEffect[];
 }
+
+// ---------- Live Effects ----------
+
+/** Corner treatment of Corners: "inverse" variants mirror the fillet / chamfer about its chord (a notch). */
+export type CornerMode = "fillet" | "inverseFillet" | "chamfer" | "inverseChamfer";
+
+export interface CornersParams {
+  mode: CornerMode;
+  /** Fillet radius, mm; chamfers cut where the fillet would touch the edges. */
+  radius: number;
+  /** Node indices per subpath of the effect's input; absent = every sharp corner. */
+  nodes?: number[][];
+}
+
+export interface OffsetParams { distance: number; join: "round" | "miter" | "bevel"; miterLimit: number }
+
+export interface HatchParams {
+  /** Line direction, degrees. */
+  angle: number;
+  spacing: number;
+  /** Shifts the lines across their direction, mm. */
+  phase: number;
+  /** Adds a second set of lines at 90°. */
+  cross: boolean;
+  /** Lines stop this far inside the outline, mm. */
+  inset: number;
+  keepOutline: boolean;
+}
+
+export interface RotateCopiesParams { count: number; start: number; cx: number; cy: number; fuse: boolean }
+
+export interface MirrorParams {
+  axis: "vertical" | "horizontal" | "line";
+  /** Vertical axis at x, horizontal axis at y (local mm). */
+  x: number;
+  y: number;
+  /** Free axis through (x1, y1) and (x2, y2). */
+  x1: number; y1: number; x2: number; y2: number;
+  keepOriginal: boolean;
+  fuse: boolean;
+}
+
+/** lib/hinge parameters of the Living Hinge effect (names as in lib/hinge Params). */
+export interface LivingHingeParams {
+  pattern: "straight" | "wave" | "relief" | "serpentine";
+  cutStyle: "slot" | "line";
+  slit: number;
+  bridge: number;
+  pitch: number;
+  slotW: number;
+  kerf: number;
+  material: string;
+  thickness: number;
+  /** 0: cuts run top to bottom (bends around a vertical axis); 90: left to right. */
+  angle: 0 | 90;
+  margin: number;
+  keepOutline: boolean;
+}
+
+export interface EffectParamsMap {
+  corners: CornersParams;
+  offset: OffsetParams;
+  hatches: HatchParams;
+  rotateCopies: RotateCopiesParams;
+  mirror: MirrorParams;
+  livingHinge: LivingHingeParams;
+}
+
+export type EffectKind = keyof EffectParamsMap;
+
+/** One entry of an object's Live Effects stack; evaluated in order in the object's own coordinates. */
+export type LiveEffect = { [K in EffectKind]: { id: string; kind: K; enabled: boolean; params: EffectParamsMap[K] } }[EffectKind];
 
 export type CornerType = "round" | "chamfer" | "inverted";
 
@@ -73,6 +146,7 @@ export type ShapeKind = ShapeParams["kind"];
 export interface ShapeNode extends NodeBase {
   type: "shape";
   shape: ShapeParams;
+  effects?: LiveEffect[];
 }
 
 export interface TextNode extends NodeBase {
@@ -90,6 +164,7 @@ export interface TextNode extends NodeBase {
   onPath?: string;
   /** Outlines cached at the last layout, so documents render without the font (mm, local space). */
   outline?: Subpath[];
+  effects?: LiveEffect[];
 }
 
 export type DitherMode = "threshold" | "floyd" | "jarvis" | "stucki" | "halftone";

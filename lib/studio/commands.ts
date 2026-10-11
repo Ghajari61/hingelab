@@ -3,6 +3,7 @@
  * default shortcuts per shortcut set. Menus, the toolbar, context menus, the command palette and the
  * keyboard all read from here; the editor supplies what each command does.
  */
+import { EFFECT_META, EFFECT_ORDER } from "./effects/meta";
 import { canonical } from "./keys";
 import type { ShortcutSet } from "./prefs";
 
@@ -155,9 +156,9 @@ export const COMMANDS: CommandDef[] = [
   c("object.showAll", "Show All", "Object", "Ctrl+Alt+3"),
   c("object.compound.make", "Make Compound Path", "Object", "Ctrl+8", { corel: ["Ctrl+L"], inkscape: ["Ctrl+K"] }),
   c("object.compound.release", "Release Compound Path", "Object", "Ctrl+Alt+Shift+8"),
-  c("object.clip.make", "Make Clipping Mask", "Object", "Ctrl+7"),
+  c("object.clip.make", "Make Clipping Mask", "Object", "Ctrl+7", { inkscape: [] }),
   c("object.clip.release", "Release Clipping Mask", "Object", "Ctrl+Alt+7"),
-  c("object.expand", "Expand", "Object", undefined, { corel: ["Ctrl+Q"], inkscape: ["Ctrl+Shift+C"] }, "Turn live shapes and text into plain paths (Object to Path).", "object to path convert to curves outline"),
+  c("object.expand", "Expand", "Object", undefined, { corel: ["Ctrl+Q"], inkscape: ["Ctrl+Shift+C"] }, "Turn live shapes and text into plain paths (Object to Path) and apply Live Effects.", "object to path convert to curves outline apply live effects bake"),
   c("object.sheets.fit", "Fit Sheet to Artwork", "Object"),
   c("object.sheets.add", "Add Sheet", "Object"),
   // Type
@@ -219,6 +220,8 @@ export const COMMANDS: CommandDef[] = [
   c("path.pf.trim", "Trim", "Path", undefined, undefined, "Remove the hidden parts of each shape"),
   c("path.pf.crop", "Crop", "Path", undefined, undefined, "Cut the shapes behind to the front shape"),
   c("path.cleanup", "Clean Up for Laser", "Path", undefined, undefined, "Close near-closed paths, drop stray points, empty paths and double cuts"),
+  ...EFFECT_ORDER.map((k) => c(`path.effect.add.${k}`, `Add Live Effect: ${EFFECT_META[k].label}`, "Path", undefined, undefined, EFFECT_META[k].description, `path effect lpe live effect ${EFFECT_META[k].keywords}`)),
+  c("path.effect.expand", "Expand Live Effects", "Path", undefined, undefined, "Apply the Live Effects: the result becomes a plain path", "object to path bake flatten apply path effect lpe"),
   // Laser
   ...LAYER_KEYS,
   // View
@@ -260,6 +263,7 @@ export const COMMANDS: CommandDef[] = [
   c("window.panel.pathfinder", "Pathfinder", "Window", "Ctrl+Shift+F9", { corel: [] }),
   c("window.panel.history", "History", "Window"),
   c("window.panel.document", "Document", "Window"),
+  c("window.panel.liveEffects", "Live Effects", "Window", undefined, { inkscape: ["Ctrl+&"] }, "Non-destructive effects on the selected path: corners, offset, hatches, copies, mirror, living hinge", "path effects lpe editor"),
   c("window.workspace.essentials", "Essentials", "Window"),
   c("window.workspace.laser", "Laser Production", "Window"),
   c("window.workspace.typography", "Typography", "Window"),
@@ -312,7 +316,8 @@ export const MENUS: MenuDef[] = [
       "node.corner", "node.smooth", "node.symmetric", "node.auto", "-", "node.straighten", "node.curve", "-",
       "node.scaleUp", "node.scaleDown", "node.rotateCCW", "node.rotateCW",
     ] }, "-",
-    "path.removeDuplicates", "path.joinNearby", "path.cleanup",
+    "path.removeDuplicates", "path.joinNearby", "path.cleanup", "-",
+    { label: "Live Effects", items: [...EFFECT_ORDER.map((k) => `path.effect.add.${k}`), "-", "path.effect.expand", "window.panel.liveEffects"] },
   ] },
   { id: "laser", label: "Laser", items: [{ label: "Assign to Layer", items: LAYER_KEYS.map((l) => l.id) }] },
   { id: "view", label: "View", items: [
@@ -322,7 +327,7 @@ export const MENUS: MenuDef[] = [
     { label: "Theme", items: ["view.theme.dark", "view.theme.darker", "view.theme.light", "view.theme.system"] },
   ] },
   { id: "window", label: "Window", items: [
-    "window.panel.properties", "window.panel.layers", "window.panel.cutLayers", "window.panel.align", "window.panel.history", "window.panel.document", "-",
+    "window.panel.properties", "window.panel.layers", "window.panel.cutLayers", "window.panel.align", "window.panel.history", "window.panel.document", "window.panel.liveEffects", "-",
     { label: "Workspace", items: ["window.workspace.essentials", "window.workspace.laser", "window.workspace.typography", "window.workspace.minimal", "-", "window.workspace.reset"] }, "-",
     "window.palette",
   ] },

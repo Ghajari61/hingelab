@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { MACHINE_PROFILES, MATERIAL_PRESETS } from "@/lib/studio/library";
 import { COMMAND_BY_ID } from "@/lib/studio/commands";
+import { hasEffects } from "@/lib/studio/effects";
+import { EFFECT_META } from "@/lib/studio/effects/meta";
 import { defaultCutLayer, layerCode } from "@/lib/studio/cutLayers";
 import { isEmptyBox, shapeForBox, translate } from "@/lib/studio/geom";
 import { findNode, isEditable, locate, moveNode, selectionBox, topLevel } from "@/lib/studio/scene";
@@ -274,6 +276,7 @@ export function LayersPanel() {
             onBlur={(e) => { const v = e.target.value.trim(); setRenaming(null); if (v !== (n.name ?? "")) api.getState().edit("Rename", (d) => { const m = findNode(d.root, n.id); if (m) { if (v) m.name = v; else delete m.name; } }); }}
             onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") setRenaming(null); }} />
         ) : <span className={`nm${n.hidden ? " dim" : ""}`}>{label}</span>}
+        {hasEffects(n) && <span className="pn-fx" title={`Live Effects: ${(n as { effects: { kind: keyof typeof EFFECT_META }[] }).effects.map((e) => EFFECT_META[e.kind]?.label ?? e.kind).join(", ")}`} data-testid="layers-fx">fx</span>}
       </div>,
     );
     if (isGroup && open[n.id]) [...n.children].reverse().forEach((c) => add(c, depth + 1));
