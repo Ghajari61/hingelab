@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.2",
-    "pub_date": "2026-10-11T06:28:04.362Z",
-    "notes": "The sidebar can be collapsed to icons and expanded again (button at the top, or Ctrl+B), so designs get more room. HingeLab remembers your choice.",
+    "version": "1.0.3",
+    "pub_date": "2026-10-11T07:34:48.792Z",
+    "notes": "The website's editors inside the app, signed in: Letters, Parametric Slicer, the full editors with 3D view, DXF and sheets, the Studio, cloud projects and the help centre (new Online section in the sidebar and on the Dashboard).",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.2_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm0vR1NtOU5EOW1OSXIzWnFsempGb1VaM2ZxKzB1cFNyQWlGZDRwSlNVQTl6eCtSaDluWElmaGhqa2QxZXJ1MjNiVmNoSEtkbzhJY1dMc1dGdUNCeHd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxNjk5OTYwCWZpbGU6SGluZ2VMYWJfMS4wLjJfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMC4yCnh6NjNJWHNMRHA3U2IvQ3BVT2FTemtwYWsram5BSmFkcmZoNUhRc25QeHhFWDhoMzVRSjFNMFRDS1dTcjFKdWhuU3cyL2NyV3lIbHdKWU1iVnFhZEF3PT0K",
-        "size": 2372123
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.3_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmhPMkpJV2h1VDU2WFVKVXZrbWlDUi94Z0VPNHowN1ZSRlJKR3NFeDBVc05wc09pdWhoOWdYN3lUN0dIVGczbVVKeVZLbUF0UTVXUEZwdzdSYThHemc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxNzAzOTg2CWZpbGU6SGluZ2VMYWJfMS4wLjNfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMC4zCktFQlhuRzB4Uk85cWVMZ2VsS0ptUXNNVTExcGtFZlNoVE1sT0J0TWxzRnc1VUM5QTBHQ2FBcW1aQWpZeGJsNWV6M0JjVklKSlpJK1dnZ3BDbU5MV0J3PT0K",
+        "size": 2414918
       }
     }
   }
