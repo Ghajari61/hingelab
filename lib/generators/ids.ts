@@ -1,5 +1,5 @@
 /** Generator ids and the little the shell needs before a generator's code loads. */
-export const GENERATOR_IDS = ["clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign"] as const;
+export const GENERATOR_IDS = ["clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum"] as const;
 export type GeneratorId = (typeof GENERATOR_IDS)[number];
 
 export const isGeneratorId = (v: unknown): v is GeneratorId => typeof v === "string" && (GENERATOR_IDS as readonly string[]).includes(v);
@@ -21,4 +21,5 @@ export const GENERATOR_INFO: Record<GeneratorId, GeneratorInfo> = {
   topper: { name: "Cake Topper", blurb: "Cake toppers and cupcake picks for birthdays, weddings, Nowruz, Eid and more: welded script, mirror layers and 39 motifs.", icon: "cake", storageKey: "hingelab-gen-topper-v1" },
   keyrack: { name: "Key Holder", blurb: "Wall key holders in 18 shapes with slot-in hooks, dowel pegs or cup hooks, names above each hook and an optional shelf.", icon: "key", storageKey: "hingelab-gen-keyrack-v1" },
   sign: { name: "Sign", blurb: "Wall, door, shop and desk signs in wood, acrylic or both: engraved, layered letters, cut-out words or flush inlays, with frames and stands.", icon: "sign", storageKey: "hingelab-gen-sign-v1" },
+  tablenum: { name: "Table Numbers", blurb: "A whole set of table numbers in one file: stands in slotted bases, living-hinge tent cards or plaques, with labels, names and Persian digits.", icon: "hash", storageKey: "hingelab-gen-tablenum-v1" },
 };
