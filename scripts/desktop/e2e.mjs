@@ -20,6 +20,7 @@ const PORT = 3457;
 const API = `http://127.0.0.1:${PORT}`;
 const EXE = join(ROOT, "desktop/src-tauri/target/debug/HingeLab.exe");
 const CDP = 9333;
+const APP_VERSION = JSON.parse(readFileSync(join(ROOT, "desktop/src-tauri/tauri.conf.json"), "utf8")).version;
 const SHOTS = join(ROOT, "docs/screenshots");
 const env = loadEnv("development", ROOT, "");
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
@@ -62,7 +63,7 @@ async function startServer(extraEnv = {}) {
   });
   for (let i = 0; i < 120; i++) {
     try {
-      if ((await fetch(`${API}/api/desktop/update/windows/x86_64/1.0.0`)).status === 204) return;
+      if ((await fetch(`${API}/api/desktop/update/windows/x86_64/999.0.0`)).status === 204) return;
     } catch {}
     await sleep(500);
   }
@@ -157,7 +158,7 @@ try {
   await step("sign in through the browser (PKCE + consent)", async () => {
     await signIn(browser, free.email);
     const info = await invoke("app_info");
-    assert(info.ok?.signedIn === true && info.ok.version === "1.0.0", JSON.stringify(info));
+    assert(info.ok?.signedIn === true && info.ok.version === APP_VERSION, JSON.stringify(info));
     await shot("dashboard");
   });
 

@@ -38,5 +38,5 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   // Skip static files, images and the API (API routes check the user themselves).
-  matcher: ["/((?!_next/static|_next/image|api/|favicon.ico|icon.svg|fonts/|hb/|wasm/|models/|library/|.*\\.(?:png|jpg|jpeg|svg|webp|ico|ttf|otf|woff2?)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|api/|favicon.ico|icon.svg|fonts/|hb/|wasm/|models/|library/|downloads/|.*\\.(?:png|jpg|jpeg|svg|webp|ico|ttf|otf|woff2?)$).*)"],
 };
