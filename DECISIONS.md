@@ -630,3 +630,9 @@ Motifs are built in code from circles, curves and polygons and unioned once (cac
 Layered designs need two materials. Rather than a global second-material setting in the shell, a generator marks parts `material: "second"` and reports the material names and kerf in its output; the shell packs each group on its own sheets with the material in the sheet label and in the SVG note. Designs that use one material are packed exactly as before (the box packer is called with the same boxes). The second material's fields live in the generator (`material2Fields`), so the desktop app gets them through the catalogue with no new code.
 
 Party sets and plate toppers are Pro; single toppers and cupcake sets are free.
+
+## D105. Key holder hooks slot through the board
+
+Hooks are separate parts whose tab is exactly the material thickness deep and passes through a slot in the board, so the arm's back rests on the board's face and glue holds the tab flush at the back. This needs no hardware, nests well, and the same profile function draws the rail picture, so the card matches the cut part. For heavy loads or thin sheets the same row can instead be holes for dowel pegs or pilot holes for cup hooks; picking the hook type sets a sensible hole size (8 mm dowel, 3 mm pilot) through the choice's `apply`, which the desktop app also honours.
+
+Shaped boards (house, heart, cloud, arch) can put a hook slot or mounting hole outside the outline; that is an error with fixes rather than a silent clip, because a slot cut across the edge leaves a notch and a loose hook.

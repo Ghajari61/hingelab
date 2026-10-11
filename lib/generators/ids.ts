@@ -1,5 +1,5 @@
 /** Generator ids and the little the shell needs before a generator's code loads. */
-export const GENERATOR_IDS = ["clock", "puzzle", "qr", "boxes", "topper"] as const;
+export const GENERATOR_IDS = ["clock", "puzzle", "qr", "boxes", "topper", "keyrack"] as const;
 export type GeneratorId = (typeof GENERATOR_IDS)[number];
 
 export const isGeneratorId = (v: unknown): v is GeneratorId => typeof v === "string" && (GENERATOR_IDS as readonly string[]).includes(v);
@@ -19,4 +19,5 @@ export const GENERATOR_INFO: Record<GeneratorId, GeneratorInfo> = {
   qr: { name: "QR Code", blurb: "Scannable plates, keychains, coasters, Wi-Fi cards and paint stencils for links, Wi-Fi, contacts and more.", icon: "qr", storageKey: "hingelab-gen-qr-v1" },
   boxes: { name: "Boxes", blurb: "Finger-jointed boxes, trays with dividers, desk signs, photo frames, phone stands, key holders and bird houses.", icon: "box", storageKey: "hingelab-gen-boxes-v1" },
   topper: { name: "Cake Topper", blurb: "Cake toppers and cupcake picks for birthdays, weddings, Nowruz, Eid and more: welded script, mirror layers and 39 motifs.", icon: "cake", storageKey: "hingelab-gen-topper-v1" },
+  keyrack: { name: "Key Holder", blurb: "Wall key holders in 18 shapes with slot-in hooks, dowel pegs or cup hooks, names above each hook and an optional shelf.", icon: "key", storageKey: "hingelab-gen-keyrack-v1" },
 };

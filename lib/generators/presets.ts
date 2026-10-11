@@ -1,6 +1,7 @@
 /** Built-in presets of every generator: data only, so the start page can list them cheaply. */
 import { BOXES_PRESETS } from "./boxes/presets";
 import { CLOCK_PRESETS } from "./clock/presets";
+import { KEYRACK_PRESETS } from "./keyrack/presets";
 import { PUZZLE_PRESETS } from "./puzzle/presets";
 import { QR_PRESETS } from "./qr/presets";
 import { TOPPER_PRESETS } from "./topper/presets";
@@ -13,4 +14,5 @@ export const GENERATOR_PRESETS: Record<GeneratorId, GenPreset<unknown>[]> = {
   qr: QR_PRESETS as GenPreset<unknown>[],
   boxes: BOXES_PRESETS as GenPreset<unknown>[],
   topper: TOPPER_PRESETS as GenPreset<unknown>[],
+  keyrack: KEYRACK_PRESETS as GenPreset<unknown>[],
 };
