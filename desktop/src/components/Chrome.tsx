@@ -1,5 +1,6 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { ArrowDownCircle, Clock3, Cloud, CreditCard, FolderOpen, Globe, HelpCircle, LayoutDashboard, LayoutTemplate, Loader2, PanelLeftClose, PanelLeftOpen, PenTool, Settings as Cog, Shapes, ShieldCheck, Star, X } from "lucide-react";
+import { avatarBackground, avatarInitials } from "../../../lib/account/avatar";
 import type { DesktopAccount } from "../ipc";
 import type { UpdateStatus } from "../updater";
 import { formatBytes } from "../updater";
@@ -10,7 +11,14 @@ export type Route = "dashboard" | "generators" | "workspace" | "recent" | "favor
 export function Logo({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden>
-      <rect width="64" height="64" rx="14" fill="#3B8FF0" />
+      <defs>
+        <linearGradient id="hl-logo" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#4F46E5" />
+          <stop offset=".6" stopColor="#9333EA" />
+          <stop offset="1" stopColor="#EC4899" />
+        </linearGradient>
+      </defs>
+      <rect width="64" height="64" rx="16" fill="url(#hl-logo)" />
       <path d="M15 16v32M23.5 16v12.5M23.5 35.5V48M32 16v32M40.5 16v12.5M40.5 35.5V48M49 16v32" fill="none" stroke="#fff" strokeWidth="4.4" strokeLinecap="round" />
     </svg>
   );
@@ -80,7 +88,7 @@ export function Sidebar({ route, onRoute, account, hasDesign, update, onUpdate, 
         )}
         {account && (
           <button type="button" className="me" onClick={() => onRoute("settings")} aria-label={collapsed ? `${who}, ${account.plan === "pro" ? "Pro" : "Free"} plan` : undefined} title={account.user.email ?? ""}>
-            <span className="avatar" aria-hidden>{(who || "?").slice(0, 1).toUpperCase()}</span>
+            <span className={`avatar${account.plan === "pro" ? " is-pro" : ""}`} style={{ background: avatarBackground(account.user.email || who) }} aria-hidden>{avatarInitials(account.user.email, account.user.name)}</span>
             <span className="me-text"><b>{who}</b><small>{account.plan === "pro" ? "Pro plan" : "Free plan"}</small></span>
           </button>
         )}

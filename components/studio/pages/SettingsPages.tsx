@@ -76,7 +76,7 @@ export function AccountPage() {
           <h3 id="prefs">Preferences</h3>
           <div className="form-grid">
             <SegmentedControl label="Theme" value={prefs.theme} onChange={(theme: Theme) => setPrefs({ theme })} options={[{ value: "dark", label: "Dark" }, { value: "darker", label: "Darker" }, { value: "light", label: "Light" }, { value: "system", label: "System" }]} />
-            <SegmentedControl label="Accent" value={prefs.accent} onChange={(accent: Accent) => setPrefs({ accent })} options={[{ value: "blue", label: "Blue" }, { value: "violet", label: "Violet" }, { value: "teal", label: "Teal" }, { value: "orange", label: "Orange" }]} />
+            <SegmentedControl label="Accent" value={prefs.accent} onChange={(accent: Accent) => setPrefs({ accent })} options={[{ value: "blue", label: "Indigo" }, { value: "violet", label: "Violet" }, { value: "teal", label: "Teal" }, { value: "orange", label: "Orange" }]} />
             <Select label="Units for new documents" value={prefs.units} options={UNIT_LIST.map((u) => ({ value: u, label: u }))} onChange={(units: Units) => setPrefs({ units })} />
             <Select label="Shortcut set" value={prefs.shortcutSet} options={(Object.keys(SHORTCUT_SET_NAMES) as ShortcutSet[]).map((s) => ({ value: s, label: SHORTCUT_SET_NAMES[s] }))} onChange={(shortcutSet) => setPrefs({ shortcutSet })} />
             <Select label="Default machine" value={prefs.machineId} options={MACHINE_PROFILES.map((m) => ({ value: m.id, label: m.name }))} onChange={(machineId) => setPrefs({ machineId })} />

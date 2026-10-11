@@ -606,3 +606,9 @@ Trust boundaries. The website view gets no IPC: capabilities now name the `main`
 Prototype freeze. Tauri's `freezePrototype` injects `Object.freeze(Object.prototype)` into every webview with no per-view switch, and a big-number library in the website's editors assigns its own `toString`, which throws on a frozen prototype ("Application error" in the Letters editor). The setting is off; `desktop/src/harden.ts`, the first import of the app UI, freezes the prototype instead and checks the result so the bundler keeps the call, and the root `package.json` lists it under `sideEffects` (the CSS-only list would otherwise drop the import). The E2E test checks the app UI is frozen and the website view is not.
 
 Shipped as desktop 1.0.3 through the usual signed update.
+
+## D102. Visual refresh and a real avatar
+
+The owner asked for a more professional and modern look and reported the profile icon as broken: it was a 26 px circle with one letter on a flat slate colour, so most accounts showed a lone "D" or "G" that read as an error. The avatar is now built from two initials (name first, else the email's local part split on dots, dashes, underscores and digits), on a gradient whose hue is a hash of the email so it is stable per person, with the profile picture when Google provides one and a fall back to the initials when the picture fails to load. The desktop app imports the same pure helper.
+
+The brand moves from flat blue to an indigo-violet-pink gradient, used sparingly: the logo mark, icon badges, the app's active sidebar item and update pill, and primary buttons. The accent id stays `blue` (saved preferences keep working) and is labelled Indigo; light themes use `#4F46E5` for text contrast. The editors' graphite primary (Export) is kept: one strong call to action per screen.

@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { heroParams, sheetFor } from "@/lib/site/samples";
 
-export const alt = "HingeLab: living-hinge boxes, ready for your laser";
+export const alt = "HingeLab: laser-cut generators for boxes, toppers, signs, trophies and more";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -21,7 +21,7 @@ function sheetDataURL(): { url: string; ratio: number } {
 }
 
 const LOGO = `data:image/svg+xml;base64,${Buffer.from(
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#3B8FF0"/><path d="M15 16v32M23.5 16v12.5M23.5 35.5V48M32 16v32M40.5 16v12.5M40.5 35.5V48M49 16v32" fill="none" stroke="#fff" stroke-width="4.4" stroke-linecap="round"/></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4F46E5"/><stop offset=".6" stop-color="#9333EA"/><stop offset="1" stop-color="#EC4899"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#g)"/><path d="M15 16v32M23.5 16v12.5M23.5 35.5V48M32 16v32M40.5 16v12.5M40.5 35.5V48M49 16v32" fill="none" stroke="#fff" stroke-width="4.4" stroke-linecap="round"/></svg>`,
 ).toString("base64")}`;
 
 export default function OpengraphImage() {
@@ -36,7 +36,7 @@ export default function OpengraphImage() {
           HingeLab
         </div>
         <div style={{ fontSize: 56, fontWeight: 800, lineHeight: 1.08, marginTop: 28, letterSpacing: -1.2, maxWidth: 1000 }}>
-          Living-hinge boxes, ready for your laser
+          Laser-ready boxes, toppers, signs and trophies in seconds
         </div>
         <div style={{ display: "flex", marginTop: "auto" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
