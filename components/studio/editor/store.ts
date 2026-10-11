@@ -6,7 +6,7 @@ import { createStore, useStore, type StoreApi } from "zustand";
 import type { ToolId } from "@/lib/studio/commands";
 import { commit, emptyHistory, jumpTo, redo, seal, undo, type History } from "@/lib/studio/history";
 import { allIds } from "@/lib/studio/scene";
-import type { Document, Mat, ShapeKind, ShapeParams, TextNode } from "@/lib/studio/types";
+import type { Document, Mat, ShapeKind, ShapeParams, TextNode, Vec } from "@/lib/studio/types";
 
 export interface AnchorRef { id: string; sub: number; idx: number }
 
@@ -38,6 +38,10 @@ export interface EditorState {
   refPoint: [number, number];
   /** W and H change together. */
   lockRatio: boolean;
+  /** Eraser tool diameter, mm. */
+  eraserSize: number;
+  /** The Measure tool's last measurement (document space). */
+  measure: { a: Vec; b: Vec } | null;
 
   edit: <T = void>(label: string, recipe: (d: Document) => T, o?: { mergeKey?: string; select?: string[] }) => T;
   begin: () => void;
@@ -56,7 +60,7 @@ export interface EditorState {
   setTool: (t: ToolId) => void;
   setView: (v: Partial<ViewState> | ((v: ViewState) => ViewState)) => void;
   setUi: (u: Partial<UiState>) => void;
-  set: (p: Partial<Pick<EditorState, "shapeDefaults" | "textDefaults" | "lastTransform" | "textEditing" | "currentLayer" | "refPoint" | "lockRatio">>) => void;
+  set: (p: Partial<Pick<EditorState, "shapeDefaults" | "textDefaults" | "lastTransform" | "textEditing" | "currentLayer" | "refPoint" | "lockRatio" | "eraserSize" | "measure">>) => void;
 }
 
 const keepExisting = (doc: Document, ids: string[]) => {
@@ -85,6 +89,8 @@ export function createEditorStore(doc: Document): StoreApi<EditorState> {
     currentLayer: 2,
     refPoint: [0, 0],
     lockRatio: false,
+    eraserSize: 4,
+    measure: null,
 
     edit: (label, recipe, o = {}) => {
       const s = get();

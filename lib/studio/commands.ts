@@ -25,6 +25,7 @@ const c = (id: string, label: string, category: Category, keys?: string | string
 export const TOOL_IDS = [
   "select", "direct", "pen", "pencil", "line", "rect", "ellipse", "polygon", "star", "arc", "slot", "gear", "arrow", "bubble", "heart",
   "grid", "spiral", "text", "rotate", "scale", "reflect", "hand", "zoom",
+  "lasso", "magicWand", "curvature", "scissors", "knife", "eraser", "shear", "shapeBuilder", "eyedropper", "measure",
 ] as const;
 export type ToolId = (typeof TOOL_IDS)[number];
 
@@ -52,6 +53,16 @@ export const TOOL_INFO: Record<ToolId, { label: string; description: string }> =
   reflect: { label: "Reflect", description: "Click to mirror the selection left–right; Alt+click mirrors top–bottom." },
   hand: { label: "Hand", description: "Drag to pan. Hold Space with any tool." },
   zoom: { label: "Zoom", description: "Click to zoom in, Alt+click to zoom out, drag to zoom to an area." },
+  lasso: { label: "Lasso", description: "Draw freehand around objects to select them. Shift adds, Alt removes." },
+  magicWand: { label: "Magic Wand", description: "Click an object to select everything on the same cut layer. Shift adds." },
+  curvature: { label: "Curvature", description: "Click points and the curve flows through them. Alt+click for a corner, click the first point to close, Enter to finish." },
+  scissors: { label: "Scissors", description: "Click a path to cut it there: closed paths open, open paths split in two." },
+  knife: { label: "Knife", description: "Drag across shapes to slice them into pieces. Hold Alt for a straight cut, Shift for 45° steps." },
+  eraser: { label: "Eraser", description: "Drag to erase parts of shapes and lines; set the size in the control bar. Works on the selection, or everything." },
+  shear: { label: "Shear", description: "Drag sideways to slant the selection horizontally, up or down to slant it vertically." },
+  shapeBuilder: { label: "Shape Builder", description: "Select overlapping shapes, then drag across regions to merge them. Alt+click a region to delete it." },
+  eyedropper: { label: "Eyedropper", description: "Click an object to give the selection its cut layer (and font, for text)." },
+  measure: { label: "Measure", description: "Drag to measure distance and angle; snaps to points." },
 };
 
 const TOOL_KEYS: Partial<Record<ToolId, { keys?: string; sets?: CommandDef["sets"] }>> = {
@@ -71,6 +82,14 @@ const TOOL_KEYS: Partial<Record<ToolId, { keys?: string; sets?: CommandDef["sets
   reflect: { keys: "O", sets: { lightburn: [], inkscape: [] } },
   hand: { keys: "H", sets: { inkscape: [] } },
   zoom: { keys: "Z" },
+  lasso: { keys: "Q", sets: { inkscape: [] } },
+  magicWand: { keys: "Y", sets: { corel: [], inkscape: [] } },
+  curvature: { keys: "Shift+`" },
+  scissors: { keys: "C", sets: { corel: [], inkscape: [] } },
+  eraser: { keys: "Shift+E", sets: { corel: ["X"] } },
+  shapeBuilder: { keys: "Shift+M", sets: { inkscape: ["X"] } },
+  eyedropper: { keys: "I", sets: { inkscape: ["D", "F7"] } },
+  measure: { sets: { inkscape: ["M"] } },
 };
 
 const LAYER_KEYS = Array.from({ length: 30 }, (_, k) =>

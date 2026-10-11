@@ -13,8 +13,8 @@ import { catmullRom, EPS, flatten, invert, nodePaths, pathD, polygonArea, simpli
 import { locate, removeNodes, topLevel, walk, type IdFactory, type Located } from "./scene";
 import type { Anchor, Document, GroupNode, PathNode, Subpath, Vec } from "./types";
 
-const UNIT = 1000;
-const FLAT_TOL = 0.01;
+export const UNIT = 1000;
+export const FLAT_TOL = 0.01;
 const FILL = ClipperLib.PolyFillType;
 
 export type BooleanOp = "unite" | "minusFront" | "minusBack" | "intersect" | "exclude" | "divide" | "trim" | "crop";
@@ -24,7 +24,7 @@ export const BOOLEAN_LABELS: Record<BooleanOp, string> = {
   divide: "Divide", trim: "Trim", crop: "Crop",
 };
 
-interface Item { l: Located; subs: Subpath[]; z: number }
+export interface Item { l: Located; subs: Subpath[]; z: number }
 
 /** Paths, live shapes and text among the selection (groups are opened), back to front, in world space. */
 export function areaItems(d: Document, ids: string[]): Item[] {
@@ -46,10 +46,10 @@ export function areaItems(d: Document, ids: string[]): Item[] {
   return out.sort((a, b) => a.z - b.z);
 }
 
-const toPath = (pts: Vec[]): Path => pts.map((p) => ({ X: Math.round(p.x * UNIT), Y: Math.round(p.y * UNIT) }));
-const fromPath = (p: Path): Vec[] => p.map((q) => ({ x: q.X / UNIT, y: q.Y / UNIT }));
+export const toPath = (pts: Vec[]): Path => pts.map((p) => ({ X: Math.round(p.x * UNIT), Y: Math.round(p.y * UNIT) }));
+export const fromPath = (p: Path): Vec[] => p.map((q) => ({ x: q.X / UNIT, y: q.Y / UNIT }));
 
-function run(type: ClipperLib.ClipType, subject: Paths, clip: Paths, fill = FILL.pftNonZero): Paths {
+export function run(type: ClipperLib.ClipType, subject: Paths, clip: Paths, fill = FILL.pftNonZero): Paths {
   const c = new ClipperLib.Clipper();
   c.AddPaths(subject, ClipperLib.PolyType.ptSubject, true);
   if (clip.length) c.AddPaths(clip, ClipperLib.PolyType.ptClip, true);
@@ -65,12 +65,12 @@ export function regionOf(subs: Subpath[]): Paths {
   return run(ClipperLib.ClipType.ctUnion, rings, [], FILL.pftEvenOdd);
 }
 
-const union = (ps: Paths[]): Paths => (ps.length ? run(ClipperLib.ClipType.ctUnion, ps.flat(), []) : []);
-const minus = (a: Paths, b: Paths): Paths => (b.length ? run(ClipperLib.ClipType.ctDifference, a, b) : a);
-const inter = (a: Paths, b: Paths): Paths => run(ClipperLib.ClipType.ctIntersection, a, b);
+export const union = (ps: Paths[]): Paths => (ps.length ? run(ClipperLib.ClipType.ctUnion, ps.flat(), []) : []);
+export const minus = (a: Paths, b: Paths): Paths => (b.length ? run(ClipperLib.ClipType.ctDifference, a, b) : a);
+export const inter = (a: Paths, b: Paths): Paths => run(ClipperLib.ClipType.ctIntersection, a, b);
 
 /** Splits an area into its separate pieces (each outer with its holes). */
-function pieces(p: Paths): Paths[] {
+export function pieces(p: Paths): Paths[] {
   if (!p.length) return [];
   const c = new ClipperLib.Clipper();
   c.AddPaths(p, ClipperLib.PolyType.ptSubject, true);
@@ -87,8 +87,8 @@ function pieces(p: Paths): Paths[] {
   return out;
 }
 
-const MIN_AREA = 1e-4 * UNIT * UNIT;
-const areaOfPaths = (p: Paths) => p.reduce((a, q) => a + ClipperLib.Clipper.Area(q), 0);
+export const MIN_AREA = 1e-4 * UNIT * UNIT;
+export const areaOfPaths = (p: Paths) => p.reduce((a, q) => a + ClipperLib.Clipper.Area(q), 0);
 
 /** Clipper paths back to closed polyline subpaths (collinear points removed). */
 export function toSubpaths(p: Paths): Subpath[] {
@@ -103,12 +103,54 @@ export interface BooleanResult { ids: string[]; error?: string }
  * Runs a Pathfinder operation on the selection. Unite, Minus Front/Back, Intersect and Exclude give one
  * (compound) path; Divide, Trim and Crop give a group of pieces that keep their source's cut layer.
  */
+export type AreaItem = Item & { region: Paths };
+export interface AreaOut { area: Paths; layer: number }
+
+/** The selection's closed areas, back to front. */
+export const closedAreas = (d: Document, ids: string[]): AreaItem[] =>
+  areaItems(d, ids).map((it) => ({ ...it, region: regionOf(it.subs) })).filter((it) => it.region.length);
+
+/** Every separate face of the overlapping areas (Divide); each face takes the layer of the top area covering it. */
+export function divideFaces(items: AreaItem[]): AreaOut[] {
+  let faces: AreaOut[] = [];
+  for (const it of items) {
+    const next: AreaOut[] = [];
+    for (const f of faces) {
+      const i = inter(f.area, it.region), m = minus(f.area, it.region);
+      if (Math.abs(areaOfPaths(i)) > MIN_AREA) next.push({ area: i, layer: it.l.node.layer });
+      if (Math.abs(areaOfPaths(m)) > MIN_AREA) next.push({ area: m, layer: f.layer });
+    }
+    const rest = minus(it.region, union(faces.map((f) => f.area)));
+    if (Math.abs(areaOfPaths(rest)) > MIN_AREA) next.push({ area: rest, layer: it.l.node.layer });
+    faces = next;
+  }
+  return faces.flatMap((f) => pieces(f.area).map((area) => ({ area, layer: f.layer })));
+}
+
+/**
+ * Replaces `items` with paths for `outs`, placed above `anchor` in its parent; `group` wraps several
+ * results in a named group. Groups emptied by the removal are removed too. Returns the new top-level ids.
+ */
+export function replaceWithAreas(d: Document, items: Item[], outs: AreaOut[], anchor: Located, group: string | null, id: IdFactory = newId): string[] {
+  const parentInv = invert(anchor.parentWorld);
+  const mk = (o: AreaOut): PathNode => ({ id: id(), type: "path", transform: [1, 0, 0, 1, 0, 0], layer: o.layer, subpaths: transformSubpaths(toSubpaths(o.area), parentInv) });
+  const nodes = outs.filter((o) => Math.abs(areaOfPaths(o.area)) > MIN_AREA).map(mk).filter((n) => n.subpaths.length);
+  const result = group && nodes.length > 1
+    ? [{ id: id(), type: "group", transform: [1, 0, 0, 1, 0, 0], layer: nodes[nodes.length - 1].layer, children: nodes, name: group } as GroupNode]
+    : nodes;
+  anchor.parent.children.splice(anchor.parent.children.indexOf(anchor.node) + 1, 0, ...result);
+  removeNodes(d, items.map((i) => i.l.node.id));
+  const emptied = [...new Set(items.map((i) => i.l.parent))].filter((g) => g !== d.root && !g.children.length).map((g) => g.id);
+  if (emptied.length) removeNodes(d, emptied);
+  return result.map((n) => n.id);
+}
+
 export function booleanOp(d: Document, ids: string[], op: BooleanOp, id: IdFactory = newId): BooleanResult {
-  const items = areaItems(d, ids).map((it) => ({ ...it, region: regionOf(it.subs) })).filter((it) => it.region.length);
+  const items = closedAreas(d, ids);
   const need = op === "divide" || op === "trim" ? 1 : 2;
   if (items.length < need) return { ids: [], error: need === 2 ? "Select two or more closed shapes" : "Select closed shapes" };
   const bottom = items[0], top = items[items.length - 1];
-  type Out = { area: Paths; layer: number };
+  type Out = AreaOut;
   let outs: Out[] = [];
   let grouped = false;
   switch (op) {
@@ -122,23 +164,7 @@ export function booleanOp(d: Document, ids: string[], op: BooleanOp, id: IdFacto
       break;
     }
     case "exclude": outs = [{ area: run(ClipperLib.ClipType.ctUnion, items.flatMap((i) => i.region), [], FILL.pftEvenOdd), layer: top.l.node.layer }]; break;
-    case "divide": {
-      let faces: Out[] = [];
-      for (const it of items) {
-        const next: Out[] = [];
-        for (const f of faces) {
-          const i = inter(f.area, it.region), m = minus(f.area, it.region);
-          if (Math.abs(areaOfPaths(i)) > MIN_AREA) next.push({ area: i, layer: it.l.node.layer });
-          if (Math.abs(areaOfPaths(m)) > MIN_AREA) next.push({ area: m, layer: f.layer });
-        }
-        const rest = minus(it.region, union(faces.map((f) => f.area)));
-        if (Math.abs(areaOfPaths(rest)) > MIN_AREA) next.push({ area: rest, layer: it.l.node.layer });
-        faces = next;
-      }
-      outs = faces.flatMap((f) => pieces(f.area).map((area) => ({ area, layer: f.layer })));
-      grouped = true;
-      break;
-    }
+    case "divide": outs = divideFaces(items); grouped = true; break;
     case "trim": {
       outs = items.map((it, k) => ({ area: minus(it.region, union(items.slice(k + 1).map((i) => i.region))), layer: it.l.node.layer }));
       grouped = true;
@@ -150,21 +176,10 @@ export function booleanOp(d: Document, ids: string[], op: BooleanOp, id: IdFacto
       break;
     }
   }
-  outs = outs.filter((o) => Math.abs(areaOfPaths(o.area)) > MIN_AREA);
+  outs = outs.filter((o) => Math.abs(areaOfPaths(o.area)) > MIN_AREA && toSubpaths(o.area).length);
+  if (!outs.length) return { ids: [], error: op === "intersect" || op === "crop" ? "The shapes do not overlap" : "Nothing is left" };
   const anchor = op === "minusFront" ? bottom.l : top.l;
-  const parentInv = invert(anchor.parentWorld);
-  const mk = (o: Out): PathNode => ({ id: id(), type: "path", transform: [1, 0, 0, 1, 0, 0], layer: o.layer, subpaths: transformSubpaths(toSubpaths(o.area), parentInv) });
-  const nodes = outs.map(mk).filter((n) => n.subpaths.length);
-  if (!nodes.length) return { ids: [], error: op === "intersect" || op === "crop" ? "The shapes do not overlap" : "Nothing is left" };
-  const result = grouped && nodes.length > 1
-    ? [{ id: id(), type: "group", transform: [1, 0, 0, 1, 0, 0], layer: nodes[nodes.length - 1].layer, children: nodes, name: BOOLEAN_LABELS[op] } as GroupNode]
-    : nodes;
-  anchor.parent.children.splice(anchor.parent.children.indexOf(anchor.node) + 1, 0, ...result);
-  removeNodes(d, items.map((i) => i.l.node.id));
-  // Groups emptied by the operation go too.
-  const emptied = [...new Set(items.map((i) => i.l.parent))].filter((g) => g !== d.root && !g.children.length).map((g) => g.id);
-  if (emptied.length) removeNodes(d, emptied);
-  return { ids: result.map((n) => n.id) };
+  return { ids: replaceWithAreas(d, items, outs, anchor, grouped ? BOOLEAN_LABELS[op] : null, id) };
 }
 
 // ---------- offset ----------

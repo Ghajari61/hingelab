@@ -15,6 +15,8 @@ import { noTargets, snapMove, snapPoint, snapTargets, type SnapLine, type SnapSe
 import { fmtLength, fromMM } from "@/lib/studio/units";
 import type { Anchor, Document, Mat, PathNode, SceneNode, ShapeKind, Subpath, TextNode, Vec } from "@/lib/studio/types";
 import type { ToolId } from "@/lib/studio/commands";
+import { layerCode } from "@/lib/studio/cutLayers";
+import { builderFaces, buildShapes, curvaturePath, eraseAlong, faceAt, knifeCut, lassoHits, scissorsAt, shearAt } from "@/lib/studio/toolOps";
 import { useEditor, useEditorApi, type AnchorRef } from "./store";
 import { TextEditor } from "./TextEditor";
 
@@ -43,7 +45,13 @@ type Drag =
   | { kind: "pencil"; pts: Vec[] }
   | { kind: "penHandle" }
   | { kind: "zoom"; start: Vec; cur: Vec; alt: boolean }
-  | { kind: "text"; start: Vec; cur: Vec };
+  | { kind: "text"; start: Vec; cur: Vec }
+  | { kind: "lasso"; pts: Vec[]; mode: "set" | "add" | "remove" }
+  | { kind: "knife"; pts: Vec[]; straight: boolean; ids: string[] }
+  | { kind: "erase"; pts: Vec[]; ids: string[] }
+  | { kind: "shear"; center: Vec; start: Vec; ids: string[]; half: Vec }
+  | { kind: "build"; faces: number[]; remove: boolean; ids: string[] }
+  | { kind: "measure"; a: Vec; targets: SnapTargets };
 
 interface Hud { x: number; y: number; text: string }
 
@@ -100,7 +108,14 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
   const [pointer, setPointer] = useState<Vec | null>(null);
   const space = useRef(false);
   const pen = useRef<{ nodes: Anchor[]; hoverClose: boolean } | null>(null);
+  const curve = useRef<{ pts: Vec[]; corners: Set<number>; hoverClose: boolean } | null>(null);
+  const [hoverFace, setHoverFace] = useState(-1);
   const fitted = useRef(false);
+  const faces = useMemo(() => {
+    if (tool !== "shapeBuilder") return [];
+    const ids = topLevel(doc.root, selection).filter((id) => isEditable(doc.root, id));
+    return ids.length ? builderFaces(doc, ids) : [];
+  }, [tool, doc, selection]);
 
   const zoom = view.zoom;
   const S = useCallback((p: Vec): Vec => ({ x: p.x * view.zoom + view.x, y: p.y * view.zoom + view.y }), [view]);
@@ -140,13 +155,18 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
 
   const sheetsBox = useCallback((d: Document): Box => d.sheets.reduce((b, s) => ({ minX: Math.min(b.minX, s.x), minY: Math.min(b.minY, s.y), maxX: Math.max(b.maxX, s.x + s.w), maxY: Math.max(b.maxY, s.y + s.h) }), emptyBox()), []);
 
-  const finishPen = useCallback(() => {
-    const p = pen.current;
+  const finishPen = useCallback((closeCurve = false) => {
+    const p = pen.current, c = curve.current;
     pen.current = null;
+    curve.current = null;
+    const s = api.getState();
     if (p && p.nodes.length >= 2) {
-      const s = api.getState();
       const node: PathNode = { id: newId(), type: "path", transform: [1, 0, 0, 1, 0, 0], layer: s.currentLayer, subpaths: [{ closed: false, nodes: p.nodes }] };
       s.edit("Pen", (d) => addNode(d, node), { select: [node.id] });
+    }
+    if (c && c.pts.length >= 2) {
+      const node: PathNode = { id: newId(), type: "path", transform: [1, 0, 0, 1, 0, 0], layer: s.currentLayer, subpaths: [curvaturePath(c.pts, c.corners, closeCurve)] };
+      s.edit("Curvature", (d) => addNode(d, node), { select: [node.id] });
     }
     rerender();
   }, [api]);
@@ -161,7 +181,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       },
       zoomBy: (f) => zoomAt(f),
       actual: () => { const v = api.getState().view; zoomAt(PX_PER_MM / v.zoom); },
-      finishPen,
+      finishPen: () => finishPen(),
       center: () => {
         const el = stageRef.current, v = api.getState().view;
         return el ? { x: (el.clientWidth / 2 - v.x) / v.zoom, y: (el.clientHeight / 2 - v.y) / v.zoom } : { x: 0, y: 0 };
@@ -173,7 +193,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
     if (!fitted.current && size.w > 100) { fitted.current = true; fitBox(sheetsBox(api.getState().doc)); }
   }, [size, fitBox, sheetsBox, api]);
 
-  useEffect(() => { if (tool !== "pen" && pen.current) finishPen(); }, [tool, finishPen]);
+  useEffect(() => { if ((tool !== "pen" && pen.current) || (tool !== "curvature" && curve.current)) finishPen(); setHoverFace(-1); }, [tool, finishPen]);
 
   useEffect(() => {
     const el = stageRef.current;
@@ -198,15 +218,22 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       if (e.key === " ") { if (!space.current) { space.current = true; setCursor("grab"); } stop(); return; }
       if (e.key === "Escape") {
         if (drag.current) { s.end("", null); drag.current = null; setLines([]); setHud(null); rerender(); stop(); return; }
-        if (pen.current) { finishPen(); stop(); return; }
+        if (pen.current || curve.current) { finishPen(); stop(); return; }
         if (s.anchors.length) { s.setAnchors([]); stop(); return; }
         if (s.selection.length) { s.select([]); stop(); }
         return;
       }
-      if (e.key === "Enter" && pen.current) { finishPen(); stop(); return; }
+      if (e.key === "Enter" && (pen.current || curve.current)) { finishPen(); stop(); return; }
       if ((e.key === "Backspace" || e.key === "Delete") && pen.current) {
         pen.current.nodes.pop();
         if (!pen.current.nodes.length) pen.current = null;
+        rerender(); stop(); return;
+      }
+      if ((e.key === "Backspace" || e.key === "Delete") && curve.current) {
+        const c = curve.current;
+        c.corners.delete(c.pts.length - 1);
+        c.pts.pop();
+        if (!c.pts.length) curve.current = null;
         rerender(); stop(); return;
       }
       if ((e.key === "Backspace" || e.key === "Delete") && s.anchors.length && s.tool === "direct") { deleteAnchors(); stop(); return; }
@@ -443,6 +470,86 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         s.set({ lastTransform: m });
         return;
       }
+      case "shear": {
+        const ids = s.selection.filter((id) => isEditable(s.doc.root, id));
+        if (!ids.length) { onToast("Select something first"); return; }
+        const b = selectionBox(s.doc, ids);
+        s.begin();
+        drag.current = { kind: "shear", center: boxCenter(b), start: p, ids, half: { x: (b.maxX - b.minX) / 2, y: (b.maxY - b.minY) / 2 } };
+        return;
+      }
+      case "lasso": drag.current = { kind: "lasso", pts: [p], mode: e.altKey ? "remove" : e.shiftKey ? "add" : "set" }; return;
+      case "magicWand": {
+        const hit = hitTest(s.doc, p, tol);
+        const n = hit ? findNode(s.doc.root, hit) : null;
+        if (!n) { if (!e.shiftKey) s.select([]); return; }
+        const same = s.doc.root.children.filter((c) => !c.hidden && !c.locked && c.layer === n.layer).map((c) => c.id);
+        s.select(same, e.shiftKey ? "add" : "set");
+        onToast(`${same.length} object${same.length === 1 ? "" : "s"} on ${layerCode(n.layer)} · ${s.doc.cutLayers[n.layer]?.name ?? ""}`);
+        return;
+      }
+      case "curvature": {
+        const q = snapPoint(p, snapTargets(s.doc, new Set(), settings), 6 / s.view.zoom, settings).p;
+        const cur = curve.current;
+        if (cur && cur.pts.length >= 2) {
+          const f = S(cur.pts[0]);
+          if (Math.hypot(sp.x - f.x, sp.y - f.y) <= 7) { finishPen(true); return; }
+        }
+        const next = cur ?? { pts: [], corners: new Set<number>(), hoverClose: false };
+        if (e.altKey) next.corners.add(next.pts.length);
+        next.pts.push(q);
+        curve.current = next;
+        rerender();
+        return;
+      }
+      case "scissors": {
+        let out: string[] | null = null;
+        s.edit("Scissors", (d) => { out = scissorsAt(d, p, 6 / s.view.zoom); });
+        if (out) s.select(out); else onToast("Click right on a path to cut it there.");
+        return;
+      }
+      case "knife": drag.current = { kind: "knife", pts: [p], straight: e.altKey, ids: s.selection.filter((id) => isEditable(s.doc.root, id)) }; return;
+      case "eraser": {
+        s.begin();
+        drag.current = { kind: "erase", pts: [p], ids: s.selection.filter((id) => isEditable(s.doc.root, id)) };
+        s.preview((d) => { eraseAlong(d, (drag.current as { ids: string[] }).ids, [p], s.eraserSize); });
+        rerender();
+        return;
+      }
+      case "shapeBuilder": {
+        const ids = s.selection.filter((id) => isEditable(s.doc.root, id));
+        const k = faceAt(faces, p);
+        if (!faces.length) { onToast("Select overlapping shapes first, then drag across the regions to merge."); return; }
+        if (k < 0) { s.select([]); return; }
+        drag.current = { kind: "build", faces: [k], remove: e.altKey, ids };
+        rerender();
+        return;
+      }
+      case "eyedropper": {
+        const hit = hitTest(s.doc, p, tol, { deep: true });
+        const src = hit ? findNode(s.doc.root, hit) : null;
+        if (!src) { onToast("Click an object to pick up its cut layer."); return; }
+        const ids = s.selection.filter((id) => isEditable(s.doc.root, id) && id !== src.id);
+        s.set({ currentLayer: src.layer });
+        if (ids.length) {
+          s.edit("Eyedropper", (d) => ids.forEach((id) => {
+            const n = findNode(d.root, id);
+            if (!n) return;
+            const deep = (m: SceneNode) => { m.layer = src.layer; if (m.type === "group") m.children.forEach(deep); };
+            deep(n);
+            if (n.type === "text" && src.type === "text") { n.font = src.font; n.size = src.size; n.tracking = src.tracking; n.lineHeight = src.lineHeight; }
+          }));
+        }
+        onToast(`${layerCode(src.layer)} · ${s.doc.cutLayers[src.layer]?.name ?? ""}${ids.length ? ` applied to ${ids.length} object${ids.length === 1 ? "" : "s"}` : " is now the layer for new objects"}`);
+        return;
+      }
+      case "measure": {
+        const targets = snapTargets(s.doc, new Set(), settings);
+        const a = snapPoint(p, targets, 6 / s.view.zoom, settings).p;
+        drag.current = { kind: "measure", a, targets };
+        s.set({ measure: { a, b: a } });
+        return;
+      }
       default:
         if (SHAPE_TOOLS.has(s.tool) || s.tool === "line") {
           const q = snapPoint(p, snapTargets(s.doc, new Set(), settings), 6 / s.view.zoom, settings).p;
@@ -503,6 +610,11 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         pen.current.hoverClose = pen.current.nodes.length >= 2 && Math.hypot(sp.x - f.x, sp.y - f.y) <= 7;
         rerender();
       }
+      if (curve.current && s.tool === "curvature") {
+        const f = S(curve.current.pts[0]);
+        curve.current.hoverClose = curve.current.pts.length >= 2 && Math.hypot(sp.x - f.x, sp.y - f.y) <= 7;
+      }
+      if (s.tool === "shapeBuilder") setHoverFace(faceAt(faces, p));
       if (s.tool === "select" && !space.current) {
         const h = handleAt(sp);
         setCursor(h ? (h.kind === "scale" ? HANDLE_CURSOR[h.h] : "alias") : guideAt(p) >= 0 && !hitTest(s.doc, p, 4 / s.view.zoom) ? (s.doc.guides[guideAt(p)].axis === "x" ? "ew-resize" : "ns-resize") : null);
@@ -569,7 +681,47 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         return;
       }
       case "marquee": case "zoom": case "text": dr.cur = p; rerender(); return;
-      case "pencil": dr.pts.push(p); rerender(); return;
+      case "pencil": case "lasso": dr.pts.push(p); rerender(); return;
+      case "knife": {
+        if (dr.straight || e.altKey) { dr.straight = true; dr.pts = [dr.pts[0], e.shiftKey ? constrain45(dr.pts[0], p) : p]; }
+        else dr.pts.push(p);
+        rerender();
+        return;
+      }
+      case "erase": {
+        dr.pts.push(p);
+        const size = s.eraserSize;
+        s.preview((d) => { eraseAlong(d, dr.ids, dr.pts, size); });
+        rerender();
+        return;
+      }
+      case "shear": {
+        const dx = p.x - dr.start.x, dy = p.y - dr.start.y;
+        const axis: "x" | "y" = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+        const arm = axis === "x" ? dr.start.y - dr.center.y : dr.start.x - dr.center.x;
+        const span = Math.abs(arm) > 1e-3 ? arm : -Math.max(dr.half[axis === "x" ? "y" : "x"], 1);
+        let k = (axis === "x" ? dx : dy) / span;
+        let deg = (Math.atan(k) * 180) / Math.PI;
+        if (e.shiftKey) { deg = Math.round(deg / 15) * 15; k = Math.tan((deg * Math.PI) / 180); }
+        const m = shearAt(k, axis, dr.center);
+        s.preview((d) => transformNodes(d, dr.ids, m));
+        setHud({ x: sp.x, y: sp.y, text: `Shear ${axis === "x" ? "horizontal" : "vertical"} ${Math.round(deg * 10) / 10}°` });
+        return;
+      }
+      case "build": {
+        const k = faceAt(faces, p);
+        if (k >= 0 && !dr.faces.includes(k)) { dr.faces.push(k); rerender(); }
+        setHoverFace(k);
+        return;
+      }
+      case "measure": {
+        let b = snapPoint(p, dr.targets, tol, settings).p;
+        if (e.shiftKey) b = constrain45(dr.a, b);
+        s.set({ measure: { a: dr.a, b } });
+        const dx = b.x - dr.a.x, dy = b.y - dr.a.y;
+        setHud({ x: sp.x, y: sp.y, text: `D ${fmt(Math.hypot(dx, dy))} ${doc.units}  ${Math.round((Math.atan2(-dy, dx) * 1800) / Math.PI) / 10}°` });
+        return;
+      }
       case "penHandle": {
         const cur = pen.current;
         if (!cur) return;
@@ -673,10 +825,39 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         s.set({ lastTransform: m });
         return;
       }
-      case "scale": case "rotate": case "toolScale": {
+      case "lasso": {
+        rerender();
+        const ids = lassoHits(s.doc, dr.pts);
+        if (dr.mode === "remove") { const out = new Set(ids); s.select(s.selection.filter((id) => !out.has(id))); }
+        else s.select(ids, dr.mode === "add" ? "add" : "set");
+        return;
+      }
+      case "knife": {
+        rerender();
+        let out: string[] = [];
+        s.edit("Knife", (d) => { out = knifeCut(d, dr.ids, dr.pts); });
+        if (out.length) s.select(out); else onToast("Drag all the way across a closed shape to slice it.");
+        return;
+      }
+      case "erase": {
+        const size = s.eraserSize;
+        s.end("Erase", (d) => { eraseAlong(d, dr.ids, dr.pts, size); });
+        rerender();
+        return;
+      }
+      case "build": {
+        let out: string[] = [];
+        s.edit(dr.remove ? "Shape Builder: Delete" : "Shape Builder", (d) => { out = buildShapes(d, dr.ids, dr.remove ? [] : dr.faces, dr.remove ? dr.faces : []); });
+        s.select(out);
+        setHoverFace(-1);
+        rerender();
+        return;
+      }
+      case "measure": rerender(); return;
+      case "scale": case "rotate": case "toolScale": case "shear": {
         const cur = s.doc, base = s.base;
         if (!base) return;
-        const label = dr.kind === "rotate" ? "Rotate" : "Scale";
+        const label = dr.kind === "rotate" ? "Rotate" : dr.kind === "shear" ? "Shear" : "Scale";
         const ids = dr.ids;
         const finals = ids.map((id) => findNode(cur.root, id)?.transform);
         s.end(label, (d) => { ids.forEach((id, k) => { const n = findNode(d.root, id); if (n && finals[k]) n.transform = finals[k]!; }); });
@@ -879,10 +1060,14 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       const kind = dr.tool as ShapeKind;
       return pathD(transformSubpaths(shapePaths(shapeForBox(kind, bx.w, bx.h, api.getState().shapeDefaults[kind])), translate(bx.c.x, bx.c.y)));
     }
-    if (dr.kind === "pencil") return pathD([{ closed: false, nodes: dr.pts.map((q) => ({ x: q.x, y: q.y })) }]);
+    if (dr.kind === "pencil" || dr.kind === "knife") return pathD([{ closed: false, nodes: dr.pts.map((q) => ({ x: q.x, y: q.y })) }]);
+    if (dr.kind === "lasso") return pathD([{ closed: true, nodes: dr.pts.map((q) => ({ x: q.x, y: q.y })) }]);
     return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dr, dr && "cur" in dr ? dr.cur : null, dr && dr.kind === "pencil" ? dr.pts.length : 0]);
+  }, [dr, dr && "cur" in dr ? dr.cur : null, dr && "pts" in dr ? dr.pts.length : 0, dr && "pts" in dr ? dr.pts[dr.pts.length - 1] : null]);
+  const curveState = curve.current;
+  const measure = useEditor((s) => s.measure);
+  const eraserSize = useEditor((s) => s.eraserSize);
 
   const box = (b: Box) => { const a = S({ x: b.minX, y: b.minY }), c = S({ x: b.maxX, y: b.maxY }); return { x: a.x, y: a.y, w: c.x - a.x, h: c.y - a.y }; };
   const selRect = !isEmptyBox(selBox) ? box(selBox) : null;
@@ -901,6 +1086,10 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
           <filter id="hl-artboard-shadow" x="-10%" y="-10%" width="120%" height="120%">
             <feDropShadow dx="0" dy={2 / zoom} stdDeviation={6 / zoom} floodColor="#000" floodOpacity="0.35" />
           </filter>
+          <pattern id="hl-build" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform={`scale(${1 / zoom}) rotate(45)`}>
+            <rect width="8" height="8" fill="color-mix(in srgb, var(--accent) 22%, transparent)" />
+            <line x1="0" y1="0" x2="0" y2="8" stroke="var(--accent)" strokeWidth="2" opacity="0.55" />
+          </pattern>
           <clipPath id="hl-sheets">{doc.sheets.map((sh) => <rect key={sh.id} x={sh.x} y={sh.y} width={sh.w} height={sh.h} />)}</clipPath>
         </defs>
         <g transform={`translate(${view.x} ${view.y}) scale(${zoom})`}>
@@ -916,8 +1105,60 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
           {ui.guidesShown && doc.guides.map((g, k) => g.axis === "x"
             ? <line key={k} x1={g.at} x2={g.at} y1={vb.minY} y2={vb.maxY} stroke="var(--guide)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
             : <line key={k} y1={g.at} y2={g.at} x1={vb.minX} x2={vb.maxX} stroke="var(--guide)" strokeWidth={1} vectorEffect="non-scaling-stroke" />)}
-          {draftPaths && <path d={draftPaths} fill="none" stroke="var(--accent)" strokeWidth={1} vectorEffect="non-scaling-stroke" />}
+          {tool === "shapeBuilder" && faces.length > 0 && (
+            <g data-testid="builder-faces">
+              {faces.map((f, k) => {
+                const on = dr?.kind === "build" && dr.faces.includes(k);
+                const hot = on || k === hoverFace;
+                const del = dr?.kind === "build" ? dr.remove : false;
+                return (
+                  <path key={k} d={f.d} fillRule="evenodd" vectorEffect="non-scaling-stroke"
+                    fill={hot ? (del ? "color-mix(in srgb, var(--danger, #e5484d) 35%, transparent)" : "url(#hl-build)") : "transparent"}
+                    stroke={hot ? "var(--accent)" : "var(--accent)"} strokeOpacity={hot ? 1 : 0.35} strokeWidth={hot ? 1.5 : 1} strokeDasharray={hot ? undefined : "3 3"} />
+                );
+              })}
+            </g>
+          )}
+          {draftPaths && (
+            <path d={draftPaths} vectorEffect="non-scaling-stroke"
+              fill={dr?.kind === "lasso" ? "color-mix(in srgb, var(--accent) 8%, transparent)" : "none"}
+              stroke={dr?.kind === "knife" ? "var(--danger, #e5484d)" : "var(--accent)"} strokeWidth={dr?.kind === "knife" ? 1.5 : 1}
+              strokeDasharray={dr?.kind === "lasso" ? "4 3" : undefined} />
+          )}
         </g>
+        {curveState && curveState.pts.length > 0 && (() => {
+          const pts = curveState.pts.map(S);
+          const live = pointer && !curveState.hoverClose ? [...pts, S(pointer)] : pts;
+          return (
+            <g data-testid="curvature-draft">
+              <path d={pathD([curvaturePath(live, curveState.corners, curveState.hoverClose)])} fill="none" stroke="var(--accent)" strokeWidth={1.5} />
+              {pts.map((q, k) => curveState.corners.has(k)
+                ? <rect key={k} x={q.x - 3} y={q.y - 3} width={6} height={6} fill={k === 0 && curveState.hoverClose ? "var(--accent)" : "var(--handle-fill)"} stroke="var(--accent)" />
+                : <circle key={k} cx={q.x} cy={q.y} r={3.5} fill={k === 0 && curveState.hoverClose ? "var(--accent)" : "var(--handle-fill)"} stroke="var(--accent)" />)}
+            </g>
+          );
+        })()}
+        {tool === "eraser" && pointer && (() => { const q = S(pointer); return <circle cx={q.x} cy={q.y} r={Math.max(2, (eraserSize / 2) * zoom)} fill="color-mix(in srgb, var(--accent) 12%, transparent)" stroke="var(--accent)" pointerEvents="none" data-testid="eraser-brush" />; })()}
+        {tool === "measure" && measure && (() => {
+          const a = S(measure.a), b = S(measure.b);
+          const dx = measure.b.x - measure.a.x, dy = measure.b.y - measure.a.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < 1e-9) return null;
+          const label = `${fmt(dist)} ${doc.units} · ${Math.round((Math.atan2(-dy, dx) * 1800) / Math.PI) / 10}°`;
+          const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+          return (
+            <g data-testid="measure-overlay" pointerEvents="none">
+              <path d={`M${a.x} ${a.y}H${b.x}V${b.y}`} fill="none" stroke="var(--smart-guide)" strokeDasharray="2 3" opacity={0.7} />
+              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="var(--smart-guide)" strokeWidth={1.5} />
+              <circle cx={a.x} cy={a.y} r={3.5} fill="var(--handle-fill)" stroke="var(--smart-guide)" />
+              <circle cx={b.x} cy={b.y} r={3.5} fill="var(--handle-fill)" stroke="var(--smart-guide)" />
+              <g transform={`translate(${mx} ${my - 14})`}>
+                <rect x={-label.length * 3.4 - 6} y={-10} width={label.length * 6.8 + 12} height={20} rx={4} fill="var(--smart-guide)" />
+                <text textAnchor="middle" y={4} fontSize={11} fill="#fff" fontFamily="var(--font-num)">{label}</text>
+              </g>
+            </g>
+          );
+        })()}
         {/* screen-space overlay */}
         {tool === "direct" && selection.map((id) => {
           const l = locate(doc.root, id);

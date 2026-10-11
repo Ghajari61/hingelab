@@ -685,3 +685,11 @@ The neon-look sign is cut as one solid piece grown around the letters (holes fil
 - Offset Path keeps the originals (as Illustrator and CorelDRAW's contour do) and puts each result just above its source.
 - Dialogs with numbers preview through the store's `begin`/`preview`/`end`, so the preview never enters the history and OK commits exactly one step.
 - Clean Up for Laser only treats exact duplicates on the same cut layer as double cuts; overlapping but different paths are left for the user.
+
+## D113. Cutting tools on the Pathfinder geometry
+
+- Knife, Eraser and Shape Builder reuse the Clipper helpers of the Pathfinder (D112) instead of a second geometry engine: the knife is a 2 µm strip subtracted from each area (pieces that only touch the cut stay one piece), the eraser is the stroke offset with round ends, and Shape Builder works on the Divide faces. Results are polylines within 0.01 mm, like the Pathfinder.
+- The Knife only cuts closed shapes and only when the line crosses them completely, so a stray drag never changes a shape; open lines are cut with Scissors or the Eraser.
+- The Eraser and Knife work on the selection when there is one and on every visible, unlocked object otherwise (Illustrator's behaviour). The Shape Builder needs a selection, because the regions come from the selected shapes.
+- Magic Wand and Eyedropper use the cut layer, not colour: in HingeLab the layer is what decides how a line is cut.
+- Scissors keep the clicked path's id for the first piece so layer names and history stay readable; the second piece is a new path just above it.

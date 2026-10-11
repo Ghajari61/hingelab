@@ -161,6 +161,9 @@
 .st-hud { position: absolute; z-index: 4; pointer-events: none; padding: 3px 7px; border-radius: var(--radius-2); background: color-mix(in srgb, var(--surface-raised) 92%, transparent); border: 1px solid var(--line); color: var(--text-primary); font-family: var(--font-num); font-size: var(--text-label); white-space: nowrap; box-shadow: var(--shadow-1); }
 .st-text-editor { position: absolute; z-index: 5; margin: 0; padding: 0; border: 1px dashed var(--accent); background: color-mix(in srgb, var(--surface-sheet) 70%, transparent); color: var(--text-primary); resize: none; overflow: hidden; outline: none; white-space: pre; }
 .st-control .hint { color: var(--text-disabled); font-size: var(--text-small); }
+.st-control .ctl-read { display: inline-flex; align-items: baseline; gap: 6px; padding: 3px 8px; border-radius: var(--radius-2); background: var(--surface-field); border: 1px solid var(--line-soft); font-size: var(--text-small); }
+.st-control .ctl-read .k { color: var(--text-disabled); font-size: var(--text-label); text-transform: uppercase; letter-spacing: .05em; }
+.st-control .ctl-read .v { font-family: var(--font-num); color: var(--text-primary); min-width: 44px; }
 .st-control .ui-seg button { padding-inline: 8px; }
 .st-control .ctl-select { display: flex; align-items: center; gap: 6px; }
 .st-control .ctl-select select { height: 24px; max-width: 170px; }
