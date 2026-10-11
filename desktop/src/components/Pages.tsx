@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Box, Clock, ExternalLink, FolderOpen, Keyboard, LifeBuoy, Lock, Puzzle, QrCode, Star, Trash2 } from "lucide-react";
+import { ArrowRight, Box, Check, Clock, Clock3, Crown, ExternalLink, FolderOpen, History, Keyboard, LayoutGrid, LifeBuoy, Lock, Plus, Puzzle, QrCode, Sparkles, Star, Trash2 } from "lucide-react";
 import type { DCatalog, DProduct } from "../../../lib/desktop/types";
+import { presetArt, productArt, showcase } from "../art";
 import type { DesktopAccount, Prefs, WebPage } from "../ipc";
 import type { Favorite, LocalPrefs, SavedDesign } from "../local";
 import type { UpdateStatus } from "../updater";
@@ -25,58 +26,140 @@ const planName = (a: DesktopAccount | null) => (a?.plan === "pro" ? "Pro" : "Fre
 
 // ---------------------------------------------------------------- Dashboard
 
-export function Dashboard({ account, catalog, recent, onNew, onOpenRecent, onUpgrade }: {
-  account: DesktopAccount | null; catalog: DCatalog | null; recent: SavedDesign[];
-  onNew: (product: string) => void; onOpenRecent: (d: SavedDesign) => void; onUpgrade: () => void;
+const HERO_PRODUCTS = ["clock", "hinge", "boxes"];
+
+const PRO_PERKS = ["Pill, polygon and cylinder boxes", "Wave, relief and serpentine hinges", "Large puzzles and every generator design", "Exports without the HingeLab mark"];
+
+export function Dashboard({ account, catalog, recent, defaultProduct, onNew, onPreset, onBrowse, onOpenRecent, onUpgrade }: {
+  account: DesktopAccount | null; catalog: DCatalog | null; recent: SavedDesign[]; defaultProduct: string;
+  onNew: (product: string) => void; onPreset: (product: string, preset: string) => void; onBrowse: () => void;
+  onOpenRecent: (d: SavedDesign) => void; onUpgrade: () => void;
 }) {
   const first = (account?.user.name || account?.user.email || "").split(/[\s@]/)[0];
+  const pro = account?.plan === "pro";
+  const products = catalog?.products ?? [];
+  const start = products.find((p) => p.id === defaultProduct) ?? products[0];
+  const heroArt = HERO_PRODUCTS.flatMap((id) => {
+    const p = products.find((x) => x.id === id);
+    const src = p && productArt(p);
+    return src ? [src] : [];
+  });
+  const ideas = showcase(products, 6);
+  const last = recent[0];
   return (
-    <div className="page">
-      <header className="page-head">
-        <h1>{first ? `Welcome back, ${first}` : "Welcome"}</h1>
-        <p>Pick a generator to start a new design, or carry on where you left off.</p>
-      </header>
-      <section aria-label="New design">
-        <h2 className="sub">New design</h2>
-        <div className="tiles">
-          {catalog?.products.map((p) => (
-            <button key={p.id} type="button" className="tile" onClick={() => onNew(p.id)}>
-              <span className="tile-icon"><ProductIcon product={p} size={22} /></span>
-              <b>{p.name}</b>
-              <small>{p.blurb}</small>
-            </button>
-          )) ?? <div className="sk tall" />}
+    <div className="page dash">
+      <section className="hero" aria-labelledby="dash-title">
+        <div className="hero-text">
+          <span className="eyebrow"><Sparkles size={13} aria-hidden />Laser-ready designs, built to size</span>
+          <h1 id="dash-title">{first ? `Welcome back, ${first}` : "Welcome to HingeLab"}</h1>
+          <p>Boxes, clocks, puzzles and QR signs as clean SVG files at true size, ready for LightBurn, xTool Creative Space or Inkscape.</p>
+          <div className="row">
+            {last
+              ? <button type="button" className="btn primary big" onClick={() => onOpenRecent(last)}><History size={16} aria-hidden /><span className="clip">Continue “{last.name}”</span></button>
+              : start && <button type="button" className="btn primary big" onClick={() => onNew(start.id)}><Plus size={16} aria-hidden />New {start.name}</button>}
+            <button type="button" className="btn big ghost" onClick={onBrowse}><LayoutGrid size={16} aria-hidden />Browse presets</button>
+          </div>
+        </div>
+        <div className="hero-art" aria-hidden>
+          {heroArt.map((src, i) => <span key={src} className={`hero-card c${i}`}><img src={src} alt="" /></span>)}
         </div>
       </section>
-      <div className="split">
-        <section aria-label="Recent designs">
-          <h2 className="sub">Recent designs</h2>
-          {recent.length ? <RecentList items={recent.slice(0, 6)} catalog={catalog} onOpen={onOpenRecent} /> : <p className="empty">Designs you work on appear here.</p>}
+
+      <section aria-labelledby="dash-new">
+        <h2 id="dash-new" className="sub">Start a new design</h2>
+        <div className="tiles">
+          {catalog ? products.map((p) => {
+            const src = productArt(p);
+            return (
+              <button key={p.id} type="button" className="tile" onClick={() => onNew(p.id)}>
+                <span className="tile-media">{src ? <img src={src} alt="" /> : <ProductIcon product={p} size={36} />}</span>
+                <span className="tile-body">
+                  <span className="tile-title"><span className="tile-icon"><ProductIcon product={p} size={15} /></span><b>{p.name}</b></span>
+                  <small>{p.blurb}</small>
+                  <span className="tile-meta">{p.presets.length} presets<ArrowRight size={13} aria-hidden /></span>
+                </span>
+              </button>
+            );
+          }) : <div className="sk tall" />}
+        </div>
+      </section>
+
+      {ideas.length > 0 && (
+        <section aria-labelledby="dash-ideas">
+          <div className="sec-head">
+            <h2 id="dash-ideas" className="sub">Ready-made designs</h2>
+            <button type="button" className="link-btn" onClick={onBrowse}>See all presets<ArrowRight size={13} aria-hidden /></button>
+          </div>
+          <ul className="ideas">
+            {ideas.map(({ product, preset, src }) => (
+              <li key={`${product.id}/${preset.id}`}>
+                <button type="button" className="idea" onClick={() => onPreset(product.id, preset.id)}>
+                  <span className="idea-media">
+                    <img src={src} alt="" />
+                    {preset.pro && !pro && <span className="badge"><Lock size={10} aria-hidden />Pro</span>}
+                  </span>
+                  <span className="idea-text">
+                    <b>{preset.name}</b>
+                    <small>{product.name}</small>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
         </section>
-        <section className="plan-card" aria-label="Your plan">
-          <h2 className="sub">Your plan</h2>
-          <p className="plan-name">{planName(account)}</p>
-          <p>{account?.plan === "pro" ? "Every shape, pattern and generator, with clean exports." : "Rounded boxes with straight hinges, smaller generator designs, and a small mark on exports."}</p>
-          {account?.plan !== "pro" && <button type="button" className="btn primary" onClick={onUpgrade}>Upgrade to Pro</button>}
+      )}
+
+      <div className="split">
+        <section aria-labelledby="dash-recent">
+          <h2 id="dash-recent" className="sub">Recent designs</h2>
+          {recent.length
+            ? <RecentGrid items={recent.slice(0, 4)} catalog={catalog} onOpen={onOpenRecent} />
+            : (
+              <div className="empty-card">
+                {heroArt[1] && <img src={heroArt[1]} alt="" />}
+                <div>
+                  <b>No designs yet</b>
+                  <p>Designs you work on appear here with a preview, so you can pick up where you left off.</p>
+                </div>
+              </div>
+            )}
+        </section>
+        <section className={`plan-card${pro ? " is-pro" : " upsell"}`} aria-labelledby="dash-plan">
+          <div className="plan-top">
+            <span className="plan-icon"><Crown size={18} aria-hidden /></span>
+            <div>
+              <h2 id="dash-plan" className="plan-label">Your plan</h2>
+              <p className="plan-name">{planName(account)}</p>
+            </div>
+          </div>
+          <p>{pro ? "Every shape, pattern and generator, with clean exports." : "Unlock every shape and generator, and export without the HingeLab mark."}</p>
+          <ul className="perks">
+            {PRO_PERKS.map((t) => <li key={t} className={pro ? "on" : ""}><Check size={14} aria-hidden />{t}</li>)}
+          </ul>
+          {!pro && <button type="button" className="btn primary" onClick={onUpgrade}><Crown size={15} aria-hidden />Upgrade to Pro</button>}
         </section>
       </div>
     </div>
   );
 }
 
-function RecentList({ items, catalog, onOpen, onRemove }: { items: SavedDesign[]; catalog: DCatalog | null; onOpen: (d: SavedDesign) => void; onRemove?: (d: SavedDesign) => void }) {
+function RecentGrid({ items, catalog, onOpen, onRemove }: { items: SavedDesign[]; catalog: DCatalog | null; onOpen: (d: SavedDesign) => void; onRemove?: (d: SavedDesign) => void }) {
   return (
-    <ul className="list">
+    <ul className="rgrid">
       {items.map((d) => {
         const p = catalog?.products.find((x) => x.id === d.product);
+        const src = d.thumb ?? (p && productArt(p));
         return (
-          <li key={d.id}>
-            <button type="button" className="list-item" onClick={() => onOpen(d)}>
-              {p && <span className="li-icon"><ProductIcon product={p} size={16} /></span>}
-              <span className="li-text"><b>{d.name}</b><small>{d.summary || p?.name}</small></span>
-              <span className="li-meta">{ago(d.at)}</span>
+          <li key={d.id} className="rcard">
+            <button type="button" className="rcard-open" onClick={() => onOpen(d)}>
+              <span className={`rcard-media${d.thumb ? " drawn" : ""}`}>{src ? <img src={src} alt="" loading="lazy" /> : p && <ProductIcon product={p} size={28} />}</span>
+              <span className="rcard-text">
+                <b>{d.name}</b>
+                <small>{p?.name ?? d.summary}</small>
+                <small className="rcard-meta"><Clock3 size={11} aria-hidden />{ago(d.at)}</small>
+              </span>
             </button>
-            {onRemove && <button type="button" className="icon-btn" title="Remove from this list" onClick={() => onRemove(d)}><Trash2 size={14} aria-hidden /></button>}
+            {onRemove && <button type="button" className="icon-btn rcard-del" title="Remove from this list" aria-label={`Remove ${d.name} from this list`} onClick={() => onRemove(d)}><Trash2 size={14} aria-hidden /></button>}
           </li>
         );
       })}
@@ -113,9 +196,11 @@ export function Generators({ catalog, plan, initial, favorites, onPreset, onNew,
       <div className="presets" role="list">
         {product.presets.map((pr) => {
           const fav = favorites.some((f) => f.product === product.id && f.preset === pr.id);
+          const src = presetArt(product.id, pr.id);
           return (
             <div key={pr.id} className="preset" role="listitem">
               <button type="button" className="preset-open" onClick={() => onPreset(product.id, pr.id)}>
+                {src && <span className="preset-media"><img src={src} alt="" loading="lazy" /></span>}
                 <b>{pr.name}{pr.pro && plan !== "pro" && <span className="badge"><Lock size={10} aria-hidden />Pro</span>}</b>
                 <small>{pr.note}</small>
               </button>
@@ -142,7 +227,7 @@ export function Recent({ recent, catalog, onOpen, onRemove, onClear }: { recent:
         </div>
         {recent.length > 0 && <button type="button" className="btn" onClick={onClear}>Clear list</button>}
       </header>
-      {recent.length ? <RecentList items={recent} catalog={catalog} onOpen={onOpen} onRemove={onRemove} /> : <p className="empty">Nothing here yet. Open a generator and your designs will be listed here.</p>}
+      {recent.length ? <RecentGrid items={recent} catalog={catalog} onOpen={onOpen} onRemove={onRemove} /> : <p className="empty">Nothing here yet. Open a generator and your designs will be listed here.</p>}
     </div>
   );
 }
@@ -158,10 +243,11 @@ export function Favorites({ favorites, catalog, onOpen, onRemove }: { favorites:
         <ul className="list">
           {favorites.map((f) => {
             const p = catalog?.products.find((x) => x.id === f.product);
+            const src = (f.preset && presetArt(f.product, f.preset)) || (p && productArt(p));
             return (
               <li key={f.id}>
                 <button type="button" className="list-item" onClick={() => onOpen(f)}>
-                  {p && <span className="li-icon"><ProductIcon product={p} size={16} /></span>}
+                  {src ? <span className="li-thumb"><img src={src} alt="" loading="lazy" /></span> : p && <span className="li-icon"><ProductIcon product={p} size={16} /></span>}
                   <span className="li-text"><b>{f.name}</b><small>{f.note || p?.name}</small></span>
                   <span className="li-meta">{f.preset ? "Preset" : "Design"}</span>
                 </button>

@@ -307,6 +307,30 @@ try {
     await shot("generators");
   });
 
+  await step("the dashboard shows pictures and a preview of recent designs", async () => {
+    await nav("Dashboard");
+    await page.locator(".rcard-media.drawn img").first().waitFor();
+    await page.waitForFunction(() => [...document.querySelectorAll(".tile-media img, .idea-media img, .hero-card img")].every((i) => i.complete), null, { timeout: 5000 }).catch(() => {});
+    const pics = await page.evaluate(() => [...document.querySelectorAll(".tile-media img, .idea-media img, .hero-card img")].map((i) => i.complete && i.naturalWidth > 0));
+    assert(pics.length >= 10 && pics.every(Boolean), `pictures not loaded: ${JSON.stringify(pics)}`);
+    const thumb = await page.locator(".rcard-media.drawn img").first().getAttribute("src");
+    assert(thumb?.startsWith("data:image/webp"), "recent design has no preview");
+    await page.locator("#dash-recent").scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    await shot("dashboard-recent");
+    await nav("Settings");
+    await page.getByRole("radio", { name: "Dark" }).click();
+    await nav("Dashboard");
+    await page.locator(".main").evaluate((el) => el.scrollTo(0, 0));
+    await page.waitForTimeout(300);
+    await shot("dashboard-dark");
+    await nav("Generators");
+    await page.waitForTimeout(300);
+    await shot("generators-dark");
+    await nav("Settings");
+    await page.getByRole("radio", { name: "Use Windows setting" }).click();
+  });
+
   await step("sign out revokes the session and clears the credential", async () => {
     await nav("Settings");
     await page.getByRole("button", { name: "Sign out" }).last().click();

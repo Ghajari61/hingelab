@@ -6,7 +6,8 @@ import { Workspace } from "./components/Workspace";
 import type { CanvasHandle } from "./components/Canvas";
 import { useDesign, type Params } from "./design";
 import { ipc, type AppError, type DCatalog, type DesktopAccount, type Prefs, type WebPage } from "./ipc";
-import { addRecent, cacheAccount, cacheCatalog, cachedAccount, cachedCatalog, lastParams, rememberParams, useFavorites, usePrefs, useRecent, type Favorite, type SavedDesign } from "./local";
+import { designThumb } from "./thumb";
+import { addRecent, setRecentThumb, cacheAccount, cacheCatalog, cachedAccount, cachedCatalog, lastParams, rememberParams, useFavorites, usePrefs, useRecent, type Favorite, type SavedDesign } from "./local";
 import { useAutoCheck, useUpdater } from "./updater";
 
 type Phase = "boot" | "signedOut" | "ready" | "updateRequired";
@@ -174,7 +175,17 @@ export function App() {
   useEffect(() => {
     if (!r || (design.state.status !== 200 && design.state.status !== 403)) return;
     rememberParams(r.product, r.params);
-    setRecent((list) => addRecent(list, { product: r.product, name: String(r.params.name ?? "Untitled"), params: r.params, summary: r.summary }));
+    const name = String(r.params.name ?? "Untitled");
+    setRecent((list) => addRecent(list, { product: r.product, name, params: r.params, summary: r.summary }));
+    if (!r.svg) return;
+    const svg = r.svg;
+    let live = true;
+    const t = window.setTimeout(() => {
+      void designThumb(svg).then((thumb) => {
+        if (live && thumb) setRecent((list) => setRecentThumb(list, r.product, name, thumb));
+      });
+    }, 700);
+    return () => { live = false; window.clearTimeout(t); };
   }, [r, design.state.status, setRecent]);
 
   const currentFavorite = r ? favorites.find((f) => !f.preset && f.product === r.product && f.name === String(r.params.name)) : undefined;
@@ -269,7 +280,7 @@ export function App() {
       <Sidebar route={route} onRoute={setRoute} account={account} hasDesign={!!design.state.product} update={updater.status} onUpdate={() => setShowUpdate(true)} />
       <div className="main">
         {!online && route !== "workspace" && <div className="offline-bar" role="status">You're offline. Designs are built on HingeLab's servers, so new changes wait until you're back online.</div>}
-        {route === "dashboard" && <Dashboard account={account} catalog={catalog} recent={recent} onNew={openNew} onOpenRecent={openSaved} onUpgrade={() => web("upgrade")} />}
+        {route === "dashboard" && <Dashboard account={account} catalog={catalog} recent={recent} defaultProduct={local.defaultProduct} onNew={openNew} onPreset={openPreset} onBrowse={() => setRoute("generators")} onOpenRecent={openSaved} onUpgrade={() => web("upgrade")} />}
         {route === "generators" && <Generators catalog={catalog} plan={plan} initial={design.state.product ?? local.defaultProduct} favorites={favorites} onPreset={openPreset} onNew={openNew} onFavorite={(p, pr) => {
           const hit = favorites.find((f) => f.product === p.id && f.preset === pr.id);
           setFavorites((l) => (hit ? l.filter((f) => f.id !== hit.id) : [{ id: crypto.randomUUID(), product: p.id, preset: pr.id, name: pr.name, note: pr.note, at: Date.now() }, ...l]));

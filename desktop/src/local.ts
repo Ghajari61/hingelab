@@ -1,6 +1,6 @@
 /**
  * Preferences and lists kept on this computer (localStorage). Only harmless data: settings,
- * design parameters and the last catalog. No tokens, no plan decisions, no SVG.
+ * design parameters, small preview pictures and the last catalog. No tokens, no plan decisions, no SVG.
  */
 import { useCallback, useEffect, useState } from "react";
 import type { DCatalog, DesktopAccount } from "./ipc";
@@ -23,6 +23,8 @@ export interface SavedDesign {
   name: string;
   params: Record<string, unknown>;
   summary: string;
+  /** A small WebP data URL of the last preview. */
+  thumb?: string;
   at: number;
 }
 
@@ -92,7 +94,11 @@ export function addRecent(list: SavedDesign[], d: Omit<SavedDesign, "id" | "at">
   if (JSON.stringify(d.params).length > MAX_ITEM) return list;
   const same = (x: SavedDesign) => x.product === d.product && x.name === d.name;
   const prev = list.find(same);
-  return [{ ...d, id: prev?.id ?? crypto.randomUUID(), at: Date.now() }, ...list.filter((x) => !same(x))].slice(0, MAX_RECENT);
+  return [{ thumb: prev?.thumb, ...d, id: prev?.id ?? crypto.randomUUID(), at: Date.now() }, ...list.filter((x) => !same(x))].slice(0, MAX_RECENT);
+}
+
+export function setRecentThumb(list: SavedDesign[], product: string, name: string, thumb: string): SavedDesign[] {
+  return list.map((x) => (x.product === product && x.name === name ? { ...x, thumb } : x));
 }
 
 /** Last settings per product. */
