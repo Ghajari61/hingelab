@@ -25,7 +25,13 @@ const LAZY_BUDGETS = {
   "Clock generator": { key: /registry\.ts -> \.\/clock$/, kb: 15 },
   "Puzzle generator": { key: /registry\.ts -> \.\/puzzle$/, kb: 15 },
   "QR Code generator": { key: /registry\.ts -> \.\/qr$/, kb: 25 },
-  "Boxes generator": { key: /registry\.ts -> \.\/boxes$/, kb: 15 },
+  // Boxes version 2 (D109) added five designs and three lids: 10 → 25 KB.
+  "Boxes generator": { key: /registry\.ts -> \.\/boxes$/, kb: 30 },
+  "Cake Topper generator": { key: /registry\.ts -> \.\/topper$/, kb: 18 },
+  "Key Holder generator": { key: /registry\.ts -> \.\/keyrack$/, kb: 17 },
+  "Sign generator": { key: /registry\.ts -> \.\/sign$/, kb: 20 },
+  "Table Numbers generator": { key: /registry\.ts -> \.\/tablenum$/, kb: 19 },
+  "Trophy generator": { key: /registry\.ts -> \.\/trophy$/, kb: 18 },
 };
 
 const gz = new Map();

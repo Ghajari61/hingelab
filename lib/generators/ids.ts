@@ -20,7 +20,7 @@ export const GENERATOR_INFO: Record<GeneratorId, GeneratorInfo> = {
   boxes: { name: "Boxes", blurb: "Finger-jointed boxes, trays with dividers, desk signs, photo frames, phone stands, key holders and bird houses.", icon: "box", storageKey: "hingelab-gen-boxes-v1" },
   topper: { name: "Cake Topper", blurb: "Cake toppers and cupcake picks for birthdays, weddings, Nowruz, Eid and more: welded script, mirror layers and 39 motifs.", icon: "cake", storageKey: "hingelab-gen-topper-v1" },
   keyrack: { name: "Key Holder", blurb: "Wall key holders in 18 shapes with slot-in hooks, dowel pegs or cup hooks, names above each hook and an optional shelf.", icon: "key", storageKey: "hingelab-gen-keyrack-v1" },
-  sign: { name: "Sign", blurb: "Wall, door, shop and desk signs in wood, acrylic or both: engraved, layered letters, cut-out words, flush inlays, neon-look acrylic or paint stencils, with frames and stands.", icon: "sign", storageKey: "hingelab-gen-sign-v1" },
+  sign: { name: "Sign", blurb: "Wall, door, shop and desk signs in wood, acrylic or both: engraved, layered lettering, cut-out words, flush inlays, neon-look acrylic or paint stencils, with frames and stands.", icon: "sign", storageKey: "hingelab-gen-sign-v1" },
   tablenum: { name: "Table Numbers", blurb: "A whole set of table numbers in one file: stands in slotted bases, living-hinge tent cards or plaques, with labels, names and Persian digits.", icon: "hash", storageKey: "hingelab-gen-tablenum-v1" },
   trophy: { name: "Trophy", blurb: "Awards that stand up: a star, cup, shield, medal, flame, laurel or motif with a name plate, slotted into a stepped base in wood, acrylic or both.", icon: "trophy", storageKey: "hingelab-gen-trophy-v1" },
 };
