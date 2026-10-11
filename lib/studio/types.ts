@@ -350,6 +350,36 @@ export interface AssetRef {
 
 export interface Guide { axis: "x" | "y"; at: number }
 
+export type GridKind = "rectangular" | "axonometric" | "modular" | "polar";
+
+/**
+ * The document grid. `size` is the major spacing and `subdivisions` the minor lines per major one
+ * (rings for polar). Every other field is optional (older documents have none): a missing `kind` is
+ * the rectangular grid, which always starts at 0,0.
+ */
+export interface GridSpec {
+  size: number;
+  subdivisions: number;
+  show: boolean;
+  kind?: GridKind;
+  /** Axonometric, modular and polar grids start here (polar: the centre), mm. */
+  originX?: number;
+  originY?: number;
+  /** Axonometric: angles of the two slanted line families from the horizontal, degrees (30/30 = isometric). */
+  angleX?: number;
+  angleZ?: number;
+  /** Modular: module size and the gutter between modules, mm. */
+  moduleW?: number;
+  moduleH?: number;
+  gutterX?: number;
+  gutterY?: number;
+  /** Polar: spokes per full turn. */
+  divisions?: number;
+}
+
+/** How the sheet looks on screen only (material preview); never exported. */
+export type SheetBackground = "none" | "wood" | "acrylic" | "cardboard" | "mdf";
+
 export interface Document {
   id: string;
   name: string;
@@ -362,7 +392,9 @@ export interface Document {
   root: GroupNode;
   assets: AssetRef[];
   guides: Guide[];
-  grid: { size: number; subdivisions: number; show: boolean };
+  grid: GridSpec;
+  /** Screen-only material preview behind the sheets; none when absent. */
+  background?: SheetBackground;
   snapping: { grid: boolean; points: boolean; guides: boolean; smart: boolean };
   view: { zoom: number; x: number; y: number };
   /** Set when the project was created from a template or a generator (Reset ▸ Project to Template). */

@@ -117,7 +117,7 @@ export const COMMANDS: CommandDef[] = [
   c("file.saveComputer", "Save to Computer (.hingelab)", "File"),
   c("file.rename", "Rename…", "File", "F2"),
   c("file.revert", "Revert to Saved", "File"),
-  c("file.documentSetup", "Document Setup…", "File", "Ctrl+Alt+P"),
+  c("file.documentSetup", "Document Setup…", "File", "Ctrl+Alt+P", { inkscape: ["Ctrl+Shift+D", "Ctrl+Alt+P"] }, "Page size, units, background, guides and grids", "document properties page setup sheet size grid guides background units"),
   c("file.exit", "Exit to Start Screen", "File"),
   // Edit
   c("edit.undo", "Undo", "Edit", "Ctrl+Z"),
@@ -231,6 +231,7 @@ export const COMMANDS: CommandDef[] = [
   c("path.outset", "Outset", "Path", undefined, { inkscape: ["Ctrl+)"] }, "Grow closed shapes by the inset/outset step (Preferences)", "grow offset expand"),
   c("path.dynamicOffset", "Dynamic Offset", "Path", undefined, undefined, "Add a live Offset effect you can change later in the Live Effects panel", "dynamic offset live inset outset kerf"),
   c("path.removeDuplicates", "Remove Duplicate Nodes", "Path", undefined, undefined, "Merge nodes that sit on top of each other", "clean up points"),
+  c("path.traceBitmap", "Trace Bitmap…", "Path", undefined, { inkscape: ["Shift+Alt+B"] }, "Turn the selected image into vector paths: brightness, edges, colours, multiple scans or centre-lines", "image trace vectorize vectorise live trace bitmap raster to vector"),
   c("path.joinNearby", "Join Nearby Endpoints…", "Path", undefined, undefined, "Connect open ends that are closer than a tolerance — fixes imported drawings", "close gaps weld ends"),
   // Nodes (Direct Selection)
   c("node.insert", "Insert Nodes", "Path", undefined, { inkscape: ["Insert"] }, "Add a node in the middle of each selected segment", "add node anchor midpoint"),
@@ -295,6 +296,7 @@ export const COMMANDS: CommandDef[] = [
   c("window.panel.history", "History", "Window"),
   c("window.panel.document", "Document", "Window"),
   c("window.panel.liveEffects", "Live Effects", "Window", undefined, { inkscape: ["Ctrl+&"] }, "Non-destructive effects on the selected path: corners, offset, hatches, copies, mirror, living hinge", "path effects lpe editor"),
+  c("window.panel.inspector", "Structure Inspector", "Window", undefined, { inkscape: ["Ctrl+Shift+X"] }, "Read-only tree of the selected objects: type, id, layer, transform, effects", "xml editor inspector structure json debug tree"),
   c("window.workspace.essentials", "Essentials", "Window"),
   c("window.workspace.laser", "Laser Production", "Window"),
   c("window.workspace.typography", "Typography", "Window"),
@@ -352,7 +354,7 @@ export const MENUS: MenuDef[] = [
       "node.corner", "node.smooth", "node.symmetric", "node.auto", "-", "node.straighten", "node.curve", "-",
       "node.scaleUp", "node.scaleDown", "node.rotateCCW", "node.rotateCW",
     ] }, "-",
-    "path.removeDuplicates", "path.joinNearby", "path.cleanup", "-",
+    "path.removeDuplicates", "path.joinNearby", "path.cleanup", "-", "path.traceBitmap", "-",
     { label: "Live Effects", items: [...EFFECT_ORDER.map((k) => `path.effect.add.${k}`), "-", "path.effect.expand", "window.panel.liveEffects"] },
   ] },
   { id: "laser", label: "Laser", items: [{ label: "Assign to Layer", items: LAYER_KEYS.map((l) => l.id) }] },
@@ -363,7 +365,7 @@ export const MENUS: MenuDef[] = [
     { label: "Theme", items: ["view.theme.dark", "view.theme.darker", "view.theme.light", "view.theme.system"] },
   ] },
   { id: "window", label: "Window", items: [
-    "window.panel.properties", "window.panel.layers", "window.panel.cutLayers", "window.panel.align", "window.panel.history", "window.panel.document", "window.panel.liveEffects", "-",
+    "window.panel.properties", "window.panel.layers", "window.panel.cutLayers", "window.panel.align", "window.panel.history", "window.panel.document", "window.panel.liveEffects", "window.panel.inspector", "-",
     { label: "Workspace", items: ["window.workspace.essentials", "window.workspace.laser", "window.workspace.typography", "window.workspace.minimal", "-", "window.workspace.reset"] }, "-",
     "window.palette",
   ] },

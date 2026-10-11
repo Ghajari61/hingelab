@@ -2,11 +2,12 @@
  * Workspaces (spec §4.2): which panels the dock shows, in what order, which is open, and the dock and
  * toolbar layout. Built-ins can be changed by the user; "Reset workspace" restores the built-in layout.
  */
-export const PANEL_IDS = ["properties", "layers", "cutLayers", "align", "pathfinder", "history", "document", "liveEffects"] as const;
+export const PANEL_IDS = ["properties", "layers", "cutLayers", "align", "pathfinder", "history", "document", "liveEffects", "inspector"] as const;
 export type PanelId = (typeof PANEL_IDS)[number];
 
 export const PANEL_LABELS: Record<PanelId, string> = {
   properties: "Properties", layers: "Layers", cutLayers: "Cut Layers", align: "Align", pathfinder: "Pathfinder", history: "History", document: "Document", liveEffects: "Effects",
+  inspector: "Structure",
 };
 
 export interface Workspace {

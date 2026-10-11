@@ -23,6 +23,9 @@ export const SHEET_PRESETS: SheetPreset[] = [
   { id: "12x12", name: "12 × 12 in", w: 304.8, h: 304.8, group: "Common" },
   { id: "300x200", name: "300 × 200 mm", w: 300, h: 200, group: "Common" },
   { id: "600x400", name: "600 × 400 mm", w: 600, h: 400, group: "Common" },
+  { id: "400x400", name: "400 × 400 mm", w: 400, h: 400, group: "Common" },
+  { id: "900x600", name: "900 × 600 mm", w: 900, h: 600, group: "Common" },
+  { id: "1300x900", name: "1300 × 900 mm", w: 1300, h: 900, group: "Common" },
 ];
 
 export type LaserType = "co2" | "diode" | "fiber";

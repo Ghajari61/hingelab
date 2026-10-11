@@ -4,8 +4,9 @@
  * spacing between neighbours. Results carry the guide lines the canvas draws in magenta.
  */
 import { boxCenter, isEmptyBox, segments, transformSubpaths, nodePaths, type Box } from "./geom";
+import { gridKind, gridNode, modularEdges } from "./grids";
 import { walk, worldBox } from "./scene";
-import type { Document, Vec } from "./types";
+import type { Document, GridSpec, Vec } from "./types";
 
 export interface SnapLine { axis: "x" | "y"; at: number; from: number; to: number; kind: "edge" | "center" | "guide" | "grid" | "point" | "spacing" }
 
@@ -124,3 +125,47 @@ export function snapPoint(p: Vec, t: SnapTargets, tol: number, s: SnapSettings):
 }
 
 export const noTargets = (): SnapTargets => ({ xs: [], ys: [], points: [], boxes: [] });
+
+// ---------- other grid kinds (Document Setup ▸ Grid) ----------
+
+/**
+ * `snapMove` for any grid kind. Rectangular grids (and documents without a kind) go straight to
+ * `snapMove`. Otherwise objects, guides and smart guides snap first; when nothing caught the box, a
+ * modular grid snaps its edges to module edges per axis, and axonometric and polar grids move the
+ * nearest of its corners or centre onto a grid node.
+ */
+export function snapMoveGrid(box: Box, dx: number, dy: number, t: SnapTargets, tol: number, s: SnapSettings, g: GridSpec): SnapResult {
+  const kind = gridKind(g);
+  if (kind === "rectangular") return snapMove(box, dx, dy, t, tol, s);
+  const r = snapMove(box, dx, dy, t, tol, { ...s, grid: false });
+  if (!s.grid) return r;
+  const b = { minX: box.minX + r.dx, minY: box.minY + r.dy, maxX: box.maxX + r.dx, maxY: box.maxY + r.dy };
+  const c = boxCenter(b);
+  const freeX = r.dx === dx, freeY = r.dy === dy;
+  if (kind === "modular") {
+    let sx = 0, sy = 0;
+    if (freeX) for (const v of [b.minX, b.maxX]) { const e = modularEdges({ x: v, y: 0 }, g).x - v; if (Math.abs(e) <= tol && (!sx || Math.abs(e) < Math.abs(sx))) sx = e; }
+    if (freeY) for (const v of [b.minY, b.maxY]) { const e = modularEdges({ x: 0, y: v }, g).y - v; if (Math.abs(e) <= tol && (!sy || Math.abs(e) < Math.abs(sy))) sy = e; }
+    return { dx: r.dx + sx, dy: r.dy + sy, lines: r.lines };
+  }
+  if (!freeX || !freeY) return r;
+  let best: Vec | null = null, bd = tol;
+  for (const p of [{ x: b.minX, y: b.minY }, { x: b.maxX, y: b.minY }, { x: b.minX, y: b.maxY }, { x: b.maxX, y: b.maxY }, c]) {
+    const n = gridNode(p, g), d = Math.hypot(n.x - p.x, n.y - p.y);
+    if (d <= bd) { bd = d; best = { x: n.x - p.x, y: n.y - p.y }; }
+  }
+  return best ? { dx: r.dx + best.x, dy: r.dy + best.y, lines: r.lines } : r;
+}
+
+/** `snapPoint` for any grid kind: object points and lines first, then the nearest grid node within the tolerance. */
+export function snapPointGrid(p: Vec, t: SnapTargets, tol: number, s: SnapSettings, g: GridSpec): { p: Vec; lines: SnapLine[] } {
+  if (gridKind(g) === "rectangular") return snapPoint(p, t, tol, s);
+  const r = snapPoint(p, t, tol, { ...s, grid: false });
+  if (!s.grid || r.p.x !== p.x || r.p.y !== p.y) return r;
+  if (gridKind(g) === "modular") {
+    const e = modularEdges(p, g);
+    return { p: { x: Math.abs(e.x - p.x) <= tol ? e.x : p.x, y: Math.abs(e.y - p.y) <= tol ? e.y : p.y }, lines: r.lines };
+  }
+  const n = gridNode(p, g);
+  return Math.hypot(n.x - p.x, n.y - p.y) <= tol ? { p: n, lines: r.lines } : r;
+}

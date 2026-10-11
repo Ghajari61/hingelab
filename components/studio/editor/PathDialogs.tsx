@@ -57,7 +57,7 @@ export function Footer({ onCancel, onOk, okLabel = "OK", preview, setPreview }: 
 
 // ---------- Offset Path… ----------
 
-export function OffsetDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function OffsetDialog({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone?: (ids: string[]) => void }) {
   const api = useEditorApi();
   const units = useEditor((s) => s.doc.units);
   const [delta, setDelta] = useState(2);
@@ -69,7 +69,7 @@ export function OffsetDialog({ open, onClose }: { open: boolean; onClose: () => 
   useEffect(() => { if (open) lp.preview(show, run); }); // every render: values, preview toggle
   const ok = () => {
     const out = lp.apply(run);
-    if (out?.length) api.getState().select(out);
+    if (out?.length) { api.getState().select(out); onDone?.(out); }
     onClose();
   };
   return (

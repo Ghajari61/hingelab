@@ -29,16 +29,19 @@ import type { PanelId } from "@/lib/studio/workspace";
 import { RESET_FIELD_EVENT, RESET_SECTION_EVENT } from "@/components/ui";
 import type { CanvasApi } from "./Canvas";
 import type { EditorState } from "./store";
+import { runPreflight, type Notify } from "./preflightToast";
 
 export interface Handler { run: () => void; enabled?: boolean; reason?: string; checked?: boolean }
 
 export type EditorDialog = "documentSetup" | "move" | "shortcuts" | "preferences" | "palette" | "resetPrefs" | "offset" | "simplify" | "corners"
-  | "stepRepeat" | "transformEach" | "gridArray" | "circularArray" | "pathArray" | "strokeToPath" | "joinNearby" | "transform" | "arrange" | "tiledClones";
+  | "stepRepeat" | "transformEach" | "gridArray" | "circularArray" | "pathArray" | "strokeToPath" | "joinNearby" | "transform" | "arrange" | "tiledClones" | "traceBitmap";
 
 export interface CommandContext {
   api: StoreApi<EditorState>;
   canvas: () => CanvasApi | null;
   toast: (message: string, undo?: boolean) => void;
+  /** A toast with an optional action button (pre-flight's "Select them"). */
+  notify?: Notify;
   navigate: (href: string) => void;
   openFile: () => void;
   save: () => void;
@@ -90,6 +93,7 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   const sel = selected(s);
   const one = sel.length >= 1, two = sel.length >= 2, three = sel.length >= 3;
   const st = () => api.getState();
+  const preflight = (ids: string[], label: string, open = true) => runPreflight(api, ctx.notify ?? ((m) => ctx.toast(m)), ids, label, open);
   const editSel = (label: string, fn: (d: Document, ids: string[]) => void, o?: { mergeKey?: string }) => () => {
     const ids = selected(st());
     if (ids.length) st().edit(label, (d) => fn(d, ids), o);
@@ -400,20 +404,20 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
       let r: { ids: string[]; error?: string } = { ids: [] };
       st().edit(BOOLEAN_LABELS[op], (d) => { r = booleanOp(d, ids, op); });
       if (r.error) ctx.toast(r.error);
-      else st().select(r.ids);
+      else { st().select(r.ids); preflight(r.ids, BOOLEAN_LABELS[op]); }
     }, single ? anyOutline : twoOutlines, single ? "Select shapes to split" : "Select two or more closed shapes");
   }
-  const pfRun = (label: string, fn: (d: Document, ids: string[]) => { ids: string[]; error?: string }) => () => {
+  const pfRun = (label: string, fn: (d: Document, ids: string[]) => { ids: string[]; error?: string }, open = true) => () => {
     const ids = selected(st());
     let r: { ids: string[]; error?: string } = { ids: [] };
     st().edit(label, (d) => { r = fn(d, ids); });
     if (r.error) ctx.toast(r.error);
-    else st().select(r.ids);
+    else { st().select(r.ids); preflight(r.ids, label, open); }
   };
   set("path.fracture", pfRun("Fracture", (d, ids) => fractureNodes(d, ids)), anyOutline, "Select overlapping closed shapes");
   set("path.flatten", pfRun("Flatten", flattenNodes), twoOutlines, "Select two or more overlapping closed shapes");
-  set("path.cutPath", pfRun("Cut Path", cutPathNodes), twoOutlines, "Select paths and, on top, the path that cuts them");
-  set("path.splitPath", () => { let out: string[] = []; st().edit("Split Path", (d) => { out = splitPathNodes(d, selected(st())); }); st().select(out); }, anyOutline, "Select a path with several parts");
+  set("path.cutPath", pfRun("Cut Path", cutPathNodes, false), twoOutlines, "Select paths and, on top, the path that cuts them");
+  set("path.splitPath", () => { let out: string[] = []; st().edit("Split Path", (d) => { out = splitPathNodes(d, selected(st())); }); st().select(out); preflight(out, "Split Path"); }, anyOutline, "Select a path with several parts");
   set("path.strokeToPath", () => ctx.dialog("strokeToPath"), anyOutline, "Select a path, shape or text");
   set("path.dynamicOffset", () => {
     const ids = fxTargets(st());
@@ -427,7 +431,7 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
       const ids = selected(st());
       let out: string[] = [];
       st().edit(label, (d) => { out = insetOutsetNodes(d, ids, delta); });
-      if (out.length) st().select(out); else ctx.toast(delta < 0 ? "The shapes are too small to inset by that step" : "Select closed shapes");
+      if (out.length) { st().select(out); preflight(out, label); } else ctx.toast(delta < 0 ? "The shapes are too small to inset by that step" : "Select closed shapes");
     }, anyOutline, "Select closed shapes");
   }
   set("path.removeDuplicates", () => {
@@ -437,6 +441,8 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
     ctx.toast(n ? `Removed ${n} duplicate node${n === 1 ? "" : "s"}` : "No duplicate nodes found", n > 0);
   }, paths.length > 0, "Select a path");
   set("path.joinNearby", () => ctx.dialog("joinNearby"), paths.length > 0, "Select paths with open ends");
+  const oneImage = s.selection.length === 1 && findNode(s.doc.root, s.selection[0])?.type === "image";
+  set("path.traceBitmap", () => ctx.dialog("traceBitmap"), oneImage, "Select one image");
   // Nodes (Direct Selection)
   const refs = s.tool === "direct" ? s.anchors : [];
   const NEED_NODES = "Select nodes with Direct Selection";
@@ -526,7 +532,7 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   set("view.presentation", () => { st().setUi({ presentation: !st().ui.presentation }); requestAnimationFrame(() => ctx.canvas()?.fit("artboard")); }, true, undefined, s.ui.presentation);
   for (const t of ["dark", "darker", "light", "system"] as const) set(`view.theme.${t}`, () => ctx.setTheme(t), true, undefined, ctx.theme === t);
   // Window
-  const panels: [string, PanelId][] = [["properties", "properties"], ["layers", "layers"], ["cutLayers", "cutLayers"], ["align", "align"], ["pathfinder", "pathfinder"], ["history", "history"], ["document", "document"], ["liveEffects", "liveEffects"]];
+  const panels: [string, PanelId][] = [["properties", "properties"], ["layers", "layers"], ["cutLayers", "cutLayers"], ["align", "align"], ["pathfinder", "pathfinder"], ["history", "history"], ["document", "document"], ["liveEffects", "liveEffects"], ["inspector", "inspector"]];
   for (const [id, p] of panels) set(`window.panel.${id}`, () => ctx.showPanel(p));
   for (const w of ["essentials", "laser", "typography", "minimal"]) set(`window.workspace.${w}`, () => ctx.setWorkspace(w), true, undefined, ctx.workspace === w);
   set("window.workspace.reset", ctx.resetWorkspace);

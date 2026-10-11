@@ -12,7 +12,9 @@ import { DEFAULT_PREFS, SHORTCUT_SET_NAMES, type Accent, type Preferences, type 
 import { duplicateNodes, isEditable, topLevel, transformNodes } from "@/lib/studio/scene";
 import { translate } from "@/lib/studio/geom";
 import { UNIT_LIST } from "@/lib/studio/units";
-import type { Units } from "@/lib/studio/types";
+import type { GridKind, GridSpec, Units } from "@/lib/studio/types";
+import { applyDocumentSetup, BACKGROUNDS, pagePresets, presetFor, readSetup, type DocumentSetup } from "@/lib/studio/documentSetup";
+import { GRID_DEFAULTS, GRID_KINDS } from "@/lib/studio/grids";
 import { Dialog, NumberInput, SegmentedControl, Select, Tabs, formatShortcut } from "@/components/ui";
 import { downloadBytes } from "../projectActions";
 import { useEditor, useEditorApi } from "./store";
@@ -288,36 +290,122 @@ export function MoveDialog({ open, onClose }: { open: boolean; onClose: () => vo
 
 // ---------- Document Setup… ----------
 
+type SetupTab = "page" | "guides" | "grid";
+const SETUP_TABS: { id: SetupTab; label: string }[] = [{ id: "page", label: "Page" }, { id: "guides", label: "Guides" }, { id: "grid", label: "Grid" }];
+
 export function DocumentSetupDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const api = useEditorApi();
   const doc = useEditor((s) => s.doc);
-  const [units, setUnits] = useState<Units>(doc.units);
-  const [w, setW] = useState(doc.sheets[0].w);
-  const [h, setH] = useState(doc.sheets[0].h);
-  const [grid, setGrid] = useState(doc.grid.size);
-  useEffect(() => { if (open) { setUnits(doc.units); setW(doc.sheets[0].w); setH(doc.sheets[0].h); setGrid(doc.grid.size); } }, [open, doc]);
+  const guidesLocked = useEditor((s) => s.ui.guidesLocked);
+  const [tab, setTab] = useState<SetupTab>("page");
+  const [setup, setSetup] = useState<DocumentSetup>(() => readSetup(doc));
+  const [lockGuides, setLockGuides] = useState(guidesLocked);
+  const [newAxis, setNewAxis] = useState<"x" | "y">("x");
+  const [newAt, setNewAt] = useState(0);
+  useEffect(() => { if (open) { setSetup(readSetup(doc)); setLockGuides(guidesLocked); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const presets = useMemo(() => pagePresets(), []);
+  const units = setup.units;
+  const patch = (p: Partial<DocumentSetup>) => setSetup((s) => ({ ...s, ...p }));
+  const gridPatch = (p: Partial<GridSpec>) => setSetup((s) => ({ ...s, grid: { ...s.grid, ...p } }));
+  const preset = presetFor(setup.sheetW, setup.sheetH)?.id ?? "custom";
+  const kind = setup.grid.kind ?? "rectangular";
   const apply = () => {
-    api.getState().edit("Document Setup", (d) => {
-      d.units = units; d.grid.size = grid;
-      const s = d.sheets[0];
-      if (Math.abs(s.w - w) > 1e-9 || Math.abs(s.h - h) > 1e-9) { s.w = w; s.h = h; s.name = "Custom size"; }
-    });
+    api.getState().edit("Document Setup", (d) => { applyDocumentSetup(d, setup); });
+    if (lockGuides !== guidesLocked) api.getState().setUi({ guidesLocked: lockGuides });
     onClose();
   };
+  const guideRows = setup.guides.map((g, k) => ({ ...g, k })).sort((a, b) => (a.axis === b.axis ? a.at - b.at : a.axis === "x" ? -1 : 1));
   return (
-    <Dialog open={open} title="Document Setup" onClose={onClose} testId="document-setup"
-      footer={<><span style={{ flex: 1 }} /><button type="button" className="ui-btn" onClick={onClose}>Cancel</button><button type="button" className="ui-btn primary" onClick={apply}>OK</button></>}>
-      <div style={{ display: "grid", gap: 12 }}>
-        <SegmentedControl label="Units" value={units} onChange={(u) => setUnits(u as Units)} options={UNIT_LIST.map((u) => ({ value: u, label: u }))} />
-        <div className="form-grid">
-          <NumberInput label="Sheet width" value={w} length units={units} min={10} max={3000} onChange={(v) => setW(v)} />
-          <NumberInput label="Sheet height" value={h} length units={units} min={10} max={3000} onChange={(v) => setH(v)} />
-          <NumberInput label="Grid size" value={grid} length units={units} min={0.5} max={500} defaultValue={10} onChange={(v) => setGrid(v)} />
-        </div>
+    <Dialog open={open} title="Document Setup" onClose={onClose} size="wide" testId="document-setup"
+      footer={<><span style={{ flex: 1 }} /><button type="button" className="ui-btn" onClick={onClose}>Cancel</button><button type="button" className="ui-btn primary" onClick={apply} data-testid="dlg-ok">OK</button></>}>
+      <Tabs label="Document Setup sections" tabs={SETUP_TABS} value={tab} onChange={setTab} />
+      <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+        {tab === "page" && <>
+          <div className="form-grid">
+            <div className="full">
+              <Select label="Sheet size" value={preset} testId="setup-preset"
+                options={[{ value: "custom", label: "Custom size" }, ...presets.map((p) => ({ value: p.id, label: `${p.name} (${p.w} × ${p.h} mm)`, group: p.group }))]}
+                onChange={(id) => { const p = presets.find((x) => x.id === id); if (p) patch({ sheetW: p.w, sheetH: p.h }); }} />
+            </div>
+            <NumberInput label="Sheet width" value={setup.sheetW} length units={units} min={10} max={3000} onChange={(v) => patch({ sheetW: v })} testId="setup-w" />
+            <NumberInput label="Sheet height" value={setup.sheetH} length units={units} min={10} max={3000} onChange={(v) => patch({ sheetH: v })} testId="setup-h" />
+            <div className="full">
+              <SegmentedControl label="Display units" value={units} onChange={(u) => patch({ units: u as Units })} options={UNIT_LIST.map((u) => ({ value: u, label: u }))} />
+            </div>
+            <p className="dlg-note full">Document units are always millimetres: shapes, files and exports keep their real size. Display units only change how lengths are shown and typed.</p>
+            <div className="full">
+              <SegmentedControl label="Sheet background (screen only)" value={setup.background} onChange={(v) => patch({ background: v })} options={BACKGROUNDS} full />
+            </div>
+            <div className="full setup-swatches" aria-hidden>
+              {BACKGROUNDS.map((b) => <span key={b.value} className={`st-material ${b.value}`} title={b.label} />)}
+            </div>
+            <p className="dlg-note full">A preview of the material behind your design. It is never cut, engraved or exported.</p>
+          </div>
+        </>}
+        {tab === "guides" && <>
+          <div className="setup-guides" data-testid="setup-guides">
+            {guideRows.length === 0 ? <p className="dlg-note">No guides yet. Drag one from a ruler or add one here.</p> : guideRows.map((g) => (
+              <div key={g.k} className="setup-guide-row">
+                <span className="ax">{g.axis === "x" ? "Vertical" : "Horizontal"}</span>
+                <NumberInput label={g.axis === "x" ? "X" : "Y"} value={g.at} length units={units} min={-10000} max={10000} hideLabel
+                  onChange={(v) => setSetup((s) => ({ ...s, guides: s.guides.map((x, i) => (i === g.k ? { ...x, at: v } : x)) }))} />
+                <button type="button" className="ui-btn" onClick={() => setSetup((s) => ({ ...s, guides: s.guides.filter((_, i) => i !== g.k) }))} aria-label={`Delete ${g.axis === "x" ? "vertical" : "horizontal"} guide`}>Delete</button>
+              </div>
+            ))}
+          </div>
+          <div className="form-grid" style={{ alignItems: "end" }}>
+            <SegmentedControl label="New guide" value={newAxis} onChange={setNewAxis} options={[{ value: "x", label: "Vertical" }, { value: "y", label: "Horizontal" }]} />
+            <NumberInput label={newAxis === "x" ? "At X" : "At Y"} value={newAt} length units={units} min={-10000} max={10000} onChange={(v) => setNewAt(v)} testId="setup-guide-at" />
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button type="button" className="ui-btn" onClick={() => patch({ guides: [...setup.guides, { axis: newAxis, at: newAt }] })} data-testid="setup-guide-add">Add guide</button>
+            <button type="button" className="ui-btn" disabled={!setup.guides.length} onClick={() => patch({ guides: [] })}>Clear all</button>
+            <span style={{ flex: 1 }} />
+            <label className="pn-check"><input type="checkbox" checked={lockGuides} onChange={(e) => setLockGuides(e.target.checked)} /> Lock guides</label>
+          </div>
+        </>}
+        {tab === "grid" && (
+          <div className="form-grid">
+            <label className="pn-check"><input type="checkbox" checked={setup.grid.show} onChange={(e) => gridPatch({ show: e.target.checked })} data-testid="setup-grid-show" /> Show grid</label>
+            <label className="pn-check"><input type="checkbox" checked={setup.snapGrid} onChange={(e) => patch({ snapGrid: e.target.checked })} data-testid="setup-grid-snap" /> Snap to grid</label>
+            <div className="full">
+              <Select label="Grid type" value={kind} options={GRID_KINDS} onChange={(k) => gridPatch({ kind: k })} testId="setup-grid-kind" />
+            </div>
+            {kind !== "modular" && <>
+              <NumberInput label={kind === "polar" ? "Ring spacing" : "Spacing"} value={setup.grid.size} length units={units} min={0.5} max={500} defaultValue={10} onChange={(v) => gridPatch({ size: v })} testId="setup-grid-size" />
+              <NumberInput label="Subdivisions" value={setup.grid.subdivisions} integer min={1} max={20} defaultValue={5} onChange={(v) => gridPatch({ subdivisions: v })} />
+            </>}
+            {kind === "axonometric" && <>
+              <NumberInput label="Angle X" value={setup.grid.angleX ?? GRID_DEFAULTS.angleX} min={5} max={85} suffix="°" onChange={(v) => gridPatch({ angleX: v })} />
+              <NumberInput label="Angle Z" value={setup.grid.angleZ ?? GRID_DEFAULTS.angleZ} min={5} max={85} suffix="°" onChange={(v) => gridPatch({ angleZ: v })} />
+            </>}
+            {kind === "modular" && <>
+              <NumberInput label="Module width" value={setup.grid.moduleW ?? GRID_DEFAULTS.moduleW} length units={units} min={1} max={2000} onChange={(v) => gridPatch({ moduleW: v })} />
+              <NumberInput label="Module height" value={setup.grid.moduleH ?? GRID_DEFAULTS.moduleH} length units={units} min={1} max={2000} onChange={(v) => gridPatch({ moduleH: v })} />
+              <NumberInput label="Gutter X" value={setup.grid.gutterX ?? GRID_DEFAULTS.gutterX} length units={units} min={0} max={500} onChange={(v) => gridPatch({ gutterX: v })} />
+              <NumberInput label="Gutter Y" value={setup.grid.gutterY ?? GRID_DEFAULTS.gutterY} length units={units} min={0} max={500} onChange={(v) => gridPatch({ gutterY: v })} />
+            </>}
+            {kind === "polar" && (
+              <NumberInput label="Spokes" value={setup.grid.divisions ?? GRID_DEFAULTS.divisions} integer min={2} max={360} onChange={(v) => gridPatch({ divisions: v })} />
+            )}
+            {kind !== "rectangular" && <>
+              <NumberInput label={kind === "polar" ? "Centre X" : "Origin X"} value={setup.grid.originX ?? 0} length units={units} min={-10000} max={10000} onChange={(v) => gridPatch({ originX: v })} />
+              <NumberInput label={kind === "polar" ? "Centre Y" : "Origin Y"} value={setup.grid.originY ?? 0} length units={units} min={-10000} max={10000} onChange={(v) => gridPatch({ originY: v })} />
+            </>}
+            <p className="dlg-note full">{GRID_NOTES[kind]}</p>
+          </div>
+        )}
       </div>
     </Dialog>
   );
 }
+
+const GRID_NOTES: Record<GridKind, string> = {
+  rectangular: "Squares from the page origin. Objects snap their edges to the lines.",
+  axonometric: "Two slanted line families (30° and 30° is isometric). Objects snap a corner or their centre to the nearest crossing.",
+  modular: "Modules separated by gutters, for layouts and nesting. Object edges snap to module edges.",
+  polar: "Rings round a centre with evenly spaced spokes. Objects snap a corner or their centre to the nearest crossing.",
+};
 
 // ---------- Reset ▸ All Preferences… ----------
 

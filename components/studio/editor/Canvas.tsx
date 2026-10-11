@@ -15,9 +15,10 @@ import {
   addNode, duplicateNodes, expandNodes, findNode, hitTest, idsInBox, isEditable, locate, selectionBox, toLocal, topLevel, transformNodes, walk,
   type IdFactory,
 } from "@/lib/studio/scene";
-import { noTargets, snapMove, snapPoint, snapTargets, type SnapLine, type SnapSettings, type SnapTargets } from "@/lib/studio/snap";
+import { noTargets, snapMoveGrid, snapPointGrid, snapTargets, type SnapLine, type SnapSettings, type SnapTargets } from "@/lib/studio/snap";
+import { gridDrawing, gridKind } from "@/lib/studio/grids";
 import { fmtLength, fromMM } from "@/lib/studio/units";
-import type { Anchor, Document, Mat, PathNode, SceneNode, ShapeKind, Subpath, TextNode, Vec } from "@/lib/studio/types";
+import type { Anchor, Document, GridSpec, Mat, PathNode, SceneNode, ShapeKind, Subpath, TextNode, Vec } from "@/lib/studio/types";
 import type { ToolId } from "@/lib/studio/commands";
 import { layerCode } from "@/lib/studio/cutLayers";
 import { builderFaces, buildShapes, curvaturePath, eraseAlong, eraseTouching, faceAt, knifeCut, lassoHits, scissorsAt, shearAt } from "@/lib/studio/toolOps";
@@ -26,6 +27,7 @@ import { useEditor, useEditorApi, type AnchorRef, type EraserMode } from "./stor
 import { TextEditor } from "./TextEditor";
 import { fillClick, measureToItem, startCalligraphy, startSpray, startTweak, type ToolPointer, type ToolSession } from "./tools/brushTools";
 import { MeasureOverlay } from "./tools/MeasureOverlay";
+import { useImageUrls } from "./assetUrls";
 
 export const PX_PER_MM = 96 / 25.4;
 const RULER = 20;
@@ -72,10 +74,19 @@ function localD(n: SceneNode): string {
   return d;
 }
 const matStr = (m: Mat) => `matrix(${m.join(" ")})`;
+/** feFunc discrete table: black below the threshold (a 0–1 fraction or a 0–255 level), white from it on. */
+const thresholdTable = (t: number, invert: boolean) => {
+  const k = Math.max(0, Math.min(64, Math.round((t <= 1 ? t : t / 255) * 64)));
+  return Array.from({ length: 64 }, (_, i) => ((i >= k) !== invert ? 1 : 0)).join(" ");
+};
 
-function snapSettings(doc: Document): SnapSettings {
-  return { ...doc.snapping, gridSize: doc.grid.size / Math.max(1, doc.grid.subdivisions) };
+type CanvasSnap = SnapSettings & { spec: GridSpec };
+
+function snapSettings(doc: Document): CanvasSnap {
+  return { ...doc.snapping, gridSize: doc.grid.size / Math.max(1, doc.grid.subdivisions), spec: doc.grid };
 }
+const snapMove = (box: Box, dx: number, dy: number, t: SnapTargets, tol: number, s: CanvasSnap) => snapMoveGrid(box, dx, dy, t, tol, s, s.spec);
+const snapPoint = (p: Vec, t: SnapTargets, tol: number, s: CanvasSnap) => snapPointGrid(p, t, tol, s, s.spec);
 
 /** Pen pressure 0–1; a mouse (or a device without pressure) counts as a steady half press. */
 const penPressure = (e: React.PointerEvent) => (e.pointerType === "mouse" || !e.pressure ? 0.5 : e.pressure);
@@ -135,6 +146,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
   const ui = useEditor((s) => s.ui);
   const textEditing = useEditor((s) => s.textEditing);
   const fxHandles = useEditor((s) => s.fxHandles);
+  const imageUrls = useImageUrls(doc);
   const stageRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 800, h: 600 });
   const drag = useRef<Drag | null>(null);
@@ -257,6 +269,8 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
     const typing = (t: EventTarget | null) => !!t && t instanceof HTMLElement && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
     const onDown = (e: KeyboardEvent) => {
       if (typing(e.target)) return;
+      // A modal dialog owns the keyboard: its Escape closes it rather than clearing the selection behind it.
+      if (e.target instanceof Element && e.target.closest(".ui-overlay")) return;
       const s = api.getState();
       const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
       if (e.key === " ") { if (!space.current) { space.current = true; setCursor("grab"); } stop(); return; }
@@ -1211,6 +1225,24 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       return <g key={n.id} transform={matStr(n.transform)} data-id={n.id}>{n.children.map(renderNode)}</g>;
     }
     if (n.type === "image") {
+      const url = outline ? undefined : imageUrls[n.assetId];
+      if (url) {
+        return (
+          <g key={n.id} transform={matStr(n.transform)} data-id={n.id} opacity={dim}>
+            <image href={url} x={-n.w / 2} y={-n.h / 2} width={n.w} height={n.h} preserveAspectRatio="none" filter={n.dither?.mode === "threshold" ? `url(#hl-dither-${n.id})` : undefined} data-testid="canvas-image" />
+            {n.dither?.mode === "threshold" && (
+              <filter id={`hl-dither-${n.id}`} colorInterpolationFilters="sRGB">
+                <feColorMatrix type="matrix" values={`0.299 0.587 0.114 0 0 0.299 0.587 0.114 0 0 0.299 0.587 0.114 0 0 0 0 0 1 0`} />
+                <feComponentTransfer>
+                  <feFuncR type="discrete" tableValues={thresholdTable(n.dither.threshold, n.dither.invert)} />
+                  <feFuncG type="discrete" tableValues={thresholdTable(n.dither.threshold, n.dither.invert)} />
+                  <feFuncB type="discrete" tableValues={thresholdTable(n.dither.threshold, n.dither.invert)} />
+                </feComponentTransfer>
+              </filter>
+            )}
+          </g>
+        );
+      }
       return <rect key={n.id} x={-n.w / 2} y={-n.h / 2} width={n.w} height={n.h} transform={matStr(n.transform)} fill="url(#hl-hatch)" stroke={outline ? "var(--text-secondary)" : layerColor(n)} vectorEffect="non-scaling-stroke" opacity={dim} />;
     }
     if (n.type === "dimension" && n.points.length >= 2) {
@@ -1238,6 +1270,13 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
   const vb = { minX: -view.x / zoom, minY: -view.y / zoom, maxX: (size.w - view.x) / zoom, maxY: (size.h - view.y) / zoom };
   const gridLines = useMemo(() => {
     if (!doc.grid.show) return null;
+    if (gridKind(doc.grid) !== "rectangular") {
+      const g = gridDrawing(doc.grid, vb, zoom);
+      return [
+        g.minor && <path key="minor" d={g.minor} stroke="var(--grid-minor)" strokeWidth={1} vectorEffect="non-scaling-stroke" fill="none" />,
+        g.major && <path key="major" d={g.major} stroke="var(--grid-major)" strokeWidth={1} vectorEffect="non-scaling-stroke" fill="none" />,
+      ];
+    }
     const out: ReactNode[] = [];
     const major = doc.grid.size, minor = major / Math.max(1, doc.grid.subdivisions);
     const steps: [number, string][] = [];
@@ -1304,11 +1343,16 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
           {doc.sheets.map((sh) => (
             <g key={sh.id}>
               <rect x={sh.x} y={sh.y} width={sh.w} height={sh.h} fill="var(--surface-sheet)" filter={ui.presentation ? undefined : "url(#hl-artboard-shadow)"} />
+              {doc.background && doc.background !== "none" && (
+                <foreignObject x={sh.x} y={sh.y} width={sh.w} height={sh.h} pointerEvents="none" data-testid="sheet-background">
+                  <div className={`st-material ${doc.background}`} />
+                </foreignObject>
+              )}
               <rect x={sh.x} y={sh.y} width={sh.w} height={sh.h} fill="none" stroke="var(--sheet-edge)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
               <text x={sh.x} y={sh.y - 6 / zoom} fontSize={11 / zoom} fill="var(--text-secondary)" className="st-sheet-label">{sh.name} · {fmtLength(sh.w, doc.units)} × {fmtLength(sh.h, doc.units, true)}</text>
             </g>
           ))}
-          {gridLines && <g clipPath={doc.sheets.length ? "url(#hl-sheets)" : undefined}>{gridLines}</g>}
+          {gridLines && <g clipPath={doc.sheets.length ? "url(#hl-sheets)" : undefined} data-testid="canvas-grid" data-kind={gridKind(doc.grid)}>{gridLines}</g>}
           <g data-testid="scene">{doc.root.children.map(renderNode)}</g>
           {fxGuides.length > 0 && !ui.presentation && (
             <g className="fx-guides" data-testid="effect-guides" pointerEvents="none">

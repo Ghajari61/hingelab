@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useStore } from "zustand";
-import { AlignCenterHorizontal, FileText, Flame, History, Layers, LayoutGrid, Search, SlidersHorizontal, Sparkles, SquaresUnite, Wand2 } from "lucide-react";
+import { AlignCenterHorizontal, Braces, FileText, Flame, History, Layers, LayoutGrid, Search, SlidersHorizontal, Sparkles, SquaresUnite, Wand2 } from "lucide-react";
 import { LogoMark } from "@/components/site/LogoMark";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { ContextMenu, Dock, MenuBar, PanelSection, Toolbar, isMac, useToast, type MenuItem } from "@/components/ui";
@@ -30,6 +31,8 @@ import { CommandPalette, DocumentSetupDialog, MoveDialog, PreferencesDialog, Res
 import { AlignPanel, CutLayersPanel, DocumentPanel, HistoryPanel, LayersPanel, PathfinderPanel, PropertiesPanel } from "./Panels";
 import { CornersDialog, JoinNearbyDialog, OffsetDialog, SimplifyDialog, StrokeToPathDialog } from "./PathDialogs";
 import { LiveEffectsPanel } from "./LiveEffectsPanel";
+import { InspectorPanel } from "./InspectorPanel";
+import { runPreflight } from "./preflightToast";
 import { CircularArrayDialog, GridArrayDialog, PathArrayDialog, StepRepeatDialog, TransformEachDialog } from "./ArrayDialogs";
 import { ArrangeDialog, TiledClonesDialog, TransformDialog } from "./ParityDialogs";
 import { createEditorStore, EditorContext, useEditor, useEditorApi, type EditorState } from "./store";
@@ -42,7 +45,10 @@ import { Dialog } from "@/components/ui";
 const PANEL_ICONS: Record<PanelId, ReactNode> = {
   properties: <SlidersHorizontal size={16} />, layers: <Layers size={16} />, cutLayers: <Flame size={16} />,
   align: <AlignCenterHorizontal size={16} />, pathfinder: <SquaresUnite size={16} />, history: <History size={16} />, document: <FileText size={16} />, liveEffects: <Sparkles size={16} />,
+  inspector: <Braces size={16} />,
 };
+
+const TraceDialog = dynamic(() => import("./TraceDialog").then((m) => m.TraceDialog), { ssr: false });
 
 type SaveState = "saved" | "saving" | "error";
 type DialogId = EditorDialog | "revert";
@@ -178,6 +184,7 @@ function EditorShell({ opened }: { opened: Document }) {
     api,
     canvas: () => canvasRef.current,
     toast,
+    notify: toastAction,
     navigate: (href) => router.push(href),
     openFile: () => fileRef.current?.click(),
     save: saveNow,
@@ -257,6 +264,7 @@ function EditorShell({ opened }: { opened: Document }) {
       case "history": return <HistoryPanel />;
       case "document": return <DocumentPanel toast={toast} />;
       case "liveEffects": return <LiveEffectsPanel toast={toast} />;
+      case "inspector": return <InspectorPanel toast={toast} />;
     }
   };
   const dockTabs = [
@@ -319,7 +327,7 @@ function EditorShell({ opened }: { opened: Document }) {
       <ShortcutsDialog open={dialog === "shortcuts"} onClose={() => setDialog(null)} set={prefs.shortcutSet} onSet={(shortcutSet) => setPrefs({ shortcutSet })} keymap={keymap} onKeymap={setKeymap} toast={toastAction} />
       <PreferencesDialog open={dialog === "preferences"} onClose={() => setDialog(null)} prefs={prefs} setPrefs={setPrefs} openShortcuts={() => setDialog("shortcuts")} toast={toastAction} />
       <MoveDialog open={dialog === "move"} onClose={() => setDialog(null)} />
-      <OffsetDialog open={dialog === "offset"} onClose={() => setDialog(null)} />
+      <OffsetDialog open={dialog === "offset"} onClose={() => setDialog(null)} onDone={(ids) => runPreflight(api, toastAction, ids, "Offset Path")} />
       <SimplifyDialog open={dialog === "simplify"} onClose={() => setDialog(null)} />
       <CornersDialog open={dialog === "corners"} onClose={() => setDialog(null)} />
       <StrokeToPathDialog open={dialog === "strokeToPath"} onClose={() => setDialog(null)} />
@@ -333,6 +341,7 @@ function EditorShell({ opened }: { opened: Document }) {
       <ArrangeDialog open={dialog === "arrange"} onClose={() => setDialog(null)} />
       <TiledClonesDialog open={dialog === "tiledClones"} onClose={() => setDialog(null)} />
       <DocumentSetupDialog open={dialog === "documentSetup"} onClose={() => setDialog(null)} />
+      {dialog === "traceBitmap" && <TraceDialog open onClose={() => setDialog(null)} onDone={(id, lines) => runPreflight(api, toastAction, [id], "Trace Bitmap", !lines)} />}
       <ResetPrefsDialog open={dialog === "resetPrefs"} onClose={() => setDialog(null)} onConfirm={() => {
         const prev = { prefs, keymap, ws };
         setPrefs({ ...DEFAULT_PREFS, onboarded: prefs.onboarded, tourDone: prefs.tourDone, dismissed: prefs.dismissed, recentGenerators: prefs.recentGenerators });
