@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { exportHingeForPlan } from "@/lib/billing/exportHinge";
 import { exportGeneratorForPlan } from "@/lib/billing/exportGenerator";
 import { DEFAULTS } from "@/lib/hinge";
-import { bearer, isLoopbackRedirect, isState, isVerifier, randomToken, sha256, verifyPkce } from "../pkce";
+import { NextURL } from "next/dist/server/web/next-url";
+import { bearer, isLoopbackRedirect, isState, isVerifier, loopbackRedirect, randomToken, sha256, verifyPkce } from "../pkce";
 import { desktopCatalog, fileNameOf, generateDesign } from "../products";
 import { isAllowedUpdateURL, isSignature, manifestError, minimumVersion, updateFor, type ReleaseManifest } from "../releases";
 import { effectivePlan } from "../session";
@@ -40,6 +41,20 @@ describe("desktop PKCE and tokens", () => {
       "http://127.0.0.1:49152/other", "http://127.0.0.1.evil.example:49152/callback", "http://evil.example/callback",
       "http://127.0.0.1:49152@evil.example/callback", "javascript:alert(1)", 42,
     ]) expect(isLoopbackRedirect(bad), String(bad)).toBe(false);
+  });
+
+  it("builds the loopback callback from the port the app sends", () => {
+    expect(loopbackRedirect("49152")).toBe("http://127.0.0.1:49152/callback");
+    for (const bad of ["80", "1023", "70000", "0049152", "49152/x", "-1", "", undefined, 49152]) expect(loopbackRedirect(bad), String(bad)).toBeNull();
+  });
+
+  it("the authorize link survives Next.js URL normalization", () => {
+    // NextURL turns the first 127.x.x.x in a URL into "localhost", query values included.
+    const link = "https://hingelab.vercel.app/desktop/authorize?port=49152&state=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256";
+    const seen = new NextURL(link);
+    expect(loopbackRedirect(seen.searchParams.get("port") ?? undefined)).toBe("http://127.0.0.1:49152/callback");
+    const old = new NextURL("https://hingelab.vercel.app/desktop/authorize?redirect_uri=http%3A%2F%2F127.0.0.1%3A49152%2Fcallback");
+    expect(isLoopbackRedirect(old.searchParams.get("redirect_uri"))).toBe(false);
   });
 
   it("makes 43-character tokens and hashes, and reads bearer headers strictly", () => {

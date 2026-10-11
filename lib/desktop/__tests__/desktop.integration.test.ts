@@ -17,7 +17,9 @@ import { createAuthCode } from "../session";
 const up = await localSupabaseUp();
 const BASE = "https://hingelab.test";
 const REDIRECT = "http://127.0.0.1:49200/callback";
-const CLIENT = { "x-hingelab-client": "desktop/1.0.0" };
+// A fresh address per run: the token rate limit is counted per IP in the shared local database.
+const ip = () => Math.floor(Math.random() * 254) + 1;
+const CLIENT = { "x-hingelab-client": "desktop/1.0.0", "x-forwarded-for": `10.${ip()}.${ip()}.${ip()}` };
 
 const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
   new Request(BASE + path, { method: "POST", headers: { "content-type": "application/json", ...CLIENT, ...headers }, body: JSON.stringify(body) });

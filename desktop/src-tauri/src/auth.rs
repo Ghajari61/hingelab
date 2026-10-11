@@ -48,9 +48,11 @@ pub async fn begin(api: &Api) -> CmdResult<Pending> {
     let verifier = random_b64(64);
     let state = random_b64(32);
     let mut authorize_url = api.url("/desktop/authorize");
+    // Only the port: Next.js rewrites a literal 127.0.0.1 inside request URLs to "localhost".
+    // The server rebuilds the same redirect_uri, and the token request sends it in the body.
     authorize_url
         .query_pairs_mut()
-        .append_pair("redirect_uri", &redirect_uri)
+        .append_pair("port", &port.to_string())
         .append_pair("state", &state)
         .append_pair("code_challenge", &challenge_of(&verifier))
         .append_pair("code_challenge_method", "S256");

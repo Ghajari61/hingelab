@@ -44,6 +44,17 @@ export function isLoopbackRedirect(uri: unknown): uri is string {
   return port >= 1024 && port <= 65535;
 }
 
+/**
+ * The app's loopback address from the `port` it sends. The app sends only the port because Next.js
+ * rewrites the first `127.x.x.x` anywhere in a request URL (query values included) to `localhost`
+ * before middleware and route handlers see it, which would break a full redirect_uri there.
+ */
+export function loopbackRedirect(port: unknown): string | null {
+  if (typeof port !== "string" || !/^\d{4,5}$/.test(port)) return null;
+  const uri = `http://127.0.0.1:${Number(port)}/callback`;
+  return isLoopbackRedirect(uri) ? uri : null;
+}
+
 /** Bearer token from an Authorization header, or null. */
 export function bearer(header: string | null): string | null {
   const m = /^Bearer ([A-Za-z0-9_-]{43})$/.exec(header ?? "");

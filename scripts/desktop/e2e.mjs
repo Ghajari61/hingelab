@@ -106,7 +106,7 @@ async function signIn(browser, email) {
   await page.getByRole("button", { name: "Sign in with your browser" }).click();
   for (let i = 0; i < 40 && !existsSync(authFile); i++) await sleep(250);
   const url = readFileSync(authFile, "utf8");
-  assert(url.startsWith(`${API}/desktop/authorize?`) && url.includes("code_challenge_method=S256"), `unexpected authorize URL ${url.slice(0, 60)}`);
+  assert(url.startsWith(`${API}/desktop/authorize?`) && url.includes("code_challenge_method=S256") && /[?&]port=\d+/.test(url) && !url.includes("redirect_uri"), `unexpected authorize URL ${url.slice(0, 60)}`);
   const ctx = await browser.newContext();
   const web = await ctx.newPage();
   await web.goto(url);

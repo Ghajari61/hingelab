@@ -30,8 +30,8 @@ Anything shipped in the installer can be read, patched or replayed. So the app c
 Follows RFC 8252 (native apps) and RFC 7636 (PKCE).
 
 1. The app makes a 64-byte `code_verifier`, its S256 `code_challenge` and a 32-byte `state`, and listens on `127.0.0.1:<random port>/callback`.
-2. It opens `https://hingelab.vercel.app/desktop/authorize?redirect_uri=…&state=…&code_challenge=…&code_challenge_method=S256` in the default browser. The password (or Google) is entered on the website, never in the app.
-3. If signed out, the website sends the user through `/login` (Google or email) and back. The consent page shows the account and asks **Allow** / **Cancel**. Only `http://127.0.0.1:<1024-65535>/callback` is accepted as `redirect_uri`.
+2. It opens `https://hingelab.vercel.app/desktop/authorize?port=…&state=…&code_challenge=…&code_challenge_method=S256` in the default browser. The password (or Google) is entered on the website, never in the app.
+3. If signed out, the website sends the user through `/login` (Google or email) and back. The consent page shows the account and asks **Allow** / **Cancel**. The server builds the redirect URI itself as `http://127.0.0.1:<port>/callback` (port 1024-65535); nothing else is accepted. The app sends only the port because Next.js rewrites the first `127.x.x.x` anywhere in a request URL to `localhost`, which mangled a full `redirect_uri` on its way through `/login` (a test in `desktop.test.ts` runs Next's own URL class on the link).
 4. Allow runs a server action that stores a one-time code (SHA-256 hashed, 120 s, single use, bound to the challenge and redirect URI) and sends the browser to the loopback address with `code` and `state`.
 5. The app checks `state`, then posts `code`, `code_verifier` and `redirect_uri` to `/api/desktop/token`. The server checks the verifier against the stored challenge (constant-time) and returns an access token (15 min) and a refresh token (30 days).
 6. Tokens are random 32-byte values (not JWTs), stored on the server only as SHA-256 hashes, and on the PC in **Windows Credential Manager** (`keyring`, entry `app.hingelab.desktop` / `session`). The web UI never sees them.
