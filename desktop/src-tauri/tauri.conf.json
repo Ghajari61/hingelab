@@ -1,0 +1,52 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "HingeLab",
+  "mainBinaryName": "HingeLab",
+  "version": "1.0.0",
+  "identifier": "app.hingelab.desktop",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5174",
+    "beforeDevCommand": "npm run desktop:ui:dev",
+    "beforeBuildCommand": "npm run desktop:ui:build"
+  },
+  "app": {
+    "windows": [],
+    "withGlobalTauri": false,
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'",
+      "freezePrototype": true,
+      "capabilities": ["main"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
+    "publisher": "HingeLab",
+    "copyright": "© 2026 HingeLab",
+    "category": "Graphics and Design",
+    "shortDescription": "Laser-cut design generators",
+    "longDescription": "HingeLab for Windows: living-hinge boxes, clocks, puzzles, QR codes and boxes, built on the HingeLab servers and saved as SVG for your laser cutter.",
+    "homepage": "https://hingelab.vercel.app",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["English"],
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico",
+        "startMenuFolder": "HingeLab"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY2NDg4NkIwREE3NjRGQUUKUldTdVQzYmFzSVpJWm1EWG12bTl2R1hFZzdtZUNNbWVEa3oyQXJDTHNMaHpPOXdwRVJBaHdZNVQK",
+      "endpoints": ["https://hingelab.vercel.app/api/desktop/update/{{target}}/{{arch}}/{{current_version}}"],
+      "requireSignedVersion": true,
+      "windows": { "installMode": "passive" }
+    }
+  }
+}

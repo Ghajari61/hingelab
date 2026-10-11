@@ -7,7 +7,7 @@
 export const PUBLIC_APP_PATHS = ["/app/editor/local", "/app/letters-debug", "/app/parametric-debug"];
 
 /** Studio pages that need an account (spec §2). /home, /templates, /help and local editors stay open. */
-export const STUDIO_ACCOUNT_PATHS = ["/projects", "/presets", "/account", "/billing"];
+export const STUDIO_ACCOUNT_PATHS = ["/projects", "/presets", "/account", "/billing", "/desktop"];
 
 /** Sign-in pages. A signed-in user who opens one goes straight to the app. */
 export const AUTH_PAGES = ["/login", "/signup"];

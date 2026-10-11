@@ -1,0 +1,27 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "The HingeLab window: its own commands, the signed updater and restart after an update. No file system, shell or HTTP access from JavaScript.",
+  "windows": ["main"],
+  "permissions": [
+    "core:app:allow-version",
+    "core:event:default",
+    "core:window:allow-set-title",
+    "updater:default",
+    "process:allow-restart",
+    "allow-app-info",
+    "allow-sign-in",
+    "allow-cancel-sign-in",
+    "allow-sign-out",
+    "allow-me",
+    "allow-catalog",
+    "allow-generate",
+    "allow-save-design",
+    "allow-export-design",
+    "allow-reveal-file",
+    "allow-open-web",
+    "allow-get-prefs",
+    "allow-choose-export-folder",
+    "allow-set-export-prefs"
+  ]
+}

@@ -15,3 +15,11 @@ public/manifold
 public/ort
 public/models/**/*.onnx
 storybook-static
+desktop/dist
+desktop/src-tauri/target
+desktop/src-tauri/gen
+*.key
+*.key.pub
+*.pfx
+*.p12
+*.password

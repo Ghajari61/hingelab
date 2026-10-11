@@ -1,0 +1,44 @@
+[package]
+name = "hingelab-desktop"
+version = "1.0.0"
+description = "HingeLab for Windows"
+authors = ["HingeLab"]
+edition = "2021"
+rust-version = "1.80"
+publish = false
+
+[lib]
+name = "hingelab_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-window-state = "2"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "http2"] }
+tokio = { version = "1", features = ["net", "io-util", "time", "sync", "macros", "rt-multi-thread"] }
+keyring = { version = "3", features = ["windows-native"] }
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.8"
+url = "2"
+
+[features]
+# Test builds only: write the sign-in URL to a file instead of opening the browser (never in release artifacts).
+e2e = []
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

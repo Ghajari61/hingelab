@@ -1,6 +1,6 @@
 # HingeLab Security Audit
 
-Audit date: 10 October 2026 · Commit audited and fixed: `0e97d97` · Decision record: DECISIONS.md D95
+Audit date: 10 October 2026 · Fixes: commit `0e97d97`, deployed to https://hingelab.vercel.app · Decision record: DECISIONS.md D95
 
 No full secret appears in this document. Key names are given; values are never printed.
 

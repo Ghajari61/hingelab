@@ -15,12 +15,20 @@
     "build:shape-icons": "vite-node -c vitest.config.ts scripts/shape-icons.ts",
     "perf:budgets": "node scripts/perf/budgets.mjs",
     "test": "vitest run",
+    "desktop:ui:dev": "vite --config desktop/vite.config.ts",
+    "desktop:ui:build": "vite build --config desktop/vite.config.ts",
+    "desktop:dev": "cd desktop && tauri dev",
+    "desktop:build": "node scripts/desktop/build.mjs",
+    "desktop:test": "cd desktop/src-tauri && cargo test",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build -o storybook-static"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.3",
+    "@tauri-apps/api": "^2.12.3",
+    "@tauri-apps/plugin-process": "^2.4.0",
+    "@tauri-apps/plugin-updater": "^2.13.3",
     "clipper-lib": "^6.4.2",
     "fflate": "^0.8.3",
     "harfbuzzjs": "^1.6.3",
@@ -42,6 +50,7 @@
   },
   "devDependencies": {
     "@storybook/react-vite": "^10.6.1",
+    "@tauri-apps/cli": "^2.12.2",
     "@types/clipper-lib": "^6.4.0",
     "@types/node": "^22.18.6",
     "@types/react": "^19.1.13",

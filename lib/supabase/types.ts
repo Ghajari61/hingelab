@@ -67,6 +67,34 @@ export type Database = {
         Args: { p_key: string; p_limit: number; p_window_seconds: number };
         Returns: { allowed: boolean; retry_after: number }[];
       };
+      desktop_code_create: {
+        Args: { p_user: string; p_code_hash: string; p_challenge: string; p_redirect: string; p_ttl_seconds: number };
+        Returns: undefined;
+      };
+      desktop_code_take: {
+        Args: { p_code_hash: string };
+        Returns: { user_id: string; code_challenge: string; redirect_uri: string; expired: boolean }[];
+      };
+      desktop_session_create: {
+        Args: { p_user: string; p_access_hash: string; p_access_ttl: number; p_refresh_hash: string; p_refresh_ttl: number; p_device: string };
+        Returns: string;
+      };
+      desktop_session_user: {
+        Args: { p_access_hash: string };
+        Returns: { session_id: string; user_id: string }[];
+      };
+      desktop_session_refresh: {
+        Args: { p_refresh_hash: string; p_access_hash: string; p_access_ttl: number; p_refresh_hash_new: string; p_refresh_ttl: number };
+        Returns: { session_id: string | null; user_id: string | null; outcome: "ok" | "expired" | "reused" | "unknown" }[];
+      };
+      desktop_session_revoke: {
+        Args: { p_hash: string };
+        Returns: boolean;
+      };
+      desktop_sessions_revoke_all: {
+        Args: { p_user: string };
+        Returns: number;
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };

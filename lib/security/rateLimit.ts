@@ -13,6 +13,10 @@ export const LIMITS = {
   exportHeavy: { name: "export-heavy", limit: 12, windowSec: 60 },
   checkout: { name: "checkout", limit: 10, windowSec: 600 },
   portal: { name: "portal", limit: 20, windowSec: 600 },
+  /** Desktop editor: every settings change is built on the server (the app debounces edits). */
+  desktopGenerate: { name: "desktop-generate", limit: 120, windowSec: 60 },
+  /** Desktop sign-in and token refresh, per IP address. */
+  desktopToken: { name: "desktop-token", limit: 30, windowSec: 600 },
 } satisfies Record<string, LimitRule>;
 
 const memory = memoryLimiter();

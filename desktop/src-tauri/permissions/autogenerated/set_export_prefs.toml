@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-export-prefs"
+description = "Enables the set_export_prefs command without any pre-configured scope."
+commands.allow = ["set_export_prefs"]
+
+[[permission]]
+identifier = "deny-set-export-prefs"
+description = "Denies the set_export_prefs command without any pre-configured scope."
+commands.deny = ["set_export_prefs"]

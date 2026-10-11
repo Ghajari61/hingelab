@@ -17,7 +17,7 @@ const HINGE_ENUMS: Partial<Record<keyof Params, readonly string[]>> = {
 };
 
 /** [min, max] per Hinge Box number; the minimums are the editor's, the maximums are generous. */
-const HINGE_RANGES: Partial<Record<keyof Params, [number, number]>> = {
+export const HINGE_RANGES: Partial<Record<keyof Params, [number, number]>> = {
   W: [10, 3000], D: [10, 3000], H: [10, 3000], R: [0, 1500], dia: [20, 3000],
   sides: [3, 12], cylFlats: [3, 16], T: [0.5, 50], K: [0, 5],
   slotW: [0, 50], slit: [3, 3000], bridge: [0.5, 500], pitch: [0.5, 500], overrun: [0, 500], stretch: [0, 8],

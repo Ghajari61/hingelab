@@ -55,6 +55,16 @@ Set these in Vercel → Project → Settings → Environment Variables (Producti
 8. `NEXT_PUBLIC_CONTACT_EMAIL` — the address shown on the Terms and Privacy pages.
 9. `NEXT_PUBLIC_DEPTH_MODEL_URL` — optional, see "Depth model in production".
 
+## Windows desktop app
+
+The app (`desktop/`, see `DESKTOP_ARCHITECTURE.md`) signs in and builds designs through the website, so it needs the hosted database and a deployed website.
+
+1. Database: `20261012000100_desktop_sessions.sql` must be applied (`npx supabase db push --linked`); without it sign-in from the app fails.
+2. Optional Vercel variable `DESKTOP_MIN_VERSION` (e.g. `1.2.0`): older apps must update before they can use the service. Leave unset normally; the minimum in `desktop/releases/stable.json` applies.
+3. Updater signing key: on the release PC in `%USERPROFILE%\.hingelab\updater\` (made 11 Oct 2026; never in Git). Back up `hingelab-updater.key` and `hingelab-updater.password` to a password manager now. For CI, store them as secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+4. Code signing (removes the SmartScreen warning): get Azure Trusted Signing or an OV/EV certificate and configure it as in `WINDOWS_RELEASE_CHECKLIST.md`.
+5. Releases: build with `npm run desktop:build`, upload the installer (GitHub Releases recommended), then `node scripts/desktop/release.mjs --url … --notes …`, commit and deploy. Full list: `WINDOWS_RELEASE_CHECKLIST.md`.
+
 ## Before launch
 
 1. Read `/terms` and `/privacy` (app/terms/page.tsx, app/privacy/page.tsx). They are plain-language drafts written for this app, not legal advice; have them checked for your country and add your business name if required.
