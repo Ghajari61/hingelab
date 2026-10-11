@@ -518,11 +518,11 @@ export function shapeForBox(kind: ShapeParams["kind"], w: number, h: number, pre
  * their children's paths. Everything that draws, hits, measures or exports geometry uses this.
  */
 export function nodePaths(n: SceneNode): Subpath[] {
-  if ((n.type === "path" || n.type === "shape" || n.type === "text") && n.effects?.some((e) => e.enabled)) return effectPaths(n);
+  if ((n.type === "path" || n.type === "shape" || n.type === "text" || n.type === "clone") && n.effects?.some((e) => e.enabled)) return effectPaths(n);
   return nodeBasePaths(n);
 }
 
-type EffectNode = Extract<SceneNode, { type: "path" | "shape" | "text" }>;
+type EffectNode = Extract<SceneNode, { type: "path" | "shape" | "text" | "clone" }>;
 /**
  * Effect output per node object. Immer gives a changed node a new object, so the node is the key; the
  * base geometry and the effects array are compared as well, for plain objects edited in place.
@@ -530,7 +530,7 @@ type EffectNode = Extract<SceneNode, { type: "path" | "shape" | "text" }>;
  */
 const fxCache = new WeakMap<object, { base: unknown; fx: unknown; out: Subpath[] }>();
 function effectPaths(n: EffectNode): Subpath[] {
-  const base = n.type === "path" ? n.subpaths : n.type === "shape" ? n.shape : n.outline;
+  const base = n.type === "path" ? n.subpaths : n.type === "shape" ? n.shape : n.type === "clone" ? n.cache : n.outline;
   const hit = fxCache.get(n);
   if (hit && hit.base === base && hit.fx === n.effects) return hit.out;
   const out = applyEffects(nodeBasePaths(n), n.effects ?? [], n);
@@ -548,6 +548,7 @@ export function nodeBasePaths(n: SceneNode): Subpath[] {
     case "group": return n.children.filter((c) => !c.hidden).flatMap((c) => transformSubpaths(nodePaths(c), c.transform));
     case "dimension": return n.points.length > 1 ? [{ closed: false, nodes: n.points.map((p) => ({ x: p.x, y: p.y })) }] : [];
     case "generator": return generatorPaths(n);
+    case "clone": return n.cache ?? [];
   }
 }
 

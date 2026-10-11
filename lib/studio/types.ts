@@ -192,7 +192,20 @@ export interface DimensionNode extends NodeBase {
   offset: number;
 }
 
-export type SceneNode = GroupNode | PathNode | ShapeNode | TextNode | ImageNode | GeneratorNode | DimensionNode;
+/**
+ * A live copy of another object (`source`, any node id). `cache` is the source's geometry after its
+ * Live Effects, in the source's parent space (the source's own transform applied), kept up to date by
+ * links.ts `syncLinks`; the clone's transform is applied on top, so an identity clone beside its
+ * source sits exactly on it.
+ */
+export interface CloneNode extends NodeBase {
+  type: "clone";
+  source: string;
+  cache?: Subpath[];
+  effects?: LiveEffect[];
+}
+
+export type SceneNode = GroupNode | PathNode | ShapeNode | TextNode | ImageNode | GeneratorNode | DimensionNode | CloneNode;
 
 export type CutMode = "cut" | "score" | "fill" | "image";
 

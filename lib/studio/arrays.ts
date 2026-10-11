@@ -5,7 +5,7 @@
  */
 import { newId } from "./doc";
 import { boxCenter, flatten, isEmptyBox, mul, nodePaths, rotateAt, scaleAt, transformSubpaths, translate } from "./geom";
-import { duplicateNodes, locate, selectionBox, topLevel, transformNodes, worldBox, type IdFactory } from "./scene";
+import { duplicateNodes, locate, selectionBox, topLevel, transformNodes, transformNodesEach, worldBox, type IdFactory } from "./scene";
 import type { Document, Mat, Vec } from "./types";
 
 export interface StepRepeat { copies: number; dx: number; dy: number; rotate: number; scale: number }
@@ -141,15 +141,16 @@ export function seeded(seed: number): () => number {
 /** Scales, moves and turns every object around its own centre. Random gives each a value between none and the full amount. */
 export function transformEach(d: Document, ids: string[], o: TransformEach): void {
   const rnd = seeded(o.seed);
+  const moves: [string, Mat][] = [];
   for (const nid of topLevel(d.root, ids)) {
     const b = worldBox(d.root, nid);
     if (isEmptyBox(b)) continue;
     const c = boxCenter(b);
     const f = o.random ? [rnd(), rnd(), rnd(), rnd()] : [1, 1, 1, 1];
     const sx = 1 + (o.scaleX - 1) * f[0], sy = 1 + (o.scaleY - 1) * f[0];
-    const m = mul(translate(o.dx * f[1], o.dy * f[2]), mul(rotateAt(o.rotate * f[3], c.x, c.y), scaleAt(sx || 1e-6, sy || 1e-6, c.x, c.y)));
-    transformNodes(d, [nid], m);
+    moves.push([nid, mul(translate(o.dx * f[1], o.dy * f[2]), mul(rotateAt(o.rotate * f[3], c.x, c.y), scaleAt(sx || 1e-6, sy || 1e-6, c.x, c.y)))]);
   }
+  transformNodesEach(d, moves);
 }
 
 /** Distribute Spacing: objects `gap` mm apart along an axis, starting from the first; equal gaps between the outer two when `gap` is null. */
@@ -165,9 +166,11 @@ export function distributeSpacing(d: Document, ids: string[], axis: "x" | "y", g
     g = (span - items.reduce((s, i) => s + (i.b[hi] - i.b[lo]), 0)) / (items.length - 1);
   }
   let at = items[0].b[hi] + g;
+  const moves: [string, Mat][] = [];
   for (const i of items.slice(1)) {
     const delta = at - i.b[lo];
-    if (Math.abs(delta) > 1e-12) transformNodes(d, [i.id], axis === "x" ? translate(delta, 0) : translate(0, delta));
+    if (Math.abs(delta) > 1e-12) moves.push([i.id, axis === "x" ? translate(delta, 0) : translate(0, delta)]);
     at += i.b[hi] - i.b[lo] + g;
   }
+  transformNodesEach(d, moves);
 }

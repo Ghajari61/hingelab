@@ -283,7 +283,7 @@ export function ControlBar({ onResetToast, handlers }: { onResetToast: (m: strin
 
 export function nodeLabel(type: string, kind?: string): string {
   if (type === "shape" && kind) return { rect: "Rectangle", ellipse: "Ellipse", polygon: "Polygon", star: "Star", arc: "Arc", slot: "Slot", gear: "Gear", arrow: "Arrow", bubble: "Speech Bubble", heart: "Heart", grid: "Grid", spiral: "Spiral" }[kind] ?? "Shape";
-  return { path: "Path", text: "Text", group: "Group", image: "Image", generator: "Generator", dimension: "Dimension", shape: "Shape" }[type] ?? type;
+  return { path: "Path", text: "Text", group: "Group", image: "Image", generator: "Generator", dimension: "Dimension", shape: "Shape", clone: "Clone" }[type] ?? type;
 }
 
 function ShapeFields({ shape, only, units, onResetToast, onChange, onCorner, onPie }: {

@@ -8,7 +8,7 @@ import { findNode } from "../scene";
 import type { Document, EffectKind, EffectParamsMap, LiveEffect, SceneNode } from "../types";
 import { canHaveEffects, createEffect, EFFECTS, effectInput } from "./index";
 
-type FxNode = Extract<SceneNode, { type: "path" | "shape" | "text" }>;
+type FxNode = Extract<SceneNode, { type: "path" | "shape" | "text" | "clone" }>;
 
 function fxNode(d: Document, id: string): FxNode | null {
   const n = findNode(d.root, id);

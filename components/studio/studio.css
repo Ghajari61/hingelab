@@ -104,6 +104,9 @@
 .dlg-gen .gen-art { width: 120px; height: 72px; flex: none; }
 .dlg-gen p { margin: 2px 0 0; color: var(--text-secondary); font-size: var(--text-small); }
 .dlg-note { color: var(--text-secondary); font-size: var(--text-small); margin: 0; }
+.tc-set { border: 1px solid var(--line); border-radius: var(--radius-3); padding: 6px 10px 10px; margin: 0; min-width: 0; }
+.tc-set legend { padding: 0 4px; }
+.tc-set .form-grid { gap: var(--space-3) var(--space-5); }
 .steps { display: flex; gap: 6px; }
 .steps span { height: 4px; flex: 1; border-radius: 2px; background: var(--line); }
 .steps span.on { background: var(--accent); }
@@ -293,6 +296,7 @@
 .pn-row .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pn-row .nm.dim { color: var(--text-disabled); }
 .pn-row .pn-fx { font: italic 600 10px/1 var(--font-num); color: var(--accent); padding: 2px 4px; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: var(--radius-1); }
+.pn-row .pn-clone { display: inline-flex; padding: 1px 3px; }
 .fx-add { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
 .fx-add button { display: grid; justify-items: center; gap: 3px; padding: 7px 2px 6px; background: var(--surface-field); border: 1px solid var(--line-soft); border-radius: var(--radius-2); color: var(--text-primary); font: inherit; font-size: var(--text-small); cursor: pointer; }
 .fx-add button:hover { border-color: var(--accent); }

@@ -121,7 +121,7 @@ export function effectInput(n: SceneNode, index: number): Subpath[] {
 }
 
 export const hasEffects = (n: SceneNode): boolean =>
-  (n.type === "path" || n.type === "shape" || n.type === "text") && !!n.effects?.length;
+  (n.type === "path" || n.type === "shape" || n.type === "text" || n.type === "clone") && !!n.effects?.length;
 
-export const canHaveEffects = (n: SceneNode): n is Extract<SceneNode, { type: "path" | "shape" | "text" }> =>
-  n.type === "path" || n.type === "shape" || n.type === "text";
+export const canHaveEffects = (n: SceneNode): n is Extract<SceneNode, { type: "path" | "shape" | "text" | "clone" }> =>
+  n.type === "path" || n.type === "shape" || n.type === "text" || n.type === "clone";

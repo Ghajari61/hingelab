@@ -31,6 +31,7 @@ import { AlignPanel, CutLayersPanel, DocumentPanel, HistoryPanel, LayersPanel, P
 import { CornersDialog, JoinNearbyDialog, OffsetDialog, SimplifyDialog, StrokeToPathDialog } from "./PathDialogs";
 import { LiveEffectsPanel } from "./LiveEffectsPanel";
 import { CircularArrayDialog, GridArrayDialog, PathArrayDialog, StepRepeatDialog, TransformEachDialog } from "./ArrayDialogs";
+import { ArrangeDialog, TiledClonesDialog, TransformDialog } from "./ParityDialogs";
 import { createEditorStore, EditorContext, useEditor, useEditorApi, type EditorState } from "./store";
 import { toolSlots } from "./tools";
 import { ToolFooter } from "./ToolFooter";
@@ -328,6 +329,9 @@ function EditorShell({ opened }: { opened: Document }) {
       <GridArrayDialog open={dialog === "gridArray"} onClose={() => setDialog(null)} />
       <CircularArrayDialog open={dialog === "circularArray"} onClose={() => setDialog(null)} />
       <PathArrayDialog open={dialog === "pathArray"} onClose={() => setDialog(null)} />
+      <TransformDialog open={dialog === "transform"} onClose={() => setDialog(null)} />
+      <ArrangeDialog open={dialog === "arrange"} onClose={() => setDialog(null)} />
+      <TiledClonesDialog open={dialog === "tiledClones"} onClose={() => setDialog(null)} />
       <DocumentSetupDialog open={dialog === "documentSetup"} onClose={() => setDialog(null)} />
       <ResetPrefsDialog open={dialog === "resetPrefs"} onClose={() => setDialog(null)} onConfirm={() => {
         const prev = { prefs, keymap, ws };

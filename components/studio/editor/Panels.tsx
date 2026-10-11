@@ -7,6 +7,7 @@ import {
   RotateCcw, RotateCw, Unlink2,
 } from "lucide-react";
 import { MACHINE_PROFILES, MATERIAL_PRESETS } from "@/lib/studio/library";
+import type { AlignTo } from "@/lib/studio/alignOps";
 import { COMMAND_BY_ID } from "@/lib/studio/commands";
 import { hasEffects } from "@/lib/studio/effects";
 import { EFFECT_META } from "@/lib/studio/effects/meta";
@@ -172,11 +173,11 @@ function QuickActions({ handlers, ids }: { handlers: Record<string, Handler>; id
 const REF_POINTS: [number, number][] = [[0, 0], [0.5, 0], [1, 0], [0, 0.5], [0.5, 0.5], [1, 0.5], [0, 1], [0.5, 1], [1, 1]];
 const REF_NAMES = ["top left", "top", "top right", "left", "centre", "right", "bottom left", "bottom", "bottom right"];
 
-function RefPointGrid({ value, onChange }: { value: [number, number]; onChange: (v: [number, number]) => void }) {
+export function RefPointGrid({ value, onChange, label = "Reference point", testId = "ref-point" }: { value: [number, number]; onChange: (v: [number, number]) => void; label?: string; testId?: string }) {
   return (
-    <div className="pn-ref" role="radiogroup" aria-label="Reference point" data-testid="ref-point">
+    <div className="pn-ref" role="radiogroup" aria-label={label} data-testid={testId}>
       {REF_POINTS.map((p, k) => (
-        <button key={k} type="button" role="radio" aria-checked={p[0] === value[0] && p[1] === value[1]} aria-label={`Reference point ${REF_NAMES[k]}`} onClick={() => onChange(p)} />
+        <button key={k} type="button" role="radio" aria-checked={p[0] === value[0] && p[1] === value[1]} aria-label={`${label} ${REF_NAMES[k]}`} onClick={() => onChange(p)} />
       ))}
     </div>
   );
@@ -276,6 +277,11 @@ export function LayersPanel() {
             onBlur={(e) => { const v = e.target.value.trim(); setRenaming(null); if (v !== (n.name ?? "")) api.getState().edit("Rename", (d) => { const m = findNode(d.root, n.id); if (m) { if (v) m.name = v; else delete m.name; } }); }}
             onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") setRenaming(null); }} />
         ) : <span className={`nm${n.hidden ? " dim" : ""}`}>{label}</span>}
+        {n.type === "clone" && (() => {
+          const src = findNode(doc.root, n.source);
+          const name = src ? src.name ?? nodeLabel(src.type, src.type === "shape" ? src.shape.kind : undefined) : "a deleted object";
+          return <span className="pn-fx pn-clone" title={`Clone of ${name}`} aria-label={`Clone of ${name}`} data-testid="layers-clone"><Link2 size={11} strokeWidth={1.5} /></span>;
+        })()}
         {hasEffects(n) && <span className="pn-fx" title={`Live Effects: ${(n as { effects: { kind: keyof typeof EFFECT_META }[] }).effects.map((e) => EFFECT_META[e.kind]?.label ?? e.kind).join(", ")}`} data-testid="layers-fx">fx</span>}
       </div>,
     );
@@ -356,11 +362,21 @@ export function CutLayersPanel({ toast }: { toast: Toast }) {
 
 // ---------- Align ----------
 
+const ALIGN_TO_NOTE: Record<AlignTo, string> = {
+  selection: "One object aligns to the sheet; several align to their combined bounds.",
+  key: "The last object you clicked stays put; the others line up with it.",
+  first: "The first object you selected stays put; the others line up with it.",
+  biggest: "The biggest object stays put; the others line up with it.",
+  smallest: "The smallest object stays put; the others line up with it.",
+  artboard: "Objects line up with the sheet edges and centre.",
+};
+
 export function AlignPanel({ handlers }: { handlers: Record<string, Handler> }) {
   const api = useEditorApi();
   const alignTo = useEditor((s) => s.alignTo);
   const gap = useEditor((s) => s.alignGap);
   const units = useEditor((s) => s.doc.units);
+  const nodeMode = useEditor((s) => s.tool === "direct" && s.anchors.length >= 2);
   const btn = (id: string, label: string, icon: ReactElement) => {
     const h = handlers[id];
     return <IconButton key={id} label={label} description={h?.enabled === false ? h.reason : undefined} icon={icon} disabled={!h || h.enabled === false} onClick={h?.run} testId={`align-${id}`} />;
@@ -380,9 +396,12 @@ export function AlignPanel({ handlers }: { handlers: Record<string, Handler> }) 
           {btn("object.align.vcenter", "Align Vertical Centres", <AlignCenterHorizontal size={16} />)}
           {btn("object.align.bottom", "Align Bottom", <AlignEndHorizontal size={16} />)}
         </div>
-        <SegmentedControl label="Align to" value={alignTo} onChange={(v) => api.getState().set({ alignTo: v })} full
-          options={[{ value: "selection", label: "Selection", title: "The bounds of everything selected" }, { value: "key", label: "Key Object", title: "The last object you clicked stays put" }, { value: "artboard", label: "Artboard", title: "The sheet" }]} />
-        <p className="pn-empty">{alignTo === "key" ? "The last object you clicked stays put; the others line up with it." : alignTo === "artboard" ? "Objects line up with the sheet edges and centre." : "One object aligns to the sheet; several align to their combined bounds."}</p>
+        <Select label="Align to" value={alignTo} onChange={(v) => api.getState().set({ alignTo: v })} testId="align-to"
+          options={[
+            { value: "selection", label: "Selection" }, { value: "key", label: "Key object (last selected)" }, { value: "first", label: "First selected" },
+            { value: "biggest", label: "Biggest object" }, { value: "smallest", label: "Smallest object" }, { value: "artboard", label: "Artboard" },
+          ]} />
+        <p className="pn-empty">{nodeMode ? "Direct Selection: the buttons line up the selected nodes." : ALIGN_TO_NOTE[alignTo]}</p>
       </PanelSection>
       <PanelSection title="Distribute">
         <div className="pn-btns">
@@ -395,9 +414,17 @@ export function AlignPanel({ handlers }: { handlers: Record<string, Handler> }) 
           <label className="pn-check"><input type="checkbox" checked={gap !== null} onChange={(e) => api.getState().set({ alignGap: e.target.checked ? 3 : null })} data-testid="align-gap-on" /> Exact gap</label>
           {gap !== null && <NumberInput label="Gap" value={gap} length units={units} min={0} max={1000} defaultValue={3} onChange={(v) => api.getState().set({ alignGap: v })} testId="align-gap" />}
         </div>
+        <div className="pn-actions">{action("object.removeOverlaps")}</div>
+        <span className="ui-label">Exchange positions</span>
+        <div className="pn-actions">
+          {([["selection", "Selection order"], ["stack", "Stacking order"], ["clockwise", "Clockwise"], ["random", "Random"]] as const).map(([o, label]) => {
+            const id = `object.exchange.${o}`, h = handlers[id];
+            return <button key={id} type="button" className="ui-btn small" disabled={!h || h.enabled === false} title={h?.enabled === false ? h.reason : COMMAND_BY_ID.get(id)?.description} onClick={h?.run} data-testid={`exchange-${o}`}>{label}</button>;
+          })}
+        </div>
       </PanelSection>
       <PanelSection title="Repeat">
-        <div className="pn-actions">{["object.stepRepeat", "object.array.grid", "object.array.circular", "object.array.path", "object.transformEach"].map(action)}</div>
+        <div className="pn-actions">{["object.stepRepeat", "object.array.grid", "object.array.circular", "object.array.path", "object.transformEach", "object.arrange", "object.transform", "object.clone.tiled"].map(action)}</div>
       </PanelSection>
     </>
   );

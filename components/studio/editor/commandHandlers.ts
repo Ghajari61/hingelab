@@ -13,6 +13,9 @@ import { canHaveEffects, EFFECT_KINDS, EFFECTS, hasEffects } from "@/lib/studio/
 import { addEffect } from "@/lib/studio/effects/ops";
 import { addAnchorNodes, breakApartNodes, closeNodes, joinNodes, makeClip, makeCompound, releaseClip, resetBoxNodes, reverseNodes } from "@/lib/studio/pathOps";
 import { distributeSpacing } from "@/lib/studio/arrays";
+import { alignAnchors, alignTarget, exchangePositions, removeOverlaps } from "@/lib/studio/alignOps";
+import { cloneNodes, clonesOf, originalsOf, relinkClones, removeClonesOf, unlinkClones } from "@/lib/studio/links";
+import { clipBox, pasteSize, pasteStyle } from "@/lib/studio/pasteOps";
 import { BOOLEAN_LABELS, booleanOp, cleanupForLaser, editPaths, smoothSubpath, type BooleanOp } from "@/lib/studio/pathfinder";
 import {
   alignNodes, arrangeNodes, distributeNodes, duplicateNodes, expandNodes, findNode, groupNodes, isEditable, pasteNodes, removeNodes, selectionBox,
@@ -29,7 +32,7 @@ import type { EditorState } from "./store";
 export interface Handler { run: () => void; enabled?: boolean; reason?: string; checked?: boolean }
 
 export type EditorDialog = "documentSetup" | "move" | "shortcuts" | "preferences" | "palette" | "resetPrefs" | "offset" | "simplify" | "corners"
-  | "stepRepeat" | "transformEach" | "gridArray" | "circularArray" | "pathArray" | "strokeToPath" | "joinNearby";
+  | "stepRepeat" | "transformEach" | "gridArray" | "circularArray" | "pathArray" | "strokeToPath" | "joinNearby" | "transform" | "arrange" | "tiledClones";
 
 export interface CommandContext {
   api: StoreApi<EditorState>;
@@ -101,7 +104,7 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   const texts = nodesOf(s, (n) => n.type === "text");
   const groups = nodesOf(s, (n) => n.type === "group");
   const clipGroups = nodesOf(s, (n) => n.type === "group" && n.role === "clip");
-  const live = nodesOf(s, (n) => n.type === "shape" || n.type === "text" || n.type === "generator" || hasEffects(n));
+  const live = nodesOf(s, (n) => n.type === "shape" || n.type === "text" || n.type === "generator" || n.type === "clone" || hasEffects(n));
   const withFx = nodesOf(s, hasEffects);
   const h: Record<string, Handler> = {};
   const set = (id: string, run: () => void, enabled = true, reason?: string, checked?: boolean) => {
@@ -160,6 +163,26 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   set("edit.pasteFront", () => paste("front"));
   set("edit.pasteBack", () => paste("back"));
   set("edit.pasteInPlace", () => paste("inPlace"));
+  const fromClip = () => {
+    const clip = loadClip();
+    if (!clip?.nodes.length) ctx.toast("Copy an object first.");
+    return clip?.nodes.length ? clip.nodes : null;
+  };
+  for (const [suffix, mode, sep, label] of [
+    ["width", "width", false, "Paste Width"], ["height", "height", false, "Paste Height"], ["both", "both", false, "Paste Size"],
+    ["widthSep", "width", true, "Paste Width Separately"], ["heightSep", "height", true, "Paste Height Separately"], ["bothSep", "both", true, "Paste Size Separately"],
+  ] as const) {
+    set(`edit.pasteSize.${suffix}`, () => {
+      const nodes = fromClip(), ids = selected(st());
+      if (!nodes || !ids.length) return;
+      const target = clipBox(nodes), { refPoint, lockRatio } = st();
+      st().edit(label, (d) => { pasteSize(d, ids, target, mode, sep, refPoint, lockRatio); });
+    }, one, NEED_ONE);
+  }
+  set("edit.pasteStyle", () => {
+    const nodes = fromClip(), ids = selected(st());
+    if (nodes && ids.length) st().edit("Paste Style", (d) => { pasteStyle(d, ids, nodes[0]); });
+  }, one, NEED_ONE);
   set("edit.duplicate", () => {
     const ids = selected(st());
     let out: string[] = [];
@@ -194,23 +217,75 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   set("object.reflectV", transform("Reflect", (c) => scaleAt(1, -1, c.x, c.y)), one, NEED_ONE);
   set("object.resetBox", editSel("Reset Bounding Box", resetBoxNodes), paths.length > 0, "Select a path (expand live shapes first)");
   for (const a of ["front", "forward", "backward", "back"] as const) set(`object.${a}`, editSel("Arrange", (d, ids) => arrangeNodes(d, ids, a)), one, NEED_ONE);
+  const nodeAlign = s.tool === "direct" && s.anchors.length >= 2;
   for (const m of ["left", "hcenter", "right", "top", "vcenter", "bottom"] as AlignMode[]) {
     set(`object.align.${m}`, () => {
       const s1 = st();
+      if (s1.tool === "direct" && s1.anchors.length >= 2) {
+        const r = s1.anchors;
+        let out: NodeRef[] = r;
+        s1.edit("Align Nodes", (d) => { out = alignAnchors(d, r, m); });
+        st().setAnchors(out);
+        return;
+      }
       const ids = selected(s1);
-      const sheet = s1.doc.sheets[0];
-      const sheetBox = sheet ? { minX: sheet.x, minY: sheet.y, maxX: sheet.x + sheet.w, maxY: sheet.y + sheet.h } : undefined;
-      const key = s1.selection.filter((id) => ids.includes(id)).at(-1);
-      const to = s1.alignTo === "artboard" || ids.length === 1 ? sheetBox
-        : s1.alignTo === "key" && key ? selectionBox(s1.doc, [key]) : undefined;
+      const to = alignTarget(s1.doc, ids, ids.length === 1 ? "artboard" : s1.alignTo);
       st().edit("Align", (d) => alignNodes(d, ids, m, to));
-    }, one, NEED_ONE);
+    }, one || nodeAlign, NEED_ONE);
   }
   set("object.distribute.x", editSel("Distribute", (d, ids) => distributeNodes(d, ids, "x")), three, NEED_THREE);
   set("object.distribute.y", editSel("Distribute", (d, ids) => distributeNodes(d, ids, "y")), three, NEED_THREE);
   const spacingOk = s.alignGap === null ? three : two;
   set("object.distribute.spaceX", editSel("Distribute Spacing", (d, ids) => distributeSpacing(d, ids, "x", st().alignGap)), spacingOk, s.alignGap === null ? NEED_THREE : NEED_TWO);
   set("object.distribute.spaceY", editSel("Distribute Spacing", (d, ids) => distributeSpacing(d, ids, "y", st().alignGap)), spacingOk, s.alignGap === null ? NEED_THREE : NEED_TWO);
+  set("object.removeOverlaps", editSel("Remove Overlaps", (d, ids) => { removeOverlaps(d, ids, st().alignGap ?? 0); }), two, NEED_TWO);
+  for (const o of ["selection", "stack", "clockwise", "random"] as const) {
+    set(`object.exchange.${o}`, () => {
+      const seed = Math.floor(Math.random() * 2 ** 31);
+      editSel("Exchange Positions", (d, ids) => exchangePositions(d, ids, o, seed))();
+    }, two, NEED_TWO);
+  }
+  set("object.transform", () => ctx.dialog("transform"), one, NEED_ONE);
+  set("object.arrange", () => ctx.dialog("arrange"), two, NEED_TWO);
+  // Clones
+  const clones = nodesOf(s, (n) => n.type === "clone");
+  const NEED_CLONE = "Select a clone";
+  set("object.clone", () => {
+    const ids = selected(st());
+    let out: string[] = [];
+    st().edit("Clone", (d) => { out = cloneNodes(d, ids); });
+    st().select(out);
+  }, one, NEED_ONE);
+  set("object.clone.linkedOffset", () => {
+    const ids = selected(st());
+    let out: string[] = [];
+    st().edit("Linked Offset", (d) => { out = cloneNodes(d, ids); addEffect(d, out, "offset"); });
+    st().select(out);
+    ctx.showPanel("liveEffects");
+  }, one, NEED_ONE);
+  set("object.clone.unlink", () => {
+    const ids = nodesOf(st(), (n) => n.type === "clone");
+    st().edit("Unlink Clone", (d) => { unlinkClones(d, ids); });
+  }, clones.length > 0, NEED_CLONE);
+  set("object.clone.selectOriginal", () => {
+    const out = originalsOf(st().doc, nodesOf(st(), (n) => n.type === "clone"));
+    if (out.length) st().select(out);
+  }, clones.length > 0, NEED_CLONE);
+  set("object.clone.relink", () => {
+    const src = loadClip()?.nodes[0]?.id;
+    if (!src || !findNode(st().doc.root, src)) { ctx.toast("Copy the object the clones should follow first (it must be in this document)."); return; }
+    const ids = nodesOf(st(), (n) => n.type === "clone");
+    let out: string[] = [];
+    st().edit("Relink to Copied", (d) => { out = relinkClones(d, ids, src); });
+    if (out.length < ids.length) ctx.toast("A clone can't follow itself or one of its own clones; those were left as they were.");
+  }, clones.length > 0, NEED_CLONE);
+  set("object.clone.tiled", () => ctx.dialog("tiledClones"), sel.length === 1, "Select one object to tile");
+  set("object.clone.removeTiled", () => {
+    const ids = selected(st());
+    let n = 0;
+    st().edit("Remove Tiled Clones", (d) => { n = removeClonesOf(d, ids); });
+    ctx.toast(`Removed ${n} clone${n === 1 ? "" : "s"}`, true);
+  }, one && clonesOf(s.doc, sel).length > 0, one ? "The selected objects have no clones" : NEED_ONE);
   set("object.stepRepeat", () => ctx.dialog("stepRepeat"), one, NEED_ONE);
   set("object.transformEach", () => ctx.dialog("transformEach"), one, NEED_ONE);
   set("object.array.grid", () => ctx.dialog("gridArray"), one, NEED_ONE);
@@ -240,7 +315,7 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   set("object.compound.release", () => { let out: string[] = []; st().edit("Release Compound Path", (d) => { out = breakApartNodes(d, paths); }); st().select(out); }, paths.some((id) => ((findNode(s.doc.root, id) as { subpaths?: unknown[] })?.subpaths?.length ?? 0) > 1), "Select a compound path");
   set("object.clip.make", () => { let id: string | null = null; st().edit("Make Clipping Mask", (d) => { id = makeClip(d, selected(st())); }); if (id) st().select([id]); }, two, NEED_TWO);
   set("object.clip.release", () => { let out: string[] = []; st().edit("Release Clipping Mask", (d) => { out = releaseClip(d, clipGroups); }); st().select(out); }, clipGroups.length > 0, "Select a clipping group");
-  set("object.expand", () => st().edit("Expand", (d) => { expandNodes(d, live); }), live.length > 0, "Select a live shape, text or an object with Live Effects");
+  set("object.expand", () => st().edit("Expand", (d) => { expandNodes(d, live); }), live.length > 0, "Select a live shape, text, clone or an object with Live Effects");
   set("object.sheets.fit", () => {
     const d0 = st().doc;
     const b = selectionBox(d0, d0.root.children.filter((n) => !n.hidden).map((n) => n.id));
@@ -329,6 +404,12 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   set("path.cutPath", pfRun("Cut Path", cutPathNodes), twoOutlines, "Select paths and, on top, the path that cuts them");
   set("path.splitPath", () => { let out: string[] = []; st().edit("Split Path", (d) => { out = splitPathNodes(d, selected(st())); }); st().select(out); }, anyOutline, "Select a path with several parts");
   set("path.strokeToPath", () => ctx.dialog("strokeToPath"), anyOutline, "Select a path, shape or text");
+  set("path.dynamicOffset", () => {
+    const ids = fxTargets(st());
+    if (!ids.length) return;
+    st().edit("Dynamic Offset", (d) => { addEffect(d, ids, "offset"); });
+    ctx.showPanel("liveEffects");
+  }, canFx, "Select a path, shape, text or clone");
   const offStep = ctx.offsetStep;
   for (const [id, label, delta] of [["path.inset", "Inset", -offStep], ["path.outset", "Outset", offStep]] as const) {
     set(id, () => {

@@ -115,7 +115,7 @@ export function LiveEffectsPanel({ toast }: { toast: Toast }) {
 }
 
 function EffectCard({ node, world, effect, index, count, units, open, onToggleOpen, anchors, live, toast }: {
-  node: Extract<SceneNode, { type: "path" | "shape" | "text" }>; world: Mat; effect: LiveEffect; index: number; count: number; units: Units;
+  node: Extract<SceneNode, { type: "path" | "shape" | "text" | "clone" }>; world: Mat; effect: LiveEffect; index: number; count: number; units: Units;
   open: boolean; onToggleOpen: () => void; anchors: { sub: number; idx: number }[]; live: Live; toast: Toast;
 }) {
   const api = useEditorApi();
@@ -171,7 +171,7 @@ function Check({ label, checked, onChange, disabled, testId }: { label: string; 
 }
 
 function Params({ node, world, effect, index, units, anchors, set, num }: {
-  node: Extract<SceneNode, { type: "path" | "shape" | "text" }>; world: Mat; effect: LiveEffect; index: number; units: Units;
+  node: Extract<SceneNode, { type: "path" | "shape" | "text" | "clone" }>; world: Mat; effect: LiveEffect; index: number; units: Units;
   anchors: { sub: number; idx: number }[]; set: Setter; num: Num;
 }) {
   const f = frame(world);

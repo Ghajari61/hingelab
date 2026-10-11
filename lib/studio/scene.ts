@@ -240,11 +240,35 @@ export function moveNode(d: Document, id: string, parentId: string, index: numbe
 
 /** Applies a world-space transform to objects (move, scale, rotate…), whatever group they are in. */
 export function transformNodes(d: Document, ids: string[], m: Mat) {
-  for (const id of topLevel(d.root, ids)) {
+  transformNodesEach(d, ids.map((id) => [id, m]));
+}
+
+/** A separate world-space transform per object, applied as one step so clones moved with their source move once. */
+export function transformNodesEach(d: Document, moves: [string, Mat][]) {
+  const byId = new Map(moves);
+  const moved = new Map<string, { local: Mat; node: SceneNode }>();
+  for (const id of topLevel(d.root, moves.map(([id]) => id))) {
     const l = locate(d.root, id);
     if (!l) continue;
+    const m = byId.get(id)!;
     l.node.transform = mul(invert(l.parentWorld), mul(m, l.world));
+    moved.set(id, { local: mul(invert(l.parentWorld), mul(m, l.parentWorld)), node: l.node });
   }
+  compensateClones(moved);
+}
+
+/**
+ * A clone follows its source, so when both move in one transform the clone would move twice. Clones
+ * inside the moved objects whose source was moved too undo the source's share (the source's move in
+ * its parent space, applied before the clone's own transform).
+ */
+function compensateClones(moved: Map<string, { local: Mat; node: SceneNode }>) {
+  if (moved.size < 2) return;
+  const rec = (n: SceneNode) => {
+    if (n.type === "clone") { const src = moved.get(n.source); if (src && src.node !== n) n.transform = mul(n.transform, invert(src.local)); }
+    else if (n.type === "group") n.children.forEach(rec);
+  };
+  for (const { node } of moved.values()) rec(node);
 }
 
 export type AlignMode = "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom";
@@ -254,14 +278,16 @@ export function alignNodes(d: Document, ids: string[], mode: AlignMode, to?: Box
   const top = topLevel(d.root, ids);
   const target = to ?? selectionBox(d, top);
   if (isEmptyBox(target)) return;
+  const moves: [string, Mat][] = [];
   for (const id of top) {
     const b = worldBox(d.root, id);
     if (isEmptyBox(b)) continue;
     const c = boxCenter(b), tc = boxCenter(target);
     const dx = mode === "left" ? target.minX - b.minX : mode === "right" ? target.maxX - b.maxX : mode === "hcenter" ? tc.x - c.x : 0;
     const dy = mode === "top" ? target.minY - b.minY : mode === "bottom" ? target.maxY - b.maxY : mode === "vcenter" ? tc.y - c.y : 0;
-    if (dx || dy) transformNodes(d, [id], translate(dx, dy));
+    if (dx || dy) moves.push([id, translate(dx, dy)]);
   }
+  transformNodesEach(d, moves);
 }
 
 /** Equal gaps between objects along an axis (the outermost two stay put). */
@@ -274,11 +300,13 @@ export function distributeNodes(d: Document, ids: string[], axis: "x" | "y") {
   const sizes = items.reduce((s, i) => s + (i.b[hi] - i.b[lo]), 0);
   const gap = (span - sizes) / (items.length - 1);
   let at = items[0].b[hi] + gap;
+  const moves: [string, Mat][] = [];
   for (const i of items.slice(1, -1)) {
     const delta = at - i.b[lo];
-    transformNodes(d, [i.id], axis === "x" ? translate(delta, 0) : translate(0, delta));
+    moves.push([i.id, axis === "x" ? translate(delta, 0) : translate(0, delta)]);
     at += i.b[hi] - i.b[lo] + gap;
   }
+  transformNodesEach(d, moves);
 }
 
 /**
@@ -293,10 +321,10 @@ export function expandNodes(d: Document, ids: string[], keepEffects = false): st
     if (!l) continue;
     const n = l.node;
     const baked = !keepEffects && (n.type === "path" || n.type === "shape" || n.type === "text") && !!n.effects?.length;
-    if (!(n.type === "shape" || n.type === "text" || n.type === "generator" || baked)) continue;
+    if (!(n.type === "shape" || n.type === "text" || n.type === "generator" || n.type === "clone" || baked)) continue;
     const subpaths = keepEffects ? nodeBasePaths(n) : nodePaths(n);
     if (!subpaths.length) continue;
-    const effects = keepEffects && (n.type === "shape" || n.type === "text") && n.effects?.length ? { effects: JSON.parse(JSON.stringify(n.effects)) } : {};
+    const effects = keepEffects && (n.type === "shape" || n.type === "text" || n.type === "clone") && n.effects?.length ? { effects: JSON.parse(JSON.stringify(n.effects)) } : {};
     const path: PathNode = { id: n.id, type: "path", transform: n.transform, layer: n.layer, subpaths: JSON.parse(JSON.stringify(subpaths)), ...(n.name ? { name: n.name } : {}), ...effects };
     l.parent.children[l.index] = path;
     out.push(id);

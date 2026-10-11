@@ -78,6 +78,11 @@ export function assertDocument(d: unknown): asserts d is Document {
   if (!Array.isArray(x.cutLayers) || x.cutLayers.length !== LAYER_COUNT) fail("cut layers");
   const root = x.root as Record<string, unknown> | undefined;
   if (!root || root.type !== "group" || !Array.isArray(root.children)) fail("no scene");
+  const nodes = (n: Record<string, unknown>) => {
+    if (n.type === "clone" && typeof n.source !== "string") fail("clone without an original");
+    if (n.type === "group" && Array.isArray(n.children)) for (const c of n.children as Record<string, unknown>[]) if (c && typeof c === "object") nodes(c);
+  };
+  nodes(root!);
 }
 
 /** One step per schema version: MIGRATIONS[n] turns version n into n + 1. */

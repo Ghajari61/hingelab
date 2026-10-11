@@ -16,14 +16,26 @@ export interface History { past: HistoryEntry[]; future: HistoryEntry[] }
 
 export const emptyHistory = (): History => ({ past: [], future: [] });
 
-export interface CommitOptions { mergeKey?: string; now?: number }
+export interface CommitOptions {
+  mergeKey?: string;
+  now?: number;
+  /** Follow-up recipes run on the edited document (derived data such as clone caches); part of the same step. */
+  after?: (doc: Document) => Generator<(d: Document) => void, void, Document>;
+}
 
 export interface CommitResult<T> { doc: Document; history: History; changed: boolean; result: T }
 
 export function commit<T = void>(doc: Document, history: History, label: string, recipe: (d: Document) => T, o: CommitOptions = {}): CommitResult<T> {
   let result: T = undefined as T;
-  const [next, patches, inverse] = produceWithPatches(doc, (d: Document) => { result = recipe(d); });
+  let [next, patches, inverse] = produceWithPatches(doc, (d: Document) => { result = recipe(d); });
   if (!patches.length) return { doc, history, changed: false, result };
+  if (o.after) {
+    const it = o.after(next);
+    for (let r = it.next(next); !r.done; r = it.next(next)) {
+      const [n2, p2, i2] = produceWithPatches(next, r.value);
+      next = n2; patches = [...patches, ...p2]; inverse = [...i2, ...inverse];
+    }
+  }
   const now = o.now ?? Date.now();
   const top = history.past[history.past.length - 1];
   let past: HistoryEntry[];

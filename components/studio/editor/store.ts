@@ -3,8 +3,10 @@
 import { createContext, useContext } from "react";
 import { produce } from "immer";
 import { createStore, useStore, type StoreApi } from "zustand";
+import type { AlignTo } from "@/lib/studio/alignOps";
 import type { ToolId } from "@/lib/studio/commands";
 import { commit, emptyHistory, jumpTo, redo, seal, undo, type History } from "@/lib/studio/history";
+import { linkPasses, syncLinks } from "@/lib/studio/links";
 import { allIds } from "@/lib/studio/scene";
 import type { BrushShape, CurveMode, PenMode } from "@/lib/studio/strokes";
 import type { Document, Mat, ShapeKind, ShapeParams, TextNode, Vec } from "@/lib/studio/types";
@@ -48,7 +50,7 @@ export interface EditorState {
   /** The Measure tool's last measurement (document space). */
   measure: { a: Vec; b: Vec } | null;
   /** What Align lines objects up with; the key object is the last one clicked. */
-  alignTo: "selection" | "key" | "artboard";
+  alignTo: AlignTo;
   /** Distribute Spacing gap in mm, or null for equal gaps between the outer objects. */
   alignGap: number | null;
   /** Pen: how clicks become a curve, and an optional brush shape that turns the line into a filled outline. */
@@ -95,7 +97,7 @@ export const DEFAULT_PENCIL_SMOOTHING = 25;
 
 export function createEditorStore(doc: Document): StoreApi<EditorState> {
   return createStore<EditorState>()((set, get) => ({
-    doc,
+    doc: syncLinks(doc),
     history: emptyHistory(),
     selection: [],
     anchors: [],
@@ -123,7 +125,7 @@ export function createEditorStore(doc: Document): StoreApi<EditorState> {
 
     edit: (label, recipe, o = {}) => {
       const s = get();
-      const r = commit(s.doc, s.history, label, recipe, { mergeKey: o.mergeKey });
+      const r = commit(s.doc, s.history, label, recipe, { mergeKey: o.mergeKey, after: linkPasses });
       if (r.changed) {
         const doc = { ...r.doc, updatedAt: new Date().toISOString() };
         set({ doc, history: r.history, selection: o.select ?? keepExisting(doc, s.selection), anchors: o.select ? [] : s.anchors });
@@ -134,14 +136,14 @@ export function createEditorStore(doc: Document): StoreApi<EditorState> {
     preview: (recipe) => {
       const base = get().base;
       if (!base) return;
-      set({ doc: produce(base, recipe) });
+      set({ doc: syncLinks(produce(base, recipe)) });
     },
     end: (label, recipe, select) => {
       const s = get();
       const base = s.base;
       if (!base) return;
       if (!recipe) { set({ doc: base, base: null }); return; }
-      const r = commit(base, s.history, label, recipe);
+      const r = commit(base, s.history, label, recipe, { after: linkPasses });
       const doc = r.changed ? { ...r.doc, updatedAt: new Date().toISOString() } : base;
       set({ doc, history: r.history, base: null, selection: select ?? keepExisting(doc, s.selection) });
     },
@@ -150,23 +152,23 @@ export function createEditorStore(doc: Document): StoreApi<EditorState> {
       const s = get();
       const r = undo(s.doc, s.history);
       if (!r.label) return undefined;
-      set({ doc: { ...r.doc }, history: r.history, selection: keepExisting(r.doc, s.selection), anchors: [] });
+      set({ doc: { ...syncLinks(r.doc) }, history: r.history, selection: keepExisting(r.doc, s.selection), anchors: [] });
       return r.label;
     },
     redo: () => {
       const s = get();
       const r = redo(s.doc, s.history);
       if (!r.label) return undefined;
-      set({ doc: { ...r.doc }, history: r.history, selection: keepExisting(r.doc, s.selection), anchors: [] });
+      set({ doc: { ...syncLinks(r.doc) }, history: r.history, selection: keepExisting(r.doc, s.selection), anchors: [] });
       return r.label;
     },
     jump: (index) => {
       const s = get();
       const r = jumpTo(s.doc, s.history, index);
-      set({ doc: r.doc, history: r.history, selection: keepExisting(r.doc, s.selection), anchors: [] });
+      set({ doc: syncLinks(r.doc), history: r.history, selection: keepExisting(r.doc, s.selection), anchors: [] });
     },
-    replace: (d) => set({ doc: d, history: emptyHistory(), selection: [], anchors: [], base: null }),
-    quiet: (recipe) => { if (!get().base) set((s) => ({ doc: produce(s.doc, recipe) })); },
+    replace: (d) => set({ doc: syncLinks(d), history: emptyHistory(), selection: [], anchors: [], base: null }),
+    quiet: (recipe) => { if (!get().base) set((s) => ({ doc: syncLinks(produce(s.doc, recipe)) })); },
     select: (ids, mode = "set") => set((s) => {
       if (mode === "set") return { selection: ids, anchors: [] };
       if (mode === "add") return { selection: [...new Set([...s.selection, ...ids])] };
