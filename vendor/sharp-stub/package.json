@@ -1,0 +1,8 @@
+{
+  "name": "sharp",
+  "version": "0.35.5-hingelab.0",
+  "description": "Empty stand-in for sharp: its prebuilt libvips binaries are LGPL, which HingeLab does not ship. Nothing in HingeLab calls sharp.",
+  "license": "MIT",
+  "private": true,
+  "main": "index.js"
+}

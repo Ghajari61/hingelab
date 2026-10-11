@@ -702,3 +702,11 @@ The neon-look sign is cut as one solid piece grown around the letters (holes fil
 - Repeat Along Path spaces copies by arc length, so copies stay evenly spaced on curves with uneven node spacing.
 - Transform Each's random mode uses a seed stored in the dialog, so the preview and the applied result are identical and Shuffle is repeatable.
 - Align to Key Object uses the last-selected object (Illustrator's key object); Distribute Spacing with an exact gap keeps the first object fixed and lays the rest out from it.
+
+## D115. Clean-room parity work and the licence gate
+
+- Inkscape-parity features are built clean-room: we read only the public Beginners' Guide and keyboard reference to learn what a feature does and never open Inkscape's source, extensions or assets. Each idea and the page it came from is listed in `docs/FEATURE_SOURCES.md`.
+- The licence gate checks everything installed (production and development npm packages, and all Rust crates in `Cargo.lock` for every platform), not only what ends up in a bundle: it is simpler to keep the whole tree clean than to prove which files are shipped.
+- Allow-list: MIT, ISC, BSD-2/3-Clause, Apache-2.0, MPL-2.0 (used unmodified, so its file-level copyleft never applies), Unlicense, CC0-1.0, Zlib, OFL-1.1. Also accepted because they are permissive and carry no source obligation: 0BSD, MIT-0, BlueOak-1.0.0, BSL-1.0 (Boost; clipper-lib), Python-2.0, Unicode-3.0 / Unicode-DFS-2016 (Unicode data in Rust crates), CC-BY-4.0 (caniuse-lite browser data) and CDLA-Permissive-2.0 (root-certificate data in webpki-roots). Anything else, or a missing licence, fails until it is reviewed and added.
+- `sharp` is replaced by an empty stub through npm `overrides` rather than tolerated as an optional dependency: its prebuilt libvips is LGPL-3.0, HingeLab has no `next/image` and never imports manifold-3d's glTF helpers, and Vercel optimises images on its own servers. If image processing is ever needed on the server it must use a permissive library.
+- The "Inkscape" name is used only descriptively ("Inkscape-style" shortcut set, "opens in Inkscape").

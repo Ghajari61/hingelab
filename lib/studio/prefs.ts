@@ -85,5 +85,5 @@ export const ONBOARDING_STEPS = ["machine", "units", "shortcuts", "material"] as
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 
 export const SHORTCUT_SET_NAMES: Record<ShortcutSet, string> = {
-  hingelab: "HingeLab (Illustrator-compatible)", corel: "CorelDRAW", lightburn: "LightBurn", inkscape: "Inkscape",
+  hingelab: "HingeLab (Illustrator-compatible)", corel: "CorelDRAW", lightburn: "LightBurn", inkscape: "Inkscape-style",
 };

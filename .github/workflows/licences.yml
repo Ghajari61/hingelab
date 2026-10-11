@@ -1,0 +1,22 @@
+name: Licences
+
+# Fails on GPL, LGPL, AGPL, SSPL or unknown licences in the web app (npm) and the desktop app (Rust crates).
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  licences:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - uses: dtolnay/rust-toolchain@stable
+      - run: node scripts/licenses.mjs --cargo --online

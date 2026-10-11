@@ -38,6 +38,7 @@
   "exclude": [
     "node_modules",
     "desktop/dist",
-    "desktop/src-tauri"
+    "desktop/src-tauri",
+    "tmp"
   ]
 }

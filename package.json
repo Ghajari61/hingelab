@@ -9,7 +9,8 @@
   "scripts": {
     "predev": "node scripts/copy-wasm.js",
     "dev": "next dev",
-    "prebuild": "node scripts/copy-wasm.js",
+    "prebuild": "node scripts/copy-wasm.js && node scripts/licenses.mjs",
+    "licenses": "node scripts/licenses.mjs",
     "build": "next build",
     "postinstall": "node scripts/copy-wasm.js",
     "start": "next start",
@@ -20,7 +21,7 @@
     "desktop:ui:dev": "vite --config desktop/vite.config.ts",
     "desktop:ui:build": "vite build --config desktop/vite.config.ts",
     "desktop:dev": "cd desktop && tauri dev",
-    "desktop:build": "node scripts/desktop/build.mjs",
+    "desktop:build": "node scripts/licenses.mjs --cargo && node scripts/desktop/build.mjs",
     "desktop:test": "cd desktop/src-tauri && cargo test",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build -o storybook-static"
@@ -69,6 +70,7 @@
     "vitest": "^4.1.11"
   },
   "overrides": {
-    "postcss": "^8.5.29"
+    "postcss": "^8.5.29",
+    "sharp": "file:./vendor/sharp-stub"
   }
 }
