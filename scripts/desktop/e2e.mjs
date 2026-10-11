@@ -332,6 +332,23 @@ try {
     await page.getByRole("radio", { name: "Use Windows setting" }).click();
   });
 
+  await step("the sidebar collapses to icons and expands again (button and Ctrl+B)", async () => {
+    await page.getByRole("button", { name: "Collapse sidebar" }).click();
+    await page.waitForTimeout(400);
+    const narrow = await page.locator(".sidebar").evaluate((el) => el.getBoundingClientRect().width);
+    assert(narrow <= 70, `collapsed sidebar is ${narrow}px wide`);
+    await nav("Recent designs");
+    await page.getByRole("heading", { name: "Recent designs" }).waitFor();
+    await nav("Generators");
+    await page.waitForTimeout(400);
+    await shot("sidebar-collapsed");
+    await page.keyboard.press("Control+b");
+    await page.waitForTimeout(400);
+    const wide = await page.locator(".sidebar").evaluate((el) => el.getBoundingClientRect().width);
+    assert(wide >= 200, `expanded sidebar is ${wide}px wide`);
+    assert(await page.getByRole("button", { name: "Collapse sidebar" }).isVisible(), "no collapse button after expanding");
+  });
+
   await step("sign out revokes the session and clears the credential", async () => {
     await nav("Settings");
     await page.getByRole("button", { name: "Sign out" }).last().click();

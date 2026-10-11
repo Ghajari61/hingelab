@@ -28,6 +28,7 @@ export function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [showUpdate, setShowUpdate] = useState(false);
   const [local, setLocal] = usePrefs();
+  const toggleSidebar = useCallback(() => setLocal((old) => ({ ...old, sidebarCollapsed: !old.sidebarCollapsed })), [setLocal]);
   const [recent, setRecent] = useRecent();
   const [favorites, setFavorites] = useFavorites();
   const updater = useUpdater();
@@ -216,6 +217,7 @@ export function App() {
       const k = e.key.toLowerCase();
       const inWs = route === "workspace";
       if (k === ",") { e.preventDefault(); setRoute("settings"); }
+      else if (k === "b") { e.preventDefault(); toggleSidebar(); }
       else if (k === "s" && inWs) { e.preventDefault(); void save("save"); }
       else if (k === "e" && inWs) { e.preventDefault(); void save("export"); }
       else if (k === "enter" && inWs) { e.preventDefault(); design.refresh(); }
@@ -228,7 +230,7 @@ export function App() {
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [phase, route, save, design]);
+  }, [phase, route, save, design, toggleSidebar]);
 
   // Block the WebView's own context menu and file drops (nothing here opens files).
   useEffect(() => {
@@ -276,8 +278,8 @@ export function App() {
 
   const plan = account?.plan ?? "free";
   return (
-    <div className="app">
-      <Sidebar route={route} onRoute={setRoute} account={account} hasDesign={!!design.state.product} update={updater.status} onUpdate={() => setShowUpdate(true)} />
+    <div className={`app${local.sidebarCollapsed ? " side-collapsed" : ""}`}>
+      <Sidebar route={route} onRoute={setRoute} account={account} hasDesign={!!design.state.product} update={updater.status} onUpdate={() => setShowUpdate(true)} collapsed={local.sidebarCollapsed} onToggle={toggleSidebar} />
       <div className="main">
         {!online && route !== "workspace" && <div className="offline-bar" role="status">You're offline. Designs are built on HingeLab's servers, so new changes wait until you're back online.</div>}
         {route === "dashboard" && <Dashboard account={account} catalog={catalog} recent={recent} defaultProduct={local.defaultProduct} onNew={openNew} onPreset={openPreset} onBrowse={() => setRoute("generators")} onOpenRecent={openSaved} onUpgrade={() => web("upgrade")} />}

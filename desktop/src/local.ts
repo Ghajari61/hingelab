@@ -15,6 +15,7 @@ export interface LocalPrefs {
   /** Open new designs with the last settings used for that product instead of its defaults. */
   reuseLastSettings: boolean;
   defaultProduct: string;
+  sidebarCollapsed: boolean;
 }
 
 export interface SavedDesign {
@@ -40,7 +41,7 @@ export interface Favorite {
 }
 
 const KEYS = { prefs: "hl-prefs-v1", recent: "hl-recent-v1", favorites: "hl-favorites-v1", last: "hl-last-v1", catalog: "hl-catalog-v1", account: "hl-account-v1" };
-export const DEFAULT_PREFS: LocalPrefs = { theme: "system", units: "mm", autoCheckUpdates: true, reuseLastSettings: true, defaultProduct: "hinge" };
+export const DEFAULT_PREFS: LocalPrefs = { theme: "system", units: "mm", autoCheckUpdates: true, reuseLastSettings: true, defaultProduct: "hinge", sidebarCollapsed: false };
 const MAX_RECENT = 24;
 const MAX_ITEM = 300_000;
 

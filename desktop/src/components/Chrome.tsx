@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ArrowDownCircle, Clock3, CreditCard, FolderOpen, Globe, HelpCircle, LayoutDashboard, Loader2, Settings as Cog, Shapes, ShieldCheck, Star, X } from "lucide-react";
+import { ArrowDownCircle, Clock3, CreditCard, FolderOpen, Globe, HelpCircle, LayoutDashboard, Loader2, PanelLeftClose, PanelLeftOpen, Settings as Cog, Shapes, ShieldCheck, Star, X } from "lucide-react";
 import type { DesktopAccount } from "../ipc";
 import type { UpdateStatus } from "../updater";
 import { formatBytes } from "../updater";
@@ -25,16 +25,26 @@ const NAV: { id: Route; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "help", label: "Help", icon: HelpCircle },
 ];
 
-export function Sidebar({ route, onRoute, account, hasDesign, update, onUpdate }: { route: Route; onRoute: (r: Route) => void; account: DesktopAccount | null; hasDesign: boolean; update: UpdateStatus; onUpdate: () => void }) {
+export function Sidebar({ route, onRoute, account, hasDesign, update, onUpdate, collapsed, onToggle }: {
+  route: Route; onRoute: (r: Route) => void; account: DesktopAccount | null; hasDesign: boolean; update: UpdateStatus; onUpdate: () => void;
+  collapsed: boolean; onToggle: () => void;
+}) {
+  const updateText = update.phase === "available" ? `Update to ${update.info.version}` : "Updating…";
+  const who = account ? account.user.name || account.user.email || "" : "";
   return (
     <nav className="sidebar" aria-label="Main">
-      <div className="brand"><Logo size={26} /><span>HingeLab</span></div>
+      <div className="brand">
+        <Logo size={26} /><span>HingeLab</span>
+        <button type="button" className="side-toggle" aria-expanded={!collapsed} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={`${collapsed ? "Expand" : "Collapse"} sidebar (Ctrl+B)`} onClick={onToggle}>
+          {collapsed ? <PanelLeftOpen size={16} aria-hidden /> : <PanelLeftClose size={16} aria-hidden />}
+        </button>
+      </div>
       <ul>
         {NAV.map((n) => {
           const active = route === n.id || (n.id === "generators" && route === "workspace");
           return (
             <li key={n.id}>
-              <button type="button" aria-current={active ? "page" : undefined} onClick={() => onRoute(n.id === "generators" && hasDesign && route !== "workspace" ? "workspace" : n.id)}>
+              <button type="button" aria-current={active ? "page" : undefined} aria-label={collapsed ? n.label : undefined} title={collapsed ? n.label : undefined} onClick={() => onRoute(n.id === "generators" && hasDesign && route !== "workspace" ? "workspace" : n.id)}>
                 <n.icon size={17} aria-hidden />
                 <span>{n.label}</span>
               </button>
@@ -44,15 +54,15 @@ export function Sidebar({ route, onRoute, account, hasDesign, update, onUpdate }
       </ul>
       <div className="side-foot">
         {(update.phase === "available" || update.phase === "downloading" || update.phase === "installing") && (
-          <button type="button" className="update-pill" onClick={onUpdate}>
+          <button type="button" className="update-pill" onClick={onUpdate} aria-label={collapsed ? updateText : undefined} title={collapsed ? updateText : undefined}>
             <ArrowDownCircle size={15} aria-hidden />
-            {update.phase === "available" ? `Update to ${update.info.version}` : "Updating…"}
+            <span>{updateText}</span>
           </button>
         )}
         {account && (
-          <button type="button" className="me" onClick={() => onRoute("settings")} title={account.user.email ?? ""}>
-            <span className="avatar" aria-hidden>{(account.user.name || account.user.email || "?").slice(0, 1).toUpperCase()}</span>
-            <span className="me-text"><b>{account.user.name || account.user.email}</b><small>{account.plan === "pro" ? "Pro plan" : "Free plan"}</small></span>
+          <button type="button" className="me" onClick={() => onRoute("settings")} aria-label={collapsed ? `${who}, ${account.plan === "pro" ? "Pro" : "Free"} plan` : undefined} title={account.user.email ?? ""}>
+            <span className="avatar" aria-hidden>{(who || "?").slice(0, 1).toUpperCase()}</span>
+            <span className="me-text"><b>{who}</b><small>{account.plan === "pro" ? "Pro plan" : "Free plan"}</small></span>
           </button>
         )}
       </div>

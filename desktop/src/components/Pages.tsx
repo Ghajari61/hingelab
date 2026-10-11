@@ -428,6 +428,7 @@ const SHORTCUTS: [string, string][] = [
   ["Ctrl + 1", "Actual size (100%)"],
   ["Ctrl + wheel", "Zoom at the pointer"],
   ["Ctrl + ,", "Settings"],
+  ["Ctrl + B", "Collapse or expand the sidebar"],
   ["F1", "Help"],
 ];
 
