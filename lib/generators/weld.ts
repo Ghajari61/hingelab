@@ -3,7 +3,8 @@
  * unioned, grown by a border, any islands left are bridged to the main piece, and sticks or tabs
  * are unioned on. Everything stays one part, so nothing falls out of the sheet.
  */
-import { dropSpecks, makeShape, offsetShapes, shapeContours, unionShapes, type Shape } from "@/lib/letters/polygon";
+import { dropSpecks, makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
+import type { Shape } from "@/lib/letters/types";
 import { bboxOf, distToContour, stadium, transform } from "./geom";
 import { orient } from "./shapes";
 import type { BuildContext, Contour, Pt } from "./types";

@@ -4,7 +4,7 @@
  */
 import type { DProduct } from "../../lib/desktop/types";
 
-const FILES = import.meta.glob<string>("../../public/presets/{hinge,clock,puzzle,qr,boxes}/*.svg", { query: "?url", import: "default", eager: true });
+const FILES = import.meta.glob<string>("../../public/presets/{hinge,clock,puzzle,qr,boxes,topper,keyrack,sign,tablenum,trophy}/*.svg", { query: "?url", import: "default", eager: true });
 
 export const presetArt = (product: string, preset: string): string | undefined => FILES[`../../public/presets/${product}/${preset}.svg`];
 
@@ -18,6 +18,11 @@ const FEATURED: Record<string, string[]> = {
   puzzle: ["heart-24", "round-36", "kids-12"],
   qr: ["coaster", "wifi-card", "table-sign"],
   boxes: ["bird-house", "phone-stand", "organiser"],
+  topper: ["happy-birthday", "mr-mrs", "nowruz"],
+  keyrack: ["home-sweet-home", "house-hooks", "family-keys"],
+  sign: ["welcome-arch", "layered-name", "cafe-hanging"],
+  tablenum: ["wedding-arch", "number-stand", "round-acrylic"],
+  trophy: ["star-award", "champion-cup", "medal-acrylic"],
 };
 
 /** The picture that stands for a product. */

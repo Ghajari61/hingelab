@@ -3,7 +3,7 @@
  * shipping anything from the server.
  */
 
-export type DesktopProductId = "hinge" | "clock" | "puzzle" | "qr" | "boxes";
+export type DesktopProductId = "hinge" | "clock" | "puzzle" | "qr" | "boxes" | "topper";
 export type DesktopPlan = "free" | "pro";
 
 export type DField =

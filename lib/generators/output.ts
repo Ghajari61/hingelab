@@ -193,8 +193,9 @@ export function genSVG<P extends GenBase>(def: GeneratorDef<P>, p: P, lay: Layou
   const W = r3(lay.width), H = r3(lay.height);
   const C = genContent(lay);
   const tags = [...new Set(lay.items.map((it) => it.pt.tag).filter((t): t is string => !!t))];
+  const untagged = lay.items.filter((it) => !it.pt.tag).map((it) => it.pt.name);
   const parts = tags.length > 1
-    ? tags.map((t) => `${t}: ${lay.items.filter((it) => it.pt.tag === t).map((it) => it.pt.name).join(", ")}`).join("; ") + " (each material on its own sheets)"
+    ? tags.map((t) => `${t}: ${lay.items.filter((it) => it.pt.tag === t).map((it) => it.pt.name).join(", ")}`).join("; ") + " (each material on its own sheets)" + (untagged.length ? `; ${untagged.join(", ")}` : "")
     : lay.items.map((it) => it.pt.name).join(", ");
   const note = `HingeLab ${def.name}: ${p.name}. ${def.summary(p)}. Material ${p.T} mm, kerf ${p.K} mm (compensated). Parts: ${parts}.${comment ? " " + comment : ""}`;
   let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"${C.images.length ? ' xmlns:xlink="http://www.w3.org/1999/xlink"' : ""} width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">\n`;

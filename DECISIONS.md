@@ -620,3 +620,13 @@ The owner called the information website "very bad": it still sold only living-h
 The Windows section reads the release manifest and hashes the installer in `public/downloads` at build time, so the published version, size and SHA-256 cannot drift from what the updater offers. If the file is missing the hash is left out rather than failing the build.
 
 Occasion links use a new `preset=` query parameter that the guest editor reads once for generators and then removes from the address, so a reload continues the autosave instead of resetting to the preset.
+
+## D104. Toppers are welded into one piece; mixed materials get their own sheets
+
+A topper whose letters or motif fall apart on the bed is useless, so the build always ends with one part: the text and motif are unioned, grown by the weld or border, holes too small to cut are filled, and any island left (a dot, a separate word, a motif with a gap) is joined to the largest piece by a short straight bridge at the closest points. Sticks start inside the shape at its lowest point under each stick and all end level below the whole topper, so the topper stands straight.
+
+Motifs are built in code from circles, curves and polygons and unioned once (cached), rather than drawn as path data, so each one is a clean cuttable region at any size and the rail pictures come from the same geometry.
+
+Layered designs need two materials. Rather than a global second-material setting in the shell, a generator marks parts `material: "second"` and reports the material names and kerf in its output; the shell packs each group on its own sheets with the material in the sheet label and in the SVG note. Designs that use one material are packed exactly as before (the box packer is called with the same boxes). The second material's fields live in the generator (`material2Fields`), so the desktop app gets them through the catalogue with no new code.
+
+Party sets and plate toppers are Pro; single toppers and cupcake sets are free.

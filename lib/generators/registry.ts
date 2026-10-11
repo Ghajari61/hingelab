@@ -10,4 +10,5 @@ export const loadGenerator: Record<GeneratorId, () => Promise<AnyGenerator>> = {
   puzzle: () => import("./puzzle").then((m) => m.PUZZLE as AnyGenerator),
   qr: () => import("./qr").then((m) => m.QR as AnyGenerator),
   boxes: () => import("./boxes").then((m) => m.BOXES as AnyGenerator),
+  topper: () => import("./topper").then((m) => m.TOPPER as AnyGenerator),
 };

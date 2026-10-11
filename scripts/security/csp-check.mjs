@@ -5,7 +5,7 @@ import { chromium } from "playwright";
 const BASE = process.env.SHOTS_BASE || "http://localhost:3457";
 const PAGES = [
   "/", "/home", "/projects", "/presets", "/templates", "/help", "/help/hinge-pattern", "/login", "/signup", "/privacy", "/app/billing", "/app/editor/local",
-  ...["hinge", "letters", "parametric", "clock", "puzzle", "qr", "boxes"].map((p) => `/app/editor/local?p=${p}`),
+  ...["hinge", "letters", "parametric", "clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy"].map((p) => `/app/editor/local?p=${p}`),
 ];
 
 const browser = await chromium.launch();
