@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useStore } from "zustand";
-import { AlignCenterHorizontal, Braces, FileText, Flame, History, Layers, LayoutGrid, Search, SlidersHorizontal, Sparkles, SquaresUnite, Wand2 } from "lucide-react";
+import { AlignCenterHorizontal, Braces, FileText, Flame, History, Layers, LayoutGrid, RotateCw, Search, SlidersHorizontal, Sparkles, SquaresUnite, Wand2 } from "lucide-react";
 import { LogoMark } from "@/components/site/LogoMark";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { ContextMenu, Dock, MenuBar, PanelSection, Toolbar, isMac, useToast, type MenuItem } from "@/components/ui";
@@ -38,6 +38,8 @@ import { ArrangeDialog, TiledClonesDialog, TransformDialog } from "./ParityDialo
 import { createEditorStore, EditorContext, useEditor, useEditorApi, type EditorState } from "./store";
 import { toolSlots } from "./tools";
 import { ToolFooter } from "./ToolFooter";
+import { SnapControls } from "./SnapBar";
+import { SwatchBar } from "./SwatchBar";
 import { useTextSync } from "./useTextSync";
 import type { StoreApi } from "zustand";
 import { Dialog } from "@/components/ui";
@@ -113,6 +115,7 @@ function EditorShell({ opened }: { opened: Document }) {
   const [renaming, setRenaming] = useState(false);
   const [dialog, setDialog] = useState<DialogId | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [snapOpen, setSnapOpen] = useState(false);
   const canvasRef = useRef<CanvasApi | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const lastField = useRef<HTMLElement | null>(null);
@@ -206,6 +209,10 @@ function EditorShell({ opened }: { opened: Document }) {
     lastField: () => lastField.current,
     viewCenter: () => canvasRef.current?.center() ?? { x: 0, y: 0 },
     offsetStep: prefs.offsetStep,
+    snapAngle: prefs.snapAngle,
+    swatchBar: layout.swatchBar,
+    toggleSwatchBar: () => setLayout((w) => ({ ...w, swatchBar: !w.swatchBar })),
+    openSnapOptions: () => setSnapOpen(true),
   };
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
@@ -311,7 +318,7 @@ function EditorShell({ opened }: { opened: Document }) {
       <ControlBar onResetToast={(m) => toast(m, true)} handlers={handlers} />
       <div className="st-main" style={{ gridTemplateColumns: `auto minmax(0, 1fr) ${layout.dockCollapsed ? "auto" : `${layout.dockWidth}px`}` }}>
         <Toolbar slots={slots} active={tool} onSelect={(t) => api.getState().setTool(t as ToolId)} columns={layout.toolbarColumns} footer={<ToolFooter handlers={handlers} />} />
-        <Canvas apiRef={canvasRef} onContextMenu={(x, y) => setMenu({ x, y })} onToast={toast} />
+        <Canvas apiRef={canvasRef} onContextMenu={(x, y) => setMenu({ x, y })} onToast={toast} snapAngle={prefs.snapAngle} />
         <Dock
           tabs={dockTabs} active={layout.active} width={layout.dockWidth} collapsed={layout.dockCollapsed}
           onActive={(id) => setLayout((w) => ({ ...w, active: id as PanelId }))}
@@ -320,7 +327,14 @@ function EditorShell({ opened }: { opened: Document }) {
           onResize={(dockWidth) => setLayout((w) => ({ ...w, dockWidth }))}
         />
       </div>
-      <StatusBar save={save} handlers={handlers} onZoom={(z) => canvasRef.current?.zoomBy(z)} onFit={() => canvasRef.current?.fit("artboard")} />
+      <div className="st-swatch-slot">
+        {layout.swatchBar && (
+          <SwatchBar handlers={handlers} toast={toast}
+            onEditLayer={(k) => { api.getState().set({ currentLayer: k }); setLayout((w) => showPanel(w, "cutLayers")); }} />
+        )}
+      </div>
+      <StatusBar save={save} handlers={handlers} onZoom={(z) => canvasRef.current?.zoomBy(z)} onFit={() => canvasRef.current?.fit("artboard")}
+        onRotate={(deg) => canvasRef.current?.setRotation(deg)} snapOpen={snapOpen} setSnapOpen={setSnapOpen} />
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={contextItems()} label="Object" onClose={() => setMenu(null)} />}
       <CommandPalette open={dialog === "palette"} onClose={() => setDialog(null)} handlers={handlers} bindings={bindings} navigate={(h) => router.push(h)} />
@@ -374,11 +388,15 @@ function DocTabMeta() {
   return <span className="meta">@ {Math.round((zoom / PX_PER_MM) * 100)}% ({outline ? "Outline" : "Preview"})</span>;
 }
 
-function StatusBar({ save, handlers, onZoom, onFit }: { save: SaveState; handlers: Record<string, Handler>; onZoom: (f: number) => void; onFit: () => void }) {
+function StatusBar({ save, handlers, onZoom, onFit, onRotate, snapOpen, setSnapOpen }: {
+  save: SaveState; handlers: Record<string, Handler>; onZoom: (f: number) => void; onFit: () => void;
+  onRotate: (deg: number) => void; snapOpen: boolean; setSnapOpen: (o: boolean) => void;
+}) {
   const api = useEditorApi();
   const p = useStore(pointerStore, (s) => s.p);
   const units = useEditor((s) => s.doc.units);
   const zoom = useEditor((s) => s.view.zoom);
+  const rotation = useEditor((s) => s.view.rotation ?? 0);
   const snapping = useEditor((s) => s.doc.snapping);
   const sel = useEditor((s) => s.selection);
   const doc = useEditor((s) => s.doc);
@@ -396,7 +414,9 @@ function StatusBar({ save, handlers, onZoom, onFit }: { save: SaveState; handler
         <button type="button" onClick={onFit} title="Fit artboard (Ctrl+0)" data-testid="status-zoom">{pct}%</button>
         <button type="button" onClick={() => onZoom(1.25)} aria-label="Zoom in">+</button>
       </span>
+      <RotationField value={rotation} onChange={onRotate} />
       <span className="sp" />
+      <SnapControls open={snapOpen} setOpen={setSnapOpen} />
       {toggle("view.snapGrid", "Grid snap", snapping.grid)}
       {toggle("view.snapPoint", "Point snap", snapping.points)}
       {toggle("view.smartGuides", "Smart guides", snapping.smart)}
@@ -410,5 +430,26 @@ function StatusBar({ save, handlers, onZoom, onFit }: { save: SaveState; handler
         {save === "saved" ? "Saved on this device" : save === "saving" ? "Saving…" : "Not saved"}
       </span>
     </footer>
+  );
+}
+
+/** View rotation in degrees (clockwise on screen); Enter or leaving the field applies it. */
+function RotationField({ value, onChange }: { value: number; onChange: (deg: number) => void }) {
+  const shown = String(Math.round(value * 10) / 10);
+  const [text, setText] = useState(shown);
+  const cancel = useRef(false);
+  useEffect(() => setText(shown), [shown]);
+  const commit = () => {
+    if (cancel.current) { cancel.current = false; return; }
+    const v = parseFloat(text.replace(",", "."));
+    if (Number.isFinite(v) && String(v) !== shown) onChange(v); else setText(shown);
+  };
+  return (
+    <label className="st-rot" title="View rotation (Ctrl+Shift+scroll). The document is not changed.">
+      <RotateCw size={11} aria-hidden />
+      <input value={text} inputMode="decimal" aria-label="View rotation in degrees" data-testid="status-rotation"
+        onChange={(e) => setText(e.target.value)} onBlur={commit}
+        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") { cancel.current = true; setText(shown); e.currentTarget.blur(); } }} />°
+    </label>
   );
 }

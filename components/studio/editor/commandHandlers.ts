@@ -24,6 +24,7 @@ import {
 } from "@/lib/studio/scene";
 import { TOOL_IDS } from "@/lib/studio/commands";
 import type { Theme } from "@/lib/studio/prefs";
+import { isTurned, PX_PER_MM } from "@/lib/studio/viewTransform";
 import type { Document, Mat, SceneNode, TextNode } from "@/lib/studio/types";
 import type { PanelId } from "@/lib/studio/workspace";
 import { RESET_FIELD_EVENT, RESET_SECTION_EVENT } from "@/components/ui";
@@ -60,6 +61,13 @@ export interface CommandContext {
   viewCenter: () => { x: number; y: number };
   /** Preferences → Inset / Outset step, mm. */
   offsetStep: number;
+  /** Preferences → snap angle, degrees (15 when absent). */
+  snapAngle?: number;
+  /** View ▸ Swatch Bar state and toggle (the editor's workspace layout). */
+  swatchBar?: boolean;
+  toggleSwatchBar?: () => void;
+  /** Opens the snapping options popover in the status bar. */
+  openSnapOptions?: () => void;
 }
 
 const NEED_ONE = "Select an object first";
@@ -482,8 +490,9 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   };
   set("node.scaleUp", nodeTransform("Scale Nodes", (c) => scaleAt(1.1, 1.1, c.x, c.y)), refs.length > 0, NEED_NODES);
   set("node.scaleDown", nodeTransform("Scale Nodes", (c) => scaleAt(1 / 1.1, 1 / 1.1, c.x, c.y)), refs.length > 0, NEED_NODES);
-  set("node.rotateCCW", nodeTransform("Rotate Nodes", (c) => rotateAt(-15, c.x, c.y)), refs.length > 0, NEED_NODES);
-  set("node.rotateCW", nodeTransform("Rotate Nodes", (c) => rotateAt(15, c.x, c.y)), refs.length > 0, NEED_NODES);
+  const angleStep = ctx.snapAngle ?? 15;
+  set("node.rotateCCW", nodeTransform("Rotate Nodes", (c) => rotateAt(-angleStep, c.x, c.y)), refs.length > 0, NEED_NODES);
+  set("node.rotateCW", nodeTransform("Rotate Nodes", (c) => rotateAt(angleStep, c.x, c.y)), refs.length > 0, NEED_NODES);
   set("path.cleanup", () => {
     const ids = selected(st());
     let r = { points: 0, closed: 0, removed: 0, duplicates: 0 };
@@ -512,6 +521,25 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   set("view.fitAll", cv((c) => c.fit("all")));
   set("view.actual", cv((c) => c.actual()));
   set("view.zoomSelection", cv((c) => c.fit("selection")), one, NEED_ONE);
+  set("view.zoom.half", cv((c) => c.zoomTo(PX_PER_MM / 2)));
+  set("view.zoom.double", cv((c) => c.zoomTo(PX_PER_MM * 2)));
+  set("view.zoom.prev", cv((c) => c.zoomPrev()), s.zoomHistory.back.length > 0, "No earlier zoom in this session");
+  set("view.zoom.next", cv((c) => c.zoomNext()), s.zoomHistory.fwd.length > 0, "No later zoom — go back first");
+  const turnedView = isTurned(s.view);
+  set("view.rotate.cw", cv((c) => c.rotate(angleStep)));
+  set("view.rotate.ccw", cv((c) => c.rotate(-angleStep)));
+  set("view.rotate.reset", cv((c) => c.resetOrientation()), turnedView, "The view is upright and not flipped");
+  set("view.flipH", cv((c) => c.flip("h")), true, undefined, !!s.view.flipX);
+  set("view.flipV", cv((c) => c.flip("v")), true, undefined, !!s.view.flipY);
+  set("view.outlineOverlay", () => st().setUi({ outlineOverlay: !st().ui.outlineOverlay }), true, undefined, s.ui.outlineOverlay);
+  set("view.split", () => st().setUi({ split: !st().ui.split }), true, undefined, s.ui.split);
+  set("view.snap.toggle", () => {
+    const on = st().doc.snapping.enabled === false;
+    st().quiet((d) => { d.snapping.enabled = on; });
+    ctx.toast(on ? "Snapping on" : "Snapping off");
+  }, true, undefined, s.doc.snapping.enabled !== false);
+  set("view.snap.options", () => ctx.openSnapOptions?.(), !!ctx.openSnapOptions, "Not available here");
+  set("view.swatchBar", () => ctx.toggleSwatchBar?.(), !!ctx.toggleSwatchBar, "Not available here", !!ctx.swatchBar);
   set("view.outline", () => st().setUi({ outline: !st().ui.outline }), true, undefined, s.ui.outline);
   set("view.rulers", () => st().setUi({ rulers: !st().ui.rulers }), true, undefined, s.ui.rulers);
   set("view.guides.show", () => st().setUi({ guidesShown: !st().ui.guidesShown }), true, undefined, s.ui.guidesShown);

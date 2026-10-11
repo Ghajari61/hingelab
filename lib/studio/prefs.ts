@@ -31,12 +31,14 @@ export interface Preferences {
   recentGenerators: { id: string; at: string }[];
   /** Path → Inset / Outset step, mm. */
   offsetStep: number;
+  /** Angle step (degrees) for every constrained rotation and direction: rotate, shear, line, pen, knife, measure, view rotation. */
+  snapAngle: number;
 }
 
 export const DEFAULT_PREFS: Preferences = {
   theme: "light", themeChosen: false, editorTheme: "dark", accent: "blue", units: "mm", shortcutSet: "hingelab", laser: "co2",
   machineId: DEFAULT_MACHINE, materialId: DEFAULT_MATERIAL, showStartScreen: true, resetTo: "default",
-  onboarded: false, tourDone: false, dismissed: [], recentGenerators: [], offsetStep: 1,
+  onboarded: false, tourDone: false, dismissed: [], recentGenerators: [], offsetStep: 1, snapAngle: 15,
 };
 
 const pick = <T extends string>(v: unknown, list: readonly T[], d: T): T => (list as readonly unknown[]).includes(v) ? (v as T) : d;
@@ -64,6 +66,7 @@ export function normalizePrefs(raw: unknown): Preferences {
       ? r.recentGenerators.filter((x): x is { id: string; at: string } => !!x && typeof x.id === "string" && typeof x.at === "string").slice(0, 10)
       : [],
     offsetStep: typeof r.offsetStep === "number" && Number.isFinite(r.offsetStep) && r.offsetStep > 0 ? Math.min(100, r.offsetStep) : d.offsetStep,
+    snapAngle: typeof r.snapAngle === "number" && Number.isFinite(r.snapAngle) ? Math.min(90, Math.max(1, r.snapAngle)) : d.snapAngle,
   };
 }
 

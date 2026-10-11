@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GENERATORS } from "@/lib/generators/catalog";
-import { COMMANDS, COMMAND_BY_ID, bindingsFor, conflicts, type CommandDef } from "@/lib/studio/commands";
+import { COMMANDS, COMMAND_BY_ID, bindingsFor, conflicts, paletteLabel, paletteSearchText, type CommandDef } from "@/lib/studio/commands";
 import { fuzzyFilter } from "@/lib/studio/fuzzy";
 import { clearShortcut, exportKeymap, parseKeymap, reassign, usersOf, type Keymap } from "@/lib/studio/keymap";
 import { shortcutFromEvent } from "@/lib/studio/keys";
@@ -44,7 +44,7 @@ export function CommandPalette({ open, onClose, handlers, bindings, navigate }: 
   const items = useMemo((): PaletteItem[] => [
     ...COMMANDS.map((c: CommandDef) => {
       const h = handlers[c.id];
-      return { id: c.id, label: c.category === "Laser" || c.category === "Tool" ? `${c.category === "Tool" ? "Tool: " : ""}${c.label}` : c.label, category: c.category, shortcut: bindings.get(c.id)?.[0], run: h?.run ?? (() => {}), disabled: !h || h.enabled === false, reason: h?.reason, keywords: c.keywords };
+      return { id: c.id, label: paletteLabel(c), category: c.category, shortcut: bindings.get(c.id)?.[0], run: h?.run ?? (() => {}), disabled: !h || h.enabled === false, reason: h?.reason, keywords: c.keywords };
     }),
     ...GENERATORS.map((g) => ({ id: `gen.${g.id}`, label: `New ${g.name}…`, category: "Generator", run: () => navigate(`/home?generator=${g.id}`) })),
     ...projects.map((p) => ({ id: `proj.${p.id}`, label: `Open ${p.name}`, category: "Recent project", run: () => navigate(`/editor/${p.id}`) })),
@@ -52,7 +52,7 @@ export function CommandPalette({ open, onClose, handlers, bindings, navigate }: 
 
   const results = useMemo(() => {
     const boost = (i: PaletteItem) => { const r = recent.indexOf(i.id); return r < 0 ? 0 : 400 - r * 10; };
-    return fuzzyFilter(items, q, (i) => `${i.label} ${i.category}${i.keywords ? ` ${i.keywords}` : ""}`, boost).slice(0, 80);
+    return fuzzyFilter(items, q, paletteSearchText, boost).slice(0, 80);
   }, [items, q, recent]);
 
   useEffect(() => { listRef.current?.querySelector(`[data-i="${act}"]`)?.scrollIntoView({ block: "nearest" }); }, [act]);
@@ -201,7 +201,7 @@ export function ShortcutsDialog({ open, onClose, set, onSet, keymap, onKeymap, t
 
 type PrefTab = "general" | "shortcuts" | "laser";
 const TAB_DEFAULTS: Record<PrefTab, (keyof Preferences)[]> = {
-  general: ["editorTheme", "theme", "accent", "units", "showStartScreen", "resetTo", "offsetStep"],
+  general: ["editorTheme", "theme", "accent", "units", "showStartScreen", "resetTo", "offsetStep", "snapAngle"],
   shortcuts: ["shortcutSet"],
   laser: ["laser", "machineId", "materialId"],
 };
@@ -236,6 +236,8 @@ export function PreferencesDialog({ open, onClose, prefs, setPrefs, openShortcut
             <Select label="Units for new projects" value={prefs.units} options={UNIT_LIST.map((u) => ({ value: u, label: u }))} onChange={(units) => setPrefs({ units: units as Units })} />
             <Select label="Reset ↺ goes to" value={prefs.resetTo} options={[{ value: "default", label: "The default value" }, { value: "preset", label: "The active preset's value" }]} onChange={(resetTo) => setPrefs({ resetTo })} />
             <NumberInput label="Inset / Outset step" value={prefs.offsetStep} length units={prefs.units} min={0.01} max={100} step={0.1} defaultValue={DEFAULT_PREFS.offsetStep} onChange={(offsetStep) => setPrefs({ offsetStep })} testId="pref-offset-step" />
+            <NumberInput label="Snap angle" value={prefs.snapAngle} suffix="°" min={1} max={90} step={1} defaultValue={DEFAULT_PREFS.snapAngle} onChange={(snapAngle) => setPrefs({ snapAngle })} testId="pref-snap-angle" />
+            <p className="dlg-note full">Snap angle: Shift while rotating or shearing, Ctrl+Shift while drawing lines and with the Pen, Knife and Measure, the [ and ] node keys, and view rotation.</p>
             <label className="pn-check full"><input type="checkbox" checked={prefs.showStartScreen} onChange={(e) => setPrefs({ showStartScreen: e.target.checked })} /> Show the start screen when HingeLab opens</label>
           </div>
         )}

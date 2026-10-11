@@ -12,18 +12,36 @@ import { SPRAY_DEFAULTS, type SprayParams } from "@/lib/studio/spray";
 import { TWEAK_DEFAULTS, type TweakParams } from "@/lib/studio/tweak";
 import { commit, emptyHistory, jumpTo, redo, seal, undo, type History } from "@/lib/studio/history";
 import { linkPasses, syncLinks } from "@/lib/studio/links";
-import { allIds } from "@/lib/studio/scene";
+import { boxCenter, isEmptyBox } from "@/lib/studio/geom";
+import { allIds, selectionBox } from "@/lib/studio/scene";
+import { emptyZoomHistory, type View, type ZoomHistory } from "@/lib/studio/viewTransform";
 import type { BrushShape, CurveMode, PenMode } from "@/lib/studio/strokes";
 import type { Document, Mat, ShapeKind, ShapeParams, TextNode, Vec } from "@/lib/studio/types";
 
 export interface AnchorRef { id: string; sub: number; idx: number }
 
-export interface ViewState { zoom: number; x: number; y: number }
+/** Zoom, pan and the on-screen rotation / mirror of the canvas (lib/studio/viewTransform). */
+export type ViewState = View;
 
 export interface UiState {
   rulers: boolean; outline: boolean; guidesShown: boolean; guidesLocked: boolean; presentation: boolean;
   /** Direct Selection: handles of every node, and direction arrows along the edited paths. */
   nodeHandles: boolean; pathDirection: boolean;
+  /** Split view: outlines right of a divider at `splitAt` (fraction of the canvas width). */
+  split: boolean; splitAt: number;
+  /** Outlines drawn over the faded normal view. */
+  outlineOverlay: boolean;
+}
+
+/** Sorted ids of a selection, so a moved rotation centre belongs to exactly that set of objects. */
+export const selectionKey = (ids: string[]) => [...ids].sort().join(",");
+
+/** Where the selection rotates around: the moved rotation centre for this selection, else the centre of its box. */
+export function rotationCentre(s: Pick<EditorState, "doc" | "selection" | "rotCenter">, ids = s.selection): Vec | null {
+  if (!ids.length) return null;
+  if (s.rotCenter && s.rotCenter.key === selectionKey(ids)) return s.rotCenter.at;
+  const b = selectionBox(s.doc, ids);
+  return isEmptyBox(b) ? null : boxCenter(b);
 }
 
 export type EraserMode = "cut" | "delete";
@@ -78,6 +96,10 @@ export interface EditorState {
   pencilMode: CurveMode;
   /** Live Effects whose on-canvas handles are shown (their cards are open in the Live Effects panel). */
   fxHandles: { node: string; effects: string[] } | null;
+  /** Views before each zoom change (View ▸ Zoom ▸ Previous / Next). */
+  zoomHistory: ZoomHistory;
+  /** A rotation centre the user moved, for the selection with this key (selectionKey). */
+  rotCenter: { key: string; at: Vec } | null;
 
   edit: <T = void>(label: string, recipe: (d: Document) => T, o?: { mergeKey?: string; select?: string[] }) => T;
   begin: () => void;
@@ -97,7 +119,8 @@ export interface EditorState {
   setView: (v: Partial<ViewState> | ((v: ViewState) => ViewState)) => void;
   setUi: (u: Partial<UiState>) => void;
   set: (p: Partial<Pick<EditorState, "shapeDefaults" | "textDefaults" | "lastTransform" | "textEditing" | "currentLayer" | "refPoint" | "lockRatio" | "eraserSize" | "eraserMode" | "measure" | "alignTo" | "alignGap"
-    | "fill" | "calligraphy" | "tweak" | "spray" | "penMode" | "penShape" | "brushWidth" | "pencilSmoothing" | "pencilPressure" | "pencilMode" | "fxHandles">>) => void;
+    | "fill" | "calligraphy" | "tweak" | "spray" | "penMode" | "penShape" | "brushWidth" | "pencilSmoothing" | "pencilPressure" | "pencilMode" | "fxHandles"
+    | "zoomHistory" | "rotCenter">>) => void;
 }
 
 const keepExisting = (doc: Document, ids: string[]) => {
@@ -107,7 +130,9 @@ const keepExisting = (doc: Document, ids: string[]) => {
 };
 
 export const DEFAULT_TEXT: TextDefaults = { font: "fredoka", size: 12, tracking: 0, lineHeight: 1.2, align: "start", direction: "auto" };
-export const DEFAULT_UI: UiState = { rulers: true, outline: false, guidesShown: true, guidesLocked: false, presentation: false, nodeHandles: false, pathDirection: false };
+export const DEFAULT_UI: UiState = { rulers: true, outline: false, guidesShown: true, guidesLocked: false, presentation: false, nodeHandles: false, pathDirection: false,
+  split: false, splitAt: 0.5, outlineOverlay: false,
+};
 export const DEFAULT_PENCIL_SMOOTHING = 25;
 
 export function createEditorStore(doc: Document): StoreApi<EditorState> {
@@ -143,6 +168,8 @@ export function createEditorStore(doc: Document): StoreApi<EditorState> {
     pencilPressure: false,
     pencilMode: "bezier",
     fxHandles: null,
+    zoomHistory: emptyZoomHistory(),
+    rotCenter: null,
 
     edit: (label, recipe, o = {}) => {
       const s = get();

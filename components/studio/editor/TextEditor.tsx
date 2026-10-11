@@ -2,12 +2,12 @@
 
 import { useEffect, useRef } from "react";
 import { locate, removeNodes } from "@/lib/studio/scene";
-import type { Vec } from "@/lib/studio/types";
+import type { Mat, Vec } from "@/lib/studio/types";
 import { editorFontFamily } from "./textRuntime";
 import { useEditor, useEditorApi } from "./store";
 
 /** In-place typing for a text object: a textarea in the preview face over the hidden outline. */
-export function TextEditor({ id, S, zoom }: { id: string; S: (p: Vec) => Vec; zoom: number }) {
+export function TextEditor({ id, S, zoom, turn }: { id: string; S: (p: Vec) => Vec; zoom: number; /** View rotation / flip (no zoom) when the canvas is turned. */ turn?: Mat }) {
   const api = useEditorApi();
   const doc = useEditor((s) => s.doc);
   const located = locate(doc.root, id);
@@ -54,7 +54,7 @@ export function TextEditor({ id, S, zoom }: { id: string; S: (p: Vec) => Vec; zo
         left: o.x, top: o.y, width, height: lineCount * n.lineHeight * px + px * 0.4,
         fontFamily: editorFontFamily(n.font), fontSize: px, lineHeight: n.lineHeight,
         letterSpacing: `${n.tracking / 1000}em`, textAlign: n.align === "center" ? "center" : n.align,
-        transform: `matrix(${w[0] / scale}, ${w[1] / scale}, ${w[2] / scale}, ${w[3] / scale}, 0, 0) scale(${scale}) translate(${left}px, ${top}px)`,
+        transform: `${turn ? `matrix(${turn[0]}, ${turn[1]}, ${turn[2]}, ${turn[3]}, 0, 0) ` : ""}matrix(${w[0] / scale}, ${w[1] / scale}, ${w[2] / scale}, ${w[3] / scale}, 0, 0) scale(${scale}) translate(${left}px, ${top}px)`,
         transformOrigin: "0 0",
       }}
       onChange={(e) => {

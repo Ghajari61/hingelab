@@ -377,6 +377,29 @@ export interface GridSpec {
   divisions?: number;
 }
 
+/**
+ * Snapping bar toggles. All optional (older documents have none); an absent toggle means its default
+ * (snap.ts SNAP_DEFAULTS), which is exactly how snapping worked before the bar.
+ */
+export interface SnapToggles {
+  /** Master switch: off disables every snap target, grid included. */
+  enabled?: boolean;
+  mode?: "simple" | "advanced";
+  bboxEdges?: boolean;
+  bboxCorners?: boolean;
+  bboxMidpoints?: boolean;
+  bboxCentres?: boolean;
+  nodesCusp?: boolean;
+  nodesSmooth?: boolean;
+  pathOutline?: boolean;
+  pathIntersections?: boolean;
+  /** Object centres and the moved rotation centre. */
+  centres?: boolean;
+  textBaseline?: boolean;
+  pageEdges?: boolean;
+  pageCentre?: boolean;
+}
+
 /** How the sheet looks on screen only (material preview); never exported. */
 export type SheetBackground = "none" | "wood" | "acrylic" | "cardboard" | "mdf";
 
@@ -395,7 +418,7 @@ export interface Document {
   grid: GridSpec;
   /** Screen-only material preview behind the sheets; none when absent. */
   background?: SheetBackground;
-  snapping: { grid: boolean; points: boolean; guides: boolean; smart: boolean };
+  snapping: { grid: boolean; points: boolean; guides: boolean; smart: boolean } & SnapToggles;
   view: { zoom: number; x: number; y: number };
   /** Set when the project was created from a template or a generator (Reset ▸ Project to Template). */
   origin?: { kind: "blank" | "generator" | "template"; id?: string };

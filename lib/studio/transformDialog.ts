@@ -6,7 +6,7 @@
 import { invert, isEmptyBox, mul, rotateAt, scaleAt, translate, type Box } from "./geom";
 import { locate, selectionBox, topLevel, transformNodes, transformNodesEach, worldBox } from "./scene";
 import { refAt, type RefPoint } from "./transform";
-import type { Document, Mat } from "./types";
+import type { Document, Mat, Vec } from "./types";
 
 export type XformTab = "move" | "scale" | "rotate" | "skew" | "matrix";
 
@@ -61,8 +61,11 @@ export function matrixOnTop(m: Mat, b: Box, rp: RefPoint): Mat {
   return mul(translate(p.x, p.y), mul(m, translate(-p.x, -p.y)));
 }
 
-/** Applies one tab to the selection (as a whole, or each object around its own box). Returns the world matrix used for the whole selection, if any. */
-export function applyXform(d: Document, ids: string[], tab: XformTab, spec: XformSpec, rp: RefPoint, each: boolean): Mat | null {
+/**
+ * Applies one tab to the selection (as a whole, or each object around its own box). Returns the world matrix used for the whole selection, if any.
+ * `centre` is a rotation centre the user moved: the whole-selection rotate turns around it when the reference point is the middle.
+ */
+export function applyXform(d: Document, ids: string[], tab: XformTab, spec: XformSpec, rp: RefPoint, each: boolean, centre: Vec | null = null): Mat | null {
   const top = topLevel(d.root, ids);
   if (!top.length) return null;
   if (tab === "matrix" && spec.matrix.edit) {
@@ -76,7 +79,9 @@ export function applyXform(d: Document, ids: string[], tab: XformTab, spec: Xfor
   }
   const make = (b: Box) => (tab === "matrix" ? (Math.abs(spec.matrix.m[0] * spec.matrix.m[3] - spec.matrix.m[1] * spec.matrix.m[2]) < 1e-12 ? null : matrixOnTop(spec.matrix.m, b, rp)) : xformMatrix(tab, spec, b, rp));
   if (!each || top.length === 1) {
-    const m = make(selectionBox(d, top));
+    const m = tab === "rotate" && centre && rp[0] === 0.5 && rp[1] === 0.5
+      ? rotateAt(spec.rotate.dir === "cw" ? spec.rotate.angle : -spec.rotate.angle, centre.x, centre.y)
+      : make(selectionBox(d, top));
     if (m) transformNodes(d, top, m);
     return m;
   }

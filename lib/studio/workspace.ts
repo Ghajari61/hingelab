@@ -19,13 +19,15 @@ export interface Workspace {
   toolbarColumns: 1 | 2;
   /** The dock shows only a column of panel icons. */
   dockCollapsed: boolean;
+  /** The cut-layer swatch bar under the canvas (View ▸ Swatch Bar). */
+  swatchBar: boolean;
 }
 
 export const WORKSPACES: Workspace[] = [
-  { id: "essentials", label: "Essentials", panels: ["properties", "layers", "cutLayers", "align", "pathfinder", "history", "document"], active: "properties", dockWidth: 320, toolbarColumns: 2, dockCollapsed: false },
-  { id: "laser", label: "Laser Production", panels: ["cutLayers", "layers", "properties", "pathfinder", "document", "history"], active: "cutLayers", dockWidth: 320, toolbarColumns: 2, dockCollapsed: false },
-  { id: "typography", label: "Typography", panels: ["properties", "layers", "history"], active: "properties", dockWidth: 320, toolbarColumns: 2, dockCollapsed: false },
-  { id: "minimal", label: "Minimal", panels: ["properties", "layers"], active: "properties", dockWidth: 260, toolbarColumns: 1, dockCollapsed: false },
+  { id: "essentials", label: "Essentials", panels: ["properties", "layers", "cutLayers", "align", "pathfinder", "history", "document"], active: "properties", dockWidth: 320, toolbarColumns: 2, dockCollapsed: false, swatchBar: true },
+  { id: "laser", label: "Laser Production", panels: ["cutLayers", "layers", "properties", "pathfinder", "document", "history"], active: "cutLayers", dockWidth: 320, toolbarColumns: 2, dockCollapsed: false, swatchBar: true },
+  { id: "typography", label: "Typography", panels: ["properties", "layers", "history"], active: "properties", dockWidth: 320, toolbarColumns: 2, dockCollapsed: false, swatchBar: true },
+  { id: "minimal", label: "Minimal", panels: ["properties", "layers"], active: "properties", dockWidth: 260, toolbarColumns: 1, dockCollapsed: false, swatchBar: false },
 ];
 
 /** Version 2 (D111) starts everyone on the two-column toolbar and the wider dock. */
@@ -49,6 +51,7 @@ export function cleanWorkspace(raw: unknown, id: string): Workspace {
     dockWidth: typeof r.dockWidth === "number" && r.dockWidth >= 200 && r.dockWidth <= 600 ? Math.round(r.dockWidth) : base.dockWidth,
     toolbarColumns: r.toolbarColumns === 1 || r.toolbarColumns === 2 ? r.toolbarColumns : base.toolbarColumns,
     dockCollapsed: typeof r.dockCollapsed === "boolean" ? r.dockCollapsed : base.dockCollapsed,
+    swatchBar: typeof r.swatchBar === "boolean" ? r.swatchBar : base.swatchBar,
   };
 }
 

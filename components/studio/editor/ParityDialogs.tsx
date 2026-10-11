@@ -12,11 +12,11 @@ import {
 } from "@/lib/studio/tiling";
 import { refAt } from "@/lib/studio/transform";
 import { applyXform, worldMatrix, XFORM_DEFAULTS, type XformSpec, type XformTab } from "@/lib/studio/transformDialog";
-import type { Document, Mat } from "@/lib/studio/types";
+import type { Document, Mat, Vec } from "@/lib/studio/types";
 import { Dialog, NumberInput, SegmentedControl, Select, Tabs } from "@/components/ui";
 import { Footer, useLivePreview } from "./PathDialogs";
 import { RefPointGrid } from "./Panels";
-import { useEditor, useEditorApi } from "./store";
+import { selectionKey, useEditor, useEditorApi } from "./store";
 
 type Props = { open: boolean; onClose: () => void };
 
@@ -46,18 +46,20 @@ export function TransformDialog({ open, onClose }: Props) {
   const [paused, setPaused] = useState(false);
   const [count, setCount] = useState(0);
   const ids = useRef<string[]>([]);
+  const centre = useRef<Vec | null>(null);
   const live = useRef(false);
   useEffect(() => {
     if (!open) return;
     const s = api.getState();
     ids.current = topLevel(s.doc.root, s.selection).filter((id) => isEditable(s.doc.root, id));
+    centre.current = s.rotCenter && s.rotCenter.key === selectionKey(s.selection) ? s.rotCenter.at : null;
     setCount(ids.current.length);
     setPaused(false);
     s.begin();
     live.current = true;
     return () => { if (live.current) { live.current = false; api.getState().end("Transform", null); } };
   }, [open, api]);
-  const run = (d: Document) => applyXform(d, ids.current, tab, spec, rp, each);
+  const run = (d: Document) => applyXform(d, ids.current, tab, spec, rp, each, centre.current);
   useEffect(() => { if (open && live.current) api.getState().preview(show && !paused ? (d) => { run(d); } : () => {}); });
   const base = () => api.getState().base ?? api.getState().doc;
   const box = () => selectionBox(base(), ids.current);

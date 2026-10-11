@@ -12,7 +12,7 @@ import { setEffectParams } from "@/lib/studio/effects/ops";
 import { refreshAuto, snapToOutlines } from "@/lib/studio/nodeOps";
 import { brushOutline, brushProfile, freehandPath, paraxialAppend, penSubpath } from "@/lib/studio/strokes";
 import {
-  addNode, duplicateNodes, expandNodes, findNode, hitTest, idsInBox, isEditable, locate, selectionBox, toLocal, topLevel, transformNodes, walk,
+  addNode, duplicateNodes, expandNodes, findNode, hitTest, idsInBox, isEditable, locate, selectionBox, toLocal, topLevel, transformNodes, walk, worldBox,
   type IdFactory,
 } from "@/lib/studio/scene";
 import { noTargets, snapMoveGrid, snapPointGrid, snapTargets, type SnapLine, type SnapSettings, type SnapTargets } from "@/lib/studio/snap";
@@ -23,13 +23,18 @@ import type { ToolId } from "@/lib/studio/commands";
 import { layerCode } from "@/lib/studio/cutLayers";
 import { builderFaces, buildShapes, curvaturePath, eraseAlong, eraseTouching, faceAt, knifeCut, lassoHits, scissorsAt, shearAt } from "@/lib/studio/toolOps";
 import { measureAcross, measureTargets, type MeasureTarget } from "@/lib/studio/measure";
-import { useEditor, useEditorApi, type AnchorRef, type EraserMode } from "./store";
+import { boxTouchesQuad, hitStack, inQuad, selectUnder, touchHits } from "@/lib/studio/selectTools";
+import {
+  fitView, flipView, isTurned, normDeg, place, PX_PER_MM, recordZoom, rotateView, screenAngle, setRotation, toDocument, toScreen, viewMatrix, visibleBox,
+  zoomAround, zoomBack, zoomForward, zoomTo as zoomViewTo,
+} from "@/lib/studio/viewTransform";
+import { rotationCentre, selectionKey, useEditor, useEditorApi, type AnchorRef, type EraserMode } from "./store";
 import { TextEditor } from "./TextEditor";
 import { fillClick, measureToItem, startCalligraphy, startSpray, startTweak, type ToolPointer, type ToolSession } from "./tools/brushTools";
 import { MeasureOverlay } from "./tools/MeasureOverlay";
 import { useImageUrls } from "./assetUrls";
 
-export const PX_PER_MM = 96 / 25.4;
+export { PX_PER_MM };
 const RULER = 20;
 const SHAPE_TOOLS = new Set<ToolId>(["rect", "ellipse", "polygon", "star", "arc", "slot", "gear", "arrow", "bubble", "heart", "grid", "spiral"]);
 
@@ -40,10 +45,16 @@ const handlePos = (b: Box, h: Handle): Vec => ({
   y: h.includes("n") ? b.minY : h.includes("s") ? b.maxY : (b.minY + b.maxY) / 2,
 });
 const HANDLE_CURSOR: Record<Handle, string> = { nw: "nwse-resize", se: "nwse-resize", ne: "nesw-resize", sw: "nesw-resize", n: "ns-resize", s: "ns-resize", e: "ew-resize", w: "ew-resize" };
+/** Resize cursor for a handle direction on screen (degrees, y down). */
+const resizeCursor = (deg: number) => ["ew-resize", "nwse-resize", "ns-resize", "nesw-resize"][((Math.round(deg / 45) % 4) + 4) % 4];
+/** Ctrl+Shift+wheel: one view-rotation step per this much wheel delta (one mouse notch). */
+const WHEEL_ROTATE_STEP = 50;
 
 type Drag =
   | { kind: "pan"; sx: number; sy: number; vx: number; vy: number }
-  | { kind: "move"; start: Vec; ids: string[]; box: Box; targets: SnapTargets; dup: boolean; pool: string[]; moved: boolean; pointerId: number }
+  | { kind: "move"; start: Vec; ids: string[]; box: Box; targets: SnapTargets; dup: boolean; pool: string[]; moved: boolean; pointerId: number; under?: string | null; key: string }
+  | { kind: "touch"; pts: Vec[]; add: boolean }
+  | { kind: "rotCenter"; key: string }
   | { kind: "scale"; handle: Handle; box: Box; ids: string[] }
   | { kind: "rotate"; center: Vec; a0: number; ids: string[]; tool?: boolean }
   | { kind: "toolScale"; center: Vec; start: Vec; ids: string[] }
@@ -115,6 +126,10 @@ function pressureWidth(pts: Vec[], pressure: number[], width: number): (u: numbe
   };
 }
 
+const quadBox = (q: Vec[]): Box => ({
+  minX: Math.min(...q.map((p) => p.x)), minY: Math.min(...q.map((p) => p.y)), maxX: Math.max(...q.map((p) => p.x)), maxY: Math.max(...q.map((p) => p.y)),
+});
+
 function idPool(pool: string[]): IdFactory {
   let k = 0;
   return () => { if (k >= pool.length) pool.push(newId()); return pool[k++]; };
@@ -126,15 +141,27 @@ function editableSubpaths(n: SceneNode): Subpath[] | null {
   return null;
 }
 
-export interface CanvasApi { fit: (what: "artboard" | "all" | "selection") => void; zoomBy: (f: number) => void; actual: () => void; finishPen: () => void; center: () => Vec }
+export interface CanvasApi {
+  fit: (what: "artboard" | "all" | "selection") => void; zoomBy: (f: number) => void; actual: () => void; finishPen: () => void; center: () => Vec;
+  /** Zoom (screen px per mm) around the stage centre. */
+  zoomTo: (zoom: number) => void;
+  zoomPrev: () => void; zoomNext: () => void;
+  /** Turn the view by `deg` (clockwise), or to an absolute angle. */
+  rotate: (deg: number) => void; setRotation: (deg: number) => void;
+  flip: (axis: "h" | "v") => void;
+  /** Upright and unmirrored, keeping the stage centre in place. */
+  resetOrientation: () => void;
+}
 
 /** Pointer position in document space, for the status bar (kept out of the editor store: it changes on every move). */
 export const pointerStore = createStore<{ p: Vec | null }>(() => ({ p: null }));
 
-export function Canvas({ onContextMenu, apiRef, onToast }: {
+export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
   onContextMenu: (x: number, y: number) => void;
   apiRef: React.MutableRefObject<CanvasApi | null>;
   onToast: (message: string, undo?: boolean) => void;
+  /** Preferences ▸ snap angle, degrees. */
+  snapAngle?: number;
 }) {
   const api = useEditorApi();
   const doc = useEditor((s) => s.doc);
@@ -168,11 +195,13 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
   }, [tool, doc, selection]);
 
   const zoom = view.zoom;
-  const S = useCallback((p: Vec): Vec => ({ x: p.x * view.zoom + view.x, y: p.y * view.zoom + view.y }), [view]);
+  const turned = isTurned(view);
+  const snapAngleRef = useRef(snapAngle);
+  snapAngleRef.current = snapAngle;
+  const S = useCallback((p: Vec): Vec => toScreen(view, p), [view]);
   const toDoc = useCallback((cx: number, cy: number): Vec => {
     const r = stageRef.current!.getBoundingClientRect();
-    const v = api.getState().view;
-    return { x: (cx - r.left - v.x) / v.zoom, y: (cy - r.top - v.y) / v.zoom };
+    return toDocument(api.getState().view, { x: cx - r.left, y: cy - r.top });
   }, [api]);
 
   useEffect(() => {
@@ -184,23 +213,35 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
     return () => ro.disconnect();
   }, []);
 
-  const fitBox = useCallback((b: Box) => {
-    const el = stageRef.current;
-    if (!el || isEmptyBox(b)) return;
-    const w = Math.max(b.maxX - b.minX, 1), h = Math.max(b.maxY - b.minY, 1);
-    const pad = 48 + (api.getState().ui.rulers ? RULER : 0);
-    const z = Math.max(0.02, Math.min(64, Math.min((el.clientWidth - pad * 2) / w, (el.clientHeight - pad * 2) / h)));
-    api.getState().setView({ zoom: z, x: (el.clientWidth - w * z) / 2 - b.minX * z, y: (el.clientHeight - h * z) / 2 - b.minY * z });
+  /** Remembers the current view for View ▸ Zoom ▸ Previous. */
+  const recordView = useCallback(() => {
+    const s = api.getState();
+    s.set({ zoomHistory: recordZoom(s.zoomHistory, s.view) });
   }, [api]);
 
-  const zoomAt = useCallback((factor: number, sx?: number, sy?: number) => {
+  const fitBox = useCallback((b: Box, record = true) => {
+    const el = stageRef.current;
+    if (!el || isEmptyBox(b)) return;
+    const s = api.getState();
+    const pad = 48 + (s.ui.rulers && !isTurned(s.view) ? RULER : 0);
+    if (record) recordView();
+    s.setView((v) => fitView(v, b, el.clientWidth, el.clientHeight, pad));
+  }, [api, recordView]);
+
+  const zoomAt = useCallback((factor: number, sx?: number, sy?: number, record = true) => {
     const el = stageRef.current;
     if (!el) return;
     const px = sx ?? el.clientWidth / 2, py = sy ?? el.clientHeight / 2;
-    api.getState().setView((v) => {
-      const z = Math.min(64, Math.max(0.02, v.zoom * factor));
-      return { zoom: z, x: px - ((px - v.x) / v.zoom) * z, y: py - ((py - v.y) / v.zoom) * z };
-    });
+    if (record) recordView();
+    api.getState().setView((v) => zoomAround(v, factor, { x: px, y: py }));
+  }, [api, recordView]);
+
+  /** Applies a change of rotation / flip around the stage centre (or a screen point). */
+  const turnView = useCallback((fn: (v: typeof view, c: Vec) => typeof view, at?: Vec) => {
+    const el = stageRef.current;
+    if (!el) return;
+    const c = at ?? { x: el.clientWidth / 2, y: el.clientHeight / 2 };
+    api.getState().setView((v) => fn(v, c));
   }, [api]);
 
   const sheetsBox = useCallback((d: Document): Box => d.sheets.reduce((b, s) => ({ minX: Math.min(b.minX, s.x), minY: Math.min(b.minY, s.y), maxX: Math.max(b.maxX, s.x + s.w), maxY: Math.max(b.maxY, s.y + s.h) }), emptyBox()), []);
@@ -240,13 +281,31 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       finishPen: () => finishPen(),
       center: () => {
         const el = stageRef.current, v = api.getState().view;
-        return el ? { x: (el.clientWidth / 2 - v.x) / v.zoom, y: (el.clientHeight / 2 - v.y) / v.zoom } : { x: 0, y: 0 };
+        return el ? toDocument(v, { x: el.clientWidth / 2, y: el.clientHeight / 2 }) : { x: 0, y: 0 };
       },
+      zoomTo: (z) => {
+        const el = stageRef.current;
+        if (!el) return;
+        recordView();
+        api.getState().setView((v) => zoomViewTo(v, z, { x: el.clientWidth / 2, y: el.clientHeight / 2 }));
+      },
+      zoomPrev: () => {
+        const s = api.getState(), r = zoomBack(s.zoomHistory, s.view);
+        if (r) { s.set({ zoomHistory: r.h }); s.setView(r.v); }
+      },
+      zoomNext: () => {
+        const s = api.getState(), r = zoomForward(s.zoomHistory, s.view);
+        if (r) { s.set({ zoomHistory: r.h }); s.setView(r.v); }
+      },
+      rotate: (deg) => turnView((v, c) => rotateView(v, deg, c)),
+      setRotation: (deg) => turnView((v, c) => setRotation(v, deg, c)),
+      flip: (axis) => turnView((v, c) => flipView(v, axis, c)),
+      resetOrientation: () => turnView((v, c) => place({ ...v, rotation: 0, flipX: false, flipY: false }, toDocument(v, c), c)),
     };
-  }, [api, apiRef, fitBox, sheetsBox, zoomAt, finishPen]);
+  }, [api, apiRef, fitBox, sheetsBox, zoomAt, finishPen, recordView, turnView]);
 
   useEffect(() => {
-    if (!fitted.current && size.w > 100) { fitted.current = true; fitBox(sheetsBox(api.getState().doc)); }
+    if (!fitted.current && size.w > 100) { fitted.current = true; fitBox(sheetsBox(api.getState().doc), false); }
   }, [size, fitBox, sheetsBox, api]);
 
   useEffect(() => { if ((tool !== "pen" && pen.current) || (tool !== "curvature" && curve.current)) finishPen(); setHoverFace(-1); }, [tool, finishPen]);
@@ -254,11 +313,26 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
+    let rotAcc = 0, lastZoomRecord = 0;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const r = el.getBoundingClientRect();
-      if (e.ctrlKey || e.metaKey) zoomAt(Math.exp(-e.deltaY * 0.0025), e.clientX - r.left, e.clientY - r.top);
-      else api.getState().setView((v) => ({ ...v, x: v.x - (e.shiftKey ? e.deltaY : e.deltaX), y: v.y - (e.shiftKey ? 0 : e.deltaY) }));
+      const at = { x: e.clientX - r.left, y: e.clientY - r.top };
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
+        rotAcc += e.deltaY || e.deltaX;
+        if (Math.abs(rotAcc) >= WHEEL_ROTATE_STEP) {
+          const step = Math.sign(rotAcc) * snapAngleRef.current;
+          rotAcc = 0;
+          api.getState().setView((v) => rotateView(v, step, at));
+        }
+        return;
+      }
+      if (e.ctrlKey || e.metaKey) {
+        // One history entry per burst of wheel zooming.
+        const record = e.timeStamp - lastZoomRecord > 600;
+        lastZoomRecord = e.timeStamp;
+        zoomAt(Math.exp(-e.deltaY * 0.0025), at.x, at.y, record);
+      } else api.getState().setView((v) => ({ ...v, x: v.x - (e.shiftKey ? e.deltaY : e.deltaX), y: v.y - (e.shiftKey ? 0 : e.deltaY) }));
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
@@ -270,7 +344,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
     const onDown = (e: KeyboardEvent) => {
       if (typing(e.target)) return;
       // A modal dialog owns the keyboard: its Escape closes it rather than clearing the selection behind it.
-      if (e.target instanceof Element && e.target.closest(".ui-overlay")) return;
+      if (e.target instanceof Element && e.target.closest(".ui-overlay, .st-snap")) return;
       const s = api.getState();
       const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
       if (e.key === " ") { if (!space.current) { space.current = true; setCursor("grab"); } stop(); return; }
@@ -302,7 +376,13 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
         if (s.anchors.length && s.tool === "direct") { moveAnchors(s.anchors, dx, dy, "nudge-anchors"); stop(); return; }
         const ids = s.selection.filter((id) => isEditable(s.doc.root, id));
-        if (ids.length) { s.edit("Nudge", (d) => transformNodes(d, ids, translate(dx, dy)), { mergeKey: "nudge" }); s.set({ lastTransform: translate(dx, dy) }); stop(); }
+        if (ids.length) {
+          s.edit("Nudge", (d) => transformNodes(d, ids, translate(dx, dy)), { mergeKey: "nudge" });
+          s.set({ lastTransform: translate(dx, dy) });
+          const rc = s.rotCenter;
+          if (rc && rc.key === selectionKey(s.selection)) s.set({ rotCenter: { key: rc.key, at: { x: rc.at.x + dx, y: rc.at.y + dy } } });
+          stop();
+        }
       }
     };
     const onUp = (e: KeyboardEvent) => { if (e.key === " ") { space.current = false; setCursor(null); } };
@@ -418,12 +498,12 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         for (const g of segments(sp)) {
           const m = cubicAt(g, 0.5), a = cubicAt(g, 0.45), b = cubicAt(g, 0.55);
           if (Math.hypot(b.x - a.x, b.y - a.y) < 1e-9) continue;
-          out.push({ p: S(m), a: (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI });
+          out.push({ p: S(m), a: turned ? screenAngle(view, b.x - a.x, b.y - a.y) : (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI });
         }
       }
     }
     return out;
-  }, [tool, ui.pathDirection, selection, doc, S]);
+  }, [tool, ui.pathDirection, selection, doc, S, turned, view]);
 
   /** Handles of the Live Effects open in the panel (page coordinates), with their guide lines. */
   const fxView = useMemo(() => {
@@ -463,15 +543,34 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
 
   function handleAt(sp: Vec): { kind: "scale"; h: Handle } | { kind: "rotate"; h: Handle } | null {
     if (isEmptyBox(selBox) || tool !== "select") return null;
-    const b = { minX: S({ x: selBox.minX, y: 0 }).x, minY: S({ x: 0, y: selBox.minY }).y, maxX: S({ x: selBox.maxX, y: 0 }).x, maxY: S({ x: 0, y: selBox.maxY }).y };
-    for (const h of HANDLES) { const p = handlePos(b, h); if (Math.abs(sp.x - p.x) <= 6 && Math.abs(sp.y - p.y) <= 6) return { kind: "scale", h }; }
+    const v = api.getState().view;
+    const q = toDocument(v, sp);
+    for (const h of HANDLES) { const p = toScreen(v, handlePos(selBox, h)); if (Math.abs(sp.x - p.x) <= 6 && Math.abs(sp.y - p.y) <= 6) return { kind: "scale", h }; }
     for (const h of ["nw", "ne", "se", "sw"] as Handle[]) {
-      const p = handlePos(b, h);
+      const p = toScreen(v, handlePos(selBox, h));
       const d = Math.hypot(sp.x - p.x, sp.y - p.y);
-      const outside = sp.x < b.minX || sp.x > b.maxX || sp.y < b.minY || sp.y > b.maxY;
+      const outside = q.x < selBox.minX || q.x > selBox.maxX || q.y < selBox.minY || q.y > selBox.maxY;
       if (d > 6 && d <= 20 && outside) return { kind: "rotate", h };
     }
     return null;
+  }
+
+  /** Cursor for a scale handle, following the handle's direction on a turned view. */
+  function handleCursor(h: Handle): string {
+    const v = api.getState().view;
+    if (!isTurned(v)) return HANDLE_CURSOR[h];
+    const c = boxCenter(selBox), p = handlePos(selBox, h);
+    return resizeCursor(screenAngle(v, p.x - c.x, p.y - c.y));
+  }
+
+  /** The rotation-centre marker of the Rotate tool is under the pointer. */
+  function rotCenterAt(sp: Vec): boolean {
+    const s = api.getState();
+    if (s.tool !== "rotate") return false;
+    const c = rotationCentre(s);
+    if (!c) return false;
+    const q = toScreen(s.view, c);
+    return Math.hypot(sp.x - q.x, sp.y - q.y) <= 8;
   }
 
   function guideAt(p: Vec): number {
@@ -516,7 +615,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       setCursor("grabbing");
       return;
     }
-    if (s.ui.rulers && (sp.x < RULER || sp.y < RULER)) {
+    if (s.ui.rulers && !isTurned(s.view) && (sp.x < RULER || sp.y < RULER)) {
       const axis: "x" | "y" = sp.y < RULER ? "y" : "x";
       s.begin();
       s.preview((d) => { d.guides.push({ axis, at: axis === "x" ? p.x : p.y }); });
@@ -540,7 +639,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
           s.begin();
           const ids = s.selection.filter((id) => isEditable(s.doc.root, id));
           if (h.kind === "scale") drag.current = { kind: "scale", handle: h.h, box: selBox, ids };
-          else { const c = boxCenter(selBox); drag.current = { kind: "rotate", center: c, a0: Math.atan2(p.y - c.y, p.x - c.x), ids }; }
+          else { const c = rotationCentre(s) ?? boxCenter(selBox); drag.current = { kind: "rotate", center: c, a0: Math.atan2(p.y - c.y, p.x - c.x), ids }; }
           return;
         }
         const gi = guideAt(p);
@@ -548,11 +647,14 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         if (!hit && gi >= 0) { s.begin(); drag.current = { kind: "guide", index: gi, axis: s.doc.guides[gi].axis, isNew: false }; return; }
         if (hit) {
           if (e.shiftKey) { s.select([hit], "toggle"); return; }
+          // Alt+click (no drag) selects the next object down the stack under the pointer; Alt+drag still duplicates.
+          const under = e.altKey ? selectUnder(hitStack(s.doc, p, tol), s.selection) : null;
           const sel = s.selection.includes(hit) ? s.selection : [hit];
           if (!s.selection.includes(hit)) s.select([hit]);
-          startMove(p, sel, e.altKey, e.pointerId, settings);
+          startMove(p, sel, e.altKey, e.pointerId, settings, under);
           return;
         }
+        if (e.altKey) { drag.current = { kind: "touch", pts: [p], add: e.shiftKey }; return; }
         if (!e.shiftKey) s.select([]);
         drag.current = { kind: "marquee", start: p, cur: p, add: e.shiftKey, deep: false };
         return;
@@ -594,7 +696,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
           }
         }
         let pt = q;
-        if (e.shiftKey && cur?.nodes.length) pt = constrain45(cur.nodes[cur.nodes.length - 1], p);
+        if (e.shiftKey && cur?.nodes.length) pt = constrainAngle(cur.nodes[cur.nodes.length - 1], p, e);
         const prev = cur?.nodes ?? [];
         pen.current = { nodes: s.penMode === "paraxial" ? paraxialAppend(prev, pt) : [...prev, { x: pt.x, y: pt.y }], hoverClose: false };
         if (s.penMode === "bezier") drag.current = { kind: "penHandle" };
@@ -607,7 +709,8 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       case "rotate": case "scale": {
         const ids = s.selection.filter((id) => isEditable(s.doc.root, id));
         if (!ids.length) { onToast("Select something first"); return; }
-        const c = boxCenter(selectionBox(s.doc, ids));
+        if (s.tool === "rotate" && rotCenterAt(sp)) { drag.current = { kind: "rotCenter", key: selectionKey(s.selection) }; return; }
+        const c = (s.tool === "rotate" ? rotationCentre(s) : null) ?? boxCenter(selectionBox(s.doc, ids));
         s.begin();
         drag.current = s.tool === "rotate" ? { kind: "rotate", center: c, a0: Math.atan2(p.y - c.y, p.x - c.x), ids, tool: true } : { kind: "toolScale", center: c, start: p, ids };
         return;
@@ -720,12 +823,13 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
     }
   }
 
-  function startMove(p: Vec, ids: string[], dup: boolean, pointerId: number, settings: SnapSettings) {
+  function startMove(p: Vec, ids: string[], dup: boolean, pointerId: number, settings: SnapSettings, under: string | null = null) {
     const s = api.getState();
     const editable = topLevel(s.doc.root, ids).filter((id) => isEditable(s.doc.root, id));
-    if (!editable.length) return;
+    if (!editable.length) { if (under) s.select([under]); return; }
     s.begin();
-    drag.current = { kind: "move", start: p, ids: editable, box: selectionBox(s.doc, editable), targets: snapTargets(s.doc, new Set(editable), settings), dup, pool: [], moved: false, pointerId };
+    const targets = snapTargets(s.doc, new Set(editable), settings);
+    drag.current = { kind: "move", start: p, ids: editable, box: selectionBox(s.doc, editable), targets, dup, pool: [], moved: false, pointerId, under, key: selectionKey(ids) };
   }
 
   function convertAnchor(ref: AnchorRef) {
@@ -744,8 +848,10 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
     s.setAnchors([ref]);
   }
 
-  function constrain45(from: Vec, to: Vec): Vec {
-    const a = Math.round(Math.atan2(to.y - from.y, to.x - from.x) / (Math.PI / 4)) * (Math.PI / 4);
+  /** Shift: 45° steps; Ctrl+Shift: the snap angle from Preferences. */
+  function constrainAngle(from: Vec, to: Vec, e: { ctrlKey: boolean; metaKey: boolean }): Vec {
+    const step = ((e.ctrlKey || e.metaKey ? snapAngleRef.current : 45) * Math.PI) / 180;
+    const a = Math.round(Math.atan2(to.y - from.y, to.x - from.x) / step) * step;
     const len = Math.hypot(to.x - from.x, to.y - from.y);
     return { x: from.x + len * Math.cos(a), y: from.y + len * Math.sin(a) };
   }
@@ -780,11 +886,21 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       const overFx = (s.tool === "select" || s.tool === "direct") && !space.current && fxView.length > 0 && !!fxHandleAt(sp);
       if (s.tool === "select" && !space.current) {
         const h = handleAt(sp);
-        setCursor(overFx ? "move" : h ? (h.kind === "scale" ? HANDLE_CURSOR[h.h] : "alias") : guideAt(p) >= 0 && !hitTest(s.doc, p, 4 / s.view.zoom) ? (s.doc.guides[guideAt(p)].axis === "x" ? "ew-resize" : "ns-resize") : null);
+        const g = guideAt(p);
+        const guideCursor = (axis: "x" | "y") => (isTurned(s.view) ? resizeCursor(screenAngle(s.view, axis === "x" ? 1 : 0, axis === "x" ? 0 : 1)) : axis === "x" ? "ew-resize" : "ns-resize");
+        setCursor(overFx ? "move" : h ? (h.kind === "scale" ? handleCursor(h.h) : "alias") : g >= 0 && !hitTest(s.doc, p, 4 / s.view.zoom) ? guideCursor(s.doc.guides[g].axis) : null);
       } else if (s.tool === "direct" && !space.current) setCursor(overFx ? "move" : null);
+      else if (s.tool === "rotate" && !space.current) setCursor(rotCenterAt(sp) ? "move" : null);
       return;
     }
     switch (dr.kind) {
+      case "touch": dr.pts.push(p); rerender(); return;
+      case "rotCenter": {
+        const q = e.ctrlKey ? p : snapPoint(p, snapTargets(s.doc, new Set(), settings), tol, settings).p;
+        s.set({ rotCenter: { key: dr.key, at: q } });
+        setHud({ x: sp.x, y: sp.y, text: `X ${fmt(q.x)}  Y ${fmt(q.y)} ${doc.units}` });
+        return;
+      }
       case "pan": s.setView({ x: dr.vx + e.clientX - dr.sx, y: dr.vy + e.clientY - dr.sy }); return;
       case "fxHandle": {
         const patch = fxHandlePatch(dr, p);
@@ -836,7 +952,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       }
       case "rotate": {
         let a = ((Math.atan2(p.y - dr.center.y, p.x - dr.center.x) - dr.a0) * 180) / Math.PI;
-        if (e.shiftKey) a = Math.round(a / 15) * 15;
+        if (e.shiftKey) a = Math.round(a / snapAngleRef.current) * snapAngleRef.current;
         const m = rotateAt(a, dr.center.x, dr.center.y);
         s.preview((d) => transformNodes(d, dr.ids, m));
         setHud({ x: sp.x, y: sp.y, text: `${Math.round(((a % 360) + 540) % 360 - 180)}°` });
@@ -855,7 +971,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       case "pencil": dr.pts.push(p); dr.pressure.push(penPressure(e)); rerender(); return;
       case "lasso": dr.pts.push(p); rerender(); return;
       case "knife": {
-        if (dr.straight || e.altKey) { dr.straight = true; dr.pts = [dr.pts[0], e.shiftKey ? constrain45(dr.pts[0], p) : p]; }
+        if (dr.straight || e.altKey) { dr.straight = true; dr.pts = [dr.pts[0], e.shiftKey ? constrainAngle(dr.pts[0], p, e) : p]; }
         else dr.pts.push(p);
         rerender();
         return;
@@ -875,7 +991,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         const span = Math.abs(arm) > 1e-3 ? arm : -Math.max(dr.half[axis === "x" ? "y" : "x"], 1);
         let k = (axis === "x" ? dx : dy) / span;
         let deg = (Math.atan(k) * 180) / Math.PI;
-        if (e.shiftKey) { deg = Math.round(deg / 15) * 15; k = Math.tan((deg * Math.PI) / 180); }
+        if (e.shiftKey) { deg = Math.max(-89, Math.min(89, Math.round(deg / snapAngleRef.current) * snapAngleRef.current)); k = Math.tan((deg * Math.PI) / 180); }
         const m = shearAt(k, axis, dr.center);
         s.preview((d) => transformNodes(d, dr.ids, m));
         setHud({ x: sp.x, y: sp.y, text: `Shear ${axis === "x" ? "horizontal" : "vertical"} ${Math.round(deg * 10) / 10}°` });
@@ -889,7 +1005,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       }
       case "measure": {
         let b = snapPoint(p, dr.targets, tol, settings).p;
-        if (e.shiftKey) b = constrain45(dr.a, b);
+        if (e.shiftKey) b = constrainAngle(dr.a, b, e);
         s.set({ measure: { a: dr.a, b, result: measureAcross(dr.crossed, dr.a, b) } });
         const dx = b.x - dr.a.x, dy = b.y - dr.a.y;
         setHud({ x: sp.x, y: sp.y, text: `D ${fmt(Math.hypot(dx, dy))} ${doc.units}  ${Math.round((Math.atan2(-dy, dx) * 1800) / Math.PI) / 10}°` });
@@ -907,7 +1023,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       }
       case "draw": {
         let q = snapPoint(p, dr.tool === "line" ? snapTargets(s.doc, new Set(), settings) : noTargets(), tol, settings).p;
-        if (dr.tool === "line" && e.shiftKey) q = constrain45(dr.start, p);
+        if (dr.tool === "line" && e.shiftKey) q = constrainAngle(dr.start, p, e);
         dr.cur = q; dr.shift = e.shiftKey; dr.alt = e.altKey;
         const bx = drawBox(dr);
         setHud({ x: sp.x, y: sp.y, text: dr.tool === "line" ? `${fmt(Math.hypot(q.x - dr.start.x, q.y - dr.start.y))} ${doc.units}  ${Math.round((Math.atan2(dr.start.y - q.y, q.x - dr.start.x) * 180) / Math.PI)}°` : `W ${fmt(bx.w)}  H ${fmt(bx.h)} ${doc.units}` });
@@ -1013,9 +1129,18 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         });
         return;
       }
+      case "touch": {
+        rerender();
+        const ids = touchHits(s.doc, dr.pts, 2 / s.view.zoom);
+        s.select(ids, dr.add ? "add" : "set");
+        if (ids.length) onToast(`Touch selection: ${ids.length} object${ids.length === 1 ? "" : "s"}`);
+        return;
+      }
+      case "rotCenter": setHud(null); return;
       case "move": {
         if (!dr.moved) {
           s.end("", null);
+          if (dr.under) s.select([dr.under]);
           return;
         }
         let dx = p.x - dr.start.x, dy = p.y - dr.start.y;
@@ -1031,6 +1156,8 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         }, dup ? copies : undefined);
         if (dup) s.select(copies);
         s.set({ lastTransform: m });
+        const rc = s.rotCenter;
+        if (!dup && rc && rc.key === dr.key) s.set({ rotCenter: { key: rc.key, at: { x: rc.at.x + r.dx, y: rc.at.y + r.dy } } });
         return;
       }
       case "lasso": {
@@ -1079,25 +1206,37 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       }
       case "marquee": {
         const b = normBox(dr.start, p);
-        if ((b.maxX - b.minX) * s.view.zoom < 2 && (b.maxY - b.minY) * s.view.zoom < 2) { if (dr.deep && !dr.add) s.select([]); rerender(); return; }
+        // On a turned view the dragged screen rectangle is a rotated quadrilateral in the document.
+        const quad = isTurned(s.view) ? screenQuad(dr.start, p) : null;
+        const inMarquee = (a: Vec) => (quad ? inQuad(a, quad) : a.x >= b.minX && a.x <= b.maxX && a.y >= b.minY && a.y <= b.maxY);
+        const sa = S(dr.start), sb = S(p);
+        if (quad ? Math.abs(sb.x - sa.x) < 2 && Math.abs(sb.y - sa.y) < 2 : (b.maxX - b.minX) * s.view.zoom < 2 && (b.maxY - b.minY) * s.view.zoom < 2) { if (dr.deep && !dr.add) s.select([]); rerender(); return; }
         if (dr.deep && s.selection.length) {
           const inside: AnchorRef[] = [];
           for (const id of s.selection) {
             const l = locate(s.doc.root, id);
             const subs = l && editableSubpaths(l.node);
             if (!l || !subs) continue;
-            transformSubpaths(subs, l.world).forEach((sp, si) => sp.nodes.forEach((a, k) => { if (a.x >= b.minX && a.x <= b.maxX && a.y >= b.minY && a.y <= b.maxY) inside.push({ id, sub: si, idx: k }); }));
+            transformSubpaths(subs, l.world).forEach((sp, si) => sp.nodes.forEach((a, k) => { if (inMarquee(a)) inside.push({ id, sub: si, idx: k }); }));
           }
           if (inside.length) { s.setAnchors(inside); rerender(); return; }
         }
-        const ids = idsInBox(s.doc, b, "touch", dr.deep);
+        const ids = quad
+          ? idsInBox(s.doc, quadBox(quad), "touch", dr.deep).filter((id) => boxTouchesQuad(worldBox(s.doc.root, id), quad))
+          : idsInBox(s.doc, b, "touch", dr.deep);
         s.select(ids, dr.add ? "add" : "set");
         rerender();
         return;
       }
       case "zoom": {
         const b = normBox(dr.start, p);
-        if ((b.maxX - b.minX) * s.view.zoom > 6) fitBox(b);
+        const sa = S(dr.start), sb = S(p);
+        if (isTurned(s.view) && Math.abs(sb.x - sa.x) > 6 && stageRef.current) {
+          const el = stageRef.current, rw = Math.abs(sb.x - sa.x), rh = Math.abs(sb.y - sa.y) || 1;
+          const z = s.view.zoom * Math.min(el.clientWidth / rw, el.clientHeight / rh);
+          recordView();
+          s.setView((v) => place(zoomViewTo(v, z, { x: 0, y: 0 }), { x: (dr.start.x + p.x) / 2, y: (dr.start.y + p.y) / 2 }, { x: el.clientWidth / 2, y: el.clientHeight / 2 }));
+        } else if (!isTurned(s.view) && (b.maxX - b.minX) * s.view.zoom > 6) fitBox(b);
         else { const sp = screenPoint(e); zoomAt(dr.alt || e.altKey ? 0.5 : 2, sp.x, sp.y); }
         rerender();
         return;
@@ -1163,10 +1302,17 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
     return [a[0] * ib[0] + a[2] * ib[1], a[1] * ib[0] + a[3] * ib[1], a[0] * ib[2] + a[2] * ib[3], a[1] * ib[2] + a[3] * ib[3], a[0] * ib[4] + a[2] * ib[5] + a[4], a[1] * ib[4] + a[3] * ib[5] + a[5]];
   }
 
+  /** The document quadrilateral under the screen rectangle spanned by two document points. */
+  function screenQuad(a: Vec, b: Vec): Vec[] {
+    const v = api.getState().view, sa = toScreen(v, a), sb = toScreen(v, b);
+    return [{ x: sa.x, y: sa.y }, { x: sb.x, y: sa.y }, { x: sb.x, y: sb.y }, { x: sa.x, y: sb.y }].map((q) => toDocument(v, q));
+  }
+
   function onDoubleClick(e: React.MouseEvent<HTMLDivElement>) {
     const s = api.getState();
     const p = toDoc(e.clientX, e.clientY);
     const tol = 4 / s.view.zoom;
+    if (s.tool === "rotate" && rotCenterAt(screenPoint(e))) { s.set({ rotCenter: null }); onToast("Rotation centre reset to the middle of the selection"); return; }
     if (s.tool === "select" || s.tool === "text") {
       const id = hitTest(s.doc, p, tol, { deep: true });
       const n = id ? findNode(s.doc.root, id) : null;
@@ -1204,34 +1350,39 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
   // ---------- render ----------
 
   const layerColor = (n: SceneNode) => { const c = doc.cutLayers[n.layer]?.color ?? "#888888"; return c === "#000000" ? "var(--ink)" : c; };
-  const outline = ui.outline;
-  const renderNode = (n: SceneNode): ReactNode => {
+  /**
+   * One object as SVG. `outline` draws wireframes; `pre` prefixes ids for the extra outline copy of
+   * split view and outline overlay (the copy carries no data-id / test ids, so queries see one scene).
+   */
+  const renderNode = (n: SceneNode, outline = ui.outline, pre = ""): ReactNode => {
     if (n.hidden) return null;
     if (textEditing === n.id) return null;
+    const own = !pre;
     const layer = doc.cutLayers[n.layer];
     const dim = layer && !layer.show ? 0.25 : 1;
+    const kids = (list: SceneNode[]) => list.map((c) => renderNode(c, outline, pre));
     if (n.type === "group") {
       if (n.role === "clip" && n.children.length > 1) {
         const [mask, ...rest] = n.children;
-        const cid = `clip-${n.id}`;
+        const cid = `${pre}clip-${n.id}`;
         return (
-          <g key={n.id} transform={matStr(n.transform)} data-id={n.id}>
+          <g key={n.id} transform={matStr(n.transform)} data-id={own ? n.id : undefined}>
             <clipPath id={cid}><path d={localD(mask)} transform={matStr(mask.transform)} clipRule="evenodd" /></clipPath>
-            <g clipPath={`url(#${cid})`}>{rest.map(renderNode)}</g>
+            <g clipPath={`url(#${cid})`}>{kids(rest)}</g>
             <path d={localD(mask)} transform={matStr(mask.transform)} fill="none" stroke="var(--text-disabled)" strokeDasharray="3 3" strokeWidth={1} vectorEffect="non-scaling-stroke" />
           </g>
         );
       }
-      return <g key={n.id} transform={matStr(n.transform)} data-id={n.id}>{n.children.map(renderNode)}</g>;
+      return <g key={n.id} transform={matStr(n.transform)} data-id={own ? n.id : undefined}>{kids(n.children)}</g>;
     }
     if (n.type === "image") {
       const url = outline ? undefined : imageUrls[n.assetId];
       if (url) {
         return (
-          <g key={n.id} transform={matStr(n.transform)} data-id={n.id} opacity={dim}>
-            <image href={url} x={-n.w / 2} y={-n.h / 2} width={n.w} height={n.h} preserveAspectRatio="none" filter={n.dither?.mode === "threshold" ? `url(#hl-dither-${n.id})` : undefined} data-testid="canvas-image" />
+          <g key={n.id} transform={matStr(n.transform)} data-id={own ? n.id : undefined} opacity={dim}>
+            <image href={url} x={-n.w / 2} y={-n.h / 2} width={n.w} height={n.h} preserveAspectRatio="none" filter={n.dither?.mode === "threshold" ? `url(#${pre}hl-dither-${n.id})` : undefined} data-testid={own ? "canvas-image" : undefined} />
             {n.dither?.mode === "threshold" && (
-              <filter id={`hl-dither-${n.id}`} colorInterpolationFilters="sRGB">
+              <filter id={`${pre}hl-dither-${n.id}`} colorInterpolationFilters="sRGB">
                 <feColorMatrix type="matrix" values={`0.299 0.587 0.114 0 0 0.299 0.587 0.114 0 0 0.299 0.587 0.114 0 0 0 0 0 1 0`} />
                 <feComponentTransfer>
                   <feFuncR type="discrete" tableValues={thresholdTable(n.dither.threshold, n.dither.invert)} />
@@ -1249,16 +1400,16 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       const m = n.transform, [a, b] = n.points;
       const len = Math.hypot(b.x - a.x, b.y - a.y) * Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2]));
       return (
-        <g key={n.id} transform={matStr(n.transform)} data-id={n.id} opacity={dim}>
+        <g key={n.id} transform={matStr(n.transform)} data-id={own ? n.id : undefined} opacity={dim}>
           <path d={localD(n)} fill="none" stroke={outline ? "var(--ink)" : layerColor(n)} strokeWidth={1} vectorEffect="non-scaling-stroke" strokeDasharray="2 2" />
-          <text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 4 / zoom} fontSize={11 / zoom} textAnchor="middle" fill={outline ? "var(--ink)" : layerColor(n)} fontFamily="var(--font-num)" data-testid="dimension-label">{fmt(len)} {doc.units}</text>
+          <text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 4 / zoom} fontSize={11 / zoom} textAnchor="middle" fill={outline ? "var(--ink)" : layerColor(n)} fontFamily="var(--font-num)" data-testid={own ? "dimension-label" : undefined}>{fmt(len)} {doc.units}</text>
         </g>
       );
     }
     const fillMode = !outline && layer?.mode === "fill" && n.type !== "dimension";
     return (
       <path
-        key={n.id} d={localD(n)} transform={matStr(n.transform)} data-id={n.id}
+        key={n.id} d={localD(n)} transform={matStr(n.transform)} data-id={own ? n.id : undefined}
         fill={fillMode ? layerColor(n) : "none"} fillOpacity={fillMode ? 0.35 : undefined} fillRule="evenodd"
         stroke={outline ? "var(--ink)" : layerColor(n)} strokeWidth={1} vectorEffect="non-scaling-stroke"
         strokeDasharray={layer?.mode === "score" && !outline ? "4 2" : n.type === "dimension" ? "2 2" : undefined}
@@ -1267,7 +1418,15 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
     );
   };
 
-  const vb = { minX: -view.x / zoom, minY: -view.y / zoom, maxX: (size.w - view.x) / zoom, maxY: (size.h - view.y) / zoom };
+  const vb = visibleBox(view, size.w, size.h);
+  const viewTf = turned ? matStr(viewMatrix(view)) : `translate(${view.x} ${view.y}) scale(${zoom})`;
+  const overlay = ui.outlineOverlay && !ui.outline;
+  const splitX = Math.round(size.w * Math.min(0.95, Math.max(0.05, ui.splitAt)));
+  const splitQuad = ui.split
+    ? [{ x: splitX, y: 0 }, { x: size.w, y: 0 }, { x: size.w, y: size.h }, { x: splitX, y: size.h }].map((q) => toDocument(view, q))
+    : null;
+  const rotCenterState = useEditor((s) => s.rotCenter);
+  const rotCentre = tool === "rotate" || tool === "select" ? rotationCentre({ doc, selection, rotCenter: rotCenterState }) : null;
   const gridLines = useMemo(() => {
     if (!doc.grid.show) return null;
     if (gridKind(doc.grid) !== "rectangular") {
@@ -1322,7 +1481,8 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
 
   return (
     <div
-      className={`st-stage${ui.rulers ? " with-rulers" : ""}`} ref={stageRef} data-testid="stage" tabIndex={-1}
+      className={`st-stage${ui.rulers && !turned ? " with-rulers" : ""}`} ref={stageRef} data-testid="stage" tabIndex={-1}
+      data-rotation={turned ? Math.round(normDeg(view.rotation ?? 0) * 100) / 100 : undefined}
       style={{ cursor: toolCursor }}
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
       onPointerLeave={() => { setPointer(null); pointerStore.setState({ p: null }); }} onDoubleClick={onDoubleClick} onContextMenu={onContextMenuEvent}
@@ -1339,7 +1499,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
           </pattern>
           <clipPath id="hl-sheets">{doc.sheets.map((sh) => <rect key={sh.id} x={sh.x} y={sh.y} width={sh.w} height={sh.h} />)}</clipPath>
         </defs>
-        <g transform={`translate(${view.x} ${view.y}) scale(${zoom})`}>
+        <g transform={viewTf}>
           {doc.sheets.map((sh) => (
             <g key={sh.id}>
               <rect x={sh.x} y={sh.y} width={sh.w} height={sh.h} fill="var(--surface-sheet)" filter={ui.presentation ? undefined : "url(#hl-artboard-shadow)"} />
@@ -1353,7 +1513,19 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
             </g>
           ))}
           {gridLines && <g clipPath={doc.sheets.length ? "url(#hl-sheets)" : undefined} data-testid="canvas-grid" data-kind={gridKind(doc.grid)}>{gridLines}</g>}
-          <g data-testid="scene">{doc.root.children.map(renderNode)}</g>
+          <g data-testid="scene" opacity={overlay ? 0.35 : undefined}>{doc.root.children.map((n) => renderNode(n))}</g>
+          {overlay && <g data-testid="outline-overlay" pointerEvents="none">{doc.root.children.map((n) => renderNode(n, true, "oo-"))}</g>}
+          {splitQuad && (
+            <g data-testid="split-outline" pointerEvents="none">
+              <clipPath id="hl-split"><polygon points={splitQuad.map((q) => `${q.x},${q.y}`).join(" ")} /></clipPath>
+              <g clipPath="url(#hl-split)">
+                <polygon points={splitQuad.map((q) => `${q.x},${q.y}`).join(" ")} fill="var(--surface-pasteboard)" />
+                {doc.sheets.map((sh) => <rect key={sh.id} x={sh.x} y={sh.y} width={sh.w} height={sh.h} fill="var(--surface-sheet)" stroke="var(--sheet-edge)" strokeWidth={1} vectorEffect="non-scaling-stroke" />)}
+                {gridLines && <g clipPath={doc.sheets.length ? "url(#hl-sheets)" : undefined}>{gridLines}</g>}
+                {doc.root.children.map((n) => renderNode(n, true, "so-"))}
+              </g>
+            </g>
+          )}
           {fxGuides.length > 0 && !ui.presentation && (
             <g className="fx-guides" data-testid="effect-guides" pointerEvents="none">
               {fxGuides.map(({ id, g }) => (
@@ -1413,24 +1585,35 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
           const fx = hasEffects(l.node);
           if (tool !== "direct" && !fx) return null;
           return (
-            <path key={"h" + id} d={pathD(transformSubpaths(nodeBasePaths(l.node), l.world))} transform={`translate(${view.x} ${view.y}) scale(${zoom})`}
+            <path key={"h" + id} d={pathD(transformSubpaths(nodeBasePaths(l.node), l.world))} transform={viewTf}
               fill="none" stroke="var(--accent)" strokeWidth={1} vectorEffect="non-scaling-stroke" pointerEvents="none"
               {...(fx ? { strokeDasharray: "4 3", opacity: tool === "direct" ? 1 : 0.75, "data-testid": "effect-base-outline" } : {})} />
           );
         })}
         {selRect && (
           <g data-testid="selection-box">
-            <rect x={selRect.x} y={selRect.y} width={selRect.w} height={selRect.h} fill="none" stroke="var(--accent)" strokeWidth={1} />
-            {tool === "select" && HANDLES.map((h) => { const q = handlePos({ minX: selRect.x, minY: selRect.y, maxX: selRect.x + selRect.w, maxY: selRect.y + selRect.h }, h); return <rect key={h} x={q.x - 3.5} y={q.y - 3.5} width={7} height={7} fill="var(--handle-fill)" stroke="var(--accent)" strokeWidth={1} />; })}
-            {tool === "select" && <circle cx={selRect.x + selRect.w / 2} cy={selRect.y + selRect.h / 2} r={2.5} fill="none" stroke="var(--accent)" strokeWidth={1} opacity={0.8} />}
+            {turned
+              ? <polygon points={(["nw", "ne", "se", "sw"] as Handle[]).map((h) => { const q = S(handlePos(selBox, h)); return `${q.x},${q.y}`; }).join(" ")} fill="none" stroke="var(--accent)" strokeWidth={1} />
+              : <rect x={selRect.x} y={selRect.y} width={selRect.w} height={selRect.h} fill="none" stroke="var(--accent)" strokeWidth={1} />}
+            {tool === "select" && HANDLES.map((h) => { const q = S(handlePos(selBox, h)); return <rect key={h} x={q.x - 3.5} y={q.y - 3.5} width={7} height={7} fill="var(--handle-fill)" stroke="var(--accent)" strokeWidth={1} />; })}
+            {tool === "select" && (() => { const c = S(rotCentre ?? boxCenter(selBox)); return <circle cx={c.x} cy={c.y} r={2.5} fill="none" stroke="var(--accent)" strokeWidth={1} opacity={0.8} />; })()}
           </g>
         )}
+        {tool === "rotate" && rotCentre && selection.length > 0 && (() => {
+          const c = S(rotCentre);
+          return (
+            <g data-testid="rotation-centre" pointerEvents="none">
+              <circle cx={c.x} cy={c.y} r={6} fill="var(--handle-fill)" stroke="var(--accent)" strokeWidth={1.5} />
+              <path d={`M${c.x - 10} ${c.y}H${c.x + 10}M${c.x} ${c.y - 10}V${c.y + 10}`} stroke="var(--accent)" strokeWidth={1.5} />
+            </g>
+          );
+        })()}
         {fxView.length > 0 && (
           <g data-testid="effect-handles">
             {fxView.map((v) => (
               <g key={v.effect} data-effect={v.effect}>
                 {v.outline.length > 0 && (
-                  <path d={pathD(v.outline)} transform={`translate(${view.x} ${view.y}) scale(${zoom})`} fill="none" stroke="var(--smart-guide)"
+                  <path d={pathD(v.outline)} transform={viewTf} fill="none" stroke="var(--smart-guide)"
                     strokeWidth={1} strokeDasharray="5 3" vectorEffect="non-scaling-stroke" pointerEvents="none" />
                 )}
                 {v.pts.map((q, k) => { const a = S(q); return <rect key={k} className="fx-handle" x={a.x - 4} y={a.y - 4} width={8} height={8} transform={`rotate(45 ${a.x} ${a.y})`} data-testid="effect-handle" />; })}
@@ -1463,7 +1646,17 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
             {penState.nodes.map((n, k) => { const q = S(n); return <rect key={k} x={q.x - 3} y={q.y - 3} width={6} height={6} fill={k === 0 && penState.hoverClose ? "var(--accent)" : "var(--handle-fill)"} stroke="var(--accent)" />; })}
           </g>
         )}
-        {dr && (dr.kind === "marquee" || dr.kind === "zoom" || dr.kind === "text") && (() => { const r = box(normBox(dr.start, dr.cur)); return <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="color-mix(in srgb, var(--accent) 10%, transparent)" stroke="var(--accent)" strokeDasharray="4 3" data-testid="marquee" />; })()}
+        {dr && (dr.kind === "marquee" || dr.kind === "zoom" || dr.kind === "text") && (() => {
+          const look = { fill: "color-mix(in srgb, var(--accent) 10%, transparent)", stroke: "var(--accent)", strokeDasharray: "4 3", "data-testid": "marquee" };
+          if (!turned) { const r = box(normBox(dr.start, dr.cur)); return <rect x={r.x} y={r.y} width={r.w} height={r.h} {...look} />; }
+          // Marquee and zoom drag a screen rectangle; area text is a box in the document, so it turns with the view.
+          if (dr.kind !== "text") { const a = S(dr.start), c = S(dr.cur); return <rect x={Math.min(a.x, c.x)} y={Math.min(a.y, c.y)} width={Math.abs(c.x - a.x)} height={Math.abs(c.y - a.y)} {...look} />; }
+          const b = normBox(dr.start, dr.cur);
+          return <polygon points={(["nw", "ne", "se", "sw"] as Handle[]).map((h) => { const q = S(handlePos(b, h)); return `${q.x},${q.y}`; }).join(" ")} {...look} />;
+        })()}
+        {dr?.kind === "touch" && dr.pts.length > 1 && (
+          <polyline points={dr.pts.map((q) => { const a = S(q); return `${a.x},${a.y}`; }).join(" ")} fill="none" stroke="var(--danger, #e5484d)" strokeWidth={1.5} data-testid="touch-path" />
+        )}
         {lines.map((l, k) => {
           const a = l.axis === "x" ? S({ x: l.at, y: l.from }) : S({ x: l.from, y: l.at });
           const b = l.axis === "x" ? S({ x: l.at, y: l.to }) : S({ x: l.to, y: l.at });
@@ -1471,9 +1664,23 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
           return <line key={k} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="var(--smart-guide)" strokeWidth={1} strokeDasharray={l.kind === "spacing" ? "2 2" : undefined} />;
         })}
       </svg>
-      {ui.rulers && <Rulers view={view} size={size} units={doc.units} pointer={pointer} />}
+      {ui.rulers && !turned && <Rulers view={view} size={size} units={doc.units} pointer={pointer} />}
+      {ui.split && (
+        <div
+          className="st-split-divider" style={{ left: splitX }} role="separator" aria-orientation="vertical" aria-label="Split view divider" data-testid="split-divider"
+          onPointerDown={(e) => { e.stopPropagation(); e.currentTarget.setPointerCapture(e.pointerId); }}
+          onPointerMove={(e) => {
+            if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+            e.stopPropagation();
+            const r = stageRef.current!.getBoundingClientRect();
+            api.getState().setUi({ splitAt: Math.min(0.95, Math.max(0.05, (e.clientX - r.left) / r.width)) });
+          }}
+          onPointerUp={(e) => { e.stopPropagation(); e.currentTarget.releasePointerCapture(e.pointerId); }}
+          onDoubleClick={(e) => e.stopPropagation()}
+        ><span>Outline</span></div>
+      )}
       {hud && <div className="st-hud" style={{ left: hud.x + 16, top: hud.y + 16 }} data-testid="hud">{hud.text}</div>}
-      {textEditing && <TextEditor id={textEditing} S={S} zoom={zoom} />}
+      {textEditing && <TextEditor id={textEditing} S={S} zoom={zoom} turn={turned ? viewMatrix({ ...view, zoom: 1, x: 0, y: 0 }) : undefined} />}
     </div>
   );
 }
