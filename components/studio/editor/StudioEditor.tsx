@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStore } from "zustand";
+import { AlignCenterHorizontal, FileText, Flame, History, Layers, LayoutGrid, Search, SlidersHorizontal, Wand2 } from "lucide-react";
 import { LogoMark } from "@/components/site/LogoMark";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { ContextMenu, Dock, MenuBar, PanelSection, Toolbar, isMac, useToast, type MenuItem } from "@/components/ui";
@@ -18,7 +19,7 @@ import { isEmptyBox } from "@/lib/studio/geom";
 import { selectionBox, topLevel } from "@/lib/studio/scene";
 import { documentThumbnail } from "@/lib/studio/thumbnail";
 import { fmtLength, UNIT_LIST } from "@/lib/studio/units";
-import { builtIn, loadWorkspaces, PANEL_LABELS, saveWorkspaces, showPanel, type PanelId, type Workspace, type WorkspaceState } from "@/lib/studio/workspace";
+import { builtIn, loadWorkspaces, PANEL_LABELS, saveWorkspaces, showPanel, WORKSPACES, type PanelId, type Workspace, type WorkspaceState } from "@/lib/studio/workspace";
 import type { Document, Units } from "@/lib/studio/types";
 import { downloadProject, editorPath, importProjectFile } from "../projectActions";
 import { usePrefs } from "../usePrefs";
@@ -29,9 +30,15 @@ import { CommandPalette, DocumentSetupDialog, MoveDialog, PreferencesDialog, Res
 import { AlignPanel, CutLayersPanel, DocumentPanel, HistoryPanel, LayersPanel, PropertiesPanel } from "./Panels";
 import { createEditorStore, EditorContext, useEditor, useEditorApi, type EditorState } from "./store";
 import { toolSlots } from "./tools";
+import { ToolFooter } from "./ToolFooter";
 import { useTextSync } from "./useTextSync";
 import type { StoreApi } from "zustand";
 import { Dialog } from "@/components/ui";
+
+const PANEL_ICONS: Record<PanelId, ReactNode> = {
+  properties: <SlidersHorizontal size={16} />, layers: <Layers size={16} />, cutLayers: <Flame size={16} />,
+  align: <AlignCenterHorizontal size={16} />, history: <History size={16} />, document: <FileText size={16} />,
+};
 
 type SaveState = "saved" | "saving" | "error";
 type DialogId = "documentSetup" | "move" | "shortcuts" | "preferences" | "palette" | "resetPrefs" | "revert";
@@ -183,8 +190,8 @@ function EditorShell({ opened }: { opened: Document }) {
     workspace: ws.current,
     setWorkspace: (id) => setWs((s) => { const next = { ...s, current: id }; saveWorkspaces(next); return next; }),
     resetWorkspace,
-    theme: prefs.theme,
-    setTheme: (theme) => setPrefs({ theme }),
+    theme: prefs.editorTheme,
+    setTheme: (editorTheme) => setPrefs({ editorTheme }),
     lastField: () => lastField.current,
     viewCenter: () => canvasRef.current?.center() ?? { x: 0, y: 0 },
   };
@@ -237,7 +244,7 @@ function EditorShell({ opened }: { opened: Document }) {
   const generators = doc.root.children.filter((n) => n.type === "generator");
   const panelContent = (p: PanelId) => {
     switch (p) {
-      case "properties": return <PropertiesPanel toast={toast} />;
+      case "properties": return <PropertiesPanel toast={toast} handlers={handlers} />;
       case "layers": return <LayersPanel />;
       case "cutLayers": return <CutLayersPanel toast={toast} />;
       case "align": return <AlignPanel handlers={handlers} />;
@@ -246,8 +253,8 @@ function EditorShell({ opened }: { opened: Document }) {
     }
   };
   const dockTabs = [
-    ...layout.panels.map((p) => ({ id: p, label: PANEL_LABELS[p], content: panelContent(p) })),
-    ...(generators.length ? [{ id: "generator", label: "Generator", content: (
+    ...layout.panels.map((p) => ({ id: p, label: PANEL_LABELS[p], icon: PANEL_ICONS[p], content: panelContent(p) })),
+    ...(generators.length ? [{ id: "generator", label: "Generator", icon: <Wand2 size={16} />, content: (
       <PanelSection title={generatorMeta((generators[0] as { generatorId: string }).generatorId)?.name ?? "Generator"}>
         <p className="dlg-note">{generatorMeta((generators[0] as { generatorId: string }).generatorId)?.blurb}</p>
         <p className="dlg-note">Live generator editing arrives with the generator framework.</p>
@@ -261,7 +268,13 @@ function EditorShell({ opened }: { opened: Document }) {
         <Link href="/home" className="brand" aria-label="HingeLab start screen"><LogoMark /></Link>
         <MenuBar menus={menus} />
         <div className="right">
-          <button type="button" className="ui-btn" onClick={() => setDialog("palette")} title="Command Palette (Ctrl+/)" data-testid="open-palette">Commands</button>
+          <label className="st-ws">
+            <LayoutGrid size={14} aria-hidden />
+            <select className="ui-select" value={ws.current} aria-label="Workspace" onChange={(e) => ctx.setWorkspace(e.target.value)}>
+              {WORKSPACES.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}
+            </select>
+          </label>
+          <button type="button" className="ui-btn" onClick={() => setDialog("palette")} title="Command Palette (Ctrl+/)" data-testid="open-palette"><Search size={14} aria-hidden /> Commands</button>
           <UserMenu />
         </div>
       </header>
@@ -276,14 +289,21 @@ function EditorShell({ opened }: { opened: Document }) {
           ) : (
             <span className="nm" onDoubleClick={() => setRenaming(true)} title="Double-click to rename" data-testid="doc-name">{doc.name}</span>
           )}
+          <DocTabMeta />
           {save === "saving" && <span className="dot" aria-label="Unsaved changes" />}
         </div>
       </div>
-      <ControlBar onResetToast={(m) => toast(m, true)} />
-      <div className="st-main" style={{ gridTemplateColumns: `auto minmax(0, 1fr) ${layout.dockWidth}px` }}>
-        <Toolbar slots={slots} active={tool} onSelect={(t) => api.getState().setTool(t as ToolId)} columns={layout.toolbarColumns} />
+      <ControlBar onResetToast={(m) => toast(m, true)} handlers={handlers} />
+      <div className="st-main" style={{ gridTemplateColumns: `auto minmax(0, 1fr) ${layout.dockCollapsed ? "auto" : `${layout.dockWidth}px`}` }}>
+        <Toolbar slots={slots} active={tool} onSelect={(t) => api.getState().setTool(t as ToolId)} columns={layout.toolbarColumns} footer={<ToolFooter handlers={handlers} />} />
         <Canvas apiRef={canvasRef} onContextMenu={(x, y) => setMenu({ x, y })} onToast={toast} />
-        <Dock tabs={dockTabs} active={layout.active} onActive={(id) => setLayout((w) => ({ ...w, active: id as PanelId }))} onReorder={(ids) => setLayout((w) => ({ ...w, panels: ids.filter((i): i is PanelId => i in PANEL_LABELS) }))} width={layout.dockWidth} />
+        <Dock
+          tabs={dockTabs} active={layout.active} width={layout.dockWidth} collapsed={layout.dockCollapsed}
+          onActive={(id) => setLayout((w) => ({ ...w, active: id as PanelId }))}
+          onReorder={(ids) => setLayout((w) => ({ ...w, panels: ids.filter((i): i is PanelId => i in PANEL_LABELS) }))}
+          onCollapse={(dockCollapsed) => setLayout((w) => ({ ...w, dockCollapsed }))}
+          onResize={(dockWidth) => setLayout((w) => ({ ...w, dockWidth }))}
+        />
       </div>
       <StatusBar save={save} handlers={handlers} onZoom={(z) => canvasRef.current?.zoomBy(z)} onFit={() => canvasRef.current?.fit("artboard")} />
 
@@ -316,6 +336,13 @@ function EditorShell({ opened }: { opened: Document }) {
       }} />
     </div>
   );
+}
+
+/** "@ 100% (Preview)" after the document name, like Illustrator's document tab. */
+function DocTabMeta() {
+  const zoom = useEditor((s) => s.view.zoom);
+  const outline = useEditor((s) => s.ui.outline);
+  return <span className="meta">@ {Math.round((zoom / PX_PER_MM) * 100)}% ({outline ? "Outline" : "Preview"})</span>;
 }
 
 function StatusBar({ save, handlers, onZoom, onFit }: { save: SaveState; handlers: Record<string, Handler>; onZoom: (f: number) => void; onFit: () => void }) {

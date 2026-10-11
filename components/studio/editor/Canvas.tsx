@@ -840,7 +840,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       <path
         key={n.id} d={localD(n)} transform={matStr(n.transform)} data-id={n.id}
         fill={fillMode ? layerColor(n) : "none"} fillOpacity={fillMode ? 0.35 : undefined} fillRule="evenodd"
-        stroke={outline ? "var(--text-primary)" : layerColor(n)} strokeWidth={1} vectorEffect="non-scaling-stroke"
+        stroke={outline ? "var(--ink)" : layerColor(n)} strokeWidth={1} vectorEffect="non-scaling-stroke"
         strokeDasharray={layer?.mode === "score" && !outline ? "4 2" : n.type === "dimension" ? "2 2" : undefined}
         opacity={dim}
       />
@@ -898,15 +898,20 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       <svg className="st-canvas" width={size.w} height={size.h} aria-label="Canvas" role="img">
         <defs>
           <pattern id="hl-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="var(--text-disabled)" strokeWidth="1" /></pattern>
+          <filter id="hl-artboard-shadow" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="0" dy={2 / zoom} stdDeviation={6 / zoom} floodColor="#000" floodOpacity="0.35" />
+          </filter>
+          <clipPath id="hl-sheets">{doc.sheets.map((sh) => <rect key={sh.id} x={sh.x} y={sh.y} width={sh.w} height={sh.h} />)}</clipPath>
         </defs>
         <g transform={`translate(${view.x} ${view.y}) scale(${zoom})`}>
           {doc.sheets.map((sh) => (
             <g key={sh.id}>
-              <rect x={sh.x} y={sh.y} width={sh.w} height={sh.h} fill="var(--surface-sheet)" stroke="var(--sheet-edge)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
-              <text x={sh.x} y={sh.y - 6 / zoom} fontSize={11 / zoom} fill="var(--text-secondary)">{sh.name} · {fmtLength(sh.w, doc.units)} × {fmtLength(sh.h, doc.units, true)}</text>
+              <rect x={sh.x} y={sh.y} width={sh.w} height={sh.h} fill="var(--surface-sheet)" filter={ui.presentation ? undefined : "url(#hl-artboard-shadow)"} />
+              <rect x={sh.x} y={sh.y} width={sh.w} height={sh.h} fill="none" stroke="var(--sheet-edge)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+              <text x={sh.x} y={sh.y - 6 / zoom} fontSize={11 / zoom} fill="var(--text-secondary)" className="st-sheet-label">{sh.name} · {fmtLength(sh.w, doc.units)} × {fmtLength(sh.h, doc.units, true)}</text>
             </g>
           ))}
-          {gridLines}
+          {gridLines && <g clipPath={doc.sheets.length ? "url(#hl-sheets)" : undefined}>{gridLines}</g>}
           <g data-testid="scene">{doc.root.children.map(renderNode)}</g>
           {ui.guidesShown && doc.guides.map((g, k) => g.axis === "x"
             ? <line key={k} x1={g.at} x2={g.at} y1={vb.minY} y2={vb.maxY} stroke="var(--guide)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
@@ -922,7 +927,8 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         {selRect && (
           <g data-testid="selection-box">
             <rect x={selRect.x} y={selRect.y} width={selRect.w} height={selRect.h} fill="none" stroke="var(--accent)" strokeWidth={1} />
-            {tool === "select" && HANDLES.map((h) => { const q = handlePos({ minX: selRect.x, minY: selRect.y, maxX: selRect.x + selRect.w, maxY: selRect.y + selRect.h }, h); return <rect key={h} x={q.x - 3.5} y={q.y - 3.5} width={7} height={7} fill="var(--surface-panel)" stroke="var(--accent)" strokeWidth={1} />; })}
+            {tool === "select" && HANDLES.map((h) => { const q = handlePos({ minX: selRect.x, minY: selRect.y, maxX: selRect.x + selRect.w, maxY: selRect.y + selRect.h }, h); return <rect key={h} x={q.x - 3.5} y={q.y - 3.5} width={7} height={7} fill="var(--handle-fill)" stroke="var(--accent)" strokeWidth={1} />; })}
+            {tool === "select" && <circle cx={selRect.x + selRect.w / 2} cy={selRect.y + selRect.h / 2} r={2.5} fill="none" stroke="var(--accent)" strokeWidth={1} opacity={0.8} />}
           </g>
         )}
         {anchorView.map((a) => {
@@ -931,7 +937,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
             <g key={`${a.ref.id}-${a.ref.sub}-${a.ref.idx}`}>
               {sel && a.i && <><line x1={a.p.x} y1={a.p.y} x2={a.i.x} y2={a.i.y} stroke="var(--accent)" /><circle cx={a.i.x} cy={a.i.y} r={3} fill="var(--accent)" /></>}
               {sel && a.o && <><line x1={a.p.x} y1={a.p.y} x2={a.o.x} y2={a.o.y} stroke="var(--accent)" /><circle cx={a.o.x} cy={a.o.y} r={3} fill="var(--accent)" /></>}
-              <rect x={a.p.x - 3} y={a.p.y - 3} width={6} height={6} fill={sel ? "var(--accent)" : "var(--surface-panel)"} stroke="var(--accent)" />
+              <rect x={a.p.x - 3} y={a.p.y - 3} width={6} height={6} fill={sel ? "var(--accent)" : "var(--handle-fill)"} stroke="var(--accent)" />
             </g>
           );
         })}
@@ -939,7 +945,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
           <g>
             <path d={pathD([{ closed: false, nodes: penState.nodes.map((n) => ({ ...S(n), ...(n.i ? { i: S(n.i) } : {}), ...(n.o ? { o: S(n.o) } : {}) })) }])} fill="none" stroke="var(--accent)" strokeWidth={1.5} />
             {pointer && !dr && <line x1={S(penState.nodes[penState.nodes.length - 1]).x} y1={S(penState.nodes[penState.nodes.length - 1]).y} x2={S(pointer).x} y2={S(pointer).y} stroke="var(--accent)" strokeDasharray="3 3" />}
-            {penState.nodes.map((n, k) => { const q = S(n); return <rect key={k} x={q.x - 3} y={q.y - 3} width={6} height={6} fill={k === 0 && penState.hoverClose ? "var(--accent)" : "var(--surface-panel)"} stroke="var(--accent)" />; })}
+            {penState.nodes.map((n, k) => { const q = S(n); return <rect key={k} x={q.x - 3} y={q.y - 3} width={6} height={6} fill={k === 0 && penState.hoverClose ? "var(--accent)" : "var(--handle-fill)"} stroke="var(--accent)" />; })}
           </g>
         )}
         {dr && (dr.kind === "marquee" || dr.kind === "zoom" || dr.kind === "text") && (() => { const r = box(normBox(dr.start, dr.cur)); return <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="color-mix(in srgb, var(--accent) 10%, transparent)" stroke="var(--accent)" strokeDasharray="4 3" data-testid="marquee" />; })()}

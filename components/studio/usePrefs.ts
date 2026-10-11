@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { DEFAULT_PREFS, loadPrefs, savePrefs, type Preferences } from "@/lib/studio/prefs";
 
 /** Preferences shared by every studio page (and kept in step across tabs and components). */
@@ -25,23 +26,26 @@ export function usePrefs(): [Preferences, (patch: Partial<Preferences> | ((p: Pr
   return [prefs, update, ready];
 }
 
-/** Applies theme and accent to <html>; "system" follows the OS setting. */
-export function applyTheme(p: Pick<Preferences, "theme" | "accent">) {
+/** Applies theme and accent to <html>; "system" follows the OS setting. The editor has its own theme. */
+export function applyTheme(p: Pick<Preferences, "theme" | "editorTheme" | "accent">, editor = false) {
   const root = document.documentElement;
   const dark = typeof matchMedia !== "undefined" && matchMedia("(prefers-color-scheme: dark)").matches;
-  root.dataset.theme = p.theme === "system" ? (dark ? "dark" : "light") : p.theme;
+  const t = editor ? p.editorTheme : p.theme;
+  root.dataset.theme = t === "system" ? (dark ? "dark" : "light") : t;
   root.dataset.accent = p.accent;
 }
 
 export function ThemeSync() {
-  const [prefs] = usePrefs();
+  const [prefs, , ready] = usePrefs();
+  const editor = usePathname()?.startsWith("/editor/") ?? false;
   useEffect(() => {
-    applyTheme(prefs);
-    if (prefs.theme !== "system") return;
+    if (!ready) return;
+    applyTheme(prefs, editor);
+    if ((editor ? prefs.editorTheme : prefs.theme) !== "system") return;
     const mq = matchMedia("(prefers-color-scheme: dark)");
-    const on = () => applyTheme(prefs);
+    const on = () => applyTheme(prefs, editor);
     mq.addEventListener("change", on);
     return () => mq.removeEventListener("change", on);
-  }, [prefs]);
+  }, [prefs, ready, editor]);
   return null;
 }

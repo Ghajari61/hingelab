@@ -16,16 +16,19 @@ export interface Workspace {
   active: PanelId;
   dockWidth: number;
   toolbarColumns: 1 | 2;
+  /** The dock shows only a column of panel icons. */
+  dockCollapsed: boolean;
 }
 
 export const WORKSPACES: Workspace[] = [
-  { id: "essentials", label: "Essentials", panels: ["properties", "layers", "cutLayers", "align", "history", "document"], active: "properties", dockWidth: 280, toolbarColumns: 1 },
-  { id: "laser", label: "Laser Production", panels: ["cutLayers", "layers", "properties", "document", "history"], active: "cutLayers", dockWidth: 300, toolbarColumns: 1 },
-  { id: "typography", label: "Typography", panels: ["properties", "layers", "history"], active: "properties", dockWidth: 300, toolbarColumns: 1 },
-  { id: "minimal", label: "Minimal", panels: ["properties", "layers"], active: "properties", dockWidth: 240, toolbarColumns: 1 },
+  { id: "essentials", label: "Essentials", panels: ["properties", "layers", "cutLayers", "align", "history", "document"], active: "properties", dockWidth: 320, toolbarColumns: 2, dockCollapsed: false },
+  { id: "laser", label: "Laser Production", panels: ["cutLayers", "layers", "properties", "document", "history"], active: "cutLayers", dockWidth: 320, toolbarColumns: 2, dockCollapsed: false },
+  { id: "typography", label: "Typography", panels: ["properties", "layers", "history"], active: "properties", dockWidth: 320, toolbarColumns: 2, dockCollapsed: false },
+  { id: "minimal", label: "Minimal", panels: ["properties", "layers"], active: "properties", dockWidth: 260, toolbarColumns: 1, dockCollapsed: false },
 ];
 
-const KEY = "hingelab-workspace";
+/** Version 2 (D111) starts everyone on the two-column toolbar and the wider dock. */
+const KEY = "hingelab-workspace-2";
 
 export interface WorkspaceState { current: string; layouts: Record<string, Workspace> }
 
@@ -43,7 +46,8 @@ export function cleanWorkspace(raw: unknown, id: string): Workspace {
     panels,
     active: panels.includes(r.active as PanelId) ? (r.active as PanelId) : panels[0],
     dockWidth: typeof r.dockWidth === "number" && r.dockWidth >= 200 && r.dockWidth <= 600 ? Math.round(r.dockWidth) : base.dockWidth,
-    toolbarColumns: r.toolbarColumns === 2 ? 2 : 1,
+    toolbarColumns: r.toolbarColumns === 1 || r.toolbarColumns === 2 ? r.toolbarColumns : base.toolbarColumns,
+    dockCollapsed: typeof r.dockCollapsed === "boolean" ? r.dockCollapsed : base.dockCollapsed,
   };
 }
 

@@ -10,8 +10,10 @@ export type ToolSlot = ToolDef | { group: string; tools: ToolDef[] } | "-";
 
 const LONG_PRESS_MS = 350;
 
-export function Toolbar({ slots, active, onSelect, columns = 1, label = "Tools" }: {
+export function Toolbar({ slots, active, onSelect, columns = 1, label = "Tools", footer }: {
   slots: ToolSlot[]; active: string; onSelect: (id: string) => void; columns?: 1 | 2; label?: string;
+  /** Shown under the tools across the full width (colour wells, screen modes). */
+  footer?: ReactNode;
 }) {
   // The tool shown for a group is the last one used from it, like Illustrator.
   const [shown, setShown] = useState<Record<string, string>>({});
@@ -65,6 +67,7 @@ export function Toolbar({ slots, active, onSelect, columns = 1, label = "Tools" 
           </div>
         );
       })}
+      {footer && <div className="ui-toolbar-foot">{footer}</div>}
     </div>
   );
 }

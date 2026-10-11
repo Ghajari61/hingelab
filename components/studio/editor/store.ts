@@ -34,6 +34,10 @@ export interface EditorState {
   textEditing: string | null;
   /** Layer for new objects. */
   currentLayer: number;
+  /** Transform reference point as fractions of the selection box (0, 0.5, 1); X/Y, W/H and rotation use it. */
+  refPoint: [number, number];
+  /** W and H change together. */
+  lockRatio: boolean;
 
   edit: <T = void>(label: string, recipe: (d: Document) => T, o?: { mergeKey?: string; select?: string[] }) => T;
   begin: () => void;
@@ -52,7 +56,7 @@ export interface EditorState {
   setTool: (t: ToolId) => void;
   setView: (v: Partial<ViewState> | ((v: ViewState) => ViewState)) => void;
   setUi: (u: Partial<UiState>) => void;
-  set: (p: Partial<Pick<EditorState, "shapeDefaults" | "textDefaults" | "lastTransform" | "textEditing" | "currentLayer">>) => void;
+  set: (p: Partial<Pick<EditorState, "shapeDefaults" | "textDefaults" | "lastTransform" | "textEditing" | "currentLayer" | "refPoint" | "lockRatio">>) => void;
 }
 
 const keepExisting = (doc: Document, ids: string[]) => {
@@ -79,6 +83,8 @@ export function createEditorStore(doc: Document): StoreApi<EditorState> {
     lastTransform: null,
     textEditing: null,
     currentLayer: 2,
+    refPoint: [0, 0],
+    lockRatio: false,
 
     edit: (label, recipe, o = {}) => {
       const s = get();

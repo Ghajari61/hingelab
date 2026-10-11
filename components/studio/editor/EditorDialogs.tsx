@@ -199,7 +199,7 @@ export function ShortcutsDialog({ open, onClose, set, onSet, keymap, onKeymap, t
 
 type PrefTab = "general" | "shortcuts" | "laser";
 const TAB_DEFAULTS: Record<PrefTab, (keyof Preferences)[]> = {
-  general: ["theme", "accent", "units", "showStartScreen", "resetTo"],
+  general: ["editorTheme", "theme", "accent", "units", "showStartScreen", "resetTo"],
   shortcuts: ["shortcutSet"],
   laser: ["laser", "machineId", "materialId"],
 };
@@ -228,7 +228,8 @@ export function PreferencesDialog({ open, onClose, prefs, setPrefs, openShortcut
         <Tabs label="Preference groups" value={tab} onChange={setTab} tabs={[{ id: "general", label: "General" }, { id: "shortcuts", label: "Shortcuts" }, { id: "laser", label: "Laser" }]} />
         {tab === "general" && (
           <div className="form-grid">
-            <Select label="Theme" value={prefs.theme} options={(["dark", "darker", "light", "system"] as Theme[]).map((t) => ({ value: t, label: t[0].toUpperCase() + t.slice(1) }))} onChange={(theme) => setPrefs({ theme })} testId="pref-theme" />
+            <Select label="Editor theme" value={prefs.editorTheme} options={(["dark", "darker", "light", "system"] as Theme[]).map((t) => ({ value: t, label: t[0].toUpperCase() + t.slice(1) }))} onChange={(editorTheme) => setPrefs({ editorTheme })} testId="pref-theme" />
+            <Select label="Start screen theme" value={prefs.theme} options={(["dark", "darker", "light", "system"] as Theme[]).map((t) => ({ value: t, label: t[0].toUpperCase() + t.slice(1) }))} onChange={(theme) => setPrefs({ theme })} />
             <Select label="Accent" value={prefs.accent} options={(["blue", "violet", "teal", "orange"] as Accent[]).map((a) => ({ value: a, label: a[0].toUpperCase() + a.slice(1) }))} onChange={(accent) => setPrefs({ accent })} />
             <Select label="Units for new projects" value={prefs.units} options={UNIT_LIST.map((u) => ({ value: u, label: u }))} onChange={(units) => setPrefs({ units: units as Units })} />
             <Select label="Reset ↺ goes to" value={prefs.resetTo} options={[{ value: "default", label: "The default value" }, { value: "preset", label: "The active preset's value" }]} onChange={(resetTo) => setPrefs({ resetTo })} />

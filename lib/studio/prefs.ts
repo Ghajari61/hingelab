@@ -14,6 +14,8 @@ export interface Preferences {
   theme: Theme;
   /** Set once the user picks a theme; until then the default (light) applies, even over an old saved "dark". */
   themeChosen: boolean;
+  /** Theme of the Studio editor only (dark by default, like Illustrator and CorelDRAW). */
+  editorTheme: Theme;
   accent: Accent;
   units: Units;
   shortcutSet: ShortcutSet;
@@ -30,7 +32,7 @@ export interface Preferences {
 }
 
 export const DEFAULT_PREFS: Preferences = {
-  theme: "light", themeChosen: false, accent: "blue", units: "mm", shortcutSet: "hingelab", laser: "co2",
+  theme: "light", themeChosen: false, editorTheme: "dark", accent: "blue", units: "mm", shortcutSet: "hingelab", laser: "co2",
   machineId: DEFAULT_MACHINE, materialId: DEFAULT_MATERIAL, showStartScreen: true, resetTo: "default",
   onboarded: false, tourDone: false, dismissed: [], recentGenerators: [],
 };
@@ -44,6 +46,7 @@ export function normalizePrefs(raw: unknown): Preferences {
   return {
     theme: r.themeChosen === true ? pick(r.theme, ["dark", "darker", "light", "system"] as const, d.theme) : d.theme,
     themeChosen: r.themeChosen === true,
+    editorTheme: pick(r.editorTheme, ["dark", "darker", "light", "system"] as const, d.editorTheme),
     accent: pick(r.accent, ["blue", "violet", "teal", "orange"] as const, d.accent),
     units: isUnits(r.units) ? r.units : d.units,
     shortcutSet: pick(r.shortcutSet, ["hingelab", "corel", "lightburn", "inkscape"] as const, d.shortcutSet),

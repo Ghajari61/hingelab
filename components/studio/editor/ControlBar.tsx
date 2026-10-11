@@ -1,13 +1,22 @@
 "use client";
 
+import type { ReactNode } from "react";
+import {
+  AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignStartHorizontal, AlignStartVertical,
+  BringToFront, FlipHorizontal2, FlipVertical2, Group, Link2, RotateCcw, RotateCw, SendToBack, Ungroup, Unlink2,
+} from "lucide-react";
 import { BUNDLED_FONTS } from "@/lib/letters/fonts";
-import { decompose, isEmptyBox, rotateAt, scaleAt, shapeForBox, translate } from "@/lib/studio/geom";
+import { isEmptyBox, shapeForBox } from "@/lib/studio/geom";
 import { layerCode } from "@/lib/studio/cutLayers";
-import { findNode, isEditable, locate, selectionBox, topLevel, transformNodes } from "@/lib/studio/scene";
+import { findNode, isEditable, selectionBox, topLevel } from "@/lib/studio/scene";
+import { currentRotation, moveRefTo, refAt, resizeTo, rotateTo } from "@/lib/studio/transform";
 import type { CornerType, Document, ShapeKind, ShapeParams, TextNode } from "@/lib/studio/types";
-import { NumberInput, SegmentedControl, Select } from "@/components/ui";
+import { IconButton, NumberInput, SegmentedControl, Select } from "@/components/ui";
 import { TOOL_INFO } from "@/lib/studio/commands";
 import { DEFAULT_TEXT, useEditor, useEditorApi, type TextDefaults } from "./store";
+import type { Handler } from "./commandHandlers";
+
+const displayColor = (c: string) => (c === "#000000" ? "var(--ink)" : c);
 
 interface FieldSpec { key: string; label: string; length?: boolean; integer?: boolean; min: number; max: number; step?: number; suffix?: string; def?: number; scale?: number }
 
@@ -48,8 +57,10 @@ function useLive() {
   };
 }
 
-export function ControlBar({ onResetToast }: { onResetToast: (m: string) => void }) {
+export function ControlBar({ onResetToast, handlers }: { onResetToast: (m: string) => void; handlers: Record<string, Handler> }) {
   const api = useEditorApi();
+  const rp = useEditor((s) => s.refPoint);
+  const lockRatio = useEditor((s) => s.lockRatio);
   const doc = useEditor((s) => s.base ?? s.doc);
   const liveDoc = useEditor((s) => s.doc);
   const selection = useEditor((s) => s.selection);
@@ -67,35 +78,53 @@ export function ControlBar({ onResetToast }: { onResetToast: (m: string) => void
 
   if (ids.length && !isEmptyBox(box) && !typeDefaults) {
     const W = box.maxX - box.minX, H = box.maxY - box.minY;
-    const rot = single ? decompose(locate(liveDoc.root, single.id)!.world).rotation : 0;
-    const resize = (axis: "w" | "h", v: number) => (d: Document) => {
-      const b = selectionBox(d, ids);
-      const cur = axis === "w" ? b.maxX - b.minX : b.maxY - b.minY;
-      if (cur < 1e-9) return;
-      const f = v / cur;
-      transformNodes(d, ids, axis === "w" ? scaleAt(f, 1, b.minX, b.minY) : scaleAt(1, f, b.minX, b.minY));
-    };
+    const ref = refAt(box, rp);
+    const rot = currentRotation(liveDoc, ids);
     const layer = single?.layer ?? (ids.every((id) => findNode(liveDoc.root, id)?.layer === findNode(liveDoc.root, ids[0])?.layer) ? findNode(liveDoc.root, ids[0])!.layer : -1);
+    const act = (id: string, label: string, icon: ReactNode) => {
+      const h = handlers[id];
+      return <IconButton key={id} label={label} description={h?.enabled === false ? h.reason : undefined} icon={icon} disabled={!h || h.enabled === false} onClick={h?.run} side="bottom" />;
+    };
     return (
       <div className="st-control" aria-label="Control bar" data-testid="control-bar">
-        <div className="grp"><span className="lbl">{single ? nodeLabel(single.type, single.type === "shape" ? single.shape.kind : undefined) : `${ids.length} objects`}</span></div>
-        <div className="grp">
-          <NumberInput label="X" value={box.minX} length {...common} onChange={(v, c) => live("Move", (d) => { const b = selectionBox(d, ids); transformNodes(d, ids, translate(v - b.minX, 0)); }, c)} testId="sel-x" />
-          <NumberInput label="Y" value={box.minY} length {...common} onChange={(v, c) => live("Move", (d) => { const b = selectionBox(d, ids); transformNodes(d, ids, translate(0, v - b.minY)); }, c)} testId="sel-y" />
-          <NumberInput label="W" value={W} length min={0.01} {...common} onChange={(v, c) => live("Scale", resize("w", v), c)} testId="sel-w" />
-          <NumberInput label="H" value={H} length min={0.01} {...common} onChange={(v, c) => live("Scale", resize("h", v), c)} testId="sel-h" />
-          <NumberInput label="Angle" value={Math.round(rot * 100) / 100} suffix="°" min={-360} max={360} defaultValue={single ? 0 : undefined} {...common}
-            onChange={(v, c) => live("Rotate", (d) => { const b = selectionBox(d, ids); const cx = (b.minX + b.maxX) / 2, cy = (b.minY + b.maxY) / 2; const r0 = single ? decompose(locate(d.root, ids[0])!.world).rotation : 0; transformNodes(d, ids, rotateAt(v - r0, cx, cy)); }, c)} testId="sel-angle" />
-        </div>
+        <div className="grp"><span className="lbl kind">{single ? nodeLabel(single.type, single.type === "shape" ? single.shape.kind : undefined) : `${ids.length} objects`}</span></div>
         <div className="grp">
           <label className="ctl-select">
-            <span className="lbl">Layer</span>
+            <span className="sw" style={{ background: layer >= 0 ? displayColor(doc.cutLayers[layer].color) : "transparent" }} aria-hidden />
             <select className="ui-select" value={layer} aria-label="Cut layer" data-testid="sel-layer"
               onChange={(e) => { const k = Number(e.target.value); api.getState().edit("Assign Cut Layer", (d) => ids.forEach((id) => { const n = findNode(d.root, id); if (n) n.layer = k; })); api.getState().set({ currentLayer: k }); }}>
               {layer < 0 && <option value={-1}>Mixed</option>}
               {doc.cutLayers.map((l) => <option key={l.index} value={l.index}>{layerCode(l.index)} · {l.name}</option>)}
             </select>
           </label>
+        </div>
+        <div className="grp sep">
+          <NumberInput label="X" value={ref.x} length {...common} onChange={(v, c) => live("Move", (d) => moveRefTo(d, ids, rp, "x", v), c)} testId="sel-x" />
+          <NumberInput label="Y" value={ref.y} length {...common} onChange={(v, c) => live("Move", (d) => moveRefTo(d, ids, rp, "y", v), c)} testId="sel-y" />
+          <NumberInput label="W" value={W} length min={0.01} {...common} onChange={(v, c) => live("Scale", (d) => resizeTo(d, ids, rp, "w", v, lockRatio), c)} testId="sel-w" />
+          <IconButton label={lockRatio ? "Constrain proportions: on" : "Constrain proportions: off"} pressed={lockRatio} icon={lockRatio ? <Link2 size={14} /> : <Unlink2 size={14} />} onClick={() => api.getState().set({ lockRatio: !lockRatio })} side="bottom" />
+          <NumberInput label="H" value={H} length min={0.01} {...common} onChange={(v, c) => live("Scale", (d) => resizeTo(d, ids, rp, "h", v, lockRatio), c)} testId="sel-h" />
+          <NumberInput label="Angle" value={Math.round(rot * 100) / 100} suffix="°" min={-360} max={360} defaultValue={single ? 0 : undefined} {...common}
+            onChange={(v, c) => live("Rotate", (d) => rotateTo(d, ids, rp, v), c)} testId="sel-angle" />
+        </div>
+        <div className="grp sep icons">
+          {act("object.reflectH", "Reflect left–right", <FlipHorizontal2 size={15} />)}
+          {act("object.reflectV", "Reflect top–bottom", <FlipVertical2 size={15} />)}
+          {act("object.rotate-90", "Rotate 90° counter-clockwise", <RotateCcw size={15} />)}
+          {act("object.rotate90", "Rotate 90° clockwise", <RotateCw size={15} />)}
+        </div>
+        <div className="grp sep icons">
+          {act("object.align.left", "Align left", <AlignStartVertical size={15} />)}
+          {act("object.align.hcenter", "Align horizontal centres", <AlignCenterVertical size={15} />)}
+          {act("object.align.right", "Align right", <AlignEndVertical size={15} />)}
+          {act("object.align.top", "Align top", <AlignStartHorizontal size={15} />)}
+          {act("object.align.vcenter", "Align vertical centres", <AlignCenterHorizontal size={15} />)}
+          {act("object.align.bottom", "Align bottom", <AlignEndHorizontal size={15} />)}
+        </div>
+        <div className="grp sep icons">
+          {act("object.front", "Bring to front", <BringToFront size={15} />)}
+          {act("object.back", "Send to back", <SendToBack size={15} />)}
+          {act(ids.length > 1 ? "object.group" : "object.ungroup", ids.length > 1 ? "Group" : "Ungroup", ids.length > 1 ? <Group size={15} /> : <Ungroup size={15} />)}
         </div>
         {single?.type === "shape" && <ShapeFields shape={single.shape} only="noSize" {...common} onChange={(f, v, c) => live(`Edit ${nodeLabel("shape", single.shape.kind)}`, (d) => { const n = findNode(d.root, single.id); if (n?.type === "shape") writeField(n.shape, f, v); }, c)} onCorner={(corner) => api.getState().edit("Corner Type", (d) => { const n = findNode(d.root, single.id); if (n?.type === "shape" && n.shape.kind === "rect") n.shape.corner = corner; })} onPie={(pie) => api.getState().edit("Arc Type", (d) => { const n = findNode(d.root, single.id); if (n?.type === "shape" && n.shape.kind === "arc") n.shape.pie = pie; })} />}
         {single?.type === "text" && <TextFields t={single} {...common} onChange={(label, patch, c) => live(label, (d) => { const n = findNode(d.root, single.id); if (n?.type === "text") Object.assign(n, patch); }, c)} />}
