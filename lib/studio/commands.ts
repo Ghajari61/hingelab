@@ -29,7 +29,7 @@ export const TOOL_IDS = [
   "select", "direct", "pen", "pencil", "line", "rect", "ellipse", "polygon", "star", "arc", "slot", "gear", "arrow", "bubble", "heart",
   "grid", "spiral", "text", "rotate", "scale", "reflect", "hand", "zoom",
   "lasso", "magicWand", "curvature", "scissors", "knife", "eraser", "shear", "shapeBuilder", "eyedropper", "measure",
-  "fill", "calligraphy", "tweak", "spray",
+  "fill", "calligraphy", "tweak", "spray", "connector",
 ] as const;
 export type ToolId = (typeof TOOL_IDS)[number];
 
@@ -71,6 +71,7 @@ export const TOOL_INFO: Record<ToolId, { label: string; description: string; key
   calligraphy: { label: "Calligraphy", description: "Draw with a flat nib: the stroke becomes a filled outline whose width follows the nib angle, speed and pressure.", keywords: "brush nib ink lettering pen" },
   tweak: { label: "Tweak", description: "Brush over objects or nodes to push, shrink, attract, roughen, move, scale or rotate them. Alt inverts.", keywords: "sculpt push brush warp" },
   spray: { label: "Spray", description: "Spray copies or clones of the selection around the brush, or one combined path. Optional no-overlap for laser parts.", keywords: "scatter spray can copies" },
+  connector: { label: "Connector", description: "Drag from one object to another to join them with a line that follows them when they move. Straight or right-angled.", keywords: "connector diagram flowchart link line attach orthogonal" },
 };
 
 const TOOL_KEYS: Partial<Record<ToolId, { keys?: string; sets?: CommandDef["sets"] }>> = {
@@ -102,6 +103,7 @@ const TOOL_KEYS: Partial<Record<ToolId, { keys?: string; sets?: CommandDef["sets
   calligraphy: { sets: { inkscape: ["C", "Ctrl+F6"] } },
   tweak: { sets: { inkscape: ["W", "Shift+F2"] } },
   spray: { sets: { inkscape: ["A", "Shift+F3"] } },
+  connector: { sets: { inkscape: ["O", "Ctrl+F2"] } },
 };
 
 const LAYER_KEYS = Array.from({ length: 30 }, (_, k) =>
@@ -195,6 +197,14 @@ export const COMMANDS: CommandDef[] = [
   c("type.outlines", "Create Outlines", "Type", "Ctrl+Shift+O", { inkscape: [] }),
   c("type.dir.ltr", "Left to Right", "Type"),
   c("type.dir.rtl", "Right to Left", "Type"),
+  c("type.dir.horizontal", "Horizontal", "Type", undefined, undefined, "Lines run across", "horizontal type writing mode"),
+  c("type.dir.vertical", "Vertical", "Type", undefined, undefined, "Characters run top to bottom, columns right to left", "vertical type text writing mode top to bottom tategaki columns"),
+  c("type.putOnPath", "Put on Path", "Type", undefined, undefined, "Select a text and a path: the text follows the path", "text on path path text type on a path attach baseline curve"),
+  c("type.removeFromPath", "Remove from Path", "Type", undefined, undefined, "The text leaves its path as point text", "text on path path text detach release"),
+  c("type.pathSide", "Text on Other Side of Path", "Type", undefined, undefined, "Text on a path runs along the path backwards, on its other side", "text on path flip side reverse"),
+  c("type.flowIntoShape", "Flow into Shape", "Type", undefined, { inkscape: ["Alt+W"] }, "Select a text and a closed shape: the lines fill the shape", "flow text area type frame text in shape wrap inside threaded"),
+  c("type.unflow", "Unflow", "Type", undefined, { inkscape: ["Shift+Alt+W"] }, "Flowed text becomes area text again", "flow text area type release frame"),
+  c("type.removeKerns", "Remove Manual Kerns", "Type", undefined, undefined, "Clear the kerning, baseline shifts and letter turns set with Alt+arrows", "kern kerning tracking letter spacing baseline shift rotate letters reset"),
   c("type.case.upper", "UPPERCASE", "Type"),
   c("type.case.lower", "lowercase", "Type"),
   c("type.case.title", "Title Case", "Type"),
@@ -356,7 +366,11 @@ export const MENUS: MenuDef[] = [
     "object.expand", "-",
     { label: "Sheets", items: ["object.sheets.fit", "object.sheets.add"] },
   ] },
-  { id: "type", label: "Type", items: ["type.outlines", { label: "Change Case", items: ["type.case.upper", "type.case.lower", "type.case.title"] }, { label: "Direction", items: ["type.dir.ltr", "type.dir.rtl"] }] },
+  { id: "type", label: "Type", items: [
+    "type.outlines", "-", "type.putOnPath", "type.removeFromPath", "type.pathSide", "-", "type.flowIntoShape", "type.unflow", "-",
+    { label: "Change Case", items: ["type.case.upper", "type.case.lower", "type.case.title"] },
+    { label: "Direction", items: ["type.dir.ltr", "type.dir.rtl", "-", "type.dir.horizontal", "type.dir.vertical"] }, "type.removeKerns",
+  ] },
   { id: "select", label: "Select", items: ["edit.selectAll", "select.none", "select.inverse", "-", { label: "Same", items: ["select.sameLayer", "select.sameType"] }, { label: "Object", items: ["select.openPaths"] }, "-", "select.next", "select.prev"] },
   { id: "path", label: "Path", items: [
     "path.join", "path.close", "path.reverse", "path.breakApart", "path.splitPath", "path.addAnchors", "-",

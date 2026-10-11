@@ -9,6 +9,7 @@ import {
 import { BUNDLED_FONTS } from "@/lib/letters/fonts";
 import { isEmptyBox, shapeForBox } from "@/lib/studio/geom";
 import { layerCode } from "@/lib/studio/cutLayers";
+import { setConnectorMode } from "@/lib/studio/connectors";
 import { findNode, isEditable, selectionBox, topLevel } from "@/lib/studio/scene";
 import { currentRotation, moveRefTo, refAt, resizeTo, rotateTo } from "@/lib/studio/transform";
 import type { CornerType, Document, ShapeKind, ShapeParams, TextNode } from "@/lib/studio/types";
@@ -169,7 +170,7 @@ export function ControlBar({ onResetToast, handlers }: { onResetToast: (m: strin
     };
     return (
       <div className="st-control" aria-label="Control bar" data-testid="control-bar">
-        <div className="grp"><span className="lbl kind">{single ? nodeLabel(single.type, single.type === "shape" ? single.shape.kind : undefined) : `${ids.length} objects`}</span></div>
+        <div className="grp"><span className="lbl kind">{single ? (single.type === "path" && single.connector ? "Connector" : nodeLabel(single.type, single.type === "shape" ? single.shape.kind : undefined)) : `${ids.length} objects`}</span></div>
         <div className="grp">
           <label className="ctl-select">
             <span className="sw" style={{ background: layer >= 0 ? displayColor(doc.cutLayers[layer].color) : "transparent" }} aria-hidden />
@@ -210,6 +211,20 @@ export function ControlBar({ onResetToast, handlers }: { onResetToast: (m: strin
         </div>
         {single?.type === "shape" && <ShapeFields shape={single.shape} only="noSize" {...common} onChange={(f, v, c) => live(`Edit ${nodeLabel("shape", single.shape.kind)}`, (d) => { const n = findNode(d.root, single.id); if (n?.type === "shape") writeField(n.shape, f, v); }, c)} onCorner={(corner) => api.getState().edit("Corner Type", (d) => { const n = findNode(d.root, single.id); if (n?.type === "shape" && n.shape.kind === "rect") n.shape.corner = corner; })} onPie={(pie) => api.getState().edit("Arc Type", (d) => { const n = findNode(d.root, single.id); if (n?.type === "shape" && n.shape.kind === "arc") n.shape.pie = pie; })} />}
         {single?.type === "text" && <TextFields t={single} {...common} onChange={(label, patch, c) => live(label, (d) => { const n = findNode(d.root, single.id); if (n?.type === "text") Object.assign(n, patch); }, c)} />}
+        {single?.type === "text" && single.onPath && (
+          <div className="grp sep" data-testid="path-text-fields">
+            <NumberInput label="Start" value={single.pathStart ?? 0} min={-100} max={200} step={1} suffix="%" defaultValue={0} onResetToast={onResetToast}
+              onChange={(pathStart, c) => live("Text Start on Path", (d) => { const n = findNode(d.root, single.id); if (n?.type === "text") n.pathStart = pathStart; }, c)} testId="text-path-start" />
+            {cmd("type.pathSide", "Text on other side of path", <FlipVertical2 size={15} />)}
+          </div>
+        )}
+        {single?.type === "path" && single.connector && (
+          <div className="grp sep" data-testid="connector-fields">
+            <SegmentedControl label="Connector routing" hideLabel value={single.connector.mode}
+              onChange={(mode) => api.getState().edit("Connector Routing", (d) => { setConnectorMode(d, [single.id], mode); })}
+              options={[{ value: "straight", label: "Straight" }, { value: "orthogonal", label: "Right-angled", title: "Horizontal and vertical runs only" }]} />
+          </div>
+        )}
       </div>
     );
   }

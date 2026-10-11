@@ -16,7 +16,7 @@ import { boxCenter, isEmptyBox } from "@/lib/studio/geom";
 import { allIds, selectionBox } from "@/lib/studio/scene";
 import { emptyZoomHistory, type View, type ZoomHistory } from "@/lib/studio/viewTransform";
 import type { BrushShape, CurveMode, PenMode } from "@/lib/studio/strokes";
-import type { Document, Mat, ShapeKind, ShapeParams, TextNode, Vec } from "@/lib/studio/types";
+import type { ConnectorMode, Document, Mat, ShapeKind, ShapeParams, TextNode, Vec } from "@/lib/studio/types";
 
 export interface AnchorRef { id: string; sub: number; idx: number }
 
@@ -80,6 +80,8 @@ export interface EditorState {
   calligraphy: CalligraphyParams;
   tweak: TweakParams;
   spray: SprayParams;
+  /** Routing for new connectors. */
+  connectorMode: ConnectorMode;
   /** What Align lines objects up with; the key object is the last one clicked. */
   alignTo: AlignTo;
   /** Distribute Spacing gap in mm, or null for equal gaps between the outer objects. */
@@ -119,7 +121,7 @@ export interface EditorState {
   setView: (v: Partial<ViewState> | ((v: ViewState) => ViewState)) => void;
   setUi: (u: Partial<UiState>) => void;
   set: (p: Partial<Pick<EditorState, "shapeDefaults" | "textDefaults" | "lastTransform" | "textEditing" | "currentLayer" | "refPoint" | "lockRatio" | "eraserSize" | "eraserMode" | "measure" | "alignTo" | "alignGap"
-    | "fill" | "calligraphy" | "tweak" | "spray" | "penMode" | "penShape" | "brushWidth" | "pencilSmoothing" | "pencilPressure" | "pencilMode" | "fxHandles"
+    | "fill" | "calligraphy" | "tweak" | "spray" | "connectorMode" | "penMode" | "penShape" | "brushWidth" | "pencilSmoothing" | "pencilPressure" | "pencilMode" | "fxHandles"
     | "zoomHistory" | "rotCenter">>) => void;
 }
 
@@ -159,6 +161,7 @@ export function createEditorStore(doc: Document): StoreApi<EditorState> {
     calligraphy: { ...CALLIGRAPHY_DEFAULTS },
     tweak: { ...TWEAK_DEFAULTS },
     spray: { ...SPRAY_DEFAULTS },
+    connectorMode: "straight",
     alignTo: "selection",
     alignGap: null,
     penMode: "bezier",

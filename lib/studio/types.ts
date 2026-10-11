@@ -50,7 +50,12 @@ export interface PathNode extends NodeBase {
   type: "path";
   subpaths: Subpath[];
   effects?: LiveEffect[];
+  /** A connector: `subpaths` is rerouted between the two objects by links.ts `syncLinks` whenever either moves. */
+  connector?: Connector;
 }
+
+export type ConnectorMode = "straight" | "orthogonal";
+export interface Connector { from: string; to: string; mode: ConnectorMode }
 
 // ---------- Live Effects ----------
 
@@ -255,8 +260,27 @@ export interface TextNode extends NodeBase {
   direction: "ltr" | "rtl" | "auto";
   /** Area text wraps at this width (mm); point text when absent. */
   width?: number;
-  /** Text on a path: id of a path node in the same document. */
+  /** Text on a path: id of the object whose (first) outline the baseline follows. */
   onPath?: string;
+  /** Text on a path: where the text is anchored, % of the path length (0 when absent). */
+  pathStart?: number;
+  /** Text on a path: "right" puts the text on the other side (the path is read backwards). */
+  pathSide?: "left" | "right";
+  /** Flowed text: id of the closed shape whose inside the lines fill. */
+  flowInto?: string;
+  /**
+   * The `onPath` / `flowInto` object's geometry in this text's own coordinates, kept by links.ts
+   * `syncLinks`. Kept as it was when that object is deleted, so the text keeps its shape.
+   */
+  frame?: Subpath[];
+  /** Vertical writing: characters top to bottom, lines (columns) right to left. */
+  vertical?: boolean;
+  /** Manual kerning: extra space before the character at this index of `text` (1/1000 em). */
+  kerns?: Record<number, number>;
+  /** Baseline shift of the character at this index (1/1000 em; up, or right in vertical text). */
+  shifts?: Record<number, number>;
+  /** Turn of the glyph that starts at this character index (degrees, clockwise). */
+  rotations?: Record<number, number>;
   /** Outlines cached at the last layout, so documents render without the font (mm, local space). */
   outline?: Subpath[];
   effects?: LiveEffect[];

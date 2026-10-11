@@ -23,6 +23,8 @@ import type { ToolId } from "@/lib/studio/commands";
 import { layerCode } from "@/lib/studio/cutLayers";
 import { builderFaces, buildShapes, curvaturePath, eraseAlong, eraseTouching, faceAt, knifeCut, lassoHits, scissorsAt, shearAt } from "@/lib/studio/toolOps";
 import { measureAcross, measureTargets, type MeasureTarget } from "@/lib/studio/measure";
+import { connectObjects } from "@/lib/studio/connectors";
+import { isPlainText } from "@/lib/studio/text";
 import { boxTouchesQuad, hitStack, inQuad, selectUnder, touchHits } from "@/lib/studio/selectTools";
 import {
   fitView, flipView, isTurned, normDeg, place, PX_PER_MM, recordZoom, rotateView, screenAngle, setRotation, toDocument, toScreen, viewMatrix, visibleBox,
@@ -73,6 +75,7 @@ type Drag =
   | { kind: "build"; faces: number[]; remove: boolean; ids: string[] }
   | { kind: "measure"; a: Vec; targets: SnapTargets; crossed: MeasureTarget[] }
   | { kind: "fxHandle"; node: string; effect: string; index: number; world: Mat; moved: boolean }
+  | { kind: "connector"; from: string; start: Vec; cur: Vec; to: string | null }
   | { kind: "session"; session: ToolSession };
 
 interface Hud { x: number; y: number; text: string }
@@ -90,6 +93,13 @@ const thresholdTable = (t: number, invert: boolean) => {
   const k = Math.max(0, Math.min(64, Math.round((t <= 1 ? t : t / 255) * 64)));
   return Array.from({ length: 64 }, (_, i) => ((i >= k) !== invert ? 1 : 0)).join(" ");
 };
+
+/** The top-level object under `p` that a connector can attach to (not another connector). */
+function connectorEnd(doc: Document, p: Vec, tol: number): string | null {
+  const id = hitTest(doc, p, tol);
+  const n = id ? findNode(doc.root, id) : null;
+  return n && !(n.type === "path" && n.connector) ? n.id : null;
+}
 
 type CanvasSnap = SnapSettings & { spec: GridSpec };
 
@@ -807,6 +817,13 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
         onToast(`${layerCode(src.layer)} · ${s.doc.cutLayers[src.layer]?.name ?? ""}${ids.length ? ` applied to ${ids.length} object${ids.length === 1 ? "" : "s"}` : " is now the layer for new objects"}`);
         return;
       }
+      case "connector": {
+        const from = connectorEnd(s.doc, p, tol);
+        if (!from) { onToast("Drag from one object to another to connect them."); return; }
+        drag.current = { kind: "connector", from, start: boxCenter(worldBox(s.doc.root, from)), cur: p, to: null };
+        rerender();
+        return;
+      }
       case "measure": {
         const targets = snapTargets(s.doc, new Set(), settings);
         const a = snapPoint(p, targets, 6 / s.view.zoom, settings).p;
@@ -968,6 +985,13 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
         return;
       }
       case "marquee": case "zoom": case "text": dr.cur = p; rerender(); return;
+      case "connector": {
+        const to = connectorEnd(s.doc, p, tol);
+        dr.cur = p;
+        dr.to = to && to !== dr.from ? to : null;
+        rerender();
+        return;
+      }
       case "pencil": dr.pts.push(p); dr.pressure.push(penPressure(e)); rerender(); return;
       case "lasso": dr.pts.push(p); rerender(); return;
       case "knife": {
@@ -1190,6 +1214,13 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
         return;
       }
       case "measure": rerender(); return;
+      case "connector": {
+        rerender();
+        if (!dr.to) { onToast("Let go over another object to connect the two."); return; }
+        const id = newId(), { from, to } = dr;
+        s.edit("Connector", (d) => { connectObjects(d, from, to, s.connectorMode, s.currentLayer, id); }, { select: [id] });
+        return;
+      }
       case "scale": case "rotate": case "toolScale": case "shear": {
         const cur = s.doc, base = s.base;
         if (!base) return;
@@ -1356,7 +1387,7 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
    */
   const renderNode = (n: SceneNode, outline = ui.outline, pre = ""): ReactNode => {
     if (n.hidden) return null;
-    if (textEditing === n.id) return null;
+    if (textEditing === n.id && n.type === "text" && isPlainText(n)) return null;
     const own = !pre;
     const layer = doc.cutLayers[n.layer];
     const dim = layer && !layer.show ? 0.25 : 1;
@@ -1467,6 +1498,10 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
     }
     if (dr.kind === "pencil" || dr.kind === "knife") return pathD([{ closed: false, nodes: dr.pts.map((q) => ({ x: q.x, y: q.y })) }]);
     if (dr.kind === "lasso") return pathD([{ closed: true, nodes: dr.pts.map((q) => ({ x: q.x, y: q.y })) }]);
+    if (dr.kind === "connector") {
+      const to = dr.to ? boxCenter(worldBox(api.getState().doc.root, dr.to)) : dr.cur;
+      return pathD([{ closed: false, nodes: [dr.start, to] }]);
+    }
     return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dr, dr && "cur" in dr ? dr.cur : null, dr && "pts" in dr ? dr.pts.length : 0, dr && "pts" in dr ? dr.pts[dr.pts.length - 1] : null]);
@@ -1560,7 +1595,7 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
             <path d={draftPaths} vectorEffect="non-scaling-stroke"
               fill={dr?.kind === "lasso" ? "color-mix(in srgb, var(--accent) 8%, transparent)" : "none"}
               stroke={dr?.kind === "knife" ? "var(--danger, #e5484d)" : "var(--accent)"} strokeWidth={dr?.kind === "knife" ? 1.5 : 1}
-              strokeDasharray={dr?.kind === "lasso" ? "4 3" : undefined} />
+              strokeDasharray={dr?.kind === "lasso" || (dr?.kind === "connector" && !dr.to) ? "4 3" : undefined} data-testid={dr?.kind === "connector" ? "connector-draft" : undefined} />
           )}
           {sessionDraft && <path d={sessionDraft} fill="var(--accent)" fillOpacity={0.55} fillRule="nonzero" stroke="none" data-testid="calligraphy-draft" />}
         </g>
@@ -1680,7 +1715,7 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
         ><span>Outline</span></div>
       )}
       {hud && <div className="st-hud" style={{ left: hud.x + 16, top: hud.y + 16 }} data-testid="hud">{hud.text}</div>}
-      {textEditing && <TextEditor id={textEditing} S={S} zoom={zoom} turn={turned ? viewMatrix({ ...view, zoom: 1, x: 0, y: 0 }) : undefined} />}
+      {textEditing && <TextEditor id={textEditing} S={S} zoom={zoom} snapAngle={snapAngle} turn={turned ? viewMatrix({ ...view, zoom: 1, x: 0, y: 0 }) : undefined} />}
     </div>
   );
 }

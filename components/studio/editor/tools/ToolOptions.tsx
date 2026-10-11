@@ -8,11 +8,12 @@ import { FILL_DEFAULTS } from "@/lib/studio/fillArea";
 import { SPRAY_DEFAULTS, SPRAY_PRESETS, type SprayParams } from "@/lib/studio/spray";
 import { TWEAK_DEFAULTS, TWEAK_MODES, type TweakParams } from "@/lib/studio/tweak";
 import { fmtLength } from "@/lib/studio/units";
+import { setConnectorMode } from "@/lib/studio/connectors";
 import type { Document } from "@/lib/studio/types";
 import { useEditor, useEditorApi } from "../store";
 import { measureToItem } from "./brushTools";
 
-export const OPTION_TOOLS = new Set<ToolId>(["eraser", "measure", "fill", "calligraphy", "tweak", "spray"]);
+export const OPTION_TOOLS = new Set<ToolId>(["eraser", "measure", "fill", "calligraphy", "tweak", "spray", "connector"]);
 
 /** Id of the preset whose values all match, or "" (custom). */
 function presetOf<T extends object>(cur: T, presets: { id: string; params: Partial<T> }[]): string {
@@ -25,6 +26,7 @@ export function ToolOptions({ tool, units, onResetToast }: { tool: ToolId; units
   const st = {
     eraserSize: useEditor((s) => s.eraserSize), eraserMode: useEditor((s) => s.eraserMode), measure: useEditor((s) => s.measure), fill: useEditor((s) => s.fill),
     calligraphy: useEditor((s) => s.calligraphy), tweak: useEditor((s) => s.tweak), spray: useEditor((s) => s.spray), selected: useEditor((s) => s.selection.length),
+    connectorMode: useEditor((s) => s.connectorMode),
   };
   const common = { units, onResetToast };
   const set = api.getState().set;
@@ -138,6 +140,19 @@ export function ToolOptions({ tool, units, onResetToast }: { tool: ToolId; units
       </>
     );
     hint = st.selected ? "Drag to spray the selection." : "Select the objects to spray, then drag.";
+  } else if (tool === "connector") {
+    body = (
+      <div className="grp" data-testid="connector-options">
+        <SegmentedControl label="Connector routing" hideLabel value={st.connectorMode}
+          onChange={(connectorMode) => {
+            set({ connectorMode });
+            const s = api.getState();
+            if (s.selection.length) s.edit("Connector Routing", (d) => { setConnectorMode(d, s.selection, connectorMode); });
+          }}
+          options={[{ value: "straight", label: "Straight" }, { value: "orthogonal", label: "Right-angled", title: "Horizontal and vertical runs only" }]} />
+      </div>
+    );
+    hint = "Drag from one object to another. The line follows them when they move; deleting either leaves a plain line.";
   }
 
   return (

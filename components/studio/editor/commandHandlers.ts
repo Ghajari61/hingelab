@@ -15,7 +15,8 @@ import { addEffect, addLinkedEffect, stackOrder } from "@/lib/studio/effects/ops
 import { addAnchorNodes, breakApartNodes, closeNodes, joinNodes, makeClip, makeCompound, releaseClip, resetBoxNodes, reverseNodes } from "@/lib/studio/pathOps";
 import { distributeSpacing } from "@/lib/studio/arrays";
 import { alignAnchors, alignTarget, exchangePositions, removeOverlaps } from "@/lib/studio/alignOps";
-import { cloneNodes, clonesOf, originalsOf, relinkClones, removeClonesOf, unlinkClones } from "@/lib/studio/links";
+import { cloneNodes, clonesOf, originalsOf, relinkClones, removeClonesOf, unlinkClones, wouldCycle } from "@/lib/studio/links";
+import { canCarryText, canHoldText, clearManual, flowIntoShape, hasManual, putOnPath, removeFromPath, setVertical, unflow } from "@/lib/studio/textOps";
 import { clipBox, pasteSize, pasteStyle } from "@/lib/studio/pasteOps";
 import { BOOLEAN_LABELS, booleanOp, cleanupForLaser, editPaths, smoothSubpath, type BooleanOp } from "@/lib/studio/pathfinder";
 import {
@@ -31,6 +32,7 @@ import { RESET_FIELD_EVENT, RESET_SECTION_EVENT } from "@/components/ui";
 import type { CanvasApi } from "./Canvas";
 import type { EditorState } from "./store";
 import { runPreflight, type Notify } from "./preflightToast";
+import { textLayoutNow } from "./textRuntime";
 
 export interface Handler { run: () => void; enabled?: boolean; reason?: string; checked?: boolean }
 
@@ -117,7 +119,7 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   const texts = nodesOf(s, (n) => n.type === "text");
   const groups = nodesOf(s, (n) => n.type === "group");
   const clipGroups = nodesOf(s, (n) => n.type === "group" && n.role === "clip");
-  const live = nodesOf(s, (n) => n.type === "shape" || n.type === "text" || n.type === "generator" || n.type === "clone" || hasEffects(n));
+  const live = nodesOf(s, (n) => n.type === "shape" || n.type === "text" || n.type === "generator" || n.type === "clone" || hasEffects(n) || (n.type === "path" && !!n.connector));
   const withFx = nodesOf(s, hasEffects);
   const h: Record<string, Handler> = {};
   const set = (id: string, run: () => void, enabled = true, reason?: string, checked?: boolean) => {
@@ -328,7 +330,10 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   set("object.compound.release", () => { let out: string[] = []; st().edit("Release Compound Path", (d) => { out = breakApartNodes(d, paths); }); st().select(out); }, paths.some((id) => ((findNode(s.doc.root, id) as { subpaths?: unknown[] })?.subpaths?.length ?? 0) > 1), "Select a compound path");
   set("object.clip.make", () => { let id: string | null = null; st().edit("Make Clipping Mask", (d) => { id = makeClip(d, selected(st())); }); if (id) st().select([id]); }, two, NEED_TWO);
   set("object.clip.release", () => { let out: string[] = []; st().edit("Release Clipping Mask", (d) => { out = releaseClip(d, clipGroups); }); st().select(out); }, clipGroups.length > 0, "Select a clipping group");
-  set("object.expand", () => st().edit("Expand", (d) => { expandNodes(d, live); }), live.length > 0, "Select a live shape, text, clone or an object with Live Effects");
+  set("object.expand", () => st().edit("Expand", (d) => {
+    expandNodes(d, live);
+    for (const id of live) { const n = findNode(d.root, id); if (n?.type === "path") delete n.connector; }
+  }), live.length > 0, "Select a live shape, text, clone, connector or an object with Live Effects");
   set("object.sheets.fit", () => {
     const d0 = st().doc;
     const b = selectionBox(d0, d0.root.children.filter((n) => !n.hidden).map((n) => n.id));
@@ -347,6 +352,33 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   set("type.case.upper", textEdit("Change Case", (t) => { t.text = t.text.toUpperCase(); }), texts.length > 0, "Select a text object");
   set("type.case.lower", textEdit("Change Case", (t) => { t.text = t.text.toLowerCase(); }), texts.length > 0, "Select a text object");
   set("type.case.title", textEdit("Change Case", (t) => { t.text = titleCase(t.text); }), texts.length > 0, "Select a text object");
+  /** One text and one other object that suits it (text on a path / flow into a shape). */
+  const textPair = (ok: (n: SceneNode) => boolean) => {
+    if (sel.length !== 2) return null;
+    const ns = sel.map((id) => findNode(s.doc.root, id)!);
+    const t = ns.find((n) => n.type === "text"), o = ns.find((n) => n !== t);
+    return t && o && ok(o) && !wouldCycle(s.doc, t.id, o.id) ? { text: t.id, other: o.id } : null;
+  };
+  const textNodes = (ids: string[]) => ids.map((id) => findNode(s.doc.root, id) as TextNode);
+  const onPathPair = textPair(canCarryText), flowPair = textPair(canHoldText);
+  const onPath = nodesOf(s, (n) => n.type === "text" && !!n.onPath), flowed = nodesOf(s, (n) => n.type === "text" && !!n.flowInto);
+  const straight = nodesOf(s, (n) => n.type === "text" && !n.onPath && !n.flowInto);
+  const kerned = nodesOf(s, (n) => n.type === "text" && hasManual(n));
+  set("type.putOnPath", () => { if (onPathPair) st().edit("Put on Path", (d) => { putOnPath(d, onPathPair.text, onPathPair.other); }, { select: [onPathPair.text] }); },
+    !!onPathPair, "Select one text and one path or shape");
+  set("type.removeFromPath", () => st().edit("Remove from Path", (d) => { onPath.forEach((id) => removeFromPath(d, id)); }), onPath.length > 0, "Select a text on a path");
+  const otherSide = onPath.length > 0 && textNodes(onPath).every((t) => t.pathSide === "right");
+  set("type.pathSide", textEdit("Text on Other Side of Path", (t) => { if (!t.onPath) return; if (otherSide) delete t.pathSide; else t.pathSide = "right"; }), onPath.length > 0, "Select a text on a path", otherSide);
+  set("type.flowIntoShape", () => { if (flowPair) st().edit("Flow into Shape", (d) => { flowIntoShape(d, flowPair.text, flowPair.other); }, { select: [flowPair.text] }); },
+    !!flowPair, "Select one text and one closed shape");
+  set("type.unflow", () => {
+    const first = new Map(textNodes(flowed).map((t) => [t.id, textLayoutNow(t.font, t)?.lines[0]?.baseline]));
+    st().edit("Unflow", (d) => { flowed.forEach((id) => unflow(d, id, first.get(id))); });
+  }, flowed.length > 0, "Select flowed text");
+  const allVertical = straight.length > 0 && textNodes(straight).every((t) => t.vertical);
+  set("type.dir.horizontal", () => st().edit("Horizontal Type", (d) => { setVertical(d, straight, false); }), straight.length > 0, "Select a text that is not on a path or flowed", straight.length > 0 && !allVertical);
+  set("type.dir.vertical", () => st().edit("Vertical Type", (d) => { setVertical(d, straight, true); }), straight.length > 0, "Select a text that is not on a path or flowed", allVertical);
+  set("type.removeKerns", () => st().edit("Remove Manual Kerns", (d) => { kerned.forEach((id) => { const n = findNode(d.root, id); if (n?.type === "text") clearManual(n); }); }), kerned.length > 0, "Select a text with manual kerning");
   // Select
   set("select.none", () => st().select([]), s.selection.length > 0, "Nothing is selected");
   set("select.inverse", () => { const cur = new Set(st().selection); st().select(selectable(st().doc).filter((id) => !cur.has(id))); });

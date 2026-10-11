@@ -15,6 +15,11 @@ const Reflect = () => <Svg><path d="M12 3v18" strokeDasharray="2 3" /><path d="M
 const Shear = () => <Svg><path d="M8 5h12l-4 14H4z" /><path d="M3 21h18" strokeDasharray="2 3" opacity={0.6} /></Svg>;
 const ShapeBuilder = () => <Svg><circle cx="9" cy="10" r="6" /><circle cx="15" cy="14" r="6" /><path d="M5 20 19 6" strokeWidth={2.4} /></Svg>;
 const Tweak = () => <Svg><circle cx="12" cy="11" r="7" strokeDasharray="2 2.6" opacity={0.7} /><path d="M2 19c5 0 6-8 10-8s5 8 10 8" /></Svg>;
+const Connector = () => (
+  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <rect x="2.75" y="3.75" width="7" height="6" rx="1" /><rect x="14.25" y="14.25" width="7" height="6" rx="1" /><path d="M9.75 6.75h4.5a3 3 0 0 1 3 3v4.5" /><circle cx="17.25" cy="14.25" r="0.75" fill="currentColor" />
+  </svg>
+);
 
 export const TOOL_ICONS: Record<ToolId, ReactNode> = {
   select: <MousePointer2 size={18} />, direct: <MousePointer size={18} />, pen: <PenTool size={18} />, pencil: <Pencil size={18} />,
@@ -25,12 +30,13 @@ export const TOOL_ICONS: Record<ToolId, ReactNode> = {
   lasso: <Lasso size={18} />, magicWand: <WandSparkles size={18} />, curvature: <Spline size={18} />, scissors: <Scissors size={18} />,
   knife: <Slice size={18} />, eraser: <Eraser size={18} />, shear: <Shear />, shapeBuilder: <ShapeBuilder />, eyedropper: <Pipette size={18} />,
   measure: <RulerDimensionLine size={18} />, fill: <PaintBucket size={18} />, calligraphy: <Feather size={18} />, tweak: <Tweak />, spray: <SprayCan size={18} />,
+  connector: <Connector />,
 };
 
 const GROUPS: (ToolId | { group: string; tools: ToolId[] } | "-")[] = [
   "select", "direct", "magicWand", "lasso", "-",
   { group: "Pen", tools: ["pen", "curvature"] }, "text",
-  "line", { group: "Shapes", tools: ["rect", "ellipse", "polygon", "star", "arc", "slot", "gear", "arrow", "bubble", "heart", "grid", "spiral"] },
+  { group: "Line", tools: ["line", "connector"] }, { group: "Shapes", tools: ["rect", "ellipse", "polygon", "star", "arc", "slot", "gear", "arrow", "bubble", "heart", "grid", "spiral"] },
   { group: "Pencil", tools: ["pencil", "calligraphy"] }, { group: "Eraser", tools: ["eraser", "scissors", "knife"] }, "-",
   { group: "Rotate", tools: ["rotate", "reflect"] }, { group: "Scale", tools: ["scale", "shear"] }, { group: "Tweak", tools: ["tweak", "spray"] },
   { group: "Shape Builder", tools: ["shapeBuilder", "fill"] }, { group: "Eyedropper", tools: ["eyedropper", "measure"] }, "-",

@@ -5,13 +5,17 @@
  * source is gone becomes a plain path, and clones that feed into each other in a loop are unlinked.
  * Live Effects that read another object (LinkedParams) get the same treatment: their `linkCache` is
  * refreshed in the same passes; a deleted source or a loop clears the cache and records `linkError`.
+ * Text on a path / flowed text keeps the linked object's geometry in its `frame` (kept as it was when
+ * that object is deleted or in a loop), and connectors are rerouted between their two objects (a
+ * connector that loses an object, or sits in a loop, becomes a plain path).
  */
 import { produce } from "immer";
 import { newId } from "./doc";
 import { I, invert, mul, nodePaths, transformSubpaths } from "./geom";
 import { LINK_SPACE } from "./effects/meta";
+import { connectorRoute } from "./connectors";
 import { findNode, locate, removeNodes, topLevel, type IdFactory } from "./scene";
-import type { CloneNode, Document, GroupNode, LinkedParams, LiveEffect, Mat, PathNode, SceneNode, Subpath } from "./types";
+import type { CloneNode, Document, GroupNode, LinkedParams, LiveEffect, Mat, PathNode, SceneNode, Subpath, TextNode } from "./types";
 
 /** What a clone of `src` shows before its own transform: the source's paths in the source's parent space. */
 export function sourceGeometry(src: SceneNode): Subpath[] {
@@ -36,23 +40,33 @@ function sameSubs(a: Subpath[], b: Subpath[]): boolean {
 const made = new WeakMap<object, object>();
 /** Linked-effect cache array → the source node object and the placement it was computed for. */
 const madeFx = new WeakMap<object, { src: object; key: string }>();
+/** Text frame / connector route array → the node object(s) and placements it was computed from. */
+const madeFrame = new WeakMap<object, { src: object; key: string }>();
+const madeRoute = new WeakMap<object, { a: object; b: object; key: string }>();
 
 type FxNode = Extract<SceneNode, { type: "path" | "shape" | "text" | "clone" }>;
 /** An effect that reads another object (Pattern Along Path, Interpolate, Live Boolean). */
 interface FxLink { node: FxNode; world: Mat; effect: LiveEffect; params: LinkedParams; space: "page" | "local" }
 
-interface Index { byId: Map<string, SceneNode>; world: Map<string, Mat>; clones: CloneNode[]; links: FxLink[] }
+interface Index { byId: Map<string, SceneNode>; world: Map<string, Mat>; clones: CloneNode[]; links: FxLink[]; framed: TextNode[]; connectors: PathNode[] }
+
+/** The object a text is on or flowed into. */
+const frameRef = (t: TextNode) => t.onPath || t.flowInto || "";
 
 function indexDoc(root: GroupNode): Index {
   const byId = new Map<string, SceneNode>();
   const world = new Map<string, Mat>();
   const clones: CloneNode[] = [];
   const links: FxLink[] = [];
+  const framed: TextNode[] = [];
+  const connectors: PathNode[] = [];
   const rec = (n: SceneNode, pw: Mat) => {
     const w = mul(pw, n.transform);
     byId.set(n.id, n);
     world.set(n.id, w);
     if (n.type === "clone") clones.push(n);
+    if (n.type === "text" && frameRef(n)) framed.push(n);
+    if (n.type === "path" && n.connector) connectors.push(n);
     if ((n.type === "path" || n.type === "shape" || n.type === "text" || n.type === "clone") && n.effects) {
       for (const e of n.effects) {
         const space = LINK_SPACE[e.kind];
@@ -63,12 +77,12 @@ function indexDoc(root: GroupNode): Index {
     if (n.type === "group") n.children.forEach((c) => rec(c, w));
   };
   root.children.forEach((c) => rec(c, root.transform));
-  return { byId, world, clones, links };
+  return { byId, world, clones, links, framed, connectors };
 }
 
-/** Ids a node reads its geometry from: a clone's source and the objects its linked effects use. */
+/** Ids a node reads its geometry from: a clone's source, the objects its linked effects use, a text's path or frame, a connector's ends. */
 function refsOf(n: SceneNode): string[] {
-  const out: string[] = n.type === "clone" ? [n.source] : [];
+  const out: string[] = n.type === "clone" ? [n.source] : n.type === "text" && frameRef(n) ? [frameRef(n)] : n.type === "path" && n.connector ? [n.connector.from, n.connector.to] : [];
   if ((n.type === "path" || n.type === "shape" || n.type === "text" || n.type === "clone") && n.effects) {
     for (const e of n.effects) { const l = (e.params as LinkedParams).link; if (LINK_SPACE[e.kind] && typeof l === "string" && l) out.push(l); }
   }
@@ -89,7 +103,7 @@ function linkedWithin(targetId: string, ix: Index): string[] {
 function cyclic(ix: Index): Set<string> {
   const state = new Map<string, 1 | 2>();
   const out = new Set<string>();
-  const nodes = [...new Set([...ix.clones.map((c) => c.id), ...ix.links.map((l) => l.node.id)])];
+  const nodes = [...new Set([...ix.clones.map((c) => c.id), ...ix.links.map((l) => l.node.id), ...ix.framed.map((t) => t.id), ...ix.connectors.map((p) => p.id)])];
   const graph = new Map(nodes.map((id) => [id, refsOf(ix.byId.get(id)!).flatMap((r) => linkedWithin(r, ix))]));
   const visit = (id: string, stack: string[]) => {
     const s = state.get(id);
@@ -106,7 +120,8 @@ function cyclic(ix: Index): Set<string> {
 }
 
 type Action = { id: string; cache: Subpath[] } | { id: string; unlink: true }
-  | { id: string; fx: string; linkCache?: Subpath[]; linkError?: LinkedParams["linkError"] };
+  | { id: string; fx: string; linkCache?: Subpath[]; linkError?: LinkedParams["linkError"] }
+  | { id: string; frame: Subpath[] } | { id: string; route: Subpath[] } | { id: string; unplug: true };
 
 const matKey = (m: Mat) => m.map((v) => v.toPrecision(12)).join(",");
 
@@ -118,7 +133,7 @@ export function linkGeometry(src: SceneNode, srcWorld: Mat, nodeWorld: Mat, spac
 /** One pass of updates for `doc`, or null when every clone and linked effect is current. */
 function plan(doc: Document): Action[] | null {
   const ix = indexDoc(doc.root);
-  if (!ix.clones.length && !ix.links.length) return null;
+  if (!ix.clones.length && !ix.links.length && !ix.framed.length && !ix.connectors.length) return null;
   const loops = cyclic(ix);
   const out: Action[] = [];
   for (const c of ix.clones) {
@@ -144,6 +159,34 @@ function plan(doc: Document): Action[] | null {
     madeFx.set(geo, { src, key });
     out.push({ id: l.node.id, fx: l.effect.id, linkCache: geo });
   }
+  for (const t of ix.framed) {
+    const src = ix.byId.get(frameRef(t));
+    if (!src || src.id === t.id || loops.has(t.id)) continue;
+    const srcWorld = ix.world.get(src.id)!, tw = ix.world.get(t.id)!;
+    const key = `${matKey(srcWorld)}|${matKey(tw)}`;
+    const seen = t.frame && madeFrame.get(t.frame);
+    if (seen && seen.src === src && seen.key === key) continue;
+    const geo = linkGeometry(src, srcWorld, tw, "local");
+    if (t.frame && sameSubs(t.frame, geo)) { madeFrame.set(t.frame, { src, key }); continue; }
+    madeFrame.set(geo, { src, key });
+    out.push({ id: t.id, frame: geo });
+  }
+  for (const c of ix.connectors) {
+    const { from, to, mode } = c.connector!;
+    const a = ix.byId.get(from), b = ix.byId.get(to);
+    if (!a || !b || from === to || loops.has(c.id)) { out.push({ id: c.id, unplug: true }); continue; }
+    const aw = ix.world.get(a.id)!, bw = ix.world.get(b.id)!, cw = ix.world.get(c.id)!;
+    const key = `${matKey(aw)}|${matKey(bw)}|${matKey(cw)}|${mode}`;
+    const seen = madeRoute.get(c.subpaths);
+    if (seen && seen.a === a && seen.b === b && seen.key === key) continue;
+    const pts = connectorRoute(transformSubpaths(nodePaths(a), aw), transformSubpaths(nodePaths(b), bw), mode);
+    if (!pts) continue;
+    const inv = invert(cw);
+    const geo: Subpath[] = [{ closed: false, nodes: pts.map((p) => ({ x: inv[0] * p.x + inv[2] * p.y + inv[4], y: inv[1] * p.x + inv[3] * p.y + inv[5] })) }];
+    if (sameSubs(c.subpaths, geo)) { madeRoute.set(c.subpaths, { a, b, key }); continue; }
+    madeRoute.set(geo, { a, b, key });
+    out.push({ id: c.id, route: geo });
+  }
   return out.length ? out : null;
 }
 
@@ -160,7 +203,10 @@ function applyPlan(d: Document, actions: Action[]) {
           if (!e) continue;
           const params = e.params as LinkedParams;
           if (a.linkCache) { params.linkCache = a.linkCache; delete params.linkError; } else { delete params.linkCache; params.linkError = a.linkError; }
-        } else if (n.type === "clone") {
+        } else if ("frame" in a) { if (n.type === "text") n.frame = a.frame; }
+        else if ("route" in a) { if (n.type === "path") n.subpaths = a.route; }
+        else if ("unplug" in a) { if (n.type === "path") delete n.connector; }
+        else if (n.type === "clone") {
           if ("unlink" in a) g.children[k] = toPath(n);
           else n.cache = a.cache;
         }

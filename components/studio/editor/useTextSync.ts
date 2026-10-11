@@ -7,7 +7,12 @@ import { textOutline } from "./textRuntime";
 import type { EditorState } from "./store";
 import type { StoreApi } from "zustand";
 
-const sig = (t: TextNode) => JSON.stringify([t.text, t.font, t.size, t.tracking, t.lineHeight, t.align, t.direction, t.width ?? null]);
+const frames = new WeakMap<object, number>();
+let frameSeq = 0;
+const frameKey = (f?: object) => { if (!f) return 0; let k = frames.get(f); if (!k) frames.set(f, (k = ++frameSeq)); return k; };
+
+const sig = (t: TextNode) => JSON.stringify([t.text, t.font, t.size, t.tracking, t.lineHeight, t.align, t.direction, t.width ?? null,
+  t.onPath ?? null, t.pathStart ?? null, t.pathSide ?? null, t.flowInto ?? null, frameKey(t.frame), t.vertical ?? null, t.kerns ?? null, t.shifts ?? null, t.rotations ?? null]);
 
 /**
  * Keeps text outlines in step with their settings. Outlines are a cache saved with the document, so a
