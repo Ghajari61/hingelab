@@ -586,3 +586,7 @@ The desktop Dashboard and preset cards use the website's public preset renders (
 ## D98. Desktop workspace settings on the right
 
 At the owner's request the settings panel sits to the right of the canvas (`.ws-body` is `1fr 320px`). The panel also comes after the canvas in the markup, so keyboard Tab order matches what is on screen (canvas view tools, then settings and checks). Notifications moved to the bottom left of the content area so they no longer cover the settings. The check hint now says the checks are on the right.
+
+## D99. Desktop installers are served from the website
+
+There is no Blob store on the project, and `hingelab.vercel.app` is already an allowed update host, so installers live in `public/downloads/` and deploy with the website (excluded from the middleware so downloads do not touch Supabase). Publishing takes two deploys: the installer first, then `release.mjs` checks the hosted file is byte-identical and writes `stable.json`, which the second deploy serves. Each installer adds about 2.4 MB to Git; old installers can be removed once no supported version needs them, because the updater only ever downloads the one in `latest`. The updater integration test now reads the published version from `stable.json` (204 for it and for 999.0.0, 200 with that version for an older one) instead of assuming nothing is published; the behaviour it checks is unchanged. 1.0.1 carries D97 and D98. Authenticode signing is still pending, so SmartScreen may warn on a fresh download; in-app updates verify the updater signature regardless.

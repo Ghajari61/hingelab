@@ -11,6 +11,7 @@ import { GET as catalogGET } from "@/app/api/desktop/catalog/route";
 import { POST as generatePOST } from "@/app/api/desktop/generate/route";
 import { GET as updateGET } from "@/app/api/desktop/update/[target]/[arch]/[version]/route";
 import { adminClient, deleteUser, localSupabaseUp, newUser } from "@/lib/testing/supabase";
+import stableManifest from "@/desktop/releases/stable.json";
 import { randomToken, sha256 } from "../pkce";
 import { createAuthCode } from "../session";
 
@@ -136,7 +137,14 @@ describe.skipIf(!up)("desktop API (local Supabase)", () => {
 
   it("answers the updater with 204 when there is nothing newer, 400 for junk", async () => {
     const params = (v: string) => ({ params: Promise.resolve({ target: "windows", arch: "x86_64", version: v }) });
-    expect((await updateGET(get("/x"), params("1.0.0"))).status).toBe(204);
+    const latest = (stableManifest as { latest: { version: string } | null }).latest?.version;
+    expect((await updateGET(get("/x"), params(latest ?? "1.0.0"))).status).toBe(204);
+    expect((await updateGET(get("/x"), params("999.0.0"))).status).toBe(204);
+    if (latest) {
+      const offer = await updateGET(get("/x"), params("0.9.0"));
+      expect(offer.status).toBe(200);
+      expect((await offer.json()).version).toBe(latest);
+    }
     expect((await updateGET(get("/x"), params("../../etc"))).status).toBe(400);
   });
 
