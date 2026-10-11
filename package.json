@@ -2,7 +2,8 @@
   "name": "hingelab",
   "private": true,
   "sideEffects": [
-    "*.css"
+    "*.css",
+    "./desktop/src/harden.ts"
   ],
   "scripts": {
     "predev": "node scripts/copy-wasm.js",

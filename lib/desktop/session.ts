@@ -98,6 +98,24 @@ export async function desktopPlan(userId: string): Promise<Plan> {
   return effectivePlan(data?.plan, data?.current_period_end);
 }
 
+/**
+ * Signs the app's website view in as the desktop user: a one-time email sign-in token (nothing is
+ * emailed) that the website's own /auth/callback turns into a session cookie, then continues to
+ * `next`. Null when the account has no email address.
+ */
+export async function webSignInPath(userId: string, next: string): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data: user, error: userError } = await admin.auth.admin.getUserById(userId);
+  if (userError) throw userError;
+  const email = user?.user?.email;
+  if (!email) return null;
+  const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email });
+  if (error) throw error;
+  const hash = data?.properties?.hashed_token;
+  if (!hash) return null;
+  return `/auth/callback?${new URLSearchParams({ token_hash: hash, type: "email", next })}`;
+}
+
 export async function desktopProfile(userId: string) {
   const admin = createAdminClient();
   const [{ data: profile }, { data: user }] = await Promise.all([

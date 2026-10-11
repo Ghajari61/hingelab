@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
-import { Sidebar, SignIn, Toasts, UpdateDialog, UpdateRequired, type Route, type Toast } from "./components/Chrome";
+import { listen } from "@tauri-apps/api/event";
+import { Sidebar, SignIn, Toasts, UpdateDialog, UpdateRequired, useModalOpen, type Route, type Toast } from "./components/Chrome";
 import { Dashboard, Favorites, Generators, Help, Recent, Settings, Subscription } from "./components/Pages";
 import { Workspace } from "./components/Workspace";
+import { isWebRoute, WEB_HOME, WebHost, type WebRequest, type WebRoute } from "./components/Web";
 import type { CanvasHandle } from "./components/Canvas";
 import { useDesign, type Params } from "./design";
-import { ipc, type AppError, type DCatalog, type DesktopAccount, type Prefs, type WebPage } from "./ipc";
+import { ipc, type AppError, type DCatalog, type DesktopAccount, type Prefs, type WebDownloadEvent, type WebPage } from "./ipc";
 import { designThumb } from "./thumb";
 import { addRecent, setRecentThumb, cacheAccount, cacheCatalog, cachedAccount, cachedCatalog, lastParams, rememberParams, useFavorites, usePrefs, useRecent, type Favorite, type SavedDesign } from "./local";
 import { useAutoCheck, useUpdater } from "./updater";
@@ -43,6 +45,8 @@ export function App() {
 
   const signedOut = useCallback((message: string | null) => {
     void ipc.signOut().catch(() => {});
+    setRoute("dashboard");
+    webSection.current = null;
     cacheAccount(null);
     setAccount(null);
     setSignError(message);
@@ -144,6 +148,28 @@ export function App() {
   }, [fatal, loadAccount]);
 
   const web = useCallback((p: WebPage) => void ipc.openWeb(p).catch((e: AppError) => toast({ text: e.message, kind: "err" })), [toast]);
+
+  // The website inside the window: one view, kept (hidden) while native pages show, so going back
+  // to the same section finds it as it was left.
+  const [webRequest, setWebRequest] = useState<WebRequest>({ path: WEB_HOME["web-editors"], n: 0 });
+  const webSection = useRef<WebRoute | null>(null);
+  const openOnline = useCallback((section: WebRoute, path?: string) => {
+    if (path || webSection.current !== section) setWebRequest((old) => ({ path: path ?? WEB_HOME[section], n: old.n + 1 }));
+    webSection.current = section;
+    setRoute(section);
+  }, []);
+  const go = useCallback((r: Route) => (isWebRoute(r) ? openOnline(r) : setRoute(r)), [openOnline]);
+  const modalOpen = useModalOpen();
+  const onWebRoute = isWebRoute(route);
+
+  useEffect(() => {
+    const off = listen<WebDownloadEvent>("web-download", ({ payload: d }) => {
+      if (d.blocked) toast({ text: "HingeLab saves drawings and project files only (SVG, DXF, ZIP, JSON, PNG, PDF).", kind: "err" });
+      else if (d.ok && d.path) toast({ text: `Saved ${d.name ?? d.path.split(/[\\/]/).pop()}`, kind: "ok", path: d.path });
+      else toast({ text: "The download did not finish.", kind: "err" });
+    });
+    return () => void off.then((f) => f());
+  }, [toast]);
 
   const refreshPlan = useCallback(async () => {
     setRefreshing(true);
@@ -278,11 +304,11 @@ export function App() {
 
   const plan = account?.plan ?? "free";
   return (
-    <div className={`app${local.sidebarCollapsed ? " side-collapsed" : ""}`}>
-      <Sidebar route={route} onRoute={setRoute} account={account} hasDesign={!!design.state.product} update={updater.status} onUpdate={() => setShowUpdate(true)} collapsed={local.sidebarCollapsed} onToggle={toggleSidebar} />
+    <div className={`app${local.sidebarCollapsed ? " side-collapsed" : ""}${onWebRoute ? " on-web" : ""}`}>
+      <Sidebar route={route} onRoute={go} account={account} hasDesign={!!design.state.product} update={updater.status} onUpdate={() => setShowUpdate(true)} collapsed={local.sidebarCollapsed} onToggle={toggleSidebar} />
       <div className="main">
         {!online && route !== "workspace" && <div className="offline-bar" role="status">You're offline. Designs are built on HingeLab's servers, so new changes wait until you're back online.</div>}
-        {route === "dashboard" && <Dashboard account={account} catalog={catalog} recent={recent} defaultProduct={local.defaultProduct} onNew={openNew} onPreset={openPreset} onBrowse={() => setRoute("generators")} onOpenRecent={openSaved} onUpgrade={() => web("upgrade")} />}
+        {route === "dashboard" && <Dashboard account={account} catalog={catalog} recent={recent} defaultProduct={local.defaultProduct} onNew={openNew} onPreset={openPreset} onBrowse={() => setRoute("generators")} onOpenRecent={openSaved} onUpgrade={() => web("upgrade")} onOnline={openOnline} />}
         {route === "generators" && <Generators catalog={catalog} plan={plan} initial={design.state.product ?? local.defaultProduct} favorites={favorites} onPreset={openPreset} onNew={openNew} onFavorite={(p, pr) => {
           const hit = favorites.find((f) => f.product === p.id && f.preset === pr.id);
           setFavorites((l) => (hit ? l.filter((f) => f.id !== hit.id) : [{ id: crypto.randomUUID(), product: p.id, preset: pr.id, name: pr.name, note: pr.note, at: Date.now() }, ...l]));
@@ -308,6 +334,7 @@ export function App() {
             onUpgrade={() => web("upgrade")}
             onRefreshPlan={refreshPlan}
             onFavorite={toggleFavorite}
+            onFullEditor={() => openOnline("web-editors", `/app/editor/local?p=${encodeURIComponent(product.id)}`)}
           />
         )}
         {route === "workspace" && !product && <Generators catalog={catalog} plan={plan} initial={local.defaultProduct} favorites={favorites} onPreset={openPreset} onNew={openNew} onFavorite={() => {}} />}
@@ -326,7 +353,8 @@ export function App() {
             onRefreshPlan={refreshPlan}
           />
         )}
-        {route === "help" && <Help onWeb={web} version={version} />}
+        {route === "help" && <Help onWeb={web} version={version} onHelpCentre={() => openOnline("web-studio", "/help")} />}
+        {onWebRoute && <WebHost request={webRequest} covered={modalOpen} onError={(e) => toast({ text: e.message, kind: "err" })} />}
       </div>
       {updateDialog}
       <Toasts items={toasts} onReveal={(p) => void ipc.revealFile(p).catch((e: AppError) => toast({ text: e.message, kind: "err" }))} onClose={(id) => setToasts((l) => l.filter((x) => x.id !== id))} />

@@ -589,3 +589,16 @@ Scope: `desktop/` (Tauri 2 app), `/api/desktop/*`, `/desktop/authorize`, `privat
 - A determined user can still save anything the server sends to their own plan (by design: the server never sends Pro output to Free accounts).
 
 **Credentials.** No credential was created, printed or exposed beyond the new updater key pair (private part outside the repository, folder limited to the owner). Nothing needs rotation.
+
+**Addendum: the website inside the app window (D101, desktop 1.0.3).** The app now shows the website's editors in a second webview, signed in as the app's account.
+
+| Area | Control | Verified by |
+|---|---|---|
+| Web sign-in | `POST /api/desktop/web-session` needs a valid desktop bearer token (version gate first); returns a one-time email token hash for that same user (admin `generateLink`, nothing emailed) as a same-site `/auth/callback` path; `next` limited to same-site pages, never `/api/` or `/auth/`; 20 per 10 min per user; `no-store`. | integration test (401 without token, token works once, unsafe `next` falls back to `/home`) |
+| IPC | Capabilities apply to the `main` webview only and list no remote URLs: the website view can't call commands or plugins. | E2E tries six commands from the website view (all refused) |
+| Navigation | The view loads only the website's origin; other links open in the default browser; `file:`, `javascript:`, `tauri:` and foreign `blob:` URLs are blocked. | Rust tests, E2E (outside link and `window.open` reach the browser, never the view) |
+| Downloads | Same-origin only, allowlisted drawing/project types, sanitised unique names in the export folder or Downloads; programs and scripts refused. | Rust tests, E2E (SVG saved, `.exe` refused) |
+| Sign-out | App sign-out ends the website session in the view and closes it. | E2E |
+| Prototype freeze | Moved from Tauri's `freezePrototype` (injected into every view, which broke a website library) to the first module of the app's UI. | E2E checks the app UI is frozen and the website view is not |
+
+Residual risk: a valid desktop access token (15 minutes) can now also be turned into a website session for the same account. Tokens never leave Rust or Windows Credential Manager, and the website session gives nothing beyond what the same account already has.

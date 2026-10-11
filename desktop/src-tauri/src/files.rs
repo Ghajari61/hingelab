@@ -41,8 +41,7 @@ pub fn save_prefs(dir: &Path, p: &Prefs) -> CmdResult<()> {
     std::fs::write(dir.join("prefs.json"), json).map_err(|_| CmdError::new("io", "Could not save settings."))
 }
 
-/// A Windows-safe file name ending in .svg (the server sends one already; this is the second check).
-pub fn safe_file_name(name: &str) -> String {
+fn clean_name(name: &str) -> String {
     let mut s: String = name
         .chars()
         .map(|c| if c.is_control() || "<>:\"/\\|?*".contains(c) { ' ' } else { c })
@@ -50,20 +49,45 @@ pub fn safe_file_name(name: &str) -> String {
     while s.contains("..") {
         s = s.replace("..", ".");
     }
-    let mut stem = s.trim().trim_matches(|c| c == '.' || c == ' ').to_string();
+    s.trim().trim_matches(|c| c == '.' || c == ' ').to_string()
+}
+
+fn usable_stem(stem: &str, max: usize, fallback: &str) -> String {
+    let stem: String = stem.trim().trim_matches(|c| c == '.' || c == ' ').chars().take(max).collect();
+    let stem = stem.trim().to_string();
+    let reserved = ["con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9"];
+    let first = stem.split('.').next().unwrap_or_default().trim().to_ascii_lowercase();
+    if stem.is_empty() {
+        fallback.to_string()
+    } else if reserved.contains(&first.as_str()) {
+        format!("{stem}-{fallback}")
+    } else {
+        stem
+    }
+}
+
+/// A Windows-safe file name ending in .svg (the server sends one already; this is the second check).
+pub fn safe_file_name(name: &str) -> String {
+    let mut stem = clean_name(name);
     if stem.to_ascii_lowercase().ends_with(".svg") {
         stem.truncate(stem.len() - 4);
     }
-    let stem: String = stem.trim().chars().take(100).collect();
-    let reserved = ["con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9"];
-    let stem = if stem.is_empty() {
-        "design".to_string()
-    } else if reserved.contains(&stem.to_ascii_lowercase().as_str()) {
-        format!("{stem}-design")
-    } else {
-        stem
-    };
-    format!("{stem}.svg")
+    format!("{}.svg", usable_stem(&stem, 100, "design"))
+}
+
+/// Kinds of files the website offers for download: drawings, projects, archives and images.
+const DOWNLOAD_TYPES: &[&str] = &["svg", "dxf", "zip", "json", "hingelab", "png", "jpg", "jpeg", "pdf", "lbrn2", "csv", "txt"];
+
+/// A Windows-safe name for a file the website view downloads, or None for a kind HingeLab does not
+/// save (programs, scripts, shortcuts, anything without a known extension).
+pub fn safe_download_name(name: &str) -> Option<String> {
+    let clean = clean_name(name);
+    let (stem, ext) = clean.rsplit_once('.')?;
+    let ext = ext.trim().to_ascii_lowercase();
+    if !DOWNLOAD_TYPES.contains(&ext.as_str()) {
+        return None;
+    }
+    Some(format!("{}.{ext}", usable_stem(stem, 120, "download")))
 }
 
 /// The path with an .svg extension (a user may type a name without one, or another one).
@@ -84,14 +108,17 @@ pub fn unique_in(dir: &Path, file_name: &str) -> PathBuf {
     if !first.exists() {
         return first;
     }
-    let stem = file_name.strip_suffix(".svg").unwrap_or(file_name);
+    let (stem, ext) = match file_name.rsplit_once('.') {
+        Some((s, e)) if !s.is_empty() => (s, format!(".{e}")),
+        _ => (file_name, String::new()),
+    };
     for i in 2..1000 {
-        let p = dir.join(format!("{stem} ({i}).svg"));
+        let p = dir.join(format!("{stem} ({i}){ext}"));
         if !p.exists() {
             return p;
         }
     }
-    dir.join(format!("{stem} ({}).svg", crate::api::now()))
+    dir.join(format!("{stem} ({}){ext}", crate::api::now()))
 }
 
 /// Only SVG text as the server makes it: an XML prolog or <svg> root, nothing else.
@@ -142,6 +169,22 @@ mod tests {
         let a = unique_in(&dir, "x.svg");
         std::fs::write(&a, "1").unwrap();
         assert_eq!(unique_in(&dir, "x.svg"), dir.join("x (2).svg"));
+        std::fs::write(dir.join("b.hingelab.json"), "1").unwrap();
+        assert_eq!(unique_in(&dir, "b.hingelab.json"), dir.join("b.hingelab (2).json"));
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn download_names() {
+        assert_eq!(safe_download_name("Gift box.dxf").as_deref(), Some("Gift box.dxf"));
+        assert_eq!(safe_download_name("Box.hingelab.json").as_deref(), Some("Box.hingelab.json"));
+        assert_eq!(safe_download_name("sheets.ZIP").as_deref(), Some("sheets.zip"));
+        assert_eq!(safe_download_name("..\\..\\x.svg").as_deref(), Some("x.svg"));
+        assert_eq!(safe_download_name("con.svg").as_deref(), Some("con-download.svg"));
+        assert_eq!(safe_download_name(".svg"), None);
+        assert_eq!(safe_download_name("setup.exe"), None);
+        assert_eq!(safe_download_name("x.svg.exe"), None);
+        assert_eq!(safe_download_name("run.ps1"), None);
+        assert_eq!(safe_download_name("noext"), None);
     }
 }

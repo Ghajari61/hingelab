@@ -59,4 +59,29 @@ export const ipc = {
   getPrefs: () => call<Prefs>("get_prefs"),
   chooseExportFolder: () => call<Prefs>("choose_export_folder"),
   setExportPrefs: (clearFolder: boolean, openAfterExport: boolean) => call<Prefs>("set_export_prefs", { clearFolder, openAfterExport }),
+  webOpen: (path: string | null, bounds: WebBounds) => call<void>("web_open", { path, bounds }),
+  webBounds: (bounds: WebBounds) => call<void>("web_bounds", { bounds }),
+  webHide: () => call<void>("web_hide"),
+  webAction: (action: "back" | "forward" | "reload" | "browser") => call<void>("web_action", { action }),
 };
+
+/** Where the website view sits in the window, in CSS pixels. */
+export interface WebBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface WebPageEvent {
+  path: string;
+  title: string | null;
+  loading: boolean;
+}
+
+export interface WebDownloadEvent {
+  ok: boolean;
+  path: string | null;
+  name: string | null;
+  blocked: boolean;
+}

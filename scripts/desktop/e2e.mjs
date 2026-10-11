@@ -6,7 +6,8 @@
 //
 // The app is driven through WebView2's DevTools port; the browser sign-in runs in Playwright's
 // Chromium. Covers sign-in (PKCE + consent), generate, export, the Pro lock and upgrade, rate
-// limits, revoked sessions, offline, required updates, navigation lockdown, and sign-out.
+// limits, revoked sessions, offline, required updates, navigation lockdown, the website view
+// (signed in, no IPC, outside links to the browser, downloads), and sign-out.
 import { spawn, execSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, copyFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -30,6 +31,7 @@ const work = mkdtempSync(join(tmpdir(), "hingelab-e2e-"));
 const exportDir = join(work, "exports");
 mkdirSync(exportDir);
 const authFile = join(work, "auth-url.txt");
+const browserFile = join(work, "browser-urls.txt");
 const configDir = join(process.env.APPDATA, "app.hingelab.desktop");
 const prefsFile = join(configDir, "prefs.json");
 const prefsBackup = join(work, "prefs.backup.json");
@@ -82,7 +84,7 @@ async function stopServer() {
 let app, cdp, page;
 async function startApp() {
   app = spawn(EXE, [], {
-    env: { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP}`, HINGELAB_E2E_AUTH_URL_FILE: authFile },
+    env: { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP}`, HINGELAB_E2E_AUTH_URL_FILE: authFile, HINGELAB_E2E_BROWSER_FILE: browserFile },
     stdio: "ignore",
   });
   for (let i = 0; i < 60 && !cdp; i++) {
@@ -100,6 +102,37 @@ async function startApp() {
 const invoke = (cmd, args = {}) => page.evaluate(([c, a]) => window.__TAURI_INTERNALS__.invoke(c, a).then((v) => ({ ok: v }), (e) => ({ err: e })), [cmd, args]);
 const shot = async (name) => page.screenshot({ path: join(SHOTS, `desktop-${name}.png`) });
 const nav = (label) => page.locator(".sidebar").getByRole("button", { name: label, exact: false }).first().click();
+
+/** The website view inside the app window (a second WebView2 on the same DevTools port). */
+const WEB = `http://localhost:${PORT}`;
+async function webView(pred = () => true, timeout = 30000) {
+  const end = Date.now() + timeout;
+  let urls = [];
+  while (Date.now() < end) {
+    const pages = cdp.contexts().flatMap((c) => c.pages());
+    urls = pages.map((p) => p.url());
+    const hit = pages.find((p) => p.url().startsWith(WEB) && pred(new URL(p.url())));
+    if (hit) return hit;
+    await sleep(250);
+  }
+  throw new Error(`website view not found (pages: ${urls.join(", ")})`);
+}
+
+/** "visible"/"hidden" for each WebView host window of the app, as Windows reports them. */
+const webViewWindows = () =>
+  execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${join(ROOT, "scripts/desktop/webview-windows.ps1")}" -ProcessId ${app.pid}`, { encoding: "utf8" }).split(/\r?\n/).filter(Boolean);
+
+/** The app window as the user sees it: the app's page with the website view laid over its area. */
+async function shotWindow(name, web) {
+  const box = await page.locator(".web-area").boundingBox();
+  const size = await page.evaluate(() => ({ w: innerWidth, h: innerHeight }));
+  const [a, b] = [await page.screenshot(), await web.screenshot()];
+  const ctx = await browser.newContext({ viewport: { width: size.w, height: size.h } });
+  const p = await ctx.newPage();
+  await p.setContent(`<body style="margin:0;position:relative"><img src="data:image/png;base64,${a.toString("base64")}" style="display:block"><img src="data:image/png;base64,${b.toString("base64")}" style="position:absolute;left:${box.x}px;top:${box.y}px;width:${box.width}px;height:${box.height}px"></body>`);
+  await p.screenshot({ path: join(SHOTS, `desktop-${name}.png`) });
+  await ctx.close();
+}
 
 /** Clicks Sign in in the app, approves in a separate browser, waits for the dashboard. */
 async function signIn(browser, email) {
@@ -349,6 +382,107 @@ try {
     assert(await page.getByRole("button", { name: "Collapse sidebar" }).isVisible(), "no collapse button after expanding");
   });
 
+  await step("the website's pages open inside the window, signed in as the app's account", async () => {
+    await nav("Cloud projects");
+    await page.locator(".web-bar").waitFor();
+    const web = await webView((u) => u.pathname === "/app");
+    await web.waitForLoadState("load");
+    assert(new URL(web.url()).pathname === "/app", `signed-out redirect: ${web.url()}`);
+    await web.waitForTimeout(1200);
+    await shotWindow("online-projects", web);
+  });
+
+  await step("the website view has no access to the app's commands", async () => {
+    const web = await webView();
+    const tryAll = await web.evaluate(async () => {
+      const t = window.__TAURI_INTERNALS__;
+      if (!t) return ["no ipc"];
+      const out = [];
+      for (const [cmd, args] of [["app_info", {}], ["me", {}], ["sign_out", {}], ["web_open", { path: "/", bounds: { x: 0, y: 0, width: 1, height: 1 } }], ["plugin:opener|open_url", { url: "https://example.com" }], ["plugin:updater|check", {}]]) {
+        out.push(await t.invoke(cmd, args).then(() => `${cmd}: allowed`, () => `${cmd}: refused`));
+      }
+      return out;
+    });
+    assert(tryAll.every((r) => !r.endsWith("allowed")), `website view reached commands: ${tryAll.join(", ")}`);
+    assert((await invoke("app_info")).ok?.signedIn === true, "the app was signed out by the website view");
+    assert(await page.evaluate(() => Object.isFrozen(Object.prototype)), "the app's UI lost its frozen Object.prototype");
+    assert(!(await web.evaluate(() => Object.isFrozen(Object.prototype))), "the website view got the app's prototype freeze");
+  });
+
+  await step("the online editors open from the sidebar and the dashboard", async () => {
+    await nav("All editors");
+    await webView((u) => u.pathname === "/app/editor/local" && !u.search);
+    await nav("Dashboard");
+    await page.locator(".tile", { hasText: "Letters" }).click();
+    const web = await webView((u) => u.pathname === "/app/editor/local" && u.searchParams.get("p") === "letters");
+    await web.waitForLoadState("load");
+    await web.getByText("Letter Box").first().waitFor();
+    assert(!(await web.getByText("Application error").count()), "the Letters editor crashed in the website view");
+    await web.waitForTimeout(2500);
+    await shotWindow("online-letters", web);
+  });
+
+  await step("links to other sites open in the browser, never inside the app", async () => {
+    const web = await webView();
+    rmSync(browserFile, { force: true });
+    await web.evaluate(() => { location.href = "https://example.com/"; });
+    await sleep(1500);
+    assert(web.url().startsWith(WEB), `website view left the site: ${web.url()}`);
+    await web.evaluate(() => { window.open("https://example.org/pricing", "_blank"); });
+    await sleep(1000);
+    const opened = existsSync(browserFile) ? readFileSync(browserFile, "utf8") : "";
+    assert(opened.includes("https://example.com/") && opened.includes("https://example.org/pricing"), `browser got: ${opened}`);
+    const pages = cdp.contexts().flatMap((c) => c.pages()).map((p) => p.url());
+    assert(!pages.some((u) => u.includes("example.")), `opened inside the app: ${pages.join(", ")}`);
+  });
+
+  await step("downloads from the website land in the export folder; programs are refused", async () => {
+    const web = await webView();
+    // Playwright's DevTools connection takes over downloads; hand them back to WebView2 (and the app).
+    const session = await cdp.newBrowserCDPSession();
+    await session.send("Browser.setDownloadBehavior", { behavior: "default" });
+    const download = (name, text) => web.evaluate(([n, t]) => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([t], { type: "application/octet-stream" }));
+      a.download = n;
+      document.body.append(a);
+      a.click();
+      a.remove();
+    }, [name, text]);
+    await download("online-e2e.svg", '<svg xmlns="http://www.w3.org/2000/svg"/>');
+    let ok = false;
+    for (let i = 0; i < 40 && !ok; i++) {
+      ok = existsSync(join(exportDir, "online-e2e.svg"));
+      await sleep(250);
+    }
+    assert(ok, `download not in the export folder: ${readdirSync(exportDir).join(", ")}`);
+    const toast = (sel, text) => page.locator(sel, { hasText: text }).waitFor({ timeout: 10000 })
+      .catch(async () => { throw new Error(`no "${text}" message; shown: ${(await page.locator(".toast").allInnerTexts()).join(" | ")}`); });
+    await toast(".toast", "Saved online-e2e.svg");
+    const shown = await invoke("reveal_file", { path: "C:\\nowhere\\x.svg" });
+    assert(shown.err?.kind === "not_found", "reveal accepted another path");
+    await download("setup.exe", "MZ");
+    await toast(".toast.err", "drawings and project files only");
+    await sleep(800);
+    assert(!readdirSync(exportDir).some((f) => /setup/i.test(f)), "a program was saved");
+  });
+
+  await step("native pages hide the website view; it comes back as it was", async () => {
+    const web = await webView();
+    const before = web.url();
+    const shown = () => webViewWindows().filter((v) => v === "visible").length;
+    const hosts = webViewWindows();
+    assert(hosts.length === 2 && shown() === 2, `expected the app and website views: ${hosts}`);
+    await nav("Generators");
+    await page.getByRole("heading", { name: "Generators" }).waitFor();
+    await sleep(500);
+    assert(shown() === 1, `website view still shown over a native page: ${webViewWindows()}`);
+    await nav("All editors");
+    await sleep(800);
+    assert(shown() === 2, `website view not shown again: ${webViewWindows()}`);
+    assert(web.url() === before, `the view navigated: ${before} -> ${web.url()}`);
+  });
+
   await step("sign out revokes the session and clears the credential", async () => {
     await nav("Settings");
     await page.getByRole("button", { name: "Sign out" }).last().click();
@@ -357,6 +491,12 @@ try {
     assert(info.ok?.signedIn === false, "still signed in");
     const r = await invoke("me");
     assert(r.err?.kind === "unauthorized", JSON.stringify(r));
+    let left = 1;
+    for (let i = 0; i < 40 && left; i++) {
+      await sleep(250);
+      left = cdp.contexts().flatMap((c) => c.pages()).filter((p) => p.url().startsWith(WEB) && !p.isClosed()).length;
+    }
+    assert(!left, "the website view stayed open after sign-out");
   });
 } finally {
   await cdp?.close().catch(() => {});

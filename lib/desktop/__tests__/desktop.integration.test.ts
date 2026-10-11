@@ -10,6 +10,8 @@ import { GET as meGET } from "@/app/api/desktop/me/route";
 import { GET as catalogGET } from "@/app/api/desktop/catalog/route";
 import { POST as generatePOST } from "@/app/api/desktop/generate/route";
 import { GET as updateGET } from "@/app/api/desktop/update/[target]/[arch]/[version]/route";
+import { POST as webSessionPOST } from "@/app/api/desktop/web-session/route";
+import { createClient } from "@supabase/supabase-js";
 import { adminClient, deleteUser, localSupabaseUp, newUser } from "@/lib/testing/supabase";
 import stableManifest from "@/desktop/releases/stable.json";
 import { randomToken, sha256 } from "../pkce";
@@ -111,6 +113,30 @@ describe.skipIf(!up)("desktop API (local Supabase)", () => {
     expect((await meGET(get("/api/desktop/me", auth(t2.access_token)))).status).toBe(401);
     const after = await tokenPOST(post("/api/desktop/token", { grant_type: "refresh_token", refresh_token: t2.refresh_token }));
     expect(after.status).toBe(400);
+  });
+
+  it("signs the app's website view in once, to a same-site page", async () => {
+    const t = await signIn(user.id);
+    expect((await webSessionPOST(post("/api/desktop/web-session", { next: "/home" }))).status).toBe(401);
+    const res = await webSessionPOST(post("/api/desktop/web-session", { next: "/app/editor/local?p=letters" }, auth(t.access_token)));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const { path } = (await res.json()) as { path: string };
+    const link = new URL(path, BASE);
+    expect(link.pathname).toBe("/auth/callback");
+    expect(link.searchParams.get("next")).toBe("/app/editor/local?p=letters");
+    const hash = link.searchParams.get("token_hash")!;
+    const type = link.searchParams.get("type") as "email";
+    const web = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+    const first = await web.auth.verifyOtp({ token_hash: hash, type });
+    expect(first.error).toBeNull();
+    expect(first.data.user?.id).toBe(user.id);
+    expect((await web.auth.verifyOtp({ token_hash: hash, type })).error).not.toBeNull();
+
+    for (const next of ["https://evil.test/", "//evil.test", "/api/desktop/me", "/auth/callback?x=1"]) {
+      const r = await webSessionPOST(post("/api/desktop/web-session", { next }, auth(t.access_token)));
+      expect(new URL(((await r.json()) as { path: string }).path, BASE).searchParams.get("next")).toBe("/home");
+    }
   });
 
   it("signs out on the server", async () => {

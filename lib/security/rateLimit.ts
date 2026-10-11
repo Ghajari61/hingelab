@@ -17,6 +17,8 @@ export const LIMITS = {
   desktopGenerate: { name: "desktop-generate", limit: 120, windowSec: 60 },
   /** Desktop sign-in and token refresh, per IP address. */
   desktopToken: { name: "desktop-token", limit: 30, windowSec: 600 },
+  /** Desktop app signing its website view in (once per app start, again if the session ends). */
+  desktopWebSession: { name: "desktop-web-session", limit: 20, windowSec: 600 },
 } satisfies Record<string, LimitRule>;
 
 const memory = memoryLimiter();

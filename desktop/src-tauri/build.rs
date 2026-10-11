@@ -14,6 +14,10 @@ const COMMANDS: &[&str] = &[
     "get_prefs",
     "choose_export_folder",
     "set_export_prefs",
+    "web_open",
+    "web_bounds",
+    "web_hide",
+    "web_action",
 ];
 
 fn main() {

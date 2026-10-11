@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ArrowRight, Box, Check, Clock, Clock3, Crown, ExternalLink, FolderOpen, History, Keyboard, LayoutGrid, LifeBuoy, Lock, Plus, Puzzle, QrCode, Sparkles, Star, Trash2 } from "lucide-react";
+import { ArrowRight, Box, Check, Clock, Clock3, Crown, ExternalLink, FolderOpen, Globe, History, Keyboard, LayoutGrid, LifeBuoy, Lock, Plus, Puzzle, QrCode, Sparkles, Star, Trash2 } from "lucide-react";
 import type { DCatalog, DProduct } from "../../../lib/desktop/types";
-import { presetArt, productArt, showcase } from "../art";
+import { onlineArt, presetArt, productArt, showcase } from "../art";
+import type { WebRoute } from "./Web";
 import type { DesktopAccount, Prefs, WebPage } from "../ipc";
 import type { Favorite, LocalPrefs, SavedDesign } from "../local";
 import type { UpdateStatus } from "../updater";
@@ -30,10 +31,17 @@ const HERO_PRODUCTS = ["clock", "hinge", "boxes"];
 
 const PRO_PERKS = ["Pill, polygon and cylinder boxes", "Wave, relief and serpentine hinges", "Large puzzles and every generator design", "Exports without the HingeLab mark"];
 
-export function Dashboard({ account, catalog, recent, defaultProduct, onNew, onPreset, onBrowse, onOpenRecent, onUpgrade }: {
+/** Editors that run on the website; they open inside the window, signed in. */
+const ONLINE_TILES: { id: string; name: string; blurb: string; art: [string, string]; section: WebRoute; path: string }[] = [
+  { id: "letters", name: "Letters", blurb: "Letter boxes, solid and stencil letters in any script.", art: ["letters", "hello-sign"], section: "web-editors", path: "/app/editor/local?p=letters" },
+  { id: "parametric", name: "Parametric Slicer", blurb: "Sliced sculptures from 3D files, photos or formulas.", art: ["parametric", "head-stack"], section: "web-editors", path: "/app/editor/local?p=parametric" },
+  { id: "studio", name: "Studio", blurb: "Lay out designs, text and images on one sheet, plus trays, lamps, finger-joint boxes and test cards.", art: ["boxes", "organiser"], section: "web-studio", path: "/home" },
+];
+
+export function Dashboard({ account, catalog, recent, defaultProduct, onNew, onPreset, onBrowse, onOpenRecent, onUpgrade, onOnline }: {
   account: DesktopAccount | null; catalog: DCatalog | null; recent: SavedDesign[]; defaultProduct: string;
   onNew: (product: string) => void; onPreset: (product: string, preset: string) => void; onBrowse: () => void;
-  onOpenRecent: (d: SavedDesign) => void; onUpgrade: () => void;
+  onOpenRecent: (d: SavedDesign) => void; onUpgrade: () => void; onOnline: (section: WebRoute, path: string) => void;
 }) {
   const first = (account?.user.name || account?.user.email || "").split(/[\s@]/)[0];
   const pro = account?.plan === "pro";
@@ -81,6 +89,28 @@ export function Dashboard({ account, catalog, recent, defaultProduct, onNew, onP
               </button>
             );
           }) : <div className="sk tall" />}
+        </div>
+      </section>
+
+      <section aria-labelledby="dash-online">
+        <div className="sec-head">
+          <h2 id="dash-online" className="sub">More editors, online</h2>
+          <button type="button" className="link-btn" onClick={() => onOnline("web-editors", "/app/editor/local")}>All editors<ArrowRight size={13} aria-hidden /></button>
+        </div>
+        <div className="tiles">
+          {ONLINE_TILES.map((t) => {
+            const src = onlineArt(...t.art);
+            return (
+              <button key={t.id} type="button" className="tile" onClick={() => onOnline(t.section, t.path)}>
+                <span className="tile-media">{src ? <img src={src} alt="" /> : <Globe size={36} aria-hidden />}</span>
+                <span className="tile-body">
+                  <span className="tile-title"><span className="tile-icon"><Globe size={15} aria-hidden /></span><b>{t.name}</b></span>
+                  <small>{t.blurb}</small>
+                  <span className="tile-meta">Opens here, signed in<ArrowRight size={13} aria-hidden /></span>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </section>
 
@@ -432,7 +462,7 @@ const SHORTCUTS: [string, string][] = [
   ["F1", "Help"],
 ];
 
-export function Help({ onWeb, version }: { onWeb: (p: WebPage) => void; version: string }) {
+export function Help({ onWeb, version, onHelpCentre }: { onWeb: (p: WebPage) => void; version: string; onHelpCentre: () => void }) {
   return (
     <div className="page narrow">
       <header className="page-head">
@@ -454,7 +484,8 @@ export function Help({ onWeb, version }: { onWeb: (p: WebPage) => void; version:
         <p><b>Signed out.</b> Sessions end after 30 days without use, or when you sign out on another device. Sign in again from the start screen.</p>
         <p><b>Windows SmartScreen.</b> If Windows warns about the installer, check that it came from hingelab.vercel.app, then choose More info and Run anyway.</p>
         <div className="row">
-          <button type="button" className="btn" onClick={() => onWeb("help")}><ExternalLink size={14} aria-hidden />Full help centre</button>
+          <button type="button" className="btn" onClick={onHelpCentre}><LifeBuoy size={14} aria-hidden />Full help centre</button>
+          <button type="button" className="btn ghost" onClick={() => onWeb("help")}><ExternalLink size={14} aria-hidden />Help centre in the browser</button>
         </div>
       </section>
       <p className="fine">HingeLab for Windows {version}</p>

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-web-hide"
+description = "Enables the web_hide command without any pre-configured scope."
+commands.allow = ["web_hide"]
+
+[[permission]]
+identifier = "deny-web-hide"
+description = "Denies the web_hide command without any pre-configured scope."
+commands.deny = ["web_hide"]

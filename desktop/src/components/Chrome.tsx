@@ -1,10 +1,11 @@
-import { useEffect, useRef } from "react";
-import { ArrowDownCircle, Clock3, CreditCard, FolderOpen, Globe, HelpCircle, LayoutDashboard, Loader2, PanelLeftClose, PanelLeftOpen, Settings as Cog, Shapes, ShieldCheck, Star, X } from "lucide-react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
+import { ArrowDownCircle, Clock3, Cloud, CreditCard, FolderOpen, Globe, HelpCircle, LayoutDashboard, LayoutTemplate, Loader2, PanelLeftClose, PanelLeftOpen, PenTool, Settings as Cog, Shapes, ShieldCheck, Star, X } from "lucide-react";
 import type { DesktopAccount } from "../ipc";
 import type { UpdateStatus } from "../updater";
 import { formatBytes } from "../updater";
+import type { WebRoute } from "./Web";
 
-export type Route = "dashboard" | "generators" | "workspace" | "recent" | "favorites" | "subscription" | "settings" | "help";
+export type Route = "dashboard" | "generators" | "workspace" | "recent" | "favorites" | "subscription" | "settings" | "help" | WebRoute;
 
 export function Logo({ size = 28 }: { size?: number }) {
   return (
@@ -23,6 +24,13 @@ const NAV: { id: Route; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "subscription", label: "Subscription", icon: CreditCard },
   { id: "settings", label: "Settings", icon: Cog },
   { id: "help", label: "Help", icon: HelpCircle },
+];
+
+/** The website's editors and pages, shown inside the window and signed in as this account. */
+const ONLINE: { id: WebRoute; label: string; icon: typeof LayoutDashboard }[] = [
+  { id: "web-editors", label: "All editors", icon: PenTool },
+  { id: "web-studio", label: "Studio", icon: LayoutTemplate },
+  { id: "web-projects", label: "Cloud projects", icon: Cloud },
 ];
 
 export function Sidebar({ route, onRoute, account, hasDesign, update, onUpdate, collapsed, onToggle }: {
@@ -51,6 +59,17 @@ export function Sidebar({ route, onRoute, account, hasDesign, update, onUpdate, 
             </li>
           );
         })}
+      </ul>
+      <p className="side-group" aria-hidden={collapsed}>Online</p>
+      <ul aria-label="Online">
+        {ONLINE.map((n) => (
+          <li key={n.id}>
+            <button type="button" aria-current={route === n.id ? "page" : undefined} aria-label={collapsed ? `${n.label} (online)` : undefined} title={collapsed ? `${n.label} (online)` : undefined} onClick={() => onRoute(n.id)}>
+              <n.icon size={17} aria-hidden />
+              <span>{n.label}</span>
+            </button>
+          </li>
+        ))}
       </ul>
       <div className="side-foot">
         {(update.phase === "available" || update.phase === "downloading" || update.phase === "installing") && (
@@ -95,11 +114,29 @@ export function SignIn({ busy, error, version, onSignIn, onCancel, onSignUp }: {
   );
 }
 
+let openModals = 0;
+const modalWatchers = new Set<() => void>();
+const watchModals = (f: () => void) => {
+  modalWatchers.add(f);
+  return () => void modalWatchers.delete(f);
+};
+const countModals = (d: number) => {
+  openModals += d;
+  modalWatchers.forEach((f) => f());
+};
+
+/** True while a dialog is open (the website view, a separate layer, steps aside for it). */
+export const useModalOpen = () => useSyncExternalStore(watchModals, () => openModals > 0);
+
 /** A dialog with focus kept inside and Escape to close. */
 function Modal({ title, onClose, children, labelledBy }: { title: string; onClose?: () => void; children: React.ReactNode; labelledBy: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
+  useEffect(() => {
+    countModals(1);
+    return () => countModals(-1);
+  }, []);
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
     (ref.current?.querySelector<HTMLElement>("button.primary") ?? ref.current?.querySelector<HTMLElement>("button"))?.focus();

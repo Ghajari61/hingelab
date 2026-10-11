@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-web-action"
+description = "Enables the web_action command without any pre-configured scope."
+commands.allow = ["web_action"]
+
+[[permission]]
+identifier = "deny-web-action"
+description = "Denies the web_action command without any pre-configured scope."
+commands.deny = ["web_action"]

@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
-  "description": "The HingeLab window: its own commands, the signed updater and restart after an update. No file system, shell or HTTP access from JavaScript.",
-  "windows": ["main"],
+  "description": "The app's own UI (the \"main\" webview only, never the \"web\" view that shows the website): its own commands, the signed updater and restart after an update. No file system, shell or HTTP access from JavaScript.",
+  "webviews": ["main"],
   "permissions": [
     "core:app:allow-version",
     "core:event:default",
@@ -22,6 +22,10 @@
     "allow-open-web",
     "allow-get-prefs",
     "allow-choose-export-folder",
-    "allow-set-export-prefs"
+    "allow-set-export-prefs",
+    "allow-web-open",
+    "allow-web-bounds",
+    "allow-web-hide",
+    "allow-web-action"
   ]
 }

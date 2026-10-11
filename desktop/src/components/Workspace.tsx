@@ -1,5 +1,5 @@
 import { useRef, useState, type RefObject } from "react";
-import { AlertTriangle, CircleAlert, Download, FileDown, Info, Lock, Maximize, Minus, Plus, Redo2, RefreshCw, Scan, Sparkles, Star, Undo2, WifiOff, Wrench } from "lucide-react";
+import { AlertTriangle, Box, CircleAlert, Download, FileDown, Info, Lock, Maximize, Minus, Plus, Redo2, RefreshCw, Scan, Sparkles, Star, Undo2, WifiOff, Wrench } from "lucide-react";
 import type { DProduct } from "../../../lib/desktop/types";
 import type { DesignState } from "../design";
 import type { AppError } from "../ipc";
@@ -27,6 +27,7 @@ interface Props {
   onUpgrade: () => void;
   onRefreshPlan: () => void;
   onFavorite: () => void;
+  onFullEditor: () => void;
 }
 
 export function Workspace(p: Props) {
@@ -76,6 +77,7 @@ export function Workspace(p: Props) {
           <button type="button" className="icon-btn" title="Undo (Ctrl+Z)" disabled={!design.canUndo} onClick={p.onUndo}><Undo2 size={16} aria-hidden /></button>
           <button type="button" className="icon-btn" title="Redo (Ctrl+Y)" disabled={!design.canRedo} onClick={p.onRedo}><Redo2 size={16} aria-hidden /></button>
           <span className="sep" />
+          <button type="button" className="btn ghost" title={`Open the online ${product.name} editor in this window: 3D view, DXF, sheets and more`} onClick={p.onFullEditor}><Box size={15} aria-hidden />Full editor</button>
           <button type="button" className="btn" title="Build the design again (Ctrl+Enter)" onClick={p.onRefresh} disabled={design.busy || !p.online}>
             <RefreshCw size={15} className={design.busy ? "spin" : undefined} aria-hidden />{design.busy ? "Updating" : "Update"}
           </button>

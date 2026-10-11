@@ -7,6 +7,7 @@ mod config;
 mod error;
 mod files;
 mod store;
+mod web;
 
 use std::path::PathBuf;
 use std::sync::atomic::Ordering;
@@ -35,6 +36,7 @@ struct AppState {
     files: Mutex<Files>,
     prefs: Mutex<Prefs>,
     prefs_dir: PathBuf,
+    web: web::WebState,
 }
 
 #[derive(Serialize)]
@@ -93,8 +95,9 @@ fn cancel_sign_in() {
 }
 
 #[tauri::command]
-async fn sign_out(state: State<'_, AppState>) -> CmdResult<()> {
+async fn sign_out(app: AppHandle, state: State<'_, AppState>) -> CmdResult<()> {
     state.api.sign_out().await;
+    web::sign_out(&app, &state);
     let mut f = state.files.lock().unwrap();
     f.last = None;
     Ok(())
@@ -293,7 +296,7 @@ pub fn run() {
         .setup(|app| {
             let prefs_dir = app.path().app_config_dir()?;
             let version = app.package_info().version.to_string();
-            app.manage(AppState { api: Api::new(&version), version, files: Mutex::new(Files::default()), prefs: Mutex::new(files::load_prefs(&prefs_dir)), prefs_dir });
+            app.manage(AppState { api: Api::new(&version), version, files: Mutex::new(Files::default()), prefs: Mutex::new(files::load_prefs(&prefs_dir)), prefs_dir, web: web::WebState::default() });
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("HingeLab")
                 .inner_size(1360.0, 860.0)
@@ -323,7 +326,11 @@ pub fn run() {
             open_web,
             get_prefs,
             choose_export_folder,
-            set_export_prefs
+            set_export_prefs,
+            web::web_open,
+            web::web_bounds,
+            web::web_hide,
+            web::web_action
         ])
         .run(tauri::generate_context!())
         .expect("error while running HingeLab");

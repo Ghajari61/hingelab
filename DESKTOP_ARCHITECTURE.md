@@ -68,8 +68,19 @@ The preview is the SVG as an `<img src="blob:…">`, so scripts or links inside 
 - CSP: `default-src 'self'; script-src 'self'; connect-src ipc: http://ipc.localhost; img-src 'self' blob: data:; object-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'`. No remote content is loaded.
 - Navigation: the window can only show the app's own pages (`on_navigation`); links open nowhere inside it. `open_web` opens only a fixed list of website pages in the browser.
 - Capabilities (`capabilities/default.json`): the app's own commands, `core:app:allow-version`, `core:event:default`, `core:window:allow-set-title`, `updater:default`, `process:allow-restart`. No filesystem, shell, HTTP or opener permissions for the WebView; file dialogs and writes happen in Rust.
-- `freezePrototype`, `withGlobalTauri: false`, single instance, context menu and file drops disabled.
+- `Object.prototype` frozen first thing in the app's UI (`src/harden.ts`; Tauri's `freezePrototype` is off because it would also apply to the website view), `withGlobalTauri: false`, single instance, context menu and file drops disabled.
 - Commands validate their input (request size and shape, design id, page names, paths).
+
+## The website inside the window (D101)
+
+The website's editors and pages (Letters, Parametric, every product's full editor with 3D view, DXF and sheets, the Studio, cloud projects, the help centre) open inside the app window, signed in as the app's account. They are the website itself, so nothing of their code ships in the EXE.
+
+- **View.** A second webview (label `web`, `src/web.rs`) laid over the content area with `Window::add_child` (Tauri `unstable` feature). The UI keeps a placeholder (`components/Web.tsx`) and sends its position and size; the view hides on native pages and while a dialog is open, and keeps its page when you come back.
+- **Sign-in.** On the first open of a run, Rust calls `POST /api/desktop/web-session` with the desktop bearer token. The server makes a one-time email sign-in token for that user with the admin API (`generateLink`, nothing is emailed) and returns `/auth/callback?token_hash=…&type=email&next=…`. The view opens that link, the website's own callback sets its session cookie and continues to `next` (same-site path, `safeNext`; `/api/` and `/auth/` fall back to `/home`). Rate limit 20 per 10 minutes per user. If a page later lands on `/login` (session ended), the app signs it in again, at most once a minute.
+- **No IPC.** Capabilities are granted to the `main` webview only (`"webviews": ["main"]`) and no remote URL is listed, so the website view can't call any command or plugin (E2E tries `app_info`, `me`, `sign_out`, `web_open`, opener and updater).
+- **Navigation.** Only the website's own origin (and its `blob:` downloads) loads in the view. Other `https`/`mailto` links, Stripe checkout included, open in the default browser; everything else (`file:`, `javascript:`, `tauri:`) is blocked. New windows go to the view (same site) or the browser.
+- **Downloads.** Only drawing and project files (SVG, DXF, ZIP, JSON, `.hingelab`, PNG, JPG, PDF, LightBurn, CSV, TXT) from the website's origin; saved with a sanitised unique name in the export folder, else Downloads; "Show in folder" works for them. Programs and scripts are refused.
+- **Sign-out.** Signing out of the app ends the website session in the view (`POST /auth/signout`) and closes it.
 
 ## Offline
 
@@ -80,6 +91,6 @@ Designs are built on the server, so editing needs a connection. Offline, the app
 - `lib/desktop/__tests__/desktop.test.ts`: PKCE (RFC 7636 example), loopback rules, versions, manifests (URL allowlist, signatures, signed version, downgrades), effective plan, catalog, generate parity with the website's export for every product.
 - `lib/desktop/__tests__/desktop.integration.test.ts` (local Supabase): code exchange, plans, refresh rotation and reuse detection, logout, 426, updater route, functions denied to API roles.
 - `lib/desktop/__tests__/minisign.test.ts`: the release scripts' signature check (valid, tampered, wrong key, corrupted).
-- `cargo test` in `desktop/src-tauri`: PKCE, callback parsing, file names, SVG check, token shape, navigation rules, API base rules.
-- `scripts/desktop/e2e.mjs`: the real app against a local production server (16 steps: sign-in, previews, export, Pro lock and upgrade, expired period, navigation lockdown, denied commands, 429, offline, revoked session, 426, sign out).
+- `cargo test` in `desktop/src-tauri`: PKCE, callback parsing, file names, download names, SVG check, token shape, navigation rules (app window and website view), API base rules.
+- `scripts/desktop/e2e.mjs`: the real app against a local production server (24 steps: sign-in, previews, export, Pro lock and upgrade, expired period, navigation lockdown, denied commands, 429, offline, revoked session, 426, dashboard, sidebar, the website view signed in / without IPC / outside links to the browser / downloads / hidden on native pages, sign out).
 - `scripts/desktop/update-e2e.mjs`: real installers (10 steps, see `DESKTOP_UPDATE_SYSTEM.md`).
