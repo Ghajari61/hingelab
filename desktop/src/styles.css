@@ -287,8 +287,8 @@ kbd { font: 12px var(--font); padding: 1px 6px; border: 1px solid var(--line-2);
 .ws-summary { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ws-actions { display: flex; align-items: center; gap: 6px; flex: none; }
 .sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
-.ws-body { display: grid; grid-template-columns: 320px 1fr; min-height: 0; }
-.ws-panel { border-right: 1px solid var(--line); background: var(--panel); overflow-y: auto; min-height: 0; }
+.ws-body { display: grid; grid-template-columns: 1fr 320px; min-height: 0; }
+.ws-panel { border-left: 1px solid var(--line); background: var(--panel); overflow-y: auto; min-height: 0; }
 .panel-loading { padding: 16px; }
 .settings .group { border-bottom: 1px solid var(--line); }
 .settings .group h3 button { width: 100%; display: flex; align-items: center; gap: 6px; padding: 11px 14px; border: 0; background: none; cursor: pointer; font: 600 13px var(--font); text-align: left; }
@@ -390,14 +390,14 @@ kbd { font: 12px var(--font); padding: 1px 6px; border: 1px solid var(--line-2);
 .progress span { display: block; height: 100%; background: var(--accent); transition: width 0.2s; }
 .progress span.indeterminate { width: 40% !important; animation: indet 1.2s ease-in-out infinite; }
 @keyframes indet { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
-.toasts { position: fixed; z-index: 60; right: 18px; bottom: 44px; display: grid; gap: 8px; }
+.toasts { position: fixed; z-index: 60; left: 242px; bottom: 44px; display: grid; gap: 8px; }
 .toast { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px; border-radius: 8px; background: var(--side); color: #e9eef5; box-shadow: var(--shadow); max-width: 460px; }
 .toast.err { background: #5a1f22; }
 .toast .link-btn { color: #9cc8fb; white-space: nowrap; }
 .toast .icon-btn { color: #c9d2de; }
 
 @media (max-width: 1100px) {
-  .ws-body { grid-template-columns: 280px 1fr; }
+  .ws-body { grid-template-columns: 1fr 280px; }
   .split { grid-template-columns: 1fr; }
   .ideas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

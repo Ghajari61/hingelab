@@ -85,6 +85,46 @@ export function Workspace(p: Props) {
       </header>
 
       <div className="ws-body">
+        <main className="ws-canvas">
+          <div className="canvas-tools" role="toolbar" aria-label="View">
+            <button type="button" className="icon-btn" title="Zoom out (Ctrl+-)" onClick={() => p.canvas.current?.zoomOut()}><Minus size={15} aria-hidden /></button>
+            <span className="zoom" aria-live="polite">{zoomLabel(zoom)}</span>
+            <button type="button" className="icon-btn" title="Zoom in (Ctrl+=)" onClick={() => p.canvas.current?.zoomIn()}><Plus size={15} aria-hidden /></button>
+            <button type="button" className="icon-btn" title="Fit to window (Ctrl+0)" onClick={() => p.canvas.current?.fit()}><Maximize size={15} aria-hidden /></button>
+            <button type="button" className="icon-btn" title="Actual size, 100% (Ctrl+1)" onClick={() => p.canvas.current?.reset()}><Scan size={15} aria-hidden /></button>
+          </div>
+          <Canvas ref={p.canvas} svg={r?.svg ?? null} width={r?.width ?? 0} height={r?.height ?? 0} fitKey={`${product.id}:${r ? "1" : "0"}`} dim={design.busy || !!r?.locked || (!!err && err.kind !== "network" && err.kind !== "rate_limited")} onZoom={setZoom}>
+            {r?.locked && (
+              <div className="overlay locked" role="status">
+                <Lock size={22} aria-hidden />
+                <h2>This design needs Pro</h2>
+                <p>{r.locked}</p>
+                <div className="row">
+                  <button type="button" className="btn primary" onClick={p.onUpgrade}>Upgrade to Pro</button>
+                  <button type="button" className="btn" onClick={p.onRefreshPlan}>I've upgraded</button>
+                </div>
+              </div>
+            )}
+            {!r?.locked && r?.error && !design.busy && (
+              <div className="overlay problem" role="alert">
+                <CircleAlert size={22} aria-hidden />
+                <h2>This design can't be built</h2>
+                <p>{r.error}</p>
+                {issues.some((i) => i.fixes.length) && <p className="hint">The checks on the right suggest fixes.</p>}
+              </div>
+            )}
+            {err && !design.busy && <ErrorOverlay error={err} online={p.online} onRetry={p.onRefresh} />}
+            {!r && design.busy && <div className="overlay quiet" aria-busy="true"><RefreshCw size={20} className="spin" aria-hidden /><p>Building on the server…</p></div>}
+          </Canvas>
+          <footer className="status">
+            {r?.stats.map((s) => <span key={s.label}><b>{s.label}</b> {s.value}</span>)}
+            {r?.watermark && <span className="wm" title="Free plan exports carry a small Made with HingeLab mark below the parts.">Free plan mark included</span>}
+            <span className="spacer" />
+            {!p.online && <span className="offline"><WifiOff size={13} aria-hidden />Offline</span>}
+            {design.busy && <span className="sync">Updating…</span>}
+          </footer>
+        </main>
+
         <aside className="ws-panel">
           {design.params ? (
             <SettingsPanel product={product} params={design.params} form={r?.form ?? null} units={p.units} plan={p.plan} onChange={p.onChange} />
@@ -113,46 +153,6 @@ export function Workspace(p: Props) {
             </section>
           )}
         </aside>
-
-        <main className="ws-canvas">
-          <div className="canvas-tools" role="toolbar" aria-label="View">
-            <button type="button" className="icon-btn" title="Zoom out (Ctrl+-)" onClick={() => p.canvas.current?.zoomOut()}><Minus size={15} aria-hidden /></button>
-            <span className="zoom" aria-live="polite">{zoomLabel(zoom)}</span>
-            <button type="button" className="icon-btn" title="Zoom in (Ctrl+=)" onClick={() => p.canvas.current?.zoomIn()}><Plus size={15} aria-hidden /></button>
-            <button type="button" className="icon-btn" title="Fit to window (Ctrl+0)" onClick={() => p.canvas.current?.fit()}><Maximize size={15} aria-hidden /></button>
-            <button type="button" className="icon-btn" title="Actual size, 100% (Ctrl+1)" onClick={() => p.canvas.current?.reset()}><Scan size={15} aria-hidden /></button>
-          </div>
-          <Canvas ref={p.canvas} svg={r?.svg ?? null} width={r?.width ?? 0} height={r?.height ?? 0} fitKey={`${product.id}:${r ? "1" : "0"}`} dim={design.busy || !!r?.locked || (!!err && err.kind !== "network" && err.kind !== "rate_limited")} onZoom={setZoom}>
-            {r?.locked && (
-              <div className="overlay locked" role="status">
-                <Lock size={22} aria-hidden />
-                <h2>This design needs Pro</h2>
-                <p>{r.locked}</p>
-                <div className="row">
-                  <button type="button" className="btn primary" onClick={p.onUpgrade}>Upgrade to Pro</button>
-                  <button type="button" className="btn" onClick={p.onRefreshPlan}>I've upgraded</button>
-                </div>
-              </div>
-            )}
-            {!r?.locked && r?.error && !design.busy && (
-              <div className="overlay problem" role="alert">
-                <CircleAlert size={22} aria-hidden />
-                <h2>This design can't be built</h2>
-                <p>{r.error}</p>
-                {issues.some((i) => i.fixes.length) && <p className="hint">The checks on the left suggest fixes.</p>}
-              </div>
-            )}
-            {err && !design.busy && <ErrorOverlay error={err} online={p.online} onRetry={p.onRefresh} />}
-            {!r && design.busy && <div className="overlay quiet" aria-busy="true"><RefreshCw size={20} className="spin" aria-hidden /><p>Building on the server…</p></div>}
-          </Canvas>
-          <footer className="status">
-            {r?.stats.map((s) => <span key={s.label}><b>{s.label}</b> {s.value}</span>)}
-            {r?.watermark && <span className="wm" title="Free plan exports carry a small Made with HingeLab mark below the parts.">Free plan mark included</span>}
-            <span className="spacer" />
-            {!p.online && <span className="offline"><WifiOff size={13} aria-hidden />Offline</span>}
-            {design.busy && <span className="sync">Updating…</span>}
-          </footer>
-        </main>
       </div>
     </div>
   );
