@@ -5,7 +5,7 @@
 import { arrangeFit, SHEET_EDGE, type Arranged } from "@/lib/fit/arrange";
 import { outlinePacker } from "@/lib/fit/outlinePack";
 import { CAL_H, CAL_STRIP, calibrationBar } from "@/lib/fit/calibration";
-import { cleanFit } from "@/lib/fit/fitToSheets";
+import { cleanFit, packBoxes, type Packed, type SheetSpec } from "@/lib/fit/fitToSheets";
 import { EXPORT_LAYERS } from "@/lib/hinge/export";
 import type { BBox, LayerContent, LayerKey, Layout } from "@/lib/hinge/types";
 import { r3 } from "@/lib/hinge/util";
@@ -40,6 +40,8 @@ export interface CutPart {
   bbox: BBox;
   /** Set on copies turned for outline nesting, degrees. */
   turned?: number;
+  /** The part's material name, in designs that mix two materials. */
+  tag?: string;
 }
 
 /** Kerf applied once: the part grows by K/2, so outlines move out and holes shrink. */
@@ -96,6 +98,31 @@ export function copiesOf(parts: CutPart[], n: number): CutPart[] {
   return out;
 }
 
+const pid = (i: number) => String(i).padStart(4, "0");
+
+type Packer = (parts: CutPart[], s: SheetSpec) => Packed;
+
+/** Packs each material's parts on their own sheets (main first), tagging the sheets with the material. */
+export function byMaterial(base: Packer): Packer {
+  return (parts, s) => {
+    const second = parts.map((_, i) => i).filter((i) => parts[i].src.material === "second");
+    if (!second.length) return base(parts, s);
+    const main = parts.map((_, i) => i).filter((i) => parts[i].src.material !== "second");
+    const out: Packed = { sheets: [], tooBig: [] };
+    for (const g of [main, second]) {
+      if (!g.length) continue;
+      const r = base(g.map((i) => parts[i]), s);
+      const map = (id: string) => pid(g[Number(id)]);
+      const tag = parts[g[0]].tag;
+      out.sheets.push(...r.sheets.map((sh) => ({ ...sh, tag, items: sh.items.map((it) => ({ ...it, id: map(it.id) })) })));
+      out.tooBig.push(...r.tooBig.map(map));
+    }
+    return out;
+  };
+}
+
+const boxPacker: Packer = (parts, s) => packBoxes(parts.map((pt, i) => ({ id: pid(i), w: pt.bbox.x1 - pt.bbox.x0, h: pt.bbox.y1 - pt.bbox.y0 })), s);
+
 /** Build at a scale and lay the parts out on sheets (Fit "off" packs at design size, like Auto). */
 export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, ctx: BuildContext): GenArranged<P> {
   const fit = cleanFit(p.fit);
@@ -105,10 +132,16 @@ export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, 
     const q = s === 1 || !def.scale ? p : def.scale(p, s);
     const out = def.build(q, ctx);
     if (out.error) return { params: q, result: { error: out.error } };
-    const parts = out.parts.map((pt) => cutPart(pt, q.K));
+    const mixed = out.parts.some((pt) => pt.material === "second");
+    const names = { main: out.materials?.main ?? `Main material ${q.T} mm`, second: out.materials?.second ?? "Second material" };
+    const parts = out.parts.map((pt) => {
+      if (!mixed) return cutPart(pt, q.K);
+      const two = pt.material === "second";
+      return { ...cutPart(pt, two && out.materials?.secondK != null ? out.materials.secondK : q.K), tag: two ? names.second : names.main };
+    });
     return { params: q, result: { parts: x.copies > 1 ? copiesOf(parts, x.copies) : parts, out } };
   }, {
-    pack: x.nest === "outline" ? outlinePacker<CutPart>((pt) => (pt.images.length ? [0] : [0, 90, 180, 270])) : undefined,
+    pack: byMaterial(x.nest === "outline" ? outlinePacker<CutPart>((pt) => (pt.images.length ? [0] : [0, 90, 180, 270])) : boxPacker),
     turn: turnCutPart,
     reserve: x.calibration ? CAL_STRIP : 0,
   });
@@ -159,7 +192,10 @@ const esc = (s: string) => s.replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt
 export function genSVG<P extends GenBase>(def: GeneratorDef<P>, p: P, lay: Layout<CutPart>, comment = ""): string {
   const W = r3(lay.width), H = r3(lay.height);
   const C = genContent(lay);
-  const parts = lay.items.map((it) => it.pt.name).join(", ");
+  const tags = [...new Set(lay.items.map((it) => it.pt.tag).filter((t): t is string => !!t))];
+  const parts = tags.length > 1
+    ? tags.map((t) => `${t}: ${lay.items.filter((it) => it.pt.tag === t).map((it) => it.pt.name).join(", ")}`).join("; ") + " (each material on its own sheets)"
+    : lay.items.map((it) => it.pt.name).join(", ");
   const note = `HingeLab ${def.name}: ${p.name}. ${def.summary(p)}. Material ${p.T} mm, kerf ${p.K} mm (compensated). Parts: ${parts}.${comment ? " " + comment : ""}`;
   let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"${C.images.length ? ' xmlns:xlink="http://www.w3.org/1999/xlink"' : ""} width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">\n`;
   s += `<!-- ${xmlCommentText(esc(note))} -->\n`;

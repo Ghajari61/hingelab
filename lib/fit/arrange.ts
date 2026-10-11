@@ -58,7 +58,8 @@ export function stackSheets<P extends { bbox: BBox }>(parts: P[], packed: Packed
   let y = 0, width = 0;
   const n = packed.sheets.length;
   packed.sheets.forEach((sh, si) => {
-    sheets.push({ x: 0, y, w: sh.w, h: sh.h, label: sh.oversize ? `Sheet ${si + 1} of ${n} · part larger than the sheet` : `Sheet ${si + 1} of ${n}`, warn: sh.oversize });
+    const tag = sh.tag ? ` · ${sh.tag}` : "";
+    sheets.push({ x: 0, y, w: sh.w, h: sh.h, label: sh.oversize ? `Sheet ${si + 1} of ${n}${tag} · part larger than the sheet` : `Sheet ${si + 1} of ${n}${tag}`, warn: sh.oversize });
     for (const it of sh.items) {
       const i = Number(it.id), pt = it.angle && turn ? turn(parts[i], it.angle) : parts[i];
       items.push({ pt, i, w: pt.bbox.x1 - pt.bbox.x0, h: pt.bbox.y1 - pt.bbox.y0, ox: it.x - pt.bbox.x0, oy: y + it.y - pt.bbox.y0 });

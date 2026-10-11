@@ -95,6 +95,10 @@ export interface GenPart {
   t?: number;
   /** Shade in 3D (1 = the material; lower is darker), for a contrasting layer. */
   tone?: number;
+  /** Cut from the design's second material (packed on its own sheets). */
+  material?: "main" | "second";
+  /** Preview colour (thumbnails and 3D), e.g. gold mirror acrylic. */
+  color?: string;
 }
 
 export interface GenStat {
@@ -113,6 +117,8 @@ export interface GenOutput {
   notice?: string;
   /** Characters the chosen font has no glyph for. */
   missing?: string[];
+  /** Names of the sheets' materials when some parts use the second material; `secondK` is its kerf. */
+  materials?: { main: string; second: string; secondK?: number };
 }
 
 /** Glyph outlines for a string, centred on (0, 0), y down; `height` is the cap height in mm. */

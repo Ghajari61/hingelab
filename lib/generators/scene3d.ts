@@ -47,6 +47,12 @@ export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D 
       shapes.forEach((s, i) => {
         const mesh = slab(s.outer, s.holes, 0, t, i ? `${p.name} piece ${i}` : p.name);
         mesh.userData.tint = tint;
+        if (p.color) {
+          // A contrasting material (gold mirror acrylic and the like) keeps its own colour in every look.
+          (mesh.material as THREE.Material).dispose();
+          mesh.material = new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.28, metalness: 0.55, side: THREE.DoubleSide });
+          mesh.userData.keepMaterial = true;
+        }
         spin.add(mesh);
       });
     }

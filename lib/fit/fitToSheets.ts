@@ -37,6 +37,8 @@ export interface PackedSheet {
   oversize: boolean;
   /** Top-left corner of each part's box on the sheet; `angle` (degrees) turns the part first. */
   items: { id: string; x: number; y: number; angle?: number }[];
+  /** What the sheet is (its material), added to its label. */
+  tag?: string;
 }
 
 export interface Packed {
