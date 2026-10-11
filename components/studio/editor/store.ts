@@ -6,13 +6,18 @@ import { createStore, useStore, type StoreApi } from "zustand";
 import type { ToolId } from "@/lib/studio/commands";
 import { commit, emptyHistory, jumpTo, redo, seal, undo, type History } from "@/lib/studio/history";
 import { allIds } from "@/lib/studio/scene";
+import type { BrushShape, CurveMode, PenMode } from "@/lib/studio/strokes";
 import type { Document, Mat, ShapeKind, ShapeParams, TextNode, Vec } from "@/lib/studio/types";
 
 export interface AnchorRef { id: string; sub: number; idx: number }
 
 export interface ViewState { zoom: number; x: number; y: number }
 
-export interface UiState { rulers: boolean; outline: boolean; guidesShown: boolean; guidesLocked: boolean; presentation: boolean }
+export interface UiState {
+  rulers: boolean; outline: boolean; guidesShown: boolean; guidesLocked: boolean; presentation: boolean;
+  /** Direct Selection: handles of every node, and direction arrows along the edited paths. */
+  nodeHandles: boolean; pathDirection: boolean;
+}
 
 export type TextDefaults = Pick<TextNode, "font" | "size" | "tracking" | "lineHeight" | "align" | "direction">;
 
@@ -46,6 +51,16 @@ export interface EditorState {
   alignTo: "selection" | "key" | "artboard";
   /** Distribute Spacing gap in mm, or null for equal gaps between the outer objects. */
   alignGap: number | null;
+  /** Pen: how clicks become a curve, and an optional brush shape that turns the line into a filled outline. */
+  penMode: PenMode;
+  penShape: BrushShape;
+  /** Brush width for the Pen's shapes and the Pencil's pressure outline, mm. */
+  brushWidth: number;
+  /** Pencil: 0 keeps every wobble, 100 smooths the most. */
+  pencilSmoothing: number;
+  /** Pencil: pen pressure varies the width of a filled outline. */
+  pencilPressure: boolean;
+  pencilMode: CurveMode;
 
   edit: <T = void>(label: string, recipe: (d: Document) => T, o?: { mergeKey?: string; select?: string[] }) => T;
   begin: () => void;
@@ -64,7 +79,8 @@ export interface EditorState {
   setTool: (t: ToolId) => void;
   setView: (v: Partial<ViewState> | ((v: ViewState) => ViewState)) => void;
   setUi: (u: Partial<UiState>) => void;
-  set: (p: Partial<Pick<EditorState, "shapeDefaults" | "textDefaults" | "lastTransform" | "textEditing" | "currentLayer" | "refPoint" | "lockRatio" | "eraserSize" | "measure" | "alignTo" | "alignGap">>) => void;
+  set: (p: Partial<Pick<EditorState, "shapeDefaults" | "textDefaults" | "lastTransform" | "textEditing" | "currentLayer" | "refPoint" | "lockRatio" | "eraserSize" | "measure" | "alignTo" | "alignGap"
+    | "penMode" | "penShape" | "brushWidth" | "pencilSmoothing" | "pencilPressure" | "pencilMode">>) => void;
 }
 
 const keepExisting = (doc: Document, ids: string[]) => {
@@ -74,7 +90,8 @@ const keepExisting = (doc: Document, ids: string[]) => {
 };
 
 export const DEFAULT_TEXT: TextDefaults = { font: "fredoka", size: 12, tracking: 0, lineHeight: 1.2, align: "start", direction: "auto" };
-export const DEFAULT_UI: UiState = { rulers: true, outline: false, guidesShown: true, guidesLocked: false, presentation: false };
+export const DEFAULT_UI: UiState = { rulers: true, outline: false, guidesShown: true, guidesLocked: false, presentation: false, nodeHandles: false, pathDirection: false };
+export const DEFAULT_PENCIL_SMOOTHING = 25;
 
 export function createEditorStore(doc: Document): StoreApi<EditorState> {
   return createStore<EditorState>()((set, get) => ({
@@ -97,6 +114,12 @@ export function createEditorStore(doc: Document): StoreApi<EditorState> {
     measure: null,
     alignTo: "selection",
     alignGap: null,
+    penMode: "bezier",
+    penShape: "none",
+    brushWidth: 2,
+    pencilSmoothing: DEFAULT_PENCIL_SMOOTHING,
+    pencilPressure: false,
+    pencilMode: "bezier",
 
     edit: (label, recipe, o = {}) => {
       const s = get();

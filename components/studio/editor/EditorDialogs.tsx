@@ -20,7 +20,7 @@ import type { Handler } from "./commandHandlers";
 
 // ---------- Command palette ----------
 
-interface PaletteItem { id: string; label: string; category: string; shortcut?: string; run: () => void; disabled?: boolean; reason?: string }
+interface PaletteItem { id: string; label: string; category: string; shortcut?: string; run: () => void; disabled?: boolean; reason?: string; keywords?: string }
 
 const RECENT_KEY = "hingelab-palette-recent";
 const loadRecent = (): string[] => { try { const r = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]"); return Array.isArray(r) ? r.filter((x) => typeof x === "string").slice(0, 20) : []; } catch { return []; } };
@@ -42,7 +42,7 @@ export function CommandPalette({ open, onClose, handlers, bindings, navigate }: 
   const items = useMemo((): PaletteItem[] => [
     ...COMMANDS.map((c: CommandDef) => {
       const h = handlers[c.id];
-      return { id: c.id, label: c.category === "Laser" || c.category === "Tool" ? `${c.category === "Tool" ? "Tool: " : ""}${c.label}` : c.label, category: c.category, shortcut: bindings.get(c.id)?.[0], run: h?.run ?? (() => {}), disabled: !h || h.enabled === false, reason: h?.reason };
+      return { id: c.id, label: c.category === "Laser" || c.category === "Tool" ? `${c.category === "Tool" ? "Tool: " : ""}${c.label}` : c.label, category: c.category, shortcut: bindings.get(c.id)?.[0], run: h?.run ?? (() => {}), disabled: !h || h.enabled === false, reason: h?.reason, keywords: c.keywords };
     }),
     ...GENERATORS.map((g) => ({ id: `gen.${g.id}`, label: `New ${g.name}…`, category: "Generator", run: () => navigate(`/home?generator=${g.id}`) })),
     ...projects.map((p) => ({ id: `proj.${p.id}`, label: `Open ${p.name}`, category: "Recent project", run: () => navigate(`/editor/${p.id}`) })),
@@ -50,7 +50,7 @@ export function CommandPalette({ open, onClose, handlers, bindings, navigate }: 
 
   const results = useMemo(() => {
     const boost = (i: PaletteItem) => { const r = recent.indexOf(i.id); return r < 0 ? 0 : 400 - r * 10; };
-    return fuzzyFilter(items, q, (i) => `${i.label} ${i.category}`, boost).slice(0, 80);
+    return fuzzyFilter(items, q, (i) => `${i.label} ${i.category}${i.keywords ? ` ${i.keywords}` : ""}`, boost).slice(0, 80);
   }, [items, q, recent]);
 
   useEffect(() => { listRef.current?.querySelector(`[data-i="${act}"]`)?.scrollIntoView({ block: "nearest" }); }, [act]);
@@ -199,7 +199,7 @@ export function ShortcutsDialog({ open, onClose, set, onSet, keymap, onKeymap, t
 
 type PrefTab = "general" | "shortcuts" | "laser";
 const TAB_DEFAULTS: Record<PrefTab, (keyof Preferences)[]> = {
-  general: ["editorTheme", "theme", "accent", "units", "showStartScreen", "resetTo"],
+  general: ["editorTheme", "theme", "accent", "units", "showStartScreen", "resetTo", "offsetStep"],
   shortcuts: ["shortcutSet"],
   laser: ["laser", "machineId", "materialId"],
 };
@@ -233,6 +233,7 @@ export function PreferencesDialog({ open, onClose, prefs, setPrefs, openShortcut
             <Select label="Accent" value={prefs.accent} options={(["blue", "violet", "teal", "orange"] as Accent[]).map((a) => ({ value: a, label: a[0].toUpperCase() + a.slice(1) }))} onChange={(accent) => setPrefs({ accent })} />
             <Select label="Units for new projects" value={prefs.units} options={UNIT_LIST.map((u) => ({ value: u, label: u }))} onChange={(units) => setPrefs({ units: units as Units })} />
             <Select label="Reset ↺ goes to" value={prefs.resetTo} options={[{ value: "default", label: "The default value" }, { value: "preset", label: "The active preset's value" }]} onChange={(resetTo) => setPrefs({ resetTo })} />
+            <NumberInput label="Inset / Outset step" value={prefs.offsetStep} length units={prefs.units} min={0.01} max={100} step={0.1} defaultValue={DEFAULT_PREFS.offsetStep} onChange={(offsetStep) => setPrefs({ offsetStep })} testId="pref-offset-step" />
             <label className="pn-check full"><input type="checkbox" checked={prefs.showStartScreen} onChange={(e) => setPrefs({ showStartScreen: e.target.checked })} /> Show the start screen when HingeLab opens</label>
           </div>
         )}

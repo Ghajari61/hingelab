@@ -3,7 +3,8 @@
 import type { ReactNode } from "react";
 import {
   AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignStartHorizontal, AlignStartVertical,
-  BringToFront, FlipHorizontal2, FlipVertical2, Group, Link2, RotateCcw, RotateCw, SendToBack, Ungroup, Unlink2,
+  BringToFront, CircleDot, Diamond, DiamondPlus, Expand, FlipHorizontal2, FlipVertical2, GitCommitHorizontal, Group, Link, Link2, Merge, MoveRight,
+  RotateCcw, RotateCw, SendToBack, Shrink, Slash, Spline, SplinePointer, Square, Ungroup, Unlink, Unlink2, Unplug,
 } from "lucide-react";
 import { BUNDLED_FONTS } from "@/lib/letters/fonts";
 import { isEmptyBox, shapeForBox } from "@/lib/studio/geom";
@@ -11,7 +12,7 @@ import { layerCode } from "@/lib/studio/cutLayers";
 import { findNode, isEditable, selectionBox, topLevel } from "@/lib/studio/scene";
 import { currentRotation, moveRefTo, refAt, resizeTo, rotateTo } from "@/lib/studio/transform";
 import type { CornerType, Document, ShapeKind, ShapeParams, TextNode } from "@/lib/studio/types";
-import { IconButton, NumberInput, SegmentedControl, Select } from "@/components/ui";
+import { IconButton, NumberInput, SegmentedControl, Select, Slider } from "@/components/ui";
 import { TOOL_INFO } from "@/lib/studio/commands";
 import { fmtLength } from "@/lib/studio/units";
 import { DEFAULT_TEXT, useEditor, useEditorApi, type TextDefaults } from "./store";
@@ -70,6 +71,13 @@ export function ControlBar({ onResetToast, handlers }: { onResetToast: (m: strin
   const textDefaults = useEditor((s) => s.textDefaults);
   const eraserSize = useEditor((s) => s.eraserSize);
   const measure = useEditor((s) => s.measure);
+  const anchors = useEditor((s) => s.anchors);
+  const penMode = useEditor((s) => s.penMode);
+  const penShape = useEditor((s) => s.penShape);
+  const brushWidth = useEditor((s) => s.brushWidth);
+  const pencilSmoothing = useEditor((s) => s.pencilSmoothing);
+  const pencilPressure = useEditor((s) => s.pencilPressure);
+  const pencilMode = useEditor((s) => s.pencilMode);
   const live = useLive();
   const units = doc.units;
   const ids = topLevel(liveDoc.root, selection).filter((id) => isEditable(liveDoc.root, id));
@@ -78,6 +86,77 @@ export function ControlBar({ onResetToast, handlers }: { onResetToast: (m: strin
   const common = { units, onResetToast };
 
   const typeDefaults = tool === "text" && single?.type !== "text";
+  const cmd = (id: string, label: string, icon: ReactNode) => {
+    const h = handlers[id];
+    return <IconButton key={id} label={label} description={h?.enabled === false ? h.reason : undefined} icon={icon} disabled={!h || h.enabled === false}
+      pressed={h?.checked} onClick={h?.run} side="bottom" testId={`ctl-${id}`} />;
+  };
+
+  if (tool === "direct" && anchors.length) {
+    return (
+      <div className="st-control" aria-label="Control bar" data-testid="control-bar">
+        <div className="grp"><span className="lbl kind" data-testid="nodes-label">Nodes · {anchors.length}</span></div>
+        <div className="grp sep icons" data-testid="nodes-bar">
+          {cmd("node.insert", "Insert nodes", <DiamondPlus size={15} />)}
+          {cmd("node.break", "Break path at nodes", <Unlink size={15} />)}
+          {cmd("node.join", "Join end nodes", <Merge size={15} />)}
+          {cmd("node.joinSegment", "Join with a segment", <Link size={15} />)}
+          {cmd("node.deleteSegment", "Delete segment", <Unplug size={15} />)}
+        </div>
+        <div className="grp sep icons">
+          {cmd("node.corner", "Corner node", <Square size={15} />)}
+          {cmd("node.smooth", "Smooth node", <Diamond size={15} />)}
+          {cmd("node.symmetric", "Symmetric node", <GitCommitHorizontal size={15} />)}
+          {cmd("node.auto", "Auto-smooth node", <CircleDot size={15} />)}
+        </div>
+        <div className="grp sep icons">
+          {cmd("node.straighten", "Make segments lines", <Slash size={15} />)}
+          {cmd("node.curve", "Make segments curves", <Spline size={15} />)}
+        </div>
+        <div className="grp sep icons">
+          {cmd("node.scaleDown", "Scale nodes down", <Shrink size={15} />)}
+          {cmd("node.scaleUp", "Scale nodes up", <Expand size={15} />)}
+          {cmd("node.rotateCCW", "Rotate nodes 15° counter-clockwise", <RotateCcw size={15} />)}
+          {cmd("node.rotateCW", "Rotate nodes 15° clockwise", <RotateCw size={15} />)}
+        </div>
+        <div className="grp sep icons">
+          {cmd("view.nodeHandles", "Show handles of all nodes", <SplinePointer size={15} />)}
+          {cmd("view.pathDirection", "Show path direction", <MoveRight size={15} />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (tool === "pen" || tool === "pencil") {
+    const shape = tool === "pen" ? penShape : pencilPressure ? "pressure" : "none";
+    return (
+      <div className="st-control" aria-label="Control bar" data-testid="control-bar">
+        <div className="grp"><span className="lbl kind">{TOOL_INFO[tool].label}</span></div>
+        {tool === "pen" ? (
+          <div className="grp" data-testid="pen-options">
+            <SegmentedControl label="Mode" hideLabel value={penMode} onChange={(v) => api.getState().set({ penMode: v })}
+              options={[{ value: "bezier", label: "Bézier", title: "Click for corners, drag for curves" }, { value: "smooth", label: "Smooth", title: "A smooth curve through every click" },
+                { value: "bspline", label: "B-Spline", title: "Clicks are control points of a smooth spline" }, { value: "paraxial", label: "Paraxial", title: "Only horizontal and vertical lines" }]} />
+            <Select label="Shape" hideLabel value={penShape} onChange={(v) => api.getState().set({ penShape: v })} testId="pen-shape"
+              options={[{ value: "none", label: "Line" }, { value: "triangleIn", label: "Triangle in" }, { value: "triangleOut", label: "Triangle out" }, { value: "ellipse", label: "Ellipse" }]} />
+          </div>
+        ) : (
+          <div className="grp" data-testid="pencil-options">
+            <div style={{ width: 190 }} data-testid="pencil-smoothing"><Slider label="Smoothing" min={0} max={100} value={pencilSmoothing} onChange={(v) => api.getState().set({ pencilSmoothing: v })} /></div>
+            <SegmentedControl label="Curve" hideLabel value={pencilMode} onChange={(v) => api.getState().set({ pencilMode: v })}
+              options={[{ value: "bezier", label: "Bézier" }, { value: "smooth", label: "Smooth" }, { value: "bspline", label: "B-Spline" }]} />
+            <label className="pn-check"><input type="checkbox" checked={pencilPressure} onChange={(e) => api.getState().set({ pencilPressure: e.target.checked })} data-testid="pencil-pressure" /> Pressure</label>
+          </div>
+        )}
+        {shape !== "none" && (
+          <div className="grp sep">
+            <NumberInput label="Width" value={brushWidth} length min={0.05} max={100} step={0.1} defaultValue={2} {...common} onChange={(v) => api.getState().set({ brushWidth: v })} testId="brush-width" />
+          </div>
+        )}
+        <div className="grp"><span className="hint">{shape === "none" ? TOOL_INFO[tool].description : "Draws a filled outline — engrave it as an area."}</span></div>
+      </div>
+    );
+  }
 
   if (tool === "eraser" || tool === "measure") {
     const m = measure;

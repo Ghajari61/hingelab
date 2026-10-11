@@ -28,7 +28,7 @@ import { buildHandlers, type CommandContext, type EditorDialog, type Handler } f
 import { ControlBar } from "./ControlBar";
 import { CommandPalette, DocumentSetupDialog, MoveDialog, PreferencesDialog, ResetPrefsDialog, ShortcutsDialog } from "./EditorDialogs";
 import { AlignPanel, CutLayersPanel, DocumentPanel, HistoryPanel, LayersPanel, PathfinderPanel, PropertiesPanel } from "./Panels";
-import { CornersDialog, OffsetDialog, SimplifyDialog } from "./PathDialogs";
+import { CornersDialog, JoinNearbyDialog, OffsetDialog, SimplifyDialog, StrokeToPathDialog } from "./PathDialogs";
 import { CircularArrayDialog, GridArrayDialog, PathArrayDialog, StepRepeatDialog, TransformEachDialog } from "./ArrayDialogs";
 import { createEditorStore, EditorContext, useEditor, useEditorApi, type EditorState } from "./store";
 import { toolSlots } from "./tools";
@@ -196,6 +196,7 @@ function EditorShell({ opened }: { opened: Document }) {
     setTheme: (editorTheme) => setPrefs({ editorTheme }),
     lastField: () => lastField.current,
     viewCenter: () => canvasRef.current?.center() ?? { x: 0, y: 0 },
+    offsetStep: prefs.offsetStep,
   };
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
@@ -318,6 +319,8 @@ function EditorShell({ opened }: { opened: Document }) {
       <OffsetDialog open={dialog === "offset"} onClose={() => setDialog(null)} />
       <SimplifyDialog open={dialog === "simplify"} onClose={() => setDialog(null)} />
       <CornersDialog open={dialog === "corners"} onClose={() => setDialog(null)} />
+      <StrokeToPathDialog open={dialog === "strokeToPath"} onClose={() => setDialog(null)} />
+      <JoinNearbyDialog open={dialog === "joinNearby"} onClose={() => setDialog(null)} toast={toast} />
       <StepRepeatDialog open={dialog === "stepRepeat"} onClose={() => setDialog(null)} />
       <TransformEachDialog open={dialog === "transformEach"} onClose={() => setDialog(null)} />
       <GridArrayDialog open={dialog === "gridArray"} onClose={() => setDialog(null)} />

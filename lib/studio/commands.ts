@@ -17,10 +17,12 @@ export interface CommandDef {
   /** Per-set overrides; `[]` removes the default in that set. */
   sets?: Partial<Record<Exclude<ShortcutSet, "hingelab">, string[]>>;
   description?: string;
+  /** Other names the command palette matches (other apps' terms). */
+  keywords?: string;
 }
 
-const c = (id: string, label: string, category: Category, keys?: string | string[], sets?: CommandDef["sets"], description?: string): CommandDef =>
-  ({ id, label, category, ...(keys ? { keys: Array.isArray(keys) ? keys : [keys] } : {}), ...(sets ? { sets } : {}), ...(description ? { description } : {}) });
+const c = (id: string, label: string, category: Category, keys?: string | string[], sets?: CommandDef["sets"], description?: string, keywords?: string): CommandDef =>
+  ({ id, label, category, ...(keys ? { keys: Array.isArray(keys) ? keys : [keys] } : {}), ...(sets ? { sets } : {}), ...(description ? { description } : {}), ...(keywords ? { keywords } : {}) });
 
 export const TOOL_IDS = [
   "select", "direct", "pen", "pencil", "line", "rect", "ellipse", "polygon", "star", "arc", "slot", "gear", "arrow", "bubble", "heart",
@@ -155,7 +157,7 @@ export const COMMANDS: CommandDef[] = [
   c("object.compound.release", "Release Compound Path", "Object", "Ctrl+Alt+Shift+8"),
   c("object.clip.make", "Make Clipping Mask", "Object", "Ctrl+7"),
   c("object.clip.release", "Release Clipping Mask", "Object", "Ctrl+Alt+7"),
-  c("object.expand", "Expand", "Object", undefined, { corel: ["Ctrl+Q"], inkscape: ["Ctrl+Shift+C"] }, "Turn live shapes and text into plain paths."),
+  c("object.expand", "Expand", "Object", undefined, { corel: ["Ctrl+Q"], inkscape: ["Ctrl+Shift+C"] }, "Turn live shapes and text into plain paths (Object to Path).", "object to path convert to curves outline"),
   c("object.sheets.fit", "Fit Sheet to Artwork", "Object"),
   c("object.sheets.add", "Add Sheet", "Object"),
   // Type
@@ -183,12 +185,37 @@ export const COMMANDS: CommandDef[] = [
   c("path.simplify", "Simplify…", "Path", undefined, undefined, "Fewer anchor points within a tolerance"),
   c("path.smooth", "Smooth", "Path", undefined, undefined, "Turn every anchor into a smooth curve point"),
   c("path.roundCorners", "Round Corners…", "Path", undefined, undefined, "Fillet or chamfer sharp corners"),
-  c("path.pf.unite", "Unite", "Path", undefined, { corel: [] }, "Merge the selected shapes into one outline"),
-  c("path.pf.minusFront", "Minus Front", "Path", undefined, undefined, "Cut the front shapes out of the back one"),
-  c("path.pf.minusBack", "Minus Back", "Path", undefined, undefined, "Cut the back shapes out of the front one"),
-  c("path.pf.intersect", "Intersect", "Path", undefined, undefined, "Keep only where all shapes overlap"),
-  c("path.pf.exclude", "Exclude Overlap", "Path", undefined, undefined, "Keep everything except the overlaps"),
-  c("path.pf.divide", "Divide", "Path", undefined, undefined, "Split the shapes into every separate piece"),
+  c("path.pf.unite", "Unite", "Path", undefined, { corel: [] }, "Merge the selected shapes into one outline", "union weld merge"),
+  c("path.pf.minusFront", "Minus Front", "Path", undefined, undefined, "Cut the front shapes out of the back one", "difference subtract back minus front"),
+  c("path.pf.minusBack", "Minus Back", "Path", undefined, undefined, "Cut the back shapes out of the front one", "subtract front"),
+  c("path.pf.intersect", "Intersect", "Path", undefined, { inkscape: ["Ctrl+*"] }, "Keep only where all shapes overlap", "intersection"),
+  c("path.pf.exclude", "Exclude Overlap", "Path", undefined, { inkscape: ["Ctrl+^"] }, "Keep everything except the overlaps", "exclusion xor"),
+  c("path.pf.divide", "Divide", "Path", undefined, undefined, "Split the shapes into every separate piece", "division"),
+  c("path.fracture", "Fracture", "Path", undefined, undefined, "Split overlapping shapes into every non-overlapping piece, each its own path", "divide pieces"),
+  c("path.flatten", "Flatten", "Path", undefined, undefined, "Remove the hidden parts of each shape; shapes hidden completely are deleted", "remove overlap trim"),
+  c("path.cutPath", "Cut Path", "Path", undefined, undefined, "The top path cuts the lines of the paths below into open pieces where it crosses them", "split stroke slice"),
+  c("path.splitPath", "Split Path", "Path", undefined, undefined, "One path per outer contour; holes stay with the contour around them", "break apart separate"),
+  c("path.strokeToPath", "Stroke to Path…", "Path", undefined, { inkscape: ["Ctrl+Alt+C"] }, "Replace each line by the filled outline of its stroke at a width — engrave lines as areas", "outline stroke expand stroke"),
+  c("path.inset", "Inset", "Path", undefined, { inkscape: ["Ctrl+("] }, "Shrink closed shapes by the inset/outset step (Preferences)", "shrink offset contract"),
+  c("path.outset", "Outset", "Path", undefined, { inkscape: ["Ctrl+)"] }, "Grow closed shapes by the inset/outset step (Preferences)", "grow offset expand"),
+  c("path.removeDuplicates", "Remove Duplicate Nodes", "Path", undefined, undefined, "Merge nodes that sit on top of each other", "clean up points"),
+  c("path.joinNearby", "Join Nearby Endpoints…", "Path", undefined, undefined, "Connect open ends that are closer than a tolerance — fixes imported drawings", "close gaps weld ends"),
+  // Nodes (Direct Selection)
+  c("node.insert", "Insert Nodes", "Path", undefined, { inkscape: ["Insert"] }, "Add a node in the middle of each selected segment", "add node anchor midpoint"),
+  c("node.break", "Break Path at Nodes", "Path", undefined, { inkscape: ["Shift+B"] }, "Open or split the path at the selected nodes"),
+  c("node.join", "Join Nodes", "Path", undefined, { inkscape: ["Shift+J"] }, "Merge two selected end nodes into one"),
+  c("node.joinSegment", "Join Nodes with Segment", "Path", undefined, { inkscape: ["Alt+J"] }, "Connect two selected end nodes with a straight segment"),
+  c("node.deleteSegment", "Delete Segment", "Path", undefined, { inkscape: ["Alt+Delete"] }, "Remove the segment between two selected nodes"),
+  c("node.corner", "Make Nodes Corner", "Path", undefined, { inkscape: ["Shift+C"] }, "Handles move independently", "cusp node type"),
+  c("node.smooth", "Make Nodes Smooth", "Path", undefined, { inkscape: ["Shift+S"] }, "Handles stay in line", "node type"),
+  c("node.symmetric", "Make Nodes Symmetric", "Path", undefined, { inkscape: ["Shift+Y"] }, "Handles in line and of equal length", "node type"),
+  c("node.auto", "Make Nodes Auto-Smooth", "Path", undefined, { inkscape: ["Shift+A"] }, "Handles follow the neighbouring nodes", "auto smooth node type"),
+  c("node.straighten", "Straighten Segments", "Path", undefined, { inkscape: ["Shift+L"] }, "Selected segments become straight lines", "line"),
+  c("node.curve", "Make Segments Curves", "Path", undefined, { inkscape: ["Shift+U"] }, "Selected straight segments get curve handles"),
+  c("node.scaleUp", "Scale Nodes Up", "Path", undefined, { inkscape: [">"] }, "Spread the selected nodes 10% from their centre"),
+  c("node.scaleDown", "Scale Nodes Down", "Path", undefined, { inkscape: ["<"] }, "Draw the selected nodes 10% towards their centre"),
+  c("node.rotateCCW", "Rotate Nodes Counter-clockwise", "Path", undefined, { inkscape: ["["] }, "Turn the selected nodes 15° around their centre"),
+  c("node.rotateCW", "Rotate Nodes Clockwise", "Path", undefined, { inkscape: ["]"] }, "Turn the selected nodes 15° around their centre"),
   c("path.pf.trim", "Trim", "Path", undefined, undefined, "Remove the hidden parts of each shape"),
   c("path.pf.crop", "Crop", "Path", undefined, undefined, "Cut the shapes behind to the front shape"),
   c("path.cleanup", "Clean Up for Laser", "Path", undefined, undefined, "Close near-closed paths, drop stray points, empty paths and double cuts"),
@@ -211,6 +238,8 @@ export const COMMANDS: CommandDef[] = [
   c("view.snapGrid", "Snap to Grid", "View", "Ctrl+Shift+'"),
   c("view.snapPoint", "Snap to Point", "View", "Ctrl+Alt+'"),
   c("view.smartGuides", "Smart Guides", "View", "Ctrl+U", { corel: ["Alt+Shift+D"], lightburn: [] }),
+  c("view.nodeHandles", "Show Handles of All Nodes", "View", undefined, undefined, "Direct Selection shows the curve handles of every node, not only the selected ones"),
+  c("view.pathDirection", "Show Path Direction", "View", undefined, undefined, "Direct Selection draws arrows along the edited paths in their drawing direction", "path outline direction arrows"),
   c("view.presentation", "Presentation Mode", "View", "F"),
   c("view.theme.dark", "Dark", "View"),
   c("view.theme.darker", "Darker", "View"),
@@ -274,17 +303,22 @@ export const MENUS: MenuDef[] = [
   { id: "type", label: "Type", items: ["type.outlines", { label: "Change Case", items: ["type.case.upper", "type.case.lower", "type.case.title"] }, { label: "Direction", items: ["type.dir.ltr", "type.dir.rtl"] }] },
   { id: "select", label: "Select", items: ["edit.selectAll", "select.none", "select.inverse", "-", { label: "Same", items: ["select.sameLayer", "select.sameType"] }, { label: "Object", items: ["select.openPaths"] }, "-", "select.next", "select.prev"] },
   { id: "path", label: "Path", items: [
-    "path.join", "path.close", "path.reverse", "path.breakApart", "path.addAnchors", "-",
-    "path.offset", "path.simplify", "path.smooth", "path.roundCorners", "-",
+    "path.join", "path.close", "path.reverse", "path.breakApart", "path.splitPath", "path.addAnchors", "-",
+    "path.offset", "path.inset", "path.outset", "path.strokeToPath", "path.simplify", "path.smooth", "path.roundCorners", "-",
     { label: "Shape Modes", items: ["path.pf.unite", "path.pf.minusFront", "path.pf.minusBack", "path.pf.intersect", "path.pf.exclude"] },
-    { label: "Pathfinders", items: ["path.pf.divide", "path.pf.trim", "path.pf.crop"] }, "-",
-    "path.cleanup",
+    { label: "Pathfinders", items: ["path.pf.divide", "path.pf.trim", "path.pf.crop", "-", "path.fracture", "path.flatten", "path.cutPath"] },
+    { label: "Nodes", items: [
+      "node.insert", "node.break", "node.join", "node.joinSegment", "node.deleteSegment", "-",
+      "node.corner", "node.smooth", "node.symmetric", "node.auto", "-", "node.straighten", "node.curve", "-",
+      "node.scaleUp", "node.scaleDown", "node.rotateCCW", "node.rotateCW",
+    ] }, "-",
+    "path.removeDuplicates", "path.joinNearby", "path.cleanup",
   ] },
   { id: "laser", label: "Laser", items: [{ label: "Assign to Layer", items: LAYER_KEYS.map((l) => l.id) }] },
   { id: "view", label: "View", items: [
     "view.zoomIn", "view.zoomOut", "view.fitArtboard", "view.fitAll", "view.actual", "view.zoomSelection", "-", "view.outline", "-",
     "view.rulers", { label: "Guides", items: ["view.guides.show", "view.guides.lock", "view.guides.fromSelection", "view.guides.clear"] },
-    "view.grid", "view.snapGrid", "view.snapPoint", "view.smartGuides", "-", "view.presentation",
+    "view.grid", "view.snapGrid", "view.snapPoint", "view.smartGuides", "-", "view.nodeHandles", "view.pathDirection", "-", "view.presentation",
     { label: "Theme", items: ["view.theme.dark", "view.theme.darker", "view.theme.light", "view.theme.system"] },
   ] },
   { id: "window", label: "Window", items: [

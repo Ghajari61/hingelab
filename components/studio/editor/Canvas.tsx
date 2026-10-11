@@ -4,11 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { createStore } from "zustand";
 import { newId } from "@/lib/studio/doc";
 import {
-  apply, boxCenter, emptyBox, insertAnchor, isEmptyBox, nearestOnSubpaths, nodePaths, normBox, pathD, rotateAt, scaleAt, shapeForBox,
-  shapePaths, smoothStroke, transformSubpaths, translate, type Box,
+  apply, boxCenter, cubicAt, emptyBox, insertAnchor, isEmptyBox, nearestOnSubpaths, nodeBox, nodePaths, normBox, pathD, rotateAt, scaleAt, segments, shapeForBox,
+  shapePaths, transformSubpaths, translate, type Box,
 } from "@/lib/studio/geom";
+import { refreshAuto, snapToOutlines } from "@/lib/studio/nodeOps";
+import { brushOutline, brushProfile, freehandPath, paraxialAppend, penSubpath } from "@/lib/studio/strokes";
 import {
-  addNode, duplicateNodes, expandNodes, findNode, hitTest, idsInBox, isEditable, locate, selectionBox, toLocal, topLevel, transformNodes,
+  addNode, duplicateNodes, expandNodes, findNode, hitTest, idsInBox, isEditable, locate, selectionBox, toLocal, topLevel, transformNodes, walk,
   type IdFactory,
 } from "@/lib/studio/scene";
 import { noTargets, snapMove, snapPoint, snapTargets, type SnapLine, type SnapSettings, type SnapTargets } from "@/lib/studio/snap";
@@ -40,9 +42,9 @@ type Drag =
   | { kind: "toolScale"; center: Vec; start: Vec; ids: string[] }
   | { kind: "marquee"; start: Vec; cur: Vec; add: boolean; deep: boolean }
   | { kind: "guide"; index: number; axis: "x" | "y"; isNew: boolean }
-  | { kind: "anchor"; ref: AnchorRef; part: "node" | "in" | "out"; start: Vec; alt: boolean; targets: SnapTargets; refs: AnchorRef[] }
+  | { kind: "anchor"; ref: AnchorRef; part: "node" | "in" | "out"; start: Vec; alt: boolean; targets: SnapTargets; refs: AnchorRef[]; at: Vec; outlines: { subs: Subpath[]; box: Box }[] }
   | { kind: "draw"; tool: ToolId; start: Vec; cur: Vec; shift: boolean; alt: boolean }
-  | { kind: "pencil"; pts: Vec[] }
+  | { kind: "pencil"; pts: Vec[]; pressure: number[] }
   | { kind: "penHandle" }
   | { kind: "zoom"; start: Vec; cur: Vec; alt: boolean }
   | { kind: "text"; start: Vec; cur: Vec }
@@ -66,6 +68,27 @@ const matStr = (m: Mat) => `matrix(${m.join(" ")})`;
 
 function snapSettings(doc: Document): SnapSettings {
   return { ...doc.snapping, gridSize: doc.grid.size / Math.max(1, doc.grid.subdivisions) };
+}
+
+/** Pen pressure 0–1; a mouse (or a device without pressure) counts as a steady half press. */
+const penPressure = (e: React.PointerEvent) => (e.pointerType === "mouse" || !e.pressure ? 0.5 : e.pressure);
+
+/** Pencil smoothing 0–100 as the curve-fit tolerance in screen pixels (25 is the classic 1.5 px). */
+const pencilTolerance = (smoothing: number) => 0.25 + Math.max(0, Math.min(100, smoothing)) * 0.05;
+
+/** Brush width along a stroke from the pressure recorded at each raw point: half pressure gives `width`. */
+function pressureWidth(pts: Vec[], pressure: number[], width: number): (u: number) => number {
+  const cum = [0];
+  for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y));
+  const total = cum[cum.length - 1] || 1;
+  return (u) => {
+    const at = u * total;
+    let k = 1;
+    while (k < cum.length - 1 && cum[k] < at) k++;
+    const span = cum[k] - cum[k - 1] || 1, t = Math.max(0, Math.min(1, (at - cum[k - 1]) / span));
+    const p = (pressure[k - 1] ?? 0.5) * (1 - t) + (pressure[k] ?? pressure[k - 1] ?? 0.5) * t;
+    return width * Math.max(0.05, Math.min(2, p / 0.5));
+  };
 }
 
 function idPool(pool: string[]): IdFactory {
@@ -94,6 +117,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
   const selection = useEditor((s) => s.selection);
   const anchors = useEditor((s) => s.anchors);
   const tool = useEditor((s) => s.tool);
+  const penMode = useEditor((s) => s.penMode);
   const view = useEditor((s) => s.view);
   const ui = useEditor((s) => s.ui);
   const textEditing = useEditor((s) => s.textEditing);
@@ -155,21 +179,27 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
 
   const sheetsBox = useCallback((d: Document): Box => d.sheets.reduce((b, s) => ({ minX: Math.min(b.minX, s.x), minY: Math.min(b.minY, s.y), maxX: Math.max(b.maxX, s.x + s.w), maxY: Math.max(b.maxY, s.y + s.h) }), emptyBox()), []);
 
+  /** Adds the Pen's path; with a brush shape the line becomes its filled, tapered outline. */
+  const addPenPath = useCallback((sub: Subpath) => {
+    const s = api.getState();
+    const subpaths = s.penShape === "none" ? [sub] : brushOutline(sub, brushProfile(s.penShape, s.brushWidth));
+    if (!subpaths.length) return;
+    const node: PathNode = { id: newId(), type: "path", transform: [1, 0, 0, 1, 0, 0], layer: s.currentLayer, subpaths };
+    s.edit("Pen", (d) => addNode(d, node), { select: [node.id] });
+  }, [api]);
+
   const finishPen = useCallback((closeCurve = false) => {
     const p = pen.current, c = curve.current;
     pen.current = null;
     curve.current = null;
     const s = api.getState();
-    if (p && p.nodes.length >= 2) {
-      const node: PathNode = { id: newId(), type: "path", transform: [1, 0, 0, 1, 0, 0], layer: s.currentLayer, subpaths: [{ closed: false, nodes: p.nodes }] };
-      s.edit("Pen", (d) => addNode(d, node), { select: [node.id] });
-    }
+    if (p && p.nodes.length >= 2) addPenPath(penSubpath(s.penMode, p.nodes, false));
     if (c && c.pts.length >= 2) {
       const node: PathNode = { id: newId(), type: "path", transform: [1, 0, 0, 1, 0, 0], layer: s.currentLayer, subpaths: [curvaturePath(c.pts, c.corners, closeCurve)] };
       s.edit("Curvature", (d) => addNode(d, node), { select: [node.id] });
     }
     rerender();
-  }, [api]);
+  }, [api, addPenPath]);
 
   useEffect(() => {
     apiRef.current = {
@@ -236,7 +266,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         if (!c.pts.length) curve.current = null;
         rerender(); stop(); return;
       }
-      if ((e.key === "Backspace" || e.key === "Delete") && s.anchors.length && s.tool === "direct") { deleteAnchors(); stop(); return; }
+      if ((e.key === "Backspace" || e.key === "Delete") && !e.altKey && s.anchors.length && s.tool === "direct") { deleteAnchors(); stop(); return; }
       if (e.key.startsWith("Arrow") && !e.ctrlKey && !e.metaKey) {
         const step = e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
         const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
@@ -277,6 +307,10 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         if (a.i) { a.i.x += o.x; a.i.y += o.y; }
         if (a.o) { a.o.x += o.x; a.o.y += o.y; }
       }
+      for (const id of new Set(refs.map((r) => r.id))) {
+        const p = findNode(d.root, id);
+        if (p?.type === "path") p.subpaths = p.subpaths.map((sp) => refreshAuto(sp));
+      }
     }, { mergeKey });
     if (converted) onToast("Converted the live shape to a path", true);
   }
@@ -289,12 +323,39 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       for (const [id, refs] of byNode) {
         const p = ensurePath(d, id);
         if (!p) continue;
-        p.subpaths = p.subpaths.map((sp, si) => ({ ...sp, nodes: sp.nodes.filter((_, k) => !refs.some((r) => r.sub === si && r.idx === k)) }))
+        p.subpaths = p.subpaths.map((sp, si) => refreshAuto({ ...sp, nodes: sp.nodes.filter((_, k) => !refs.some((r) => r.sub === si && r.idx === k)) }))
           .filter((sp) => sp.nodes.length >= 2);
         if (!p.subpaths.length) { const l = locate(d.root, id); if (l) l.parent.children.splice(l.index, 1); }
       }
     });
     s.setAnchors([]);
+  }
+
+  /** Snap targets for dragging nodes: everything else, the unmoved nodes of the edited paths, and outlines to slide along. */
+  function nodeSnapTargets(d: Document, ref: AnchorRef & { part?: "node" | "in" | "out" }, moving: AnchorRef[], settings: SnapSettings) {
+    const own = new Set(moving.map((r) => r.id));
+    const targets = snapTargets(d, own, settings);
+    const movingKey = new Set(moving.map((r) => `${r.id}:${r.sub}:${r.idx}`));
+    const outlines: { subs: Subpath[]; box: Box }[] = [];
+    let at: Vec = { x: 0, y: 0 };
+    for (const id of own) {
+      const l = locate(d.root, id);
+      const subs = l && editableSubpaths(l.node);
+      if (!l || !subs) continue;
+      transformSubpaths(subs, l.world).forEach((sp, si) => sp.nodes.forEach((a, k) => {
+        if (id === ref.id && si === ref.sub && k === ref.idx) at = { x: a.x, y: a.y };
+        else if (settings.points && !movingKey.has(`${id}:${si}:${k}`)) targets.points.push({ x: a.x, y: a.y });
+      }));
+    }
+    if (settings.points) {
+      walk(d.root, (l) => {
+        if (l.node.hidden) return "skip";
+        if (own.has(l.node.id) || l.node.type === "group") return;
+        const subs = transformSubpaths(nodePaths(l.node), l.world);
+        if (subs.length) outlines.push({ subs, box: nodeBox(l.node, l.world) });
+      });
+    }
+    return { targets, outlines, at };
   }
 
   function toLocalDelta(world: Mat, dx: number, dy: number): Vec {
@@ -305,16 +366,35 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
   /** Anchors and handles of the selected editable leaves, in screen space. */
   const anchorView = useMemo(() => {
     if (tool !== "direct") return [];
-    const out: { ref: AnchorRef; p: Vec; i?: Vec; o?: Vec }[] = [];
+    const out: { ref: AnchorRef; p: Vec; i?: Vec; o?: Vec; k?: Anchor["k"] }[] = [];
     for (const id of selection) {
       const l = locate(doc.root, id);
       if (!l) continue;
       const subs = editableSubpaths(l.node);
       if (!subs) continue;
-      transformSubpaths(subs, l.world).forEach((sp, si) => sp.nodes.forEach((a, k) => out.push({ ref: { id, sub: si, idx: k }, p: S(a), i: a.i && S(a.i), o: a.o && S(a.o) })));
+      transformSubpaths(subs, l.world).forEach((sp, si) => sp.nodes.forEach((a, k) => out.push({ ref: { id, sub: si, idx: k }, p: S(a), i: a.i && S(a.i), o: a.o && S(a.o), k: a.k })));
     }
     return out;
   }, [tool, selection, doc, S]);
+
+  /** View ▸ Show Path Direction: a chevron at the middle of every segment of the edited paths, pointing along the path. */
+  const directionMarks = useMemo(() => {
+    if (tool !== "direct" || !ui.pathDirection) return [];
+    const out: { p: Vec; a: number }[] = [];
+    for (const id of selection) {
+      const l = locate(doc.root, id);
+      const subs = l && editableSubpaths(l.node);
+      if (!l || !subs) continue;
+      for (const sp of transformSubpaths(subs, l.world)) {
+        for (const g of segments(sp)) {
+          const m = cubicAt(g, 0.5), a = cubicAt(g, 0.45), b = cubicAt(g, 0.55);
+          if (Math.hypot(b.x - a.x, b.y - a.y) < 1e-9) continue;
+          out.push({ p: S(m), a: (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI });
+        }
+      }
+    }
+    return out;
+  }, [tool, ui.pathDirection, selection, doc, S]);
 
   // ---------- hit helpers ----------
 
@@ -342,7 +422,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
   function anchorAt(sp: Vec): { ref: AnchorRef; part: "node" | "in" | "out" } | null {
     for (let k = anchorView.length - 1; k >= 0; k--) {
       const a = anchorView[k];
-      const sel = anchors.some((r) => r.id === a.ref.id && r.sub === a.ref.sub && r.idx === a.ref.idx);
+      const sel = ui.nodeHandles || anchors.some((r) => r.id === a.ref.id && r.sub === a.ref.sub && r.idx === a.ref.idx);
       if (sel && a.i && Math.hypot(sp.x - a.i.x, sp.y - a.i.y) <= 5) return { ref: a.ref, part: "in" };
       if (sel && a.o && Math.hypot(sp.x - a.o.x, sp.y - a.o.y) <= 5) return { ref: a.ref, part: "out" };
     }
@@ -416,7 +496,8 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
           const refs = a.part !== "node" ? [a.ref] : e.shiftKey ? (isSel ? s.anchors.filter((r) => !(r.id === a.ref.id && r.sub === a.ref.sub && r.idx === a.ref.idx)) : [...s.anchors, a.ref]) : isSel ? s.anchors : [a.ref];
           if (a.part === "node") s.setAnchors(refs);
           s.begin();
-          drag.current = { kind: "anchor", ref: a.ref, part: a.part, start: p, alt: e.altKey, targets: snapTargets(s.doc, new Set([a.ref.id]), settings), refs: a.part === "node" ? refs : [a.ref] };
+          const moving = a.part === "node" ? refs : [a.ref];
+          drag.current = { kind: "anchor", ref: a.ref, part: a.part, start: p, alt: e.altKey, refs: moving, ...nodeSnapTargets(s.doc, a.ref, moving, settings) };
           return;
         }
         const hit = hitTest(s.doc, p, tol, { deep: true });
@@ -426,7 +507,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
           startMove(p, s.selection.includes(hit) ? s.selection : [hit], e.altKey, e.pointerId, settings);
           return;
         }
-        if (!e.shiftKey) { s.select([]); }
+        if (!e.shiftKey) s.setAnchors([]);
         drag.current = { kind: "marquee", start: p, cur: p, add: e.shiftKey, deep: true };
         return;
       }
@@ -436,21 +517,22 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         if (cur && cur.nodes.length >= 2) {
           const f = S(cur.nodes[0]);
           if (Math.hypot(sp.x - f.x, sp.y - f.y) <= 7) {
-            const node: PathNode = { id: newId(), type: "path", transform: [1, 0, 0, 1, 0, 0], layer: s.currentLayer, subpaths: [{ closed: true, nodes: cur.nodes }] };
+            const nodes = s.penMode === "paraxial" ? paraxialAppend(cur.nodes, cur.nodes[0]).slice(0, -1) : cur.nodes;
             pen.current = null;
-            s.edit("Pen", (d) => addNode(d, node), { select: [node.id] });
+            addPenPath(penSubpath(s.penMode, nodes, true));
             rerender();
             return;
           }
         }
         let pt = q;
         if (e.shiftKey && cur?.nodes.length) pt = constrain45(cur.nodes[cur.nodes.length - 1], p);
-        pen.current = { nodes: [...(cur?.nodes ?? []), { x: pt.x, y: pt.y }], hoverClose: false };
-        drag.current = { kind: "penHandle" };
+        const prev = cur?.nodes ?? [];
+        pen.current = { nodes: s.penMode === "paraxial" ? paraxialAppend(prev, pt) : [...prev, { x: pt.x, y: pt.y }], hoverClose: false };
+        if (s.penMode === "bezier") drag.current = { kind: "penHandle" };
         rerender();
         return;
       }
-      case "pencil": drag.current = { kind: "pencil", pts: [p] }; return;
+      case "pencil": drag.current = { kind: "pencil", pts: [p], pressure: [penPressure(e)] }; return;
       case "text": drag.current = { kind: "text", start: p, cur: p }; return;
       case "zoom": drag.current = { kind: "zoom", start: p, cur: p, alt: e.altKey }; return;
       case "rotate": case "scale": {
@@ -681,7 +763,8 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         return;
       }
       case "marquee": case "zoom": case "text": dr.cur = p; rerender(); return;
-      case "pencil": case "lasso": dr.pts.push(p); rerender(); return;
+      case "pencil": dr.pts.push(p); dr.pressure.push(penPressure(e)); rerender(); return;
+      case "lasso": dr.pts.push(p); rerender(); return;
       case "knife": {
         if (dr.straight || e.altKey) { dr.straight = true; dr.pts = [dr.pts[0], e.shiftKey ? constrain45(dr.pts[0], p) : p]; }
         else dr.pts.push(p);
@@ -742,36 +825,57 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         return;
       }
       case "anchor": {
-        const q = snapPoint(p, dr.targets, tol, settings).p;
         const base = s.base!;
         const l = locate(base.root, dr.ref.id);
         if (!l) return;
+        if (dr.part === "node") {
+          let want = { x: dr.at.x + p.x - dr.start.x, y: dr.at.y + p.y - dr.start.y };
+          if (e.shiftKey) { if (Math.abs(want.x - dr.at.x) > Math.abs(want.y - dr.at.y)) want.y = dr.at.y; else want.x = dr.at.x; }
+          let q = want, snapLines: SnapLine[] = [];
+          if (!e.ctrlKey) {
+            const r = snapPoint(want, dr.targets, tol, settings);
+            const onOutline = r.lines.some((x) => x.kind === "point") ? null : snapToOutlines(want, dr.outlines, tol);
+            if (onOutline) { q = onOutline; snapLines = [{ axis: "x", at: q.x, from: q.y, to: q.y, kind: "point" }]; }
+            else { q = r.p; snapLines = r.lines; }
+          }
+          setLines(snapLines);
+          const dx = q.x - dr.at.x, dy = q.y - dr.at.y;
+          s.preview((d) => {
+            const byId = new Map<string, AnchorRef[]>();
+            for (const r of dr.refs) byId.set(r.id, [...(byId.get(r.id) ?? []), r]);
+            for (const [id, rs] of byId) {
+              const lb = locate(base.root, id);
+              const path = lb && ensurePath(d, id);
+              if (!lb || !path) continue;
+              const o = toLocalDelta(lb.world, dx, dy);
+              for (const r of rs) {
+                const a = path.subpaths[r.sub]?.nodes[r.idx];
+                if (!a) continue;
+                a.x += o.x; a.y += o.y;
+                if (a.i) { a.i.x += o.x; a.i.y += o.y; }
+                if (a.o) { a.o.x += o.x; a.o.y += o.y; }
+              }
+              path.subpaths = path.subpaths.map((sp) => refreshAuto(sp));
+            }
+          });
+          setHud({ x: sp.x, y: sp.y, text: `X ${fmt(q.x)}  Y ${fmt(q.y)} ${doc.units}` });
+          return;
+        }
+        const q = e.ctrlKey ? p : snapPoint(p, dr.targets, tol, settings).p;
         s.preview((d) => {
           const path = ensurePath(d, dr.ref.id);
           if (!path) return;
           const lp = apply(invertWorld(l.world), q);
-          if (dr.part === "node") {
-            const start = apply(invertWorld(l.world), dr.start);
-            const ddx = lp.x - start.x, ddy = lp.y - start.y;
-            for (const r of dr.refs) {
-              if (r.id !== dr.ref.id) continue;
-              const a = path.subpaths[r.sub]?.nodes[r.idx];
-              if (!a) continue;
-              a.x += ddx; a.y += ddy;
-              if (a.i) { a.i.x += ddx; a.i.y += ddy; }
-              if (a.o) { a.o.x += ddx; a.o.y += ddy; }
-            }
-          } else {
-            const a = path.subpaths[dr.ref.sub]?.nodes[dr.ref.idx];
-            if (!a) return;
-            const mine = dr.part === "in" ? "i" : "o", other = dr.part === "in" ? "o" : "i";
-            a[mine] = { x: lp.x, y: lp.y };
-            if (e.altKey || dr.alt) a.k = "corner";
-            else if (a[other] && a.k !== "corner") {
-              const vx = a.x - lp.x, vy = a.y - lp.y, len = Math.hypot(vx, vy) || 1;
-              const keep = a.k === "symmetric" ? len : Math.hypot(a[other]!.x - a.x, a[other]!.y - a.y);
-              a[other] = { x: a.x + (vx / len) * keep, y: a.y + (vy / len) * keep };
-            }
+          const a = path.subpaths[dr.ref.sub]?.nodes[dr.ref.idx];
+          if (!a) return;
+          const mine = dr.part === "in" ? "i" : "o", other = dr.part === "in" ? "o" : "i";
+          a[mine] = { x: lp.x, y: lp.y };
+          if (a.k === "auto") a.k = "smooth";
+          if (e.altKey || dr.alt) a.k = "corner";
+          else if (a[other] && a.k !== "corner") {
+            const vx = a.x - lp.x, vy = a.y - lp.y, len = Math.hypot(vx, vy) || 1;
+            const keep = a.k === "symmetric" ? len : Math.hypot(a[other]!.x - a.x, a[other]!.y - a.y);
+            a[other] = { x: a.x + (vx / len) * keep, y: a.y + (vy / len) * keep };
           }
         });
         setHud({ x: sp.x, y: sp.y, text: `X ${fmt(q.x)}  Y ${fmt(q.y)} ${doc.units}` });
@@ -870,7 +974,7 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
       }
       case "marquee": {
         const b = normBox(dr.start, p);
-        if ((b.maxX - b.minX) * s.view.zoom < 2 && (b.maxY - b.minY) * s.view.zoom < 2) { rerender(); return; }
+        if ((b.maxX - b.minX) * s.view.zoom < 2 && (b.maxY - b.minY) * s.view.zoom < 2) { if (dr.deep && !dr.add) s.select([]); rerender(); return; }
         if (dr.deep && s.selection.length) {
           const inside: AnchorRef[] = [];
           for (const id of s.selection) {
@@ -898,9 +1002,11 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
         if (dr.pts.length < 2) return;
         const z = s.view.zoom;
         const closed = Math.hypot(dr.pts[0].x - dr.pts[dr.pts.length - 1].x, dr.pts[0].y - dr.pts[dr.pts.length - 1].y) * z < 10 && dr.pts.length > 8;
-        const sub = smoothStroke(dr.pts, 1.5 / z, closed);
+        const sub = freehandPath(dr.pts, pencilTolerance(s.pencilSmoothing) / z, closed, s.pencilMode);
         if (sub.nodes.length < 2) return;
-        const node: PathNode = { id: newId(), type: "path", transform: [1, 0, 0, 1, 0, 0], layer: s.currentLayer, subpaths: [sub] };
+        const subpaths = s.pencilPressure ? brushOutline(sub, pressureWidth(dr.pts, dr.pressure, s.brushWidth)) : [sub];
+        if (!subpaths.length) return;
+        const node: PathNode = { id: newId(), type: "path", transform: [1, 0, 0, 1, 0, 0], layer: s.currentLayer, subpaths };
         s.edit("Pencil", (d) => addNode(d, node), { select: [node.id] });
         return;
       }
@@ -1172,20 +1278,28 @@ export function Canvas({ onContextMenu, apiRef, onToast }: {
             {tool === "select" && <circle cx={selRect.x + selRect.w / 2} cy={selRect.y + selRect.h / 2} r={2.5} fill="none" stroke="var(--accent)" strokeWidth={1} opacity={0.8} />}
           </g>
         )}
+        {directionMarks.map((m, k) => (
+          <path key={"dir" + k} d="M -4 -4 L 2 0 L -4 4" transform={`translate(${m.p.x} ${m.p.y}) rotate(${m.a})`} fill="none" stroke="var(--accent)" strokeWidth={1.5} data-testid="path-direction" />
+        ))}
         {anchorView.map((a) => {
           const sel = anchors.some((r) => r.id === a.ref.id && r.sub === a.ref.sub && r.idx === a.ref.idx);
+          const showH = sel || ui.nodeHandles;
+          const fill = sel ? "var(--accent)" : "var(--handle-fill)";
           return (
             <g key={`${a.ref.id}-${a.ref.sub}-${a.ref.idx}`}>
-              {sel && a.i && <><line x1={a.p.x} y1={a.p.y} x2={a.i.x} y2={a.i.y} stroke="var(--accent)" /><circle cx={a.i.x} cy={a.i.y} r={3} fill="var(--accent)" /></>}
-              {sel && a.o && <><line x1={a.p.x} y1={a.p.y} x2={a.o.x} y2={a.o.y} stroke="var(--accent)" /><circle cx={a.o.x} cy={a.o.y} r={3} fill="var(--accent)" /></>}
-              <rect x={a.p.x - 3} y={a.p.y - 3} width={6} height={6} fill={sel ? "var(--accent)" : "var(--handle-fill)"} stroke="var(--accent)" />
+              {showH && a.i && <><line x1={a.p.x} y1={a.p.y} x2={a.i.x} y2={a.i.y} stroke="var(--accent)" opacity={sel ? 1 : 0.6} /><circle cx={a.i.x} cy={a.i.y} r={3} fill="var(--accent)" opacity={sel ? 1 : 0.6} /></>}
+              {showH && a.o && <><line x1={a.p.x} y1={a.p.y} x2={a.o.x} y2={a.o.y} stroke="var(--accent)" opacity={sel ? 1 : 0.6} /><circle cx={a.o.x} cy={a.o.y} r={3} fill="var(--accent)" opacity={sel ? 1 : 0.6} /></>}
+              {a.k === "auto" ? <circle cx={a.p.x} cy={a.p.y} r={3.5} fill={fill} stroke="var(--accent)" data-node-kind="auto" />
+                : a.k === "smooth" || a.k === "symmetric" ? <rect x={a.p.x - 3} y={a.p.y - 3} width={6} height={6} transform={`rotate(45 ${a.p.x} ${a.p.y})`} fill={fill} stroke="var(--accent)" data-node-kind={a.k} />
+                : <rect x={a.p.x - 3} y={a.p.y - 3} width={6} height={6} fill={fill} stroke="var(--accent)" />}
             </g>
           );
         })}
         {penState && penState.nodes.length > 0 && (
           <g>
-            <path d={pathD([{ closed: false, nodes: penState.nodes.map((n) => ({ ...S(n), ...(n.i ? { i: S(n.i) } : {}), ...(n.o ? { o: S(n.o) } : {}) })) }])} fill="none" stroke="var(--accent)" strokeWidth={1.5} />
-            {pointer && !dr && <line x1={S(penState.nodes[penState.nodes.length - 1]).x} y1={S(penState.nodes[penState.nodes.length - 1]).y} x2={S(pointer).x} y2={S(pointer).y} stroke="var(--accent)" strokeDasharray="3 3" />}
+            <path d={pathD([penSubpath(penMode, penState.nodes.map((n) => ({ ...S(n), ...(n.i ? { i: S(n.i) } : {}), ...(n.o ? { o: S(n.o) } : {}) })), false)])} fill="none" stroke="var(--accent)" strokeWidth={1.5} />
+            {pointer && !dr && penMode !== "paraxial" && <line x1={S(penState.nodes[penState.nodes.length - 1]).x} y1={S(penState.nodes[penState.nodes.length - 1]).y} x2={S(pointer).x} y2={S(pointer).y} stroke="var(--accent)" strokeDasharray="3 3" />}
+            {pointer && !dr && penMode === "paraxial" && <polyline points={paraxialAppend(penState.nodes, pointer).slice(penState.nodes.length - 1).map((q) => `${S(q).x},${S(q).y}`).join(" ")} fill="none" stroke="var(--accent)" strokeDasharray="3 3" />}
             {penState.nodes.map((n, k) => { const q = S(n); return <rect key={k} x={q.x - 3} y={q.y - 3} width={6} height={6} fill={k === 0 && penState.hoverClose ? "var(--accent)" : "var(--handle-fill)"} stroke="var(--accent)" />; })}
           </g>
         )}

@@ -413,6 +413,9 @@ const PF_ICONS: Record<string, ReactElement> = {
   divide: <><path d="M2 2h11v5H7v6H2z" fill="currentColor" /><path d="M7.8 7.8h4.4v4.4H7.8z" fill="currentColor" opacity={0.55} /><path d="M13 7h5v11H7v-5h6z" fill="currentColor" /><path d="M7 7h6v6H7z" fill="none" stroke="var(--surface-panel, #2d2d2d)" strokeWidth={1.2} /></>,
   trim: <><path d="M2 2h11v5H7v6H2z" fill="currentColor" opacity={0.55} /><path d={PF_FRONT} fill="currentColor" /></>,
   crop: <><path d={PF_FRONT} fill="none" stroke="currentColor" strokeDasharray="1.5 1.5" opacity={0.6} /><path d="M7 7h6v6H7z" fill="currentColor" /><path d={PF_BACK} fill="none" stroke="currentColor" opacity={0.35} /></>,
+  fracture: <><path d="M1.5 1.5h11v4.7H6.2v6.3H1.5z" fill="currentColor" /><path d="M7.2 7.2h5.3v5.3H7.2z" fill="currentColor" opacity={0.55} /><path d="M13.5 7.5h5v11h-11v-5h6z" fill="currentColor" /></>,
+  flatten: <><path d="M2 2h11v5H7v6H2z" fill="currentColor" /><path d={PF_FRONT} fill="currentColor" opacity={0.55} /><path d={PF_FRONT} fill="none" stroke="currentColor" /></>,
+  cutPath: <><path d="M9 3H3v14h6M11 3h6v14h-6" fill="none" stroke="currentColor" strokeWidth={1.5} /><path d="M10 1v18" fill="none" stroke="currentColor" strokeDasharray="1.5 1.5" opacity={0.6} /></>,
 };
 const pfIcon = (op: string) => <svg width={20} height={20} viewBox="0 0 20 20" aria-hidden>{PF_ICONS[op]}</svg>;
 
@@ -420,7 +423,7 @@ function OpButtons({ handlers, ops }: { handlers: Record<string, Handler>; ops: 
   return (
     <div className="pn-btns pn-pf">
       {ops.map((op) => {
-        const id = `path.pf.${op}`, h = handlers[id], def = COMMAND_BY_ID.get(id);
+        const id = ["fracture", "flatten", "cutPath"].includes(op) ? `path.${op}` : `path.pf.${op}`, h = handlers[id], def = COMMAND_BY_ID.get(id);
         return <IconButton key={op} label={def?.label ?? op} description={h?.enabled === false ? h.reason : def?.description} icon={pfIcon(op)} disabled={!h || h.enabled === false} onClick={h?.run} testId={`pf-${op}`} />;
       })}
     </div>
@@ -444,14 +447,14 @@ export function PathfinderPanel({ handlers }: { handlers: Record<string, Handler
         <ShapeModeButtons handlers={handlers} />
       </PanelSection>
       <PanelSection title="Pathfinders">
-        <OpButtons handlers={handlers} ops={["divide", "trim", "crop"]} />
+        <OpButtons handlers={handlers} ops={["divide", "trim", "crop", "fracture", "flatten", "cutPath"]} />
         <p className="pn-empty">Results are plain paths that keep their cut layers. Divide and Trim also work on a single group.</p>
       </PanelSection>
       <PanelSection title="Path">
-        <div className="pn-actions">{["path.offset", "path.roundCorners", "path.simplify", "path.smooth", "path.join", "path.close", "path.breakApart", "path.reverse"].map(action)}</div>
+        <div className="pn-actions">{["path.offset", "path.inset", "path.outset", "path.strokeToPath", "path.roundCorners", "path.simplify", "path.smooth", "path.join", "path.close", "path.breakApart", "path.splitPath", "path.reverse"].map(action)}</div>
       </PanelSection>
       <PanelSection title="Laser Ready">
-        <div className="pn-actions">{action("path.cleanup")}</div>
+        <div className="pn-actions">{["path.cleanup", "path.removeDuplicates", "path.joinNearby"].map(action)}</div>
         <p className="pn-empty">Closes near-closed paths, removes stray points, empty paths and double cuts on the same layer. Works on the selection, or the whole document when nothing is selected.</p>
       </PanelSection>
     </>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { areaItems, editPaths, offsetNodes, roundCorners, simplifySubpath, type JoinKind } from "@/lib/studio/pathfinder";
+import { joinNearbyEndpoints, strokeToPathNodes, type CapKind } from "@/lib/studio/pathMenu";
 import { isEditable, topLevel } from "@/lib/studio/scene";
 import type { Document } from "@/lib/studio/types";
 import { Dialog, NumberInput, SegmentedControl, Slider } from "@/components/ui";
@@ -118,6 +119,73 @@ export function SimplifyDialog({ open, onClose }: { open: boolean; onClose: () =
         <label className="pn-check"><input type="checkbox" checked={straight} onChange={(e) => setStraight(e.target.checked)} /> Straight lines only</label>
         {stats && <p className="dlg-note" data-testid="simplify-stats">Anchor points: {stats.before} → {stats.after} (within {tol.toFixed(2)} mm)</p>}
       </div>
+    </Dialog>
+  );
+}
+
+// ---------- Stroke to Path… ----------
+
+export function StrokeToPathDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const api = useEditorApi();
+  const units = useEditor((s) => s.doc.units);
+  const [width, setWidth] = useState(1);
+  const [join, setJoin] = useState<JoinKind>("round");
+  const [cap, setCap] = useState<CapKind>("round");
+  const [show, setShow] = useState(true);
+  const lp = useLivePreview(open, "Stroke to Path");
+  const run = (d: Document, ids: string[]) => strokeToPathNodes(d, ids, width, join, cap);
+  useEffect(() => { if (open) lp.preview(show, run); });
+  const ok = () => {
+    const out = lp.apply(run);
+    if (out?.length) api.getState().select(out);
+    onClose();
+  };
+  return (
+    <Dialog open={open} title="Stroke to Path" onClose={onClose} size="narrow" testId="stroke-dialog"
+      footer={<Footer onCancel={onClose} onOk={ok} preview={show} setPreview={setShow} />}>
+      <div style={{ display: "grid", gap: 12 }}>
+        <NumberInput label="Width" value={width} length units={units} min={0.01} max={200} defaultValue={1} onChange={(v) => setWidth(v)} testId="stroke-width" />
+        <SegmentedControl label="Joins" value={join} onChange={setJoin} full options={[{ value: "round", label: "Round" }, { value: "miter", label: "Miter" }, { value: "bevel", label: "Bevel" }]} />
+        <SegmentedControl label="Caps" value={cap} onChange={setCap} full options={[{ value: "round", label: "Round" }, { value: "butt", label: "Butt" }, { value: "square", label: "Square" }]} />
+      </div>
+      <p className="dlg-note" style={{ marginTop: 10 }}>
+        Each selected path is replaced by the filled outline of a stroke this wide — ready to cut or engrave as an area.
+      </p>
+    </Dialog>
+  );
+}
+
+// ---------- Join Nearby Endpoints… ----------
+
+export function JoinNearbyDialog({ open, onClose, toast }: { open: boolean; onClose: () => void; toast: (m: string, undo?: boolean) => void }) {
+  const units = useEditor((s) => s.doc.units);
+  const [tol, setTol] = useState(0.5);
+  const [show, setShow] = useState(true);
+  const [joins, setJoins] = useState(0);
+  const lp = useLivePreview(open, "Join Nearby Endpoints");
+  const run = (d: Document, ids: string[]) => joinNearbyEndpoints(d, ids, tol);
+  useEffect(() => {
+    if (!open) return;
+    let n = 0;
+    lp.preview(true, (d, ids) => { n = run(d, ids); });
+    setJoins(n);
+    if (!show) lp.preview(false, run);
+  }, [open, tol, show]); // eslint-disable-line react-hooks/exhaustive-deps
+  const ok = () => {
+    const n = lp.apply(run) ?? 0;
+    toast(n ? `Joined ${n} gap${n === 1 ? "" : "s"}` : "No endpoints were close enough to join", n > 0);
+    onClose();
+  };
+  return (
+    <Dialog open={open} title="Join Nearby Endpoints" onClose={onClose} size="narrow" testId="join-nearby-dialog"
+      footer={<Footer onCancel={onClose} onOk={ok} preview={show} setPreview={setShow} />}>
+      <div style={{ display: "grid", gap: 12 }}>
+        <NumberInput label="Tolerance" value={tol} length units={units} min={0.001} max={50} defaultValue={0.5} onChange={(v) => setTol(v)} testId="join-nearby-tol" />
+        <p className="dlg-note" data-testid="join-nearby-count">{joins ? `${joins} gap${joins === 1 ? "" : "s"} will be closed` : "No open ends are this close"}</p>
+      </div>
+      <p className="dlg-note" style={{ marginTop: 10 }}>
+        Open ends of the selected paths that lie closer than the tolerance are joined, nearest pair first. A path whose own ends are close is closed.
+      </p>
     </Dialog>
   );
 }

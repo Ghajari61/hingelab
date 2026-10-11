@@ -29,12 +29,14 @@ export interface Preferences {
   tourDone: boolean;
   dismissed: string[];
   recentGenerators: { id: string; at: string }[];
+  /** Path → Inset / Outset step, mm. */
+  offsetStep: number;
 }
 
 export const DEFAULT_PREFS: Preferences = {
   theme: "light", themeChosen: false, editorTheme: "dark", accent: "blue", units: "mm", shortcutSet: "hingelab", laser: "co2",
   machineId: DEFAULT_MACHINE, materialId: DEFAULT_MATERIAL, showStartScreen: true, resetTo: "default",
-  onboarded: false, tourDone: false, dismissed: [], recentGenerators: [],
+  onboarded: false, tourDone: false, dismissed: [], recentGenerators: [], offsetStep: 1,
 };
 
 const pick = <T extends string>(v: unknown, list: readonly T[], d: T): T => (list as readonly unknown[]).includes(v) ? (v as T) : d;
@@ -61,6 +63,7 @@ export function normalizePrefs(raw: unknown): Preferences {
     recentGenerators: Array.isArray(r.recentGenerators)
       ? r.recentGenerators.filter((x): x is { id: string; at: string } => !!x && typeof x.id === "string" && typeof x.at === "string").slice(0, 10)
       : [],
+    offsetStep: typeof r.offsetStep === "number" && Number.isFinite(r.offsetStep) && r.offsetStep > 0 ? Math.min(100, r.offsetStep) : d.offsetStep,
   };
 }
 

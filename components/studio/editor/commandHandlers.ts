@@ -2,7 +2,12 @@
 
 import type { StoreApi } from "zustand";
 import { newId } from "@/lib/studio/doc";
-import { boxCenter, emptyBox, isEmptyBox, rotateAt, scaleAt, translate, unionBox } from "@/lib/studio/geom";
+import { boxCenter, emptyBox, invert, isEmptyBox, mul, rotateAt, scaleAt, translate, unionBox } from "@/lib/studio/geom";
+import {
+  anchorsCenter, breakAt, canJoinEnds, curveSegments, deleteSegments, editAnchors, hasSelectedSegment, insertMidpoints, joinAnchors, setKinds,
+  straightenSegments, transformSelected, type MSub, type NodeRef,
+} from "@/lib/studio/nodeOps";
+import { cutPathNodes, flattenNodes, fractureNodes, insetOutsetNodes, removeDuplicateNodesIn, splitPathNodes } from "@/lib/studio/pathMenu";
 import { clipToSvg, copyNodes, loadClip, storeClip } from "@/lib/studio/clipboard";
 import { addAnchorNodes, breakApartNodes, closeNodes, joinNodes, makeClip, makeCompound, releaseClip, resetBoxNodes, reverseNodes } from "@/lib/studio/pathOps";
 import { distributeSpacing } from "@/lib/studio/arrays";
@@ -13,7 +18,7 @@ import {
 } from "@/lib/studio/scene";
 import { TOOL_IDS } from "@/lib/studio/commands";
 import type { Theme } from "@/lib/studio/prefs";
-import type { Document, SceneNode, TextNode } from "@/lib/studio/types";
+import type { Document, Mat, SceneNode, TextNode } from "@/lib/studio/types";
 import type { PanelId } from "@/lib/studio/workspace";
 import { RESET_FIELD_EVENT, RESET_SECTION_EVENT } from "@/components/ui";
 import type { CanvasApi } from "./Canvas";
@@ -22,7 +27,7 @@ import type { EditorState } from "./store";
 export interface Handler { run: () => void; enabled?: boolean; reason?: string; checked?: boolean }
 
 export type EditorDialog = "documentSetup" | "move" | "shortcuts" | "preferences" | "palette" | "resetPrefs" | "offset" | "simplify" | "corners"
-  | "stepRepeat" | "transformEach" | "gridArray" | "circularArray" | "pathArray";
+  | "stepRepeat" | "transformEach" | "gridArray" | "circularArray" | "pathArray" | "strokeToPath" | "joinNearby";
 
 export interface CommandContext {
   api: StoreApi<EditorState>;
@@ -44,6 +49,8 @@ export interface CommandContext {
   setTheme: (t: Theme) => void;
   lastField: () => HTMLElement | null;
   viewCenter: () => { x: number; y: number };
+  /** Preferences → Inset / Outset step, mm. */
+  offsetStep: number;
 }
 
 const NEED_ONE = "Select an object first";
@@ -296,6 +303,75 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
       else st().select(r.ids);
     }, single ? anyOutline : twoOutlines, single ? "Select shapes to split" : "Select two or more closed shapes");
   }
+  const pfRun = (label: string, fn: (d: Document, ids: string[]) => { ids: string[]; error?: string }) => () => {
+    const ids = selected(st());
+    let r: { ids: string[]; error?: string } = { ids: [] };
+    st().edit(label, (d) => { r = fn(d, ids); });
+    if (r.error) ctx.toast(r.error);
+    else st().select(r.ids);
+  };
+  set("path.fracture", pfRun("Fracture", (d, ids) => fractureNodes(d, ids)), anyOutline, "Select overlapping closed shapes");
+  set("path.flatten", pfRun("Flatten", flattenNodes), twoOutlines, "Select two or more overlapping closed shapes");
+  set("path.cutPath", pfRun("Cut Path", cutPathNodes), twoOutlines, "Select paths and, on top, the path that cuts them");
+  set("path.splitPath", () => { let out: string[] = []; st().edit("Split Path", (d) => { out = splitPathNodes(d, selected(st())); }); st().select(out); }, anyOutline, "Select a path with several parts");
+  set("path.strokeToPath", () => ctx.dialog("strokeToPath"), anyOutline, "Select a path, shape or text");
+  const offStep = ctx.offsetStep;
+  for (const [id, label, delta] of [["path.inset", "Inset", -offStep], ["path.outset", "Outset", offStep]] as const) {
+    set(id, () => {
+      const ids = selected(st());
+      let out: string[] = [];
+      st().edit(label, (d) => { out = insetOutsetNodes(d, ids, delta); });
+      if (out.length) st().select(out); else ctx.toast(delta < 0 ? "The shapes are too small to inset by that step" : "Select closed shapes");
+    }, anyOutline, "Select closed shapes");
+  }
+  set("path.removeDuplicates", () => {
+    const ids = selected(st());
+    let n = 0;
+    st().edit("Remove Duplicate Nodes", (d) => { n = removeDuplicateNodesIn(d, ids); });
+    ctx.toast(n ? `Removed ${n} duplicate node${n === 1 ? "" : "s"}` : "No duplicate nodes found", n > 0);
+  }, paths.length > 0, "Select a path");
+  set("path.joinNearby", () => ctx.dialog("joinNearby"), paths.length > 0, "Select paths with open ends");
+  // Nodes (Direct Selection)
+  const refs = s.tool === "direct" ? s.anchors : [];
+  const NEED_NODES = "Select nodes with Direct Selection";
+  const nodeEdit = (label: string, fn: (ms: MSub[], world: Mat) => MSub[] | null) => () => {
+    const r = st().anchors;
+    if (!r.length) return;
+    let out: NodeRef[] = r;
+    st().edit(label, (d) => { out = editAnchors(d, r, fn); });
+    st().setAnchors(out);
+  };
+  const segOk = refs.length > 1 && hasSelectedSegment(s.doc, refs);
+  const NEED_SEG = "Select both ends of a segment";
+  set("node.insert", nodeEdit("Insert Nodes", insertMidpoints), segOk, NEED_SEG);
+  set("node.break", nodeEdit("Break Path", breakAt), refs.length > 0, NEED_NODES);
+  for (const [id, label, merge] of [["node.join", "Join Nodes", true], ["node.joinSegment", "Join Nodes with Segment", false]] as const) {
+    set(id, () => {
+      const r = st().anchors;
+      let out: NodeRef[] | null = null;
+      st().edit(label, (d) => { out = joinAnchors(d, r, merge); });
+      if (out) st().setAnchors(out);
+    }, canJoinEnds(s.doc, refs), "Select two end nodes of open paths");
+  }
+  set("node.deleteSegment", nodeEdit("Delete Segment", deleteSegments), segOk, NEED_SEG);
+  for (const [id, kind, label] of [["node.corner", "corner", "Corner"], ["node.smooth", "smooth", "Smooth"], ["node.symmetric", "symmetric", "Symmetric"], ["node.auto", "auto", "Auto-Smooth"]] as const) {
+    set(id, nodeEdit(`Make Nodes ${label}`, (ms) => setKinds(ms, kind)), refs.length > 0, NEED_NODES);
+  }
+  set("node.straighten", nodeEdit("Straighten Segments", straightenSegments), segOk, NEED_SEG);
+  set("node.curve", nodeEdit("Make Segments Curves", curveSegments), segOk, NEED_SEG);
+  const nodeTransform = (label: string, make: (c: { x: number; y: number }) => Mat) => () => {
+    const r = st().anchors;
+    const c = anchorsCenter(st().doc, r);
+    if (!c) return;
+    const m = make(c);
+    let out: NodeRef[] = r;
+    st().edit(label, (d) => { out = editAnchors(d, r, (ms, world) => transformSelected(ms, mul(invert(world), mul(m, world)))); }, { mergeKey: `node-${label}` });
+    st().setAnchors(out);
+  };
+  set("node.scaleUp", nodeTransform("Scale Nodes", (c) => scaleAt(1.1, 1.1, c.x, c.y)), refs.length > 0, NEED_NODES);
+  set("node.scaleDown", nodeTransform("Scale Nodes", (c) => scaleAt(1 / 1.1, 1 / 1.1, c.x, c.y)), refs.length > 0, NEED_NODES);
+  set("node.rotateCCW", nodeTransform("Rotate Nodes", (c) => rotateAt(-15, c.x, c.y)), refs.length > 0, NEED_NODES);
+  set("node.rotateCW", nodeTransform("Rotate Nodes", (c) => rotateAt(15, c.x, c.y)), refs.length > 0, NEED_NODES);
   set("path.cleanup", () => {
     const ids = selected(st());
     let r = { points: 0, closed: 0, removed: 0, duplicates: 0 };
@@ -339,6 +415,8 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   set("view.snapGrid", () => st().quiet((d) => { d.snapping.grid = !d.snapping.grid; }), true, undefined, s.doc.snapping.grid);
   set("view.snapPoint", () => st().quiet((d) => { d.snapping.points = !d.snapping.points; }), true, undefined, s.doc.snapping.points);
   set("view.smartGuides", () => st().quiet((d) => { d.snapping.smart = !d.snapping.smart; }), true, undefined, s.doc.snapping.smart);
+  set("view.nodeHandles", () => st().setUi({ nodeHandles: !st().ui.nodeHandles }), true, undefined, s.ui.nodeHandles);
+  set("view.pathDirection", () => st().setUi({ pathDirection: !st().ui.pathDirection }), true, undefined, s.ui.pathDirection);
   set("view.presentation", () => { st().setUi({ presentation: !st().ui.presentation }); requestAnimationFrame(() => ctx.canvas()?.fit("artboard")); }, true, undefined, s.ui.presentation);
   for (const t of ["dark", "darker", "light", "system"] as const) set(`view.theme.${t}`, () => ctx.setTheme(t), true, undefined, ctx.theme === t);
   // Window

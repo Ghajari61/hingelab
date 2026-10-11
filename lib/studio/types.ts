@@ -11,7 +11,8 @@ export interface Vec { x: number; y: number }
 /** SVG-style affine matrix [a, b, c, d, e, f]: x' = a·x + c·y + e, y' = b·x + d·y + f. */
 export type Mat = [number, number, number, number, number, number];
 
-export type NodeKind = "corner" | "smooth" | "symmetric";
+/** "auto": handles follow the neighbouring nodes (recomputed whenever the path is edited). */
+export type NodeKind = "corner" | "smooth" | "symmetric" | "auto";
 
 /** One anchor of a cubic Bézier path. `i` and `o` are absolute control points; absent = straight. */
 export interface Anchor {
