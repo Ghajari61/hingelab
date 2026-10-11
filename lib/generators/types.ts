@@ -124,8 +124,8 @@ export interface TextShape {
 }
 
 export interface BuildContext {
-  /** Shape text with a Letters font, or null while the font loads. */
-  text?: (s: string, fontId: string, height: number) => TextShape | null;
+  /** Shape text with a Letters font, or null while the font loads; `spacing` is extra mm between letters. */
+  text?: (s: string, fontId: string, height: number, spacing?: number) => TextShape | null;
 }
 
 interface FieldCommon<P> {

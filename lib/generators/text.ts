@@ -8,15 +8,15 @@ import type { BuildContext, TextShape } from "./types";
 /** A `ctx.text` over the fonts loaded so far; results are cached per string, font and size. */
 export function makeTextFn(hb: HarfBuzz, fontOf: (id: string) => LoadedFont | null): NonNullable<BuildContext["text"]> {
   const cache = new Map<string, TextShape>();
-  return (s, fontId, height) => {
+  return (s, fontId, height, spacing = 0) => {
     const font = fontOf(fontId);
     if (!font) return null;
-    const key = `${fontId}\u0000${height}\u0000${s}`;
+    const key = `${fontId}\u0000${height}\u0000${spacing}\u0000${s}`;
     const hit = cache.get(key);
     if (hit) return hit;
     // Numbers read left to right in every script (Persian ۱۲ is twelve), so digit-only text is LTR.
     const direction = /\p{L}/u.test(s) ? "auto" : "ltr";
-    const out = shapeText(hb, font, s, { direction, size: height, sizeMode: "capHeight", letterSpacing: 0 });
+    const out = shapeText(hb, font, s, { direction, size: height, sizeMode: "capHeight", letterSpacing: Number.isFinite(spacing) ? spacing : 0 });
     const contours = shapeContours(unionShapes(out.glyphs.flatMap((g) => g.contours)));
     const bb = contours.length ? bboxOf(contours) : { x0: 0, y0: 0, x1: 0, y1: 0 };
     const cx = (bb.x0 + bb.x1) / 2, cy = (bb.y0 + bb.y1) / 2;
