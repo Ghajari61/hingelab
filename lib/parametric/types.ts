@@ -15,7 +15,10 @@ export interface MeshData {
   indices: Uint32Array;
 }
 
-export type LibraryId = "sphere" | "torus" | "abstract-head-cc0" | "wave-panel" | "ripple" | "vase";
+export type LibraryId = "sphere" | "torus" | "abstract-head-cc0" | "wave-panel" | "ripple" | "vase"
+  | "face-cc0" | "veiled-face-cc0" | "profile-face-cc0" | "terrain" | "sand-dunes" | "ocean-wave" | "diagonal-waves" | "sound-wave"
+  | "flow-lines" | "hex-bumps" | "pebbles" | "rose" | "lotus" | "shell-spiral" | "mandala" | "moon" | "heart" | "star"
+  | "globe-lamp" | "teardrop-lamp" | "bell-lamp" | "bulb-vase";
 export type MeshFormat = "stl" | "obj" | "glb" | "gltf";
 export type ModelUnits = "mm" | "cm" | "m" | "in" | "auto";
 

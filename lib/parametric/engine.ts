@@ -17,6 +17,7 @@ import { sliceWaffle } from "./methods/waffle";
 import { nestSheets } from "./nest";
 import { formulaHeightfield, formulaRadialProfile, formulaRevolution, radialProfileFn } from "./source/formula";
 import { libraryMesh } from "./source/library";
+import { WALL_RELIEF_IDS } from "./source/reliefs";
 import { reliefFromDepth, unpackDepth } from "./source/relief";
 import { textMesh, unpackOutline } from "./source/text";
 import { measureDeviation } from "./quality";
@@ -25,7 +26,7 @@ import { fallbackSections, manifoldSections, tryManifold, type SectionSource } f
 import type { Contour, LibraryId, ParametricParams, Plane, Shape, SliceResult, Stats, Warning } from "./types";
 
 /** Library reliefs are authored with their flat back on the wall; solids are centred on the origin. */
-const WALL_SHAPES: LibraryId[] = ["abstract-head-cc0", "wave-panel", "ripple"];
+const WALL_SHAPES: LibraryId[] = ["abstract-head-cc0", "wave-panel", "ripple", ...WALL_RELIEF_IDS];
 
 /** Build the normalised source mesh for the params (and the file bytes for an imported mesh). */
 export async function loadSource(p: ParametricParams, file?: ArrayBuffer): Promise<PreparedMesh> {

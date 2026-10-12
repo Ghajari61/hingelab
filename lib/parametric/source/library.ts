@@ -3,6 +3,7 @@
  * with consistent outward-facing triangles, in mm, Y up, Z toward the viewer.
  */
 import type { LibraryId, MeshData } from "../types";
+import { RELIEF_LIBRARY, reliefMesh } from "./reliefs";
 
 export const LIBRARY: { id: LibraryId; name: string; note: string }[] = [
   { id: "abstract-head-cc0", name: "Abstract head", note: "Face relief, about 160 × 220 mm" },
@@ -11,6 +12,7 @@ export const LIBRARY: { id: LibraryId; name: string; note: string }[] = [
   { id: "wave-panel", name: "Wave panel", note: "Sine relief, 200 × 150 mm" },
   { id: "ripple", name: "Ripple", note: "Rings fading out from the centre" },
   { id: "vase", name: "Vase", note: "Turned profile around Y" },
+  ...RELIEF_LIBRARY.map(({ id, name, note }) => ({ id, name, note })),
 ];
 
 export class Builder {
@@ -203,5 +205,6 @@ export function libraryMesh(id: LibraryId, detail = 5): MeshData {
     case "wave-panel": return heightfieldBlock(200, 150, (x, y) => 14 + 10 * Math.sin(x / 20) * Math.cos(y / 30));
     case "ripple": return heightfieldBlock(220, 220, (x, y) => { const r = Math.hypot(x, y); return 6 + 14 * Math.cos(r / 9) * Math.exp(-r / 70) + 14 * Math.exp(-r / 70); });
     case "vase": return revolution(h => 45 + 25 * Math.sin(h / 32) - 12 * Math.cos(h / 15), 240);
+    default: return reliefMesh(id);
   }
 }

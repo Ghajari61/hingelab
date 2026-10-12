@@ -6,6 +6,7 @@
 import { PARAM_FIELDS } from "@/components/parametric/fields";
 import type { Params } from "@/lib/hinge";
 import type { ParametricParams } from "@/lib/parametric";
+import { RELIEF_IDS } from "@/lib/parametric/source/reliefs";
 
 const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 
@@ -45,7 +46,7 @@ export function hingeRequestError(p: Params): string | null {
 }
 
 const METHODS = ["parallel", "stacked", "waffle", "radial", "curveNormal", "folded"];
-const LIBRARY = ["sphere", "torus", "abstract-head-cc0", "wave-panel", "ripple", "vase"];
+const LIBRARY: string[] = ["sphere", "torus", "abstract-head-cc0", "wave-panel", "ripple", "vase", ...RELIEF_IDS];
 const MAX_EXPRESSION = 2000;
 /** Fields whose presets go past the editor's own range (card sculptures are 0.3 mm). */
 const PARAMETRIC_BOUNDS: Record<string, [number, number]> = { T: [0.1, 25] };
