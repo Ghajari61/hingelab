@@ -137,12 +137,13 @@ export const ARTICLES: HelpArticle[] = [
   {
     slug: "view-3d", product: "general", title: "The 3D view",
     summary: "See the assembled design in 3D, explode it, or lay every part flat as it will be cut.",
-    keywords: ["3d", "preview", "orbit", "explode", "lay flat", "view cube"],
+    keywords: ["3d", "preview", "orbit", "explode", "lay flat", "view cube", "dimensions", "size"],
     images: [shot("hinge-3d", "The 3D view of a Hinge Box")],
     blocks: [
       { list: [
         "Switch between Sheets and 3D view at the top of the stage.",
         "Drag to orbit, right-drag to pan and scroll to zoom. The view cube and its Top, Front and Side buttons turn the model to a set view.",
+        "The overall width, depth and height are drawn on the model, in your units; the ruler button next to the view buttons hides them. A top view shows width and depth, a front view width and height. They are hidden while the model is exploded.",
         "Explode (Lift lid for a letter box) pulls the parts apart so you can see how they go together.",
         "Assembled shows the finished piece; Lay flat shows every part as a slab where it sits on the sheet, with the hinge cuts drawn on top.",
         "The material look follows your material preset: plywood, MDF, card or clear acrylic.",

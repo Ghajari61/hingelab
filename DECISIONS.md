@@ -870,3 +870,10 @@ The Letters base and lid were the outer wall face exactly, and the tab slots are
 - The model is optional and only sent while the 3D view is open, so the 2D sheet's response and speed do not change. A model over 600,000 numbers is dropped and the view says the design is too large to show in 3D; a model that fails to build never fails the SVG.
 - One WebGL canvas draws all four views with a scissor rectangle per view, instead of four canvases, to stay within WebGL context limits and share one scene. Each view has its own camera and controls on a transparent overlay, so the view label and the view cube stay clickable.
 - The 3D code is a lazily loaded chunk (about 155 kB gzipped), so opening the app and the 2D sheet do not load three.js.
+
+## D133. 3D dimensions measure the solid parts and read kerf as the whole millimetre
+
+- The sizes are measured from the 3D model actually shown, not from the form fields, so one piece of code (`lib/three/dims.ts`) serves the Hinge Box, Letters, every generator and the desktop app, and laid-flat parts are measured too. Only meshes count: hinge slits drawn just off the wall surface, the cut lines painted over parts lying flat, and the 0.2 mm engraving skin (marked `userData.noMeasure`, carried to the desktop as `noMeasure` on the slab) would otherwise add a fraction of a millimetre.
+- Cut outlines are grown by half the kerf and curves are faceted, so a 140 mm Hinge Box base measures 140.15 mm and a 300 mm round clock 299.9 mm as modelled. A size within 0.2 mm of a whole millimetre is therefore shown as that millimetre (140.0 mm, 300.0 mm); anything else is shown to 0.1 mm. This is display only; no geometry changes.
+- Each axis is drawn along the bounding-box edge that lies furthest out on screen and set off past the whole outline, so the line never crosses the model; an axis seen end-on (shorter than 28 px) is left out. The lines are an SVG overlay redrawn with every frame, not 3D objects, so they stay crisp and readable at any zoom.
+- They are hidden while exploded because an exploded model is not the product's size.

@@ -85,6 +85,9 @@ try {
   check(last().model && last().objects > 0, `opening 3D asks for the model (${last().objects} objects, ${Math.round(last().bytes / 1024)} kB)`);
   const labels = await page.locator(".v3-pane:not([hidden]) .v3-label").allInnerTexts();
   check(labels.length === 4 && /Top/.test(labels[0]) && /Perspective/.test(labels[3]), `four views: ${labels.join(", ")}`);
+  const dimTexts = () => page.locator(".v3-pane:not([hidden]) .v3-dims text").allTextContents();
+  const dims = await dimTexts();
+  check(dims.length >= 4 && dims.includes("300.0 mm"), `dimensions on the views: ${dims.join(", ")}`);
   await shot(page, "clock-quad");
 
   await page.locator(".v3").focus();
@@ -106,6 +109,7 @@ try {
   await page.getByRole("button", { name: "Edges", exact: true }).click();
   await page.locator('input[aria-label="Explode"]').fill("0.7");
   await page.waitForTimeout(500);
+  check((await dimTexts()).length === 0, "no dimensions while exploded");
   await shot(page, "clock-exploded-edges");
 
   await page.getByRole("button", { name: "Wire", exact: true }).click();
@@ -114,6 +118,11 @@ try {
   await page.keyboard.press("Alt+w");
   await page.waitForTimeout(500);
   check(await page.locator(".v3-pane:not([hidden])").count() === 4, "Alt+W again brings back the four views");
+  check((await dimTexts()).length >= 4, "dimensions come back when assembled");
+  await page.getByRole("button", { name: "Dimensions" }).click();
+  await page.waitForTimeout(300);
+  check((await dimTexts()).length === 0, "the ruler button hides the dimensions");
+  await page.getByRole("button", { name: "Dimensions" }).click();
   await shot(page, "clock-wire-quad");
   await page.getByRole("button", { name: "Shaded", exact: true }).click();
 

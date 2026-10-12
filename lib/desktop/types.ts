@@ -79,8 +79,11 @@ export interface D3Material {
  * model's frame; `ex` is how far it moves there when the view is fully exploded.
  */
 export type D3Object = { name: string; m: number[]; ex: [number, number, number] } & (
-  /** An outline in its own plane extruded along z from `z` up `depth`. Flat [x, y, x, y, …] lists; `fade` hides it while exploded. */
-  | { kind: "slab"; outer: number[]; holes: number[][]; z: number; depth: number; tint?: number; mat?: D3Material; fade?: boolean }
+  /**
+   * An outline in its own plane extruded along z from `z` up `depth`. Flat [x, y, x, y, …] lists;
+   * `fade` hides it while exploded; `noMeasure` leaves a skin (engraving) out of the dimensions.
+   */
+  | { kind: "slab"; outer: number[]; holes: number[][]; z: number; depth: number; tint?: number; mat?: D3Material; fade?: boolean; noMeasure?: boolean }
   /** A triangle mesh with optional vertex colours (the bent hinge wall). */
   | { kind: "mesh"; pos: number[]; col?: number[]; index: number[]; tint?: number; vertexBase?: string }
   /** Line segments drawn on the model (hinge slits). */

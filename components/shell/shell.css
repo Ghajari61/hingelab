@@ -223,7 +223,16 @@ details.sec > summary:hover .sec-rst, .sec-rst:focus-visible { opacity: 1; }
 .vcube-btns { display: flex; gap: 2px; padding: 2px; background: var(--hud-bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow-2); }
 .vcube-btns button { display: grid; place-items: center; height: 24px; min-width: 26px; padding: 0 6px; border: 0; background: none; border-radius: 6px; font-size: 11px; font-weight: 500; color: var(--fg-dim); cursor: pointer; }
 .vcube-btns button:hover { background: var(--surface-hover); color: var(--fg); }
+.vcube-btns button[aria-pressed="true"] { background: var(--accent-soft); color: var(--fg); }
 .hud3d .iconseg button { height: 26px; }
+.dims3d { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 1; }
+.dims3d .dim-line, .dims3d .dim-ext { stroke: #5b6475; stroke-width: 1; fill: none; }
+.dims3d .dim-ext { opacity: .7; }
+.dims3d .dim-arrow { fill: #5b6475; }
+.dims3d .dim-text { font: 600 12px/1 var(--font-ui); fill: #2b3a66; stroke: rgba(255, 255, 255, .85); stroke-width: 3px; paint-order: stroke; font-variant-numeric: tabular-nums; }
+:root[data-theme="dark"] .dims3d .dim-line, :root[data-theme="dark"] .dims3d .dim-ext { stroke: #a3abbd; }
+:root[data-theme="dark"] .dims3d .dim-arrow { fill: #a3abbd; }
+:root[data-theme="dark"] .dims3d .dim-text { fill: #dfe6ff; stroke: rgba(20, 22, 28, .85); }
 
 /* U6: shape buttons for formula fields */
 .shape-pick { display: grid; gap: 8px; padding: 8px 0 4px; border-top: 1px solid var(--line); }

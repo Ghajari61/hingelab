@@ -270,10 +270,18 @@ describe("desktop 3D model", () => {
           expect(o.outer.length, `${p.id} ${o.name}`).toBeGreaterThanOrEqual(6);
           expect(finite([...o.outer, ...o.holes.flat(), o.z, o.depth])).toBe(true);
           expect(o.depth).toBeGreaterThan(0);
+          expect(!!o.noMeasure, `${p.id} ${o.name}`).toBe(/ engraving$/.test(o.name));
         } else {
           expect(finite(o.pos)).toBe(true);
         }
       }
     }
+  });
+
+  it("marks engraving skins so the dimensions measure the parts, not the 0.2 mm skin on top", async () => {
+    const r = await gen({ product: "trophy", model: true }, "pro");
+    const skins = r.body.model!.objects.filter((o) => o.kind === "slab" && o.noMeasure);
+    expect(skins.length).toBeGreaterThan(0);
+    expect(skins.every((o) => / engraving$/.test(o.name))).toBe(true);
   });
 });

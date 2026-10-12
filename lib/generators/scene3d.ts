@@ -61,6 +61,7 @@ export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D 
       (e.material as THREE.Material).dispose();
       e.material = ENGRAVE;
       e.userData.keepMaterial = true;
+      e.userData.noMeasure = true;
       spin.add(e);
     }
     stand.add(spin);

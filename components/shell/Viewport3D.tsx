@@ -4,9 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { Box, Maximize } from "lucide-react";
+import { Box, Maximize, Ruler } from "lucide-react";
 import { applyLook, type LookId } from "@/lib/three/looks";
 import type { Scene3D } from "@/lib/three/flat";
+import { dimLines, dimSVG, modelBox } from "@/lib/three/dims";
+import type { Units } from "@/components/editor/format";
+
+const DIMS_KEY = "hl.dims3d";
 
 type ViewName = "persp" | "top" | "front" | "side" | "back" | "left";
 const DIRS: Record<ViewName, [number, number, number]> = {
@@ -58,27 +62,46 @@ interface Stage {
  * It renders only when something changes. The scene is owned here once passed in: the previous
  * one is disposed when a new one arrives.
  */
-export default function Viewport3D({ scene, look, frameKey, label, className = "", children }: {
+export default function Viewport3D({ scene, look, frameKey, label, className = "", units = "mm", measure = true, children }: {
   scene: Scene3D | null;
   look: LookId;
   /** The camera reframes when this changes (not while a slider is scrubbed). */
   frameKey: string;
   label: string;
   className?: string;
+  units?: Units;
+  /** Whether the scene shows the product at its real size (false while exploded): dimensions only then. */
+  measure?: boolean;
   /** HUD controls drawn over the view (explode, lay flat). */
   children?: React.ReactNode;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const cube = useRef<HTMLDivElement>(null);
+  const dimsEl = useRef<SVGSVGElement>(null);
   const st = useRef<Stage | null>(null);
   const shown = useRef<Scene3D | null>(null);
+  const bbox = useRef<THREE.Box3 | null>(null);
   const framed = useRef("");
   const [noGL, setNoGL] = useState(false);
+  const [dims, setDims] = useState(true);
+  const dimsOn = useRef({ dims, measure, units });
+  dimsOn.current = { dims, measure, units };
+
+  useEffect(() => {
+    try { if (localStorage.getItem(DIMS_KEY) === "0") setDims(false); } catch { /* storage blocked */ }
+  }, []);
 
   const syncCube = () => {
     const s = st.current, c = cube.current;
     if (!s || !c) return;
     c.style.transform = cameraCSS(s.camera.matrixWorldInverse);
+  };
+
+  const drawDims = () => {
+    const s = st.current, svg = dimsEl.current, el = host.current;
+    if (!s || !svg || !el) return;
+    const o = dimsOn.current;
+    svg.innerHTML = o.dims && o.measure && bbox.current ? dimSVG(dimLines(bbox.current, s.camera, el.clientWidth, el.clientHeight), o.units) : "";
   };
 
   useEffect(() => {
@@ -120,7 +143,7 @@ export default function Viewport3D({ scene, look, frameKey, label, className = "
     controls.enableDamping = false;
     controls.screenSpacePanning = true;
     controls.maxPolarAngle = Math.PI / 2 - 0.005;
-    const render = () => { renderer.render(scene, camera); syncCube(); };
+    const render = () => { renderer.render(scene, camera); syncCube(); drawDims(); };
     controls.addEventListener("change", render);
     const resize = () => {
       const w = el.clientWidth, h = el.clientHeight;
@@ -163,7 +186,7 @@ export default function Viewport3D({ scene, look, frameKey, label, className = "
     const s = st.current!;
     const fov = THREE.MathUtils.degToRad(s.camera.fov / 2);
     const fovH = Math.atan(Math.tan(fov) * s.camera.aspect);
-    return (r / Math.sin(Math.min(fov, fovH))) * 1.08;
+    return (r / Math.sin(Math.min(fov, fovH))) * 1.25;
   };
 
   /** Move the camera to look along `dir` (or keep the current direction) at the whole model. */
@@ -239,6 +262,7 @@ export default function Viewport3D({ scene, look, frameKey, label, className = "
       s.scene.add(scene.group);
       shown.current = scene;
     }
+    bbox.current = scene ? modelBox(scene.group) : null;
     if (frameKey !== framed.current && scene) {
       const first = !framed.current;
       framed.current = frameKey;
@@ -254,6 +278,8 @@ export default function Viewport3D({ scene, look, frameKey, label, className = "
     if (shown.current) applyLook(shown.current.group, look);
     st.current?.render();
   }, [look]);
+
+  useEffect(() => { drawDims(); }, [dims, measure, units]);
 
   // Faces of the view cube, placed once.
   useEffect(() => {
@@ -294,8 +320,13 @@ export default function Viewport3D({ scene, look, frameKey, label, className = "
           <button type="button" onClick={() => view("front")} title="Front view">Front</button>
           <button type="button" onClick={() => view("side")} title="Side view">Side</button>
           <button type="button" onClick={() => goTo(null)} aria-label="Zoom to fit" title="Zoom to fit"><Maximize size={13} /></button>
+          <button
+            type="button" aria-pressed={dims} aria-label="Dimensions" title={dims ? "Hide the overall dimensions" : "Show the overall dimensions"}
+            onClick={() => { const next = !dims; setDims(next); try { localStorage.setItem(DIMS_KEY, next ? "1" : "0"); } catch { /* storage blocked */ } }}
+          ><Ruler size={13} /></button>
         </div>
       </div>
+      <svg ref={dimsEl} className="dims3d" aria-hidden />
       {children}
       <span className="hint3d">Drag to orbit · right-drag to pan · scroll to zoom</span>
     </div>

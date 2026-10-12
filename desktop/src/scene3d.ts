@@ -63,6 +63,7 @@ export function buildModel(model: D3Model): Model3D {
     obj.matrixAutoUpdate = false;
     const base = new THREE.Matrix4().fromArray(o.m);
     obj.matrix.copy(base);
+    if (o.kind === "slab" && o.noMeasure) obj.userData.noMeasure = true;
     inner.add(obj);
     placed.push({ obj, base, ex: new THREE.Vector3(...o.ex), fade: o.kind === "slab" && !!o.fade });
     if ((obj as THREE.Mesh).isMesh) meshes.push(obj as THREE.Mesh);

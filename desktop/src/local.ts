@@ -27,6 +27,8 @@ export interface LocalPrefs {
   /** Four 3D views (Top, Front, Left, Perspective) rather than one. */
   view3dQuad: boolean;
   view3dShade: Shade3D;
+  /** Overall dimensions drawn on the 3D views. */
+  view3dDims: boolean;
 }
 
 export interface SavedDesign {
@@ -52,7 +54,7 @@ export interface Favorite {
 }
 
 const KEYS = { prefs: "hl-prefs-v1", recent: "hl-recent-v1", favorites: "hl-favorites-v1", last: "hl-last-v1", catalog: "hl-catalog-v1", account: "hl-account-v1" };
-export const DEFAULT_PREFS: LocalPrefs = { theme: "system", units: "mm", autoCheckUpdates: true, reuseLastSettings: true, defaultProduct: "hinge", sidebarCollapsed: false, sheetTone: "plywood", sheetGrid: true, view3d: false, view3dQuad: true, view3dShade: "shaded" };
+export const DEFAULT_PREFS: LocalPrefs = { theme: "system", units: "mm", autoCheckUpdates: true, reuseLastSettings: true, defaultProduct: "hinge", sidebarCollapsed: false, sheetTone: "plywood", sheetGrid: true, view3d: false, view3dQuad: true, view3dShade: "shaded", view3dDims: true };
 const MAX_RECENT = 24;
 const MAX_ITEM = 300_000;
 

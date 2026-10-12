@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, type RefObject } from "react";
-import { AlertTriangle, Box, CircleAlert, Download, FileDown, Grid2x2, Grid3x3, Info, Lock, Maximize, Minus, Plus, Redo2, RefreshCw, Scan, Sparkles, Square, Star, Undo2, WifiOff, Wrench } from "lucide-react";
+import { AlertTriangle, Box, CircleAlert, Download, FileDown, Grid2x2, Grid3x3, Info, Lock, Maximize, Minus, Plus, Redo2, RefreshCw, Ruler, Scan, Sparkles, Square, Star, Undo2, WifiOff, Wrench } from "lucide-react";
 import type { DProduct } from "../../../lib/desktop/types";
 import type { DesignState } from "../design";
 import type { AppError } from "../ipc";
@@ -145,6 +145,11 @@ export function Workspace(p: Props) {
                   {SHADES.map(([v, label, title]) => <button key={v} type="button" aria-pressed={prefs.view3dShade === v} title={title} onClick={() => set({ view3dShade: v })}>{label}</button>)}
                 </span>
                 <label className="explode" title="Pull the layers apart">Explode <input type="range" min={0} max={1} step={0.01} value={explode} aria-label="Explode" onChange={(e) => setExplode(parseFloat(e.target.value))} /></label>
+                <button
+                  type="button" className="icon-btn" aria-pressed={prefs.view3dDims} aria-label="Dimensions"
+                  title={prefs.view3dDims ? "Hide the overall dimensions" : "Show the overall dimensions (hidden while exploded)"}
+                  onClick={() => set({ view3dDims: !prefs.view3dDims })}
+                ><Ruler size={15} aria-hidden /></button>
                 <button type="button" className="icon-btn" title="Zoom extents, all views (Ctrl+0)" onClick={() => p.canvas.current?.fit()}><Maximize size={15} aria-hidden /></button>
               </>
             ) : (
@@ -168,7 +173,7 @@ export function Workspace(p: Props) {
             <Suspense fallback={<div className="v3" aria-busy="true" />}>
               <View3D
                 ref={p.canvas} model={r?.model ?? null} material={String(r?.params.material ?? "")} explode={explode}
-                shade={prefs.view3dShade} quad={prefs.view3dQuad} active={active} dim={dim}
+                shade={prefs.view3dShade} quad={prefs.view3dQuad} active={active} dims={prefs.view3dDims} units={p.units} dim={dim}
                 onActive={(a) => setActive(a)} onQuad={(q) => set({ view3dQuad: q })} onShade={(s) => set({ view3dShade: s })}
               >
                 {overlays}

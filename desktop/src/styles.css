@@ -405,6 +405,14 @@ kbd { font: 12px var(--font); padding: 1px 6px; border: 1px solid var(--line-2);
 .v3-pane.active { border: 2px solid #f2c230; }
 .v3-hit { position: absolute; inset: 0; cursor: grab; touch-action: none; }
 .v3-hit:active { cursor: grabbing; }
+.v3-dims { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
+.v3-dims .dim-line, .v3-dims .dim-ext { stroke: #3f4757; stroke-width: 1; fill: none; }
+.v3-dims .dim-ext { opacity: 0.7; }
+.v3-dims .dim-arrow { fill: #3f4757; }
+.v3-dims .dim-text { font: 600 12px/1 "Segoe UI Variable Text", "Segoe UI", sans-serif; fill: #1f2b55; stroke: rgba(255, 255, 255, 0.8); stroke-width: 3px; paint-order: stroke; font-variant-numeric: tabular-nums; }
+:root[data-theme="dark"] .v3-dims .dim-line, :root[data-theme="dark"] .v3-dims .dim-ext { stroke: #b4bccc; }
+:root[data-theme="dark"] .v3-dims .dim-arrow { fill: #b4bccc; }
+:root[data-theme="dark"] .v3-dims .dim-text { fill: #e4eaff; stroke: rgba(20, 22, 28, 0.85); }
 .v3-label { position: absolute; z-index: 2; top: 4px; left: 6px; padding: 1px 4px; border: 0; border-radius: 3px; background: none; font: 600 11.5px var(--font); color: #20232a; cursor: pointer; }
 .v3-label:hover { background: rgba(255, 255, 255, 0.35); }
 :root[data-theme="dark"] .v3-label { color: #e6e8ee; }

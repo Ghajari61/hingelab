@@ -10,7 +10,8 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { Home } from "lucide-react";
 import type { D3Model } from "../../../lib/desktop/types";
 import { applyLook, lookOf } from "../../../lib/three/looks";
-import type { Shade3D as Shade } from "../local";
+import { dimLines, dimSVG, modelBox } from "../../../lib/three/dims";
+import type { Shade3D as Shade, Units } from "../local";
 import { buildModel, type Model3D } from "../scene3d";
 import type { CanvasHandle } from "./Canvas";
 
@@ -37,6 +38,7 @@ const FACES: { name: string; dir: [number, number, number] | null; pos: [number,
   { name: "Bottom", dir: [0, -1, 0.0008], pos: [0, -1, 0], rot: [Math.PI / 2, 0, 0] },
 ];
 const CUBE = 46;
+const DIM_ROOM = 56;
 
 const eps = (v: number) => (Math.abs(v) < 1e-10 ? 0 : v);
 /** CSS matrix for an object placed in three.js world space (the CSS3DRenderer convention). */
@@ -50,7 +52,7 @@ function cameraCSS(m: THREE.Matrix4) {
   return `matrix3d(${[e[0], -e[1], e[2], e[3], e[4], -e[5], e[6], e[7], e[8], -e[9], e[10], e[11], 0, 0, 0, 1].map(eps).join(",")})`;
 }
 
-interface Pane { def: PaneDef; el: HTMLDivElement; cam: THREE.PerspectiveCamera | THREE.OrthographicCamera; controls: OrbitControls; half: number }
+interface Pane { def: PaneDef; el: HTMLDivElement; svg: SVGSVGElement | null; cam: THREE.PerspectiveCamera | THREE.OrthographicCamera; controls: OrbitControls; half: number }
 
 interface Stage {
   renderer: THREE.WebGLRenderer;
@@ -72,6 +74,9 @@ interface Props {
   onActive: (p: PaneId) => void;
   onQuad: (quad: boolean) => void;
   onShade: (s: Shade) => void;
+  /** Overall dimensions on every view (hidden while exploded). */
+  dims: boolean;
+  units: Units;
   dim?: boolean;
   children?: React.ReactNode;
 }
@@ -101,9 +106,14 @@ function glow(mesh: THREE.Mesh, on: boolean) {
 }
 
 const View3D = forwardRef<CanvasHandle, Props>(function View3D(props, ref) {
-  const { model, material, explode, shade, quad, active, onActive, onQuad, onShade, dim, children } = props;
+  const { model, material, explode, shade, quad, active, onActive, onQuad, onShade, dims, units, dim, children } = props;
   const host = useRef<HTMLDivElement>(null);
   const paneEls = useRef<Partial<Record<PaneId, HTMLDivElement | null>>>({});
+  const dimEls = useRef<Partial<Record<PaneId, SVGSVGElement | null>>>({});
+  /** The assembled model's bounding box, for the dimensions. */
+  const bbox = useRef<THREE.Box3 | null>(null);
+  const showDims = useRef<Units | null>(null);
+  showDims.current = dims && explode === 0 ? units : null;
   const cube = useRef<HTMLDivElement>(null);
   const st = useRef<Stage | null>(null);
   const shown = useRef<Model3D | null>(null);
@@ -177,6 +187,7 @@ const View3D = forwardRef<CanvasHandle, Props>(function View3D(props, ref) {
         renderer.setViewport(x, y, r.width, r.height);
         renderer.setScissor(x, y, r.width, r.height);
         renderer.render(scene, p.cam);
+        if (p.svg) p.svg.innerHTML = showDims.current && bbox.current ? dimSVG(dimLines(bbox.current, p.cam, r.width, r.height), showDims.current) : "";
       }
       syncCube();
     };
@@ -199,7 +210,7 @@ const View3D = forwardRef<CanvasHandle, Props>(function View3D(props, ref) {
         controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.PAN };
       }
       controls.addEventListener("change", request);
-      return { def, el: pel, cam, controls, half: 100 };
+      return { def, el: pel, svg: dimEls.current[def.id] ?? null, cam, controls, half: 100 };
     });
 
     const resize = () => {
@@ -245,7 +256,7 @@ const View3D = forwardRef<CanvasHandle, Props>(function View3D(props, ref) {
     const d = (dir ?? new THREE.Vector3(...p.def.dir)).normalize();
     if (cam instanceof THREE.PerspectiveCamera) {
       const fov = THREE.MathUtils.degToRad(cam.fov / 2), fovH = Math.atan(Math.tan(fov) * cam.aspect);
-      const dist = (r / Math.sin(Math.min(fov, fovH))) * 1.08;
+      const dist = (r / Math.sin(Math.min(fov, fovH))) * 1.3;
       cam.position.copy(c).addScaledVector(d, dist);
       cam.near = dist / 200;
       cam.far = dist * 20;
@@ -268,8 +279,10 @@ const View3D = forwardRef<CanvasHandle, Props>(function View3D(props, ref) {
         mx = Math.max(mx, Math.abs(v.x - cc.x));
         my = Math.max(my, Math.abs(v.y - cc.y));
       }
-      const aspect = (p.el.clientWidth || 1) / (p.el.clientHeight || 1);
-      p.half = Math.max(my, mx / aspect, 5) * 1.12;
+      // Leave DIM_ROOM px on each side for the dimensions (and the view label).
+      const pw = p.el.clientWidth || 1, ph = p.el.clientHeight || 1;
+      const room = (px: number) => (px / 2) / Math.max(px / 4, px / 2 - DIM_ROOM);
+      p.half = Math.max(my * room(ph), (mx * room(pw) * ph) / pw, 5);
     }
     frustum(p);
     p.controls.update();
@@ -333,6 +346,8 @@ const View3D = forwardRef<CanvasHandle, Props>(function View3D(props, ref) {
       const m = buildModel(model);
       applyLook(m.group, lookOf(material));
       paintShade(m, shade);
+      m.explode(0);
+      bbox.current = modelBox(m.group);
       m.explode(explode);
       s.scene.add(m.group);
       shown.current = m;
@@ -344,6 +359,7 @@ const View3D = forwardRef<CanvasHandle, Props>(function View3D(props, ref) {
         for (const p of s.panes) fitPane(p);
       }
     } else {
+      bbox.current = null;
       setPicked(null);
     }
     s.request();
@@ -365,7 +381,7 @@ const View3D = forwardRef<CanvasHandle, Props>(function View3D(props, ref) {
   }, [explode]);
 
   // Panes change size when the layout changes; the observer redraws, this keeps the active view framed.
-  useEffect(() => { st.current?.request(); }, [quad, active]);
+  useEffect(() => { st.current?.request(); }, [quad, active, dims, units]);
 
   // Faces of the view cube, placed once.
   useEffect(() => {
@@ -444,6 +460,7 @@ const View3D = forwardRef<CanvasHandle, Props>(function View3D(props, ref) {
                 if (p && e.button === 0 && Math.hypot(e.clientX - p.x, e.clientY - p.y) < 4) pickAt(def.id, e);
               }}
             />
+            <svg ref={(n) => { dimEls.current[def.id] = n; }} className="v3-dims" aria-hidden />
             <button
               type="button" className="v3-label" title={`${def.label} view (${def.key.toUpperCase()}). Double-click or Alt+W to ${quad ? "maximize it" : "show all four views"}.`}
               onClick={() => onActive(def.id)} onDoubleClick={() => onQuad(!quad)}

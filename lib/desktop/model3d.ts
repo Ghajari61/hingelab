@@ -62,6 +62,7 @@ function serialize(it: Item, ex: [number, number, number], fade: boolean): D3Obj
     return {
       ...base, kind: "slab", outer: flat(pts.shape), holes: pts.holes.map(flat), z: r2(geo.boundingBox!.min.z), depth: r2(geo.parameters.options.depth ?? 1),
       ...tint, ...(o.userData.keepMaterial ? { mat: own(o.material as THREE.Material) } : {}), ...(fade ? { fade: true } : {}),
+      ...(o.userData.noMeasure ? { noMeasure: true } : {}),
     };
   }
   const index = geo.getIndex();

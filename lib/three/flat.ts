@@ -84,6 +84,7 @@ function cutOverlay(d: string[], width: number, height: number, z: number): THRE
   plane.position.set(width / 2, -height / 2, z);
   plane.name = "cuts";
   plane.userData.keepMaterial = true;
+  plane.userData.noMeasure = true;
   plane.renderOrder = 2;
   return plane;
 }
