@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { MeshData, SliceResult } from "@/lib/parametric";
-import { deviationObject, disposeTree, modelObject, partsObject, planesObject } from "./scene";
+import { FINISH_COLORS, deviationObject, disposeTree, modelObject, partsObject, planesObject } from "./scene";
 
 export type ViewToggles = { model: boolean; planes: boolean; parts: boolean };
 
@@ -14,10 +14,12 @@ const SELECT_COLOR = 0x3b8ff0;
  * three.js view of the source model, the slicing planes and the assembled parts. `explode` (mm)
  * pushes the parts apart along their plane normals; clicking a part reports its id.
  */
-export default function Viewport3D({ mesh, result, T, show, explode = 0, heat = false, selected = [], onSelect, className = "pdbg-view" }: {
+export default function Viewport3D({ mesh, result, T, show, explode = 0, finish = "wood", heat = false, selected = [], onSelect, className = "pdbg-view" }: {
   mesh: MeshData | null;
   result: SliceResult | null;
   T: number;
+  /** How the parts are coloured (a look only). */
+  finish?: keyof typeof FINISH_COLORS;
   show: ViewToggles;
   explode?: number;
   /** Show the deviation samples as a heat map. */
@@ -141,10 +143,10 @@ export default function Viewport3D({ mesh, result, T, show, explode = 0, heat = 
   }, [result]);
 
   useEffect(() => {
-    swap("parts", result ? partsObject(result, T, explode) : undefined);
+    swap("parts", result ? partsObject(result, T, explode, finish) : undefined);
     paintSelection();
     ctx.current?.render();
-  }, [result, T, explode]);
+  }, [result, T, explode, finish]);
 
   const paintSelection = () => {
     const parts = layers.current.parts;

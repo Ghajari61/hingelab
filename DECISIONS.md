@@ -841,3 +841,12 @@ The neon-look sign is cut as one solid piece grown around the letters (holes fil
 - The Pro badge uses the existing `parametricLocks` rule with the part count. Part counts are only known after slicing, so `scripts/build-preset-thumbs.mjs` now also writes `lib/parametric/presetParts.ts` while it slices each preset for its thumbnail; the build test fails with a hint to rerun the script when a count goes stale. Several wave presets that the Free plan cannot export (more than 30 parts) now show the badge they should have had.
 - Reliefs whose base is thinner than the minimum feature fall apart into many small pieces on a shaped plate, so those presets use backboard slats (each fin is joined to its slat), which keeps parts whole and gives the slat-wall look.
 - Radial formula presets use 30 fins so fins never collide at the 20 mm hub.
+
+## D129. Design generator writes ordinary parameters
+
+- A generated design is a recipe, a few knob values, a seed and a “cut as” choice. `designParams` turns it into ordinary parametric parameters (a formula source, a method and settings), so saving, undo, sharing, the plan rule and export treat it like any hand-made design; nothing new is stored.
+- The same recipe, knobs, seed and cut always give the same parameters (seeded mulberry32 with a hashed seed so consecutive seeds look different). A test builds every recipe with every cut plus 120 random designs and checks each against `parametricRequestError`, and slices the defaults within the limits.
+- Previews and the six variations are drawn from the formula on a coarse grid (hillshade plus the fin lines) instead of slicing, so changing a slider is instant; the full model is sliced only when the design is used. Library and text sources are not previewed this way; the gallery uses their stored thumbnails.
+- Clock recipes are written with the shape specs so the dock's shape buttons recognise them. Radial recipes use a 20 mm hub and at most 30 fins so fins never collide at the hub.
+- Formula sources stay Pro, so generated designs show the Pro badge on Free; the generator is still free to explore.
+- The Look (wood, dark, white) only changes the 3D view colours and is remembered locally; it is not part of the design file. Presets may suggest one (the flagship opens dark).

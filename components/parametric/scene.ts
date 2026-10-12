@@ -68,16 +68,24 @@ export function partGeometry(part: Part, T: number): THREE.BufferGeometry {
   return g;
 }
 
+/** Part colour and edge colour for each 3D-view look. */
+export const FINISH_COLORS: Record<"wood" | "dark" | "white", [number, number]> = {
+  wood: [PART_COLOR, 0x5a4220],
+  dark: [0x2b2a2c, 0x7a7670],
+  white: [0xefebe4, 0x9c968c],
+};
+
 /** Parts extruded to T at their placement; `explode` pushes them apart along their normals. */
-export function partsObject(r: SliceResult, T: number, explode = 0): THREE.Group {
+export function partsObject(r: SliceResult, T: number, explode = 0, finish: keyof typeof FINISH_COLORS = "wood"): THREE.Group {
   const grp = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color: PART_COLOR, roughness: 0.75 });
-  const edge = new THREE.LineBasicMaterial({ color: 0x5a4220 });
+  const [face, edgeColor] = FINISH_COLORS[finish] ?? FINISH_COLORS.wood;
+  const mat = new THREE.MeshStandardMaterial({ color: face, roughness: finish === "dark" ? 0.55 : 0.75 });
+  const edge = new THREE.LineBasicMaterial({ color: edgeColor });
   // Each family of parallel planes spreads about its own middle.
   const famKey = (pl: Plane) => pl.normal.join(",");
   const fam = new Map<string, number[]>();
   r.planes.forEach((pl, i) => fam.set(famKey(pl), [...(fam.get(famKey(pl)) ?? []), i]));
-  const card = new THREE.MeshStandardMaterial({ color: PART_COLOR, roughness: 0.85, side: THREE.DoubleSide, flatShading: true });
+  const card = new THREE.MeshStandardMaterial({ color: face, roughness: 0.85, side: THREE.DoubleSide, flatShading: true });
   for (const part of r.parts) {
     if (part.faces3d) {
       const g = new THREE.BufferGeometry();

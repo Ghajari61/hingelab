@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LayoutGrid, Sparkles } from "lucide-react";
 import { r3, type LayerContent } from "@/lib/hinge";
 import { IMAGE_DEFAULTS, PARAMETRIC_DEFAULTS, mergeParametricParams } from "@/lib/parametric/defaults";
 import { allSheetsSVG, assemblyGuideSVG, exportZip, sheetFileName, sheetLayerContent, sheetSVG, slugName } from "@/lib/parametric/export";
@@ -42,6 +43,15 @@ import { depthPreview, estimateDepth } from "./depthProtocol";
 import { getStoredModel, getStoredPhoto, putStoredModel, putStoredPhoto, type StoredModel } from "./modelStore";
 import { Slicer } from "./slicerProtocol";
 import Viewport3D, { type ViewToggles } from "./Viewport3D";
+import type { DesignTab } from "./DesignStudio";
+import type { Finish } from "@/lib/parametric/presets";
+
+const DesignStudio = lazy(() => import("./DesignStudio"));
+const FINISH_KEY = "hingelab-parametric-finish";
+const FINISHES: { v: Finish; text: string }[] = [{ v: "wood", text: "Wood" }, { v: "dark", text: "Dark" }, { v: "white", text: "White" }];
+const readFinish = (): Finish => {
+  try { const v = localStorage.getItem(FINISH_KEY); return v === "dark" || v === "white" ? v : "wood"; } catch { return "wood"; }
+};
 
 const KEY = "hingelab-parametric-v1";
 const MAX_MODEL_BYTES = 100 * 1024 * 1024;
@@ -113,6 +123,13 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<string | null>(null);
   const [askUnits, setAskUnits] = useState(false);
+  const [designs, setDesigns] = useState<DesignTab | null>(null);
+  const [finish, setFinishState] = useState<Finish>("wood");
+  useEffect(() => { setFinishState(readFinish()); }, []);
+  const setFinish = (f: Finish) => {
+    setFinishState(f);
+    try { localStorage.setItem(FINISH_KEY, f); } catch { /* storage blocked */ }
+  };
   const slicer = useRef<Slicer | null>(null);
   const meshKey = useRef("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -416,11 +433,27 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     toastMsg("All settings reset. Ctrl+Z undoes it.");
   }
 
+  /**
+   * A design from the gallery, the generator or My designs, as one undoable step. Designs that do
+   * not choose a material keep the current one (sheet size included), unless that is folding card.
+   */
+  function applyDesign(p: Partial<ParametricParams>, name: string, look?: Finish) {
+    const next = mergeParametricParams(p);
+    if (!p.material && params.material.T > 1) next.material = clone(params.material);
+    replace(next, true);
+    setSelected([]);
+    setDesigns(null);
+    if (look) setFinish(look);
+    toastMsg(`Opened “${name}”. Ctrl+Z returns to your last design.`);
+  }
+
   const started = useRef(false);
   useEffect(() => {
     if (!start || started.current) return;
     started.current = true;
     replace(mergeParametricParams(start.params as Partial<ParametricParams>), true);
+    const look = (start as { finish?: Finish }).finish;
+    if (look) setFinish(look);
     setSelected([]);
     toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -478,6 +511,8 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     file: [
       { label: "New sculpture", kbd: "Ctrl+N", run: newProject },
       { label: "Start page", kbd: "", run: onHome },
+      { label: "Browse designs…", kbd: "", run: () => setDesigns("gallery") },
+      { label: "Generate a design…", kbd: "", run: () => setDesigns("generate") },
       { label: "Open project…", kbd: "Ctrl+O", run: openProject },
       { label: "Save project", kbd: "Ctrl+S", run: saveProject },
       { label: "Save as my preset…", kbd: "", run: () => setModal({ type: "preset", name: params.name }) },
@@ -544,13 +579,21 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
             if (m === "folded" && q.material.T > 1) q.material = { ...q.material, id: "custom", T: 0.3, K: 0.05 };
           }, true) })}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
-        />
+        >
+          <section className="gallery-group" aria-label="Designs">
+            <h3>Designs</h3>
+            <div className="ds-entry">
+              <button type="button" data-open="gallery" title="Ready designs in nine categories" onClick={() => setDesigns("gallery")}><LayoutGrid size={20} aria-hidden />Browse<small>Ready designs</small></button>
+              <button type="button" data-open="generate" title="Make a new design from a recipe and a seed" onClick={() => setDesigns("generate")}><Sparkles size={20} aria-hidden />Generate<small>New from a recipe</small></button>
+            </div>
+          </section>
+        </GalleryRail>
         <div className={`stage pe-center${tab === "3d" ? " no-rulers" : ""}`}>
           <ViewToggle value={tab} onChange={setTab} sheetsLabel={`Sheets${result ? ` (${result.sheets.length})` : ""}`} />
           <div className="stage-chip"><span className="pe-stage">{busy || depthBusy ? (stage ?? "Slicing…") : res ? `${result!.stats.partCount} parts · ${Math.round(res.ms)} ms` : ""}</span>
             {(busy || depthBusy) && <span className="pe-progress" aria-hidden />}</div>
           <div className="pe-3d stage-3d" hidden={tab !== "3d"}>
-              <Viewport3D className="pe-view" mesh={result && !result.usesModel ? null : mesh} result={result} T={params.material.T} show={show} explode={exploded} selected={selected} onSelect={(id) => setSelected(id ? [id] : [])} heat={showHeat && !!result?.deviation} />
+              <Viewport3D className="pe-view" mesh={result && !result.usesModel ? null : mesh} result={result} T={params.material.T} show={show} explode={exploded} finish={finish} selected={selected} onSelect={(id) => setSelected(id ? [id] : [])} heat={showHeat && !!result?.deviation} />
               <div className="pe-hud">
                 {(["model", "planes", "parts"] as const).map((k) => (
                   <label key={k} className="chk"><input type="checkbox" checked={show[k]} onChange={(e) => setShow((s) => ({ ...s, [k]: e.target.checked }))} /> {k === "model" ? "Model" : k === "planes" ? "Planes" : "Parts"}</label>
@@ -558,6 +601,11 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
                 {result?.deviation && (
                   <label className="chk" title="How far the model's surface lies from the nearest part"><input type="checkbox" checked={showHeat} onChange={(e) => setShowHeat(e.target.checked)} /> Deviation</label>
                 )}
+                <label className="pe-finish" title="How the parts look in this view (the cut files are the same)">Look
+                  <select aria-label="Look" value={finish} onChange={(e) => setFinish(e.target.value as Finish)}>
+                    {FINISHES.map((f) => <option key={f.v} value={f.v}>{f.text}</option>)}
+                  </select>
+                </label>
                 <label className="pe-explode">Explode <input type="range" min={0} max={1} step={0.01} value={explode} aria-label="Explode" onChange={(e) => setExplode(parseFloat(e.target.value))} /></label>
               </div>
               {showHeat && result?.deviation && (
@@ -628,6 +676,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
           onExportZip={exportZipNow}
           onGuide={guideNow}
           onResetSection={resetSection}
+          onBrowse={() => setDesigns("gallery")}
         />
         </DockColumn>
       </div>
@@ -649,6 +698,18 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
         }}
         onSavePreset={(name) => { setModal(null); void myPresets.save("parametric", name, params).then(toastMsg); }}
       />
+      {designs && (
+        <Suspense fallback={<div className="modal-back"><div className="modal ds-loading" role="dialog" aria-label="Designs" aria-busy="true" style={{ height: 200 }}>Loading designs…</div></div>}>
+          <DesignStudio
+            initialTab={designs}
+            plan={account.plan}
+            mine={myPresets.list.filter((m) => m.product === "parametric")}
+            onRemoveMine={(id) => void myPresets.remove(id)}
+            onApply={applyDesign}
+            onClose={() => setDesigns(null)}
+          />
+        </Suspense>
+      )}
       {toast && <div className="toast" role="status">{toast}</div>}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       <input

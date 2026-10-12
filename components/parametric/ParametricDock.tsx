@@ -11,6 +11,8 @@ import type { CurveNormalParams, FormulaSpec, LibraryId, ModelUnits, ParametricP
 import { SHAPE_TARGETS, applyShape, contextOf } from "@/lib/parametric/shapes";
 import { BUNDLED_FONTS, fontInfo } from "@/lib/letters/fonts";
 import { ShapePicker } from "./ShapePicker";
+import { StyleSection } from "./StyleSection";
+import { RELIEF_LIBRARY } from "@/lib/parametric/source/reliefs";
 import { NumberField } from "@/components/editor/NumberField";
 import { LayersPanel } from "@/components/editor/LayersPanel";
 import { Sec } from "@/components/editor/PanelDock";
@@ -43,6 +45,14 @@ function Choice<T extends string>({ label, value, options, onPick }: {
     </>
   );
 }
+
+const FACES = RELIEF_LIBRARY.filter((r) => r.id.endsWith("face-cc0")).map((r) => r.id);
+const LIBRARY_GROUPS: [string, string[]][] = [
+  ["Shapes", ["sphere", "torus", "abstract-head-cc0", "wave-panel", "ripple", "vase"]],
+  ["Faces", FACES],
+  ["Wall reliefs", RELIEF_LIBRARY.filter((r) => r.wall && !FACES.includes(r.id)).map((r) => r.id)],
+  ["Lamps & vessels", RELIEF_LIBRARY.filter((r) => !r.wall).map((r) => r.id)],
+];
 
 const KIND_NAMES: Partial<Record<Part["kind"], string>> = {
   backboard: "Backboard", slat: "Slat", fin: "Fin", layer: "Layer", "rib-x": "Rib (A)", "rib-y": "Rib (B)", "radial-fin": "Radial fin", hub: "Hub ring", net: "Net",
@@ -105,8 +115,10 @@ function PartDrawing({ part }: { part: Part }) {
 }
 
 export function ParametricDock({
-  params, result, error, busy, units, selected, fileName, photo, depthBusy, plan, locks, askUnits, textMissing = [], onEdit, onSelect, onImport, onImportPhoto, onUpgrade, onExportAll, onExportDXF, onExportSheet, onExportZip, onGuide, onResetSection,
+  params, result, error, busy, units, selected, fileName, photo, depthBusy, plan, locks, askUnits, textMissing = [], onEdit, onSelect, onImport, onImportPhoto, onUpgrade, onExportAll, onExportDXF, onExportSheet, onExportZip, onGuide, onResetSection, onBrowse,
 }: {
+  /** Opens the design gallery. */
+  onBrowse?: () => void;
   /** Characters of a Text source that its font does not have. */
   textMissing?: string[];
   plan: Plan;
@@ -187,6 +199,7 @@ export function ParametricDock({
 
   return (
     <aside className="dock" aria-label="Panels">
+      <StyleSection params={params} units={units} onEdit={onEdit} onBrowse={onBrowse} />
       <Sec title="Source" meta={params.method === "curveNormal" ? "Formulas only" : sourceMeta} startOpen onReset={() => onResetSection("Size and rotation", ["sourceSettings"])}>
         {params.method === "curveNormal" && <p className="note">Along a curve builds the fins from the formulas in Method; the model below is not used.</p>}
         <Choice label="Model from" value={kind} onPick={(v) => {
@@ -249,7 +262,11 @@ export function ParametricDock({
         )}
         {kind === "library" && (
           <select className="sel" aria-label="Library model" value={src.id} onChange={(e) => onEdit((q) => { q.source = { kind: "library", id: e.target.value as LibraryId }; }, true)}>
-            {LIBRARY.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            {LIBRARY_GROUPS.map(([label, ids]) => (
+              <optgroup key={label} label={label}>
+                {LIBRARY.filter((l) => ids.includes(l.id)).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </optgroup>
+            ))}
           </select>
         )}
         {kind === "mesh" && (
