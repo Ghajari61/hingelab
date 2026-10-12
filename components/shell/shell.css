@@ -2,7 +2,7 @@
 
 /* ---------- header ---------- */
 .hdr-center { display: flex; justify-content: center; flex: 1 1 auto; min-width: 0; }
-.product-tabs button { height: 30px; padding-inline: 12px; }
+.product-tabs button { height: 30px; padding-inline: 12px; white-space: nowrap; flex: none; }
 .gen-menu { position: relative; display: inline-flex; }
 .gen-menu > button svg:last-child { margin-inline-start: -2px; opacity: .7; }
 .gen-dropdown { position: absolute; top: calc(100% + 8px); right: 0; z-index: 60; width: 320px; display: grid; gap: 2px; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-3); }
@@ -85,9 +85,23 @@
 @media (max-width: 860px) {
   .main { grid-template-columns: minmax(0, 1fr); }
   .gallery { border-right: 0; border-bottom: 1px solid var(--line); }
-  .gallery-scroll { grid-auto-flow: column; grid-auto-columns: minmax(240px, 1fr); overflow-x: auto; }
-  .hdr-center { order: 5; flex-basis: 100%; }
+  /* Option groups wrap onto rows (one column on phones) instead of a clipped horizontal strip. */
+  .gallery-scroll { grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); }
+  .hdr-center { order: 5; flex-basis: 100%; position: relative; }
+  /* The tab strip scrolls if it still does not fit; the Generators menu is placed against the
+     header row (not the strip) so the strip's overflow does not clip it. */
+  .product-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .product-tabs::-webkit-scrollbar { display: none; }
+  .product-tabs.more-start::before, .product-tabs.more-end::after { content: ""; position: sticky; z-index: 1; flex: none; width: 22px; pointer-events: none; }
+  .product-tabs.more-start::before { left: 0; margin-inline-end: -24px; background: linear-gradient(to right, var(--field), transparent); }
+  .product-tabs.more-end::after { right: 0; margin-inline-start: -24px; background: linear-gradient(to left, var(--field), transparent); }
+  .gen-menu { position: static; }
+  .gen-dropdown { max-width: calc(100vw - 16px); }
   .dock-col { border-left: 0; }
+}
+@media (max-width: 480px) {
+  .product-tabs > button > svg, .gen-menu > button > svg:first-child { display: none; }
+  .product-tabs button { padding-inline: 8px; }
 }
 .pe-3d { background: var(--canvas-bg); }
 .stage-3d[hidden] { display: none; }

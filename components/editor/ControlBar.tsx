@@ -47,9 +47,28 @@ export function ProductTabs({ product, onProduct }: { product: Product; onProduc
     document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("pointerdown", onDown); document.removeEventListener("keydown", onKey); };
   }, [open]);
+  // On narrow screens the strip scrolls: fade the edges that hide tabs, and keep the current tab in view.
+  const strip = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState({ start: false, end: false });
+  useEffect(() => {
+    const el = strip.current;
+    if (!el) return;
+    const update = () => setMore({ start: el.scrollLeft > 1, end: el.scrollLeft + el.clientWidth < el.scrollWidth - 1 });
+    const on = el.querySelector<HTMLElement>(':scope > button[aria-pressed="true"], .gen-menu > button[aria-pressed="true"]');
+    if (on) {
+      const a = el.getBoundingClientRect(), b = on.getBoundingClientRect();
+      if (b.right > a.right) el.scrollLeft += b.right - a.right + 24;
+      else if (b.left < a.left) el.scrollLeft -= a.left - b.left + 24;
+    }
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", update); ro.disconnect(); };
+  }, [product]);
   const gen = isGeneratorId(product) ? product : null;
   return (
-    <div className="iconseg product-tabs" role="group" aria-label="Product">
+    <div ref={strip} className={`iconseg product-tabs${more.start ? " more-start" : ""}${more.end ? " more-end" : ""}`} role="group" aria-label="Product">
       {CORE_PRODUCTS.map((p) => (
         <button key={p} type="button" aria-pressed={product === p} onClick={() => onProduct(p)}>
           {PRODUCT_INFO[p].icon}{PRODUCT_INFO[p].name}
