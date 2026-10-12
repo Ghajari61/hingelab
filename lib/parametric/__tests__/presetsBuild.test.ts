@@ -8,6 +8,7 @@ import { LIMITS, mergeParametricParams } from "../defaults";
 import { computeParametric, loadSource } from "../engine";
 import { PARAMETRIC_CATEGORIES, PARAMETRIC_PRESETS } from "../presets";
 import { PRESET_PARTS } from "../presetParts";
+import { recognise, shapeExpression, type ShapeSpec, type ShapeTargetId } from "../shapes";
 import { RELIEF_IDS, reliefMesh } from "../source/reliefs";
 import { signedVolume } from "../source/library";
 import { openEdgeCount } from "../source/mesh";
@@ -32,6 +33,22 @@ describe("parametric design library", () => {
 
   it("every design passes the export request checks", () => {
     for (const pr of PARAMETRIC_PRESETS) expect(parametricRequestError(mergeParametricParams(pr.params)), pr.id).toBeNull();
+  });
+
+  it("clock and frame formulas match their shape specs", () => {
+    const shaped = PARAMETRIC_PRESETS.filter((pr) => pr.params.shapes);
+    expect(shaped.length).toBeGreaterThan(0);
+    for (const pr of shaped) {
+      const cn = pr.params.curveNormal!;
+      const written: Partial<Record<ShapeTargetId, string>> = {
+        finLength: cn.finLength, finHeight: cn.finHeight, twist: cn.twist,
+        outline: cn.outerBoundary?.kind === "formula" ? cn.outerBoundary.expression : undefined,
+      };
+      for (const [target, spec] of Object.entries(pr.params.shapes!) as [ShapeTargetId, ShapeSpec][]) {
+        expect(written[target], `${pr.id} ${target}`).toBe(shapeExpression(target, spec));
+        expect(recognise(target, written[target]!, spec), `${pr.id} ${target}`).toEqual(spec);
+      }
+    }
   });
 
   it("every new relief is a closed, outward-facing solid", () => {

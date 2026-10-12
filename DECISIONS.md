@@ -850,3 +850,4 @@ The neon-look sign is cut as one solid piece grown around the letters (holes fil
 - Clock recipes are written with the shape specs so the dock's shape buttons recognise them. Radial recipes use a 20 mm hub and at most 30 fins so fins never collide at the hub.
 - Formula sources stay Pro, so generated designs show the Pro badge on Free; the generator is still free to explore.
 - The Look (wood, dark, white) only changes the 3D view colours and is remembered locally; it is not part of the design file. Presets may suggest one (the flagship opens dark).
+- The start screen ships the preset list in the editor shell, so presets must not import heavy modules. Clock and frame presets keep their shape specs plus the literal formulas `shapeExpression` writes (a test checks they match and are recognised), which keeps `shapes.ts` out of the shell and the shell inside its 150 KB budget.

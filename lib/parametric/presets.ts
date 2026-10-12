@@ -1,6 +1,6 @@
 import type { Preset } from "@/lib/presets";
 import { FORMULA_DEFAULTS, LEAF_CLOCK, PARAMETRIC_DEFAULTS, TEXT_DEFAULTS } from "./defaults";
-import { shapeExpression, type ShapeId, type ShapeSpec } from "./shapes";
+import type { ShapeId, ShapeSpec } from "./shapes";
 import type { FormulaSpec, LibraryId, ParametricParams } from "./types";
 
 export type ParametricCategory = "portraits" | "wall-art" | "nature" | "abstract" | "lamps" | "clocks" | "typography" | "radial" | "papercraft";
@@ -42,13 +42,18 @@ const surface = (expression: string, w = 220, h = 160, base = 6): FormulaSpec =>
 const burst = (expression: string, r0 = 20, r1 = 120): FormulaSpec => ({ ...FORMULA_DEFAULTS["radial-profile"], expression, domain: { x: [r0, r1], y: [0, 0] } });
 const shape = (s: ShapeId, base: number, amp: number, extra: Partial<ShapeSpec> = {}): ShapeSpec => ({ shape: s, base, amp, waves: 1, phase: 0, ease: 1, ...extra });
 
-/** A clock or frame along a curve, with its formulas written by shape specs (so the shape buttons recognise them). */
-function curve(over: Partial<ParametricParams["curveNormal"]>, specs: { finLength?: ShapeSpec; finHeight?: ShapeSpec; twist?: ShapeSpec; outline?: ShapeSpec }): Partial<ParametricParams> {
+type CurveShapes = { finLength?: ShapeSpec; finHeight?: ShapeSpec; twist?: ShapeSpec; outline?: ShapeSpec };
+
+/**
+ * A clock or frame along a curve, with its shape specs (so the shape buttons recognise them) and the formulas
+ * `shapeExpression` writes for them, kept literal so the start screen does not load the shape writer (a test checks they match).
+ */
+function curve(over: Partial<ParametricParams["curveNormal"]>, specs: CurveShapes, formulas: { [K in keyof CurveShapes]: string }): Partial<ParametricParams> {
   const cn: ParametricParams["curveNormal"] = { ...PARAMETRIC_DEFAULTS.curveNormal, ...over };
-  if (specs.finLength) cn.finLength = shapeExpression("finLength", specs.finLength);
-  if (specs.finHeight) cn.finHeight = shapeExpression("finHeight", specs.finHeight);
-  if (specs.twist) cn.twist = shapeExpression("twist", specs.twist);
-  if (specs.outline) cn.outerBoundary = { kind: "formula", expression: shapeExpression("outline", specs.outline) };
+  if (formulas.finLength) cn.finLength = formulas.finLength;
+  if (formulas.finHeight) cn.finHeight = formulas.finHeight;
+  if (formulas.twist) cn.twist = formulas.twist;
+  if (formulas.outline) cn.outerBoundary = { kind: "formula", expression: formulas.outline };
   return { method: "curveNormal", curveNormal: cn, shapes: specs };
 }
 
@@ -241,6 +246,8 @@ export const PARAMETRIC_PRESETS: ParametricPreset[] = [
       name: "Sunburst clock",
       ...curve({ guide: { kind: "circle", d: 110 }, count: 60, centerFeature: "clock-insert", clockInsertDia: 60 }, {
         finLength: shape("constant", 140, 0), finHeight: shape("arch", 4, 18), twist: shape("constant", 0, 0), outline: shape("star", 170, 0.4, { waves: 12 }),
+      }, {
+        finLength: "140", finHeight: "4 + 18*sin(pi*s/L)", twist: "0", outline: "170*(1 - 0.4 + 0.4*abs(cos(6*phi))^2)",
       }),
     },
   },
@@ -251,6 +258,9 @@ export const PARAMETRIC_PRESETS: ParametricPreset[] = [
       name: "Heart clock",
       ...curve({ guide: { kind: "ellipse", w: 120, h: 96 }, count: 54, centerFeature: "clock-insert", clockInsertDia: 60 }, {
         finLength: shape("constant", 200, 0), finHeight: shape("arch", 5, 15), twist: shape("constant", 0, 0), outline: shape("heart", 150, 0.6),
+      }, {
+        finLength: "200", finHeight: "5 + 15*sin(pi*s/L)", twist: "0",
+        outline: "150*(1 + 0.6*((2 - 2*sin(phi) + sin(phi)*sqrt(abs(cos(phi)))/(sin(phi) + 1.4))/2 - 1))",
       }),
     },
   },
@@ -261,6 +271,8 @@ export const PARAMETRIC_PRESETS: ParametricPreset[] = [
       name: "Ripple clock",
       ...curve({ guide: { kind: "ellipse", w: 130, h: 86 }, count: 64, centerFeature: "clock-insert", clockInsertDia: 60 }, {
         finLength: shape("sine", 70, 18, { waves: 6 }), finHeight: shape("arch", 4, 16), twist: shape("sine", 0, 10, { waves: 2 }),
+      }, {
+        finLength: "70 + 18*sin(12*pi*t)", finHeight: "4 + 16*sin(pi*s/L)", twist: "10*sin(4*pi*t)",
       }),
     },
   },
@@ -271,6 +283,8 @@ export const PARAMETRIC_PRESETS: ParametricPreset[] = [
       name: "Round mirror frame",
       ...curve({ guide: { kind: "circle", d: 220 }, count: 88, centerFeature: "mirror" }, {
         finLength: shape("constant", 46, 0), finHeight: shape("arch", 4, 14), twist: shape("sine", 0, 18, { waves: 3 }),
+      }, {
+        finLength: "46", finHeight: "4 + 14*sin(pi*s/L)", twist: "18*sin(6*pi*t)",
       }),
     },
   },
