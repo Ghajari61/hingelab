@@ -3,12 +3,12 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   autoFit, clone, DEFAULTS, exportSVG, layerContent, MATERIALS, mergeParams,
-  type CutStyle, type Params,
+  type CutStyle, type LayerContent, type Layout, type Model, type Params,
 } from "@/lib/hinge";
 import { arrangeHinge } from "@/lib/fit/hinge";
 import { usedArea, usedText } from "@/lib/fit/arrange";
 import { autoFixAll, type Fix } from "@/lib/issues";
-import { hingeIssues } from "@/lib/issues/hinge";
+import { explainHingeError, hingeIssues } from "@/lib/issues/hinge";
 import { IssueList } from "@/components/shell/IssueList";
 import { HelpContext, useHelpPanel } from "@/components/help/HelpContext";
 import { cleanFit } from "@/lib/fit/fitToSheets";
@@ -37,6 +37,7 @@ import { useMyPresets } from "@/components/shell/useMyPresets";
 import { Canvas } from "./Canvas";
 import { rulerSvg } from "./Rulers";
 import { PanelDock } from "./PanelDock";
+import { hingeMeta, hingeSize, type HingeMeta } from "./summary";
 import { StatusBar } from "./StatusBar";
 import { Dialogs, type ModalState } from "./dialogs";
 
@@ -55,10 +56,6 @@ function loadInitial(cloud: CloudDoc | null) {
 function baseName(p: Params) {
   const d = p.shape === "cyl" ? `cyl${Math.round(p.dia)}` : `${Math.round(p.W)}x${p.shape === "poly" ? p.sides + "gon" : Math.round(p.D)}`;
   return `hingebox-${d}x${Math.round(p.H)}-${p.T}mm`;
-}
-
-function shapeKind(p: Params) {
-  return ({ rect: "Rounded box", pill: "Pill box", poly: `${p.sides}-sided box`, cyl: "Cylinder" })[p.shape];
 }
 
 export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
@@ -97,7 +94,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   /** The settings actually built: the design, shrunk when Fit is on. */
   const built = arranged.params;
   const model = "error" in result ? null : result;
-  const error = "error" in result ? result.error : null;
+  const error = "error" in result ? explainHingeError(built, result.error) : null;
   const lay = model ? arranged.lay : null;
   const content = useMemo(() => (model && lay ? layerContent(model, lay, built) : null), [model, lay, built]);
   const fitSet = cleanFit(params.fit);
@@ -115,17 +112,13 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
     layH: lay?.height ?? 0,
   };
 
-  const meta = useRef({ title: "", kind: "", dims: "", pat: "" });
-  if (model) {
-    meta.current = {
-      title: params.name,
-      kind: shapeKind(params),
-      dims: params.shape === "cyl"
-        ? `Ø${fmtLen(params.dia, units)} × ${fmtLen(params.H, units)}`
-        : `${fmtLen(params.W, units)} × ${params.shape === "poly" ? params.sides + " sides" : fmtLen(params.D, units)} × ${fmtLen(params.H, units)}`,
-      pat: `${model.analysis.columns} slits`,
-    };
-  }
+  const metaRef = useRef<HingeMeta | null>(null);
+  const meta = metaRef.current = hingeMeta(params, model, metaRef.current, units);
+
+  /** The last design that built, shown dimmed while the settings do not build. */
+  const lastGood = useRef<{ model: Model; lay: Layout; content: LayerContent; built: Params; sheets: typeof arranged.sheets } | null>(null);
+  if (model && lay && content) lastGood.current = { model, lay, content, built, sheets: arranged.sheets };
+  const stale = error ? lastGood.current : null;
 
   function toastMsg(msg: string) {
     setToast(msg);
@@ -391,12 +384,9 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
     : fits
       ? { cls: "s-ok" as const, text: fitInfo ? `Fits ${sheetsText}${fitInfo.scale < 1 ? ` at ${Math.round(fitInfo.scale * 1000) / 10} %` : ""}` : "Fits the bed" }
       : { cls: "s-warn" as const, text: `Larger than the ${fitInfo ? "sheet" : "bed"}${longStrip && params.split === 1 ? " — try Two halves under Joints" : fitInfo ? "" : " — try Fit product to under Sheet"}` };
-  const fittedSize = built.shape === "cyl"
-    ? `Ø${fmtLen(built.dia, units)} × ${fmtLen(built.H, units)}`
-    : `${fmtLen(built.W, units)} × ${built.shape === "poly" ? built.sides + " sides" : fmtLen(built.D, units)} × ${fmtLen(built.H, units)}`;
   const sheetProps = {
     info: fitInfo,
-    size: fittedSize,
+    size: hingeSize(built, units),
     meta: fitSet.mode === "off" ? undefined : fitSet.mode === "auto" ? `Auto · ${sheetsText}` : `Fit · ${fitSet.sheets} sheet${fitSet.sheets === 1 ? "" : "s"}`,
     onSheet: (w: number, h: number) => { const next = { ...params, bedW: w, bedH: h }; patch(next, true); applyFit(next); },
     onFit: (f: { mode: "off" | "sheets" | "auto"; sheets: number }) => {
@@ -412,7 +402,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
     <HelpContext.Provider value={help.ctx}>
     <div className="app">
       <MenuBar
-        title={meta.current.title} kind={meta.current.kind} menus={menus} product="hinge" onProduct={onProduct}
+        title={meta.title} kind={meta.kind} menus={menus} product="hinge" onProduct={onProduct}
         onSave={saveProject} onOpen={openProject}
       />
       <div className="main">
@@ -423,8 +413,9 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
         />
         <div className="stage">
         <ViewToggle value={viewMode} onChange={setViewMode} />
-        <div className="stage-3d" hidden={viewMode !== "3d"}>
-          {seen3d && <HingeView3D model={model} params={built} lay={lay} content={content} />}
+        <div className={`stage-3d${stale ? " stale" : ""}`} hidden={viewMode !== "3d"}>
+          {seen3d && <HingeView3D model={stale?.model ?? model} params={stale?.built ?? built} lay={stale?.lay ?? lay} content={stale?.content ?? content} />}
+          {seen3d && error && <div className="canvas-error">{error}</div>}
         </div>
         <section className="viewport" aria-label="Canvas">
           <div className="ruler-corner" />
@@ -436,8 +427,9 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
             viewRef={viewApi.viewRef}
             bedW={params.bedW}
             bedH={params.bedH}
-            sheets={arranged.sheets}
-            content={content}
+            sheets={stale ? stale.sheets : arranged.sheets}
+            content={stale ? stale.content : content}
+            stale={!!stale}
             layers={params.layers}
             labels={params.labels}
             pitch={params.pitch}
@@ -462,8 +454,8 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
           model={model}
           error={error}
           units={units}
-          dimsMeta={meta.current.dims}
-          patMeta={meta.current.pat}
+          dimsMeta={meta.dims}
+          patMeta={meta.pat}
           onLive={(id, v, mat) => setField(id, v, mat, false)}
           onCommit={(id, v, mat) => setField(id, v, mat, true)}
           onMaterial={(id) => {

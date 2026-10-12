@@ -25,6 +25,8 @@ export function NumberField({
   const inputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState(() => dispVal(!!field.len, value, units));
   const [invalid, setInvalid] = useState(false);
+  /** Why a committed entry was changed to `at` (the field's limits); shown while the value stays there. */
+  const [note, setNote] = useState<{ text: string; at: number } | null>(null);
   const scrub = useRef<{ x: number; v: number; moved: boolean; current: number } | null>(null);
 
   useEffect(() => {
@@ -42,12 +44,16 @@ export function NumberField({
       return;
     }
     setInvalid(false);
-    let v = field.len ? v0 * (units === "in" ? 25.4 : 1) : v0;
-    v = clamp(v, field.min ?? -1e9, field.max ?? 1e9);
+    const typed = field.len ? v0 * (units === "in" ? 25.4 : 1) : v0;
+    const lo = field.min ?? -1e9, hi = field.max ?? 1e9;
+    let v = clamp(typed, lo, hi);
     if (!field.len && !field.float) v = Math.round(v);
-    if (history) setText(dispVal(!!field.len, v, units));
-    if (history) onCommit(v);
-    else onLive(v);
+    if (history) {
+      const limit = (word: string, x: number) => `${label} must be ${word} ${dispVal(!!field.len, x, units)}${field.len ? ` ${units}` : ""}`;
+      setNote((prev) => (typed < lo ? { text: limit("at least", lo), at: v } : typed > hi ? { text: limit("at most", hi), at: v } : prev?.at === v ? prev : null));
+      setText(dispVal(!!field.len, v, units));
+      onCommit(v);
+    } else onLive(v);
   }
 
   function nudge(dir: number, shift: boolean) {
@@ -70,6 +76,7 @@ export function NumberField({
   }
 
   const range = slider ? sliderRange(field, value, defaultValue) : null;
+  const shownNote = !!note && Math.abs(note.at - value) < 1e-9;
 
   return (
     <div className={`fld${invalid ? " invalid" : ""}${range ? "" : " no-slider"}`} hidden={hidden} data-id={field.id}>
@@ -129,7 +136,9 @@ export function NumberField({
             applyRaw(e.target.value, false);
           }}
           onBlur={(e) => { applyRaw(e.target.value, true); }}
+          aria-describedby={shownNote ? `f_${field.id}_note` : undefined}
           onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); applyRaw(e.currentTarget.value, true); return; }
             if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
             e.preventDefault();
             nudge(e.key === "ArrowUp" ? 1 : -1, e.shiftKey);
@@ -141,6 +150,7 @@ export function NumberField({
             onPointerDown={(e) => e.preventDefault()} onClick={reset}><RotateCcw size={12} strokeWidth={2.2} /></button>
         )}
       </span>
+      {shownNote && note && <p className="fld-msg" id={`f_${field.id}_note`} role="status">{note.text}</p>}
     </div>
   );
 }

@@ -22,6 +22,37 @@ const fitsBed = (p: Params, a = arrangeHinge(p)) => {
   return !!a.lay && a.lay.width <= p.bedW + 1e-6 && a.lay.height <= p.bedH + 1e-6;
 };
 
+const down = (v: number, step = 0.5) => Math.floor(v / step + 1e-9) * step;
+
+const RADIUS_TOO_BIG = /^Corner radius is larger than half the width or depth/;
+const SIZE_NAMES = { W: "width", D: "depth" } as const;
+
+/** Outside sizes of a rounded box that are under twice its corner radius. */
+function underTwiceRadius(p: Params): ("W" | "D")[] {
+  if (p.shape !== "rect") return [];
+  return (["W", "D"] as const).filter((k) => p[k] < 2 * p.R - 1e-9);
+}
+
+/** Largest corner radius the box's width and depth take, if the material allows it (else null). */
+function radiusThatFits(p: Params): number | null {
+  const r = down(Math.min(p.W, p.D) / 2);
+  return r >= p.T + 1 ? r : null;
+}
+
+/**
+ * The model's error in terms of what to change. "Corner radius is larger than half the width or
+ * depth" names the size that is too small for the radius and the values that would work.
+ */
+export function explainHingeError(p: Params, error: string): string {
+  const small = RADIUS_TOO_BIG.test(error) ? underTwiceRadius(p) : [];
+  if (!small.length) return error;
+  const what = small.map((k) => `${SIZE_NAMES[k]} (${r3(p[k])} mm)`).join(" and ");
+  const r = radiusThatFits(p);
+  const many = small.length > 1;
+  return `The ${what} ${many ? "are" : "is"} less than twice the ${r3(p.R)} mm corner radius. `
+    + `Make ${many ? "them" : "it"} at least ${r3(2 * p.R)} mm${r != null ? `, or lower the radius to ${r} mm or less` : ""}.`;
+}
+
 /** Model messages that a coded issue below already covers. */
 const COVERED = [/^Corner radius is too small for a lid lip/, /^Torsion bars are under/, /^No flat side is long enough/, /^The hinge is far more flexible/];
 
@@ -34,7 +65,16 @@ export function hingeIssues(p: Params): HIssue[] {
     const fixes: Fix<Params>[] = [];
     if (/Slit spacing is too tight/.test(res.error)) fixes.push({ id: "pitch", label: `Spacing ${r3(up(cutWidth(p) + 1, 0.05))} mm`, safe: true, apply: (q) => ({ ...q, pitch: r3(up(cutWidth(q) + 1, 0.05)) }) });
     if (/Corner radius must be at least/.test(res.error)) fixes.push({ id: "radius", label: `Radius ${up(p.T + 1)} mm`, safe: true, apply: (q) => ({ ...q, R: up(q.T + 1) }) });
-    out.push({ code: "BUILD", level: "error", message: res.error, fixes });
+    const small = RADIUS_TOO_BIG.test(res.error) ? underTwiceRadius(p) : [];
+    if (small.length) {
+      const r = radiusThatFits(p);
+      if (r != null) fixes.push({ id: "radius-fit", label: `Set radius to ${r} mm`, safe: false, apply: (q) => ({ ...q, R: radiusThatFits(q) ?? q.R }) });
+      fixes.push({
+        id: "size-fit", label: `Set ${small.map((k) => SIZE_NAMES[k]).join(" and ")} to ${r3(2 * p.R)} mm`, safe: false,
+        apply: (q) => ({ ...q, ...Object.fromEntries(small.map((k) => [k, Math.max(q[k], 2 * q.R)])) }),
+      });
+    }
+    out.push({ code: "BUILD", level: "error", message: explainHingeError(arranged.params, res.error), fixes });
     return out;
   }
   const m = res;

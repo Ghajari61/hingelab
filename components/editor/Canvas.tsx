@@ -8,7 +8,7 @@ import { fmtLen, type Units } from "./format";
 
 /** The laser bed with the laid-out parts. Products pass ready-made layer content. */
 export function Canvas({
-  canvasRef, view, viewRef, bedW, bedH, sheets, content, engrave, images, layers, labels, pitch = 0, overlay, error, notice, showGrid, tool, spaceDown, units,
+  canvasRef, view, viewRef, bedW, bedH, sheets, content, stale, engrave, images, layers, labels, pitch = 0, overlay, error, notice, showGrid, tool, spaceDown, units,
   onCursor, zoomAt, panBy, onZoomCenter, onActual, onFit, tools,
 }: {
   canvasRef: React.RefObject<HTMLDivElement | null>;
@@ -19,6 +19,8 @@ export function Canvas({
   /** Several sheets laid out side by side, drawn instead of the single bed. */
   sheets?: { x: number; y: number; w: number; h: number; label: string; warn?: boolean }[] | null;
   content: LayerContent | null;
+  /** `content` is the last design that built, drawn dimmed under the error. */
+  stale?: boolean;
   /** Engraved areas (filled, even-odd), on the labels layer. */
   engrave?: string[];
   /** Engraved pictures (sheet coordinates), clipped to `clip`, on the labels layer. */
@@ -80,7 +82,7 @@ export function Canvas({
 
   return (
     <div
-      className={`canvas${dragging ? " dragging" : ""}${tool === "zoom" && !spaceDown ? " zoom-in" : ""}`}
+      className={`canvas${dragging ? " dragging" : ""}${tool === "zoom" && !spaceDown ? " zoom-in" : ""}${stale ? " stale" : ""}`}
       ref={canvasRef}
       onPointerDown={(e) => {
         const canvas = canvasRef.current;

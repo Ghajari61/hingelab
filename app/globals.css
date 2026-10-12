@@ -53,6 +53,7 @@ kbd { font-family: var(--font-num); font-size: 11px; color: var(--fg-faint); }
 .canvas-hud { position: absolute; right: 14px; bottom: 14px; display: flex; gap: 2px; background: var(--hud-bg); border: 1px solid var(--line); border-radius: 10px; padding: 3px; box-shadow: var(--shadow-2); backdrop-filter: blur(6px); }
 .canvas-hud button { background: none; border: 0; height: 28px; min-width: 30px; border-radius: 7px; color: var(--fg-dim); cursor: pointer; font-family: var(--font-num); font-size: 12px; }
 .canvas-hud button:hover { background: var(--surface-hover); color: var(--fg); }
+.canvas.stale #world, .stage-3d.stale #preview3d { opacity: .35; filter: grayscale(.6); }
 .canvas-error { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); background: var(--error-bg); border: 1px solid color-mix(in srgb, var(--err) 50%, transparent); color: var(--error-ink); padding: 8px 14px; border-radius: 10px; max-width: min(520px, 90%); font-size: 13px; box-shadow: var(--shadow-2); z-index: 4; }
 
 /* ---------- dock ---------- */
@@ -80,6 +81,7 @@ details.sec > summary .sec-rst { order: 2; }
 .fld.wide { grid-column: 1 / -1; }
 .fld[hidden] { display: none; }
 .fld.invalid .in { border-color: var(--err); }
+.fld-msg { grid-column: 1 / -1; margin: -4px 0 0; color: var(--warn); font-size: 11.5px; line-height: 1.35; }
 .slider { position: relative; height: 20px; cursor: pointer; touch-action: none; outline: none; min-width: 0; }
 .slider::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; background: var(--line); }
 .slider .fill { position: absolute; left: 0; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; background: var(--select); }
