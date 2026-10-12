@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.7",
-    "pub_date": "2026-10-12T20:30:22.222Z",
-    "notes": "New in HingeLab: a calmer canvas with a plywood, grey, white or dark sheet, a 10 mm grid on the sheet you can turn on and off, sharp preview lines at every zoom, and a fix for the left panel squeezing after opening the editor from the home page.",
+    "version": "1.0.8",
+    "pub_date": "2026-10-12T21:07:02.620Z",
+    "notes": "Letters: a Base rim option moves the tab slots in from the edge of the base and lid.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.7_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnZxZHBGSmRkSWVWMm1GU2pKZWdpZWlYRk9YN0pmOGJSNHJ0bXRtb1Q5QmRxQ0lwa0pSVUlEckljT2s2bVQ3dUdyUFlZcVJHbWJ0dnZ3dUhxOWw4Unc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODM3MDEzCWZpbGU6SGluZ2VMYWJfMS4wLjdfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMC43CnpWZkt5aDFGQk1UKzdZVWprRXA0TVFMTGJWMjJoZ2tyTU9OMk82QWVwd09vM3FldFRTamtGdGtIOXNMYWxNdW9RWmtyVUoxMXVhdDBjZ2o3NmhSMURBPT0K",
-        "size": 2846942
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.8_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnNETkljb0V3dGcvRlFnM1BMTktaRGMzMkZGeWdyU1k4WXJaTFQvaVNpRWVCWVNLVmU3SGxPRDJ3QitlZ0ZUbVRxMk5uTDhnOWNQdVlxUWhwdnFod0FJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODM5MjExCWZpbGU6SGluZ2VMYWJfMS4wLjhfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMC44CjNRTjFZbjJyeXRQYnhvdXNBVm1MK3dxaGZpZjhxNEpOK3VwcUdJeEdGWFEwQTdnc012U2hBSWl0cVQzb1l0R2x0MUNETHNPWGN1UnNZRngxb3VXdkFnPT0K",
+        "size": 2848411
       }
     }
   }
