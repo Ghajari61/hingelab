@@ -28,8 +28,8 @@ export function lettersGroups({ mode, wallStyle, lid, pro = true, onMode, onWall
   const groups: GalleryGroup[] = [{ label: "Mode", name: "Letters mode", art: "mode", value: mode, options: modes, cols: 3 }];
   if (mode === "box") {
     groups.push(
-      { label: "Walls", name: "Wall style", art: "wall", value: wallStyle, options: walls },
-      { label: "Lid", name: "Lid type", art: "lid", value: lid, options: LID_OPTS((v) => onLid(v as Lid)), cols: 3 },
+      { label: "Walls", name: "Wall style", art: "wall", pics: "letters-wall", value: wallStyle, options: walls },
+      { label: "Lid", name: "Lid type", art: "lid", pics: "letters-lid", value: lid, options: LID_OPTS((v) => onLid(v as Lid)), cols: 3 },
     );
   }
   return groups;

@@ -229,7 +229,7 @@ select.sel:focus { border-color: var(--accent); outline: none; }
 @keyframes pe-slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 .pe-3d { position: relative; min-height: 0; min-width: 0; }
 .pe-view { position: absolute; inset: 0; overflow: hidden; }
-.pe-hud { position: absolute; left: 12px; bottom: 12px; display: flex; align-items: center; gap: 14px; background: var(--hud-bg); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-2); padding: 6px 10px; font-size: 12px; }
+.pe-hud { position: absolute; left: 12px; bottom: 12px; max-width: calc(100% - 24px); display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; background: var(--hud-bg); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-2); padding: 6px 10px; font-size: 12px; }
 .pe-explode { display: flex; align-items: center; gap: 8px; color: var(--fg-dim); }
 .pe-explode input { width: 120px; accent-color: var(--accent); }
 .pe-finish { display: flex; align-items: center; gap: 6px; color: var(--fg-dim); }

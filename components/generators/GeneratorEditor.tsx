@@ -391,7 +391,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
         icon: <ArtIcon paths={def.art?.(c.key, o.v) ?? []} />,
         onClick: () => (c.apply ? replace(c.apply(params, o.v), true) : setField(c.key, o.v, true)),
       }));
-      groups.push({ label: c.label, name: c.label, art: `gen-${def.id}`, value: String(getPath(params, c.key)), options, cols: options.length === 3 || options.length >= 5 ? 3 : 2 });
+      groups.push({ label: c.label, name: c.label, art: `gen-${def.id}`, pics: `gen-${def.id}-${c.key}`, value: String(getPath(params, c.key)), options, cols: options.length === 3 || options.length >= 5 ? 3 : 2 });
     }
   }
   groups.push({

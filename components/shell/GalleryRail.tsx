@@ -6,6 +6,7 @@ import { Lightbulb, Redo2, Undo2 } from "lucide-react";
 import { LockIcon } from "@/components/billing/Lock";
 import { HelpContext, HelpMark } from "@/components/help/HelpContext";
 import type { Opt } from "@/components/editor/ControlBar";
+import { railPic } from "@/lib/railArt";
 import { ART } from "./cardArt";
 
 export type GalleryGroup = {
@@ -15,6 +16,8 @@ export type GalleryGroup = {
   name: string;
   /** Prefix into the card art table, e.g. "shape" for "shape:rect". */
   art: string;
+  /** Prefix into the rendered 3D picture table when it differs from `art`. */
+  pics?: string;
   value: string;
   options: Opt[];
   cols?: 2 | 3;
@@ -24,6 +27,17 @@ function TipsButton() {
   const help = useContext(HelpContext);
   if (!help) return null;
   return <button type="button" className="hdr-btn" aria-label="Tips" title="Tips for this product" onClick={() => help.open(help.map.tips)}><Lightbulb size={16} /></button>;
+}
+
+/** Rendered 3D picture (from scripts/rail-art.ts) when one exists, else the line art. */
+function CardArt({ pic, children }: { pic?: string; children: ReactNode }) {
+  if (!pic) return <span className="art" aria-hidden="true">{children}</span>;
+  return (
+    <span className="art pic" aria-hidden="true">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={pic} alt="" width={96} height={66} loading="lazy" decoding="async" draggable={false} />
+    </span>
+  );
 }
 
 export type History = { canUndo: boolean; canRedo: boolean; undo: () => void; redo: () => void };
@@ -59,7 +73,7 @@ export function GalleryRail({ title, icon, groups, history, children }: {
                   title={o.locked ? `${o.title ?? o.text} (Pro)` : o.title}
                   aria-pressed={g.value === o.v} disabled={o.disabled} onClick={o.onClick}
                 >
-                  <span className="art" aria-hidden="true">{ART[`${g.art}:${o.v}`] ?? o.icon}</span>
+                  <CardArt pic={railPic(g.pics ?? g.art, o.v)}>{ART[`${g.art}:${o.v}`] ?? o.icon}</CardArt>
                   <span className="lbl">{o.text}{o.locked && <LockIcon />}</span>
                   {o.soon && <span className="soon">{o.soon}</span>}
                 </button>
