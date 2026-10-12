@@ -86,7 +86,8 @@ export function Canvas({
       ref={canvasRef}
       onPointerDown={(e) => {
         const canvas = canvasRef.current;
-        if (!canvas) return;
+        // Capturing the pointer for a HUD press would retarget its click to the canvas.
+        if (!canvas || (e.target as Element).closest(".canvas-hud")) return;
         const r = canvas.getBoundingClientRect();
         const cx = e.clientX - r.left, cy = e.clientY - r.top;
         if (tool === "zoom" && !spaceDown && e.button === 0) {
