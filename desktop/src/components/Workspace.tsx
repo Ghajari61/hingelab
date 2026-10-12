@@ -1,11 +1,13 @@
 import { useRef, useState, type RefObject } from "react";
-import { AlertTriangle, Box, CircleAlert, Download, FileDown, Info, Lock, Maximize, Minus, Plus, Redo2, RefreshCw, Scan, Sparkles, Star, Undo2, WifiOff, Wrench } from "lucide-react";
+import { AlertTriangle, Box, CircleAlert, Download, FileDown, Grid3x3, Info, Lock, Maximize, Minus, Plus, Redo2, RefreshCw, Scan, Sparkles, Star, Undo2, WifiOff, Wrench } from "lucide-react";
 import type { DProduct } from "../../../lib/desktop/types";
 import type { DesignState } from "../design";
 import type { AppError } from "../ipc";
-import type { Units } from "../local";
+import { DEFAULT_PREFS, usePrefs, type SheetTone, type Units } from "../local";
 import { Canvas, zoomLabel, type CanvasHandle } from "./Canvas";
 import { SettingsPanel } from "./SettingsPanel";
+
+const SHEET_TONES: [SheetTone, string][] = [["plywood", "Plywood"], ["grey", "Soft grey"], ["white", "White"], ["dark", "Dark"]];
 
 interface Props {
   product: DProduct;
@@ -34,6 +36,7 @@ export function Workspace(p: Props) {
   const { design, product } = p;
   const r = design.result;
   const [zoom, setZoom] = useState(1);
+  const [prefs, setPrefs] = usePrefs();
   const [editingName, setEditingName] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
   const name = String(design.params?.name ?? r?.params.name ?? product.name);
@@ -94,8 +97,15 @@ export function Workspace(p: Props) {
             <button type="button" className="icon-btn" title="Zoom in (Ctrl+=)" onClick={() => p.canvas.current?.zoomIn()}><Plus size={15} aria-hidden /></button>
             <button type="button" className="icon-btn" title="Fit to window (Ctrl+0)" onClick={() => p.canvas.current?.fit()}><Maximize size={15} aria-hidden /></button>
             <button type="button" className="icon-btn" title="Actual size, 100% (Ctrl+1)" onClick={() => p.canvas.current?.reset()}><Scan size={15} aria-hidden /></button>
+            <span className="sep" />
+            <button type="button" className="icon-btn" aria-pressed={prefs.sheetGrid} title={prefs.sheetGrid ? "Hide the 10 mm grid on the sheet" : "Show a 10 mm grid on the sheet"} onClick={() => setPrefs((o) => ({ ...DEFAULT_PREFS, ...o, sheetGrid: !prefs.sheetGrid }))}><Grid3x3 size={15} aria-hidden /></button>
+            <span className="tones" role="radiogroup" aria-label="Sheet colour">
+              {SHEET_TONES.map(([v, label]) => (
+                <button key={v} type="button" role="radio" aria-checked={prefs.sheetTone === v} aria-label={label} title={`Sheet: ${label}`} className={`tone-sw tone-${v}`} onClick={() => setPrefs((o) => ({ ...DEFAULT_PREFS, ...o, sheetTone: v }))} />
+              ))}
+            </span>
           </div>
-          <Canvas ref={p.canvas} svg={r?.svg ?? null} width={r?.width ?? 0} height={r?.height ?? 0} fitKey={`${product.id}:${r ? "1" : "0"}`} dim={design.busy || !!r?.locked || (!!err && err.kind !== "network" && err.kind !== "rate_limited")} onZoom={setZoom}>
+          <Canvas ref={p.canvas} svg={r?.svg ?? null} tone={prefs.sheetTone} grid={prefs.sheetGrid} width={r?.width ?? 0} height={r?.height ?? 0} fitKey={`${product.id}:${r ? "1" : "0"}`} dim={design.busy || !!r?.locked || (!!err && err.kind !== "network" && err.kind !== "rate_limited")} onZoom={setZoom}>
             {r?.locked && (
               <div className="overlay locked" role="status">
                 <Lock size={22} aria-hidden />

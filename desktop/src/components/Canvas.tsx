@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
+import type { SheetTone } from "../local";
 
 /** Pixels per millimetre at 100 %: true size on a standard 96 dpi screen. */
 const PX_PER_MM = 96 / 25.4;
@@ -22,8 +23,24 @@ interface Props {
   /** Fit again when this changes (a new design). */
   fitKey: string;
   dim?: boolean;
+  tone?: SheetTone;
+  /** Draw a 10 mm grid on the sheet. */
+  grid?: boolean;
   onZoom?: (z: number) => void;
   children?: React.ReactNode;
+}
+
+/**
+ * The preview copy of a cut file: every line drawn at a fixed screen width at any zoom (the file's
+ * 0.1 mm hairlines are under a pixel when zoomed out), and on the dark sheet black and blue lines
+ * lightened. Display only: the file that is saved or exported is the server's, unchanged.
+ */
+export function displaySVG(svg: string, tone: SheetTone): string {
+  const dark = tone === "dark"
+    ? `[stroke="#000000"],[stroke="#000"]{stroke:#E6E8F0}[fill="#000000"],[fill="#000"]{fill:#E6E8F0}[stroke="#0000FF"]{stroke:#7FA8FF}[fill="#0000FF"]{fill:#7FA8FF}[stroke="#FF0000"]{stroke:#FF5C5C}`
+    : "";
+  const style = `<style>path,line,polyline,polygon,rect,circle,ellipse{vector-effect:non-scaling-stroke;stroke-width:1.35px;stroke-linejoin:round}${dark}</style>`;
+  return svg.replace(/<svg\b[^>]*>/, (open) => open + style);
 }
 
 /** Ruler steps in mm: the first whose labels are at least 56 px apart. */
@@ -37,7 +54,7 @@ function stepFor(scale: number): number {
  * at true scale, on a 10 mm grid with millimetre rulers. Ctrl + wheel zooms at the pointer; drag
  * or wheel pans.
  */
-export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas({ svg, width, height, fitKey, dim, onZoom, children }, ref) {
+export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas({ svg, width, height, fitKey, dim, tone = "plywood", grid: sheetGrid = true, onZoom, children }, ref) {
   const box = useRef<HTMLDivElement>(null);
   const top = useRef<HTMLCanvasElement>(null);
   const left = useRef<HTMLCanvasElement>(null);
@@ -49,10 +66,10 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas({ svg, wid
 
   useEffect(() => {
     if (!svg) return;
-    const u = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+    const u = URL.createObjectURL(new Blob([displaySVG(svg, tone)], { type: "image/svg+xml" }));
     setUrl(u);
     return () => URL.revokeObjectURL(u);
-  }, [svg]);
+  }, [svg, tone]);
 
   useLayoutEffect(() => {
     const el = box.current;
@@ -178,7 +195,10 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas({ svg, wid
       onPointerCancel={() => (drag.current = null)}
     >
       {url && width > 0 && (
-        <div className={`sheet${dim ? " dim" : ""}`} style={{ left: view.x, top: view.y, width: width * scale, height: height * scale }}>
+        <div
+          className={`sheet tone-${tone}${sheetGrid && 10 * scale >= 4 ? " gridded" : ""}${dim ? " dim" : ""}`}
+          style={{ left: view.x, top: view.y, width: width * scale, height: height * scale, ["--sg" as string]: `${10 * scale}px` }}
+        >
           <img src={url} alt="Preview of the cut file" draggable={false} />
         </div>
       )}
