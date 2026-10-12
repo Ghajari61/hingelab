@@ -63,6 +63,32 @@ export interface GenerateRequest {
   change?: { key: string; value: unknown };
   fix?: { code: string; id: string };
   autofix?: boolean;
+  /** Also send the assembled 3D model (the 3D view is open). */
+  model?: boolean;
+}
+
+/** A material that keeps its own colour in every look (engraving, mirror acrylic). */
+export interface D3Material {
+  color: string;
+  roughness: number;
+  metalness: number;
+}
+
+/**
+ * One object of the assembled design (mm, z up). `m` is its column-major 4×4 placement in the
+ * model's frame; `ex` is how far it moves there when the view is fully exploded.
+ */
+export type D3Object = { name: string; m: number[]; ex: [number, number, number] } & (
+  /** An outline in its own plane extruded along z from `z` up `depth`. Flat [x, y, x, y, …] lists; `fade` hides it while exploded. */
+  | { kind: "slab"; outer: number[]; holes: number[][]; z: number; depth: number; tint?: number; mat?: D3Material; fade?: boolean }
+  /** A triangle mesh with optional vertex colours (the bent hinge wall). */
+  | { kind: "mesh"; pos: number[]; col?: number[]; index: number[]; tint?: number; vertexBase?: string }
+  /** Line segments drawn on the model (hinge slits). */
+  | { kind: "lines"; pos: number[]; color: string; opacity: number }
+);
+
+export interface D3Model {
+  objects: D3Object[];
 }
 
 export interface GenerateResponse {
@@ -85,6 +111,8 @@ export interface GenerateResponse {
   locked?: string;
   /** Set when the design cannot be built (HTTP 422). */
   error?: string;
+  /** The assembled design in 3D, when asked for and the SVG is sent too. */
+  model?: D3Model;
 }
 
 export interface DesktopAccount {

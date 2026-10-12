@@ -43,10 +43,14 @@ export function useDesign(onFatal: (e: AppError) => void) {
   const future = useRef<Params[]>([]);
   const retryTimer = useRef<number | null>(null);
   const lastRequest = useRef<GenerateRequest | null>(null);
+  /** The 3D view is open: builds also bring the assembled model. */
+  const want3d = useRef(false);
+  const hasModel = useRef(false);
 
   const flags = () => ({ canUndo: past.current.length > 1, canRedo: future.current.length > 0 });
 
-  const send = useCallback(async (req: GenerateRequest, record = true) => {
+  const send = useCallback(async (request: GenerateRequest, record = true): Promise<void> => {
+    const req: GenerateRequest = want3d.current ? { ...request, model: true } : request;
     const id = ++seq.current;
     lastRequest.current = req;
     if (retryTimer.current) window.clearTimeout(retryTimer.current);
@@ -56,6 +60,7 @@ export function useDesign(onFatal: (e: AppError) => void) {
       if (id !== seq.current) return;
       const next = out.body.params;
       params.current = next;
+      hasModel.current = !!out.body.model;
       if (record) {
         const prev = past.current[past.current.length - 1];
         if (!prev || JSON.stringify(prev) !== JSON.stringify(next)) {
@@ -64,6 +69,8 @@ export function useDesign(onFatal: (e: AppError) => void) {
         }
       }
       setState((s) => ({ ...s, product: out.body.product, params: next, result: out.body, status: out.status, busy: false, error: null, ...flags() }));
+      // The 3D view opened while this build was on its way: build again with the model.
+      if (want3d.current && !req.model && out.status === 200) void send({ product: out.body.product, params: next }, false);
     } catch (e) {
       if (id !== seq.current) return;
       const err = e as AppError;
@@ -118,6 +125,11 @@ export function useDesign(onFatal: (e: AppError) => void) {
   const autofix = useCallback(() => request({ autofix: true }), [request]);
   const refresh = useCallback(() => request({}, false), [request]);
 
+  const setWant3d = useCallback((on: boolean) => {
+    want3d.current = on;
+    if (on && !hasModel.current && product.current && params.current && !timer.current) request({}, false);
+  }, [request]);
+
   const travel = useCallback((dir: -1 | 1) => {
     if (!product.current) return;
     if (dir < 0 && past.current.length > 1) {
@@ -137,5 +149,5 @@ export function useDesign(onFatal: (e: AppError) => void) {
     if (retryTimer.current) window.clearTimeout(retryTimer.current);
   }, []);
 
-  return { state, open, change, flush, fix, autofix, refresh, undo: () => travel(-1), redo: () => travel(1) };
+  return { state, open, change, flush, fix, autofix, refresh, setWant3d, undo: () => travel(-1), redo: () => travel(1) };
 }

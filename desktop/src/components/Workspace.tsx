@@ -1,13 +1,17 @@
-import { useRef, useState, type RefObject } from "react";
-import { AlertTriangle, Box, CircleAlert, Download, FileDown, Grid3x3, Info, Lock, Maximize, Minus, Plus, Redo2, RefreshCw, Scan, Sparkles, Star, Undo2, WifiOff, Wrench } from "lucide-react";
+import { lazy, Suspense, useEffect, useRef, useState, type RefObject } from "react";
+import { AlertTriangle, Box, CircleAlert, Download, FileDown, Grid2x2, Grid3x3, Info, Lock, Maximize, Minus, Plus, Redo2, RefreshCw, Scan, Sparkles, Square, Star, Undo2, WifiOff, Wrench } from "lucide-react";
 import type { DProduct } from "../../../lib/desktop/types";
 import type { DesignState } from "../design";
 import type { AppError } from "../ipc";
-import { DEFAULT_PREFS, usePrefs, type SheetTone, type Units } from "../local";
+import { DEFAULT_PREFS, usePrefs, type LocalPrefs, type Shade3D, type SheetTone, type Units } from "../local";
 import { Canvas, zoomLabel, type CanvasHandle } from "./Canvas";
 import { SettingsPanel } from "./SettingsPanel";
+import type { PaneId } from "./View3D";
+
+const View3D = lazy(() => import("./View3D"));
 
 const SHEET_TONES: [SheetTone, string][] = [["plywood", "Plywood"], ["grey", "Soft grey"], ["white", "White"], ["dark", "Dark"]];
+const SHADES: [Shade3D, string, string][] = [["shaded", "Shaded", "Shaded (F3)"], ["wire", "Wire", "Wireframe (F3)"], ["edges", "Edges", "Shaded with edges (F4)"]];
 
 interface Props {
   product: DProduct;
@@ -30,6 +34,8 @@ interface Props {
   onRefreshPlan: () => void;
   onFavorite: () => void;
   onFullEditor: () => void;
+  /** The 3D view opened or closed: builds then bring the assembled model. */
+  onWant3d: (on: boolean) => void;
 }
 
 export function Workspace(p: Props) {
@@ -44,6 +50,39 @@ export function Workspace(p: Props) {
   const issues = r?.issues ?? [];
   const safeFixes = issues.some((i) => i.fixes.some((f) => f.safe));
   const err = design.error;
+  const set = (patch: Partial<LocalPrefs>) => setPrefs((o) => ({ ...DEFAULT_PREFS, ...o, ...patch }));
+  const is3d = prefs.view3d;
+  const [active, setActive] = useState<PaneId>("persp");
+  const [explode, setExplode] = useState(0);
+  const { onWant3d } = p;
+  useEffect(() => { onWant3d(is3d); }, [is3d, onWant3d]);
+  const dim = design.busy || !!r?.locked || (!!err && err.kind !== "network" && err.kind !== "rate_limited");
+
+  const overlays = (
+    <>
+      {r?.locked && (
+        <div className="overlay locked" role="status">
+          <Lock size={22} aria-hidden />
+          <h2>This design needs Pro</h2>
+          <p>{r.locked}</p>
+          <div className="row">
+            <button type="button" className="btn primary" onClick={p.onUpgrade}>Upgrade to Pro</button>
+            <button type="button" className="btn" onClick={p.onRefreshPlan}>I've upgraded</button>
+          </div>
+        </div>
+      )}
+      {!r?.locked && r?.error && !design.busy && (
+        <div className="overlay problem" role="alert">
+          <CircleAlert size={22} aria-hidden />
+          <h2>This design can't be built</h2>
+          <p>{r.error}</p>
+          {issues.some((i) => i.fixes.length) && <p className="hint">The checks on the right suggest fixes.</p>}
+        </div>
+      )}
+      {err && !design.busy && <ErrorOverlay error={err} online={p.online} onRetry={p.onRefresh} />}
+      {!r && design.busy && <div className="overlay quiet" aria-busy="true"><RefreshCw size={20} className="spin" aria-hidden /><p>Building on the server…</p></div>}
+    </>
+  );
 
   return (
     <div className="workspace">
@@ -91,43 +130,59 @@ export function Workspace(p: Props) {
 
       <div className="ws-body">
         <main className="ws-canvas">
-          <div className="canvas-tools" role="toolbar" aria-label="View">
-            <button type="button" className="icon-btn" title="Zoom out (Ctrl+-)" onClick={() => p.canvas.current?.zoomOut()}><Minus size={15} aria-hidden /></button>
-            <span className="zoom" aria-live="polite">{zoomLabel(zoom)}</span>
-            <button type="button" className="icon-btn" title="Zoom in (Ctrl+=)" onClick={() => p.canvas.current?.zoomIn()}><Plus size={15} aria-hidden /></button>
-            <button type="button" className="icon-btn" title="Fit to window (Ctrl+0)" onClick={() => p.canvas.current?.fit()}><Maximize size={15} aria-hidden /></button>
-            <button type="button" className="icon-btn" title="Actual size, 100% (Ctrl+1)" onClick={() => p.canvas.current?.reset()}><Scan size={15} aria-hidden /></button>
-            <span className="sep" />
-            <button type="button" className="icon-btn" aria-pressed={prefs.sheetGrid} title={prefs.sheetGrid ? "Hide the 10 mm grid on the sheet" : "Show a 10 mm grid on the sheet"} onClick={() => setPrefs((o) => ({ ...DEFAULT_PREFS, ...o, sheetGrid: !prefs.sheetGrid }))}><Grid3x3 size={15} aria-hidden /></button>
-            <span className="tones" role="radiogroup" aria-label="Sheet colour">
-              {SHEET_TONES.map(([v, label]) => (
-                <button key={v} type="button" role="radio" aria-checked={prefs.sheetTone === v} aria-label={label} title={`Sheet: ${label}`} className={`tone-sw tone-${v}`} onClick={() => setPrefs((o) => ({ ...DEFAULT_PREFS, ...o, sheetTone: v }))} />
-              ))}
+          <div className={`canvas-tools${is3d ? " tools3d" : ""}`} role="toolbar" aria-label="View">
+            <span className="seg" role="group" aria-label="Workspace view">
+              <button type="button" aria-pressed={!is3d} title="The cut sheet, as it will be saved" onClick={() => set({ view3d: false })}>2D sheet</button>
+              <button type="button" aria-pressed={is3d} title="The design assembled in 3D: Top, Front, Left and Perspective views" onClick={() => set({ view3d: true })}><Box size={13} aria-hidden /> 3D</button>
             </span>
+            <span className="sep" />
+            {is3d ? (
+              <>
+                <button type="button" className="icon-btn" aria-pressed={prefs.view3dQuad} title={prefs.view3dQuad ? "Maximize the active view (Alt+W)" : "Show all four views (Alt+W)"} onClick={() => set({ view3dQuad: !prefs.view3dQuad })}>
+                  {prefs.view3dQuad ? <Grid2x2 size={15} aria-hidden /> : <Square size={15} aria-hidden />}
+                </button>
+                <span className="seg" role="group" aria-label="Display">
+                  {SHADES.map(([v, label, title]) => <button key={v} type="button" aria-pressed={prefs.view3dShade === v} title={title} onClick={() => set({ view3dShade: v })}>{label}</button>)}
+                </span>
+                <label className="explode" title="Pull the layers apart">Explode <input type="range" min={0} max={1} step={0.01} value={explode} aria-label="Explode" onChange={(e) => setExplode(parseFloat(e.target.value))} /></label>
+                <button type="button" className="icon-btn" title="Zoom extents, all views (Ctrl+0)" onClick={() => p.canvas.current?.fit()}><Maximize size={15} aria-hidden /></button>
+              </>
+            ) : (
+              <>
+                <button type="button" className="icon-btn" title="Zoom out (Ctrl+-)" onClick={() => p.canvas.current?.zoomOut()}><Minus size={15} aria-hidden /></button>
+                <span className="zoom" aria-live="polite">{zoomLabel(zoom)}</span>
+                <button type="button" className="icon-btn" title="Zoom in (Ctrl+=)" onClick={() => p.canvas.current?.zoomIn()}><Plus size={15} aria-hidden /></button>
+                <button type="button" className="icon-btn" title="Fit to window (Ctrl+0)" onClick={() => p.canvas.current?.fit()}><Maximize size={15} aria-hidden /></button>
+                <button type="button" className="icon-btn" title="Actual size, 100% (Ctrl+1)" onClick={() => p.canvas.current?.reset()}><Scan size={15} aria-hidden /></button>
+                <span className="sep" />
+                <button type="button" className="icon-btn" aria-pressed={prefs.sheetGrid} title={prefs.sheetGrid ? "Hide the 10 mm grid on the sheet" : "Show a 10 mm grid on the sheet"} onClick={() => set({ sheetGrid: !prefs.sheetGrid })}><Grid3x3 size={15} aria-hidden /></button>
+                <span className="tones" role="radiogroup" aria-label="Sheet colour">
+                  {SHEET_TONES.map(([v, label]) => (
+                    <button key={v} type="button" role="radio" aria-checked={prefs.sheetTone === v} aria-label={label} title={`Sheet: ${label}`} className={`tone-sw tone-${v}`} onClick={() => set({ sheetTone: v })} />
+                  ))}
+                </span>
+              </>
+            )}
           </div>
-          <Canvas ref={p.canvas} svg={r?.svg ?? null} tone={prefs.sheetTone} grid={prefs.sheetGrid} width={r?.width ?? 0} height={r?.height ?? 0} fitKey={`${product.id}:${r ? "1" : "0"}`} dim={design.busy || !!r?.locked || (!!err && err.kind !== "network" && err.kind !== "rate_limited")} onZoom={setZoom}>
-            {r?.locked && (
-              <div className="overlay locked" role="status">
-                <Lock size={22} aria-hidden />
-                <h2>This design needs Pro</h2>
-                <p>{r.locked}</p>
-                <div className="row">
-                  <button type="button" className="btn primary" onClick={p.onUpgrade}>Upgrade to Pro</button>
-                  <button type="button" className="btn" onClick={p.onRefreshPlan}>I've upgraded</button>
-                </div>
-              </div>
-            )}
-            {!r?.locked && r?.error && !design.busy && (
-              <div className="overlay problem" role="alert">
-                <CircleAlert size={22} aria-hidden />
-                <h2>This design can't be built</h2>
-                <p>{r.error}</p>
-                {issues.some((i) => i.fixes.length) && <p className="hint">The checks on the right suggest fixes.</p>}
-              </div>
-            )}
-            {err && !design.busy && <ErrorOverlay error={err} online={p.online} onRetry={p.onRefresh} />}
-            {!r && design.busy && <div className="overlay quiet" aria-busy="true"><RefreshCw size={20} className="spin" aria-hidden /><p>Building on the server…</p></div>}
-          </Canvas>
+          {is3d ? (
+            <Suspense fallback={<div className="v3" aria-busy="true" />}>
+              <View3D
+                ref={p.canvas} model={r?.model ?? null} material={String(r?.params.material ?? "")} explode={explode}
+                shade={prefs.view3dShade} quad={prefs.view3dQuad} active={active} dim={dim}
+                onActive={(a) => setActive(a)} onQuad={(q) => set({ view3dQuad: q })} onShade={(s) => set({ view3dShade: s })}
+              >
+                {overlays}
+                {r?.svg && !r.model && !design.busy && !err && (
+                  <div className="overlay quiet" role="status"><Box size={20} aria-hidden /><p>This design is too large to show in 3D. Full editor shows it on the website.</p></div>
+                )}
+                {r?.svg && !r.model && design.busy && <div className="overlay quiet" aria-busy="true"><RefreshCw size={20} className="spin" aria-hidden /><p>Building the 3D model…</p></div>}
+              </View3D>
+            </Suspense>
+          ) : (
+            <Canvas ref={p.canvas} svg={r?.svg ?? null} tone={prefs.sheetTone} grid={prefs.sheetGrid} width={r?.width ?? 0} height={r?.height ?? 0} fitKey={`${product.id}:${r ? "1" : "0"}`} dim={dim} onZoom={setZoom}>
+              {overlays}
+            </Canvas>
+          )}
           <footer className="status">
             {r?.stats.map((s) => <span key={s.label}><b>{s.label}</b> {s.value}</span>)}
             {r?.watermark && <span className="wm" title="Free plan exports carry a small Made with HingeLab mark below the parts.">Free plan mark included</span>}

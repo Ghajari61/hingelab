@@ -8,6 +8,7 @@ import type { DCatalog, DesktopAccount } from "./ipc";
 export type Theme = "system" | "light" | "dark";
 export type Units = "mm" | "in";
 export type SheetTone = "plywood" | "grey" | "white" | "dark";
+export type Shade3D = "shaded" | "wire" | "edges";
 
 export interface LocalPrefs {
   theme: Theme;
@@ -21,6 +22,11 @@ export interface LocalPrefs {
   sheetTone: SheetTone;
   /** 10 mm grid drawn on the sheet. */
   sheetGrid: boolean;
+  /** The workspace shows the assembled design in 3D instead of the sheet. */
+  view3d: boolean;
+  /** Four 3D views (Top, Front, Left, Perspective) rather than one. */
+  view3dQuad: boolean;
+  view3dShade: Shade3D;
 }
 
 export interface SavedDesign {
@@ -46,7 +52,7 @@ export interface Favorite {
 }
 
 const KEYS = { prefs: "hl-prefs-v1", recent: "hl-recent-v1", favorites: "hl-favorites-v1", last: "hl-last-v1", catalog: "hl-catalog-v1", account: "hl-account-v1" };
-export const DEFAULT_PREFS: LocalPrefs = { theme: "system", units: "mm", autoCheckUpdates: true, reuseLastSettings: true, defaultProduct: "hinge", sidebarCollapsed: false, sheetTone: "plywood", sheetGrid: true };
+export const DEFAULT_PREFS: LocalPrefs = { theme: "system", units: "mm", autoCheckUpdates: true, reuseLastSettings: true, defaultProduct: "hinge", sidebarCollapsed: false, sheetTone: "plywood", sheetGrid: true, view3d: false, view3dQuad: true, view3dShade: "shaded" };
 const MAX_RECENT = 24;
 const MAX_ITEM = 300_000;
 

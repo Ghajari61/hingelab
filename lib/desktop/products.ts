@@ -20,7 +20,11 @@ import { autoFixAll, sortIssues, type Issue } from "@/lib/issues";
 import { hingeIssues } from "@/lib/issues/hinge";
 import { BUNDLED_FONTS } from "@/lib/letters/fonts";
 import { addWatermark, FREE_PATTERNS, FREE_SHAPES, hingeLocks, needsWatermark, PATTERN_NAMES, SHAPE_NAMES, type Plan } from "@/lib/plans";
-import type { DCatalog, DesktopProductId, DField, DForm, DIssue, DProduct, DSection, GenerateRequest, GenerateResponse } from "./types";
+import { generatorScene } from "@/lib/generators/scene3d";
+import { buildHingeScene } from "@/lib/hinge3d/scene";
+import type { Scene3D } from "@/lib/three/flat";
+import { sceneModel } from "./model3d";
+import type { DCatalog, D3Model, DesktopProductId, DField, DForm, DIssue, DProduct, DSection, GenerateRequest, GenerateResponse } from "./types";
 
 export const DESKTOP_PRODUCTS: DesktopProductId[] = ["hinge", ...GENERATOR_IDS];
 export const CATALOG_VERSION = 1;
@@ -212,6 +216,18 @@ function sheetSize(svg: string): { width?: number; height?: number } {
 
 const plainObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 
+/** The 3D model when the app asked for it; a design too large to send, or a failed build, sends none. */
+function modelPart(r: GenerateRequest, at: (explode: number) => Scene3D): { model?: D3Model } {
+  if (r.model !== true) return {};
+  try {
+    const model = sceneModel(at);
+    return model ? { model } : {};
+  } catch (e) {
+    console.error("desktop 3D model failed", e);
+    return {};
+  }
+}
+
 /**
  * One request from the desktop editor. The plan comes from the caller's session, never from the
  * request; a design the plan does not include gets 403 with no SVG at all, because anything sent
@@ -287,7 +303,11 @@ function generateHinge(r: GenerateRequest, product: DProduct, plan: Plan): Gener
     { label: "Sheet", value: size.width ? `${Math.round(size.width)} × ${Math.round(size.height!)} mm` : "-" },
     { label: "Material", value: MATERIALS[p.material]?.name ?? "Custom" },
   ];
-  return { status: 200, body: { ...base(p, issues, applied), stats, svg, fileName: fileNameOf(p.name, "hinge-box"), ...size, watermark } };
+  const model = a.result;
+  return {
+    status: 200,
+    body: { ...base(p, issues, applied), stats, svg, fileName: fileNameOf(p.name, "hinge-box"), ...size, watermark, ...modelPart(r, (e) => buildHingeScene(model, a.params, e)) },
+  };
 }
 
 function hingeSummary(p: Params): string {
@@ -359,5 +379,8 @@ async function generateGenerator(r: GenerateRequest, id: GeneratorId, product: D
   const lock = def.pro?.(a.params, out) ?? null;
   if (lock && plan !== "pro") return { status: 403, body: { ...base(p, issues, applied), stats, locked: `${lock} Upgrade to Pro to preview and export it in the desktop app.` } };
   const svg = genSVG(def, a.params, a.lay);
-  return { status: 200, body: { ...base(p, issues, applied), stats, svg, fileName: fileNameOf(def.fileName(a.params), id), ...sheetSize(svg), watermark: false } };
+  return {
+    status: 200,
+    body: { ...base(p, issues, applied), stats, svg, fileName: fileNameOf(def.fileName(a.params), id), ...sheetSize(svg), watermark: false, ...modelPart(r, (e) => generatorScene(out, a.params.T, e)) },
+  };
 }

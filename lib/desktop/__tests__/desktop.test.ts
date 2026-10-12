@@ -234,3 +234,46 @@ describe("desktop generate (server-side SVG)", () => {
     expect(qr.status).toBe(200);
   });
 });
+
+describe("desktop 3D model", () => {
+  const finite = (a: number[]) => a.every(Number.isFinite);
+
+  it("is sent only when asked for, and only with the SVG", async () => {
+    expect((await gen({ product: "hinge" })).body.model).toBeUndefined();
+    const locked = await gen({ product: "hinge", change: { key: "shape", value: "cyl" }, model: true });
+    expect(locked.status).toBe(403);
+    expect(locked.body.model).toBeUndefined();
+  });
+
+  it("carries the Hinge Box's base, bent wall, slits and lid, and lifts the lid when exploded", async () => {
+    const r = await gen({ product: "hinge", change: { key: "lid", value: "fixed" }, model: true });
+    const objs = r.body.model!.objects;
+    expect(objs.map((o) => o.name)).toEqual(expect.arrayContaining(["base", "wall", "slits", "lid"]));
+    const by = (n: string) => objs.find((o) => o.name === n)!;
+    expect(by("base").ex).toEqual([0, 0, 0]);
+    expect(by("wall").kind).toBe("mesh");
+    expect(by("lid").ex[2]).toBeGreaterThan(by("wall").ex[2]);
+    expect(by("wall").ex[2]).toBeGreaterThan(0);
+  });
+
+  it("every product sends a well-formed model of a few hundred kB at most", async () => {
+    for (const p of (await desktopCatalog()).products) {
+      const r = await gen({ product: p.id, model: true }, "pro");
+      expect(r.status, p.id).toBe(200);
+      const objs = r.body.model?.objects ?? [];
+      expect(objs.length, p.id).toBeGreaterThan(0);
+      expect(JSON.stringify(r.body.model).length, p.id).toBeLessThan(800_000);
+      for (const o of objs) {
+        expect(o.m.length).toBe(16);
+        expect(finite([...o.m, ...o.ex])).toBe(true);
+        if (o.kind === "slab") {
+          expect(o.outer.length, `${p.id} ${o.name}`).toBeGreaterThanOrEqual(6);
+          expect(finite([...o.outer, ...o.holes.flat(), o.z, o.depth])).toBe(true);
+          expect(o.depth).toBeGreaterThan(0);
+        } else {
+          expect(finite(o.pos)).toBe(true);
+        }
+      }
+    }
+  });
+});

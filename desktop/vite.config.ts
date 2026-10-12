@@ -14,6 +14,8 @@ export default defineConfig({
     emptyOutDir: true,
     target: "es2022",
     sourcemap: false,
+    // The 3D view (three.js) is its own chunk of about 600 kB, loaded when 3D is first opened.
+    chunkSizeWarningLimit: 700,
     // Tauri's CSP has no 'unsafe-eval' and no inline scripts.
     modulePreload: { polyfill: false },
   },

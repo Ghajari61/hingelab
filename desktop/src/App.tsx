@@ -335,6 +335,7 @@ export function App() {
             onRefreshPlan={refreshPlan}
             onFavorite={toggleFavorite}
             onFullEditor={() => openOnline("web-editors", `/app/editor/local?p=${encodeURIComponent(product.id)}`)}
+            onWant3d={design.setWant3d}
           />
         )}
         {route === "workspace" && !product && <Generators catalog={catalog} plan={plan} initial={local.defaultProduct} favorites={favorites} onPreset={openPreset} onNew={openNew} onFavorite={() => {}} />}
