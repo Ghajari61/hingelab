@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.6",
-    "pub_date": "2026-10-12T19:38:31.431Z",
-    "notes": "New in HingeLab: 3D pictures on every left-rail option card, a left rail that no longer clips on narrow windows, and the canvas zoom bar (zoom in and out, actual size, fit, grid, zoom tool) working again.",
+    "version": "1.0.7",
+    "pub_date": "2026-10-12T20:30:22.222Z",
+    "notes": "New in HingeLab: a calmer canvas with a plywood, grey, white or dark sheet, a 10 mm grid on the sheet you can turn on and off, sharp preview lines at every zoom, and a fix for the left panel squeezing after opening the editor from the home page.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.6_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnV6N0dxQ2hqUG9ldkZhMWltV2kzVFFhN0x6Y3VzWmg2K1NIeEdKUFIzQmpMSXRETFU5cG5TNU9oSHlkVWVJNC9vS1RaZTJlY05yZ2FNdThyRDgybEFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODMzOTAyCWZpbGU6SGluZ2VMYWJfMS4wLjZfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMC42ClhzZmNNdmVFS09CekswWHhESEhoTHZKTjhYNTB2R3dhWDdITzRJM2pubU45OVpGZGQ3WjQ5Z0pzRUR0ZjlwQWNBVWxIM0lacVl0cUhhb2w3WGJEV0FBPT0K",
-        "size": 2846203
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.7_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnZxZHBGSmRkSWVWMm1GU2pKZWdpZWlYRk9YN0pmOGJSNHJ0bXRtb1Q5QmRxQ0lwa0pSVUlEckljT2s2bVQ3dUdyUFlZcVJHbWJ0dnZ3dUhxOWw4Unc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODM3MDEzCWZpbGU6SGluZ2VMYWJfMS4wLjdfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMC43CnpWZkt5aDFGQk1UKzdZVWprRXA0TVFMTGJWMjJoZ2tyTU9OMk82QWVwd09vM3FldFRTamtGdGtIOXNMYWxNdW9RWmtyVUoxMXVhdDBjZ2o3NmhSMURBPT0K",
+        "size": 2846942
       }
     }
   }
