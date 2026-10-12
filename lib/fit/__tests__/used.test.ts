@@ -43,7 +43,7 @@ describe("status bar Used size", () => {
   });
 
   it("names the sheet count and the largest per-sheet size with several sheets, never a summed height", () => {
-    const p = { ...QR.merge({}), bedW: 200, bedH: 150, sheet: { nest: "box", calibration: false, labels: false, copies: 20 } };
+    const p = { ...QR.merge({}), bedW: 200, bedH: 150, sheet: { nest: "box" as const, calibration: false, labels: false, copies: 20 } };
     const a = arrangeGenerator(QR, p, CTX);
     expect(a.sheets!.length).toBeGreaterThan(1);
     const u = usedArea(a.lay!, a.sheets);
