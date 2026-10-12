@@ -11,6 +11,7 @@ import { HINGE_KEY, readStored } from "@/hooks/useAutosave";
 import { HINGE_PRESETS, hingePresetParams } from "@/lib/hinge/presets";
 import { LETTER_PRESETS } from "@/lib/letters/presets";
 import { PARAMETRIC_PRESETS } from "@/lib/parametric/presets";
+import { PRESET_PARTS } from "@/lib/parametric/presetParts";
 import { GENERATOR_IDS, GENERATOR_INFO, isGeneratorId } from "@/lib/generators/ids";
 import { GENERATOR_PRESETS } from "@/lib/generators/presets";
 import { hingeLocks, lettersLock, parametricLocks } from "@/lib/plans";
@@ -38,7 +39,7 @@ function isPro(product: Product, p: AnyPreset): boolean {
   const q = p.params as Record<string, unknown>;
   if (product === "hinge") return hingeLocks("free", hingePresetParams(q)).length > 0;
   if (product === "letters") return lettersLock("free", { mode: (q.mode as string) ?? "solid", text: (q.text as string) ?? "" }) !== null;
-  return parametricLocks("free", { source: (q.source as { kind: string }) ?? { kind: "library" }, method: (q.method as string) ?? "parallel" }).length > 0;
+  return parametricLocks("free", { source: (q.source as { kind: string }) ?? { kind: "library" }, method: (q.method as string) ?? "parallel" }, PRESET_PARTS[p.id]).length > 0;
 }
 
 /** First screen of the guest editor: pick a product (continue its autosave) or start from a preset. */

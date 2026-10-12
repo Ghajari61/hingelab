@@ -834,3 +834,10 @@ The neon-look sign is cut as one solid piece grown around the letters (holes fil
 - Rectangular reliefs are closed height fields with a low base (about 1.2 mm). Under the parallel method with backboard slats and empty slots filled, a base lower than the slat depth turns into plain slats wherever the picture is flat. That is what makes the slat-portrait look: fins carry the face, plain slats fill the rest of the board.
 - Shaped reliefs (face, heart, star, flowers, moon) are polar height fields whose outline comes from scanning for the outermost crossing, so the plate under the fins follows the shape.
 - The new models live in their own module with their own small mesh builder rather than inside `library.ts`, so the existing library shapes and their snapshot tests are byte-for-byte unchanged. `WALL_RELIEF_IDS` decides which of them sit on the wall (flat back at z = 0) and `RELIEF_IDS` extends the server's list of allowed library ids.
+
+## D128. Categories and stored part counts for parametric presets
+
+- Presets gain a required `category` and optional `tags` (extra search words) and `finish` (the 3D view's look) through a `ParametricPreset` type that extends the shared `Preset`. Old saved designs and preset ids are unchanged; the 14 existing presets keep their ids and settings and only gain a category.
+- The Pro badge uses the existing `parametricLocks` rule with the part count. Part counts are only known after slicing, so `scripts/build-preset-thumbs.mjs` now also writes `lib/parametric/presetParts.ts` while it slices each preset for its thumbnail; the build test fails with a hint to rerun the script when a count goes stale. Several wave presets that the Free plan cannot export (more than 30 parts) now show the badge they should have had.
+- Reliefs whose base is thinner than the minimum feature fall apart into many small pieces on a shaped plate, so those presets use backboard slats (each fin is joined to its slat), which keeps parts whole and gives the slat-wall look.
+- Radial formula presets use 30 fins so fins never collide at the 20 mm hub.
