@@ -8,7 +8,7 @@
 .studio-top nav a:hover { color: var(--text-primary); background: var(--surface-raised); }
 .studio-top nav a[aria-current="page"] { color: var(--text-primary); background: var(--surface-raised); }
 .studio-top .right { margin-inline-start: auto; display: flex; align-items: center; gap: var(--space-4); }
-.studio-main { max-width: 1240px; margin: 0 auto; padding: var(--space-7) var(--space-7) 64px; display: grid; gap: 36px; }
+.studio-main { max-width: 1240px; margin: 0 auto; padding: var(--space-7) var(--space-7) 64px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 36px; }
 .studio-main h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
 .studio-main h2 { margin: 0 0 var(--space-5); font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .07em; display: flex; align-items: center; gap: var(--space-4); }
 .studio-main h2 .more { margin-inline-start: auto; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--accent-hi); text-decoration: none; font-size: var(--text-ui); }
