@@ -23,6 +23,7 @@ import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
 import { fitSummary } from "@/components/shell/SheetSection";
 import { arrangeLetters } from "@/lib/fit/letters";
+import { usedArea, usedText } from "@/lib/fit/arrange";
 import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
 import type { Preset } from "@/lib/presets";
 import { useMyPresets } from "@/components/shell/useMyPresets";
@@ -544,7 +545,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
         x={cursor.x}
         y={cursor.y}
         zoom={zoom}
-        parts={model && lay ? { count: model.parts.length, used: `${fmtLen(lay.width, units, true)} × ${fmtLen(lay.height, units, true)}` } : null}
+        parts={model && lay ? { count: model.parts.length, used: usedText(usedArea(lay, arranged?.sheets ?? null), (mm) => fmtLen(mm, units, true)) } : null}
         fit={fit}
         saved={saved}
       />

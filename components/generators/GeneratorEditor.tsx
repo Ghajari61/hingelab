@@ -26,6 +26,7 @@ import { usePlan } from "@/components/billing/usePlan";
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 import { getLoadedFont, loadHarfBuzz } from "@/components/letters/runtime";
 import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
+import { usedArea, usedText } from "@/lib/fit/arrange";
 import { autoFixAll, type Fix, type Issue } from "@/lib/issues";
 import type { Preset } from "@/lib/presets";
 import { generatorHelpMap } from "@/lib/generators/helpMap";
@@ -498,7 +499,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
         x={cursor.x}
         y={cursor.y}
         zoom={zoom}
-        parts={out && lay ? { count: lay.items.filter((it) => it.i >= 0).length, used: `${fmtLen(lay.width, units, true)} × ${fmtLen(lay.height, units, true)}` } : null}
+        parts={out && lay ? { count: lay.items.filter((it) => it.i >= 0).length, used: usedText(usedArea(lay, arranged.sheets), (mm) => fmtLen(mm, units, true)) } : null}
         fit={fit}
         saved={saved}
       />

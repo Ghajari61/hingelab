@@ -108,5 +108,35 @@ export function arrangeFit<Q, M extends { parts: P[] }, P extends { bbox: BBox }
   };
 }
 
+export interface UsedArea {
+  /** Width and height used on a sheet; with several sheets, the largest of each. */
+  w: number;
+  h: number;
+  sheets: number;
+}
+
+/**
+ * How much of the sheet the parts take, measured like the row layout: from the sheet's corner to
+ * the far edge of the parts plus the edge margin. Without stacked sheets that is the layout size.
+ */
+export function usedArea(lay: Layout<{ bbox: BBox }>, sheets: SheetRect[] | null): UsedArea {
+  if (!sheets?.length) return { w: lay.width, h: lay.height, sheets: 1 };
+  let w = 0, h = 0;
+  for (const { pt, ox, oy } of lay.items) {
+    const y0 = oy + pt.bbox.y0;
+    const s = sheets.find((r) => y0 >= r.y - 1e-6 && y0 <= r.y + r.h + 1e-6);
+    if (!s) continue;
+    w = Math.max(w, Math.min(s.w, ox + pt.bbox.x1 - s.x + SHEET_EDGE));
+    h = Math.max(h, Math.min(s.h, oy + pt.bbox.y1 - s.y + SHEET_EDGE));
+  }
+  return { w, h, sheets: sheets.length };
+}
+
+/** The status bar's "Used" text: one sheet's size, or the sheet count and the largest size on any of them. */
+export function usedText(u: UsedArea, fmt: (mm: number) => string): string {
+  const size = `${fmt(u.w)} × ${fmt(u.h)}`;
+  return u.sheets > 1 ? `${u.sheets} sheets, up to ${size} each` : size;
+}
+
 /** Round a scaled length to 0.1 mm so the settings read cleanly. */
 export const r1 = (x: number) => Math.round(x * 10) / 10;

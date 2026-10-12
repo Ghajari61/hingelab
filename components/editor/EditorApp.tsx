@@ -6,6 +6,7 @@ import {
   type CutStyle, type Params,
 } from "@/lib/hinge";
 import { arrangeHinge } from "@/lib/fit/hinge";
+import { usedArea, usedText } from "@/lib/fit/arrange";
 import { autoFixAll, type Fix } from "@/lib/issues";
 import { hingeIssues } from "@/lib/issues/hinge";
 import { IssueList } from "@/components/shell/IssueList";
@@ -494,7 +495,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
         x={cursor.x}
         y={cursor.y}
         zoom={zoom}
-        parts={model && lay ? { count: model.parts.length, used: `${fmtLen(lay.width, units, true)} × ${fmtLen(lay.height, units, true)}` } : null}
+        parts={model && lay ? { count: model.parts.length, used: usedText(usedArea(lay, arranged.sheets), (mm) => fmtLen(mm, units, true)) } : null}
         fit={fit}
         saved={saved}
       />
