@@ -43,6 +43,7 @@ import { HelpContext, useHelpPanel } from "@/components/help/HelpContext";
 import { lettersLock } from "@/lib/plans";
 import { MAX_UPLOAD_FONT_BYTES } from "@/lib/billing/exportLetters";
 import { usePlan } from "@/components/billing/usePlan";
+import { getBrowserClient } from "@/lib/supabase/client";
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 
 const LetterPreview3D = dynamic(() => import("./LetterPreview3D"), {
@@ -59,6 +60,13 @@ const PRE_BOX_KEYS = ["slit", "bridge", "pitch", "overrun", "stretch", "pattern"
 
 const mergeParams = mergeLetterParams;
 
+/** A new design. Solid and Stencil are Pro, so Free and guest users start on Letter Box, the mode they can export. */
+function freshParams(pro: boolean): LetterParams {
+  const p = clone(LETTER_DEFAULTS);
+  if (!pro) p.mode = "box";
+  return p;
+}
+
 function loadInitial(cloud: CloudDoc | null) {
   if (cloud) return { params: mergeParams(cloud.params as Partial<LetterParams>), units: readUnits() };
   let stored = readStored<LetterParams>(KEY);
@@ -71,7 +79,9 @@ function loadInitial(cloud: CloudDoc | null) {
     }
   }
   const units: Units = stored?.units === "in" ? "in" : "mm";
-  return { params: mergeParams(stored?.params), units };
+  // A saved draft keeps its mode, locked or not (previewing is free). Without accounts every mode is open.
+  if (!stored?.params) return { params: freshParams(!getBrowserClient()), units };
+  return { params: mergeParams(stored.params), units };
 }
 
 function baseName(p: LetterParams) {
@@ -285,7 +295,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
       void openNewCloudProject("letters").then((err) => { if (err) toastMsg(err); });
       return;
     }
-    patch(clone(LETTER_DEFAULTS), true);
+    patch(freshParams(account.plan === "pro"), true);
     window.setTimeout(() => viewApi.fit(), 50);
     toastMsg("New letters");
   }
@@ -338,7 +348,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   }
 
   function resetAll() {
-    replace({ ...clone(LETTER_DEFAULTS), name: params.name, text: params.text, fontId: params.fontId }, true);
+    replace({ ...freshParams(account.plan === "pro"), name: params.name, text: params.text, fontId: params.fontId }, true);
     window.setTimeout(() => viewApi.fit(), 50);
     toastMsg("All settings reset. Ctrl+Z undoes it.");
   }
