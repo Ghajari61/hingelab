@@ -95,11 +95,11 @@ html:has(.landing), body:has(> .landing) { height: auto; overflow: visible; }
 .occ a svg { color: var(--accent); flex: none; }
 .occ a:hover { transform: translateY(-3px); box-shadow: var(--shadow-2); }
 
-.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; counter-reset: step; }
-.steps li { display: grid; gap: 10px; align-content: start; padding: 26px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-1); }
+.landing-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; counter-reset: step; }
+.landing-steps li { display: grid; gap: 10px; align-content: start; padding: 26px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-1); }
 .step-ico { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: var(--brand-grad); color: #fff; box-shadow: 0 10px 20px -10px rgba(79, 70, 229, .8); }
 .step-n { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); margin-top: 6px; }
-.steps p { font-size: 15.5px; }
+.landing-steps p { font-size: 15.5px; }
 
 .features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 32px; }
 .features li { display: grid; gap: 8px; align-content: start; }
@@ -163,15 +163,15 @@ html:has(.landing), body:has(> .landing) { height: auto; overflow: visible; }
 .cutsheet.trace .l-outline path { animation-duration: 1.1s; animation-delay: 1.9s; }
 @keyframes laser-cut { to { stroke-dashoffset: 0; } }
 
-.gallery { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
-.gallery li { display: grid; gap: 10px; align-content: start; }
+.landing-gallery { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+.landing-gallery li { display: grid; gap: 10px; align-content: start; }
 .g-box { aspect-ratio: 280 / 186; background: var(--bed); border-radius: 14px 14px 0 0; border: 1px solid #2a2b2e; border-bottom: 0; }
 .g-box svg { width: 100%; height: 100%; display: block; }
 .g-sheet { width: 100%; aspect-ratio: 2 / 1; height: auto; display: block; margin-top: -10px; border-radius: 0 0 14px 14px; background: var(--bed); padding: 0 10px 10px; border: 1px solid #2a2b2e; border-top: 0; }
 .g-sheet.cutsheet path { stroke-width: .5; }
 .g-sheet.cutsheet .l-outline path { stroke-width: .7; }
-.gallery h3 { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
-.gallery p { font-size: 15px; }
+.landing-gallery h3 { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.landing-gallery p { font-size: 15px; }
 .pro-tag { font-family: var(--font-ui); font-stretch: 100%; font-size: 12px; font-weight: 600; letter-spacing: 0; color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 10px; padding: 0 8px; }
 
 /* ---------- pricing, FAQ ---------- */
@@ -221,14 +221,14 @@ html:has(.landing), body:has(> .landing) { height: auto; overflow: visible; }
 @media (max-width: 1000px) {
   .hero, .desktop { grid-template-columns: 1fr; }
   .mosaic { transform: none; }
-  .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .landing-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .site-nav { display: none; }
   .occ { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .features, .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .features, .landing-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .site-footer { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 680px) {
-  .steps, .features, .gallery { grid-template-columns: 1fr; }
+  .landing-steps, .features, .landing-gallery { grid-template-columns: 1fr; }
   .mosaic { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .m-card:nth-child(n+7) { display: none; }
   .site-link { display: none; }

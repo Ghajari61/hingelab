@@ -168,7 +168,7 @@ export default function HomePage() {
 
         <section id="how" className="band">
           <div className="band-head"><h2>How it works</h2></div>
-          <ol className="steps">
+          <ol className="landing-steps">
             {STEPS.map((s, i) => (
               <li key={s.title}>
                 <span className="step-ico" aria-hidden="true"><s.icon size={22} /></span>
@@ -202,7 +202,7 @@ export default function HomePage() {
             <p>Change the shape and size: the cut file below is the real one, with slots, hinge slits and outline on their own layers.</p>
           </div>
           <HeroGenerator />
-          <ul className="gallery">
+          <ul className="landing-gallery">
             {gallery.map((g) => (
               <li key={g.title}>
                 <div className="g-box" aria-hidden="true" dangerouslySetInnerHTML={{ __html: sceneSVG(g.sheet.model, g.sheet.params, -0.6, 0.35) }} />

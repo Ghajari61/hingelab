@@ -23,7 +23,7 @@ await withBrowser(async (page) => {
 
   await page.screenshot({ path: path.join(OUT, "main-5-landing-full.png"), fullPage: true });
   console.log("saved docs/screenshots/main-5-landing-full.png");
-  assert((await page.locator(".gallery li").count()) === 4, "gallery shows 4 real boxes");
+  assert((await page.locator(".landing-gallery li").count()) === 4, "gallery shows 4 real boxes");
   assert((await page.locator("#pricing tbody tr").count()) >= 5, "pricing table from lib/plans");
   await page.locator("#faq summary").first().click();
   assert(await page.locator("#faq details").first().evaluate((d) => d.open), "FAQ opens");
