@@ -48,6 +48,7 @@ export const LETTER_DEFAULTS: LetterParams = {
   stretch: HINGE.stretch,
   tabW: HINGE.tabW,
   slotClr: HINGE.slotClr,
+  baseRim: 0,
   lidGap: HINGE.lidGap,
   bedW: HINGE.bedW,
   bedH: HINGE.bedH,

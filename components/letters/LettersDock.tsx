@@ -201,9 +201,9 @@ export function LettersDock({
         {checks}
       </Sec>
       {box && (
-        <Sec title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["tabW", "slotClr", "lidGap"])}>
+        <Sec title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["tabW", "slotClr", "baseRim", "lidGap"])}>
           <div className="grid2">{fields("joints")}</div>
-          <p className="note">Tabs on the walls fit slots in the base{params.lid === "fixed" ? " and the lid" : ""}. Slot play loosens or tightens that fit.</p>
+          <p className="note">Tabs on the walls fit slots in the base{params.lid === "fixed" ? " and the lid" : ""}. Slot play loosens or tightens that fit; Base rim moves the slots in from the plate edge.</p>
         </Sec>
       )}
       <Sec title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>

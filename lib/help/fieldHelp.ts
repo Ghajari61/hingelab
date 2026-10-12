@@ -46,6 +46,7 @@ export const LETTER_FIELD_HELP: Record<LetterNumKey, string> = {
   marqueeDia: "The diameter of the holes for marquee lights in the lid or base.",
   marqueeSpacing: "The distance between marquee holes along each letter.",
   marqueeMargin: "How far the marquee holes stay from the letter's edges.",
+  baseRim: "How far the base and lid reach past the outside of the walls. The tab slots then sit this far in from the edge, so the edge stays solid; 0 keeps the plates flush with the walls.",
   T, K,
   ...HINGE,
 };

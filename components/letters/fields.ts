@@ -4,7 +4,7 @@ import type { BaseField } from "@/components/editor/fields";
 export type LetterNumKey =
   | "size" | "letterSpacing" | "thicken" | "stencilBridge" | "sheetMargin" | "T" | "K" | "bedW" | "bedH" | "gap"
   | "depth" | "minCornerRadius" | "wallMaxLength" | "islandArea" | "facetTol" | "panelMin"
-  | "slotW" | "slit" | "bridge" | "pitch" | "overrun" | "stretch" | "tabW" | "slotClr" | "lidGap"
+  | "slotW" | "slit" | "bridge" | "pitch" | "overrun" | "stretch" | "tabW" | "slotClr" | "baseRim" | "lidGap"
   | "marqueeDia" | "marqueeSpacing" | "marqueeMargin";
 
 /** Marquee fields live in `params.marquee`. */
@@ -44,6 +44,7 @@ export const LETTER_FIELDS: LetterField[] = [
   { id: "stretch", label: "Stretch %", sec: "hinge", step: 0.5, min: 0, max: 8, float: true },
   { id: "tabW", label: "Tab width", sec: "joints", len: true, step: 0.5, min: 3 },
   { id: "slotClr", label: "Slot play", sec: "joints", len: true, step: 0.05, min: -0.5 },
+  { id: "baseRim", label: "Base rim", sec: "joints", len: true, step: 0.5, min: 0, max: 50 },
   { id: "lidGap", label: "Lid gap", sec: "joints", len: true, step: 0.05, min: 0, show: p => p.lid === "removable" },
   { id: "T", label: "Thick", sec: "mat", len: true, step: 0.1, min: 0.5, mat: true },
   { id: "K", label: "Kerf", sec: "mat", len: true, step: 0.01, min: 0, mat: true },

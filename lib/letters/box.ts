@@ -66,7 +66,8 @@ function boxPlates(shapes: Shape[], name: string, p: LetterParams, slots: Contou
   const series = (pieces: Shape[], label: string, withSlots: boolean, withMarks: boolean) =>
     pieces.forEach((s, k) => out.push(make(s, pieces.length > 1 ? `${label} ${k + 1}` : label, withSlots, withMarks)));
 
-  const plate = dropSpecks(offsetShapes(shapes, p.K / 2, join), MIN_PIECE_AREA);
+  const rim = Math.max(0, p.baseRim ?? 0);
+  const plate = dropSpecks(offsetShapes(shapes, rim + p.K / 2, join), MIN_PIECE_AREA);
   series(plate, `${name} · base`, true, true);
   if (p.lid === "fixed") series(plate, `${name} · lid`, true, false);
   if (p.lid === "removable") {

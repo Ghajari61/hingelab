@@ -66,6 +66,8 @@ export interface LetterParams {
   stretch: number;
   tabW: number;
   slotClr: number;
+  /** How far the base and lid reach past the outer walls, mm: the tab slots sit this far in from the plate edge. */
+  baseRim: number;
   lidGap: number;
   bedW: number;
   bedH: number;

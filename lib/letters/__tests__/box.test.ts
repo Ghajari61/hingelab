@@ -306,6 +306,19 @@ describe("letter box (flat-panel walls)", () => {
     });
   }
 
+  for (const wallStyle of ["faceted", "hinge"] as const) it(`base rim moves the slots in from the plate edge (${wallStyle})`, () => {
+    const edgeGap = (pt: PlatePart) => Math.min(...pt.slots.flatMap(sl => sl.map(q => Math.min(...[pt.outer, ...pt.holes].map(c => distToPolyline(q, c))))));
+    const platesOf = (rim: number) => boxModel(params("A", { wallStyle, lid: "fixed", baseRim: rim })).parts.filter((pt): pt is PlatePart => pt.kind === "plate");
+    const flush = platesOf(0), rimmed = platesOf(4);
+    expect(rimmed.map(pt => pt.slots.length)).toEqual(flush.map(pt => pt.slots.length));
+    expect(Math.min(...flush.map(edgeGap))).toBeLessThan(0.5);
+    for (const pt of rimmed) {
+      expect(pt.slots.length).toBeGreaterThan(0);
+      expect(edgeGap(pt), pt.name).toBeGreaterThanOrEqual(4 - 0.05);
+      expect(simplePolygons([pt.outer, ...pt.holes])).toBe(true);
+    }
+  });
+
   const wallOf = (c: Contour, extra: Partial<LetterParams> = {}) =>
     facetedWall(facetContour(c, 1, 15), { letter: "T", contour: "outer", p: params("T", { wallStyle: "faceted", ...extra }), hBody: 54, topTabs: false, panelNo: 1 });
 

@@ -289,12 +289,13 @@ export const ARTICLES: HelpArticle[] = [
     slug: "box-joints", product: "general", title: "Joints and fit",
     summary: "Tabs on the walls fit slots in the base and lid. Set their width and how tight they fit.",
     keywords: ["tabs", "slots", "fit", "tight", "loose", "press fit", "lid gap", "split"],
-    fields: [{ product: "hinge", secs: ["secJoints"], alsoFor: ["letters"] }],
+    fields: [{ product: "hinge", secs: ["secJoints"], alsoFor: ["letters"] }, { product: "letters", secs: ["joints"], title: "Letters joints" }],
     blocks: [
       { list: [
         "Tabs too tight to push in: raise Slot play by 0.05 mm at a time.",
         "Tabs loose: lower Slot play, or check your kerf.",
         "Removable lid sticks: raise Lid gap.",
+        "Slots right at the edge of a letter's base (Letters): raise Base rim, so the base reaches past the walls and keeps a solid edge.",
         "Wall in two halves (Hinge Box): splits a long wall into two strips, so each fits a smaller bed.",
       ] },
     ],
