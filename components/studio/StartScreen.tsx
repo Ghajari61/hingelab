@@ -11,6 +11,8 @@ import { fuzzyFilter } from "@/lib/studio/fuzzy";
 import { deleteLocalProject, listLocalProjects, loadLocalProject, newLocalId, saveLocalProject, type LocalProjectSummary } from "@/lib/studio/localStore";
 import { uniqueName } from "@/lib/studio/naming";
 import { noteGeneratorUse } from "@/lib/studio/prefs";
+import { templateThumb, TEMPLATES } from "@/lib/templates/catalog";
+import { searchTemplates } from "@/lib/templates/search";
 import { GeneratorArt } from "./GeneratorArt";
 import { NewDocumentDialog, NewProjectDialog, OnboardingDialog, type NewProjectResult } from "./NewDialogs";
 import { createLocalProject, createProjectFromImage, createProjectFromSvg, downloadProject, editorPath, importProjectFile } from "./projectActions";
@@ -70,7 +72,7 @@ export default function StartScreen() {
   const names = useMemo(() => (recents ?? []).map((r) => r.name), [recents]);
   const lastUsed = (id: string) => prefs.recentGenerators.find((r) => r.id === id);
 
-  type Hit = { kind: "generator" | "project" | "action"; id: string; label: string; hint: string; run: () => void };
+  type Hit = { kind: "generator" | "project" | "action" | "template"; id: string; label: string; hint: string; run: () => void };
   const hits = useMemo<Hit[]>(() => {
     if (!q.trim()) return [];
     const all: Hit[] = [
@@ -78,8 +80,13 @@ export default function StartScreen() {
       ...GENERATORS.map((g) => ({ kind: "generator" as const, id: g.id, label: g.name, hint: `Generator · ${g.category}`, run: () => setGen(g.id) })),
       ...(recents ?? []).map((p) => ({ kind: "project" as const, id: p.id, label: p.name, hint: `Project · ${ago(p.openedAt)}`, run: () => router.push(editorPath(p.id)) })),
     ];
-    return fuzzyFilter(all, q, (h) => `${h.label} ${h.hint}`).map((x) => x.item).slice(0, 12);
+    const found = fuzzyFilter(all, q, (h) => `${h.label} ${h.hint}`).map((x) => x.item).slice(0, 8);
+    const templates = searchTemplates(TEMPLATES, q).slice(0, 12 - found.length).map((t): Hit => ({
+      kind: "template", id: t.id, label: t.title, hint: `Template · ${t.category}`, run: () => router.push(`/templates?t=${t.id}`),
+    }));
+    return [...found, ...templates];
   }, [q, recents, router]);
+  const featured = useMemo(() => TEMPLATES.filter((t) => t.featured), []);
 
   async function create(r: NewProjectResult, generatorId?: string) {
     try {
@@ -208,6 +215,19 @@ export default function StartScreen() {
                 </button>
               );
             })}
+          </div>
+        </section>
+
+        <section aria-labelledby="tpls">
+          <h2 id="tpls">Start from a template <a className="more" href="/templates">All {TEMPLATES.length} templates</a></h2>
+          <div className="home-row" role="list" aria-label="Featured templates">
+            {featured.map((t) => (
+              <button key={t.id} type="button" role="listitem" className="tpl-mini" onClick={() => router.push(`/templates?t=${t.id}`)} data-testid={`featured-${t.id}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- static template thumbnails */}
+                <span className="thumb"><img src={templateThumb(t.id)} alt="" loading="lazy" decoding="async" width={300} height={200} /></span>
+                <span className="txt"><span className="name">{t.title}</span><span className="meta">{t.category}</span></span>
+              </button>
+            ))}
           </div>
         </section>
 

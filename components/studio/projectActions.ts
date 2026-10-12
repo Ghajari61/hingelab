@@ -73,6 +73,22 @@ export async function createProjectFromSvg(file: File, materialId: string, machi
   return { id: await saveNewProject(doc), warnings };
 }
 
+/** "Open in Studio" from the template library: a new project with the template's sheets and parts. */
+export async function createProjectFromTemplate(templateId: string, materialId: string, machineId: string): Promise<string> {
+  const [{ TEMPLATE_BY_ID }, { templateDocument }] = await Promise.all([import("@/lib/templates/catalog"), import("@/lib/templates/open")]);
+  const t = TEMPLATE_BY_ID[templateId];
+  if (!t) throw new Error("That template no longer exists.");
+  const fetchText = async (url: string) => {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`The template "${t.title}" could not be loaded (${r.status}).`);
+    return r.text();
+  };
+  return saveNewProject(await templateDocument(t, { id: newLocalId(), materialId, machineId, fetchText }));
+}
+
+/** The classic editor with a template's settings ("Customise in generator"). */
+export const templateEditorPath = (product: string, templateId: string) => `/app/editor/local?p=${encodeURIComponent(product)}&template=${encodeURIComponent(templateId)}`;
+
 function imageSize(file: File): Promise<{ w: number; h: number }> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);

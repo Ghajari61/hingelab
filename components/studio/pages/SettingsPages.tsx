@@ -91,17 +91,3 @@ export function AccountPage() {
     </div>
   );
 }
-
-export function TemplatesPage() {
-  return (
-    <div className="studio-page">
-      <StudioHeader />
-      <main className="studio-main">
-        <h1>Templates</h1>
-        <EmptyState icon={<Layers size={30} />} title="Templates are on their way">
-          Curated starter projects (gift sets, name signs, menu covers, desk organizer kits) will appear here.
-        </EmptyState>
-      </main>
-    </div>
-  );
-}

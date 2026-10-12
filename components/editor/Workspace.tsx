@@ -10,6 +10,7 @@ import { openNewCloudProject } from "./cloud";
 import type { ProductId } from "@/lib/supabase/types";
 import { isGeneratorId } from "@/lib/generators/ids";
 import { GENERATOR_PRESETS } from "@/lib/generators/presets";
+import { TEMPLATE_PRESETS } from "@/lib/templates/presets";
 import { StartGallery, type StartChoice } from "@/components/shell/StartGallery";
 
 const LettersEditor = dynamic(() => import("@/components/letters/LettersEditor"), {
@@ -43,11 +44,19 @@ function urlProduct(): Product | null {
   }
 }
 
-/** `?p=<generator>&preset=<id>` (links from the site) opens that built-in preset once. */
+/**
+ * `?p=<generator>&preset=<id>` (links from the site) opens that built-in preset once;
+ * `?p=<product>&template=<id>` opens a template's settings from the template library.
+ */
 function urlPreset(p: Product | null): StartChoice | null {
-  if (!p || !isGeneratorId(p)) return null;
+  if (!p) return null;
   try {
-    const id = new URLSearchParams(window.location.search).get("preset");
+    const q = new URLSearchParams(window.location.search);
+    const tid = q.get("template");
+    const t = tid && Object.prototype.hasOwnProperty.call(TEMPLATE_PRESETS, tid) ? TEMPLATE_PRESETS[tid] : undefined;
+    if (t && t.product === p) return { product: p, preset: { id: `template-${tid}`, name: t.name, note: t.note, params: t.params } };
+    if (!isGeneratorId(p)) return null;
+    const id = q.get("preset");
     const preset = id ? GENERATOR_PRESETS[p].find((x) => x.id === id) : undefined;
     return preset ? { product: p, preset: preset as StartChoice["preset"] } : null;
   } catch {
@@ -58,6 +67,7 @@ function urlPreset(p: Product | null): StartChoice | null {
 function setUrlProduct(p: Product | null) {
   const u = new URL(window.location.href);
   u.searchParams.delete("preset");
+  u.searchParams.delete("template");
   if (p) u.searchParams.set("p", p); else u.searchParams.delete("p");
   window.history.replaceState(window.history.state, "", u.pathname + u.search + u.hash);
 }

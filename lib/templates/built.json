@@ -1,0 +1,403 @@
+{
+ "hinge-notebook-cover": {
+  "w": 360,
+  "h": 240,
+  "sheets": 1,
+  "objects": 7
+ },
+ "hinge-bracelet": {
+  "w": 220,
+  "h": 60,
+  "sheets": 1,
+  "objects": 4
+ },
+ "hinge-lamp-wrap": {
+  "w": 420,
+  "h": 180,
+  "sheets": 1,
+  "objects": 2
+ },
+ "hinge-card-wallet": {
+  "w": 230,
+  "h": 90,
+  "sheets": 1,
+  "objects": 3
+ },
+ "hinge-pen-case": {
+  "w": 584,
+  "h": 95,
+  "sheets": 1,
+  "objects": 4,
+  "pro": "Pill shape needs the Pro plan"
+ },
+ "hinge-sweet-jar": {
+  "w": 541,
+  "h": 226,
+  "sheets": 1,
+  "objects": 4,
+  "pro": "Cylinder shape and Wave pattern need the Pro plan"
+ },
+ "hinge-hex-gift": {
+  "w": 512,
+  "h": 243,
+  "sheets": 1,
+  "objects": 4,
+  "pro": "Polygon shape and Serpentine pattern need the Pro plan"
+ },
+ "hinge-desk-tub": {
+  "w": 488,
+  "h": 121,
+  "sheets": 1,
+  "objects": 2,
+  "pro": "Relief pattern needs the Pro plan"
+ },
+ "hinge-ring-box": {
+  "w": 396,
+  "h": 71,
+  "sheets": 1,
+  "objects": 4
+ },
+ "hinge-cookie-tin": {
+  "w": 589,
+  "h": 263,
+  "sheets": 1,
+  "objects": 4,
+  "pro": "Polygon shape and Wave pattern need the Pro plan"
+ },
+ "hinge-cutlery-caddy": {
+  "w": 504,
+  "h": 216,
+  "sheets": 1,
+  "objects": 2,
+  "pro": "Pill shape needs the Pro plan"
+ },
+ "box-recipe": {
+  "w": 307,
+  "h": 390,
+  "sheets": 1,
+  "objects": 9,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "box-craft-caddy": {
+  "w": 467,
+  "h": 385,
+  "sheets": 1,
+  "objects": 7,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "box-wren-house": {
+  "w": 367,
+  "h": 384,
+  "sheets": 1,
+  "objects": 7,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "box-dream-bank": {
+  "w": 227,
+  "h": 395,
+  "sheets": 1,
+  "objects": 8,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "box-three-drawers": {
+  "w": 556,
+  "h": 397,
+  "sheets": 2,
+  "objects": 26,
+  "files": [
+   "sheet-1.svg",
+   "sheet-2.svg"
+  ]
+ },
+ "box-hex-candy": {
+  "w": 303,
+  "h": 399,
+  "sheets": 1,
+  "objects": 9,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "box-domino": {
+  "w": 577,
+  "h": 199,
+  "sheets": 1,
+  "objects": 11,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "box-frame-13x18": {
+  "w": 541,
+  "h": 317,
+  "sheets": 1,
+  "objects": 4,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "box-craft-stack": {
+  "w": 577,
+  "h": 398,
+  "sheets": 2,
+  "objects": 19,
+  "files": [
+   "sheet-1.svg",
+   "sheet-2.svg"
+  ]
+ },
+ "clock-scallop": {
+  "w": 308,
+  "h": 378,
+  "sheets": 1,
+  "objects": 3,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "clock-flower": {
+  "w": 316,
+  "h": 398,
+  "sheets": 1,
+  "objects": 3,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "puzzle-hex-19": {
+  "w": 251,
+  "h": 220,
+  "sheets": 1,
+  "objects": 1,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "puzzle-cloud-kids": {
+  "w": 515,
+  "h": 345,
+  "sheets": 1,
+  "objects": 3,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "keyrack-leash": {
+  "w": 271,
+  "h": 220,
+  "sheets": 1,
+  "objects": 4,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "sign-garden": {
+  "w": 251,
+  "h": 92,
+  "sheets": 1,
+  "objects": 1,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "tablenum-rustic": {
+  "w": 289,
+  "h": 384,
+  "sheets": 1,
+  "objects": 12,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "topper-congrats": {
+  "w": 156,
+  "h": 184,
+  "sheets": 1,
+  "objects": 1,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "topper-anniversary": {
+  "w": 153,
+  "h": 196,
+  "sheets": 1,
+  "objects": 1,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "trophy-quiz": {
+  "w": 141,
+  "h": 294,
+  "sheets": 1,
+  "objects": 3,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "qr-pet-tag": {
+  "w": 58,
+  "h": 64,
+  "sheets": 1,
+  "objects": 1,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "mandala-coasters": {
+  "w": 220,
+  "h": 220,
+  "sheets": 1,
+  "objects": 14
+ },
+ "snowflake-ornaments": {
+  "w": 270,
+  "h": 100,
+  "sheets": 1,
+  "objects": 15
+ },
+ "hatched-ornaments": {
+  "w": 260,
+  "h": 180,
+  "sheets": 1,
+  "objects": 18
+ },
+ "gear-fidget": {
+  "w": 420,
+  "h": 160,
+  "sheets": 1,
+  "objects": 11
+ },
+ "tangram": {
+  "w": 360,
+  "h": 190,
+  "sheets": 1,
+  "objects": 9
+ },
+ "headphone-stand": {
+  "w": 260,
+  "h": 280,
+  "sheets": 1,
+  "objects": 14
+ },
+ "earring-cards": {
+  "w": 290,
+  "h": 200,
+  "sheets": 1,
+  "objects": 56
+ },
+ "plant-markers": {
+  "w": 390,
+  "h": 150,
+  "sheets": 1,
+  "objects": 16
+ },
+ "mountain-shadow-box": {
+  "w": 335,
+  "h": 335,
+  "sheets": 1,
+  "objects": 9
+ },
+ "ocean-shadow-box": {
+  "w": 335,
+  "h": 335,
+  "sheets": 1,
+  "objects": 12
+ },
+ "moon-phases": {
+  "w": 400,
+  "h": 100,
+  "sheets": 1,
+  "objects": 29
+ },
+ "heart-garland": {
+  "w": 290,
+  "h": 110,
+  "sheets": 1,
+  "objects": 40
+ },
+ "honeycomb-panel": {
+  "w": 320,
+  "h": 220,
+  "sheets": 1,
+  "objects": 4
+ },
+ "lantern-panels": {
+  "w": 420,
+  "h": 280,
+  "sheets": 1,
+  "objects": 25
+ },
+ "hatched-bookmarks": {
+  "w": 290,
+  "h": 175,
+  "sheets": 1,
+  "objects": 25
+ },
+ "op-art-coasters": {
+  "w": 220,
+  "h": 220,
+  "sheets": 1,
+  "objects": 24
+ },
+ "motif-keychains": {
+  "w": 230,
+  "h": 170,
+  "sheets": 1,
+  "objects": 36
+ },
+ "cable-organiser": {
+  "w": 230,
+  "h": 105,
+  "sheets": 1,
+  "objects": 18
+ },
+ "mandala-wall-art": {
+  "w": 300,
+  "h": 300,
+  "sheets": 1,
+  "objects": 11
+ },
+ "heart-string-art": {
+  "w": 220,
+  "h": 220,
+  "sheets": 1,
+  "objects": 5
+ },
+ "spinning-tops": {
+  "w": 260,
+  "h": 110,
+  "sheets": 1,
+  "objects": 14
+ },
+ "ceramic-tile-frame": {
+  "w": 221,
+  "h": 284,
+  "sheets": 1,
+  "objects": 3,
+  "files": [
+   "frame.svg"
+  ]
+ },
+ "kv1-tank": {
+  "w": 902,
+  "h": 528,
+  "sheets": 4,
+  "objects": 1587,
+  "files": [
+   "body.svg",
+   "turret.svg",
+   "wheels.svg",
+   "tracks.svg"
+  ]
+ }
+}

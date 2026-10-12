@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { TemplatesPage } from "@/components/studio/pages/SettingsPages";
+import { TemplatesGallery } from "@/components/studio/pages/TemplatesGallery";
 
 export const metadata: Metadata = { title: "Templates" };
 
 export default function Page() {
-  return <TemplatesPage />;
+  return <TemplatesGallery />;
 }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="221mm" height="284mm" viewBox="0 0 221 284">
+<!-- Ceramic tile frame, from the owner's own design (xTool Creative Space). The US Letter sheet edge is left out. -->
+<g id="inner-cuts" fill="none" stroke="#00E000" stroke-width="0.1">
+  <path d="M55.99 29.48L163.99 29.48L163.99 137.48L55.99 137.48L55.99 29.48ZM55.99 145.54L163.99 145.54L163.99 253.54L55.99 253.54L55.99 145.54Z"/>
+</g>
+<g id="outline-cut" fill="none" stroke="#FF0000" stroke-width="0.1">
+  <path d="M5 5L215.01 5L215.01 278.01L5 278.01L5 5Z"/>
+</g>
+</svg>
