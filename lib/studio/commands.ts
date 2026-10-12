@@ -113,6 +113,8 @@ export const COMMANDS: CommandDef[] = [
   // File
   c("file.new", "New…", "File", "Ctrl+Alt+N", undefined, "Open the start screen to create a project. (Ctrl+N belongs to the browser.)"),
   c("file.open", "Open…", "File", "Ctrl+O"),
+  c("file.import", "Import SVG…", "File", "Ctrl+I", undefined, "Place an SVG drawing on the page; its colours go onto cut layers.", "svg import place drawing vector file inkscape illustrator corel"),
+  c("file.templates", "New from Template…", "File", undefined, undefined, "Browse ready-made projects and open one as a new project.", "template gallery library example project"),
   c("file.close", "Close", "File", "Ctrl+Alt+W"),
   c("file.save", "Save", "File", "Ctrl+S"),
   c("file.saveCopy", "Save a Copy…", "File", "Ctrl+Alt+S", { inkscape: ["Ctrl+Shift+Alt+S", "Ctrl+Alt+S"] }),
@@ -342,7 +344,7 @@ export type MenuEntry = string | "-" | { label: string; items: MenuEntry[] };
 export interface MenuDef { id: string; label: string; items: MenuEntry[] }
 
 export const MENUS: MenuDef[] = [
-  { id: "file", label: "File", items: ["file.new", "file.open", "-", "file.close", "file.save", "file.saveCopy", "file.saveComputer", "file.rename", "file.revert", "-", "file.documentSetup", "-", "file.exit"] },
+  { id: "file", label: "File", items: ["file.new", "file.templates", "file.open", "file.import", "-", "file.close", "file.save", "file.saveCopy", "file.saveComputer", "file.rename", "file.revert", "-", "file.documentSetup", "-", "file.exit"] },
   { id: "edit", label: "Edit", items: [
     "edit.undo", "edit.redo", "-", "edit.cut", "edit.copy", "edit.paste", "edit.pasteFront", "edit.pasteBack", "edit.pasteInPlace", "edit.pasteStyle",
     { label: "Paste Size", items: ["edit.pasteSize.both", "edit.pasteSize.width", "edit.pasteSize.height", "-", "edit.pasteSize.bothSep", "edit.pasteSize.widthSep", "edit.pasteSize.heightSep"] }, "-",

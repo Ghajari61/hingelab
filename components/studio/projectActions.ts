@@ -54,6 +54,25 @@ export async function createProjectFromImage(file: File, materialId: string, mac
   return id;
 }
 
+/** Saves a freshly built document as a new project on this device, with its drawing in the thumbnail. */
+export async function saveNewProject(doc: Document): Promise<string> {
+  const { documentArt } = await import("@/lib/studio/thumbnailArt");
+  const named: Document = { ...doc, name: uniqueName(doc.name, await existingNames()) };
+  await saveLocalProject(named, documentThumbnail(named, documentArt(named)));
+  return named.id;
+}
+
+export const MAX_SVG_BYTES = 40 * 1024 * 1024;
+
+/** "Import SVG…": a new project sized to the drawing, its colours sorted onto cut layers. */
+export async function createProjectFromSvg(file: File, materialId: string, machineId: string): Promise<{ id: string; warnings: string[] }> {
+  if (file.size > MAX_SVG_BYTES) throw new Error("That SVG is larger than 40 MB.");
+  const { svgDocument } = await import("@/lib/studio/svgProject");
+  const name = file.name.replace(/\.svgz?$/i, "") || "Imported SVG";
+  const { doc, warnings } = svgDocument([{ src: await file.text(), name }], { id: newLocalId(), name, materialId, machineId });
+  return { id: await saveNewProject(doc), warnings };
+}
+
 function imageSize(file: File): Promise<{ w: number; h: number }> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);

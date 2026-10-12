@@ -17,12 +17,13 @@ import { isLocalId, loadLocalProject, newLocalId, saveLocalProject, touchLocalPr
 import { cleanName } from "@/lib/studio/naming";
 import { DEFAULT_PREFS } from "@/lib/studio/prefs";
 import { isEmptyBox } from "@/lib/studio/geom";
-import { selectionBox, topLevel } from "@/lib/studio/scene";
+import { pasteNodes, selectionBox, topLevel } from "@/lib/studio/scene";
 import { documentThumbnail } from "@/lib/studio/thumbnail";
+import { documentArt } from "@/lib/studio/thumbnailArt";
 import { fmtLength, UNIT_LIST } from "@/lib/studio/units";
 import { builtIn, loadWorkspaces, PANEL_LABELS, saveWorkspaces, showPanel, WORKSPACES, type PanelId, type Workspace, type WorkspaceState } from "@/lib/studio/workspace";
 import type { Document, Units } from "@/lib/studio/types";
-import { downloadProject, editorPath, importProjectFile } from "../projectActions";
+import { downloadProject, editorPath, importProjectFile, MAX_SVG_BYTES } from "../projectActions";
 import { usePrefs } from "../usePrefs";
 import { Canvas, PX_PER_MM, pointerStore, type CanvasApi } from "./Canvas";
 import { buildHandlers, type CommandContext, type EditorDialog, type Handler } from "./commandHandlers";
@@ -118,6 +119,7 @@ function EditorShell({ opened }: { opened: Document }) {
   const [snapOpen, setSnapOpen] = useState(false);
   const canvasRef = useRef<CanvasApi | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const svgRef = useRef<HTMLInputElement>(null);
   const lastField = useRef<HTMLElement | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -152,7 +154,7 @@ function EditorShell({ opened }: { opened: Document }) {
   // Autosave on this device; a drag saves when it ends.
   const persist = useCallback(async (d: Document) => {
     setSave("saving");
-    try { await saveLocalProject(d, documentThumbnail(d)); setSave("saved"); } catch { setSave("error"); }
+    try { await saveLocalProject(d, documentThumbnail(d, documentArt(d))); setSave("saved"); } catch { setSave("error"); }
   }, []);
   useEffect(() => api.subscribe((s, p) => {
     if (s.doc === p.doc || s.base) return;
@@ -177,6 +179,29 @@ function EditorShell({ opened }: { opened: Document }) {
     void persist(api.getState().doc).then(() => toast("Saved on this device"));
   }, [api, persist, toast]);
 
+  // File ▸ Import SVG: the drawing keeps its page position on the first sheet when it fits, else lands in the view centre.
+  const placeSvg = useCallback(async (f: File) => {
+    if (f.size > MAX_SVG_BYTES) { toast("That SVG is larger than 40 MB."); return; }
+    try {
+      const { importSvg } = await import("@/lib/studio/svgImport");
+      const r = importSvg(await f.text(), { name: f.name.replace(/\.svgz?$/i, "") });
+      if (!r.group) { toast("The SVG has no paths to cut. Convert text to paths and try again."); return; }
+      const sheet = api.getState().doc.sheets[0];
+      const b = r.box;
+      let offset = sheet ? { x: sheet.x, y: sheet.y } : { x: 0, y: 0 };
+      if (!sheet || b.minX < -1 || b.minY < -1 || b.maxX > sheet.w + 1 || b.maxY > sheet.h + 1) {
+        const c = canvasRef.current?.center() ?? { x: 0, y: 0 };
+        offset = { x: c.x - (b.minX + b.maxX) / 2, y: c.y - (b.minY + b.maxY) / 2 };
+      }
+      let ids: string[] = [];
+      api.getState().edit("Import SVG", (d) => { ids = pasteNodes(d, [r.group!], offset); });
+      api.getState().select(ids);
+      toast(`Imported ${r.objects} object${r.objects === 1 ? "" : "s"} from ${f.name}${r.warnings[0] ? `. ${r.warnings[0]}` : ""}`, true);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "That SVG could not be imported.");
+    }
+  }, [api, toast]);
+
   const resetWorkspace = useCallback(() => {
     const prev = layout;
     setLayout(() => builtIn(ws.current));
@@ -190,6 +215,7 @@ function EditorShell({ opened }: { opened: Document }) {
     notify: toastAction,
     navigate: (href) => router.push(href),
     openFile: () => fileRef.current?.click(),
+    importSvg: () => svgRef.current?.click(),
     save: saveNow,
     saveCopy: () => {
       const d = api.getState().doc;
@@ -373,6 +399,10 @@ function EditorShell({ opened }: { opened: Document }) {
         }}>Revert</button></>}>
         <p className="dlg-note">Every change since you opened this project is undone. You can still redo them from Edit → Undo.</p>
       </Dialog>
+      <input ref={svgRef} type="file" accept=".svg,image/svg+xml" hidden aria-label="Import an SVG drawing" onChange={(e) => {
+        const f = e.target.files?.[0]; e.target.value = "";
+        if (f) void placeSvg(f);
+      }} />
       <input ref={fileRef} type="file" accept=".hingelab,application/zip" hidden aria-label="Open a project file" onChange={(e) => {
         const f = e.target.files?.[0]; e.target.value = "";
         if (f) void importProjectFile(f).then((r) => { if ("id" in r) router.push(editorPath(r.id)); else toast("That file belongs to the classic editor."); }).catch((err) => toast(err.message));

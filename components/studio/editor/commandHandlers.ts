@@ -47,6 +47,8 @@ export interface CommandContext {
   notify?: Notify;
   navigate: (href: string) => void;
   openFile: () => void;
+  /** File ▸ Import SVG…: opens the file picker; the editor places the drawing. */
+  importSvg?: () => void;
   save: () => void;
   saveCopy: () => void;
   download: () => void;
@@ -143,7 +145,7 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   };
   const paste = (where: "center" | "inPlace" | "front" | "back") => {
     const clip = loadClip();
-    if (!clip?.nodes.length) { ctx.toast("The clipboard has no HingeLab objects. SVG import arrives with File → Import."); return; }
+    if (!clip?.nodes.length) { ctx.toast("The clipboard has no HingeLab objects. To bring in an SVG drawing, use File ▸ Import SVG… (Ctrl+I)."); return; }
     let offset = { x: 0, y: 0 };
     if (where === "center") {
       const b = clip.nodes.reduce((acc, n) => {
@@ -161,6 +163,8 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   // File
   set("file.new", () => ctx.navigate("/home?new=blank"));
   set("file.open", ctx.openFile);
+  set("file.import", () => ctx.importSvg?.(), !!ctx.importSvg, "Import is not available here");
+  set("file.templates", () => ctx.navigate("/templates"));
   set("file.close", () => ctx.navigate("/home"));
   set("file.save", ctx.save);
   set("file.saveCopy", ctx.saveCopy);

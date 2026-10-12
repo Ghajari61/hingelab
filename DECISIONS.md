@@ -810,3 +810,12 @@ The neon-look sign is cut as one solid piece grown around the letters (holes fil
 - Result: 2 designs (5 SVGs) bundled; the Ceramic Frame is assumed to be the owner's work and is listed for confirmation.
 - Excluded files remain usable privately through Studio's SVG import, which keeps them on the user's device.
 - The scan is read-only: zip central directories are parsed directly (zip64 aware, CP866 names), nested zips are inflated in memory, and nothing is written to the source folder. The scripts stay in tmp/ (not shipped); the catalogue is the committed record.
+
+## D125. SVG import reads numbers, never markup
+
+- The importer is our own small XML reader plus a geometry converter (`lib/studio/svgImport.ts`); no DOMParser, so it runs the same in tests, in the editor and in build scripts. Only coordinates, colours (as layer numbers) and names cleaned to letters, digits and a few punctuation marks reach the document. Scripts, event handlers, foreignObject, images, external references and CSS url() never get through, and nothing from the file is ever inserted as HTML.
+- DOCTYPE entities expand once, are at most 512 characters, and share a 4 MB budget (no entity bombs). Element count (250,000), objects (20,000) and anchors (600,000) are capped; a larger drawing imports its first part with a warning. Files over 40 MB are refused.
+- Illustrator writes px as points: the importer detects Illustrator files and reads them at 72 per inch. Checked on the archive: the KV-1 sheets are 850.394 px tall, exactly 300 mm at 72 per inch.
+- Black strokes go to a cut layer, not C00, because C00 is the engrave-fill layer and laser files almost always mean black lines as cuts. Fills engrave on C00.
+- `svgDocument` builds a whole project from one or more SVGs, one sheet per drawing. Both Import SVG and the bundled design templates use it.
+- Checked on 48 real files from the archive (CorelDRAW, Illustrator, Inkscape, xTool, up to 22 MB): no failures, and all but the 22 MB file import in under 0.1 s.

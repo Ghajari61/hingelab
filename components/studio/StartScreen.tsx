@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FolderOpen, ImagePlus, Search, X } from "lucide-react";
+import { FileUp, FolderOpen, ImagePlus, Search, X } from "lucide-react";
 import { Badge, ContextMenu, Dialog, TextField, useToast, type MenuItem } from "@/components/ui";
 import { useAccount } from "@/components/auth/useAccount";
 import { GENERATORS, generatorMeta } from "@/lib/generators/catalog";
@@ -13,7 +13,7 @@ import { uniqueName } from "@/lib/studio/naming";
 import { noteGeneratorUse } from "@/lib/studio/prefs";
 import { GeneratorArt } from "./GeneratorArt";
 import { NewDocumentDialog, NewProjectDialog, OnboardingDialog, type NewProjectResult } from "./NewDialogs";
-import { createLocalProject, createProjectFromImage, downloadProject, editorPath, importProjectFile } from "./projectActions";
+import { createLocalProject, createProjectFromImage, createProjectFromSvg, downloadProject, editorPath, importProjectFile } from "./projectActions";
 import { StudioHeader } from "./StudioHeader";
 import { usePrefs } from "./usePrefs";
 
@@ -45,6 +45,7 @@ export default function StartScreen() {
   const searchRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLInputElement>(null);
+  const svgRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(() => { listLocalProjects().then((l) => setRecents(l.slice(0, 12))).catch(() => setRecents([])); }, []);
   useEffect(refresh, [refresh]);
@@ -100,6 +101,16 @@ export default function StartScreen() {
       });
     } catch (e) {
       toast({ message: e instanceof Error ? e.message : "That file could not be opened.", kind: "danger" });
+    }
+  }
+
+  async function importSvgFile(f: File) {
+    try {
+      const r = await createProjectFromSvg(f, prefs.materialId, prefs.machineId);
+      if (r.warnings.length) toast({ message: r.warnings[0] + (r.warnings.length > 1 ? ` (+${r.warnings.length - 1} more)` : "") });
+      router.push(editorPath(r.id));
+    } catch (e) {
+      toast({ message: e instanceof Error ? e.message : "That SVG could not be imported.", kind: "danger" });
     }
   }
 
@@ -204,8 +215,10 @@ export default function StartScreen() {
           <h2 id="open">Open</h2>
           <div className="open-actions">
             <button type="button" className="ui-btn" onClick={() => fileRef.current?.click()}><FolderOpen size={15} /> Open from computer…</button>
+            <button type="button" className="ui-btn" onClick={() => svgRef.current?.click()} data-testid="import-svg"><FileUp size={15} /> Import SVG…</button>
             <button type="button" className="ui-btn" onClick={() => imageRef.current?.click()}><ImagePlus size={15} /> Import image to trace…</button>
           </div>
+          <input ref={svgRef} type="file" accept=".svg,image/svg+xml" hidden aria-label="Import an SVG drawing" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void importSvgFile(f); }} />
           <input ref={fileRef} type="file" accept=".hingelab,application/zip,application/json" hidden aria-label="Open a project file" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void openFile(f); }} />
           <input ref={imageRef} type="file" accept="image/png,image/jpeg,image/webp" hidden aria-label="Import an image" onChange={(e) => {
             const f = e.target.files?.[0]; e.target.value = "";
