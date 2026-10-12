@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.4",
-    "pub_date": "2026-10-11T10:10:25.148Z",
-    "notes": "New generators: Cake Topper, Key Holder, Sign, Table Numbers and Trophy. Boxes gain new lids, drawers, hexagon, insert and money-box designs with engraved lids. Every generator can mirror for back-engraved acrylic and cut a batch of names. More materials, clock faces, puzzle outlines, QR frames, and neon-look and stencil signs.",
+    "version": "1.0.5",
+    "pub_date": "2026-10-12T17:19:23.230Z",
+    "notes": "New in HingeLab: a Parametric design gallery with 60 ready-made sculptures (including slat-wall portraits), a design generator with seeds and variations, a Style panel, a template gallery with 54 ready-to-cut projects, pro vector tools in Studio (Pathfinder, Live Effects, arrays, Shape Builder, Knife, Eraser and more), and fixes for the used-size readout, the box dimensions summary and narrow screens.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.4_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm91YzM3MGd3M0RTM0htMGlHbElKbS93aXMvTGFXKzcveWxyWkRVWW1MOWowRk9MQ0E5a1ZTSHIySHRQK1pKV09TV0xFbyszZnc1S2VFdnBxZThxbkFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxNzEzMjkyCWZpbGU6SGluZ2VMYWJfMS4wLjRfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMC40CjluRFFVd2ZoRmxNWlRjWVBGT2w3UnAwT2JEZWdWbXZsYUJOZmpRMHFvdnA3WUZEeXhNaGxuYnFRYklRY0Q2RnIyTnYrS3lVdGdPU1Jla28xLzFhS0JBPT0K",
-        "size": 2846195
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.5_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm11ZDJ6R0dFRFJDZTRaalByVWdFWlZId09HSCtkVzF4WkRUTFF6cFVpdDVyYVYwSjVuampIeEZIcW55VHkvaHdQV2ZJSFplaHluL3c4bnJiWWhJa0FFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODI1NTUyCWZpbGU6SGluZ2VMYWJfMS4wLjVfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMC41CmtFeDUvd3RqdmZlR2wyTStqTFp2bXFBUTJVRG4wVkVlaWJ3OWRTR1lyL2hjQXF1M0ZBZHVzRUxwamwybUdFT0E3NlFHbG9ZYXhlb2tnYitTMXdlWUNBPT0K",
+        "size": 2846719
       }
     }
   }
