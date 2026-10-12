@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Box, Cake, ChevronDown, Clock, Hash, KeyRound, Layers, Package, Puzzle, QrCode, Shapes, Signpost, Trophy, Type } from "lucide-react";
 import type { Params } from "@/lib/hinge";
 import { HINGE_VARIANTS, hingeVariantOf, type HingeVariant } from "@/lib/hinge/presets";
@@ -38,6 +38,7 @@ export const PRODUCT_INFO: Record<Product, { name: string; icon: ReactNode }> = 
 /** Product switcher in the header: the three core products, then the generators in a menu. */
 export function ProductTabs({ product, onProduct }: { product: Product; onProduct: (p: Product) => void }) {
   const [open, setOpen] = useState(false);
+  const menuId = useId();
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
@@ -81,9 +82,13 @@ export function ProductTabs({ product, onProduct }: { product: Product; onProduc
         {open && (
           <div className="gen-dropdown" role="menu" aria-label="Generators">
             {GENERATOR_IDS.map((id) => (
-              <button key={id} type="button" role="menuitem" aria-current={product === id || undefined} onClick={() => { setOpen(false); onProduct(id); }}>
+              <button
+                key={id} type="button" role="menuitem" aria-current={product === id || undefined}
+                aria-label={GENERATOR_INFO[id].name} aria-describedby={`${menuId}-${id}`}
+                onClick={() => { setOpen(false); onProduct(id); }}
+              >
                 <span className="gi">{PRODUCT_INFO[id].icon}</span>
-                <span className="gt"><b>{GENERATOR_INFO[id].name}</b><small>{GENERATOR_INFO[id].blurb}</small></span>
+                <span className="gt"><b>{GENERATOR_INFO[id].name}</b><small id={`${menuId}-${id}`}>{GENERATOR_INFO[id].blurb}</small></span>
               </button>
             ))}
           </div>
