@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isProtected, routeDecision, safeNext } from "../routes";
+import { isProtected, marksGuest, routeDecision, safeNext } from "../routes";
 import { checkCredentials, friendlyAuthError, validEmail } from "../validate";
 
 describe("protected routes", () => {
@@ -32,6 +32,32 @@ describe("protected routes", () => {
     expect(routeDecision({ path: "/app", search: "", signedIn: false, configured: false })).toBe("/app/editor/local");
     expect(routeDecision({ path: "/app/editor/local", search: "", signedIn: false, configured: false })).toBeNull();
     expect(routeDecision({ path: "/login", search: "", signedIn: false, configured: false })).toBeNull();
+  });
+});
+
+describe("guest choice", () => {
+  it("takes a signed-out visitor who chose guest mode from /app to the guest editor", () => {
+    expect(routeDecision({ path: "/app", search: "", signedIn: false, configured: true, guest: true })).toBe("/app/editor/local");
+    expect(routeDecision({ path: "/app", search: "", signedIn: false, configured: true })).toBe("/login?next=%2Fapp");
+  });
+
+  it("only changes /app: account pages still ask for sign-in, signed-in users are unaffected", () => {
+    expect(routeDecision({ path: "/app/billing", search: "", signedIn: false, configured: true, guest: true })).toBe("/login?next=%2Fapp%2Fbilling");
+    expect(routeDecision({ path: "/projects", search: "", signedIn: false, configured: true, guest: true })).toBe("/login?next=%2Fprojects");
+    expect(routeDecision({ path: "/app", search: "", signedIn: true, configured: true, guest: true })).toBeNull();
+    expect(routeDecision({ path: "/login", search: "", signedIn: true, configured: true, guest: true })).toBe("/app");
+    expect(routeDecision({ path: "/login", search: "", signedIn: false, configured: true, guest: true })).toBeNull();
+  });
+
+  it("is recorded by a signed-out, non-prefetch visit to the guest editor", () => {
+    const base = { signedIn: false, configured: true, prefetch: false };
+    expect(marksGuest({ ...base, path: "/app/editor/local" })).toBe(true);
+    expect(marksGuest({ ...base, path: "/app/editor/local", prefetch: true })).toBe(false);
+    expect(marksGuest({ ...base, path: "/app/editor/local", signedIn: true })).toBe(false);
+    expect(marksGuest({ ...base, path: "/app/editor/local", configured: false })).toBe(false);
+    expect(marksGuest({ ...base, path: "/app" })).toBe(false);
+    expect(marksGuest({ ...base, path: "/login" })).toBe(false);
+    expect(marksGuest({ ...base, path: "/app/editor/localx" })).toBe(false);
   });
 });
 

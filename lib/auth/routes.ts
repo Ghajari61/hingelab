@@ -16,6 +16,10 @@ export const HOME_AFTER_LOGIN = "/app";
 export const GUEST_EDITOR = "/app/editor/local";
 export const STUDIO_HOME = "/home";
 
+/** Cookie set when someone uses the guest editor signed out; /app then takes them back to it. */
+export const GUEST_COOKIE = "hl_guest";
+export const GUEST_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
 const under = (path: string, p: string) => path === p || path.startsWith(p + "/");
 
 function isStudioProtected(path: string): boolean {
@@ -42,16 +46,24 @@ export function safeNext(next: string | null | undefined, fallback = HOME_AFTER_
   return next;
 }
 
-export type RouteInput = { path: string; search: string; signedIn: boolean; configured: boolean };
+export type RouteInput = {
+  path: string;
+  search: string;
+  signedIn: boolean;
+  configured: boolean;
+  /** The visitor chose to work without an account (GUEST_COOKIE). */
+  guest?: boolean;
+};
 
 /** Returns the path to redirect to, or null to let the request through. */
-export function routeDecision({ path, search, signedIn, configured }: RouteInput): string | null {
+export function routeDecision({ path, search, signedIn, configured, guest = false }: RouteInput): string | null {
   if (!configured) {
     // No accounts yet: everything that needs one falls back to the guest editor or the studio home.
     if (!isProtected(path)) return null;
     return isStudioProtected(path) ? STUDIO_HOME : GUEST_EDITOR;
   }
   if (isProtected(path) && !signedIn) {
+    if (guest && path === HOME_AFTER_LOGIN) return GUEST_EDITOR;
     return `/login?next=${encodeURIComponent(path + search)}`;
   }
   if (AUTH_PAGES.includes(path) && signedIn) {
@@ -59,4 +71,12 @@ export function routeDecision({ path, search, signedIn, configured }: RouteInput
     return safeNext(next);
   }
   return null;
+}
+
+/**
+ * Whether this request records the guest choice: a signed-out visit to the guest editor. Router
+ * prefetches do not count, so merely seeing a link to the editor does not set it.
+ */
+export function marksGuest({ path, signedIn, configured, prefetch }: { path: string; signedIn: boolean; configured: boolean; prefetch: boolean }): boolean {
+  return configured && !signedIn && !prefetch && under(path, GUEST_EDITOR);
 }
