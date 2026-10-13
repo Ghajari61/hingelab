@@ -255,7 +255,13 @@ async function currentResult(rev: AIRevise, plan: Plan): Promise<string> {
 }
 
 /** Designs one product from a description and/or photo, on the caller's plan. */
-export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: string, model?: LanguageModel, opts: { photoRelief?: boolean } = {}): Promise<AIDesign> {
+export interface DesignOptions {
+  photoRelief?: boolean;
+  /** Examples from the shop's library that fit the request, shown with a new original drawing. */
+  examples?: (query: string) => Promise<UserContent | undefined>;
+}
+
+export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: string, model?: LanguageModel, opts: DesignOptions = {}): Promise<AIDesign> {
   const menu = await aiMenu();
   const signal = AbortSignal.timeout(TIMEOUT_MS);
   const ask: Ask = { model, userId, signal };
@@ -291,7 +297,9 @@ export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: str
   const product = revising ?? menu.find((p) => p.id === choice.product) ?? menu[0];
   if (product.id === "art") {
     return withArt(model, userId, async (o) => {
-      const b = await drawArt(userContent(req, `Name: ${choice.name}\nBrief: ${choice.brief}`), o);
+      const query = [req.prompt, req.image ? req.imageNote : "", choice.name, choice.brief].filter(Boolean).join("\n");
+      const examples = opts.examples ? await opts.examples(query).catch(() => undefined) : undefined;
+      const b = await drawArt(userContent(req, `Name: ${choice.name}\nBrief: ${choice.brief}`), o, examples);
       return artDesign(b, plan, choice.match);
     });
   }

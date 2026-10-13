@@ -95,6 +95,23 @@ export type Database = {
         Args: { p_user: string };
         Returns: number;
       };
+      /** Service role only: the AI designer's example library (ai_examples migration). */
+      ai_is_curator: {
+        Args: { p_user: string };
+        Returns: boolean;
+      };
+      ai_examples_list: {
+        Args: Record<string, never>;
+        Returns: { id: string; title: string; description: string; tags: string; width_mm: number; height_mm: number; render_path: string; svg_path: string; photo_path: string | null; created_at: string }[];
+      };
+      ai_example_add: {
+        Args: { p_user: string; p_id: string; p_title: string; p_description: string; p_tags: string; p_width: number; p_height: number; p_render_path: string; p_svg_path: string; p_photo_path: string | null };
+        Returns: undefined;
+      };
+      ai_example_delete: {
+        Args: { p_user: string; p_id: string };
+        Returns: { render_path: string; svg_path: string; photo_path: string | null }[];
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };

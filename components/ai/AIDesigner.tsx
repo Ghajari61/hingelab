@@ -2,13 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ArrowUp, Check, Download, ImagePlus, Info, Layers, Loader2, PenTool, RotateCcw, ScanEye, Sparkles, Undo2, Wand2, X } from "lucide-react";
-import { AI_START_KEY, isAIProduct, MAX_IMAGE_CHARS, MAX_IMAGE_NOTE, MAX_PROMPT, reviseOf, type AIDesign, type AIMatch, type AIOpen } from "@/lib/ai/types";
+import { ArrowRight, ArrowUp, Check, Download, ImagePlus, Info, Layers, Library, Loader2, PenTool, RotateCcw, ScanEye, Sparkles, Undo2, Wand2, X } from "lucide-react";
+import { AI_START_KEY, isAIProduct, MAX_IMAGE_NOTE, MAX_PROMPT, reviseOf, type AIDesign, type AIMatch, type AIOpen } from "@/lib/ai/types";
 import { previewSvg } from "@/lib/ai/preview";
+import { photoJpeg } from "@/lib/ai/photo";
 import type { Plan } from "@/lib/plans";
 
-/** Longest side of the photo sent to the designer, px. */
-const PHOTO_PX = 1024;
 /** The last answer, so a reload or a trip to the editor and back keeps it. */
 const LAST_KEY = "hingelab-ai-last";
 
@@ -21,23 +20,6 @@ const EXAMPLES = [
 ];
 
 const MATCH: Record<AIMatch, string> = { exact: "Exact match", close: "Close match", loose: "Nearest product" };
-
-/** The photo as a colour JPEG data URL, at most PHOTO_PX on its longest side and small enough to send. */
-async function photoJpeg(file: Blob): Promise<string> {
-  const bmp = await createImageBitmap(file);
-  const k = Math.min(1, PHOTO_PX / Math.max(bmp.width, bmp.height));
-  const cv = document.createElement("canvas");
-  cv.width = Math.max(1, Math.round(bmp.width * k));
-  cv.height = Math.max(1, Math.round(bmp.height * k));
-  const g = cv.getContext("2d")!;
-  g.fillStyle = "#fff";
-  g.fillRect(0, 0, cv.width, cv.height);
-  g.drawImage(bmp, 0, 0, cv.width, cv.height);
-  bmp.close();
-  let q = 0.85, url = cv.toDataURL("image/jpeg", q);
-  while (url.length > MAX_IMAGE_CHARS * 0.9 && q > 0.4) { q -= 0.1; url = cv.toDataURL("image/jpeg", q); }
-  return url;
-}
 
 /** The design in an `open` link (`#open=<base64url JSON>`); anything malformed is ignored. */
 function readOpen(hash: string): AIOpen | null {
@@ -75,7 +57,7 @@ async function handOff(o: AIOpen, note: string, replace = false, photo?: string 
 const fileName = (name: string) => (name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "design") + ".svg";
 
 /** Describe a product or show a photo of it; get a ready design of the nearest HingeLab product. */
-export function AIDesigner({ plan }: { plan: Plan }) {
+export function AIDesigner({ plan, curator = false }: { plan: Plan; curator?: boolean }) {
   const [prompt, setPrompt] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoNote, setPhotoNote] = useState("");
@@ -92,6 +74,8 @@ export function AIDesigner({ plan }: { plan: Plan }) {
   const [editError, setEditError] = useState<string | null>(null);
   /** Designs before each AI edit, newest last. */
   const [history, setHistory] = useState<AIDesign[]>([]);
+  /** Curators: adding the shown design to the example library. */
+  const [kept, setKept] = useState<{ busy?: boolean; ok?: boolean; text?: string }>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -116,6 +100,24 @@ export function AIDesigner({ plan }: { plan: Plan }) {
   }, [busy, editing]);
 
   const preview = useMemo(() => (design?.svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(previewSvg(design.svg))}` : null), [design]);
+
+  useEffect(() => { setKept({}); }, [design]);
+
+  async function keepAsExample() {
+    if (!design?.svg || kept.busy) return;
+    setKept({ busy: true });
+    try {
+      const res = await fetch("/api/ai/examples", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title: design.name, description: design.summary, tags: "", svg: design.svg, photo: designPhoto }),
+      });
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      setKept(res.ok ? { ok: true, text: "Added to the example library." } : { ok: false, text: body?.error ?? "It could not be added. Try again." });
+    } catch {
+      setKept({ ok: false, text: "Could not reach HingeLab. Check your connection and try again." });
+    }
+  }
 
   async function addPhoto(file: File | undefined) {
     if (!file) return;
@@ -239,6 +241,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
         <span className="ai-eyebrow"><Sparkles size={14} aria-hidden /> AI designer</span>
         <h1>Describe it. <span className="ai-grad">Get a laser-ready file.</span></h1>
         <p className="ai-sub">The designer draws an original cut and engrave file, looks at its own drawing and fixes it. Boxes, hinges and other engineered products are built with HingeLab&apos;s tested generators.</p>
+        {curator && <Link href="/app/ai/examples" className="ai-link-btn"><Library size={14} aria-hidden /> Example library</Link>}
       </header>
 
       <form
@@ -391,8 +394,14 @@ export function AIDesigner({ plan }: { plan: Plan }) {
                 {design.product === "art" ? "Open in Studio" : "Open in editor"} <ArrowRight size={16} aria-hidden />
               </button>
               {design.svg && <button type="button" className="btn-ghost" onClick={download}><Download size={15} aria-hidden /> Download SVG</button>}
+              {curator && design.product === "art" && design.svg && !kept.ok && (
+                <button type="button" className="ai-link-btn" onClick={() => void keepAsExample()} disabled={kept.busy}>
+                  {kept.busy ? <Loader2 size={14} className="spin" aria-hidden /> : <Library size={14} aria-hidden />} Add to example library
+                </button>
+              )}
               <button type="button" className="ai-link-btn" onClick={startOver}><RotateCcw size={14} aria-hidden /> Start over</button>
             </div>
+            {kept.text && <p className={kept.ok ? "ai-status" : "auth-msg err"} role={kept.ok ? "status" : "alert"}>{kept.text}</p>}
           </div>
         </section>
       )}

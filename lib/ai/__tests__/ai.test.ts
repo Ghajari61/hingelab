@@ -260,6 +260,24 @@ describe("AI designer", () => {
     expect((d.params.art as { texts: unknown[] }).texts).toHaveLength(1);
   });
 
+  it("shows the shop's examples with the first drawing only, and draws without them when they fail", async () => {
+    const reviewed = { ...art(), looksRight: false, problems: ["thin"] };
+    const { model, calls } = mock(ART_PICK, art(), reviewed);
+    const asked: string[] = [];
+    const examples = async (q: string) => { asked.push(q); return [{ type: "text" as const, text: "Example 1: Moon stand (100 × 100 mm)" }, { type: "file" as const, mediaType: "image/png", data: "UE5H" }]; };
+    const d = await designWithAI({ prompt: "circle Phone stand" }, "pro", "user-1", model, { examples });
+    expect(d.product).toBe("art");
+    expect(asked[0]).toContain("circle Phone stand");
+    expect(asked[0]).toContain("A circular phone stand");
+    const drawCall = JSON.stringify(calls[1].prompt);
+    expect(drawCall).toContain("Example 1: Moon stand");
+    expect(drawCall.indexOf("Example 1")).toBeLessThan(drawCall.indexOf("Request: circle Phone stand"));
+    expect(JSON.stringify(calls[2].prompt)).not.toContain("Example 1");
+    const broken = mock(ART_PICK, art(), { ...art(), looksRight: true, problems: [] });
+    const ok = await designWithAI({ prompt: "circle Phone stand" }, "pro", "user-1", broken.model, { examples: async () => { throw new Error("db down"); } });
+    expect(ok.product).toBe("art");
+  });
+
   it("draws anything a product would only approximate, and never fills in a template layout", async () => {
     const reviewed = { ...art(), looksRight: true, problems: [] };
     const near = mock({ product: "boxes", preset: "phone-stand", name: "Phone stand", match: "close", flat: false, brief: "A circular phone stand" }, art(), reviewed);

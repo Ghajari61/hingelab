@@ -309,9 +309,13 @@ async function improve(b: BuiltArt, request: UserContent, o: ArtOptions): Promis
   return b;
 }
 
-/** Draws a new design for the request (description, photo and the planner's brief), then reviews it. */
-export async function drawArt(request: UserContent, o: ArtOptions): Promise<BuiltArt> {
-  const first = await buildArt(cleanArt(await o.ask(DRAW_SYSTEM, request, artSchema, "medium")));
+/**
+ * Draws a new design for the request (description, photo and the planner's brief), then reviews it.
+ * Examples from the shop's library go only with the first drawing; the review judges the request alone.
+ */
+export async function drawArt(request: UserContent, o: ArtOptions, examples?: UserContent): Promise<BuiltArt> {
+  const content = examples && examples.length ? [...asParts(examples), ...asParts(request)] : request;
+  const first = await buildArt(cleanArt(await o.ask(DRAW_SYSTEM, content, artSchema, "medium")));
   if (!drawn(first)) throw new Error("the model drew nothing");
   return improve(first, request, o);
 }

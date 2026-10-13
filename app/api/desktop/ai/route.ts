@@ -1,6 +1,7 @@
 import { desktopError, desktopJSON, requireDesktopUser } from "@/lib/desktop/http";
 import { desktopPlan } from "@/lib/desktop/session";
 import { AIDesignError, designWithAI } from "@/lib/ai/design";
+import { examplesFor } from "@/lib/ai/examples";
 import { aiAllowance, aiConfigured, aiLimitMessage, MAX_AI_BODY, parseAIRequest } from "@/lib/ai/request";
 import { declaredLength, isJSONRequest } from "@/lib/security/request";
 
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
   const allowed = await aiAllowance(plan, who.userId);
   if (!allowed.ok) return desktopError("invalid", aiLimitMessage(plan, allowed.daily), 429, { "retry-after": String(Math.max(1, allowed.retryAfter)) });
   try {
-    return desktopJSON(await designWithAI(req, plan, who.userId), 200, { "x-hingelab-plan": plan });
+    return desktopJSON(await designWithAI(req, plan, who.userId, undefined, { examples: examplesFor }), 200, { "x-hingelab-plan": plan });
   } catch (e) {
     if (e instanceof AIDesignError) return desktopError("invalid", e.message, 502);
     console.error("desktop ai design failed", e);

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { AIDesignError, designWithAI } from "@/lib/ai/design";
+import { examplesFor } from "@/lib/ai/examples";
 import { aiAllowance, aiConfigured, aiLimitMessage, MAX_AI_BODY, parseAIRequest } from "@/lib/ai/request";
 import { currentPlan } from "@/lib/billing/plan";
 import { declaredLength, isCrossSite, isJSONRequest, siteOrigins } from "@/lib/security/request";
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
   const allowed = await aiAllowance(plan, userId);
   if (!allowed.ok) return json({ error: aiLimitMessage(plan, allowed.daily) }, 429, { "retry-after": String(Math.max(1, allowed.retryAfter)) });
   try {
-    return json(await designWithAI(req, plan, userId, undefined, { photoRelief: true }), 200, { "x-hingelab-plan": plan });
+    return json(await designWithAI(req, plan, userId, undefined, { photoRelief: true, examples: examplesFor }), 200, { "x-hingelab-plan": plan });
   } catch (e) {
     if (e instanceof AIDesignError) return json({ error: e.message }, 502);
     console.error("ai design failed", e);

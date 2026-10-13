@@ -65,6 +65,14 @@ The app (`desktop/`, see `DESKTOP_ARCHITECTURE.md`) signs in and builds designs 
 4. Code signing (removes the SmartScreen warning): get Azure Trusted Signing or an OV/EV certificate and configure it as in `WINDOWS_RELEASE_CHECKLIST.md`.
 5. Releases: build with `npm run desktop:build`, upload the installer (GitHub Releases recommended), then `node scripts/desktop/release.mjs --url … --notes …`, commit and deploy. Full list: `WINDOWS_RELEASE_CHECKLIST.md`.
 
+## AI designer example library
+
+Finished products the AI designer looks at before it draws an original design (D143), at `/app/ai/examples`.
+
+1. Database: `20261013000100_ai_examples.sql` must be applied (`npx supabase db push --linked`). It adds the private tables, the functions and the private `ai-examples` storage bucket.
+2. Who curates: the account with the confirmed email ghajari61@gmail.com, always. To add someone else, run in the Supabase SQL editor: `insert into private.ai_curators (user_id) values ('<their user id>');`
+3. Each example is a cut file (SVG, real size in mm, text as paths) and optionally a photo of the finished product. For a request, the two examples whose title, tags and description fit best are sent with the first drawing; nothing is sent when none fits.
+
 ## Before launch
 
 1. Read `/terms` and `/privacy` (app/terms/page.tsx, app/privacy/page.tsx). They are plain-language drafts written for this app, not legal advice; have them checked for your country and add your business name if required.

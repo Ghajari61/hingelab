@@ -23,6 +23,7 @@ const nextConfig: NextConfig = {
     "/api/export": ["./public/fonts/*.ttf", "./public/fonts/*.otf", "./node_modules/harfbuzzjs/dist/**", "./node_modules/manifold-3d/*.wasm", "./node_modules/manifold-3d/*.js"],
     "/api/ai/design": ["./public/fonts/*.ttf", "./public/fonts/*.otf", "./node_modules/harfbuzzjs/dist/**", "./node_modules/@resvg/**"],
     "/api/desktop/ai": ["./public/fonts/*.ttf", "./public/fonts/*.otf", "./node_modules/harfbuzzjs/dist/**", "./node_modules/@resvg/**"],
+    "/api/ai/examples": ["./node_modules/@resvg/**"],
   },
   async headers() {
     return [
