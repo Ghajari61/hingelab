@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Box, Cake, Check, Clock, Clock3, Crown, ExternalLink, FolderOpen, Globe, Hash, History, KeyRound, Keyboard, LayoutGrid, LifeBuoy, Lock, Plus, Puzzle, QrCode, Signpost, Sparkles, Star, Trash2, Trophy } from "lucide-react";
+import { ArrowRight, Box, Cake, Check, Clock, Clock3, Crown, ExternalLink, FolderOpen, Globe, Hash, History, KeyRound, Keyboard, LayoutGrid, LifeBuoy, Lock, Plus, Puzzle, QrCode, Signpost, Sparkles, Star, Trash2, Trophy, Wand2 } from "lucide-react";
 import type { DCatalog, DProduct } from "../../../lib/desktop/types";
 import { onlineArt, presetArt, productArt, showcase } from "../art";
 import type { WebRoute } from "./Web";
@@ -8,7 +8,7 @@ import type { Favorite, LocalPrefs, SavedDesign } from "../local";
 import type { UpdateStatus } from "../updater";
 import { formatBytes } from "../updater";
 
-export const ICONS = { box: Box, clock: Clock, puzzle: Puzzle, qr: QrCode, cake: Cake, key: KeyRound, sign: Signpost, hash: Hash, trophy: Trophy } as const;
+export const ICONS = { box: Box, clock: Clock, puzzle: Puzzle, qr: QrCode, cake: Cake, key: KeyRound, sign: Signpost, hash: Hash, trophy: Trophy, wand: Wand2 } as const;
 
 export function ProductIcon({ product, size = 18 }: { product: DProduct; size?: number }) {
   const I = ICONS[product.icon] ?? Box;

@@ -57,6 +57,7 @@ const KEYS = { prefs: "hl-prefs-v1", recent: "hl-recent-v1", favorites: "hl-favo
 export const DEFAULT_PREFS: LocalPrefs = { theme: "system", units: "mm", autoCheckUpdates: true, reuseLastSettings: true, defaultProduct: "hinge", sidebarCollapsed: false, sheetTone: "plywood", sheetGrid: true, view3d: false, view3dQuad: true, view3dShade: "shaded", view3dDims: true };
 const MAX_RECENT = 24;
 const MAX_ITEM = 300_000;
+const MAX_LIST = 3_500_000;
 
 function read<T>(key: string, fallback: T): T {
   try {
@@ -107,15 +108,22 @@ export const usePrefs = () => {
 export const useRecent = () => useStored<SavedDesign[]>(KEYS.recent, EMPTY);
 export const useFavorites = () => useStored<Favorite[]>(KEYS.favorites, EMPTY);
 
+/** The newest entries that fit in storage (`write` skips a list that is too large). */
+function fitList<T>(list: T[]): T[] {
+  let out = list;
+  while (out.length > 1 && JSON.stringify(out).length > MAX_LIST) out = out.slice(0, -1);
+  return out;
+}
+
 export function addRecent(list: SavedDesign[], d: Omit<SavedDesign, "id" | "at">): SavedDesign[] {
   if (JSON.stringify(d.params).length > MAX_ITEM) return list;
   const same = (x: SavedDesign) => x.product === d.product && x.name === d.name;
   const prev = list.find(same);
-  return [{ thumb: prev?.thumb, ...d, id: prev?.id ?? crypto.randomUUID(), at: Date.now() }, ...list.filter((x) => !same(x))].slice(0, MAX_RECENT);
+  return fitList([{ thumb: prev?.thumb, ...d, id: prev?.id ?? crypto.randomUUID(), at: Date.now() }, ...list.filter((x) => !same(x))].slice(0, MAX_RECENT));
 }
 
 export function setRecentThumb(list: SavedDesign[], product: string, name: string, thumb: string): SavedDesign[] {
-  return list.map((x) => (x.product === product && x.name === name ? { ...x, thumb } : x));
+  return fitList(list.map((x) => (x.product === product && x.name === name ? { ...x, thumb } : x)));
 }
 
 /** Last settings per product. */

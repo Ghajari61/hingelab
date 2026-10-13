@@ -4,6 +4,8 @@
  */
 
 export type DesktopProductId = "hinge" | "clock" | "puzzle" | "qr" | "boxes" | "topper" | "keyrack" | "sign" | "tablenum" | "trophy";
+/** Everything the workspace opens: the products, and "art", a drawing from the AI designer. */
+export type WorkspaceProductId = DesktopProductId | "art";
 export type DesktopPlan = "free" | "pro";
 
 export type DField =
@@ -27,10 +29,10 @@ export interface DPreset {
 }
 
 export interface DProduct {
-  id: DesktopProductId;
+  id: WorkspaceProductId;
   name: string;
   blurb: string;
-  icon: "box" | "clock" | "puzzle" | "qr" | "cake" | "key" | "sign" | "hash" | "trophy";
+  icon: "box" | "clock" | "puzzle" | "qr" | "cake" | "key" | "sign" | "hash" | "trophy" | "wand";
   sections: DSection[];
   presets: DPreset[];
 }
@@ -38,6 +40,8 @@ export interface DProduct {
 export interface DCatalog {
   version: number;
   products: DProduct[];
+  /** The AI designer's drawings; not in `products`, so apps that do not know it never list it. */
+  art?: DProduct;
 }
 
 /** What changes with the settings: hidden fields and sections, and labels that depend on them. */
@@ -55,7 +59,7 @@ export interface DIssue {
 }
 
 export interface GenerateRequest {
-  product: DesktopProductId;
+  product: WorkspaceProductId;
   /** Current settings (omit to start from the defaults or a preset). */
   params?: unknown;
   preset?: string;
@@ -95,7 +99,7 @@ export interface D3Model {
 }
 
 export interface GenerateResponse {
-  product: DesktopProductId;
+  product: WorkspaceProductId;
   params: Record<string, unknown>;
   form: DForm;
   issues: DIssue[];

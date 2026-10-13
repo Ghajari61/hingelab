@@ -934,3 +934,14 @@ The owner asked to import 1000 files from `D:\Archive\Print\SVG Files` with titl
 - **Titles.** The folder names are Russian. A vision model named each project from its photo and folder name: English title, how it is built and what it is made of, and words customers would use. Photos were resized to 1024 px JPEG in a browser canvas (sharp is not allowed).
 - **Limits.** The cap went from 500 to 2000 (`20261014000100_ai_examples_cap.sql`). 1000 examples take about 210 MB of storage. The list loads once per five minutes per server, and only the two best matches' images are fetched for a request.
 - **Copyright.** The examples are only shown to the model as references for style and construction, and the prompt tells it not to copy them; they are never offered to customers.
+
+## D145. Desktop: AI drawings in the workspace
+
+The owner asked to open an AI drawing in the 3D view and settings, not only save it.
+
+- **A workspace product, not a generator.** `lib/desktop/art.ts` adds "AI drawing" (`art`). Its settings carry the drawing as the designer wrote it (shapes and texts in mm) plus width, mirror, engrave, score, material and T. Each request checks the drawing with the designer's own schema and `cleanArt`, rebuilds it with `buildArt` (text outlines with the bundled fonts), then scales, mirrors and filters layers. The drawing itself is never changed: a different design is a job for Edit with AI.
+- **Parts in 3D.** Every outermost closed cut is a part; everything cut inside it is a hole (even-odd, so an island inside a hole shows in place), and closed engraving inside it is its engraving. The parts lie flat in the chosen thickness through the generators' `generatorScene`. They are not assembled: the drawing does not say how its parts go together. Over 3000 closed cuts, no 3D model is sent.
+- **Checks.** With two or more parts, slots are taken to be as wide as the thickness the drawing was made for. When the thickness times the scale differs from the material by more than 0.05 mm, a warning offers "Use X mm material" (safe, so Fix all applies it) or "Resize for T mm". Open cuts, no cut outline and texts the fonts could not draw are reported too.
+- **Older apps.** The catalog sends the product as `catalog.art`, beside `products`, so apps before 1.0.18 never list it. `generateDesign` accepts `art` only with a drawing in the settings; there are no presets and no online editor, so Full editor is hidden.
+- **Storage.** A drawing's settings can be up to about 170 KB, so drawings are not remembered as the product's last settings, and the recent list drops its oldest entries to stay under the storage limit instead of failing to save.
+- **Plan.** As before, the free plan gets the watermark on drawings; nothing is locked.

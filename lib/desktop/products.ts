@@ -158,7 +158,8 @@ let catalog: Promise<DCatalog> | null = null;
 export function desktopCatalog(): Promise<DCatalog> {
   catalog ??= (async () => {
     const gens = await Promise.all(GENERATOR_IDS.map(async (id) => genProduct(id, await loadGenerator[id]())));
-    return { version: CATALOG_VERSION, products: [hingeProduct(), ...gens] };
+    const { ART_PRODUCT } = await import("./art");
+    return { version: CATALOG_VERSION, products: [hingeProduct(), ...gens], art: ART_PRODUCT };
   })();
   return catalog;
 }
@@ -199,11 +200,11 @@ function withMaterial<T extends { material: string; T: number; K: number }>(p: T
 
 export type GenerateResult = { status: number; body: GenerateResponse | { error: string } };
 
-const toIssues = <P>(list: Issue<P>[]): DIssue[] => sortIssues(list).map((i) => ({
+export const toIssues = <P>(list: Issue<P>[]): DIssue[] => sortIssues(list).map((i) => ({
   code: i.code, level: i.level, message: i.message, fixes: i.fixes.map((f) => ({ id: f.id, label: f.label, safe: f.safe })),
 }));
 
-function applyFix<P>(p: P, issues: Issue<P>[], fix: GenerateRequest["fix"]): { p: P; applied: string[] } {
+export function applyFix<P>(p: P, issues: Issue<P>[], fix: GenerateRequest["fix"]): { p: P; applied: string[] } {
   if (!fix || typeof fix.code !== "string" || typeof fix.id !== "string") return { p, applied: [] };
   const f = issues.find((i) => i.code === fix.code)?.fixes.find((x) => x.id === fix.id);
   return f ? { p: f.apply(p), applied: [f.label] } : { p, applied: [] };
@@ -217,7 +218,7 @@ function sheetSize(svg: string): { width?: number; height?: number } {
 const plainObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 
 /** The 3D model when the app asked for it; a design too large to send, or a failed build, sends none. */
-function modelPart(r: GenerateRequest, at: (explode: number) => Scene3D): { model?: D3Model } {
+export function modelPart(r: GenerateRequest, at: (explode: number) => Scene3D): { model?: D3Model } {
   if (r.model !== true) return {};
   try {
     const model = sceneModel(at);
@@ -234,18 +235,19 @@ function modelPart(r: GenerateRequest, at: (explode: number) => Scene3D): { mode
  * to the app can be saved from it.
  */
 export async function generateDesign(req: unknown, plan: Plan): Promise<GenerateResult> {
-  if (!plainObject(req) || !isDesktopProduct(req.product)) return { status: 400, body: { error: "Unknown product." } };
+  if (!plainObject(req) || !(isDesktopProduct(req.product) || req.product === "art")) return { status: 400, body: { error: "Unknown product." } };
   const r = req as unknown as GenerateRequest;
   if (r.params !== undefined && !plainObject(r.params)) return { status: 400, body: { error: "Invalid settings." } };
   if (r.change !== undefined && (!plainObject(r.change) || typeof r.change.key !== "string")) return { status: 400, body: { error: "Invalid change." } };
   if (r.fix !== undefined && !plainObject(r.fix)) return { status: 400, body: { error: "Invalid fix." } };
-  const product = (await desktopCatalog()).products.find((p) => p.id === r.product)!;
   if (r.change?.key === "name") {
     // The design's name is free text (used for the file name, which is sanitized separately).
     if (typeof r.change.value !== "string") return { status: 400, body: { error: "The name must be text." } };
     r.params = { ...(plainObject(r.params) ? r.params : {}), name: r.change.value.replace(/[\u0000-\u001f]/g, "").slice(0, 120) };
     delete r.change;
   }
+  if (r.product === "art") return (await import("./art")).generateArt(r, plan);
+  const product = (await desktopCatalog()).products.find((p) => p.id === r.product)!;
   return r.product === "hinge" ? generateHinge(r, product, plan) : generateGenerator(r, r.product, product, plan);
 }
 

@@ -33,7 +33,8 @@ interface Props {
   onUpgrade: () => void;
   onRefreshPlan: () => void;
   onFavorite: () => void;
-  onFullEditor: () => void;
+  /** Absent when the product has no online editor (AI drawings). */
+  onFullEditor?: () => void;
   /** The 3D view opened or closed: builds then bring the assembled model. */
   onWant3d: (on: boolean) => void;
 }
@@ -119,7 +120,7 @@ export function Workspace(p: Props) {
           <button type="button" className="icon-btn" title="Undo (Ctrl+Z)" disabled={!design.canUndo} onClick={p.onUndo}><Undo2 size={16} aria-hidden /></button>
           <button type="button" className="icon-btn" title="Redo (Ctrl+Y)" disabled={!design.canRedo} onClick={p.onRedo}><Redo2 size={16} aria-hidden /></button>
           <span className="sep" />
-          <button type="button" className="btn ghost" title={`Open the online ${product.name} editor in this window: 3D view, DXF, sheets and more`} onClick={p.onFullEditor}><Box size={15} aria-hidden />Full editor</button>
+          {p.onFullEditor && <button type="button" className="btn ghost" title={`Open the online ${product.name} editor in this window: 3D view, DXF, sheets and more`} onClick={p.onFullEditor}><Box size={15} aria-hidden />Full editor</button>}
           <button type="button" className="btn" title="Build the design again (Ctrl+Enter)" onClick={p.onRefresh} disabled={design.busy || !p.online}>
             <RefreshCw size={15} className={design.busy ? "spin" : undefined} aria-hidden />{design.busy ? "Updating" : "Update"}
           </button>
@@ -178,7 +179,7 @@ export function Workspace(p: Props) {
               >
                 {overlays}
                 {r?.svg && !r.model && !design.busy && !err && (
-                  <div className="overlay quiet" role="status"><Box size={20} aria-hidden /><p>This design is too large to show in 3D. Full editor shows it on the website.</p></div>
+                  <div className="overlay quiet" role="status"><Box size={20} aria-hidden /><p>{p.onFullEditor ? "This design is too large to show in 3D. Full editor shows it on the website." : "This design has no closed cut parts to show in 3D, or too many."}</p></div>
                 )}
                 {r?.svg && !r.model && design.busy && <div className="overlay quiet" aria-busy="true"><RefreshCw size={20} className="spin" aria-hidden /><p>Building the 3D model…</p></div>}
               </View3D>

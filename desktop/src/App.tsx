@@ -182,7 +182,7 @@ export function App() {
     }
   }, [loadAccount, design, toast]);
 
-  const product = useMemo(() => catalog?.products.find((p) => p.id === design.state.product) ?? null, [catalog, design.state.product]);
+  const product = useMemo(() => (catalog?.art?.id === design.state.product ? catalog.art : catalog?.products.find((p) => p.id === design.state.product)) ?? null, [catalog, design.state.product]);
 
   const openNew = useCallback((id: string) => {
     const saved = local.reuseLastSettings ? lastParams(id) : null;
@@ -202,7 +202,7 @@ export function App() {
   const r = design.state.result;
   useEffect(() => {
     if (!r || (design.state.status !== 200 && design.state.status !== 403)) return;
-    rememberParams(r.product, r.params);
+    if (r.product !== "art") rememberParams(r.product, r.params);
     const name = String(r.params.name ?? "Untitled");
     setRecent((list) => addRecent(list, { product: r.product, name, params: r.params, summary: r.summary }));
     if (!r.svg) return;
@@ -345,7 +345,7 @@ export function App() {
             onUpgrade={() => web("upgrade")}
             onRefreshPlan={refreshPlan}
             onFavorite={toggleFavorite}
-            onFullEditor={() => openOnline("web-editors", `/app/editor/local?p=${encodeURIComponent(product.id)}`)}
+            onFullEditor={product.id === "art" ? undefined : () => openOnline("web-editors", `/app/editor/local?p=${encodeURIComponent(product.id)}`)}
             onWant3d={design.setWant3d}
           />
         )}

@@ -40,7 +40,8 @@ async function photoJpeg(file: Blob): Promise<string> {
 /**
  * Describe a product or show a photo; the server's AI designer answers with settings for one of
  * the products. Hinge Box and generator designs open in the workspace (built on the server as
- * usual); Letters and Parametric open in the website's editor inside the window.
+ * usual), and so do the designer's own drawings; Letters and Parametric open in the website's
+ * editor inside the window.
  */
 export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
   catalog: DCatalog | null; plan: "free" | "pro"; online: boolean;
@@ -132,7 +133,7 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
     kept = { prompt: prompt.trim(), design: prev, fromPhoto, history: h };
   }
 
-  const native = !!design && !!catalog?.products.some((p) => p.id === design.product);
+  const native = !!design && (design.product === "art" ? !!catalog?.art : !!catalog?.products.some((p) => p.id === design.product));
   const drawn = design?.product === "art" && !!design.svg;
   const preview = design?.svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(previewSvg(design.svg))}` : null;
 
@@ -313,7 +314,8 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
             <div className="ai-actions">
               {drawn ? (
                 <>
-                  <button type="button" className="btn primary" onClick={() => void saveDrawn("save")} disabled={editing || saving}><Save size={15} aria-hidden />Save SVG…</button>
+                  {native && <button type="button" className="btn primary" title="Resize it, choose the material and see its parts in 3D" onClick={open} disabled={editing}>Open in workspace<ArrowRight size={15} aria-hidden /></button>}
+                  <button type="button" className={native ? "btn" : "btn primary"} onClick={() => void saveDrawn("save")} disabled={editing || saving}><Save size={15} aria-hidden />Save SVG…</button>
                   <button type="button" className="btn" onClick={() => void saveDrawn("export")} disabled={editing || saving}><Download size={15} aria-hidden />Export</button>
                 </>
               ) : (

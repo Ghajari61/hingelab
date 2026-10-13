@@ -161,8 +161,11 @@ async function textShapes(texts: Art["texts"]): Promise<{ shapes: { layer: Layer
   return { shapes: out, lost };
 }
 
+export type ArtShape = { layer: Layer; d: string };
+export type ArtBox = { x: number; y: number; w: number; h: number };
+
 /** The finished SVG; `preview` draws thicker lines so a small picture still shows the cuts. */
-function svgOf(a: Art, all: { layer: Layer; d: string }[], box: { x: number; y: number; w: number; h: number }, preview = false): string {
+export function svgOf(a: Pick<Art, "name" | "material">, all: ArtShape[], box: ArtBox, preview = false): string {
   const line = preview ? round(Math.max(0.3, Math.max(box.w, box.h) / 300)) : 0.1;
   const group = (layer: Layer) => {
     const mine = all.filter((s) => s.layer === layer);
@@ -181,6 +184,9 @@ export interface BuiltArt {
   art: Art;
   svg: string;
   preview: string;
+  /** Every shape in the file, the texts as outlines, and the artboard they are drawn on. */
+  shapes: ArtShape[];
+  box: ArtBox;
   width: number;
   height: number;
   cuts: number;
@@ -233,7 +239,7 @@ export async function buildArt(a: Art): Promise<BuiltArt> {
   if (!inertSvgMarkup(svg)) throw new Error("art svg is not inert");
   const check = importSvg(svg);
   return {
-    art: a, svg, preview: svgOf(a, all, box, true), width: round(box.w), height: round(box.h),
+    art: a, svg, preview: svgOf(a, all, box, true), shapes: all, box, width: round(box.w), height: round(box.h),
     cuts: all.filter((s) => s.layer === "cut").reduce((n, s) => n + (s.d.match(/[Mm]/g)?.length ?? 0), 0),
     openCuts: check.openCuts,
     outside, lostTexts: text.lost, dropOuts: countDropOuts(all),
