@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.9",
-    "pub_date": "2026-10-13T00:59:39.200Z",
-    "notes": "3D workspace for every generator: Top, Front, Left and Perspective views like a 3D modelling program, with shaded, wireframe and edged display, explode and part selection. Overall dimensions drawn on the model in every view.",
+    "version": "1.0.10",
+    "pub_date": "2026-10-13T01:36:50.822Z",
+    "notes": "The 3D views offer Shaded and Edges display; the Wire mode is removed.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.9_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnNKeXY5N2hQbjcxZ2dCb0lHNTJHWVBQRUc0bmVCbCtjRC9VdEU0bUlmdTdBTGl1WlJnSWI3ejdEcnlqblA5U3JJWUF5dEJGamhDZ3lTZEo1TDNSTHc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODUzMTcwCWZpbGU6SGluZ2VMYWJfMS4wLjlfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMC45CjZhRDZBNVNGZ1kzSHF4cVN5NzVYQm5vNlR2YzVMeENMOVJ0TnZkZEE0bkNOZXZEYTJQMUZmaGVPRXlPa1hpTDhRV2ZURnhVdjhyemU0QjRyZWYvT0NRPT0K",
-        "size": 2991378
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.10_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmlZUy9TQWVNOUR3WU5qVVVkTy9FdGRTckh2M29LVytPY1RhNThJUy9nbGN0eGFQV0R5U2g1a1lRR09rajNMcDdGOEJNSDB0am93RDl0WFRKV0tJYmdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODU1NDAxCWZpbGU6SGluZ2VMYWJfMS4wLjEwX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMTAKUUdOMFlWVjZUcUNkYXZ3aldUaWpXSWZSUXc3dG91ekhjMVVPSDkzZXZ0ZllQMWJBeXpXUktLTjRBMFNmdm4xMmtOdHRqVzVPeUFFSEVzMnVpNjg4RGc9PQo=",
+        "size": 2990845
       }
     }
   }
