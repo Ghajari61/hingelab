@@ -48,7 +48,7 @@ import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 
 const LetterPreview3D = dynamic(() => import("./LetterPreview3D"), {
   ssr: false,
-  loading: () => <div id="preview3d" className="p3d" />,
+  loading: () => <div id="preview3d" className="v3" aria-busy="true" />,
 });
 
 const KEY = "hingelab-letters-v2";
@@ -487,7 +487,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
           })}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
         />
-        <div className="stage">
+        <div className={`stage${viewMode === "3d" ? " no-rulers" : ""}`}>
         <ViewToggle value={viewMode} onChange={setViewMode} />
         <div className="stage-3d" hidden={viewMode !== "3d"}>
           {seen3d && <LetterPreview3D model={model} params={built} lay={lay} content={content} units={units} />}

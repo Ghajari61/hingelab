@@ -43,7 +43,7 @@ import { Dialogs, type ModalState } from "./dialogs";
 
 const HingeView3D = dynamic(() => import("./HingeView3D"), {
   ssr: false,
-  loading: () => <div id="preview3d" className="p3d v3d" />,
+  loading: () => <div id="preview3d" className="v3" aria-busy="true" />,
 });
 
 function loadInitial(cloud: CloudDoc | null) {
@@ -411,7 +411,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
           groups={hingeGroups({ params, plan: account.plan, onShape: (v) => setChoice("shape", v), onLid: (v) => setChoice("lid", v), onPattern: (v) => setChoice("pattern", v), onVariant: (v) => { patch({ ...params, ...v.params }, true); toastMsg(`${v.name} hinge style`); } })}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
         />
-        <div className="stage">
+        <div className={`stage${viewMode === "3d" ? " no-rulers" : ""}`}>
         <ViewToggle value={viewMode} onChange={setViewMode} />
         <div className={`stage-3d${stale ? " stale" : ""}`} hidden={viewMode !== "3d"}>
           {seen3d && <HingeView3D model={stale?.model ?? model} params={stale?.built ?? built} lay={stale?.lay ?? lay} content={stale?.content ?? content} units={units} />}

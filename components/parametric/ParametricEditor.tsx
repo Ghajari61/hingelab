@@ -29,6 +29,8 @@ import { PRODUCT_INFO, type Product } from "@/components/editor/ControlBar";
 import { GalleryRail } from "@/components/shell/GalleryRail";
 import { HelpContext, useHelpPanel } from "@/components/help/HelpContext";
 import { ViewToggle } from "@/components/shell/ViewToggle";
+import { useView3D } from "@/components/shell/view3d";
+import { View3DTools } from "@/components/shell/View3DTools";
 import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
 import type { Preset } from "@/lib/presets";
@@ -98,7 +100,8 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   const [spaceDown, setSpaceDown] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [show, setShow] = useState<ViewToggles>({ model: true, planes: false, parts: true });
-  const [explode, setExplode] = useState(0);
+  const v3 = useView3D();
+  const explode = v3.explode;
   const [selected, setSelected] = useState<string[]>([]);
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
   const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
@@ -589,25 +592,27 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
           </section>
         </GalleryRail>
         <div className={`stage pe-center${tab === "3d" ? " no-rulers" : ""}`}>
-          <ViewToggle value={tab} onChange={setTab} sheetsLabel={`Sheets${result ? ` (${result.sheets.length})` : ""}`} />
+          <ViewToggle value={tab} onChange={setTab} sheetsLabel={`Sheets${result ? ` (${result.sheets.length})` : ""}`} tools={(
+            <View3DTools v={v3}>
+              <span className="v3-seg" role="group" aria-label="Show">
+                {(["model", "planes", "parts"] as const).map((k) => (
+                  <button key={k} type="button" aria-pressed={show[k]} onClick={() => setShow((s) => ({ ...s, [k]: !s[k] }))}>{k === "model" ? "Model" : k === "planes" ? "Planes" : "Parts"}</button>
+                ))}
+                {result?.deviation && (
+                  <button type="button" aria-pressed={showHeat} title="How far the model's surface lies from the nearest part" onClick={() => setShowHeat(!showHeat)}>Deviation</button>
+                )}
+              </span>
+              <label className="pe-finish" title="How the parts look in this view (the cut files are the same)">Look
+                <select aria-label="Look" value={finish} onChange={(e) => setFinish(e.target.value as Finish)}>
+                  {FINISHES.map((f) => <option key={f.v} value={f.v}>{f.text}</option>)}
+                </select>
+              </label>
+            </View3DTools>
+          )} />
           <div className="stage-chip"><span className="pe-stage">{busy || depthBusy ? (stage ?? "Slicing…") : res ? `${result!.stats.partCount} parts · ${Math.round(res.ms)} ms` : ""}</span>
             {(busy || depthBusy) && <span className="pe-progress" aria-hidden />}</div>
           <div className="pe-3d stage-3d" hidden={tab !== "3d"}>
-              <Viewport3D className="pe-view" mesh={result && !result.usesModel ? null : mesh} result={result} T={params.material.T} show={show} explode={exploded} finish={finish} selected={selected} onSelect={(id) => setSelected(id ? [id] : [])} heat={showHeat && !!result?.deviation} />
-              <div className="pe-hud">
-                {(["model", "planes", "parts"] as const).map((k) => (
-                  <label key={k} className="chk"><input type="checkbox" checked={show[k]} onChange={(e) => setShow((s) => ({ ...s, [k]: e.target.checked }))} /> {k === "model" ? "Model" : k === "planes" ? "Planes" : "Parts"}</label>
-                ))}
-                {result?.deviation && (
-                  <label className="chk" title="How far the model's surface lies from the nearest part"><input type="checkbox" checked={showHeat} onChange={(e) => setShowHeat(e.target.checked)} /> Deviation</label>
-                )}
-                <label className="pe-finish" title="How the parts look in this view (the cut files are the same)">Look
-                  <select aria-label="Look" value={finish} onChange={(e) => setFinish(e.target.value as Finish)}>
-                    {FINISHES.map((f) => <option key={f.v} value={f.v}>{f.text}</option>)}
-                  </select>
-                </label>
-                <label className="pe-explode">Explode <input type="range" min={0} max={1} step={0.01} value={explode} aria-label="Explode" onChange={(e) => setExplode(parseFloat(e.target.value))} /></label>
-              </div>
+              <Viewport3D className="pe-view" mesh={result && !result.usesModel ? null : mesh} result={result} T={params.material.T} show={show} explode={exploded} finish={finish} selected={selected} onSelect={(id) => setSelected(id ? [id] : [])} heat={showHeat && !!result?.deviation} v={v3} units={units} />
               {showHeat && result?.deviation && (
                 <div className="pe-legend" data-testid="deviation-legend">
                   <span>0</span>

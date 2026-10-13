@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { LayerContent, Layout, Point } from "@/lib/hinge";
 import type { LetterModel, LetterParams, LetterPart } from "@/lib/letters";
 import { buildLetterScene, WOOD } from "@/lib/letters/scene3d";
 import { flatScene, type FlatPart } from "@/lib/three/flat";
 import { lookOf } from "@/lib/three/looks";
-import Viewport3D from "@/components/shell/Viewport3D";
-import { View3DHud } from "@/components/shell/View3DHud";
+import QuadView from "@/lib/three/QuadView";
+import { quadProps, useView3D } from "@/components/shell/view3d";
+import { View3DBarTools } from "@/components/shell/View3DTools";
 import type { Units } from "@/components/editor/format";
 
 /** Tints that keep base, lid, lip and glued pieces apart once the material look replaces the colours. */
@@ -29,10 +30,10 @@ function flatParts(lay: Layout<LetterPart>): FlatPart[] {
   });
 }
 
-/** The assembled letters (or their parts lying flat) in the shared 3D stage. */
+/** The assembled letters (or their parts lying flat) in the shared 3D workspace. */
 export default function LetterPreview3D({ model, params, lay, content, units }: { model: LetterModel | null; params: LetterParams; lay: Layout<LetterPart> | null; content: LayerContent | null; units: Units }) {
-  const [explode, setExplode] = useState(0);
-  const [flat, setFlat] = useState(false);
+  const v = useView3D();
+  const { flat, explode } = v;
   const lid = params.mode === "box" && params.lid !== "open";
   const scene = useMemo(() => {
     if (!model) return null;
@@ -43,8 +44,11 @@ export default function LetterPreview3D({ model, params, lay, content, units }: 
   }, [model, params, explode, flat, lay, content, lid]);
   const key = flat && lay ? `flat|${Math.round(lay.width)}x${Math.round(lay.height)}` : `${params.text}|${params.mode}|${params.fontId}|${Math.round(params.size)}`;
   return (
-    <Viewport3D scene={scene} look={lookOf(params.material)} frameKey={key} units={units} measure={flat || !lid || explode === 0} label="Assembled letters in 3D, drag to orbit">
-      <View3DHud flat={flat} onFlat={setFlat} explode={explode} onExplode={setExplode} explodeLabel={lid ? "Lift lid" : null} />
-    </Viewport3D>
+    <QuadView
+      {...quadProps(v)} id="preview3d" model={scene} look={lookOf(params.material)} frameKey={key} units={units}
+      measure={flat || !lid || explode === 0} label="Assembled letters in 3D: Top, Front, Left and Perspective views"
+    >
+      <View3DBarTools v={v} flat explodeLabel={lid ? "Lift lid" : null} />
+    </QuadView>
   );
 }

@@ -41,7 +41,7 @@ import "./generators.css";
 
 const GeneratorView3D = dynamic(() => import("./GeneratorView3D"), {
   ssr: false,
-  loading: () => <div id="preview3d" className="p3d" />,
+  loading: () => <div id="preview3d" className="v3" aria-busy="true" />,
 });
 
 type P = GenBase & Record<string, unknown>;
@@ -436,7 +436,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       />
       <div className="main">
         <GalleryRail title={PRODUCT_INFO[def.id].name} icon={PRODUCT_INFO[def.id].icon} groups={groups} history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }} />
-        <div className="stage">
+        <div className={`stage${viewMode === "3d" ? " no-rulers" : ""}`}>
           <ViewToggle value={viewMode} onChange={setViewMode} />
           <div className="stage-3d" hidden={viewMode !== "3d"}>
             {seen3d && <GeneratorView3D out={out} lay={lay} T={built.T} material={params.material} units={units} frameKey={`${def.id}|${Math.round(lay?.width ?? 0)}x${Math.round(lay?.height ?? 0)}`} />}
