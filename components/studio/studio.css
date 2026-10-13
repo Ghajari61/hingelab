@@ -305,6 +305,55 @@
 .st-menubar .ui-btn { height: 24px; font-size: var(--text-small); gap: 6px; }
 .st-ws { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); }
 .st-ws .ui-select { height: 24px; background: var(--surface-panel); }
+.st-view-seg { display: inline-flex; gap: 1px; padding: 2px; border-radius: var(--radius-2); background: var(--surface-field); }
+.st-view-seg button { height: 20px; min-width: 30px; padding: 0 8px; border: 0; border-radius: 4px; background: none; color: var(--text-secondary); font: 600 var(--text-label)/1 var(--font-ui); cursor: pointer; }
+.st-view-seg button:hover { color: var(--text-primary); }
+.st-view-seg button[aria-pressed="true"] { background: var(--surface-panel); color: var(--text-primary); box-shadow: 0 1px 2px rgba(0, 0, 0, .14); }
+
+/* 3D assembly (components/studio/editor/assembly): over the drawing area, the drawing stays mounted underneath. */
+.st-main { position: relative; }
+.asm { position: absolute; inset: 0; z-index: 30; display: grid; grid-template-columns: minmax(0, 1fr) 300px; background: var(--surface-chrome); min-height: 0; }
+.asm-loading { display: grid; place-items: center; color: var(--text-secondary); }
+.asm-stage { position: relative; min-width: 0; min-height: 0; }
+.asm-stage > .v3 { position: absolute; inset: 0; }
+.asm-bar { top: 10px; }
+.asm-back { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 0; border-radius: 7px; background: var(--select); color: var(--select-ink); font: 600 12px/1 var(--font-ui); cursor: pointer; white-space: nowrap; }
+.asm-back:hover { opacity: .9; }
+.asm-side { display: grid; align-content: start; gap: 14px; padding: 12px; overflow: auto; border-inline-start: 1px solid var(--line); background: var(--surface-panel); font-size: var(--text-small); }
+.asm-side section { display: grid; gap: 8px; }
+.asm-h { margin: 0; font-size: 14px; font-weight: 700; }
+.asm-summary { margin: 0; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.asm-sh { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 0; }
+.asm-sh h3, h3.asm-sh { margin: 0; font-size: var(--text-label); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); }
+.asm-sh .role { color: var(--text-secondary); font-size: var(--text-label); }
+.asm-row { display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: center; gap: 8px; color: var(--text-secondary); }
+.asm-row .ui-select { width: 100%; height: 26px; }
+.asm-check { display: flex; align-items: center; gap: 8px; color: var(--text-primary); cursor: pointer; }
+.asm-ok { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--success); }
+.asm-issues, .asm-parts { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.asm-issue { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 6px; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-3); background: var(--surface-field); }
+.asm-issue > svg { margin-top: 1px; }
+.asm-issue.fix > svg { color: var(--accent); }
+.asm-issue.warn > svg { color: var(--warning); }
+.asm-issue.info > svg { color: var(--info); }
+.asm-issue b { font-weight: 600; }
+.asm-issue p { margin: 2px 0 0; color: var(--text-secondary); line-height: 1.4; }
+.asm-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
+.asm-sel .asm-actions { margin-top: 0; }
+.asm-link { border: 0; padding: 0; background: none; color: var(--accent); font: inherit; cursor: pointer; }
+.asm-link:hover { text-decoration: underline; }
+.asm-parts li { display: grid; grid-template-columns: minmax(0, 1fr) 28px; align-items: center; border-radius: var(--radius-2); }
+.asm-parts li.on { background: var(--accent-soft); }
+.asm-part { display: grid; gap: 1px; min-width: 0; padding: 5px 8px; border: 0; border-radius: var(--radius-2); background: none; color: var(--text-primary); text-align: start; font: inherit; cursor: pointer; }
+.asm-parts li:not(.on) .asm-part:hover { background: var(--surface-hover); }
+.asm-part .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.asm-part .role { color: var(--text-secondary); font-size: var(--text-label); }
+.asm-eye { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: var(--radius-2); background: none; color: var(--text-secondary); cursor: pointer; }
+.asm-eye:hover { color: var(--text-primary); background: var(--surface-hover); }
+.asm-sel { padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-3); background: var(--surface-raised); }
+.asm-move { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.asm-num { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px; color: var(--text-secondary); font-weight: 600; }
+.asm-num input { width: 100%; min-width: 0; height: 26px; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--radius-2); background: var(--surface-field); color: var(--text-primary); font: 12px var(--font-num); }
 .st-tabs { background: var(--surface-chrome); }
 .st-tab { border-color: var(--line); background: var(--surface-chrome); height: 26px; }
 .st-tab.on { background: var(--surface-pasteboard); border-color: var(--line); box-shadow: inset 0 2px 0 var(--accent); }

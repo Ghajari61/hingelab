@@ -116,6 +116,10 @@ interface Props {
   onPick?: (mesh: THREE.Mesh | null) => void;
   /** Which meshes a click can select (default: every named mesh not marked userData.noPick). */
   pickable?: (mesh: THREE.Mesh) => boolean;
+  /** Told the name of the highlighted part whenever it changes (null: none). */
+  onSelect?: (name: string | null) => void;
+  /** Highlights the part with this name from outside (undefined leaves the selection to clicks). */
+  selectName?: string | null;
   id?: string;
   testId?: string;
   className?: string;
@@ -153,7 +157,10 @@ function glow(mesh: THREE.Mesh, on: boolean) {
 }
 
 const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref) {
-  const { model, look, frameKey, explode = 0, measure, shade, quad, active, onActive, onQuad, onShade, dims, units, dim, onPick, pickable, id, testId, className = "", label = "3D views of the design", children } = props;
+  const { model, look, frameKey, explode = 0, measure, shade, quad, active, onActive, onQuad, onShade, dims, units, dim, onPick, pickable, onSelect, selectName, id, testId, className = "", label = "3D views of the design", children } = props;
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+  const told = useRef<string | null>(null);
   const host = useRef<HTMLDivElement>(null);
   const paneEls = useRef<Partial<Record<PaneId, HTMLDivElement | null>>>({});
   const dimEls = useRef<Partial<Record<PaneId, SVGSVGElement | null>>>({});
@@ -400,6 +407,8 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     selected.current = mesh;
     if (mesh) glow(mesh, true);
     setPicked(mesh ? mesh.name || "Part" : null);
+    const name = mesh?.name || null;
+    if (name !== told.current) { told.current = name; onSelectRef.current?.(name); }
     st.current?.request();
   };
 
@@ -442,6 +451,14 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model, frameKey]);
+
+  useEffect(() => {
+    const m = shown.current;
+    if (selectName === undefined || onPick || !m) return;
+    if ((selected.current?.name ?? null) === selectName) return;
+    select(selectName ? meshesOf(m.group).find((x) => x.name === selectName) ?? null : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectName, model]);
 
   useEffect(() => {
     const m = shown.current;

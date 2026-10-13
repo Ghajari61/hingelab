@@ -72,6 +72,9 @@ export interface CommandContext {
   toggleSwatchBar?: () => void;
   /** Opens the snapping options popover in the status bar. */
   openSnapOptions?: () => void;
+  /** View ▸ 3D Assembly: whether it is shown, and the switch between it and the drawing. */
+  view3d?: boolean;
+  toggleView3d?: () => void;
 }
 
 const NEED_ONE = "Select an object first";
@@ -576,6 +579,7 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   }, true, undefined, s.doc.snapping.enabled !== false);
   set("view.snap.options", () => ctx.openSnapOptions?.(), !!ctx.openSnapOptions, "Not available here");
   set("view.swatchBar", () => ctx.toggleSwatchBar?.(), !!ctx.toggleSwatchBar, "Not available here", !!ctx.swatchBar);
+  set("view.assembly3d", () => ctx.toggleView3d?.(), !!ctx.toggleView3d, "Not available here", !!ctx.view3d);
   set("view.outline", () => st().setUi({ outline: !st().ui.outline }), true, undefined, s.ui.outline);
   set("view.rulers", () => st().setUi({ rulers: !st().ui.rulers }), true, undefined, s.ui.rulers);
   set("view.guides.show", () => st().setUi({ guidesShown: !st().ui.guidesShown }), true, undefined, s.ui.guidesShown);

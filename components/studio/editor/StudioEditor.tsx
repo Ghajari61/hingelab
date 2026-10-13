@@ -52,6 +52,9 @@ const PANEL_ICONS: Record<PanelId, ReactNode> = {
 };
 
 const TraceDialog = dynamic(() => import("./TraceDialog").then((m) => m.TraceDialog), { ssr: false });
+const Assembly3D = dynamic(() => import("./assembly/Assembly3D").then((m) => m.Assembly3D), { ssr: false, loading: () => <div className="asm asm-loading" role="status">Loading 3D…</div> });
+/** What the keyboard still does while the 3D assembly is shown (the 3D view has its own keys). */
+const KEYS_IN_3D = new Set(["edit.undo", "edit.redo", "file.save", "view.assembly3d", "window.palette"]);
 const AIStudioPanel = dynamic(() => import("./ai/AIStudioPanel").then((m) => m.AIStudioPanel), { ssr: false, loading: () => <p className="dlg-note" style={{ padding: 12 }}>Loading AI Studio…</p> });
 
 type SaveState = "saved" | "saving" | "error";
@@ -118,6 +121,9 @@ function EditorShell({ opened }: { opened: Document }) {
   const [dialog, setDialog] = useState<DialogId | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [snapOpen, setSnapOpen] = useState(false);
+  const [view3d, setView3d] = useState(false);
+  const view3dRef = useRef(view3d);
+  view3dRef.current = view3d;
   const canvasRef = useRef<CanvasApi | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const svgRef = useRef<HTMLInputElement>(null);
@@ -242,6 +248,8 @@ function EditorShell({ opened }: { opened: Document }) {
     swatchBar: layout.swatchBar,
     toggleSwatchBar: () => setLayout((w) => ({ ...w, swatchBar: !w.swatchBar })),
     openSnapOptions: () => setSnapOpen(true),
+    view3d,
+    toggleView3d: () => setView3d((x) => !x),
   };
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
@@ -264,6 +272,7 @@ function EditorShell({ opened }: { opened: Document }) {
       for (const [id, keys] of bindingsRef.current) {
         const k = keys.find((x) => matches(e, x, mac));
         if (!k) continue;
+        if (view3dRef.current && !KEYS_IN_3D.has(id)) return;
         if (typing && (isSingleKey(k) || !WHILE_TYPING.has(id))) return;
         if (/^(shift\+)?tab$/i.test(k)) {
           const a = document.activeElement;
@@ -324,6 +333,10 @@ function EditorShell({ opened }: { opened: Document }) {
         <Link href="/home" className="brand" aria-label="HingeLab start screen"><LogoMark /></Link>
         <MenuBar menus={menus} />
         <div className="right">
+          <span className="st-view-seg" role="group" aria-label="View">
+            <button type="button" aria-pressed={!view3d} onClick={() => setView3d(false)} data-testid="view-2d" title="The drawing">2D</button>
+            <button type="button" aria-pressed={view3d} onClick={() => setView3d(true)} data-testid="view-3d" title="Put the parts together in 3D (Ctrl+Shift+3)">3D</button>
+          </span>
           <label className="st-ws">
             <LayoutGrid size={14} aria-hidden />
             <select className="ui-select" value={ws.current} aria-label="Workspace" onChange={(e) => ctx.setWorkspace(e.target.value)}>
@@ -360,6 +373,16 @@ function EditorShell({ opened }: { opened: Document }) {
           onCollapse={(dockCollapsed) => setLayout((w) => ({ ...w, dockCollapsed }))}
           onResize={(dockWidth) => setLayout((w) => ({ ...w, dockWidth }))}
         />
+        {view3d && (
+          <Assembly3D
+            toast={toast} onBack={() => setView3d(false)}
+            onShow={(ids) => {
+              api.getState().select(ids);
+              setView3d(false);
+              requestAnimationFrame(() => canvasRef.current?.fit("selection"));
+            }}
+          />
+        )}
       </div>
       <div className="st-swatch-slot">
         {layout.swatchBar && (

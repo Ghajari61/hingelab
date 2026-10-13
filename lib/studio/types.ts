@@ -446,4 +446,26 @@ export interface Document {
   view: { zoom: number; x: number; y: number };
   /** Set when the project was created from a template or a generator (Reset ▸ Project to Template). */
   origin?: { kind: "blank" | "generator" | "template"; id?: string };
+  /** The 3D assembly view's settings and the hand adjustments made there (lib/studio/assembly). */
+  assembly?: AssemblySettings;
+}
+
+/** A part moved or turned by hand in the 3D assembly view, on top of where the solver put it. */
+export interface PartAdjust {
+  /** mm along the 3D axes (x right, y back, z up). */
+  move?: [number, number, number];
+  /** Degrees about the part's own centre, applied x, then y, then z. */
+  turn?: [number, number, number];
+  /** Laid flat beside the assembly instead of joined. */
+  flat?: boolean;
+  hidden?: boolean;
+}
+
+export interface AssemblySettings {
+  /** Parts that join nothing: beside the assembly as they lie on the sheet, or stacked as layers. */
+  loose?: "beside" | "stack";
+  /** Apply the safe fixes when the 3D view opens (on unless false). */
+  autoFix?: boolean;
+  /** Adjustments by part key ("nodeId:subpath"). */
+  parts?: Record<string, PartAdjust>;
 }

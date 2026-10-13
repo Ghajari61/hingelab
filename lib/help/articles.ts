@@ -137,6 +137,29 @@ export const ARTICLES: HelpArticle[] = [
     related: ["ai-designer", "checks-and-fixes"],
   },
   {
+    slug: "studio-3d-assembly", product: "general", title: "3D Assembly in Studio",
+    summary: "Send the parts on your Studio sheet to 3D, see them put together, fix the joints, adjust parts and go back to the drawing.",
+    keywords: ["3d", "assembly", "assemble", "3d preview", "box", "finger joints", "tab and slot", "half lap", "round trip", "back to studio", "studio 3d"],
+    blocks: [
+      { p: "In a Studio project, press 3D at the top right (or View → 3D Assembly, Ctrl+Shift+3). The parts on your sheets are put together in 3D: finger-jointed boxes, tab-in-slot parts, dividers and half-lap grids are found from the cut outlines. Press Back to Studio (or 2D) to return; the drawing is exactly where you left it." },
+      { h: "Automatic fixes", list: [
+        "When the 3D view opens it applies the safe fixes in one step: joints cut for another thickness are matched to your material, slots that are too short are widened, parts off the sheet are turned or moved onto it, and tiny gaps in outlines are closed. A message tells you what changed and Undo puts it back.",
+        "Checks lists what still needs you: joints that don't interlock, open outlines, parts that don't join anything. Fix applies one fix, Show selects the parts in 3D, Fix all applies every safe fix.",
+        "Turn Auto-fix off in Settings if you would rather fix things yourself.",
+      ] },
+      { h: "Adjust", list: [
+        "Click a part in 3D or in the Parts list. Move it along X, Y and Z, turn it 90° about any axis or lay it flat. Reset part or Reset all undoes the adjustments; they are saved with the project.",
+        "Hide parts with the eye button to look inside. Explode, the four views and the material picker work as in the other 3D views.",
+        "Show in Studio goes back to the drawing with that part selected.",
+      ] },
+      { h: "What it reads", list: [
+        "Closed and open boxes, lift-off and flush lids, trays with dividers, drawers in a cabinet, stacking trays, desk signs and tab-and-slot boxes.",
+        "Parts it cannot place are laid beside the model (or stacked, in Settings). Sliding lids, frames, stands and shapes with angled joints are not put together yet.",
+      ] },
+    ],
+    related: ["view-3d", "checks-and-fixes", "box-joints"],
+  },
+  {
     slug: "undo-and-reset", product: "general", title: "Undo, redo and reset",
     summary: "Every change can be undone. Reset a field, a section or the whole design back to its defaults.",
     keywords: ["undo", "redo", "reset", "defaults", "history"],
