@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Box, Cake, Check, Clock, Clock3, Crown, ExternalLink, FolderOpen, Globe, Hash, History, KeyRound, Keyboard, LayoutGrid, LifeBuoy, Lock, Plus, Puzzle, QrCode, Signpost, Sparkles, Star, Trash2, Trophy, Wand2 } from "lucide-react";
+import { ArrowRight, Box, Cake, Clock, Clock3, Crown, ExternalLink, FolderOpen, Globe, Hash, History, KeyRound, Keyboard, LayoutGrid, LifeBuoy, Lock, Plus, Puzzle, QrCode, Signpost, Star, Trash2, Trophy, Wand2 } from "lucide-react";
 import type { DCatalog, DProduct } from "../../../lib/desktop/types";
 import { onlineArt, presetArt, productArt, showcase } from "../art";
 import type { WebRoute } from "./Web";
@@ -59,116 +59,133 @@ export function Dashboard({ account, catalog, recent, defaultProduct, onNew, onP
     <div className="page dash">
       <section className="hero" aria-labelledby="dash-title">
         <div className="hero-text">
-          <span className="eyebrow"><Sparkles size={13} aria-hidden />Laser-ready designs, built to size</span>
           <h1 id="dash-title">{first ? `Welcome back, ${first}` : "Welcome to HingeLab"}</h1>
           <p>Boxes, clocks, puzzles and QR signs as clean SVG files at true size, ready for LightBurn, xTool Creative Space or Inkscape.</p>
-          <div className="row">
-            {last
-              ? <button type="button" className="btn primary big" onClick={() => onOpenRecent(last)}><History size={16} aria-hidden /><span className="clip">Continue “{last.name}”</span></button>
-              : start && <button type="button" className="btn primary big" onClick={() => onNew(start.id)}><Plus size={16} aria-hidden />New {start.name}</button>}
-            <button type="button" className="btn big ghost" onClick={onBrowse}><LayoutGrid size={16} aria-hidden />Browse presets</button>
-          </div>
+        </div>
+        <div className="hero-actions">
+          {last
+            ? <button type="button" className="btn primary big" onClick={() => onOpenRecent(last)}><History size={16} aria-hidden /><span className="clip">Continue “{last.name}”</span></button>
+            : start && <button type="button" className="btn primary big" onClick={() => onNew(start.id)}><Plus size={16} aria-hidden />New {start.name}</button>}
+          <button type="button" className="btn big ghost" onClick={onBrowse}><LayoutGrid size={16} aria-hidden />Browse presets</button>
         </div>
         <div className="hero-art" aria-hidden>
           {heroArt.map((src, i) => <span key={src} className={`hero-card c${i}`}><img src={src} alt="" /></span>)}
         </div>
       </section>
 
-      <section aria-labelledby="dash-new">
-        <h2 id="dash-new" className="sub">Start a new design</h2>
-        <div className="tiles">
-          {catalog ? products.map((p) => {
-            const src = productArt(p);
-            return (
-              <button key={p.id} type="button" className="tile" onClick={() => onNew(p.id)}>
-                <span className="tile-media">{src ? <img src={src} alt="" /> : <ProductIcon product={p} size={36} />}</span>
-                <span className="tile-body">
-                  <span className="tile-title"><span className="tile-icon"><ProductIcon product={p} size={15} /></span><b>{p.name}</b></span>
-                  <small>{p.blurb}</small>
-                  <span className="tile-meta">{p.presets.length} presets<ArrowRight size={13} aria-hidden /></span>
-                </span>
-              </button>
-            );
-          }) : <div className="sk tall" />}
-        </div>
-      </section>
-
-      <section aria-labelledby="dash-online">
-        <div className="sec-head">
-          <h2 id="dash-online" className="sub">More editors, online</h2>
-          <button type="button" className="link-btn" onClick={() => onOnline("web-editors", "/app/editor/local")}>All editors<ArrowRight size={13} aria-hidden /></button>
-        </div>
-        <div className="tiles">
-          {ONLINE_TILES.map((t) => {
-            const src = onlineArt(...t.art);
-            return (
-              <button key={t.id} type="button" className="tile" onClick={() => onOnline(t.section, t.path)}>
-                <span className="tile-media">{src ? <img src={src} alt="" /> : <Globe size={36} aria-hidden />}</span>
-                <span className="tile-body">
-                  <span className="tile-title"><span className="tile-icon"><Globe size={15} aria-hidden /></span><b>{t.name}</b></span>
-                  <small>{t.blurb}</small>
-                  <span className="tile-meta">Opens here, signed in<ArrowRight size={13} aria-hidden /></span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {ideas.length > 0 && (
-        <section aria-labelledby="dash-ideas">
-          <div className="sec-head">
-            <h2 id="dash-ideas" className="sub">Ready-made designs</h2>
-            <button type="button" className="link-btn" onClick={onBrowse}>See all presets<ArrowRight size={13} aria-hidden /></button>
-          </div>
-          <ul className="ideas">
-            {ideas.map(({ product, preset, src }) => (
-              <li key={`${product.id}/${preset.id}`}>
-                <button type="button" className="idea" onClick={() => onPreset(product.id, preset.id)}>
-                  <span className="idea-media">
-                    <img src={src} alt="" />
-                    {preset.pro && !pro && <span className="badge"><Lock size={10} aria-hidden />Pro</span>}
-                  </span>
-                  <span className="idea-text">
-                    <b>{preset.name}</b>
-                    <small>{product.name}</small>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <div className="split">
-        <section aria-labelledby="dash-recent">
-          <h2 id="dash-recent" className="sub">Recent designs</h2>
-          {recent.length
-            ? <RecentGrid items={recent.slice(0, 4)} catalog={catalog} onOpen={onOpenRecent} />
-            : (
-              <div className="empty-card">
-                {heroArt[1] && <img src={heroArt[1]} alt="" />}
-                <div>
-                  <b>No designs yet</b>
-                  <p>Designs you work on appear here with a preview, so you can pick up where you left off.</p>
-                </div>
-              </div>
-            )}
-        </section>
-        <section className={`plan-card${pro ? " is-pro" : " upsell"}`} aria-labelledby="dash-plan">
-          <div className="plan-top">
-            <span className="plan-icon"><Crown size={18} aria-hidden /></span>
-            <div>
-              <h2 id="dash-plan" className="plan-label">Your plan</h2>
-              <p className="plan-name">{planName(account)}</p>
+      <div className="dash-grid">
+        <div className="dash-main">
+          <section className="dash-card dash-new" aria-labelledby="dash-new">
+            <div className="sec-head">
+              <h2 id="dash-new" className="sub">Start a new design</h2>
+              <button type="button" className="link-btn" onClick={onBrowse}>All presets<ArrowRight size={13} aria-hidden /></button>
             </div>
-          </div>
-          <p>{pro ? "Every shape, pattern and generator, with clean exports." : "Unlock every shape and generator, and export without the HingeLab mark."}</p>
-          <ul className="perks">
-            {PRO_PERKS.map((t) => <li key={t} className={pro ? "on" : ""}><Check size={14} aria-hidden />{t}</li>)}
-          </ul>
-          {!pro && <button type="button" className="btn primary" onClick={onUpgrade}><Crown size={15} aria-hidden />Upgrade to Pro</button>}
-        </section>
+            <div className="tiles">
+              {catalog ? products.map((p) => {
+                const src = productArt(p);
+                return (
+                  <button key={p.id} type="button" className="tile" title={p.blurb} onClick={() => onNew(p.id)}>
+                    <span className="tile-media">{src ? <img src={src} alt="" /> : <ProductIcon product={p} size={36} />}</span>
+                    <span className="tile-body">
+                      <span className="tile-icon"><ProductIcon product={p} size={14} /></span>
+                      <span className="tile-name"><b>{p.name}</b><small>{p.presets.length} presets</small></span>
+                    </span>
+                  </button>
+                );
+              }) : <div className="sk tall" />}
+            </div>
+          </section>
+
+          {ideas.length > 0 && (
+            <section className="dash-card dash-ideas" aria-labelledby="dash-ideas">
+              <div className="sec-head">
+                <h2 id="dash-ideas" className="sub">Ready-made designs</h2>
+                <button type="button" className="link-btn" onClick={onBrowse}>See all<ArrowRight size={13} aria-hidden /></button>
+              </div>
+              <ul className="ideas">
+                {ideas.map(({ product, preset, src }) => (
+                  <li key={`${product.id}/${preset.id}`}>
+                    <button type="button" className="idea" onClick={() => onPreset(product.id, preset.id)}>
+                      <span className="idea-media">
+                        <img src={src} alt="" />
+                        {preset.pro && !pro && <span className="badge"><Lock size={10} aria-hidden />Pro</span>}
+                      </span>
+                      <span className="idea-text">
+                        <b>{preset.name}</b>
+                        <small>{product.name}</small>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <section className="dash-card dash-online" aria-labelledby="dash-online">
+            <div className="sec-head">
+              <h2 id="dash-online" className="sub">More editors, online</h2>
+              <button type="button" className="link-btn" onClick={() => onOnline("web-editors", "/app/editor/local")}>All editors<ArrowRight size={13} aria-hidden /></button>
+            </div>
+            <div className="online">
+              {ONLINE_TILES.map((t) => {
+                const src = onlineArt(...t.art);
+                return (
+                  <button key={t.id} type="button" className="tile" title={t.blurb} onClick={() => onOnline(t.section, t.path)}>
+                    <span className="tile-media">{src ? <img src={src} alt="" /> : <Globe size={22} aria-hidden />}</span>
+                    <span className="tile-name"><b>{t.name}</b><small><Globe size={11} aria-hidden />Opens here</small></span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+
+        <aside className="dash-side" aria-label="Your work">
+          <section className="dash-card dash-recent" aria-labelledby="dash-recent">
+            <div className="sec-head">
+              <h2 id="dash-recent" className="sub">Recent designs</h2>
+            </div>
+            {recent.length
+              ? (
+                <ul className="rlist">
+                  {recent.slice(0, 8).map((d) => {
+                    const p = catalog?.products.find((x) => x.id === d.product);
+                    const src = d.thumb ?? (p && productArt(p));
+                    return (
+                      <li key={d.id}>
+                        <button type="button" className="rrow" onClick={() => onOpenRecent(d)}>
+                          <span className={`rcard-media${d.thumb ? " drawn" : ""}`}>{src ? <img src={src} alt="" loading="lazy" /> : p && <ProductIcon product={p} size={20} />}</span>
+                          <span className="rrow-text">
+                            <b>{d.name}</b>
+                            <small>{p?.name ?? d.summary} · {ago(d.at)}</small>
+                          </span>
+                          <ArrowRight size={14} aria-hidden className="rrow-go" />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )
+              : (
+                <div className="rempty">
+                  {heroArt[1] && <img src={heroArt[1]} alt="" />}
+                  <b>No designs yet</b>
+                  <p>Designs you work on appear here, so you can pick up where you left off.</p>
+                </div>
+              )}
+          </section>
+          <section className={`dash-card plan-card${pro ? " is-pro" : " upsell"}`} aria-labelledby="dash-plan">
+            <div className="plan-top">
+              <span className="plan-icon"><Crown size={18} aria-hidden /></span>
+              <div>
+                <h2 id="dash-plan" className="plan-label">Your plan</h2>
+                <p className="plan-name">{planName(account)}</p>
+              </div>
+            </div>
+            <p title={PRO_PERKS.join(" · ")}>{pro ? "Every shape, pattern and generator, with clean exports." : "Unlock every shape and generator, and export without the HingeLab mark."}</p>
+            {!pro && <button type="button" className="btn primary" onClick={onUpgrade}><Crown size={15} aria-hidden />Upgrade to Pro</button>}
+          </section>
+        </aside>
       </div>
     </div>
   );

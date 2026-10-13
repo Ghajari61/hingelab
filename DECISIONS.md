@@ -991,3 +991,13 @@ The owner asked to send the Studio drawing to 3D assembled, have it corrected au
 - **Adjustments.** `doc.assembly.parts[key]` keeps move, turn (90° steps), flat and hidden per part; `loose` and `autoFix` are settings. They are applied on top of the solved placement, so a later drawing change re-solves and keeps them.
 - **Not yet.** Sliding lids, picture frames, stands, angled (hexagon) joints, hooks and living-hinge bends are left flat beside the model. Studio generator objects are still placeholders, so a box only assembles once its parts are on the sheet (templates with Open in Studio, SVG import, or drawn).
 - **Geometry.** No generator or hinge math changed. The Hinge Box golden test is unchanged.
+
+## D150. One-screen desktop dashboard
+
+The owner asked for a modern Dashboard that is a single page with no scrolling.
+
+- **Layout.** A bento grid: a compact hero row, then a main column (product grid, ready-made designs, online editors) and a side column (recent designs, plan). The page takes the height of the window (`flex: 1`, `overflow: hidden`); the product grid's rows flex, so pictures grow with the window instead of the page growing.
+- **Stepping down, not scrolling.** Container queries decide what shows: the hero art leaves under 1060px of page width and the hero text under 820px; the ready-made row leaves when the main column is under 600px tall; the recent list drops whole rows by the height of its card (58px per row, up to eight). The Recent page still lists everything.
+- **Small windows.** At the 960×620 minimum the side column narrows to 224px, gaps tighten and the online tiles drop their pictures, so names stay readable. Long names end in an ellipsis.
+- **Checked.** 960×620 with the sidebar open and collapsed, 1280×720, 1366×728, 1360×860 and 1920×1040, light and dark, Free and Pro, with none, six and ten recent designs: no scroll and no clipped content. Hover lifts are off with reduced motion.
+- **Unchanged.** The e2e hooks (`.tile`, `.tile-media`, `.idea-media`, `.hero-card`, `.rcard-media.drawn`, `#dash-recent`) stay. No geometry changed.
