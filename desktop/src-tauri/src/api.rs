@@ -136,9 +136,17 @@ impl Api {
     /// An authenticated call. Returns the status and JSON body for 2xx and for the statuses in
     /// `pass` (answers the caller handles itself); everything else becomes a `CmdError`.
     pub async fn call(&self, method: Method, path: &str, body: Option<&Value>, pass: &[u16]) -> CmdResult<(u16, Value)> {
+        self.call_within(method, path, body, pass, None).await
+    }
+
+    /// `call` with its own time limit in place of the client's 90 s.
+    pub async fn call_within(&self, method: Method, path: &str, body: Option<&Value>, pass: &[u16], limit: Option<Duration>) -> CmdResult<(u16, Value)> {
         let mut token = self.access_token(None).await?;
         for attempt in 0..2 {
             let mut req = self.http.request(method.clone(), self.url(path)).bearer_auth(&token);
+            if let Some(t) = limit {
+                req = req.timeout(t);
+            }
             if let Some(b) = body {
                 req = req.json(b);
             }

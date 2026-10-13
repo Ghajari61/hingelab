@@ -54,6 +54,10 @@ export function aiMenu(): Promise<MenuProduct[]> {
       id: "letters", name: "Letters", blurb: "Letter boxes (hollow letters with living-hinge or flat walls), solid cut-out letters and stencils from a word or name, in Latin or Persian/Arabic fonts.",
       presets: LETTER_PRESETS.map(({ id, name, note }) => ({ id, name, note })), fields: LETTER_FIELDS,
     });
+    byId.set("art", {
+      id: "art", name: "Original design", blurb: "An original flat laser design drawn from scratch for this request: signs and name plates with their own shapes, ornaments, coasters, keychains, wall art, mandalas, logos, stands and decorations of flat interlocking pieces, engraved pictures and text. Has no presets.",
+      presets: [], fields: [],
+    });
     byId.set("parametric", {
       id: "parametric", name: "Parametric sculpture", blurb: "Sliced 3D sculptures (fins, stacked layers, waffle grids, radial and folded paper) of faces, waves, flowers, vases, lamps, clocks and words. Pick the closest preset; its shape cannot be changed here.",
       presets: PARAMETRIC_PRESETS.map((p) => ({ id: p.id, name: p.name, note: [p.note, p.category, ...(p.tags ?? [])].join("; ") })), fields: [],

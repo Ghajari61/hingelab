@@ -1,6 +1,6 @@
 /** The AI designer's request and answer. Types and constants only, safe to import in the browser and the desktop app. */
 
-export const AI_PRODUCTS = ["hinge", "letters", "parametric", "boxes", "sign", "trophy", "topper", "keyrack", "tablenum", "clock", "puzzle", "qr"] as const;
+export const AI_PRODUCTS = ["art", "hinge", "letters", "parametric", "boxes", "sign", "trophy", "topper", "keyrack", "tablenum", "clock", "puzzle", "qr"] as const;
 export type AIProduct = (typeof AI_PRODUCTS)[number];
 
 export const isAIProduct = (v: unknown): v is AIProduct => typeof v === "string" && (AI_PRODUCTS as readonly string[]).includes(v);
@@ -69,6 +69,8 @@ export interface AIDesign {
   stats?: { label: string; value: string }[];
   /** Letters and Parametric: a website path that opens the design in its editor (how the desktop app gets there). */
   open?: string;
+  /** File name for saving the cut file. */
+  fileName?: string;
 }
 
 /** What an `open` link carries: the preset and only the settings that differ from it. */

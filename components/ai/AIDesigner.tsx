@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Download, ImagePlus, Loader2, RotateCcw, Sparkles, Undo2, Wand2, X } from "lucide-react";
 import { AI_START_KEY, isAIProduct, MAX_IMAGE_CHARS, MAX_IMAGE_NOTE, MAX_PROMPT, reviseOf, type AIDesign, type AIMatch, type AIOpen } from "@/lib/ai/types";
+import { previewSvg } from "@/lib/ai/preview";
 import type { Plan } from "@/lib/plans";
 
 /** Longest side of the photo sent to the designer, px. */
@@ -113,7 +114,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
     return () => clearInterval(id);
   }, [busy, editing]);
 
-  const preview = useMemo(() => (design?.svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(design.svg)}` : null), [design]);
+  const preview = useMemo(() => (design?.svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(previewSvg(design.svg))}` : null), [design]);
 
   async function addPhoto(file: File | undefined) {
     if (!file) return;
@@ -191,8 +192,24 @@ export function AIDesigner({ plan }: { plan: Plan }) {
     try { sessionStorage.setItem(LAST_KEY, JSON.stringify({ prompt, design: prev })); } catch { /* too large to keep */ }
   }
 
+  async function openInStudio() {
+    if (!design?.svg) return;
+    setOpening(true);
+    try {
+      const [{ saveNewProject, editorPath }, { svgDocument }, { newLocalId }] = await Promise.all([
+        import("@/components/studio/projectActions"), import("@/lib/studio/svgProject"), import("@/lib/studio/localStore"),
+      ]);
+      const { doc } = svgDocument([{ src: design.svg, name: design.name }], { id: newLocalId(), name: design.name });
+      window.location.assign(editorPath(await saveNewProject(doc)));
+    } catch {
+      setOpening(false);
+      setEditError("The design could not be opened in Studio. Download the SVG and import it instead.");
+    }
+  }
+
   function openInEditor() {
     if (!design) return;
+    if (design.product === "art") { void openInStudio(); return; }
     setOpening(true);
     void handOff({ product: design.product, preset: design.preset, name: design.name, params: design.params }, design.summary, false, designPhoto);
   }
@@ -201,7 +218,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
     if (!design?.svg) return;
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([design.svg], { type: "image/svg+xml" }));
-    a.download = fileName(design.name);
+    a.download = design.fileName ?? fileName(design.name);
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
@@ -215,7 +232,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
   return (
     <main className="boxes ai-page">
       <h1><Sparkles size={22} aria-hidden /> AI designer</h1>
-      <p className="ai-sub">Describe a product or add a photo of one. The designer picks the closest HingeLab product, fills in its settings and makes the cut file, ready to fine-tune in the editor.</p>
+      <p className="ai-sub">Describe a product or add a photo of one. The designer draws an original cut and engrave file for it, checks its own drawing and fixes it. Boxes, hinges and other engineered products are built with HingeLab&apos;s tested generators instead.</p>
 
       <form
         className="ai-form"
@@ -280,7 +297,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
           </button>
           {busy && <button type="button" className="btn-ghost" onClick={() => abortRef.current?.abort()}>Cancel</button>}
           <span className="ai-status" role="status" aria-live="polite">
-            {busy ? `Working for ${elapsed} s. This usually takes 10 to 30 seconds.` : ""}
+            {busy ? `Working for ${elapsed} s. An original drawing is checked and redrawn, which can take up to two minutes.` : ""}
           </span>
         </div>
         {error && <p className="auth-msg err" role="alert">{error}</p>}
@@ -330,7 +347,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
                 </button>
                 {editing && <button type="button" className="btn-ghost" onClick={() => abortRef.current?.abort()}>Cancel</button>}
               </div>
-              <span className="ai-status" role="status" aria-live="polite">{editing ? `Working for ${elapsed} s.` : ""}</span>
+              <span className="ai-status" role="status" aria-live="polite">{editing ? `Working for ${elapsed} s.${design.product === "art" ? " Redrawing can take a minute or two." : ""}` : ""}</span>
               {editError && <p className="auth-msg err" role="alert">{editError}</p>}
               {history.length > 0 && !editing && (
                 <button type="button" className="btn-ghost ai-undo" onClick={undoEdit}><Undo2 size={15} aria-hidden /> Undo last edit</button>
@@ -338,7 +355,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
             </form>
             <div className="ai-actions">
               <button type="button" className="btn-primary" onClick={openInEditor} disabled={opening}>
-                Open in editor <ArrowRight size={16} aria-hidden />
+                {design.product === "art" ? "Open in Studio" : "Open in editor"} <ArrowRight size={16} aria-hidden />
               </button>
               {design.svg && <button type="button" className="btn-ghost" onClick={download}><Download size={15} aria-hidden /> Download SVG</button>}
               <button type="button" className="btn-ghost" onClick={startOver}><RotateCcw size={15} aria-hidden /> Start over</button>

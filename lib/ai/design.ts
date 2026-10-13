@@ -20,6 +20,7 @@ import { PARAMETRIC_PRESETS } from "@/lib/parametric/presets";
 import { LETTER_PRESETS } from "@/lib/letters/presets";
 import type { Plan } from "@/lib/plans";
 import { aiMenu, fieldsText, LETTER_FIELDS, productsText, type MenuProduct } from "./menu";
+import { artDesign, artSchema, drawArt, editArt, type ArtOptions } from "./art";
 import { gatewayConfigured } from "./request";
 import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_OPEN_PATH, type AIDesign, type AIDesignRequest, type AIOpen, type AIProduct, type AIRevise } from "./types";
 
@@ -31,6 +32,8 @@ const MODEL = "google/gemini-3.8-flash";
 const FALLBACK_MODELS = ["openai/gpt-5.6-luna", "openai/gpt-5-mini"];
 const OPENAI_MODEL = "gpt-5.6-terra";
 const TIMEOUT_MS = 50_000;
+/** An original design: drawing, rendering and one look at the result (the routes allow 180 s). */
+const ART_TIMEOUT_MS = 150_000;
 
 export class AIDesignError extends Error {}
 
@@ -39,6 +42,7 @@ const pickSchema = z.object({
   preset: z.string().describe("Id of the preset of that product closest to the request, or an empty string to start from the product's defaults."),
   name: z.string().describe("A short English name for the design, e.g. \"Walnut pen box\"."),
   match: z.enum(["exact", "close", "loose"]).describe("exact: the product makes this; close: a near version of it; loose: only a rough stand-in."),
+  flat: z.boolean().describe("True when the object is flat or a few flat pieces slotted or stacked together: signs, plaques, name plates, stands (phone, tablet, book), frames, ornaments, keychains, coasters, toppers, trophies, wall art. False for containers with walls (boxes, jars, cups, trays, drawers, planters), slice sculptures, puzzles, QR codes and clocks."),
   brief: z.string().describe("Everything the next step needs: what the object is, its shape, every size in millimetres (estimate sizes in a photo from typical real sizes), the exact text on it in its original language and script, style and material."),
 });
 
@@ -51,8 +55,24 @@ const editSchema = settingsSchema.extend({
   name: z.string().describe("A new short English name when the change makes the current one wrong (e.g. the text on it changed), otherwise an empty string."),
 });
 
-const PICK_SYSTEM = `You are the design assistant of HingeLab, a web app that makes laser-cut files. A user describes something they want to laser cut, or shows a photo of one, possibly in Persian or another language. Choose the one product below that can make it and the preset closest to it. You cannot invent new kinds of products: if nothing fits well, choose the closest product and set match to "loose". Text that must appear on the product keeps its original language and script.
-Which product: round, oval, pill-shaped or curved containers (jars, tins, cylinders, rounded boxes) are hinge, whose walls bend with a living hinge. Square-cornered boxes, trays, drawers, money boxes, photo frames, phone stands and bird houses are boxes. Hollow letter shapes or cut-out words are letters. Flat signs and plaques with words are sign. 3D sculptures, faces, waves, lamps made of many slices are parametric.
+/** Products that are a preset layout with the user's words in it; new designs are drawn instead (old ones still edit). */
+const TEMPLATED = new Set<AIProduct>(["sign", "trophy", "topper", "keyrack", "tablenum"]);
+/** Flat presets of the engineered products (signs, stands, frames, stencils); drawn instead too. */
+const FLAT_PRESETS: Partial<Record<AIProduct, Set<string>>> = {
+  boxes: new Set(["desk-sign", "name-plate", "office-sign", "frame-10x15", "frame-square", "phone-stand", "tablet-stand", "key-holder"]),
+  letters: new Set(["script-sign", "year-sign", "hello-sign", "salam-sign", "open-stencil", "bar-stencil"]),
+};
+/** Engineered products that are right for flat things too. */
+const FLAT_OK = new Set<AIProduct>(["art", "parametric", "puzzle", "qr", "clock"]);
+const isFlat = (product: AIProduct, preset: string) => TEMPLATED.has(product) || !!FLAT_PRESETS[product]?.has(preset);
+
+/** The products a new design may come from: no template products or flat presets. */
+const pickMenu = (menu: MenuProduct[]) => menu
+  .filter((p) => !TEMPLATED.has(p.id))
+  .map((p) => (FLAT_PRESETS[p.id] ? { ...p, presets: p.presets.filter((x) => !FLAT_PRESETS[p.id]!.has(x.id)) } : p));
+
+const PICK_SYSTEM = `You are the design assistant of HingeLab, a web app that makes laser-cut files. A user describes something they want to laser cut, or shows a photo of one, possibly in Persian or another language. Choose the one product below that can make it and the preset closest to it. Text that must appear on the product keeps its original language and script.
+Which product: art is the default. It draws an original design from scratch for anything flat or made of a few flat pieces: signs, name plates, logos, ornaments, coasters, keychains, wall art, cake toppers, key holders, table numbers, trophies, phone and tablet stands, decorations, engraved pictures. Choose another product only for what needs its engineering and that it makes exactly (match "exact"); anything it would only approximate is art: round, oval or curved containers with bending walls are hinge; boxes, trays, drawers, money boxes and bird houses with finger joints are boxes; hollow letter boxes with walls are letters; sculptures made of many slices are parametric; jigsaw puzzles are puzzle; QR codes are qr; clocks with a movement hole are clock. Also choose a product when the user names it.
 The brief describes only what the user asked for or the photo shows, in under 80 words; do not add features. When the user writes about the photo (what it is, its size, text or changes they want), that wins over what the photo seems to show.
 
 `;
@@ -100,7 +120,7 @@ function routes(ask: Ask): Route[] {
 
 type Ask = { model?: LanguageModel; userId: string; signal: AbortSignal };
 
-async function askModel<T>(ask: Ask, system: string, content: UserContent, schema: z.ZodType<T>): Promise<T> {
+async function askModel<T>(ask: Ask, system: string, content: UserContent, schema: z.ZodType<T>, reasoning: "low" | "medium" = "low"): Promise<T> {
   const list = routes(ask);
   for (let i = 0; ; i++) {
     try {
@@ -109,7 +129,7 @@ async function askModel<T>(ask: Ask, system: string, content: UserContent, schem
         system,
         messages: [{ role: "user", content }],
         output: Output.object({ schema }),
-        reasoning: "low",
+        reasoning,
         abortSignal: ask.signal,
       });
       return output as T;
@@ -209,6 +229,19 @@ function buildParametric(preset: string | null, name: string) {
   return { params: p as unknown as Record<string, unknown>, summary: `${pr.name} · ${pr.note}`, style: pr.name, skipped: [], error, preset: pr.id };
 }
 
+/** Runs an original design job with its own, longer time limit (drawing, then looking at the drawing). */
+async function withArt(model: LanguageModel | undefined, userId: string, job: (o: ArtOptions) => Promise<AIDesign>): Promise<AIDesign> {
+  const deadline = Date.now() + ART_TIMEOUT_MS;
+  const ask: Ask = { model, userId, signal: AbortSignal.timeout(ART_TIMEOUT_MS) };
+  try {
+    return await job({ deadline, ask: (system, content, schema, reasoning) => askModel(ask, system, content, schema, reasoning) });
+  } catch (e) {
+    if (e instanceof AIDesignError) throw e;
+    console.error("ai design: art failed", e);
+    throw new AIDesignError("The design could not be drawn. Try again or describe it differently.");
+  }
+}
+
 /** What the design being edited makes now (summary and sizes), so an edit can scale from it. */
 async function currentResult(rev: AIRevise, plan: Plan): Promise<string> {
   try {
@@ -227,6 +260,11 @@ export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: str
   const signal = AbortSignal.timeout(TIMEOUT_MS);
   const ask: Ask = { model, userId, signal };
   const rev = req.revise;
+  if (rev?.product === "art") {
+    const current = artSchema.safeParse((rev.params as { art?: unknown }).art);
+    if (!current.success) throw new AIDesignError("This design cannot be edited. Start over and try again.");
+    return withArt(model, userId, async (o) => artDesign(await editArt(current.data, req.prompt, o), plan, rev.match));
+  }
   const revising = rev ? menu.find((p) => p.id === rev.product) : undefined;
   if (rev && !revising) throw new AIDesignError("This design cannot be edited here. Start over and try again.");
   /** Settings the design starts from when one is being edited. */
@@ -235,21 +273,28 @@ export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: str
   if (rev && from) {
     const now = await currentResult(rev, plan);
     choice = {
-      product: rev.product, preset: rev.preset ?? "", name: rev.name, match: rev.match,
+      product: rev.product, preset: rev.preset ?? "", name: rev.name, match: rev.match, flat: false,
       brief: `Edit the current design. Change only this and keep everything else as it is: ${req.prompt}\n${now ? `The current result: ${now}.\n` : ""}A size asked for here must be the size of the result: work out the settings that give it from the current values and the current result, and switch off any setting that fits or sizes it automatically and would change that size.`,
     };
   } else {
     try {
       // A sculpture has no settings to edit, so an edit picks its style again from the request.
       const current = rev ? `Current design: "${rev.name}", preset ${rev.preset ?? "none"}. Pick the preset that best fits the design with this change.` : undefined;
-      choice = await pick(current ? { prompt: `${req.prompt}\n\n${current}` } : req, revising ? [revising] : menu, ask);
+      choice = await pick(current ? { prompt: `${req.prompt}\n\n${current}` } : req, revising ? [revising] : pickMenu(menu), ask);
     } catch (e) {
       console.error("ai design: pick failed", e);
       throw new AIDesignError("The AI designer could not read the request. Try again or describe it differently.");
     }
     if (rev) choice = { ...choice, name: rev.name || choice.name, match: rev.match };
+    else if (isFlat(choice.product, choice.preset) || choice.match !== "exact" || (choice.flat && !FLAT_OK.has(choice.product))) choice = { ...choice, product: "art", preset: "", match: "exact" };
   }
   const product = revising ?? menu.find((p) => p.id === choice.product) ?? menu[0];
+  if (product.id === "art") {
+    return withArt(model, userId, async (o) => {
+      const b = await drawArt(userContent(req, `Name: ${choice.name}\nBrief: ${choice.brief}`), o);
+      return artDesign(b, plan, choice.match);
+    });
+  }
   const preset = product.presets.some((p) => p.id === choice.preset) ? choice.preset : null;
   let name = cleanName(choice.name, product.name);
 

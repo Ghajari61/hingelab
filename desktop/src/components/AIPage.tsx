@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Crown, Globe, ImagePlus, Loader2, RotateCcw, Sparkles, Undo2, Wand2, X } from "lucide-react";
+import { ArrowRight, Crown, Download, Globe, ImagePlus, Loader2, RotateCcw, Save, Sparkles, Undo2, Wand2, X } from "lucide-react";
 import type { AIDesign, AIMatch } from "../../../lib/ai/types";
 import { MAX_IMAGE_CHARS, MAX_IMAGE_NOTE, MAX_PROMPT, reviseOf } from "../../../lib/ai/types";
+import { previewSvg } from "../../../lib/ai/preview";
 import type { DCatalog } from "../../../lib/desktop/types";
 import { ipc, type AppError } from "../ipc";
 
@@ -60,6 +61,8 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
   const [editError, setEditError] = useState<string | null>(null);
   /** Designs before each AI edit, newest last. */
   const [history, setHistory] = useState<AIDesign[]>(kept?.history ?? []);
+  const [saving, setSaving] = useState(false);
+  const [saveNote, setSaveNote] = useState<{ text: string; ok: boolean } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const run = useRef(0);
 
@@ -129,7 +132,24 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
   }
 
   const native = !!design && !!catalog?.products.some((p) => p.id === design.product);
-  const preview = design?.svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(design.svg)}` : null;
+  const drawn = design?.product === "art" && !!design.svg;
+  const preview = design?.svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(previewSvg(design.svg))}` : null;
+
+  useEffect(() => { setSaveNote(null); }, [design]);
+
+  async function saveDrawn(how: "save" | "export") {
+    if (!design?.svg || saving) return;
+    setSaving(true); setSaveNote(null);
+    try {
+      const id = await ipc.keepSvg(design.svg, design.fileName ?? design.name);
+      const out = how === "save" ? await ipc.saveDesign(id) : await ipc.exportDesign(id);
+      if (out.path) setSaveNote({ text: `Saved ${out.path.split(/[\\/]/).pop()}`, ok: true });
+    } catch (e) {
+      setSaveNote({ text: (e as AppError).message, ok: false });
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function open() {
     if (!design) return;
@@ -141,7 +161,7 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
     <div className="page ai-page">
       <header className="page-head">
         <h1><Sparkles size={22} aria-hidden /> AI designer</h1>
-        <p>Describe a product or add a photo of one. The designer picks the closest HingeLab product and fills in its settings; then fine-tune it like any other design.</p>
+        <p>Describe a product or add a photo of one. The designer draws an original cut and engrave file for it, checks its own drawing and fixes it. Boxes, hinges and other engineered products are built with HingeLab&apos;s tested generators instead.</p>
       </header>
 
       <section className="card ai-form" onPaste={(e) => { const f = [...e.clipboardData.files].find((x) => x.type.startsWith("image/")); if (f) { e.preventDefault(); void addPhoto(f); } }}>
@@ -194,7 +214,7 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
           </button>
           {busy && <button type="button" className="btn ghost" onClick={() => { run.current++; setBusy(false); }}>Cancel</button>}
           <span className="fine" role="status" aria-live="polite">
-            {busy ? `Working for ${elapsed} s. This usually takes 10 to 30 seconds.` : !online ? "The AI designer needs an internet connection." : "Ctrl+Enter also starts it."}
+            {busy ? `Working for ${elapsed} s. An original drawing is checked and redrawn, which can take up to two minutes.` : !online ? "The AI designer needs an internet connection." : "Ctrl+Enter also starts it."}
           </span>
         </div>
         {error && <p className="ai-error" role="alert">{error}</p>}
@@ -237,18 +257,26 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
                 </button>
                 {editing && <button type="button" className="btn ghost" onClick={() => { run.current++; setEditing(false); }}>Cancel</button>}
               </div>
-              {editing && <span className="fine" role="status" aria-live="polite">Working for {elapsed} s.</span>}
+              {editing && <span className="fine" role="status" aria-live="polite">Working for {elapsed} s.{design.product === "art" ? " Redrawing can take a minute or two." : ""}</span>}
               {editError && <p className="ai-error" role="alert">{editError}</p>}
               {history.length > 0 && !editing && (
                 <button type="button" className="btn ghost ai-undo" onClick={undoEdit}><Undo2 size={14} aria-hidden />Undo last edit</button>
               )}
             </form>
             <div className="row">
-              <button type="button" className="btn primary" onClick={open} disabled={editing}>
-                {native ? <>Open in workspace<ArrowRight size={15} aria-hidden /></> : <><Globe size={15} aria-hidden />Open in the online editor</>}
-              </button>
+              {drawn ? (
+                <>
+                  <button type="button" className="btn primary" onClick={() => void saveDrawn("save")} disabled={editing || saving}><Save size={15} aria-hidden />Save SVG…</button>
+                  <button type="button" className="btn" onClick={() => void saveDrawn("export")} disabled={editing || saving}><Download size={15} aria-hidden />Export</button>
+                </>
+              ) : (
+                <button type="button" className="btn primary" onClick={open} disabled={editing}>
+                  {native ? <>Open in workspace<ArrowRight size={15} aria-hidden /></> : <><Globe size={15} aria-hidden />Open in the online editor</>}
+                </button>
+              )}
               <button type="button" className="btn ghost" disabled={editing} onClick={() => { setDesign(null); setPrompt(""); setPhoto(null); setPhotoNote(""); setError(null); setHistory([]); setEditText(""); setEditError(null); kept = null; }}><RotateCcw size={14} aria-hidden />Start over</button>
             </div>
+            {saveNote && <p className={saveNote.ok ? "fine" : "ai-error"} role={saveNote.ok ? "status" : "alert"}>{saveNote.text}</p>}
           </div>
         </section>
       )}

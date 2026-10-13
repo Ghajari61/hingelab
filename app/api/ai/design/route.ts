@@ -5,7 +5,7 @@ import { currentPlan } from "@/lib/billing/plan";
 import { declaredLength, isCrossSite, isJSONRequest, siteOrigins } from "@/lib/security/request";
 
 /** Two model calls and one build. */
-export const maxDuration = 60;
+export const maxDuration = 180;
 
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   NextResponse.json(body, { status, headers: { "cache-control": "no-store", ...headers } });

@@ -5,7 +5,7 @@ import { aiAllowance, aiConfigured, aiLimitMessage, MAX_AI_BODY, parseAIRequest 
 import { declaredLength, isJSONRequest } from "@/lib/security/request";
 
 /** Two model calls and one build. */
-export const maxDuration = 60;
+export const maxDuration = 180;
 
 /**
  * The AI designer for the desktop app: the same designer as /api/ai/design, signed in with the

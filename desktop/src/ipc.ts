@@ -54,6 +54,7 @@ export const ipc = {
   catalog: () => call<DCatalog>("catalog"),
   generate: (request: GenerateRequest) => call<Generated>("generate", { request }),
   aiDesign: (request: AIDesignRequest) => call<AIDesign>("ai_design", { request }),
+  keepSvg: (svg: string, fileName: string) => call<number>("keep_svg", { svg, fileName }),
   saveDesign: (designId: number) => call<{ path: string | null }>("save_design", { designId }),
   exportDesign: (designId: number) => call<{ path: string | null }>("export_design", { designId }),
   revealFile: (path: string) => call<void>("reveal_file", { path }),

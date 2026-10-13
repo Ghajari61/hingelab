@@ -54,7 +54,8 @@ describe("AI designer menu", () => {
     const menu = await aiMenu();
     expect(menu.map((p) => p.id)).toEqual([...AI_PRODUCTS]);
     for (const p of menu) {
-      expect(p.presets.length).toBeGreaterThan(0);
+      if (p.id === "art") expect(p.presets).toEqual([]);
+      else expect(p.presets.length).toBeGreaterThan(0);
       for (const f of p.fields) expect(f.key).not.toMatch(/path$/i);
     }
     const text = productsText(menu);
@@ -70,7 +71,7 @@ describe("AI designer menu", () => {
 describe("AI designer", () => {
   it("builds a Hinge Box from checked settings and reports what it ignored", async () => {
     const { model, calls } = mock(
-      { product: "hinge", preset: "no-such-preset", name: "Tea box", match: "exact", brief: "Rounded box 200 x 120 x 9999 mm" },
+      { product: "hinge", preset: "no-such-preset", name: "Tea box", match: "exact", flat: false, brief: "Rounded box 200 x 120 x 9999 mm" },
       { settings: [{ key: "W", value: "200 mm" }, { key: "D", value: "120" }, { key: "H", value: "99999" }, { key: "lid", value: "removable" }, { key: "colour", value: "red" }, { key: "pattern", value: "zigzag" }], notes: ["Height was capped."] },
     );
     const d = await designWithAI({ prompt: "a tea box", image: PNG }, "pro", "user-1", model);
@@ -90,7 +91,7 @@ describe("AI designer", () => {
 
   it("keeps Pro designs locked on the Free plan but still returns their settings", async () => {
     const { model } = mock(
-      { product: "hinge", preset: "", name: "Round jar", match: "exact", brief: "Cylinder 90 mm across, 100 mm tall" },
+      { product: "hinge", preset: "", name: "Round jar", match: "exact", flat: false, brief: "Cylinder 90 mm across, 100 mm tall" },
       { settings: [{ key: "shape", value: "cyl" }, { key: "dia", value: "90" }, { key: "H", value: "100" }], notes: [] },
     );
     const d = await designWithAI({ prompt: "round jar" }, "free", "user-1", model);
@@ -102,13 +103,12 @@ describe("AI designer", () => {
 
   it("builds a generator design with the cut file", async () => {
     const { model } = mock(
-      { product: "sign", preset: "", name: "Cafe sign", match: "close", brief: "Wall sign reading Cafe Luna, 300 mm wide" },
-      { settings: [{ key: "material", value: "birch3" }, { key: "nope.key", value: "1" }], notes: [] },
+      { product: "boxes", preset: "", name: "Pen box", match: "exact", flat: false, brief: "Finger-jointed box 150 x 80 x 60 mm" },
+      { settings: [{ key: "nope.key", value: "1" }], notes: [] },
     );
-    const d = await designWithAI({ prompt: "cafe sign" }, "pro", "user-1", model);
-    expect(d.product).toBe("sign");
-    expect(d.productName).toBe("Sign");
-    expect(d.params.name).toBe("Cafe sign");
+    const d = await designWithAI({ prompt: "pen box" }, "pro", "user-1", model);
+    expect(d.product).toBe("boxes");
+    expect(d.params.name).toBe("Pen box");
     expect(d.svg).toMatch(/^<\?xml|^<svg/);
     expect(d.width).toBeGreaterThan(0);
     expect(d.notes.join(" ")).toContain("nope.key");
@@ -116,7 +116,7 @@ describe("AI designer", () => {
 
   it("sets Letters from the curated fields, clamped to their ranges", async () => {
     const { model } = mock(
-      { product: "letters", preset: "persian-box", name: "Salam letters", match: "exact", brief: "Solid letters سلام 5 m tall" },
+      { product: "letters", preset: "persian-box", name: "Salam letters", match: "exact", flat: false, brief: "Solid letters سلام 5 m tall" },
       { settings: [{ key: "text", value: "سلام" }, { key: "mode", value: "solid" }, { key: "size", value: "5000" }, { key: "fontId", value: "comic-sans" }], notes: [] },
     );
     const d = await designWithAI({ prompt: "سلام" }, "pro", "user-1", model);
@@ -138,7 +138,7 @@ describe("AI designer", () => {
   it("shortens a long name so the Letters link still fits", async () => {
     const long = "ب".repeat(80);
     const { model } = mock(
-      { product: "letters", preset: "", name: long, match: "exact", brief: "Letters" },
+      { product: "letters", preset: "", name: long, match: "exact", flat: false, brief: "Letters" },
       { settings: [{ key: "text", value: "پ".repeat(60) }], notes: [] },
     );
     const d = await designWithAI({ prompt: "letters" }, "pro", "user-1", model);
@@ -147,7 +147,7 @@ describe("AI designer", () => {
   });
 
   it("picks a Parametric preset without a settings step", async () => {
-    const { model, calls } = mock({ product: "parametric", preset: "slat-portrait", name: "Portrait wall", match: "close", brief: "Face sculpture" });
+    const { model, calls } = mock({ product: "parametric", preset: "slat-portrait", name: "Portrait wall", match: "exact", flat: false, brief: "Face sculpture" });
     const d = await designWithAI({ prompt: "a face made of wooden slats" }, "pro", "user-1", model);
     expect(calls).toHaveLength(1);
     expect(d.product).toBe("parametric");
@@ -157,7 +157,7 @@ describe("AI designer", () => {
   });
 
   it("says a Parametric design from a photo becomes a relief of that photo (website only)", async () => {
-    const pick = { product: "parametric", preset: "slat-portrait", name: "Veiled face slat wall", match: "exact", brief: "Face relief in vertical slats" };
+    const pick = { product: "parametric", preset: "slat-portrait", name: "Veiled face slat wall", match: "exact", flat: false, brief: "Face relief in vertical slats" };
     const web = await designWithAI({ prompt: "", image: PNG }, "pro", "user-1", mock(pick).model, { photoRelief: true });
     expect(web.summary).toMatch(/^Your photo as a relief/);
     expect(web.summary).not.toContain("sweeping strands");
@@ -167,7 +167,7 @@ describe("AI designer", () => {
   });
 
   it("gives both steps the note about the photo", async () => {
-    const { model, calls } = mock({ product: "sign", preset: "", name: "Sign", match: "exact", brief: "A sign" }, { settings: [], notes: [] });
+    const { model, calls } = mock({ product: "boxes", preset: "", name: "Box", match: "exact", flat: false, brief: "A box" }, { settings: [], notes: [] });
     await designWithAI({ prompt: "", image: PNG, imageNote: "make it 30 × 40 cm with the name سارا" }, "pro", "user-1", model);
     expect(calls).toHaveLength(2);
     for (const c of calls) expect(JSON.stringify(c.prompt)).toContain("About the photo: make it 30 × 40 cm with the name سارا");
@@ -175,21 +175,21 @@ describe("AI designer", () => {
 
   it("edits a design: only the asked change, everything else kept, no product pick", async () => {
     const first = await designWithAI({ prompt: "round jar" }, "pro", "user-1", mock(
-      { product: "hinge", preset: "", name: "Round jar", match: "close", brief: "Cylinder 90 mm across, 100 mm tall" },
+      { product: "hinge", preset: "", name: "Round jar", match: "exact", flat: false, brief: "Cylinder 90 mm across, 100 mm tall" },
       { settings: [{ key: "shape", value: "cyl" }, { key: "dia", value: "90" }, { key: "H", value: "100" }], notes: [] },
     ).model);
     const { model, calls } = mock({ settings: [{ key: "H", value: "15 cm" }], notes: [], name: "" });
     const d = await designWithAI({ prompt: "make it 15 cm tall", revise: reviseOf(first) }, "pro", "user-1", model);
     expect(calls).toHaveLength(1);
     expect(JSON.stringify(calls[0].prompt)).toContain("make it 15 cm tall");
-    expect(d).toMatchObject({ product: "hinge", name: "Round jar", match: "close" });
+    expect(d).toMatchObject({ product: "hinge", name: "Round jar", match: "exact" });
     expect(d.params).toMatchObject({ shape: "cyl", dia: 90, H: 150 });
     expect(d.svg).toMatch(/<svg/);
   });
 
   it("edits Letters from their current settings", async () => {
     const first = await designWithAI({ prompt: "سلام" }, "pro", "user-1", mock(
-      { product: "letters", preset: "persian-box", name: "Salam", match: "exact", brief: "Solid letters سلام" },
+      { product: "letters", preset: "persian-box", name: "Salam", match: "exact", flat: false, brief: "Solid letters سلام" },
       { settings: [{ key: "text", value: "سلام" }, { key: "mode", value: "solid" }, { key: "size", value: "200" }], notes: [] },
     ).model);
     const d = await designWithAI({ prompt: "change the word to سارا", revise: reviseOf(first) }, "pro", "user-1", mock({ settings: [{ key: "text", value: "سارا" }], notes: [], name: "Sara letters" }).model);
@@ -198,8 +198,8 @@ describe("AI designer", () => {
   });
 
   it("edits a sculpture by picking its style again, within sculptures only", async () => {
-    const first = await designWithAI({ prompt: "a face" }, "pro", "user-1", mock({ product: "parametric", preset: "slat-portrait", name: "Face", match: "exact", brief: "Face" }).model);
-    const { model, calls } = mock({ product: "boxes", preset: "wave-lamp", name: "Other", match: "exact", brief: "Waves" });
+    const first = await designWithAI({ prompt: "a face" }, "pro", "user-1", mock({ product: "parametric", preset: "slat-portrait", name: "Face", match: "exact", flat: false, brief: "Face" }).model);
+    const { model, calls } = mock({ product: "boxes", preset: "wave-lamp", name: "Other", match: "exact", flat: false, brief: "Waves" });
     const d = await designWithAI({ prompt: "make it waves instead", revise: reviseOf(first) }, "pro", "user-1", model);
     expect(d.product).toBe("parametric");
     expect(d.name).toBe("Face");
@@ -216,15 +216,104 @@ describe("AI designer", () => {
   });
 
   it("keeps the preset's values when the settings step fails", async () => {
-    const { model } = mock({ product: "boxes", preset: "", name: "Box", match: "exact", brief: "A box" }, new Error("model down"));
+    const { model } = mock({ product: "boxes", preset: "", name: "Box", match: "exact", flat: false, brief: "A box" }, new Error("model down"));
     const d = await designWithAI({ prompt: "a box" }, "pro", "user-1", model);
     expect(d.product).toBe("boxes");
     expect(d.notes.join(" ")).toContain("preset's values");
   });
 
   it("fails cleanly when the model answers outside the menu", async () => {
-    const { model } = mock({ product: "spaceship", preset: "", name: "x", match: "exact", brief: "x" });
+    const { model } = mock({ product: "spaceship", preset: "", name: "x", match: "exact", flat: false, brief: "x" });
     await expect(designWithAI({ prompt: "a spaceship" }, "pro", "user-1", model)).rejects.toBeInstanceOf(AIDesignError);
+  });
+
+  const ART_PICK = { product: "art", preset: "", name: "Round phone stand", match: "exact", flat: false, brief: "A circular phone stand" };
+  const art = (over: Record<string, unknown> = {}) => ({
+    name: "Round phone stand", summary: "A round phone stand, 100 mm across, in two slotted parts.",
+    width: 210, height: 100, material: "3 mm birch plywood", thickness: 3,
+    shapes: [
+      { layer: "cut", d: "M50 0A50 50 0 1 1 49.99 0Z M47 60H53V100H47Z" },
+      { layer: "cut", d: "M110 20H210V80H110Z" },
+      { layer: "engrave", d: "M40 30C45 20 55 20 60 30S75 40 60 45Z" },
+    ],
+    texts: [{ text: "سارا", font: "fredoka", cx: 50, cy: 75, height: 12, maxWidth: 40, layer: "engrave" }],
+    notes: [],
+    ...over,
+  });
+
+  it("draws an original design, looks at its own drawing and fixes it", async () => {
+    const { model, calls } = mock(ART_PICK, art({ shapes: [{ layer: "cut", d: "M0 0H100V100H0Z" }], texts: [] }), { ...art(), looksRight: false, problems: ["plain square"] });
+    const d = await designWithAI({ prompt: "circle Phone stand" }, "pro", "user-1", model);
+    expect(d.product).toBe("art");
+    expect(d.productName).toBe("Original design");
+    expect(d.preset).toBeNull();
+    expect(d.svg).toContain('<g id="cut" fill="none" stroke="#FF0000"');
+    expect(d.svg).toContain('<g id="engrave" fill="#000000" fill-rule="evenodd"');
+    expect(d.svg).not.toContain("سارا");
+    expect(d.width).toBe(210);
+    expect(d.stats?.find((s) => s.label === "Cut shapes")?.value).toBe("3");
+    expect(d.fileName).toBe("Round phone stand.svg");
+    expect(calls).toHaveLength(3);
+    const reviewed = JSON.stringify(calls[2].prompt);
+    expect(reviewed).toContain("image/png");
+    expect(reviewed).toContain("M0 0H100V100H0Z");
+    expect((d.params.art as { texts: unknown[] }).texts).toHaveLength(1);
+  });
+
+  it("draws anything a product would only approximate, and never fills in a template layout", async () => {
+    const reviewed = { ...art(), looksRight: true, problems: [] };
+    const near = mock({ product: "boxes", preset: "phone-stand", name: "Phone stand", match: "close", flat: false, brief: "A circular phone stand" }, art(), reviewed);
+    expect((await designWithAI({ prompt: "circle Phone stand" }, "pro", "user-1", near.model)).product).toBe("art");
+    expect(JSON.stringify(near.calls[0].prompt)).not.toContain("## sign:");
+    const templated = mock({ product: "sign", preset: "persian-home", name: "Home sign", match: "exact", flat: false, brief: "Wall sign خانه ما" }, art(), reviewed);
+    const d = await designWithAI({ prompt: "تابلوی خانه ما" }, "pro", "user-1", templated.model);
+    expect(d.product).toBe("art");
+    expect(JSON.stringify(templated.calls[1].prompt)).toContain("Wall sign خانه ما");
+  });
+
+  it("draws flat things even when the model reaches for an engineered product", async () => {
+    const reviewed = { ...art(), looksRight: true, problems: [] };
+    const stand = mock({ product: "boxes", preset: "", name: "Phone stand", match: "exact", flat: true, brief: "A circular phone stand" }, art(), reviewed);
+    expect((await designWithAI({ prompt: "circle Phone stand" }, "pro", "user-1", stand.model)).product).toBe("art");
+    const puzzle = mock({ product: "puzzle", preset: "", name: "Puzzle", match: "exact", flat: true, brief: "A 12 piece puzzle" }, { settings: [], notes: [] });
+    expect((await designWithAI({ prompt: "kids puzzle" }, "pro", "user-1", puzzle.model)).product).toBe("puzzle");
+  });
+
+  it("tells the review what it measured: a frame cut out with its text, a sheet engraved black", async () => {
+    const reviewed = { ...art(), looksRight: true, problems: [] };
+    const framed = art({
+      width: 300, height: 120,
+      shapes: [{ layer: "cut", d: "M0 0H300V120H0Z" }, { layer: "cut", d: "M15 15H285V105H15Z" }],
+      texts: [{ text: "خانه ما", font: "vazirmatn", cx: 150, cy: 60, height: 50, maxWidth: 240, layer: "engrave" }],
+    });
+    const a = mock(ART_PICK, framed, reviewed);
+    await designWithAI({ prompt: "sign" }, "pro", "user-1", a.model);
+    expect(JSON.stringify(a.calls[2].prompt)).toContain("1 closed cut inside a part would cut out a large piece");
+    const black = art({ shapes: [{ layer: "cut", d: "M0 0H210V100H0Z" }, { layer: "engrave", d: "M2 2H208V98H2Z" }], texts: [] });
+    const b = mock(ART_PICK, black, reviewed);
+    await designWithAI({ prompt: "sign" }, "pro", "user-1", b.model);
+    expect(JSON.stringify(b.calls[2].prompt)).toMatch(/Engraving covers 9\d% of the sheet/);
+  });
+
+  it("keeps the first drawing when the review fails, and fails cleanly when nothing is drawn", async () => {
+    const kept = await designWithAI({ prompt: "a sign" }, "free", "user-1", mock(ART_PICK, art(), new Error("model down")).model);
+    expect(kept.product).toBe("art");
+    expect(kept.svg).toContain("HingeLab");
+    const empty = mock(ART_PICK, art({ shapes: [{ layer: "cut", d: "M0 0L10 10Z\"/><script>alert(1)</script>" }, { layer: "cut", d: "javascript:alert(1)" }], texts: [] }));
+    await expect(designWithAI({ prompt: "a sign" }, "pro", "user-1", empty.model)).rejects.toBeInstanceOf(AIDesignError);
+  });
+
+  it("edits an original design from its picture, without picking a product", async () => {
+    const first = await designWithAI({ prompt: "circle Phone stand" }, "pro", "user-1", mock(ART_PICK, art(), { ...art(), looksRight: true, problems: [] }).model);
+    const { model, calls } = mock({ ...art({ name: "Sara phone stand", width: 250 }) }, { ...art(), looksRight: true, problems: [] });
+    const d = await designWithAI({ prompt: "make it 25 cm wide", revise: reviseOf(first) }, "pro", "user-1", model);
+    expect(d.product).toBe("art");
+    expect(d.name).toBe("Sara phone stand");
+    expect(d.width).toBe(250);
+    const asked = JSON.stringify(calls[0].prompt);
+    expect(asked).toContain("make it 25 cm wide");
+    expect(asked).toContain("image/png");
+    await expect(designWithAI({ prompt: "wider", revise: { ...reviseOf(first), params: { art: { shapes: 5 } } } }, "pro", "user-1", model)).rejects.toBeInstanceOf(AIDesignError);
   });
 
   it("asks OpenAI directly when the deployment has an OpenAI key, then falls back to the gateway", async () => {

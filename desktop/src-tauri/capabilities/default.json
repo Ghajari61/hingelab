@@ -17,6 +17,7 @@
     "allow-catalog",
     "allow-generate",
     "allow-ai-design",
+    "allow-keep-svg",
     "allow-save-design",
     "allow-export-design",
     "allow-reveal-file",

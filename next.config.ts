@@ -15,10 +15,14 @@ const nextConfig: NextConfig = {
   // Lets a production build run next to `next dev` (NEXT_DIST_DIR=.next-build npm run build).
   distDir: process.env.NEXT_DIST_DIR || ".next",
   // HarfBuzz and manifold-3d load their own .wasm next to their modules, so the server must import them from node_modules.
-  serverExternalPackages: ["harfbuzzjs", "manifold-3d"],
+  // resvg is a native module (the AI designer renders its drawings to look at them).
+  serverExternalPackages: ["harfbuzzjs", "manifold-3d", "@resvg/resvg-js"],
   // The Letters export builds the SVG on the server from the bundled fonts; Parametric re-slices with manifold.
+  // The AI designer outlines text with the same fonts and renders with resvg.
   outputFileTracingIncludes: {
     "/api/export": ["./public/fonts/*.ttf", "./public/fonts/*.otf", "./node_modules/harfbuzzjs/dist/**", "./node_modules/manifold-3d/*.wasm", "./node_modules/manifold-3d/*.js"],
+    "/api/ai/design": ["./public/fonts/*.ttf", "./public/fonts/*.otf", "./node_modules/harfbuzzjs/dist/**", "./node_modules/@resvg/**"],
+    "/api/desktop/ai": ["./public/fonts/*.ttf", "./public/fonts/*.otf", "./node_modules/harfbuzzjs/dist/**", "./node_modules/@resvg/**"],
   },
   async headers() {
     return [

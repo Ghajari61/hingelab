@@ -146,14 +146,18 @@ async fn generate(request: Value, state: State<'_, AppState>) -> CmdResult<Gener
 /// The AI designer's request: a description and a photo the UI shrank to 1024 px.
 const MAX_AI_REQUEST: usize = 1536 * 1024;
 
-/// Asks the AI designer for a design of one of the products. The answer is settings (and the cut
-/// file's preview) that the workspace then opens and builds like any other design.
+/// A drawn design is drawn, checked and redrawn on the server, which may take up to 180 s.
+const AI_WAIT: std::time::Duration = std::time::Duration::from_secs(190);
+
+/// Asks the AI designer for a design. A product design comes back as settings (and the cut file's
+/// preview) that the workspace then opens and builds like any other design; a drawn design comes
+/// back as its finished cut file.
 #[tauri::command]
 async fn ai_design(request: Value, state: State<'_, AppState>) -> CmdResult<Value> {
     if !request.is_object() || serde_json::to_vec(&request).map(|v| v.len()).unwrap_or(usize::MAX) > MAX_AI_REQUEST {
         return Err(CmdError::new("invalid", "This photo is too large."));
     }
-    let (status, body) = state.api.call(Method::POST, "/api/desktop/ai", Some(&request), &[400, 413, 429, 502, 503]).await?;
+    let (status, body) = state.api.call_within(Method::POST, "/api/desktop/ai", Some(&request), &[400, 413, 429, 502, 503], Some(AI_WAIT)).await?;
     if status != 200 || !body.get("product").is_some_and(|p| p.is_string()) {
         let msg: String = body.get("message").and_then(|m| m.as_str()).unwrap_or("The design could not be made. Try again.").chars().take(300).collect();
         let kind = match status {
@@ -164,6 +168,23 @@ async fn ai_design(request: Value, state: State<'_, AppState>) -> CmdResult<Valu
         return Err(CmdError::new(kind, msg).with_status(status));
     }
     Ok(body)
+}
+
+/// Largest drawn design the AI page hands over for saving, bytes.
+const MAX_KEPT_SVG: usize = 8 * 1024 * 1024;
+
+/// Makes a drawn AI design (which has no workspace product to rebuild it) the one Save and Export
+/// write, and returns its id.
+#[tauri::command]
+fn keep_svg(svg: String, file_name: String, state: State<'_, AppState>) -> CmdResult<u64> {
+    if svg.len() > MAX_KEPT_SVG || !files::looks_like_svg(&svg) {
+        return Err(CmdError::new("invalid", "This design cannot be saved."));
+    }
+    let mut files = state.files.lock().unwrap();
+    files.next_id += 1;
+    let id = files.next_id;
+    files.last = Some(Design { id, svg, file_name: files::safe_file_name(&file_name) });
+    Ok(id)
 }
 
 fn design(state: &AppState, id: u64) -> CmdResult<Design> {
@@ -344,6 +365,7 @@ pub fn run() {
             catalog,
             generate,
             ai_design,
+            keep_svg,
             save_design,
             export_design,
             reveal_file,
