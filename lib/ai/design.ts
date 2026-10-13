@@ -106,6 +106,7 @@ async function askModel<T>(ask: Ask, system: string, content: UserContent, schem
       return output as T;
     } catch (e) {
       if (i + 1 >= list.length || ask.signal.aborted) throw e;
+      console.warn("AI designer: OpenAI failed, trying the gateway:", e instanceof Error ? e.message.slice(0, 200) : e);
     }
   }
 }
