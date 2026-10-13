@@ -69,9 +69,10 @@ The app (`desktop/`, see `DESKTOP_ARCHITECTURE.md`) signs in and builds designs 
 
 Finished products the AI designer looks at before it draws an original design (D143), at `/app/ai/examples`.
 
-1. Database: `20261013000100_ai_examples.sql` must be applied (`npx supabase db push --linked`). It adds the private tables, the functions and the private `ai-examples` storage bucket.
+1. Database: `20261013000100_ai_examples.sql` and `20261014000100_ai_examples_cap.sql` must be applied (`npx supabase db push --linked`). They add the private tables, the functions and the private `ai-examples` storage bucket; the library holds up to 2000 examples.
 2. Who curates: the account with the confirmed email ghajari61@gmail.com, always. To add someone else, run in the Supabase SQL editor: `insert into private.ai_curators (user_id) values ('<their user id>');`
-3. Each example is a cut file (SVG, real size in mm, text as paths) and optionally a photo of the finished product. For a request, the two examples whose title, tags and description fit best are sent with the first drawing; nothing is sent when none fits.
+3. Each example is a cut file (SVG or ASCII DXF, real size in mm, text as paths) and optionally a photo of the finished product. For a request, the two examples whose title, tags and description fit best are sent with the first drawing; nothing is sent when none fits. The page has a search box for large libraries.
+4. Storage: an example takes about 0.2 MB on average (drawing, its picture and the photo), so 1000 examples need about 200 MB of Supabase Storage.
 
 ## Before launch
 

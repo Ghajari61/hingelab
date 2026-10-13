@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, FileUp, ImagePlus, Library, Loader2, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, FileUp, ImagePlus, Library, Loader2, Plus, Search, Trash2, X } from "lucide-react";
 import { MAX_EXAMPLE_DESCRIPTION, MAX_EXAMPLE_SVG, MAX_EXAMPLE_TAGS, MAX_EXAMPLE_TITLE, type AIExample } from "@/lib/ai/exampleLimits";
+import { DxfError, dxfToSvg, readDxf } from "@/lib/ai/dxfRead";
 import { photoJpeg } from "@/lib/ai/photo";
+
+const PAGE = 60;
+/** Largest DXF read in the browser, bytes. */
+const MAX_DXF = 12_000_000;
 
 /** The AI designer's example library: finished products the designer studies before it draws (curators only). */
 export function ExampleLibrary() {
@@ -18,7 +23,17 @@ export function ExampleLibrary() {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [shown, setShown] = useState(PAGE);
   const svgRef = useRef<HTMLInputElement>(null);
+  const found = useMemo(() => {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    if (!list || !words.length) return list;
+    return list.filter((x) => {
+      const text = `${x.title} ${x.tags} ${x.description}`.toLowerCase();
+      return words.every((w) => text.includes(w));
+    });
+  }, [list, query]);
   const photoRef = useRef<HTMLInputElement>(null);
 
   async function load() {
@@ -37,11 +52,21 @@ export function ExampleLibrary() {
 
   async function pickSvg(file: File | undefined) {
     if (!file) return;
-    if (!/\.svg$/i.test(file.name) && file.type !== "image/svg+xml") { setNote({ ok: false, text: "Choose an SVG file. In LightBurn: File ▸ Export, as SVG." }); return; }
-    const text = await file.text();
-    if (text.length > MAX_EXAMPLE_SVG) { setNote({ ok: false, text: "The SVG is too large (2.5 MB at most)." }); return; }
-    setSvg({ text, name: file.name, url: URL.createObjectURL(file) });
-    if (!title) setTitle(file.name.replace(/\.svg$/i, "").replace(/[-_]+/g, " ").slice(0, MAX_EXAMPLE_TITLE));
+    const dxf = /\.dxf$/i.test(file.name);
+    if (!dxf && !/\.svg$/i.test(file.name) && file.type !== "image/svg+xml") { setNote({ ok: false, text: "Choose an SVG or DXF file. In LightBurn: File ▸ Export, as SVG." }); return; }
+    if (dxf && file.size > MAX_DXF) { setNote({ ok: false, text: "The DXF is too large (12 MB at most)." }); return; }
+    let text = await file.text();
+    if (dxf) {
+      try {
+        text = dxfToSvg(readDxf(text));
+      } catch (e) {
+        setNote({ ok: false, text: e instanceof DxfError ? e.message : "That DXF could not be read. Save it as ASCII DXF and try again." });
+        return;
+      }
+    }
+    if (text.length > MAX_EXAMPLE_SVG) { setNote({ ok: false, text: "The drawing is too large (2.5 MB at most as SVG)." }); return; }
+    setSvg({ text, name: file.name, url: URL.createObjectURL(dxf ? new Blob([text], { type: "image/svg+xml" }) : file) });
+    if (!title) setTitle(file.name.replace(/\.(svg|dxf)$/i, "").replace(/[-_]+/g, " ").slice(0, MAX_EXAMPLE_TITLE));
     setNote(null);
   }
 
@@ -101,9 +126,9 @@ export function ExampleLibrary() {
         <div className="ai-lib-files">
           <button type="button" className={`ai-lib-drop${svg ? " has" : ""}`} onClick={() => svgRef.current?.click()} disabled={busy}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            {svg ? <img src={svg.url} alt={`Cut file ${svg.name}`} /> : <><FileUp size={22} aria-hidden /><b>Cut file (SVG)</b><span>Real size in mm, text as paths. Red cuts, blue scores, black fills engrave.</span></>}
+            {svg ? <img src={svg.url} alt={`Cut file ${svg.name}`} /> : <><FileUp size={22} aria-hidden /><b>Cut file (SVG or DXF)</b><span>Real size in mm, text as paths. Red cuts, blue scores, black fills engrave.</span></>}
           </button>
-          <input ref={svgRef} type="file" accept=".svg,image/svg+xml" hidden onChange={(e) => { void pickSvg(e.target.files?.[0]); e.target.value = ""; }} />
+          <input ref={svgRef} type="file" accept=".svg,.dxf,image/svg+xml" hidden onChange={(e) => { void pickSvg(e.target.files?.[0]); e.target.value = ""; }} />
           <div className={`ai-lib-drop${photo ? " has" : ""}`}>
             <button type="button" className="ai-lib-drop-btn" onClick={() => photoRef.current?.click()} disabled={busy}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -131,13 +156,22 @@ export function ExampleLibrary() {
       </form>
 
       <section aria-label="Examples in the library" className="ai-lib-list">
-        <h2>{list ? `${list.length} example${list.length === 1 ? "" : "s"}` : "Examples"}</h2>
+        <div className="ai-lib-head">
+          <h2>{list ? `${list.length} example${list.length === 1 ? "" : "s"}` : "Examples"}</h2>
+          {list && list.length > 0 && (
+            <label className="ai-lib-search">
+              <Search size={15} aria-hidden />
+              <input type="search" dir="auto" value={query} onChange={(e) => { setQuery(e.target.value); setShown(PAGE); }} placeholder="Search titles and tags" aria-label="Search the examples" />
+            </label>
+          )}
+        </div>
         {listError && <p className="auth-msg err" role="alert">{listError}</p>}
         {!list && !listError && <p className="ai-status"><Loader2 size={14} className="spin" aria-hidden /> Loading…</p>}
         {list?.length === 0 && <p className="ai-status">No examples yet. Start with five to ten of your best sellers; the designer gets better with every good one.</p>}
-        {list && list.length > 0 && (
+        {list && list.length > 0 && found?.length === 0 && <p className="ai-status">No example matches “{query.trim()}”.</p>}
+        {found && found.length > 0 && (
           <ul className="ai-lib-grid">
-            {list.map((x) => (
+            {found.slice(0, shown).map((x) => (
               <li key={x.id}>
                 <div className="ai-lib-pics">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -155,6 +189,11 @@ export function ExampleLibrary() {
               </li>
             ))}
           </ul>
+        )}
+        {found && found.length > shown && (
+          <div className="ai-actions ai-lib-more">
+            <button type="button" className="btn-ghost" onClick={() => setShown((n) => n + PAGE)}>Show more ({found.length - shown} left)</button>
+          </div>
         )}
       </section>
     </main>
