@@ -893,3 +893,7 @@ The AI designer turns a description or a photo into a design, but the model neve
 ## D137. AI designer photos become the relief, in the browser
 
 A Parametric design from a photo used the chosen preset's own source model, so the user's photo only steered which preset was picked. The photo is now handed to the Parametric editor with the start design and turned into depth there by the existing in-browser depth model, then used as an image source while the preset's slicing settings stay. Depth stays client-side: no new server model, no extra AI cost, and the image never leaves the browser a second time. The summary no longer repeats the preset's description, which described a different subject. The desktop app keeps the preset and shows a hint, since its workspace has no depth model; passing the photo there can come later.
+
+## D138. The AI designer can use the owner's OpenAI key
+
+The gateway's free tier only allows gpt-5-mini, and a ChatGPT subscription cannot be used by a server: OpenAI only grants programmatic access through API keys. So the deployment may set OPENAI_API_KEY and the designer calls OpenAI directly (via the Apache-2.0 @ai-sdk/openai provider, same AI SDK version line), keeping the gateway as the fallback so a bad key, an empty balance or an outage still produces a design. Users are identified to OpenAI only by the same hashed id the gateway gets.

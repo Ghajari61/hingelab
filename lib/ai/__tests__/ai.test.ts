@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MockLanguageModelV4 } from "ai/test";
 import { AIDesignError, designWithAI } from "../design";
 import { aiMenu, fieldsText, productsText } from "../menu";
@@ -169,5 +169,23 @@ describe("AI designer", () => {
   it("fails cleanly when the model answers outside the menu", async () => {
     const { model } = mock({ product: "spaceship", preset: "", name: "x", match: "exact", brief: "x" });
     await expect(designWithAI({ prompt: "a spaceship" }, "pro", "user-1", model)).rejects.toBeInstanceOf(AIDesignError);
+  });
+
+  it("asks OpenAI directly when the deployment has an OpenAI key, then falls back to the gateway", async () => {
+    const hosts: string[] = [];
+    vi.stubEnv("OPENAI_API_KEY", "sk-test-not-real");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "gw-test-not-real");
+    vi.stubGlobal("fetch", async (url: string | URL | Request) => {
+      hosts.push(new URL(url instanceof Request ? url.url : url).host);
+      return new Response(JSON.stringify({ error: { message: "bad key", type: "invalid_request_error" } }), { status: 401, headers: { "content-type": "application/json" } });
+    });
+    try {
+      await expect(designWithAI({ prompt: "a box" }, "pro", "user-1")).rejects.toBeInstanceOf(AIDesignError);
+      expect(hosts[0]).toBe("api.openai.com");
+      expect(hosts.some((h) => h.includes("ai-gateway"))).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
   });
 });

@@ -6,6 +6,7 @@ import "server-only";
  * product's own ranges and options, and the product code builds, checks and fixes the design.
  */
 import { createHash } from "node:crypto";
+import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, Output, type LanguageModel, type UserContent } from "ai";
 import { z } from "zod";
 import { coerce, designFromChanges, generateDesign } from "@/lib/desktop/products";
@@ -19,6 +20,7 @@ import { PARAMETRIC_PRESETS } from "@/lib/parametric/presets";
 import { LETTER_PRESETS } from "@/lib/letters/presets";
 import type { Plan } from "@/lib/plans";
 import { aiMenu, fieldsText, LETTER_FIELDS, productsText, type MenuProduct } from "./menu";
+import { gatewayConfigured } from "./request";
 import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_OPEN_PATH, type AIDesign, type AIDesignRequest, type AIOpen, type AIProduct } from "./types";
 
 /**
@@ -27,6 +29,7 @@ import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_OPEN_PATH, type AIDesign, type AIDesig
  */
 const MODEL = "google/gemini-3.8-flash";
 const FALLBACK_MODELS = ["openai/gpt-5.6-luna", "openai/gpt-5-mini"];
+const OPENAI_MODEL = "gpt-5.6-terra";
 const TIMEOUT_MS = 50_000;
 
 export class AIDesignError extends Error {}
@@ -67,43 +70,52 @@ function userContent(req: AIDesignRequest, extra?: string): UserContent {
   return parts;
 }
 
-function gatewayOptions(userId: string) {
-  return {
-    gateway: {
-      models: FALLBACK_MODELS,
-      user: createHash("sha256").update(`ai-design:${userId}`).digest("hex").slice(0, 24),
-      tags: ["ai-design"],
-    },
+const userTag = (userId: string) => createHash("sha256").update(`ai-design:${userId}`).digest("hex").slice(0, 24);
+
+type Route = { model: LanguageModel; providerOptions: NonNullable<Parameters<typeof generateText>[0]["providerOptions"]> };
+
+/** OpenAI directly when the deployment has its own OPENAI_API_KEY (model OPENAI_MODEL), then the AI Gateway. */
+function routes(ask: Ask): Route[] {
+  const gateway: Route = {
+    model: ask.model ?? (process.env.AI_DESIGN_MODEL || MODEL),
+    providerOptions: { gateway: { models: FALLBACK_MODELS, user: userTag(ask.userId), tags: ["ai-design"] } },
   };
+  const key = process.env.OPENAI_API_KEY;
+  if (ask.model || !key) return [gateway];
+  const openai: Route = {
+    model: createOpenAI({ apiKey: key })(process.env.OPENAI_MODEL || OPENAI_MODEL),
+    providerOptions: { openai: { safetyIdentifier: userTag(ask.userId) } },
+  };
+  return gatewayConfigured() ? [openai, gateway] : [openai];
 }
 
 type Ask = { model?: LanguageModel; userId: string; signal: AbortSignal };
 
-async function pick(req: AIDesignRequest, menu: MenuProduct[], ask: Ask) {
-  const { output } = await generateText({
-    model: ask.model ?? (process.env.AI_DESIGN_MODEL || MODEL),
-    system: PICK_SYSTEM + productsText(menu),
-    messages: [{ role: "user", content: userContent(req) }],
-    output: Output.object({ schema: pickSchema }),
-    reasoning: "low",
-    providerOptions: gatewayOptions(ask.userId),
-    abortSignal: ask.signal,
-  });
-  return output;
+async function askModel<T>(ask: Ask, system: string, content: UserContent, schema: z.ZodType<T>): Promise<T> {
+  const list = routes(ask);
+  for (let i = 0; ; i++) {
+    try {
+      const { output } = await generateText({
+        ...list[i],
+        system,
+        messages: [{ role: "user", content }],
+        output: Output.object({ schema }),
+        reasoning: "low",
+        abortSignal: ask.signal,
+      });
+      return output as T;
+    } catch (e) {
+      if (i + 1 >= list.length || ask.signal.aborted) throw e;
+    }
+  }
 }
 
-async function settings(req: AIDesignRequest, product: MenuProduct, brief: string, start: Record<string, unknown>, ask: Ask) {
+const pick = (req: AIDesignRequest, menu: MenuProduct[], ask: Ask) =>
+  askModel(ask, PICK_SYSTEM + productsText(menu), userContent(req), pickSchema);
+
+function settings(req: AIDesignRequest, product: MenuProduct, brief: string, start: Record<string, unknown>, ask: Ask) {
   const current = Object.fromEntries(product.fields.map((f) => [f.key, f.key.split(".").reduce<unknown>((o, k) => (o && typeof o === "object" ? (o as Record<string, unknown>)[k] : undefined), start)]));
-  const { output } = await generateText({
-    model: ask.model ?? (process.env.AI_DESIGN_MODEL || MODEL),
-    system: SETTINGS_SYSTEM + fieldsText(product),
-    messages: [{ role: "user", content: userContent(req, `Product: ${product.name}\nBrief: ${brief}\nStarting values: ${JSON.stringify(current)}`) }],
-    output: Output.object({ schema: settingsSchema }),
-    reasoning: "low",
-    providerOptions: gatewayOptions(ask.userId),
-    abortSignal: ask.signal,
-  });
-  return output;
+  return askModel(ask, SETTINGS_SYSTEM + fieldsText(product), userContent(req, `Product: ${product.name}\nBrief: ${brief}\nStarting values: ${JSON.stringify(current)}`), settingsSchema);
 }
 
 const TO_MM: Record<string, number> = { mm: 1, cm: 10, m: 1000, in: 25.4, inch: 25.4, inches: 25.4, '"': 25.4 };
