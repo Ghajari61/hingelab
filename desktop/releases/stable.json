@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.20",
-    "pub_date": "2026-10-13T19:31:41.177Z",
-    "notes": "3D Assembly in the Studio: send the drawing to 3D put together, automatic fixes, adjust parts and go back to 2D. Kerf-compensated box templates assemble too.",
+    "version": "1.0.21",
+    "pub_date": "2026-10-13T23:09:58.995Z",
+    "notes": "A new one-screen dashboard: your products, ready-made designs, online editors, recent designs and plan all fit the window without scrolling.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.20_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm5lZlZlcGJzQ1pTbjRYRHh0amUxQjIxVElydVRPT2g2TE1WckJJZnNPRS95VXdUbnl5MTc5UUtrTEd4QjhpSWNSMzVvT3JXbzhDczY2QkRqcFhxN2dFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTE5ODkxCWZpbGU6SGluZ2VMYWJfMS4wLjIwX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjAKa0Q4SmJ6ZzhQYkJ0NnRxTkUvY1p5dEt6SUVuVlFRbjV1blIzc2hzdzNQL3VCYk5XRWVtK0hpYzRNTTlGUlUxTDk3RTlKUEtmR1JuVmk1TTlQYjJaQVE9PQo=",
-        "size": 2965344
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.21_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnRBbk1oTUZBb2RBam5uc0JhZGE2QTJlZzhwOTZTRkNFNXdlV2xYOFgvd2NrWmtHODVnREIxR1BodmRYQlFBU3ltMlRaUm9aTGNaZzI2d3JnUjlhSkFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTMyOTgxCWZpbGU6SGluZ2VMYWJfMS4wLjIxX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjEKMlhPcVFnZTl6WEk2QlIvZERSRVZjZU9ubzhZNklWd2tTYnM5ZVYwY2ZuVkozNjFSZENTbmJkN2NhUHBSdDhFcDBPUGQ3U1UrdVo5eVBITStvRHozQ1E9PQo=",
+        "size": 2968552
       }
     }
   }
