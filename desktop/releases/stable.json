@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.11",
-    "pub_date": "2026-10-13T02:37:25.236Z",
-    "notes": "One 3D workspace everywhere: Top, Front, Left and Perspective views, Shaded and Edges, dimensions per view, the same look as the website. Full editor and Help centre buttons are readable again.",
+    "version": "1.0.12",
+    "pub_date": "2026-10-13T03:27:44.453Z",
+    "notes": "New AI designer: describe a product or add a photo, and HingeLab sets up the closest design for you to fine-tune.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.11_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnVIcTRodzNVZlhXOUp1Vm9JUFlIeDdPUm9teHQ1UXNVbGRmNHZYTzh6Q0RPU1RVMis5ZjVSWjNGV2RXeS9nMDh5eGd5cFJSUWFKeWVLcjBNUVVxa2dzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODU5MDM3CWZpbGU6SGluZ2VMYWJfMS4wLjExX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMTEKaDg4U2hkcEdleTlLQUwwcURnbmY2a0tvbTlnVWQ1ejB5UXpDQlh3ajJUS3g3eDZ3OG5oOWdweXVKME1Idjh4THdTdUhOcGhWRzR0amtmenQ0RllsQnc9PQo=",
-        "size": 2992428
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.12_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmtDQVFlN091eDdtSmE4b3lkZlJtRkJvZTl2a2xFK1dyS1p0QmIzaGd2N1FUcG44dDJJbW94L1hOLzkxV05pamZLMnIzSzZyZXZSZHBlNWZYY3VlQndrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODYyMDU3CWZpbGU6SGluZ2VMYWJfMS4wLjEyX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMTIKQVlKT2tFVDZkVXBBTjRQMXkzd25NU3NQS0dvNkJ0OFRGd3ZtYTBpRmR4cmtmTDZTYWROY01RMytxaFBpbzlGc2hFYjVIcDB4L21rM1U5azlQL0VIRHc9PQo=",
+        "size": 2995336
       }
     }
   }
