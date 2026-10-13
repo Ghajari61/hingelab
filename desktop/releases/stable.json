@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.14",
-    "pub_date": "2026-10-13T04:30:23.321Z",
-    "notes": "AI designer now answers with OpenAI's gpt-5.6-terra model for better designs from descriptions and photos.",
+    "version": "1.0.15",
+    "pub_date": "2026-10-13T04:46:06.914Z",
+    "notes": "AI designer: tell the designer about your photo (size, text, what to change) in a box next to it.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.14_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmxnVkY5SWxpTSs2VjU2ZmVKNkJCZEF0YlN2dUR1ay9MKzZWQWRXTFBVUTJOU014RmZoRDRXOFV0ZEJCM0ZKSVBtYUlpV21mR1BHa1NkYVdnQm52VGdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODY1ODE3CWZpbGU6SGluZ2VMYWJfMS4wLjE0X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMTQKWW1MNGZKbHN0dm5IL3hJL3F5Q3ROTy9NYXhYRi80WHpCdU5EOTVCVTd4aURSNEI3V09HNklpMERWVFE2R0FHZUNiZytkVkhod1pWRWlhUG8xVUlWQnc9PQo=",
-        "size": 2996106
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.15_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnFCU2x5R2JHQkMrdFBZQWV4aFZORlJiSmtIbnppeEpqYUFvME5GOFRZT3lFRGp1cFFRQk94aFJzQVN0V2NqLzdqV0FxTjZpRXU4WDRCYXRPV3JYMlFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODY2NzYwCWZpbGU6SGluZ2VMYWJfMS4wLjE1X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMTUKVVVsZ0JvSmN2S2RCaUQ3VnBSTmN0S0tEbjJyK2swckpWc2lWZVd4WlNqeExYRW84SnM2WTBHTncrZHNmYkxxcCtMV25mRlJzSmhtQ00xL0c3ZjdzRGc9PQo=",
+        "size": 2995898
       }
     }
   }
