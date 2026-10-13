@@ -11,7 +11,7 @@ import type { PaneId } from "./View3D";
 const View3D = lazy(() => import("./View3D"));
 
 const SHEET_TONES: [SheetTone, string][] = [["plywood", "Plywood"], ["grey", "Soft grey"], ["white", "White"], ["dark", "Dark"]];
-const SHADES: [Shade3D, string, string][] = [["shaded", "Shaded", "Shaded (F3)"], ["wire", "Wire", "Wireframe (F3)"], ["edges", "Edges", "Shaded with edges (F4)"]];
+const SHADES: [Shade3D, string, string][] = [["shaded", "Shaded", "Shaded"], ["edges", "Edges", "Shaded with edges (F4)"]];
 
 interface Props {
   product: DProduct;

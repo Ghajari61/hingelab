@@ -8,7 +8,7 @@ import type { DCatalog, DesktopAccount } from "./ipc";
 export type Theme = "system" | "light" | "dark";
 export type Units = "mm" | "in";
 export type SheetTone = "plywood" | "grey" | "white" | "dark";
-export type Shade3D = "shaded" | "wire" | "edges";
+export type Shade3D = "shaded" | "edges";
 
 export interface LocalPrefs {
   theme: Theme;
@@ -99,7 +99,10 @@ const EMPTY: never[] = [];
 
 export const usePrefs = () => {
   const [p, set] = useStored<LocalPrefs>(KEYS.prefs, DEFAULT_PREFS);
-  return [{ ...DEFAULT_PREFS, ...p }, set] as const;
+  const prefs = { ...DEFAULT_PREFS, ...p };
+  // Older versions also saved "wire".
+  if (prefs.view3dShade !== "edges") prefs.view3dShade = "shaded";
+  return [prefs, set] as const;
 };
 export const useRecent = () => useStored<SavedDesign[]>(KEYS.recent, EMPTY);
 export const useFavorites = () => useStored<Favorite[]>(KEYS.favorites, EMPTY);

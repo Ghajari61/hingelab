@@ -877,3 +877,7 @@ The Letters base and lid were the outer wall face exactly, and the tab slots are
 - Cut outlines are grown by half the kerf and curves are faceted, so a 140 mm Hinge Box base measures 140.15 mm and a 300 mm round clock 299.9 mm as modelled. A size within 0.2 mm of a whole millimetre is therefore shown as that millimetre (140.0 mm, 300.0 mm); anything else is shown to 0.1 mm. This is display only; no geometry changes.
 - Each axis is drawn along the bounding-box edge that lies furthest out on screen and set off past the whole outline, so the line never crosses the model; an axis seen end-on (shorter than 28 px) is left out. The lines are an SVG overlay redrawn with every frame, not 3D objects, so they stay crisp and readable at any zoom.
 - They are hidden while exploded because an exploded model is not the product's size.
+
+## D134. No wireframe display in the desktop 3D views
+
+The wireframe mode drew every triangle of the extruded parts, which on curved outlines and lettering is a dense mesh that says little about the design, and the Edges mode already shows the parts' outlines over the shaded model. The mode is removed rather than hidden: `Shade3D` is `"shaded" | "edges"`, and the stored preference is read back as Shaded when it holds anything else, so 1.0.9 settings carry over. The website's 3D view never had it.

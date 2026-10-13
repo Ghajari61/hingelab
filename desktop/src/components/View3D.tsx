@@ -27,7 +27,7 @@ export const PANES: PaneDef[] = [
   { id: "persp", label: "Perspective", key: "p", dir: [0.95, 0.85, 1.35], up: [0, 1, 0], ortho: false, layer: 1 },
 ];
 
-export const SHADE_NAMES: Record<Shade, string> = { shaded: "Shaded", wire: "Wireframe", edges: "Edged faces" };
+export const SHADE_NAMES: Record<Shade, string> = { shaded: "Shaded", edges: "Edged faces" };
 
 const FACES: { name: string; dir: [number, number, number] | null; pos: [number, number, number]; rot: [number, number, number] }[] = [
   { name: "Front", dir: [0, 0.0008, 1], pos: [0, 0, 1], rot: [0, 0, 0] },
@@ -85,7 +85,6 @@ const materials = (m: THREE.Mesh) => ([] as THREE.Material[]).concat(m.material)
 
 function paintShade(model: Model3D, shade: Shade) {
   for (const mesh of model.meshes) {
-    for (const mat of materials(mesh)) (mat as THREE.MeshStandardMaterial).wireframe = shade === "wire";
     let edges = mesh.getObjectByName("__edges") as THREE.LineSegments | undefined;
     if (shade === "edges" && !edges) {
       edges = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, 28), new THREE.LineBasicMaterial({ color: 0x1d1d1d, transparent: true, opacity: 0.55 }));
@@ -434,7 +433,6 @@ const View3D = forwardRef<CanvasHandle, Props>(function View3D(props, ref) {
     const view = PANES.find((p) => p.key === k);
     if (view) { e.preventDefault(); onActive(view.id); }
     else if (k === "z") { e.preventDefault(); if (e.shiftKey) fitAll(); else { const p = paneOf(active); if (p) fitPane(p, p.def.ortho ? undefined : p.cam.position.clone().sub(p.controls.target)); } }
-    else if (e.key === "F3") { e.preventDefault(); onShade(shade === "wire" ? "shaded" : "wire"); }
     else if (e.key === "F4") { e.preventDefault(); onShade(shade === "edges" ? "shaded" : "edges"); }
     else if (e.key === "Escape") select(null);
   };
@@ -485,7 +483,7 @@ const View3D = forwardRef<CanvasHandle, Props>(function View3D(props, ref) {
         ))}
       </div>
       {picked && <span className="v3-pick" role="status">Selected: <b>{picked}</b> · Esc to clear</span>}
-      <span className="v3-hint">Drag to orbit · middle or right-drag to pan · wheel to zoom · click a part to select · Alt+W one or four views · Z zoom extents · F3 wireframe · F4 edges</span>
+      <span className="v3-hint">Drag to orbit · middle or right-drag to pan · wheel to zoom · click a part to select · Alt+W one or four views · Z zoom extents · F4 edges</span>
       {children}
     </div>
   );

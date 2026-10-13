@@ -112,7 +112,7 @@ try {
   check((await dimTexts()).length === 0, "no dimensions while exploded");
   await shot(page, "clock-exploded-edges");
 
-  await page.getByRole("button", { name: "Wire", exact: true }).click();
+  check(await page.getByRole("button", { name: /^Wire/ }).count() === 0, "there is no Wire display mode");
   await page.locator('input[aria-label="Explode"]').fill("0");
   await page.locator(".v3").focus();
   await page.keyboard.press("Alt+w");
@@ -123,7 +123,7 @@ try {
   await page.waitForTimeout(300);
   check((await dimTexts()).length === 0, "the ruler button hides the dimensions");
   await page.getByRole("button", { name: "Dimensions" }).click();
-  await shot(page, "clock-wire-quad");
+  await shot(page, "clock-edges-quad");
   await page.getByRole("button", { name: "Shaded", exact: true }).click();
 
   for (const name of ["Hinge Box", "Boxes", "Puzzle", "Sign", "Trophy"]) {
