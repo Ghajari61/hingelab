@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.17",
-    "pub_date": "2026-10-13T13:29:06.554Z",
-    "notes": "AI designer: learns from a library of 1000 finished laser products before it draws an original design.",
+    "version": "1.0.18",
+    "pub_date": "2026-10-13T13:52:34.782Z",
+    "notes": "AI drawings open in the workspace: resize them, choose the material, check the slots and see the parts in 3D.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.17_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm00NGNsVnE5SHM4M3gyUVF3SHlDY0tjSTdYdjlUaHpxTHNXMWQ0YW5BS3M2UGZhbWlWcHJ5VWdvT0paN0xuR2pLSzc1US9oUlBxSHJaZy9LdjNGWEFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODk4MTM4CWZpbGU6SGluZ2VMYWJfMS4wLjE3X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMTcKQ1JDMzVWVkVFRHpkM3Z4cEpTeVZuNzNDdEtvVmsxR1R2bENaSmlRbHZyaHlMYmZ1ZmhvOHdlUzBPeTJnNVhvOUg0b3JuanZKeGdibGdpanhJUEdpQlE9PQo=",
-        "size": 3000950
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.18_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnFrNW1FdjdqYzFrUW1vVjVKcmtXWjk3dXVON1R2M2VBWVA2QWtnNFhOWm1uMUV6bE9vUjJQK2lYSTZFQjdydXBLM2UzNkhBVHFwUGhLUk8xalFWNmdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODk5NTQ4CWZpbGU6SGluZ2VMYWJfMS4wLjE4X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMTgKVUpWOWhqYlBHVkoydC9iMHZUSkFvMHFSeUpzV2oxbU5OdEFrMzl0Tm1XWGhwaXBlWDNpUkxvK3BvYkkxUGVmK0QzRTgvMUhrZ05qb0JmZnBOV1dsQ0E9PQo=",
+        "size": 3000457
       }
     }
   }
