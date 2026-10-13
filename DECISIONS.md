@@ -901,3 +901,7 @@ The gateway's free tier only allows gpt-5-mini, and a ChatGPT subscription canno
 ## D139. The note about a photo is its own field
 
 People describe a photo differently from a product they want: they correct it ("the real one is 30 × 40 cm"), change it ("my name instead of the face") or say which part matters. Mixing that into the main description loses whether it refers to the photo. A separate `imageNote` field, only kept with a photo and labelled for the model, lets the prompt say plainly that the user's words beat the model's reading of the picture, and keeps the main box for describing a product without a photo.
+
+## D140. Editing an AI design sends the design back, not a conversation
+
+An edit could have been a chat thread the server keeps, but the design itself already says everything needed and the server is stateless. So the client sends the design's settings with the change; the server treats them like any other client settings (merged and sanitized by the product, never trusted), skips the product pick so an edit cannot turn a sign into a box, and tells the model the current result's size because sizes such as a word's width follow from other settings. Undo is kept on the client as the list of earlier designs.

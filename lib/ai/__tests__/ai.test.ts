@@ -3,7 +3,7 @@ import { MockLanguageModelV4 } from "ai/test";
 import { AIDesignError, designWithAI } from "../design";
 import { aiMenu, fieldsText, productsText } from "../menu";
 import { parseAIRequest } from "../request";
-import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_IMAGE_NOTE, MAX_OPEN_PATH, MAX_PROMPT } from "../types";
+import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_IMAGE_NOTE, MAX_OPEN_PATH, MAX_PROMPT, MAX_REVISE_CHARS, reviseOf } from "../types";
 
 const usage = { inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined }, outputTokens: { total: 20, text: 20, reasoning: undefined } };
 
@@ -171,6 +171,48 @@ describe("AI designer", () => {
     await designWithAI({ prompt: "", image: PNG, imageNote: "make it 30 × 40 cm with the name سارا" }, "pro", "user-1", model);
     expect(calls).toHaveLength(2);
     for (const c of calls) expect(JSON.stringify(c.prompt)).toContain("About the photo: make it 30 × 40 cm with the name سارا");
+  });
+
+  it("edits a design: only the asked change, everything else kept, no product pick", async () => {
+    const first = await designWithAI({ prompt: "round jar" }, "pro", "user-1", mock(
+      { product: "hinge", preset: "", name: "Round jar", match: "close", brief: "Cylinder 90 mm across, 100 mm tall" },
+      { settings: [{ key: "shape", value: "cyl" }, { key: "dia", value: "90" }, { key: "H", value: "100" }], notes: [] },
+    ).model);
+    const { model, calls } = mock({ settings: [{ key: "H", value: "15 cm" }], notes: [], name: "" });
+    const d = await designWithAI({ prompt: "make it 15 cm tall", revise: reviseOf(first) }, "pro", "user-1", model);
+    expect(calls).toHaveLength(1);
+    expect(JSON.stringify(calls[0].prompt)).toContain("make it 15 cm tall");
+    expect(d).toMatchObject({ product: "hinge", name: "Round jar", match: "close" });
+    expect(d.params).toMatchObject({ shape: "cyl", dia: 90, H: 150 });
+    expect(d.svg).toMatch(/<svg/);
+  });
+
+  it("edits Letters from their current settings", async () => {
+    const first = await designWithAI({ prompt: "سلام" }, "pro", "user-1", mock(
+      { product: "letters", preset: "persian-box", name: "Salam", match: "exact", brief: "Solid letters سلام" },
+      { settings: [{ key: "text", value: "سلام" }, { key: "mode", value: "solid" }, { key: "size", value: "200" }], notes: [] },
+    ).model);
+    const d = await designWithAI({ prompt: "change the word to سارا", revise: reviseOf(first) }, "pro", "user-1", mock({ settings: [{ key: "text", value: "سارا" }], notes: [], name: "Sara letters" }).model);
+    expect(d.params).toMatchObject({ text: "سارا", mode: "solid", size: 200 });
+    expect(d.name).toBe("Sara letters");
+  });
+
+  it("edits a sculpture by picking its style again, within sculptures only", async () => {
+    const first = await designWithAI({ prompt: "a face" }, "pro", "user-1", mock({ product: "parametric", preset: "slat-portrait", name: "Face", match: "exact", brief: "Face" }).model);
+    const { model, calls } = mock({ product: "boxes", preset: "wave-lamp", name: "Other", match: "exact", brief: "Waves" });
+    const d = await designWithAI({ prompt: "make it waves instead", revise: reviseOf(first) }, "pro", "user-1", model);
+    expect(d.product).toBe("parametric");
+    expect(d.name).toBe("Face");
+    expect(JSON.stringify(calls[0].prompt)).toContain("Current design");
+  });
+
+  it("refuses edits without a change or with a broken design", () => {
+    const revise = { product: "sign", preset: null, name: "Sign", match: "exact", params: { W: 300 } };
+    expect(parseAIRequest(JSON.stringify({ prompt: "  ", revise }))).toHaveProperty("error");
+    expect(parseAIRequest(JSON.stringify({ prompt: "wider", revise: { ...revise, product: "rocket" } }))).toHaveProperty("error");
+    expect(parseAIRequest(JSON.stringify({ prompt: "wider", revise: { ...revise, params: [] } }))).toHaveProperty("error");
+    expect(parseAIRequest(JSON.stringify({ prompt: "wider", revise: { ...revise, params: { big: "x".repeat(MAX_REVISE_CHARS) } } }))).toHaveProperty("error");
+    expect(parseAIRequest(JSON.stringify({ prompt: "wider", image: PNG, revise }))).toEqual({ prompt: "wider", revise });
   });
 
   it("keeps the preset's values when the settings step fails", async () => {

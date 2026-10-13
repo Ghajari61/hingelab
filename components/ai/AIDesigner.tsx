@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Download, ImagePlus, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
-import { AI_START_KEY, isAIProduct, MAX_IMAGE_CHARS, MAX_IMAGE_NOTE, MAX_PROMPT, type AIDesign, type AIMatch, type AIOpen } from "@/lib/ai/types";
+import { ArrowRight, Download, ImagePlus, Loader2, RotateCcw, Sparkles, Undo2, Wand2, X } from "lucide-react";
+import { AI_START_KEY, isAIProduct, MAX_IMAGE_CHARS, MAX_IMAGE_NOTE, MAX_PROMPT, reviseOf, type AIDesign, type AIMatch, type AIOpen } from "@/lib/ai/types";
 import type { Plan } from "@/lib/plans";
 
 /** Longest side of the photo sent to the designer, px. */
@@ -85,6 +85,11 @@ export function AIDesigner({ plan }: { plan: Plan }) {
   const [opening, setOpening] = useState(false);
   /** The photo the shown design was made from. */
   const [designPhoto, setDesignPhoto] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  /** Designs before each AI edit, newest last. */
+  const [history, setHistory] = useState<AIDesign[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -102,11 +107,11 @@ export function AIDesigner({ plan }: { plan: Plan }) {
   }, []);
 
   useEffect(() => {
-    if (!busy) return;
+    if (!busy && !editing) return;
     const t0 = Date.now();
     const id = setInterval(() => setElapsed(Math.round((Date.now() - t0) / 1000)), 1000);
     return () => clearInterval(id);
-  }, [busy]);
+  }, [busy, editing]);
 
   const preview = useMemo(() => (design?.svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(design.svg)}` : null), [design]);
 
@@ -118,7 +123,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
 
   async function submit(e?: React.FormEvent) {
     e?.preventDefault();
-    if (busy) return;
+    if (busy || editing) return;
     if (!prompt.trim() && !photo) { setError("Describe the product or add a photo of it."); return; }
     const ac = new AbortController();
     abortRef.current = ac;
@@ -137,6 +142,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
       }
       setDesign(body);
       setDesignPhoto(photo);
+      setHistory([]); setEditText(""); setEditError(null);
       try { sessionStorage.setItem(LAST_KEY, JSON.stringify({ prompt: prompt.trim(), design: body })); } catch { /* too large to keep */ }
     } catch (err) {
       if ((err as Error).name !== "AbortError") setError("Could not reach HingeLab. Check your connection and try again.");
@@ -144,6 +150,45 @@ export function AIDesigner({ plan }: { plan: Plan }) {
       setBusy(false);
       abortRef.current = null;
     }
+  }
+
+  async function edit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!design || editing || busy || !editText.trim()) return;
+    const ac = new AbortController();
+    abortRef.current = ac;
+    setEditing(true); setElapsed(0); setEditError(null);
+    try {
+      const res = await fetch("/api/ai/design", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: editText.trim(), revise: reviseOf(design) }),
+        signal: ac.signal,
+      });
+      const body = (await res.json().catch(() => null)) as (AIDesign & { error?: string }) | { error?: string } | null;
+      if (!res.ok || !body || !("product" in body)) {
+        setEditError(body?.error ?? "The change could not be made. Try again.");
+        return;
+      }
+      setHistory((h) => [...h, design].slice(-10));
+      setDesign(body);
+      setEditText("");
+      try { sessionStorage.setItem(LAST_KEY, JSON.stringify({ prompt, design: body })); } catch { /* too large to keep */ }
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") setEditError("Could not reach HingeLab. Check your connection and try again.");
+    } finally {
+      setEditing(false);
+      abortRef.current = null;
+    }
+  }
+
+  function undoEdit() {
+    const prev = history[history.length - 1];
+    if (!prev) return;
+    setHistory((h) => h.slice(0, -1));
+    setDesign(prev);
+    setEditError(null);
+    try { sessionStorage.setItem(LAST_KEY, JSON.stringify({ prompt, design: prev })); } catch { /* too large to keep */ }
   }
 
   function openInEditor() {
@@ -163,6 +208,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
 
   function startOver() {
     setDesign(null); setPrompt(""); setPhoto(null); setPhotoNote(""); setDesignPhoto(null); setError(null);
+    setHistory([]); setEditText(""); setEditError(null);
     sessionStorage.removeItem(LAST_KEY);
   }
 
@@ -266,6 +312,30 @@ export function AIDesigner({ plan }: { plan: Plan }) {
             {design.locked && plan === "free" && (
               <p className="ai-locked">{design.locked} <Link href="/app/billing">Upgrade to Pro</Link></p>
             )}
+            <form className="ai-edit" onSubmit={edit}>
+              <label htmlFor="ai-edit" className="ai-label">Edit with AI</label>
+              <div className="ai-edit-row">
+                <input
+                  id="ai-edit"
+                  dir="auto"
+                  value={editText}
+                  maxLength={MAX_PROMPT}
+                  placeholder="What should change? For example: make it 20 cm wide, or change the text to Sara"
+                  onChange={(e) => setEditText(e.target.value)}
+                  disabled={editing}
+                />
+                <button type="submit" className="btn-primary" disabled={editing || !editText.trim()}>
+                  {editing ? <Loader2 size={15} className="spin" aria-hidden /> : <Wand2 size={15} aria-hidden />}
+                  {editing ? "Editing…" : "Apply"}
+                </button>
+                {editing && <button type="button" className="btn-ghost" onClick={() => abortRef.current?.abort()}>Cancel</button>}
+              </div>
+              <span className="ai-status" role="status" aria-live="polite">{editing ? `Working for ${elapsed} s.` : ""}</span>
+              {editError && <p className="auth-msg err" role="alert">{editError}</p>}
+              {history.length > 0 && !editing && (
+                <button type="button" className="btn-ghost ai-undo" onClick={undoEdit}><Undo2 size={15} aria-hidden /> Undo last edit</button>
+              )}
+            </form>
             <div className="ai-actions">
               <button type="button" className="btn-primary" onClick={openInEditor} disabled={opening}>
                 Open in editor <ArrowRight size={16} aria-hidden />

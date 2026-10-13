@@ -284,12 +284,12 @@ function changeGenerator(def: AnyGenerator, product: DProduct, p: GenBase, chang
  * A design's settings from a preset (or the defaults) with edits applied, each checked against its
  * field like an edit from the editor; an edit the catalog does not allow is skipped and reported.
  */
-export async function designFromChanges(id: DesktopProductId, preset: string | null, changes: Change[]): Promise<{ params: Record<string, unknown>; skipped: string[] }> {
+export async function designFromChanges(id: DesktopProductId, preset: string | null, changes: Change[], from?: Record<string, unknown>): Promise<{ params: Record<string, unknown>; skipped: string[] }> {
   const product = (await desktopCatalog()).products.find((x) => x.id === id)!;
   const skipped: string[] = [];
   if (id === "hinge") {
     const pr = preset ? HINGE_PRESETS.find((x) => x.id === preset) : undefined;
-    let p = pr ? hingePresetParams(pr.params) : clone(DEFAULTS);
+    let p = from ? mergeParams(from as Partial<Params>) : pr ? hingePresetParams(pr.params) : clone(DEFAULTS);
     for (const c of changes) {
       const q = changeHinge(p, product, c);
       if ("error" in q) skipped.push(c.key);
@@ -299,7 +299,7 @@ export async function designFromChanges(id: DesktopProductId, preset: string | n
   }
   const def = await loadGenerator[id]();
   const pr = preset ? def.presets.find((x) => x.id === preset) : undefined;
-  let p: GenBase = def.merge(pr ? pr.params : {});
+  let p: GenBase = def.merge(from ?? (pr ? pr.params : {}));
   for (const c of changes) {
     const q = changeGenerator(def, product, p, c);
     if ("error" in q) skipped.push(c.key);

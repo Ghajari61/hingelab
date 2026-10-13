@@ -21,7 +21,7 @@ import { LETTER_PRESETS } from "@/lib/letters/presets";
 import type { Plan } from "@/lib/plans";
 import { aiMenu, fieldsText, LETTER_FIELDS, productsText, type MenuProduct } from "./menu";
 import { gatewayConfigured } from "./request";
-import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_OPEN_PATH, type AIDesign, type AIDesignRequest, type AIOpen, type AIProduct } from "./types";
+import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_OPEN_PATH, type AIDesign, type AIDesignRequest, type AIOpen, type AIProduct, type AIRevise } from "./types";
 
 /**
  * Gateway model ids (provider/model), tried in order; the deployment can override the first with
@@ -45,6 +45,10 @@ const pickSchema = z.object({
 const settingsSchema = z.object({
   settings: z.array(z.object({ key: z.string(), value: z.string() })).describe("Settings to change, by key from the list; numbers as plain numbers in the listed unit, choices as the option value, toggles as true or false."),
   notes: z.array(z.string()).describe("At most two short English sentences for the user, under 25 words each, in plain words (no setting keys, ids or the word 'brief'): a size you had to guess, or something asked for that this product cannot do. Usually none."),
+});
+
+const editSchema = settingsSchema.extend({
+  name: z.string().describe("A new short English name when the change makes the current one wrong (e.g. the text on it changed), otherwise an empty string."),
 });
 
 const PICK_SYSTEM = `You are the design assistant of HingeLab, a web app that makes laser-cut files. A user describes something they want to laser cut, or shows a photo of one, possibly in Persian or another language. Choose the one product below that can make it and the preset closest to it. You cannot invent new kinds of products: if nothing fits well, choose the closest product and set match to "loose". Text that must appear on the product keeps its original language and script.
@@ -119,9 +123,11 @@ async function askModel<T>(ask: Ask, system: string, content: UserContent, schem
 const pick = (req: AIDesignRequest, menu: MenuProduct[], ask: Ask) =>
   askModel(ask, PICK_SYSTEM + productsText(menu), userContent(req), pickSchema);
 
-function settings(req: AIDesignRequest, product: MenuProduct, brief: string, start: Record<string, unknown>, ask: Ask) {
+function settings(req: AIDesignRequest, product: MenuProduct, brief: string, start: Record<string, unknown>, ask: Ask, editing?: string) {
   const current = Object.fromEntries(product.fields.map((f) => [f.key, f.key.split(".").reduce<unknown>((o, k) => (o && typeof o === "object" ? (o as Record<string, unknown>)[k] : undefined), start)]));
-  return askModel(ask, SETTINGS_SYSTEM + fieldsText(product), userContent(req, `Product: ${product.name}\nBrief: ${brief}\nStarting values: ${JSON.stringify(current)}`), settingsSchema);
+  const content = userContent(req, `Product: ${product.name}\n${editing ? `Current name: ${editing}\n` : ""}Brief: ${brief}\nStarting values: ${JSON.stringify(current)}`);
+  const system = SETTINGS_SYSTEM + fieldsText(product);
+  return editing ? askModel(ask, system, content, editSchema) : askModel(ask, system, content, settingsSchema).then((o) => ({ ...o, name: "" }));
 }
 
 const TO_MM: Record<string, number> = { mm: 1, cm: 10, m: 1000, in: 25.4, inch: 25.4, inches: 25.4, '"': 25.4 };
@@ -147,8 +153,8 @@ function startParams(product: AIProduct, preset: string | null): Record<string, 
 
 const ignoredNote = (keys: string[]) => (keys.length ? [`Left at their starting values (not available or out of range): ${[...new Set(keys)].slice(0, 6).join(", ")}.`] : []);
 
-async function buildDesktopProduct(id: DesktopProductId, preset: string | null, changes: { key: string; value: unknown }[], name: string, plan: Plan) {
-  const { params, skipped } = await designFromChanges(id, preset, changes);
+async function buildDesktopProduct(id: DesktopProductId, preset: string | null, changes: { key: string; value: unknown }[], name: string, plan: Plan, from?: Record<string, unknown>) {
+  const { params, skipped } = await designFromChanges(id, preset, changes, from);
   const res = await generateDesign({ product: id, params: { ...params, name }, autofix: true }, plan);
   const body = res.body as Partial<GenerateResponse> & { error?: string };
   return {
@@ -162,8 +168,8 @@ async function buildDesktopProduct(id: DesktopProductId, preset: string | null, 
   };
 }
 
-function buildLetters(preset: string | null, changes: { key: string; value: unknown }[], name: string) {
-  let p = startParams("letters", preset) as unknown as LetterParams;
+function buildLetters(preset: string | null, changes: { key: string; value: unknown }[], name: string, from?: Record<string, unknown>) {
+  let p = (from ? mergeLetterParams(from as Partial<LetterParams>) : startParams("letters", preset)) as unknown as LetterParams;
   const skipped: string[] = [];
   for (const c of changes) {
     const f = LETTER_FIELDS.find((x) => x.key === c.key);
@@ -203,33 +209,64 @@ function buildParametric(preset: string | null, name: string) {
   return { params: p as unknown as Record<string, unknown>, summary: `${pr.name} · ${pr.note}`, style: pr.name, skipped: [], error, preset: pr.id };
 }
 
+/** What the design being edited makes now (summary and sizes), so an edit can scale from it. */
+async function currentResult(rev: AIRevise, plan: Plan): Promise<string> {
+  try {
+    if (rev.product === "letters") return buildLetters(rev.preset, [], rev.name, rev.params).summary;
+    if (rev.product === "parametric") return "";
+    const r = await buildDesktopProduct(rev.product as DesktopProductId, rev.preset, [], rev.name, plan, rev.params);
+    return [r.summary, ...(r.stats ?? []).map((s) => `${s.label} ${s.value}`)].filter(Boolean).join("; ");
+  } catch {
+    return "";
+  }
+}
+
 /** Designs one product from a description and/or photo, on the caller's plan. */
 export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: string, model?: LanguageModel, opts: { photoRelief?: boolean } = {}): Promise<AIDesign> {
   const menu = await aiMenu();
   const signal = AbortSignal.timeout(TIMEOUT_MS);
   const ask: Ask = { model, userId, signal };
+  const rev = req.revise;
+  const revising = rev ? menu.find((p) => p.id === rev.product) : undefined;
+  if (rev && !revising) throw new AIDesignError("This design cannot be edited here. Start over and try again.");
+  /** Settings the design starts from when one is being edited. */
+  const from = rev && revising?.fields.length ? rev.params : undefined;
   let choice: z.infer<typeof pickSchema>;
-  try {
-    choice = await pick(req, menu, ask);
-  } catch (e) {
-    console.error("ai design: pick failed", e);
-    throw new AIDesignError("The AI designer could not read the request. Try again or describe it differently.");
+  if (rev && from) {
+    const now = await currentResult(rev, plan);
+    choice = {
+      product: rev.product, preset: rev.preset ?? "", name: rev.name, match: rev.match,
+      brief: `Edit the current design. Change only this and keep everything else as it is: ${req.prompt}\n${now ? `The current result: ${now}.\n` : ""}A size asked for here must be the size of the result: work out the settings that give it from the current values and the current result, and switch off any setting that fits or sizes it automatically and would change that size.`,
+    };
+  } else {
+    try {
+      // A sculpture has no settings to edit, so an edit picks its style again from the request.
+      const current = rev ? `Current design: "${rev.name}", preset ${rev.preset ?? "none"}. Pick the preset that best fits the design with this change.` : undefined;
+      choice = await pick(current ? { prompt: `${req.prompt}\n\n${current}` } : req, revising ? [revising] : menu, ask);
+    } catch (e) {
+      console.error("ai design: pick failed", e);
+      throw new AIDesignError("The AI designer could not read the request. Try again or describe it differently.");
+    }
+    if (rev) choice = { ...choice, name: rev.name || choice.name, match: rev.match };
   }
-  const product = menu.find((p) => p.id === choice.product) ?? menu[0];
+  const product = revising ?? menu.find((p) => p.id === choice.product) ?? menu[0];
   const preset = product.presets.some((p) => p.id === choice.preset) ? choice.preset : null;
-  const name = cleanName(choice.name, product.name);
+  let name = cleanName(choice.name, product.name);
 
   let changes: { key: string; value: unknown }[] = [];
   let notes: string[] = [];
   if (product.fields.length) {
     try {
-      const start = product.id === "letters" ? startParams("letters", preset) : (await designFromChanges(product.id as DesktopProductId, preset, [])).params;
-      const out = await settings(req, product, choice.brief, start, ask);
+      const start = product.id === "letters"
+        ? (from ? mergeLetterParams(from as Partial<LetterParams>) as unknown as Record<string, unknown> : startParams("letters", preset))
+        : (await designFromChanges(product.id as DesktopProductId, preset, [], from)).params;
+      const out = await settings(req, product, choice.brief, start, ask, from ? name : undefined);
+      if (out.name.trim()) name = cleanName(out.name, name);
       changes = out.settings.slice(0, 60).map((s) => ({ key: s.key, value: valueOf(s.value, product.fields.find((f) => f.key === s.key)) }));
       notes = out.notes.slice(0, 2).map((n) => n.slice(0, 240));
     } catch (e) {
       console.error("ai design: settings failed", e);
-      notes = ["The settings could not be filled in, so the design keeps the preset's values."];
+      notes = [from ? "The change could not be made, so the design is as it was. Try saying it differently." : "The settings could not be filled in, so the design keeps the preset's values."];
     }
   }
 
@@ -245,11 +282,11 @@ export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: str
     return { ...base, preset: r.preset, params: r.params, summary, notes: [...notes, ...extra], ...(r.error ? { error: r.error } : {}), ...(open ? { open } : {}) };
   }
   if (product.id === "letters") {
-    const r = buildLetters(preset, changes, name);
+    const r = buildLetters(preset, changes, name, from);
     const open = r.error ? undefined : openLink("letters", preset, name, r.params);
     return { ...base, preset, params: r.params, summary: r.summary, notes: [...notes, ...ignoredNote(r.skipped)], ...(r.error ? { error: r.error } : {}), ...(open ? { open } : {}) };
   }
-  const r = await buildDesktopProduct(product.id as DesktopProductId, preset, changes, name, plan);
+  const r = await buildDesktopProduct(product.id as DesktopProductId, preset, changes, name, plan, from);
   const fixed = r.applied.length ? [`Fixed automatically: ${r.applied.slice(0, 4).join("; ")}.`] : [];
   return {
     ...base, preset, params: r.params, summary: r.summary, notes: [...notes, ...ignoredNote(r.skipped), ...fixed],

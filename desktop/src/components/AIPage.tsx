@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Crown, Globe, ImagePlus, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
+import { ArrowRight, Crown, Globe, ImagePlus, Loader2, RotateCcw, Sparkles, Undo2, Wand2, X } from "lucide-react";
 import type { AIDesign, AIMatch } from "../../../lib/ai/types";
-import { MAX_IMAGE_CHARS, MAX_IMAGE_NOTE, MAX_PROMPT } from "../../../lib/ai/types";
+import { MAX_IMAGE_CHARS, MAX_IMAGE_NOTE, MAX_PROMPT, reviseOf } from "../../../lib/ai/types";
 import type { DCatalog } from "../../../lib/desktop/types";
 import { ipc, type AppError } from "../ipc";
 
@@ -18,7 +18,7 @@ const EXAMPLES = [
 const MATCH: Record<AIMatch, string> = { exact: "Exact match", close: "Close match", loose: "Nearest product" };
 
 /** The page's last answer, kept while the app runs so a trip to the workspace and back finds it. */
-let kept: { prompt: string; design: AIDesign; fromPhoto: boolean } | null = null;
+let kept: { prompt: string; design: AIDesign; fromPhoto: boolean; history: AIDesign[] } | null = null;
 
 async function photoJpeg(file: Blob): Promise<string> {
   const bmp = await createImageBitmap(file);
@@ -55,15 +55,20 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
   const [error, setError] = useState<string | null>(null);
   const [design, setDesign] = useState<AIDesign | null>(kept?.design ?? null);
   const [fromPhoto, setFromPhoto] = useState(kept?.fromPhoto ?? false);
+  const [editText, setEditText] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  /** Designs before each AI edit, newest last. */
+  const [history, setHistory] = useState<AIDesign[]>(kept?.history ?? []);
   const fileRef = useRef<HTMLInputElement>(null);
   const run = useRef(0);
 
   useEffect(() => {
-    if (!busy) return;
+    if (!busy && !editing) return;
     const t0 = Date.now();
     const id = window.setInterval(() => setElapsed(Math.round((Date.now() - t0) / 1000)), 1000);
     return () => window.clearInterval(id);
-  }, [busy]);
+  }, [busy, editing]);
 
   async function addPhoto(file: File | undefined) {
     if (!file) return;
@@ -72,7 +77,7 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
   }
 
   async function submit() {
-    if (busy) return;
+    if (busy || editing) return;
     if (!prompt.trim() && !photo) { setError("Describe the product or add a photo of it."); return; }
     const n = ++run.current;
     setBusy(true); setElapsed(0); setError(null);
@@ -81,7 +86,8 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
       if (n !== run.current) return;
       setDesign(d);
       setFromPhoto(!!photo);
-      kept = { prompt: prompt.trim(), design: d, fromPhoto: !!photo };
+      setHistory([]); setEditText(""); setEditError(null);
+      kept = { prompt: prompt.trim(), design: d, fromPhoto: !!photo, history: [] };
     } catch (e) {
       if (n !== run.current) return;
       const err = e as AppError;
@@ -89,6 +95,37 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
     } finally {
       if (n === run.current) setBusy(false);
     }
+  }
+
+  async function edit() {
+    if (!design || editing || busy || !editText.trim()) return;
+    const n = ++run.current;
+    setEditing(true); setElapsed(0); setEditError(null);
+    try {
+      const d = await ipc.aiDesign({ prompt: editText.trim(), revise: reviseOf(design) });
+      if (n !== run.current) return;
+      const h = [...history, design].slice(-10);
+      setHistory(h);
+      setDesign(d);
+      setEditText("");
+      kept = { prompt: prompt.trim(), design: d, fromPhoto, history: h };
+    } catch (e) {
+      if (n !== run.current) return;
+      const err = e as AppError;
+      setEditError(err.kind === "network" ? "Could not reach HingeLab. Check your connection and try again." : err.message);
+    } finally {
+      if (n === run.current) setEditing(false);
+    }
+  }
+
+  function undoEdit() {
+    const prev = history[history.length - 1];
+    if (!prev) return;
+    const h = history.slice(0, -1);
+    setHistory(h);
+    setDesign(prev);
+    setEditError(null);
+    kept = { prompt: prompt.trim(), design: prev, fromPhoto, history: h };
   }
 
   const native = !!design && !!catalog?.products.some((p) => p.id === design.product);
@@ -151,7 +188,7 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => { void addPhoto(e.target.files?.[0]); e.target.value = ""; }} />
         </div>
         <div className="row">
-          <button type="button" className="btn primary" onClick={() => void submit()} disabled={busy || !online || (!prompt.trim() && !photo)}>
+          <button type="button" className="btn primary" onClick={() => void submit()} disabled={busy || editing || !online || (!prompt.trim() && !photo)}>
             {busy ? <Loader2 size={15} className="spin" aria-hidden /> : <Sparkles size={15} aria-hidden />}
             {busy ? "Designing…" : "Design it"}
           </button>
@@ -182,11 +219,35 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
             {design.locked && plan === "free" && (
               <p className="ai-locked">{design.locked} <button type="button" className="link-btn" onClick={onUpgrade}><Crown size={13} aria-hidden />Upgrade to Pro</button></p>
             )}
+            <form className="ai-edit" onSubmit={(e) => { e.preventDefault(); void edit(); }}>
+              <label htmlFor="ai-edit"><b>Edit with AI</b></label>
+              <div className="row">
+                <input
+                  id="ai-edit"
+                  dir="auto"
+                  value={editText}
+                  maxLength={MAX_PROMPT}
+                  placeholder="What should change? For example: make it 20 cm wide, or change the text to Sara"
+                  onChange={(e) => setEditText(e.target.value)}
+                  disabled={editing}
+                />
+                <button type="submit" className="btn primary" disabled={editing || !online || !editText.trim()}>
+                  {editing ? <Loader2 size={15} className="spin" aria-hidden /> : <Wand2 size={15} aria-hidden />}
+                  {editing ? "Editing…" : "Apply"}
+                </button>
+                {editing && <button type="button" className="btn ghost" onClick={() => { run.current++; setEditing(false); }}>Cancel</button>}
+              </div>
+              {editing && <span className="fine" role="status" aria-live="polite">Working for {elapsed} s.</span>}
+              {editError && <p className="ai-error" role="alert">{editError}</p>}
+              {history.length > 0 && !editing && (
+                <button type="button" className="btn ghost ai-undo" onClick={undoEdit}><Undo2 size={14} aria-hidden />Undo last edit</button>
+              )}
+            </form>
             <div className="row">
-              <button type="button" className="btn primary" onClick={open}>
+              <button type="button" className="btn primary" onClick={open} disabled={editing}>
                 {native ? <>Open in workspace<ArrowRight size={15} aria-hidden /></> : <><Globe size={15} aria-hidden />Open in the online editor</>}
               </button>
-              <button type="button" className="btn ghost" onClick={() => { setDesign(null); setPrompt(""); setPhoto(null); setError(null); kept = null; }}><RotateCcw size={14} aria-hidden />Start over</button>
+              <button type="button" className="btn ghost" disabled={editing} onClick={() => { setDesign(null); setPrompt(""); setPhoto(null); setPhotoNote(""); setError(null); setHistory([]); setEditText(""); setEditError(null); kept = null; }}><RotateCcw size={14} aria-hidden />Start over</button>
             </div>
           </div>
         </section>

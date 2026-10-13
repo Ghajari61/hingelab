@@ -537,6 +537,10 @@ kbd { font: 12px var(--font); padding: 1px 6px; border: 1px solid var(--line-2);
 .ai-tag.loose { background: var(--err-soft); color: var(--err); }
 .ai-summary { color: var(--ink-2); }
 .ai-notes { margin: 0; padding-left: 18px; display: grid; gap: 4px; color: var(--ink-2); font-size: 13px; }
+.ai-edit { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--panel-2, var(--panel)); }
+.ai-edit .row { flex-wrap: wrap; }
+.ai-edit input { flex: 1 1 200px; min-width: 0; height: 32px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--field); padding: 0 10px; }
+.ai-undo { justify-self: start; }
 .ai-locked { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; background: var(--warn-soft); font-size: 13px; }
 @media (max-width: 1100px) { .ai-result { grid-template-columns: minmax(0, 1fr); } }
 @media (forced-colors: active) {

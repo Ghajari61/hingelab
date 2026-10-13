@@ -22,10 +22,27 @@ export interface AIDesignRequest {
   image?: string;
   /** What the user says about the photo: what it shows, its size, what to change. Only sent with a photo. */
   imageNote?: string;
+  /** Edit this design instead of starting a new one; `prompt` then says what to change. */
+  revise?: AIRevise;
 }
 
 /** How closely the products can make what was asked. */
 export type AIMatch = "exact" | "close" | "loose";
+
+/** The design being edited, as the designer returned it. */
+export interface AIRevise {
+  product: AIProduct;
+  preset: string | null;
+  name: string;
+  match: AIMatch;
+  params: Record<string, unknown>;
+}
+
+/** Largest settings of a design sent back for editing, characters of JSON. */
+export const MAX_REVISE_CHARS = 200_000;
+
+/** The part of a design that is sent back to edit it. */
+export const reviseOf = (d: AIDesign): AIRevise => ({ product: d.product, preset: d.preset, name: d.name, match: d.match, params: d.params });
 
 export interface AIDesign {
   product: AIProduct;
