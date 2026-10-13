@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.12",
-    "pub_date": "2026-10-13T03:27:44.453Z",
-    "notes": "New AI designer: describe a product or add a photo, and HingeLab sets up the closest design for you to fine-tune.",
+    "version": "1.0.13",
+    "pub_date": "2026-10-13T03:49:48.934Z",
+    "notes": "AI designer: clearer guidance for photo-based sculptures, which become a relief of your photo in the online editor.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.12_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmtDQVFlN091eDdtSmE4b3lkZlJtRkJvZTl2a2xFK1dyS1p0QmIzaGd2N1FUcG44dDJJbW94L1hOLzkxV05pamZLMnIzSzZyZXZSZHBlNWZYY3VlQndrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODYyMDU3CWZpbGU6SGluZ2VMYWJfMS4wLjEyX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMTIKQVlKT2tFVDZkVXBBTjRQMXkzd25NU3NQS0dvNkJ0OFRGd3ZtYTBpRmR4cmtmTDZTYWROY01RMytxaFBpbzlGc2hFYjVIcDB4L21rM1U5azlQL0VIRHc9PQo=",
-        "size": 2995336
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.13_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm9EZFc1NDZ0MkpIQmtrM25hdWxIZ3ZUWWN6YnF5VU50ajZjaTZLSTJsbWRRS0p5WWMyKzlkZ1RRV3BQbkpodlM3OS9PdEtMTlQ5QzhYZE9kZWJqdEFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODYzMzc3CWZpbGU6SGluZ2VMYWJfMS4wLjEzX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMTMKNXZiblhYZlB3SHE4UTRQUkQ5bEVsU3Bzd2ExekVEZ0ZCTDBUWWtkNm9ZTzVORllUb1dHZVhUako2V2V2anhoRGU1VTlyczJqMmQzMFdqbUlIWlhPRHc9PQo=",
+        "size": 2996703
       }
     }
   }
