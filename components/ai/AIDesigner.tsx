@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Download, ImagePlus, Loader2, RotateCcw, Sparkles, Undo2, Wand2, X } from "lucide-react";
+import { ArrowRight, ArrowUp, Check, Download, ImagePlus, Info, Layers, Loader2, PenTool, RotateCcw, ScanEye, Sparkles, Undo2, Wand2, X } from "lucide-react";
 import { AI_START_KEY, isAIProduct, MAX_IMAGE_CHARS, MAX_IMAGE_NOTE, MAX_PROMPT, reviseOf, type AIDesign, type AIMatch, type AIOpen } from "@/lib/ai/types";
 import { previewSvg } from "@/lib/ai/preview";
 import type { Plan } from "@/lib/plans";
@@ -13,11 +13,11 @@ const PHOTO_PX = 1024;
 const LAST_KEY = "hingelab-ai-last";
 
 const EXAMPLES = [
-  "A round cookie jar with a lid, 12 cm across and 15 cm tall",
+  "Round phone stand with a crescent moon cut-out",
+  "Cat keychain with the name Luna",
   "Wall sign that says Cafe Luna, about 60 cm wide",
-  "Small box with a sliding lid, 18 × 11 × 6 cm",
-  "Letter box spelling ARIA, 15 cm tall",
-  "Wall clock, 30 cm across",
+  "A round cookie jar with a lid, 12 cm across and 15 cm tall",
+  "Snowflake ornaments, 8 cm, set of four",
 ];
 
 const MATCH: Record<AIMatch, string> = { exact: "Exact match", close: "Close match", loose: "Nearest product" };
@@ -84,6 +84,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
   const [error, setError] = useState<string | null>(null);
   const [design, setDesign] = useState<AIDesign | null>(null);
   const [opening, setOpening] = useState(false);
+  const [dragging, setDragging] = useState(false);
   /** The photo the shown design was made from. */
   const [designPhoto, setDesignPhoto] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
@@ -229,79 +230,104 @@ export function AIDesigner({ plan }: { plan: Plan }) {
     sessionStorage.removeItem(LAST_KEY);
   }
 
+  const step = elapsed < 6 ? 0 : elapsed < 35 ? 1 : elapsed < 60 ? 2 : 3;
+
   return (
     <main className="boxes ai-page">
-      <h1><Sparkles size={22} aria-hidden /> AI designer</h1>
-      <p className="ai-sub">Describe a product or add a photo of one. The designer draws an original cut and engrave file for it, checks its own drawing and fixes it. Boxes, hinges and other engineered products are built with HingeLab&apos;s tested generators instead.</p>
+      <div className="ai-glow" aria-hidden />
+      <header className="ai-hero">
+        <span className="ai-eyebrow"><Sparkles size={14} aria-hidden /> AI designer</span>
+        <h1>Describe it. <span className="ai-grad">Get a laser-ready file.</span></h1>
+        <p className="ai-sub">The designer draws an original cut and engrave file, looks at its own drawing and fixes it. Boxes, hinges and other engineered products are built with HingeLab&apos;s tested generators.</p>
+      </header>
 
       <form
-        className="ai-form"
+        className={`ai-composer${dragging ? " drag" : ""}${busy ? " busy" : ""}`}
         onSubmit={submit}
         onPaste={(e) => { const f = [...e.clipboardData.files].find((x) => x.type.startsWith("image/")); if (f) { e.preventDefault(); void addPhoto(f); } }}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false); }}
+        onDrop={(e) => { e.preventDefault(); setDragging(false); void addPhoto(e.dataTransfer.files[0]); }}
       >
-        <label htmlFor="ai-prompt" className="ai-label">What would you like to make?</label>
+        <label htmlFor="ai-prompt" className="sr-only">What would you like to make?</label>
         <textarea
           id="ai-prompt"
+          dir="auto"
           value={prompt}
           maxLength={MAX_PROMPT}
-          rows={4}
-          placeholder="For example: a hexagon gift box, 10 cm across and 6 cm tall, with a removable lid"
+          rows={3}
+          placeholder="What would you like to make? For example: a round phone stand with a crescent moon cut-out, for 3 mm plywood"
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) void submit(); }}
           disabled={busy}
         />
-        <div className="ai-examples" aria-label="Examples">
-          {EXAMPLES.map((x) => (
-            <button key={x} type="button" className="ai-chip" disabled={busy} onClick={() => setPrompt(x)}>{x}</button>
-          ))}
-        </div>
-
-        <div
-          className={`ai-photo${photo ? " has" : ""}`}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => { e.preventDefault(); void addPhoto(e.dataTransfer.files[0]); }}
-        >
-          {photo ? (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo} alt="Your photo" />
-              <div className="ai-photo-note">
-                <label htmlFor="ai-photo-note" className="ai-label">About this photo <span className="ai-optional">(optional)</span></label>
-                <textarea
-                  id="ai-photo-note"
-                  dir="auto"
-                  value={photoNote}
-                  maxLength={MAX_IMAGE_NOTE}
-                  rows={3}
-                  placeholder="What it is, its real size, the text to put on it, what to keep or change. For example: make it 30 × 40 cm, with the name Sara instead of the face"
-                  onChange={(e) => setPhotoNote(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) void submit(); }}
-                  disabled={busy}
-                />
-                <button type="button" className="btn-ghost" onClick={() => { setPhoto(null); setPhotoNote(""); }} disabled={busy}><X size={14} aria-hidden /> Remove photo</button>
-              </div>
-            </>
-          ) : (
-            <button type="button" className="ai-photo-add" onClick={() => fileRef.current?.click()} disabled={busy}>
-              <ImagePlus size={18} aria-hidden />
-              <span><b>Add a photo</b> of the product (optional). You can also drop or paste one here.</span>
-            </button>
-          )}
+        {photo && (
+          <div className="ai-attach">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={photo} alt="Your photo" />
+            <div className="ai-photo-note">
+              <label htmlFor="ai-photo-note" className="ai-label">About this photo <span className="ai-optional">(optional)</span></label>
+              <textarea
+                id="ai-photo-note"
+                dir="auto"
+                value={photoNote}
+                maxLength={MAX_IMAGE_NOTE}
+                rows={2}
+                placeholder="What it is, its real size, the text to put on it, what to keep or change"
+                onChange={(e) => setPhotoNote(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) void submit(); }}
+                disabled={busy}
+              />
+            </div>
+            <button type="button" className="ai-icon-btn" aria-label="Remove photo" title="Remove photo" onClick={() => { setPhoto(null); setPhotoNote(""); }} disabled={busy}><X size={16} aria-hidden /></button>
+          </div>
+        )}
+        <div className="ai-bar">
+          <button type="button" className="ai-tool" onClick={() => fileRef.current?.click()} disabled={busy}>
+            <ImagePlus size={16} aria-hidden /> {photo ? "Change photo" : "Add photo"}
+          </button>
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => { void addPhoto(e.target.files?.[0]); e.target.value = ""; }} />
-        </div>
-
-        <div className="ai-actions">
-          <button type="submit" className="btn-primary" disabled={busy || (!prompt.trim() && !photo)}>
+          <span className="ai-hint">{dragging ? "Drop the photo here" : "Drop or paste a photo · Ctrl + Enter to start"}</span>
+          {busy && <button type="button" className="btn-ghost" onClick={() => abortRef.current?.abort()}>Cancel</button>}
+          <button type="submit" className="btn-primary ai-go" disabled={busy || (!prompt.trim() && !photo)}>
             {busy ? <Loader2 size={16} className="spin" aria-hidden /> : <Sparkles size={16} aria-hidden />}
             {busy ? "Designing…" : "Design it"}
           </button>
-          {busy && <button type="button" className="btn-ghost" onClick={() => abortRef.current?.abort()}>Cancel</button>}
-          <span className="ai-status" role="status" aria-live="polite">
-            {busy ? `Working for ${elapsed} s. An original drawing is checked and redrawn, which can take up to two minutes.` : ""}
-          </span>
         </div>
-        {error && <p className="auth-msg err" role="alert">{error}</p>}
       </form>
+      {error && <p className="auth-msg err" role="alert">{error}</p>}
+
+      {!design && !busy && (
+        <>
+          <div className="ai-try" aria-label="Examples">
+            <span>Try</span>
+            {EXAMPLES.map((x) => (
+              <button key={x} type="button" className="ai-chip" onClick={() => setPrompt(x)}>{x}</button>
+            ))}
+          </div>
+          <ul className="ai-features">
+            <li><PenTool size={18} aria-hidden /><b>Original artwork</b><span>Drawn for your request, not picked from a template.</span></li>
+            <li><ScanEye size={18} aria-hidden /><b>Checks its own drawing</b><span>Renders the file, measures it and fixes loose parts, open cuts and crowded text.</span></li>
+            <li><Layers size={18} aria-hidden /><b>Ready for the laser</b><span>Real sizes in mm, text as outlines, and cut, score and engrave layers in LightBurn colours.</span></li>
+          </ul>
+        </>
+      )}
+
+      {busy && (
+        <section className="ai-busy" aria-label="Designing">
+          <div className="ai-busy-sheet" aria-hidden>
+            <svg viewBox="0 0 200 120"><path d="M30 95C30 40 70 20 100 20s70 20 70 75" /><circle cx="100" cy="62" r="18" /><path d="M20 95h160" /></svg>
+          </div>
+          <div className="ai-busy-info">
+            <ol className="ai-steps">
+              {["Reading your request", "Drawing the design", "Checking the drawing", "Fixing what it found"].map((s, i) => (
+                <li key={s} className={i < step ? "done" : i === step ? "now" : ""}>{i < step ? <Check size={14} aria-hidden /> : <span className="ai-dot" aria-hidden />}{s}</li>
+              ))}
+            </ol>
+            <p className="ai-status" role="status" aria-live="polite">Working for {elapsed} s. Engineered products take about 15 seconds; an original drawing up to two minutes.</p>
+          </div>
+        </section>
+      )}
 
       {design && !busy && (
         <section className="ai-result" aria-label="Your design">
@@ -312,45 +338,52 @@ export function AIDesigner({ plan }: { plan: Plan }) {
             ) : (
               <p>{design.error ?? (design.locked ? "The preview of this design needs Pro." : "Open the design in the editor to see its preview.")}</p>
             )}
+            {preview && (
+              <div className="ai-legend" aria-label="Layers">
+                <span><i className="cut" />Cut</span><span><i className="score" />Score</span><span><i className="engrave" />Engrave</span>
+              </div>
+            )}
           </div>
           <div className="ai-info">
             <div className="ai-tags">
               <span className="ai-tag">{design.productName}</span>
               <span className={`ai-tag ${design.match}`}>{MATCH[design.match]}</span>
             </div>
-            <h2>{design.name}</h2>
-            <p className="ai-summary">{design.summary}</p>
+            <h2 dir="auto">{design.name}</h2>
+            <p className="ai-summary" dir="auto">{design.summary}</p>
             {design.stats && design.stats.length > 0 && (
               <dl className="ai-stats">
                 {design.stats.map((s) => <div key={s.label}><dt>{s.label}</dt><dd>{s.value}</dd></div>)}
               </dl>
             )}
-            {design.notes.length > 0 && <ul className="ai-notes">{design.notes.map((n) => <li key={n}>{n}</li>)}</ul>}
+            {design.notes.length > 0 && (
+              <div className="ai-notes"><Info size={15} aria-hidden /><ul>{design.notes.map((n) => <li key={n} dir="auto">{n}</li>)}</ul></div>
+            )}
             {design.locked && plan === "free" && (
               <p className="ai-locked">{design.locked} <Link href="/app/billing">Upgrade to Pro</Link></p>
             )}
             <form className="ai-edit" onSubmit={edit}>
-              <label htmlFor="ai-edit" className="ai-label">Edit with AI</label>
+              <label htmlFor="ai-edit" className="ai-label"><Wand2 size={14} aria-hidden /> Edit with AI</label>
               <div className="ai-edit-row">
                 <input
                   id="ai-edit"
                   dir="auto"
                   value={editText}
                   maxLength={MAX_PROMPT}
-                  placeholder="What should change? For example: make it 20 cm wide, or change the text to Sara"
+                  placeholder="Make it 20 cm wide, change the text to Sara…"
                   onChange={(e) => setEditText(e.target.value)}
                   disabled={editing}
                 />
+                {editing && <button type="button" className="btn-ghost" onClick={() => abortRef.current?.abort()}>Cancel</button>}
                 <button type="submit" className="btn-primary" disabled={editing || !editText.trim()}>
-                  {editing ? <Loader2 size={15} className="spin" aria-hidden /> : <Wand2 size={15} aria-hidden />}
+                  {editing ? <Loader2 size={15} className="spin" aria-hidden /> : <ArrowUp size={15} aria-hidden />}
                   {editing ? "Editing…" : "Apply"}
                 </button>
-                {editing && <button type="button" className="btn-ghost" onClick={() => abortRef.current?.abort()}>Cancel</button>}
               </div>
               <span className="ai-status" role="status" aria-live="polite">{editing ? `Working for ${elapsed} s.${design.product === "art" ? " Redrawing can take a minute or two." : ""}` : ""}</span>
               {editError && <p className="auth-msg err" role="alert">{editError}</p>}
               {history.length > 0 && !editing && (
-                <button type="button" className="btn-ghost ai-undo" onClick={undoEdit}><Undo2 size={15} aria-hidden /> Undo last edit</button>
+                <button type="button" className="ai-link-btn" onClick={undoEdit}><Undo2 size={14} aria-hidden /> Undo last edit</button>
               )}
             </form>
             <div className="ai-actions">
@@ -358,7 +391,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
                 {design.product === "art" ? "Open in Studio" : "Open in editor"} <ArrowRight size={16} aria-hidden />
               </button>
               {design.svg && <button type="button" className="btn-ghost" onClick={download}><Download size={15} aria-hidden /> Download SVG</button>}
-              <button type="button" className="btn-ghost" onClick={startOver}><RotateCcw size={15} aria-hidden /> Start over</button>
+              <button type="button" className="ai-link-btn" onClick={startOver}><RotateCcw size={14} aria-hidden /> Start over</button>
             </div>
           </div>
         </section>
