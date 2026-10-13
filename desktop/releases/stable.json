@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.10",
-    "pub_date": "2026-10-13T01:36:50.822Z",
-    "notes": "The 3D views offer Shaded and Edges display; the Wire mode is removed.",
+    "version": "1.0.11",
+    "pub_date": "2026-10-13T02:37:25.236Z",
+    "notes": "One 3D workspace everywhere: Top, Front, Left and Perspective views, Shaded and Edges, dimensions per view, the same look as the website. Full editor and Help centre buttons are readable again.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.10_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmlZUy9TQWVNOUR3WU5qVVVkTy9FdGRTckh2M29LVytPY1RhNThJUy9nbGN0eGFQV0R5U2g1a1lRR09rajNMcDdGOEJNSDB0am93RDl0WFRKV0tJYmdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODU1NDAxCWZpbGU6SGluZ2VMYWJfMS4wLjEwX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMTAKUUdOMFlWVjZUcUNkYXZ3aldUaWpXSWZSUXc3dG91ekhjMVVPSDkzZXZ0ZllQMWJBeXpXUktLTjRBMFNmdm4xMmtOdHRqVzVPeUFFSEVzMnVpNjg4RGc9PQo=",
-        "size": 2990845
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.11_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnVIcTRodzNVZlhXOUp1Vm9JUFlIeDdPUm9teHQ1UXNVbGRmNHZYTzh6Q0RPU1RVMis5ZjVSWjNGV2RXeS9nMDh5eGd5cFJSUWFKeWVLcjBNUVVxa2dzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODU5MDM3CWZpbGU6SGluZ2VMYWJfMS4wLjExX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMTEKaDg4U2hkcEdleTlLQUwwcURnbmY2a0tvbTlnVWQ1ejB5UXpDQlh3ajJUS3g3eDZ3OG5oOWdweXVKME1Idjh4THdTdUhOcGhWRzR0amtmenQ0RllsQnc9PQo=",
+        "size": 2992428
       }
     }
   }
