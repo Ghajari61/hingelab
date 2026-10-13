@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.19",
-    "pub_date": "2026-10-13T15:57:13.884Z",
-    "notes": "AI Studio in the editor: AI pictures, photo engraving, vectorize with cut checks, toppers, signs and relief. Persian samples removed; Persian fonts kept.",
+    "version": "1.0.20",
+    "pub_date": "2026-10-13T19:31:41.177Z",
+    "notes": "3D Assembly in the Studio: send the drawing to 3D put together, automatic fixes, adjust parts and go back to 2D. Kerf-compensated box templates assemble too.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.19_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnU5djhUUXp6aEhnMlE3ODFXSVhwNXhvUkZNYmUvaWIwdk9Sdk10eXRGUWlVSEIxc1NJTFA2U09KLzBuWkY5UzFwcmo2WGQ3M0xkOFU0YmF1RzBVTWdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTA3MDEwCWZpbGU6SGluZ2VMYWJfMS4wLjE5X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMTkKcEhmWjVwQURxditsNUNpdXIxRFNlaGl4STIycGEyYStPMTNYNTFYUkU5YWhZOVdZMFRKWUJLem15YVlFbmQ3YkpKcmU2SzZCZ0lQTlFiaUhVYno2Q1E9PQo=",
-        "size": 2966111
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.20_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm5lZlZlcGJzQ1pTbjRYRHh0amUxQjIxVElydVRPT2g2TE1WckJJZnNPRS95VXdUbnl5MTc5UUtrTEd4QjhpSWNSMzVvT3JXbzhDczY2QkRqcFhxN2dFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTE5ODkxCWZpbGU6SGluZ2VMYWJfMS4wLjIwX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjAKa0Q4SmJ6ZzhQYkJ0NnRxTkUvY1p5dEt6SUVuVlFRbjV1blIzc2hzdzNQL3VCYk5XRWVtK0hpYzRNTTlGUlUxTDk3RTlKUEtmR1JuVmk1TTlQYjJaQVE9PQo=",
+        "size": 2965344
       }
     }
   }
