@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { Sidebar, SignIn, Toasts, UpdateDialog, UpdateRequired, useModalOpen, type Route, type Toast } from "./components/Chrome";
 import { Dashboard, Favorites, Generators, Help, Recent, Settings, Subscription } from "./components/Pages";
 import { Workspace } from "./components/Workspace";
+import { AIPage } from "./components/AIPage";
 import { isWebRoute, WEB_HOME, WebHost, type WebRequest, type WebRoute } from "./components/Web";
 import type { CanvasHandle } from "./components/Canvas";
 import { useDesign, type Params } from "./design";
@@ -313,6 +314,16 @@ export function App() {
           const hit = favorites.find((f) => f.product === p.id && f.preset === pr.id);
           setFavorites((l) => (hit ? l.filter((f) => f.id !== hit.id) : [{ id: crypto.randomUUID(), product: p.id, preset: pr.id, name: pr.name, note: pr.note, at: Date.now() }, ...l]));
         }} />}
+        {route === "ai" && (
+          <AIPage
+            catalog={catalog}
+            plan={plan}
+            online={online}
+            onOpen={(id, params) => { design.open(id, { params }); setRoute("workspace"); }}
+            onOnline={(path) => openOnline("web-editors", path)}
+            onUpgrade={() => web("upgrade")}
+          />
+        )}
         {route === "workspace" && product && (
           <Workspace
             product={product}

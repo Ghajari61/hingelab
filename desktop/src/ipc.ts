@@ -4,6 +4,7 @@
  */
 import { invoke } from "@tauri-apps/api/core";
 import type { DCatalog, DesktopAccount, GenerateRequest, GenerateResponse } from "../../lib/desktop/types";
+import type { AIDesign, AIDesignRequest } from "../../lib/ai/types";
 
 export type { DCatalog, DesktopAccount, GenerateRequest, GenerateResponse };
 
@@ -52,6 +53,7 @@ export const ipc = {
   me: () => call<DesktopAccount>("me"),
   catalog: () => call<DCatalog>("catalog"),
   generate: (request: GenerateRequest) => call<Generated>("generate", { request }),
+  aiDesign: (request: AIDesignRequest) => call<AIDesign>("ai_design", { request }),
   saveDesign: (designId: number) => call<{ path: string | null }>("save_design", { designId }),
   exportDesign: (designId: number) => call<{ path: string | null }>("export_design", { designId }),
   revealFile: (path: string) => call<void>("reveal_file", { path }),

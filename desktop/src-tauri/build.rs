@@ -7,6 +7,7 @@ const COMMANDS: &[&str] = &[
     "me",
     "catalog",
     "generate",
+    "ai_design",
     "save_design",
     "export_design",
     "reveal_file",

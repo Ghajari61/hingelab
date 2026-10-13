@@ -117,6 +117,14 @@ fn local_part(url: &Url) -> String {
     }
 }
 
+/// Where the sign-in link continues to: path, query and fragment (an AI design rides in the fragment).
+fn next_of(url: &Url) -> String {
+    match url.fragment() {
+        Some(f) => format!("{}#{f}", local_part(url)),
+        None => local_part(url),
+    }
+}
+
 /// The one-time sign-in link for `next`, or None when the app is signed out or the server says no.
 async fn sign_in_url(api: &Api, base: &Url, next: &str) -> Option<Url> {
     if !api.signed_in().await {
@@ -302,7 +310,7 @@ pub async fn web_open(path: Option<String>, bounds: Bounds, app: AppHandle, stat
     }
     let first = target.unwrap_or_else(|| base.join("/home").expect("static path"));
     *state.web.last_sign_in.lock().unwrap() = Some(Instant::now());
-    let start = sign_in_url(&state.api, &base, &local_part(&first)).await.unwrap_or(first);
+    let start = sign_in_url(&state.api, &base, &next_of(&first)).await.unwrap_or(first);
     let window = app.get_window("main").ok_or_else(|| CmdError::new("io", "The app window is not ready."))?;
     let rect = state.web.bounds.lock().unwrap().rect();
     let w = window.add_child(builder(&app, start, base), rect.position, rect.size).map_err(|_| CmdError::new("io", "Could not open the website view."))?;
@@ -397,5 +405,7 @@ mod tests {
         assert_eq!(classify(&b, &u("tauri://localhost/")), Nav::Block);
         assert!(is_sign_in_page(&u("https://hingelab.vercel.app/login?next=%2Fapp")));
         assert_eq!(local_part(&u("https://hingelab.vercel.app/app?x=1")), "/app?x=1");
+        assert_eq!(next_of(&u("https://hingelab.vercel.app/app/ai#open=eyJw")), "/app/ai#open=eyJw");
+        assert_eq!(next_of(&u("https://hingelab.vercel.app/app?x=1")), "/app?x=1");
     }
 }

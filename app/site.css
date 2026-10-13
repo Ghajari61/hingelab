@@ -112,5 +112,45 @@
 .plan-card ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13px; color: var(--fg-dim); }
 .plan-card li b { color: var(--fg); font-weight: 600; }
 .plan-buy { display: flex; flex-wrap: wrap; gap: 8px; }
+.ai-page { max-width: 980px; }
+.ai-page h1 { display: flex; align-items: center; gap: 10px; margin: 0; }
+.ai-page h1 svg { color: var(--accent); }
+.ai-sub { margin: -8px 0 0; color: var(--fg-dim); max-width: 70ch; }
+.ai-form { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; display: grid; gap: 12px; }
+.ai-label { font-weight: 600; font-size: 14px; }
+.ai-form textarea { width: 100%; resize: vertical; min-height: 92px; background: var(--field); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font: inherit; font-size: 14px; line-height: 1.5; }
+.ai-form textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ai-examples { display: flex; flex-wrap: wrap; gap: 6px; }
+.ai-chip { background: var(--panel-2); color: var(--fg-dim); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+.ai-chip:hover:not(:disabled) { border-color: var(--accent); color: var(--fg); }
+.ai-photo { border: 1px dashed var(--line); border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ai-photo.has { border-style: solid; }
+.ai-photo img { max-height: 140px; max-width: 220px; border-radius: 6px; object-fit: contain; background: var(--panel-2); }
+.ai-photo-add { display: flex; align-items: center; gap: 10px; background: none; border: 0; color: var(--fg-dim); font: inherit; font-size: 13px; cursor: pointer; text-align: left; padding: 4px; }
+.ai-photo-add svg { color: var(--accent); flex: none; }
+.ai-photo-add b { color: var(--fg); }
+.ai-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ai-status { font-size: 13px; color: var(--fg-dim); }
+.ai-page .spin { animation: ai-spin 0.9s linear infinite; }
+@keyframes ai-spin { to { transform: rotate(360deg); } }
+.ai-result { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; }
+.ai-preview { background: var(--sheet); border-radius: 8px; min-height: 240px; display: grid; place-items: center; padding: 12px; }
+.ai-preview img { width: 100%; max-height: 460px; object-fit: contain; }
+.ai-preview p { color: var(--fg-dim); font-size: 13px; text-align: center; max-width: 36ch; }
+.ai-info { display: grid; gap: 10px; align-content: start; }
+.ai-info h2 { margin: 0; font-size: 19px; }
+.ai-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.ai-tag { font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-hi); }
+.ai-tag.close { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.ai-tag.loose { background: color-mix(in srgb, var(--err) 16%, transparent); color: var(--err); }
+.ai-summary { margin: 0; color: var(--fg-dim); font-size: 14px; }
+.ai-stats { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.ai-stats div { background: var(--panel-2); border-radius: 8px; padding: 6px 10px; }
+.ai-stats dt { font-size: 11px; color: var(--fg-faint); }
+.ai-stats dd { margin: 0; font-size: 13.5px; font-weight: 600; }
+.ai-notes { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; color: var(--fg-dim); }
+.ai-locked { margin: 0; font-size: 13px; color: var(--fg-dim); background: color-mix(in srgb, var(--pro) 12%, transparent); border-radius: 8px; padding: 8px 12px; }
+.ai-locked a { color: var(--accent-hi); font-weight: 600; text-decoration: none; }
+@media (max-width: 760px) { .ai-result { grid-template-columns: minmax(0, 1fr); } }
 .limit-note { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--fg-dim); }
 .limit-note a { color: var(--accent-hi); text-decoration: none; font-weight: 600; }

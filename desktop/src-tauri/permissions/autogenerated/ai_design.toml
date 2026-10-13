@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-ai-design"
+description = "Enables the ai_design command without any pre-configured scope."
+commands.allow = ["ai_design"]
+
+[[permission]]
+identifier = "deny-ai-design"
+description = "Denies the ai_design command without any pre-configured scope."
+commands.deny = ["ai_design"]

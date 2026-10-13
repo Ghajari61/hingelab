@@ -69,7 +69,7 @@ export function StartGallery({ onPick }: { onPick: (choice: StartChoice) => void
       </header>
       <main className="start-main">
         <h1>What would you like to make?</h1>
-        <p className="start-sub">Pick a product to continue where you left off, or start from a preset below.</p>
+        <p className="start-sub">Pick a product to continue where you left off, start from a preset below, or <a href="/app/ai">describe it to the AI designer</a>.</p>
         <div className="start-products">
           {CORE_PRODUCTS.map((k) => (
             <button key={k} type="button" className="start-tile" aria-label={PRODUCT_INFO[k].name} onClick={() => onPick({ product: k })}>

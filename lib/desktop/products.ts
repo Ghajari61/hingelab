@@ -169,7 +169,7 @@ function fieldOf(product: DProduct, key: string): DField | null {
 }
 
 /** An edit, checked against the field it targets. Returns the new value or a message. */
-function coerce(f: DField, value: unknown): { v: unknown } | { error: string } {
+export function coerce(f: DField, value: unknown): { v: unknown } | { error: string } {
   switch (f.kind) {
     case "number": {
       const n = typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : NaN;
@@ -249,6 +249,65 @@ export async function generateDesign(req: unknown, plan: Plan): Promise<Generate
   return r.product === "hinge" ? generateHinge(r, product, plan) : generateGenerator(r, r.product, product, plan);
 }
 
+type Change = { key: string; value: unknown };
+
+function changeHinge(p: Params, product: DProduct, change: Change): Params | { error: string } {
+  const f = fieldOf(product, change.key);
+  if (!f) return { error: "Unknown setting." };
+  const c = coerce(f, change.value);
+  if ("error" in c) return c;
+  const key = change.key as keyof Params;
+  let q: Params = key === "material" ? withMaterial(p, c.v as string) : ({ ...p, [key]: key === "split" ? Number(c.v) : c.v } as Params);
+  if (FIELDS.some((x) => x.id === key && x.mat) && q.material !== "custom") q = { ...q, material: "custom" };
+  return q;
+}
+
+function changeGenerator(def: AnyGenerator, product: DProduct, p: GenBase, change: Change): GenBase | { error: string } {
+  const f = fieldOf(product, change.key);
+  if (!f) return { error: "Unknown setting." };
+  const c = coerce(f, change.value);
+  if ("error" in c) return c;
+  const key = change.key;
+  const spec = def.sections.flatMap((s) => s.fields).find((x) => x.key === key);
+  let q: GenBase;
+  if (key === "material") q = withMaterial(p, c.v as string);
+  else if (spec?.kind === "choice" && spec.apply) q = spec.apply(p, c.v as string);
+  else q = setPath(p, key, c.v);
+  if (MAT_KEYS.has(key) && q.material !== "custom") q = { ...q, material: "custom" };
+  if (key === "sheet.copies" || key === "sheet.nest" || key === "sheet.labels" || key === "sheet.calibration") {
+    q = setPath(q, "sheet", { nest: "box", calibration: false, labels: false, copies: 1, ...(getPath(q, "sheet") as object), [key.slice(6)]: c.v });
+  }
+  return q;
+}
+
+/**
+ * A design's settings from a preset (or the defaults) with edits applied, each checked against its
+ * field like an edit from the editor; an edit the catalog does not allow is skipped and reported.
+ */
+export async function designFromChanges(id: DesktopProductId, preset: string | null, changes: Change[]): Promise<{ params: Record<string, unknown>; skipped: string[] }> {
+  const product = (await desktopCatalog()).products.find((x) => x.id === id)!;
+  const skipped: string[] = [];
+  if (id === "hinge") {
+    const pr = preset ? HINGE_PRESETS.find((x) => x.id === preset) : undefined;
+    let p = pr ? hingePresetParams(pr.params) : clone(DEFAULTS);
+    for (const c of changes) {
+      const q = changeHinge(p, product, c);
+      if ("error" in q) skipped.push(c.key);
+      else p = q;
+    }
+    return { params: p as unknown as Record<string, unknown>, skipped };
+  }
+  const def = await loadGenerator[id]();
+  const pr = preset ? def.presets.find((x) => x.id === preset) : undefined;
+  let p: GenBase = def.merge(pr ? pr.params : {});
+  for (const c of changes) {
+    const q = changeGenerator(def, product, p, c);
+    if ("error" in q) skipped.push(c.key);
+    else p = q;
+  }
+  return { params: sanitizeGeneratorParams(def, def.merge(p)) as unknown as Record<string, unknown>, skipped };
+}
+
 function generateHinge(r: GenerateRequest, product: DProduct, plan: Plan): GenerateResult {
   let p: Params;
   if (typeof r.preset === "string") {
@@ -259,14 +318,9 @@ function generateHinge(r: GenerateRequest, product: DProduct, plan: Plan): Gener
     p = r.params ? mergeParams(r.params as Partial<Params>) : clone(DEFAULTS);
   }
   if (r.change) {
-    const f = fieldOf(product, r.change.key);
-    if (!f) return { status: 400, body: { error: "Unknown setting." } };
-    const c = coerce(f, r.change.value);
-    if ("error" in c) return { status: 400, body: { error: c.error } };
-    const key = r.change.key as keyof Params;
-    if (key === "material") p = withMaterial(p, c.v as string);
-    else p = { ...p, [key]: key === "split" ? Number(c.v) : c.v } as Params;
-    if (FIELDS.some((x) => x.id === key && x.mat) && p.material !== "custom") p = { ...p, material: "custom" };
+    const q = changeHinge(p, product, r.change);
+    if ("error" in q) return { status: 400, body: { error: q.error } };
+    p = q;
   }
   const base = (q: Params, issues: DIssue[] = [], applied: string[] = []): GenerateResponse => ({
     product: "hinge", params: q as unknown as Record<string, unknown>, form: hingeForm(q), issues, stats: [], summary: hingeSummary(q), applied,
@@ -333,19 +387,9 @@ async function generateGenerator(r: GenerateRequest, id: GeneratorId, product: D
     p = def.merge(r.params ?? {});
   }
   if (r.change) {
-    const f = fieldOf(product, r.change.key);
-    if (!f) return { status: 400, body: { error: "Unknown setting." } };
-    const c = coerce(f, r.change.value);
-    if ("error" in c) return { status: 400, body: { error: c.error } };
-    const key = r.change.key;
-    const spec = def.sections.flatMap((s) => s.fields).find((x) => x.key === key);
-    if (key === "material") p = withMaterial(p, c.v as string);
-    else if (spec?.kind === "choice" && spec.apply) p = spec.apply(p, c.v as string);
-    else p = setPath(p, key, c.v);
-    if (MAT_KEYS.has(key) && p.material !== "custom") p = { ...p, material: "custom" };
-    if (key === "sheet.copies" || key === "sheet.nest" || key === "sheet.labels" || key === "sheet.calibration") {
-      p = setPath(p, "sheet", { nest: "box", calibration: false, labels: false, copies: 1, ...(getPath(p, "sheet") as object), [key.slice(6)]: c.v });
-    }
+    const q = changeGenerator(def, product, p, r.change);
+    if ("error" in q) return { status: 400, body: { error: q.error } };
+    p = q;
   }
   p = sanitizeGeneratorParams(def, def.merge(p));
   const ctx = await serverBuildContext(def, p);

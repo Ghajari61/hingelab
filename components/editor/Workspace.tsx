@@ -11,6 +11,7 @@ import type { ProductId } from "@/lib/supabase/types";
 import { isGeneratorId } from "@/lib/generators/ids";
 import { GENERATOR_PRESETS } from "@/lib/generators/presets";
 import { TEMPLATE_PRESETS } from "@/lib/templates/presets";
+import { AI_START_KEY } from "@/lib/ai/types";
 import { StartGallery, type StartChoice } from "@/components/shell/StartGallery";
 
 const LettersEditor = dynamic(() => import("@/components/letters/LettersEditor"), {
@@ -44,14 +45,22 @@ function urlProduct(): Product | null {
   }
 }
 
+/** The design the AI designer left in this tab for product `p`. */
+function aiStart(p: Product): StartChoice | null {
+  const s = JSON.parse(sessionStorage.getItem(AI_START_KEY) ?? "null") as StartChoice | null;
+  return s?.product === p && s.preset && typeof s.preset.params === "object" ? s : null;
+}
+
 /**
  * `?p=<generator>&preset=<id>` (links from the site) opens that built-in preset once;
- * `?p=<product>&template=<id>` opens a template's settings from the template library.
+ * `?p=<product>&template=<id>` opens a template's settings from the template library;
+ * `?p=<product>&ai=1` opens the AI designer's result.
  */
 function urlPreset(p: Product | null): StartChoice | null {
   if (!p) return null;
   try {
     const q = new URLSearchParams(window.location.search);
+    if (q.get("ai") === "1") return aiStart(p);
     const tid = q.get("template");
     const t = tid && Object.prototype.hasOwnProperty.call(TEMPLATE_PRESETS, tid) ? TEMPLATE_PRESETS[tid] : undefined;
     if (t && t.product === p) return { product: p, preset: { id: `template-${tid}`, name: t.name, note: t.note, params: t.params } };
@@ -68,6 +77,7 @@ function setUrlProduct(p: Product | null) {
   const u = new URL(window.location.href);
   u.searchParams.delete("preset");
   u.searchParams.delete("template");
+  u.searchParams.delete("ai");
   if (p) u.searchParams.set("p", p); else u.searchParams.delete("p");
   window.history.replaceState(window.history.state, "", u.pathname + u.search + u.hash);
 }
@@ -89,7 +99,11 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
   });
   const [product, setProduct] = useState<Product | null>(() => (doc ? fromId(doc.product) : urlProduct()));
   const [start, setStart] = useState<StartChoice | null>(() => (doc ? null : urlPreset(product)));
-  useEffect(() => { if (start && !doc) setUrlProduct(start.product); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!start || doc) return;
+    setUrlProduct(start.product);
+    try { sessionStorage.removeItem(AI_START_KEY); } catch { /* storage off */ }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const choose = (p: Product) => {
     if (doc) {

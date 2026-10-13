@@ -49,6 +49,7 @@ Every request carries `x-hingelab-client: desktop/<version>` and `Authorization:
 | `GET /api/desktop/me` | Account, effective plan, entitlements, minimum version. |
 | `GET /api/desktop/catalog` | Products, settings sections, fields and presets as plain JSON (no code). |
 | `POST /api/desktop/generate` | Builds a design on the server. 120 per minute per user, 256 KB body, 60 s. |
+| `POST /api/desktop/ai` | AI designer: a description and/or photo in, a design's settings (and the cut file when the plan allows) out. 6 per 10 min and 10 / 60 per day (Free / Pro) per user, about 1.4 MB body, 60 s. |
 | `GET /api/desktop/update/{target}/{arch}/{version}` | Tauri updater answer (see `DESKTOP_UPDATE_SYSTEM.md`). |
 
 Errors: 400 bad request or missing client header, 401 sign in again, 403 the design needs Pro (no SVG is sent, because anything sent to the app can be saved), 422 the design can't be built (with checks and fixes), 426 `update_required` with `minimumVersion`, 429 with `Retry-After`, 503 service not configured. The Rust core turns these into typed errors (`kind`: `unauthorized`, `forbidden`, `rate_limited`, `update_required`, `network`, `server`, `invalid`, …); the UI shows each one in words and keeps the last good preview.

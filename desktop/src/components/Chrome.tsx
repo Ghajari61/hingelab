@@ -1,12 +1,12 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { ArrowDownCircle, Clock3, Cloud, CreditCard, FolderOpen, Globe, HelpCircle, LayoutDashboard, LayoutTemplate, Loader2, PanelLeftClose, PanelLeftOpen, PenTool, Settings as Cog, Shapes, ShieldCheck, Star, X } from "lucide-react";
+import { ArrowDownCircle, Clock3, Cloud, CreditCard, FolderOpen, Globe, HelpCircle, LayoutDashboard, LayoutTemplate, Loader2, PanelLeftClose, PanelLeftOpen, PenTool, Settings as Cog, Shapes, ShieldCheck, Sparkles, Star, X } from "lucide-react";
 import { avatarBackground, avatarInitials } from "../../../lib/account/avatar";
 import type { DesktopAccount } from "../ipc";
 import type { UpdateStatus } from "../updater";
 import { formatBytes } from "../updater";
 import type { WebRoute } from "./Web";
 
-export type Route = "dashboard" | "generators" | "workspace" | "recent" | "favorites" | "subscription" | "settings" | "help" | WebRoute;
+export type Route = "dashboard" | "generators" | "ai" | "workspace" | "recent" | "favorites" | "subscription" | "settings" | "help" | WebRoute;
 
 export function Logo({ size = 28 }: { size?: number }) {
   return (
@@ -27,6 +27,7 @@ export function Logo({ size = 28 }: { size?: number }) {
 const NAV: { id: Route; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "generators", label: "Generators", icon: Shapes },
+  { id: "ai", label: "AI designer", icon: Sparkles },
   { id: "recent", label: "Recent designs", icon: Clock3 },
   { id: "favorites", label: "Favorites", icon: Star },
   { id: "subscription", label: "Subscription", icon: CreditCard },

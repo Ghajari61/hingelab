@@ -86,6 +86,27 @@ export const ARTICLES: HelpArticle[] = [
     related: ["getting-started", "undo-and-reset"],
   },
   {
+    slug: "ai-designer", product: "general", title: "AI designer",
+    summary: "Describe a product or add a photo of one, and the AI designer sets up the closest HingeLab product for you to fine-tune and cut.",
+    keywords: ["ai", "artificial intelligence", "prompt", "photo", "picture", "describe", "generate", "assistant"],
+    blocks: [
+      { p: "The AI designer is at AI designer in the account menu bar (and in the sidebar of the Windows app). Sign in to use it." },
+      { list: [
+        "Write what you want to make, with sizes if you know them: “a round tea tin, 9 cm across and 12 cm tall, with a removable lid”. Any language works, and words that go on the product keep their own script.",
+        "Or add a photo of a product (pick a file, drop it or paste it). A description and a photo together work best.",
+        "Choose Design it. In 10 to 30 seconds you get the product it picked, the design's settings and, for the Hinge Box and generators, the cut file.",
+        "Open in editor applies the design over your current one as a single undo step, so Ctrl+Z brings your last design back. Download SVG saves the cut file straight away.",
+      ] },
+      { h: "What it can and cannot do", list: [
+        "It chooses one of HingeLab's products and fills in its settings; the geometry is always made by that product, so every slot, hinge and joint is the same as a design you set up by hand.",
+        "It cannot invent a new kind of product. When nothing fits well, it says “Nearest product” and notes what is different.",
+        "Check the sizes it chose before you cut. Notes under the design list anything it had to guess or could not do.",
+        "Free accounts get 10 AI designs a day and Pro accounts 60. Designs that use Pro shapes or generators still need Pro to preview and export.",
+      ] },
+    ],
+    related: ["getting-started", "presets", "checks-and-fixes"],
+  },
+  {
     slug: "undo-and-reset", product: "general", title: "Undo, redo and reset",
     summary: "Every change can be undone. Reset a field, a section or the whole design back to its defaults.",
     keywords: ["undo", "redo", "reset", "defaults", "history"],

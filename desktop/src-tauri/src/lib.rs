@@ -143,6 +143,29 @@ async fn generate(request: Value, state: State<'_, AppState>) -> CmdResult<Gener
     Ok(Generated { status, body })
 }
 
+/// The AI designer's request: a description and a photo the UI shrank to 1024 px.
+const MAX_AI_REQUEST: usize = 1536 * 1024;
+
+/// Asks the AI designer for a design of one of the products. The answer is settings (and the cut
+/// file's preview) that the workspace then opens and builds like any other design.
+#[tauri::command]
+async fn ai_design(request: Value, state: State<'_, AppState>) -> CmdResult<Value> {
+    if !request.is_object() || serde_json::to_vec(&request).map(|v| v.len()).unwrap_or(usize::MAX) > MAX_AI_REQUEST {
+        return Err(CmdError::new("invalid", "This photo is too large."));
+    }
+    let (status, body) = state.api.call(Method::POST, "/api/desktop/ai", Some(&request), &[400, 413, 429, 502, 503]).await?;
+    if status != 200 || !body.get("product").is_some_and(|p| p.is_string()) {
+        let msg: String = body.get("message").and_then(|m| m.as_str()).unwrap_or("The design could not be made. Try again.").chars().take(300).collect();
+        let kind = match status {
+            429 => "rate_limited",
+            502 | 503 => "server",
+            _ => "invalid",
+        };
+        return Err(CmdError::new(kind, msg).with_status(status));
+    }
+    Ok(body)
+}
+
 fn design(state: &AppState, id: u64) -> CmdResult<Design> {
     let files = state.files.lock().unwrap();
     files.last.clone().filter(|d| d.id == id).ok_or_else(|| CmdError::new("not_found", "This design changed. Wait for the preview to update, then save again."))
@@ -320,6 +343,7 @@ pub fn run() {
             me,
             catalog,
             generate,
+            ai_design,
             save_design,
             export_design,
             reveal_file,

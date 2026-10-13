@@ -19,6 +19,10 @@ export const LIMITS = {
   desktopToken: { name: "desktop-token", limit: 30, windowSec: 600 },
   /** Desktop app signing its website view in (once per app start, again if the session ends). */
   desktopWebSession: { name: "desktop-web-session", limit: 20, windowSec: 600 },
+  /** AI designer: each request is two paid model calls. A short burst limit and a daily allowance per plan. */
+  aiDesign: { name: "ai-design", limit: 6, windowSec: 600 },
+  aiDesignDayFree: { name: "ai-design-day-free", limit: 10, windowSec: 86_400 },
+  aiDesignDayPro: { name: "ai-design-day-pro", limit: 60, windowSec: 86_400 },
 } satisfies Record<string, LimitRule>;
 
 const memory = memoryLimiter();

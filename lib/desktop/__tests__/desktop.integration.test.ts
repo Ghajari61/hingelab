@@ -9,6 +9,7 @@ import { POST as logoutPOST } from "@/app/api/desktop/logout/route";
 import { GET as meGET } from "@/app/api/desktop/me/route";
 import { GET as catalogGET } from "@/app/api/desktop/catalog/route";
 import { POST as generatePOST } from "@/app/api/desktop/generate/route";
+import { POST as aiPOST } from "@/app/api/desktop/ai/route";
 import { GET as updateGET } from "@/app/api/desktop/update/[target]/[arch]/[version]/route";
 import { POST as webSessionPOST } from "@/app/api/desktop/web-session/route";
 import { createClient } from "@supabase/supabase-js";
@@ -96,6 +97,22 @@ describe.skipIf(!up)("desktop API (local Supabase)", () => {
     const lapsed = await meGET(get("/api/desktop/me", auth(t.access_token)));
     expect((await lapsed.json()).plan).toBe("free");
     await adminClient().from("profiles").update({ plan: "free", plan_status: null, current_period_end: null }).eq("id", user.id);
+  });
+
+  it("lets only a signed-in app use the AI designer, with a description or a photo", async () => {
+    expect((await aiPOST(post("/api/desktop/ai", { prompt: "a round box" }))).status).toBe(401);
+    const t = await signIn(user.id);
+    const had = process.env.AI_GATEWAY_API_KEY;
+    process.env.AI_GATEWAY_API_KEY = had || "test-only";
+    try {
+      const empty = await aiPOST(post("/api/desktop/ai", { prompt: "  " }, auth(t.access_token)));
+      expect(empty.status).toBe(400);
+      expect(await empty.json()).toEqual({ error: "invalid", message: "Describe the product or add a photo of it." });
+      const svg = await aiPOST(post("/api/desktop/ai", { image: "data:image/svg+xml;base64,PHN2Zz4=" }, auth(t.access_token)));
+      expect(svg.status).toBe(400);
+    } finally {
+      if (had === undefined) delete process.env.AI_GATEWAY_API_KEY;
+    }
   });
 
   it("rotates refresh tokens and revokes the session when an old one is reused", async () => {
