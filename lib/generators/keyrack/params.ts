@@ -5,6 +5,7 @@ import { isMotifId } from "../motifs";
 import { isShapeKind, type ShapeKind } from "../shapes";
 import { SECOND_MATERIALS } from "../material2";
 import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
+import { TEXT_STYLE, cleanTextStyle, type TextStyle } from "../textStyle";
 import { mergeInto } from "../util";
 
 export type Mark = "engrave" | "score" | "raised" | "none";
@@ -16,6 +17,7 @@ export type Mount = "keyhole" | "holes" | "none";
 export interface KeyrackParams extends GenBase {
   board: { shape: ShapeKind; width: number; height: number; corner: number; frame: boolean };
   text: { text: string; fontId: string; size: number; spacing: number; mark: Mark; y: number };
+  textStyle: TextStyle;
   motif: { kind: string; side: MotifSide; size: number; gap: number };
   hooks: {
     count: number;
@@ -54,6 +56,7 @@ export const KEYRACK_DEFAULTS: KeyrackParams = {
   layers: clone(HINGE.layers),
   board: { shape: "rounded", width: 260, height: 120, corner: 8, frame: false },
   text: { text: "Home Sweet Home", fontId: "pacifico", size: 20, spacing: 0, mark: "engrave", y: 30 },
+  textStyle: { ...TEXT_STYLE },
   motif: { kind: "house", side: "left", size: 30, gap: 6 },
   hooks: { count: 4, style: "hook", profile: "round", reach: 32, size: 16, y: 72, margin: 30, hole: 8, labels: "", labelFont: "fredoka", labelSize: 6 },
   shelf: { on: false, depth: 70, at: 14 },
@@ -72,6 +75,7 @@ export function mergeKeyrack(raw: unknown): KeyrackParams {
   const p = mergeInto(clone(d), raw);
   if (!isShapeKind(p.board.shape)) p.board.shape = d.board.shape;
   if (!MARKS.includes(p.text.mark)) p.text.mark = d.text.mark;
+  p.textStyle = cleanTextStyle(p.textStyle);
   if (!STYLES.includes(p.hooks.style)) p.hooks.style = d.hooks.style;
   if (!PROFILES.includes(p.hooks.profile)) p.hooks.profile = d.hooks.profile;
   if (!SIDES.includes(p.motif.side)) p.motif.side = d.motif.side;

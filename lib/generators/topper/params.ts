@@ -4,6 +4,7 @@ import { isMotifId } from "../motifs";
 import { isShapeKind, type ShapeKind } from "../shapes";
 import { SECOND_MATERIALS } from "../material2";
 import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
+import { TEXT_STYLE, cleanTextStyle, type TextStyle } from "../textStyle";
 import { mergeInto } from "../util";
 
 export type KitKind = "topper" | "cupcake" | "set";
@@ -33,6 +34,7 @@ export interface TopperParams extends GenBase {
     /** How the text shows on a silhouette or plate. */
     mark: TextMark;
   };
+  textStyle: TextStyle;
   motif: { kind: string; place: MotifPlace; size: number; gap: number };
   plate: { shape: ShapeKind; auto: boolean; pad: number; width: number; height: number; corner: number; frame: boolean };
   sticks: { count: number; length: number; width: number; tip: number; spread: number };
@@ -68,6 +70,7 @@ export const TOPPER_DEFAULTS: TopperParams = {
   kit: { kind: "topper" },
   text: { text: "Happy\nBirthday", fontId: "pacifico", size: 34, spacing: -0.5, lead: 1.25 },
   style: { kind: "letters", weld: 1, border: 4, mark: "engrave" },
+  textStyle: { ...TEXT_STYLE },
   motif: { kind: "none", place: "above", size: 40, gap: 0 },
   plate: { shape: "arch", auto: true, pad: 10, width: 180, height: 120, corner: 4, frame: true },
   sticks: { count: 2, length: 90, width: 7, tip: 14, spread: 45 },
@@ -85,6 +88,7 @@ export function mergeTopper(raw: unknown): TopperParams {
   const d = TOPPER_DEFAULTS;
   const p = mergeInto(clone(d), raw);
   if (!KITS.includes(p.kit.kind)) p.kit.kind = d.kit.kind;
+  p.textStyle = cleanTextStyle(p.textStyle);
   if (!STYLES.includes(p.style.kind)) p.style.kind = d.style.kind;
   if (!MARKS.includes(p.style.mark)) p.style.mark = d.style.mark;
   if (!PLACES.includes(p.motif.place)) p.motif.place = d.motif.place;

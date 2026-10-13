@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { BUNDLED_FONTS, type FontScript } from "@/lib/letters";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { BUNDLED_FONTS, FONT_CATEGORIES, type FontInfo, type FontScript } from "@/lib/letters";
 import type { StoredFontMeta } from "./fontStore";
 import { ensurePreviewFace, previewFamily } from "./runtime";
 
@@ -19,7 +19,13 @@ function Chevron({ open }: { open: boolean }) {
   return <svg className={`chev${open ? " open" : ""}`} width="8" height="8" viewBox="0 0 8 8"><path d="M2 1l4 3-4 3z" fill="currentColor" /></svg>;
 }
 
-/** Font list with live previews of the typed text, plus uploads stored on this device. */
+type Filter = "all" | "persian" | "yours" | FontInfo["category"];
+
+const matches = (f: FontInfo, filter: Filter, q: string) =>
+  (filter === "all" || (filter === "persian" ? f.scripts.includes("arabic") : f.category === filter)) &&
+  (!q || `${f.name} ${f.note} ${f.category}`.toLowerCase().includes(q));
+
+/** Font list with live previews of the typed text, search and style filters, plus uploads stored on this device. */
 export function FontPicker({
   fontId, text, uploads, onPick, onUpload, onDelete,
 }: {
@@ -32,50 +38,109 @@ export function FontPicker({
   onDelete: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [query, setQuery] = useState("");
   const [, setLoaded] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const preview = text.replace(/\s+/g, " ").trim().slice(0, 28) || "Aa";
 
-  const ids = open ? [...BUNDLED_FONTS.map((f) => f.id), ...uploads.map((u) => u.id)] : [fontId];
-  const idKey = ids.join("|");
+  const load = useCallback((id: string) => { ensurePreviewFace(id).then(() => setLoaded((n) => n + 1), () => {}); }, []);
+  useEffect(() => { load(fontId); }, [fontId, load]);
+
+  // Previews load as their rows scroll into view, so opening the list does not fetch every font.
   useEffect(() => {
-    for (const id of idKey.split("|")) ensurePreviewFace(id).then(() => setLoaded((n) => n + 1), () => {});
-  }, [idKey]);
+    if (!open || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) if (e.isIntersecting) {
+        const id = (e.target as HTMLElement).dataset.font;
+        if (id) load(id);
+        io.unobserve(e.target);
+      }
+    }, { root: listRef.current, rootMargin: "120px 0px" });
+    listRef.current?.querySelectorAll<HTMLElement>("[data-font]").forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [open, filter, query, load]);
+
+  const toggle = () => {
+    if (!open) {
+      setFilter(ARABIC.test(text) ? "persian" : "all");
+      setQuery("");
+    }
+    setOpen(!open);
+  };
 
   const current = BUNDLED_FONTS.find((f) => f.id === fontId)?.name ?? uploads.find((u) => u.id === fontId)?.name ?? "Uploaded font";
   const family = (id: string) => `"${previewFamily(id)}", var(--font-ui)`;
+  const q = query.trim().toLowerCase();
+  // Fonts that can set the typed text come first.
+  const shown = filter === "yours" ? [] : BUNDLED_FONTS
+    .filter((f) => matches(f, filter, q))
+    .map((f, i) => ({ f, i, tag: lacks(f.scripts, text) }))
+    .sort((a, b) => Number(!!a.tag) - Number(!!b.tag) || a.i - b.i);
+  const mine = uploads.filter((u) => (filter === "all" || filter === "yours") && (!q || u.name.toLowerCase().includes(q)));
+  const chips: { id: Filter; name: string }[] = [
+    { id: "all", name: "All" },
+    { id: "persian", name: "Persian" },
+    ...FONT_CATEGORIES.filter((c) => BUNDLED_FONTS.some((f) => f.category === c.id)),
+    ...(uploads.length ? [{ id: "yours" as const, name: "Yours" }] : []),
+  ];
 
-  const option = (id: string, name: string, tag: string | null) => (
+  const option = (id: string, name: string, tags: { text: string; title?: string; warn?: boolean }[]) => (
     <button
       key={id}
       type="button"
       role="option"
       className="fp-opt"
+      data-font={id}
       aria-selected={id === fontId}
       onClick={() => { onPick(id); setOpen(false); }}
     >
-      <span className="fp-head"><span className="fp-name">{name}</span>{tag && <span className="fp-tag">{tag}</span>}</span>
+      <span className="fp-head">
+        <span className="fp-name">{name}</span>
+        {tags.length > 0 && <span className="fp-tags">{tags.map((t) => <span key={t.text} className={`fp-tag${t.warn ? "" : " soft"}`} title={t.title}>{t.text}</span>)}</span>}
+      </span>
       <span className="fp-prev" dir="auto" style={{ fontFamily: family(id) }}>{preview}</span>
     </button>
   );
 
   return (
-    <div className="fontpick">
-      <button type="button" className="fp-opt" aria-expanded={open} aria-haspopup="listbox" onClick={() => setOpen(!open)}>
+    <div className="fontpick" onKeyDown={(e) => { if (e.key === "Escape" && open) { e.stopPropagation(); setOpen(false); } }}>
+      <button type="button" className="fp-opt" aria-expanded={open} aria-haspopup="listbox" onClick={toggle}>
         <span className="fp-head"><span className="fp-name">{current}</span><Chevron open={open} /></span>
         <span className="fp-prev" dir="auto" style={{ fontFamily: family(fontId) }}>{preview}</span>
       </button>
       {open && (
-        <div className="fp-list" role="listbox" aria-label="Fonts">
-          {BUNDLED_FONTS.map((f) => option(f.id, `${f.name} · ${f.note}`, lacks(f.scripts, text)))}
-          {uploads.length > 0 && <div className="fp-group">Your fonts (this device)</div>}
-          {uploads.map((u) => (
-            <div className="fp-row" key={u.id}>
-              {option(u.id, u.name, null)}
-              <button type="button" className="fp-del" title={`Remove ${u.name} from this device`} aria-label={`Remove ${u.name}`} onClick={() => onDelete(u.id)}>×</button>
-            </div>
-          ))}
-        </div>
+        <>
+          <input
+            type="search"
+            className="fp-search"
+            placeholder={`Search ${BUNDLED_FONTS.length} free fonts`}
+            aria-label="Search fonts"
+            value={query}
+            autoFocus
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <div className="fp-chips" role="group" aria-label="Font style">
+            {chips.map((c) => (
+              <button key={c.id} type="button" className="fp-chip" aria-pressed={filter === c.id} onClick={() => setFilter(c.id)}>{c.name}</button>
+            ))}
+          </div>
+          <div className="fp-list" role="listbox" aria-label="Fonts" ref={listRef}>
+            {shown.map(({ f, tag }) => option(f.id, `${f.name} · ${f.note}`, [
+              ...(tag ? [{ text: tag, warn: true }] : []),
+              ...(f.thin ? [{ text: "Thin", title: "Fine strokes: best engraved, or use Thicken so they cut cleanly." }] : []),
+            ]))}
+            {mine.length > 0 && <div className="fp-group">Your fonts (this device)</div>}
+            {mine.map((u) => (
+              <div className="fp-row" key={u.id}>
+                {option(u.id, u.name, [])}
+                <button type="button" className="fp-del" title={`Remove ${u.name} from this device`} aria-label={`Remove ${u.name}`} onClick={() => onDelete(u.id)}>×</button>
+              </div>
+            ))}
+            {!shown.length && !mine.length && <p className="fp-empty">No fonts match. Try another word or pick All.</p>}
+          </div>
+        </>
       )}
       {onUpload && (
         <>

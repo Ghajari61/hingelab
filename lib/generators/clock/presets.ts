@@ -43,15 +43,6 @@ export const CLOCK_PRESETS: GenPreset<ClockParams>[] = [
     },
   },
   {
-    id: "persian", name: "Persian numerals", note: "۱۲ ۳ ۶ ۹ in Vazirmatn",
-    params: {
-      name: "Persian clock",
-      face: { ring: 42 },
-      markers: { style: "numerals", numerals: "persian", fontId: "vazirmatn", size: 24, inset: 8 },
-      hands: { style: "leaf", hour: 70, minute: 100, width: 12, tail: 18 },
-    },
-  },
-  {
     id: "square-layered", name: "Square, three layers", note: "Back, ring and centre disc",
     params: {
       name: "Square clock",

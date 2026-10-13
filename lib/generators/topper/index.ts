@@ -3,6 +3,7 @@ import { material2Fields } from "../material2";
 import { MOTIF_OPTIONS, motifArt } from "../motifs";
 import { SHAPE_KINDS, SHAPE_NAMES, shapeArt, type ShapeKind } from "../shapes";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
+import { textStyleSection } from "../textStyle";
 import { fitArt, namedFile } from "../util";
 import { buildTopper, type TopperOutput } from "./build";
 import { checkTopper } from "./check";
@@ -31,12 +32,13 @@ const sections: SectionSpec<TopperParams>[] = [
     help: "The words on the topper: each line is centred; script fonts join up into one piece.",
     fields: [
       { kind: "text", key: "text.text", label: "Text", multiline: true, maxLength: 80, placeholder: "Happy Birthday", help: "The words on the topper; press Enter for a new line." },
-      { kind: "font", key: "text.fontId", label: "Font", sample: (p) => p.text.text || "Aa", help: "Pacifico joins its letters like handwriting; Lalezar and Vazirmatn cover Persian and Arabic." },
+      { kind: "font", key: "text.fontId", label: "Font", sample: (p) => p.text.text || "Aa", help: "Pacifico joins its letters like handwriting; Persian and Arabic fonts are under Persian in the font list." },
       { kind: "number", key: "text.size", label: "Letter height", unit: "mm", min: 8, max: 200, step: 1, help: "Cap height of the letters; the topper grows with it." },
       { kind: "number", key: "text.spacing", label: "Letter spacing", unit: "mm", min: -5, max: 10, step: 0.1, help: "Extra space between letters; a little negative spacing makes script letters overlap so they hold together." },
       { kind: "number", key: "text.lead", label: "Line spacing", unit: "", min: 0.8, max: 2, step: 0.05, help: "Distance between lines as a multiple of the letter height; lower values make lines touch and join." },
     ],
   },
+  textStyleSection(main),
   {
     id: "style", title: "Style", open: true, show: main,
     help: "How the topper is cut: welded letters, a silhouette, two layers, or a shaped plate.",
@@ -184,7 +186,7 @@ export const TOPPER: GeneratorDef<TopperParams> = {
     ],
     tips: [
       "Mirror acrylic scratches easily: leave its film on while cutting and peel it after.",
-      "For Persian and Arabic text use Lalezar or Vazirmatn; the letters join naturally.",
+      "For Persian and Arabic text pick a font under Persian in the font list; the letters join naturally.",
       "Thin script letters are fragile: raise the weld to 1 to 1.5 mm, or switch to the Outline style.",
       "Cut sticks along the length of the sheet's grain when using wood, so they do not snap.",
       "Wash acrylic toppers before they touch food, or wrap the sticks in food-safe film.",

@@ -82,7 +82,7 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
   const second = (pt: GenPart): GenPart => ({ ...pt, material: "second", color: m2.color, t: p.mat.T2 });
 
   // Text and motif, centred on (0, 0).
-  const t = textBlock(ctx, p.text.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, lead: p.text.lead, align: p.text.align, missing });
+  const t = textBlock(ctx, p.text.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, lead: p.text.lead, align: p.text.align, missing, style: p.textStyle });
   if (t.loading) return { parts: [], stats: [], notice: "Loading the font." };
   const hasText = t.contours.length > 0;
   const mot = isMotifId(p.motif.kind) ? placeMotif(p.motif.kind, p.motif, t.width, t.height, hasText) : [];

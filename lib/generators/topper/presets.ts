@@ -14,13 +14,6 @@ export const TOPPER_PRESETS: GenPreset<TopperParams>[] = [
     },
   },
   {
-    id: "nowruz", name: "Nowruz", note: "نوروز مبارک with sprouts, engraved on a wood silhouette",
-    params: {
-      name: "Nowruz topper", material: "birch3", T: 3, K: 0.15, text: { text: "نوروز مبارک", fontId: "lalezar", size: 30, spacing: 0 },
-      style: { kind: "outline", border: 5, mark: "engrave" }, motif: { kind: "sprout", place: "above", size: 44, gap: -6 },
-    },
-  },
-  {
     id: "eid-mubarak", name: "Eid Mubarak", note: "Crescent and star beside script letters",
     params: { name: "Eid Mubarak topper", text: { text: "Eid\nMubarak", fontId: "pacifico", size: 28 }, motif: { kind: "moonstar", place: "left", size: 62, gap: -6 } },
   },
@@ -44,20 +37,6 @@ export const TOPPER_PRESETS: GenPreset<TopperParams>[] = [
     params: {
       name: "Anniversary topper", material: "birch3", T: 3, K: 0.15, text: { text: "Happy\nAnniversary", fontId: "pacifico", size: 26 },
       style: { kind: "layered", border: 4, weld: 1 }, motif: { kind: "hearts", place: "above", size: 36, gap: -3 }, mat: { mat2: "acrylic-rose", T2: 3 },
-    },
-  },
-  {
-    id: "yalda", name: "Yalda night", note: "شب یلدا with a pomegranate, wood silhouette",
-    params: {
-      name: "Yalda topper", material: "birch3", T: 3, K: 0.15, text: { text: "شب یلدا", fontId: "lalezar", size: 34, spacing: 0 },
-      style: { kind: "outline", border: 5, mark: "engrave" }, motif: { kind: "pomegranate", place: "left", size: 56, gap: -4 },
-    },
-  },
-  {
-    id: "tavalodet", name: "تولدت مبارک", note: "Persian birthday letters with a cake",
-    params: {
-      name: "Persian birthday topper", text: { text: "تولدت مبارک", fontId: "lalezar", size: 32, spacing: 0 },
-      style: { kind: "letters", weld: 1.2 }, motif: { kind: "cake", place: "above", size: 42, gap: -2 },
     },
   },
   {

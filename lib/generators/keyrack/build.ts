@@ -60,7 +60,7 @@ export function buildKeyrack(p: KeyrackParams, ctx: BuildContext): KeyrackOutput
   const m2 = material2(p.mat.mat2);
 
   // Text and motif, centred as a group.
-  const t = textBlock(ctx, p.text.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, missing });
+  const t = textBlock(ctx, p.text.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, missing, style: p.textStyle });
   if (t.loading) loading = true;
   let content: Contour[] = [...t.contours];
   if (isMotifId(p.motif.kind)) {

@@ -3,6 +3,7 @@ import { material2Fields } from "../material2";
 import { MOTIF_OPTIONS, motifArt } from "../motifs";
 import { SHAPE_KINDS, SHAPE_NAMES, shapeArt, type ShapeKind } from "../shapes";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
+import { textStyleSection } from "../textStyle";
 import { fitArt, namedFile } from "../util";
 import { buildKeyrack, hookProfile, type KeyrackOutput } from "./build";
 import { checkKeyrack } from "./check";
@@ -29,7 +30,7 @@ const sections: SectionSpec<KeyrackParams>[] = [
     help: "Words on the board, with an optional motif beside them.",
     fields: [
       { kind: "text", key: "text.text", label: "Text", multiline: true, maxLength: 80, placeholder: "Home Sweet Home", help: "The words on the board; press Enter for a new line." },
-      { kind: "font", key: "text.fontId", label: "Font", sample: (p) => p.text.text || "Aa", help: "The typeface; Lalezar and Vazirmatn cover Persian and Arabic." },
+      { kind: "font", key: "text.fontId", label: "Font", sample: (p) => p.text.text || "Aa", help: "The typeface. Persian and Arabic fonts are under Persian in the font list." },
       { kind: "number", key: "text.size", label: "Letter height", unit: "mm", min: 5, max: 150, step: 1, help: "Cap height of the letters." },
       { kind: "number", key: "text.spacing", label: "Letter spacing", unit: "mm", min: -5, max: 10, step: 0.1, help: "Extra space between letters." },
       {
@@ -44,6 +45,7 @@ const sections: SectionSpec<KeyrackParams>[] = [
       { kind: "number", key: "motif.gap", label: "Motif gap", unit: "mm", min: -20, max: 40, step: 0.5, show: (p) => p.motif.kind !== "none", help: "Space between the motif and the text." },
     ],
   },
+  textStyleSection(),
   {
     id: "hooks", title: "Hooks", open: true,
     help: "Laser-cut hooks that slot through the board, or holes for wooden pegs or screw-in hooks.",

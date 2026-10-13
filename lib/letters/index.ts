@@ -1,8 +1,8 @@
 export { LETTER_DEFAULTS, minFeatureOf, bridgeWidthOf, hingeParamsOf, wallHeightOf, wallMaxLengthOf, cornerRadiusOf, concaveRadiusOf, stackLayersOf, mergeLetterParams } from "./defaults";
 export { marqueeCenters, marqueeHoles, marqueeSpacingOf, circleHole } from "./marquee";
 export { stencilSheet } from "./stencil";
-export { BUNDLED_FONTS, fontInfo, loadFont, missingChars, fontFamilyName } from "./fonts";
-export type { FontInfo, FontScript, HarfBuzz, LoadedFont } from "./fonts";
+export { BUNDLED_FONTS, FONT_CATEGORIES, fontInfo, loadFont, missingChars, fontFamilyName } from "./fonts";
+export type { FontCategory, FontInfo, FontScript, HarfBuzz, LoadedFont } from "./fonts";
 export { shapeText, detectDirection, resolveDirection, spacingAllowed } from "./shape";
 export type { GlyphOutline, TextOutline } from "./shape";
 export { flatten, cleanContour, signedArea, unionShapes, differenceShapes, offsetShapes, shapeContours, pointInShape, makeShape, UNIT } from "./polygon";

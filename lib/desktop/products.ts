@@ -18,13 +18,15 @@ import { clone, DEFAULTS, exportSVG, MATERIALS, mergeParams, type Params } from 
 import { HINGE_PRESETS, hingePresetParams } from "@/lib/hinge/presets";
 import { autoFixAll, sortIssues, type Issue } from "@/lib/issues";
 import { hingeIssues } from "@/lib/issues/hinge";
-import { BUNDLED_FONTS } from "@/lib/letters/fonts";
+import { BUNDLED_FONTS, FONT_CATEGORIES } from "@/lib/letters/fonts";
 import { addWatermark, FREE_PATTERNS, FREE_SHAPES, hingeLocks, needsWatermark, PATTERN_NAMES, SHAPE_NAMES, type Plan } from "@/lib/plans";
 import { generatorScene } from "@/lib/generators/scene3d";
 import { buildHingeScene } from "@/lib/hinge3d/scene";
 import type { Scene3D } from "@/lib/three/flat";
 import { sceneModel } from "./model3d";
 import type { DCatalog, D3Model, DesktopProductId, DField, DForm, DIssue, DProduct, DSection, GenerateRequest, GenerateResponse } from "./types";
+
+const FONTS_BY_STYLE = FONT_CATEGORIES.flatMap((c) => BUNDLED_FONTS.filter((f) => f.category === c.id));
 
 export const DESKTOP_PRODUCTS: DesktopProductId[] = ["hinge", ...GENERATOR_IDS];
 export const CATALOG_VERSION = 1;
@@ -125,7 +127,7 @@ function genField(f: FieldSpec<GenBase>): DField | null {
     case "choice": return { kind: "choice", ...common, options: f.options.map((o) => ({ v: o.v, text: o.text, ...(o.title ? { title: o.title } : {}), ...(o.pro ? { pro: true } : {}) })) };
     case "toggle": return { kind: "toggle", ...common };
     case "text": return { kind: "text", ...common, placeholder: f.placeholder, multiline: f.multiline, maxLength: f.maxLength ?? 2000 };
-    case "font": return { kind: "choice", ...common, options: BUNDLED_FONTS.map((b) => ({ v: b.id, text: b.name, title: b.note })) };
+    case "font": return { kind: "choice", ...common, options: FONTS_BY_STYLE.map((b) => ({ v: b.id, text: b.scripts.includes("arabic") ? `${b.name} (Persian)` : b.name, title: `${FONT_CATEGORIES.find((c) => c.id === b.category)?.name}: ${b.note}` })) };
     // Pictures are not offered in the desktop app yet.
     case "image": return null;
   }

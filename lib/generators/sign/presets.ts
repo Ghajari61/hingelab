@@ -52,21 +52,6 @@ export const SIGN_PRESETS: GenPreset<SignParams>[] = [
     },
   },
   {
-    id: "persian-welcome", name: "خوش آمدید", note: "Persian welcome on an arch with pomegranates",
-    params: {
-      name: "Persian welcome sign", board: { shape: "arch", auto: true, pad: 18 }, text: { text: "خوش آمدید", fontId: "lalezar", size: 46 },
-      motif: { kind: "pomegranate", side: "both", size: 64, gap: 10 }, border: { kind: "score", inset: 7 }, mount: { kind: "keyhole" },
-    },
-  },
-  {
-    id: "persian-home", name: "خانه ما", note: "Gold Persian letters layered on wood",
-    params: {
-      name: "Our home sign", style: { kind: "layered", weld: 0.8, join: false }, board: { shape: "scalloped", auto: true, pad: 24, corner: 0 },
-      text: { text: "خانه ما", fontId: "vazirmatn", size: 42 }, motif: { kind: "none" }, border: { kind: "none" }, mount: { kind: "hanging" },
-      mat: { mat2: "acrylic-gold", T2: 3 },
-    },
-  },
-  {
     id: "inlay-home", name: "Walnut inlay", note: "HOME inlaid flush in walnut on birch", pro: true,
     params: {
       name: "Inlay home sign", style: { kind: "inlay" }, board: { shape: "rounded", auto: true, pad: 22, corner: 8 },

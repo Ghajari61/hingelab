@@ -4,6 +4,7 @@ import { isMotifId } from "../motifs";
 import { isShapeKind, type ShapeKind } from "../shapes";
 import { SECOND_MATERIALS } from "../material2";
 import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
+import { TEXT_STYLE, cleanTextStyle, type TextStyle } from "../textStyle";
 import { mergeInto } from "../util";
 
 export type TableBuild = "stand" | "tent" | "plaque";
@@ -36,6 +37,7 @@ export interface TablenumParams extends GenBase {
     nameSize: number;
     mark: TableMark;
   };
+  textStyle: TextStyle;
   motif: { kind: string; place: TableMotifPlace; size: number; gap: number };
   border: { kind: "none" | "score" | "engrave"; inset: number };
   base: { layers: number; depth: number; width: number; step: number; corner: number };
@@ -60,6 +62,7 @@ export const TABLENUM_DEFAULTS: TablenumParams = {
   build: { kind: "stand", double: false },
   plate: { shape: "arch", auto: true, pad: 16, width: 110, height: 150, corner: 4 },
   text: { label: "Table", labelFont: "pacifico", labelSize: 18, labelBelow: false, fontId: "archivo-black", size: 60, spacing: 0, nameSize: 10, mark: "engrave" },
+  textStyle: { ...TEXT_STYLE },
   motif: { kind: "none", place: "above", size: 22, gap: 4 },
   border: { kind: "score", inset: 5 },
   base: { layers: 2, depth: 60, width: 90, step: 4, corner: 4 },
@@ -79,6 +82,7 @@ export function mergeTablenum(raw: unknown): TablenumParams {
   if (p.batch.mode !== "range" && p.batch.mode !== "list") p.batch.mode = d.batch.mode;
   if (p.batch.digits !== "latin" && p.batch.digits !== "persian") p.batch.digits = d.batch.digits;
   if (!BUILDS.includes(p.build.kind)) p.build.kind = d.build.kind;
+  p.textStyle = cleanTextStyle(p.textStyle);
   if (!MARKS.includes(p.text.mark)) p.text.mark = d.text.mark;
   if (!isShapeKind(p.plate.shape)) p.plate.shape = d.plate.shape;
   if (p.motif.kind !== "none" && !isMotifId(p.motif.kind)) p.motif.kind = "none";

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight, Award, Baby, Box, Cake, CheckCircle2, Clock, Download, FileDown, Gift, GraduationCap, Hash, Heart, KeyRound, Layers,
-  LayoutGrid, Moon, Package, Puzzle, QrCode, Ruler, ScanLine, Shapes, ShieldCheck, Signpost, Sparkles, Sprout, TreePine, Trophy,
+  LayoutGrid, Moon, Package, Puzzle, QrCode, Ruler, ScanLine, Shapes, ShieldCheck, Signpost, Sparkles, TreePine, Trophy,
   Type, Wand2, Wrench, type LucideIcon,
 } from "lucide-react";
 import { sceneSVG } from "@/components/editor/scene3d";
@@ -31,12 +31,12 @@ const ICON: Record<SiteIcon, LucideIcon> = {
 const OCCASIONS: { name: string; icon: LucideIcon; preset: string }[] = [
   { name: "Birthday", icon: Cake, preset: "happy-birthday" },
   { name: "Wedding", icon: Heart, preset: "mr-mrs" },
-  { name: "Nowruz", icon: Sprout, preset: "nowruz" },
   { name: "Eid & Ramadan", icon: Moon, preset: "eid-mubarak" },
   { name: "Graduation", icon: GraduationCap, preset: "graduation" },
   { name: "Baby shower", icon: Baby, preset: "baby-shower" },
   { name: "Christmas", icon: TreePine, preset: "merry-christmas" },
   { name: "Anniversary", icon: Gift, preset: "anniversary" },
+  { name: "Milestone ages", icon: Sparkles, preset: "number-30" },
 ];
 
 const STEPS = [

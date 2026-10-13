@@ -60,7 +60,7 @@ describe("AI designer menu", () => {
     }
     const text = productsText(menu);
     expect(text).toContain("## hinge: Hinge Box");
-    expect(text).toContain("persian-box");
+    expect(text).toContain("name-box");
     const hinge = fieldsText(menu.find((p) => p.id === "hinge")!);
     expect(hinge).toMatch(/^W \| number mm \d+\.\.\d+/m);
     expect(hinge).toContain("shape | one of: rect");
@@ -116,23 +116,23 @@ describe("AI designer", () => {
 
   it("sets Letters from the curated fields, clamped to their ranges", async () => {
     const { model } = mock(
-      { product: "letters", preset: "persian-box", name: "Salam letters", match: "exact", flat: false, brief: "Solid letters سلام 5 m tall" },
+      { product: "letters", preset: "name-box", name: "Salam letters", match: "exact", flat: false, brief: "Solid letters سلام 5 m tall" },
       { settings: [{ key: "text", value: "سلام" }, { key: "mode", value: "solid" }, { key: "size", value: "5000" }, { key: "fontId", value: "comic-sans" }], notes: [] },
     );
     const d = await designWithAI({ prompt: "سلام" }, "pro", "user-1", model);
     expect(d.product).toBe("letters");
-    expect(d.preset).toBe("persian-box");
+    expect(d.preset).toBe("name-box");
     expect(d.params.text).toBe("سلام");
     expect(d.params.mode).toBe("solid");
     expect(d.params.size).toBe(600);
-    expect(d.params.fontId).toBe("vazirmatn");
+    expect(d.params.fontId).toBe("fredoka");
     expect(d.summary).toContain("Solid letters");
     expect(d.notes.join(" ")).toContain("fontId");
     // The short link the desktop app opens carries only the chosen settings and fits its 512-character limit.
     expect(d.open?.startsWith(AI_OPEN_PREFIX)).toBe(true);
     expect(d.open!.length).toBeLessThanOrEqual(MAX_OPEN_PATH);
     const open = JSON.parse(Buffer.from(d.open!.slice(AI_OPEN_PREFIX.length), "base64url").toString("utf8"));
-    expect(open).toMatchObject({ product: "letters", preset: "persian-box", name: "Salam letters", params: { text: "سلام", mode: "solid", size: 600 } });
+    expect(open).toMatchObject({ product: "letters", preset: "name-box", name: "Salam letters", params: { text: "سلام", mode: "solid", size: 600 } });
   });
 
   it("shortens a long name so the Letters link still fits", async () => {
@@ -189,7 +189,7 @@ describe("AI designer", () => {
 
   it("edits Letters from their current settings", async () => {
     const first = await designWithAI({ prompt: "سلام" }, "pro", "user-1", mock(
-      { product: "letters", preset: "persian-box", name: "Salam", match: "exact", flat: false, brief: "Solid letters سلام" },
+      { product: "letters", preset: "name-box", name: "Salam", match: "exact", flat: false, brief: "Solid letters سلام" },
       { settings: [{ key: "text", value: "سلام" }, { key: "mode", value: "solid" }, { key: "size", value: "200" }], notes: [] },
     ).model);
     const d = await designWithAI({ prompt: "change the word to سارا", revise: reviseOf(first) }, "pro", "user-1", mock({ settings: [{ key: "text", value: "سارا" }], notes: [], name: "Sara letters" }).model);
@@ -283,7 +283,7 @@ describe("AI designer", () => {
     const near = mock({ product: "boxes", preset: "phone-stand", name: "Phone stand", match: "close", flat: false, brief: "A circular phone stand" }, art(), reviewed);
     expect((await designWithAI({ prompt: "circle Phone stand" }, "pro", "user-1", near.model)).product).toBe("art");
     expect(JSON.stringify(near.calls[0].prompt)).not.toContain("## sign:");
-    const templated = mock({ product: "sign", preset: "persian-home", name: "Home sign", match: "exact", flat: false, brief: "Wall sign خانه ما" }, art(), reviewed);
+    const templated = mock({ product: "sign", preset: "welcome-arch", name: "Home sign", match: "exact", flat: false, brief: "Wall sign خانه ما" }, art(), reviewed);
     const d = await designWithAI({ prompt: "تابلوی خانه ما" }, "pro", "user-1", templated.model);
     expect(d.product).toBe("art");
     expect(JSON.stringify(templated.calls[1].prompt)).toContain("Wall sign خانه ما");

@@ -21,13 +21,6 @@ export const KEYRACK_PRESETS: GenPreset<KeyrackParams>[] = [
     },
   },
   {
-    id: "persian-home", name: "خانه", note: "Persian lettering on an arch with brass-look hooks",
-    params: {
-      name: "Persian key holder", board: { shape: "arch", width: 220, height: 170 }, text: { text: "خانه", fontId: "lalezar", size: 34, y: 42 },
-      motif: { kind: "none" }, hooks: { count: 3, profile: "ball", y: 80, margin: 40 }, mount: { kind: "keyhole", y: 24 },
-    },
-  },
-  {
     id: "shelf-organiser", name: "Keys and mail", note: "Hooks below and a shelf on top for post and phones", pro: true,
     params: {
       name: "Key and mail organiser", board: { shape: "rect", width: 320, height: 180, corner: 6 }, text: { text: "Keys & Mail", fontId: "archivo-black", size: 16, y: 52 },

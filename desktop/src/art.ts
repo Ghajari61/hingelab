@@ -14,11 +14,11 @@ export const onlineArt = (product: string, preset: string): string | undefined =
 
 const FEATURED: Record<string, string[]> = {
   hinge: ["wave-box", "hex-jewel", "card-box"],
-  clock: ["persian", "sunburst", "gear"],
+  clock: ["sunburst", "station", "gear"],
   puzzle: ["heart-24", "round-36", "kids-12"],
   qr: ["coaster", "wifi-card", "table-sign"],
   boxes: ["bird-house", "phone-stand", "organiser"],
-  topper: ["happy-birthday", "mr-mrs", "nowruz"],
+  topper: ["happy-birthday", "mr-mrs", "eid-mubarak"],
   keyrack: ["home-sweet-home", "house-hooks", "family-keys"],
   sign: ["welcome-arch", "layered-name", "cafe-hanging"],
   tablenum: ["wedding-arch", "number-stand", "round-acrylic"],

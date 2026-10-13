@@ -75,14 +75,6 @@ export const TROPHY_PRESETS: GenPreset<TrophyParams>[] = [
     },
   },
   {
-    id: "persian-champion", name: "جام قهرمانی", note: "A cup with a Persian name plate",
-    params: {
-      name: "Persian champion cup", emblem: { kind: "cup", width: 110, height: 100, text: "" },
-      plate: { title: "قهرمان", name: "تیم آبی", year: "۱۴۰۵", fontId: "vazirmatn", titleFont: "lalezar", titleSize: 12, nameSize: 9, width: 90 },
-      stem: { height: 0 }, base: { tiers: 3, width: 120, depth: 64, step: 6 },
-    },
-  },
-  {
     id: "graduation", name: "Graduation", note: "A cap over the graduate's name",
     params: {
       name: "Graduation award", emblem: { kind: "motif", motif: "cap", width: 120, height: 80, text: "" },

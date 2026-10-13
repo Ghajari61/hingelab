@@ -60,7 +60,7 @@ const TEMPLATED = new Set<AIProduct>(["sign", "trophy", "topper", "keyrack", "ta
 /** Flat presets of the engineered products (signs, stands, frames, stencils); drawn instead too. */
 const FLAT_PRESETS: Partial<Record<AIProduct, Set<string>>> = {
   boxes: new Set(["desk-sign", "name-plate", "office-sign", "frame-10x15", "frame-square", "phone-stand", "tablet-stand", "key-holder"]),
-  letters: new Set(["script-sign", "year-sign", "hello-sign", "salam-sign", "open-stencil", "bar-stencil"]),
+  letters: new Set(["script-sign", "year-sign", "hello-sign", "open-stencil", "bar-stencil"]),
 };
 /** Engineered products that are right for flat things too. */
 const FLAT_OK = new Set<AIProduct>(["art", "parametric", "puzzle", "qr", "clock"]);

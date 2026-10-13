@@ -369,7 +369,7 @@ export const ARTICLES: HelpArticle[] = [
     fields: [{ product: "letters", secs: ["text"] }],
     blocks: [
       { list: [
-        "Fonts cover Latin, Persian and Arabic. If your font has no glyph for a letter, the check suggests a font that has.",
+        "More than 50 free fonts, grouped as Sans, Rounded, Serif, Script, Display, Stencil and Calligraphy, with a Persian filter for fonts that cover Persian and Arabic. Search by name, and every font shows your own text. If your font has no glyph for a letter, the check suggests a font that has.",
         "Upload your own font (TTF or OTF); it stays on this device.",
         "Size measures: Cap height measures a capital letter such as H; Total height measures the whole text, ascenders and descenders included.",
         "Weld: Whole word joins letters that touch into one piece; Each letter keeps every letter separate.",
@@ -413,7 +413,7 @@ export const ARTICLES: HelpArticle[] = [
     slug: "letters-solid", product: "letters", title: "Solid letters",
     summary: "Each letter as a flat piece; Weld dots joins dots and accents to their word.",
     keywords: ["solid", "sign", "weld dots", "accents"],
-    images: [preset("letters", "salam-sign", "Solid Persian letters")],
+    images: [preset("letters", "script-sign", "Solid script letters")],
     fields: [{ product: "letters", secs: ["solid"] }],
     blocks: [
       { p: "Solid cuts each letter shape as a flat piece, with counters as inner cuts. Weld dots joins every separate piece of a word, dots and accents included, with small bridges, so each word cuts as one part." },
@@ -442,7 +442,7 @@ export const ARTICLES: HelpArticle[] = [
       { list: [
         "Bold, rounded fonts make the strongest letter boxes; thin serifs are hard to wrap with a hinge.",
         "Thicken by 0.3 to 1 mm helps thin fonts survive cutting.",
-        "For Persian and Arabic, pick Vazirmatn or another font that covers the script; joined letters stay joined.",
+        "For Persian and Arabic, pick a font from the Persian filter of the font list; joined letters stay joined, and numbers and English words inside Persian text keep their order.",
         "In a letter box, cut flat dots and accents and glue them on the lid, or tick Stack to full height.",
         "Use two bridges for large stencils so the centres do not twist.",
       ] },

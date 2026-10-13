@@ -7,6 +7,7 @@ import { dropSpecks, makeShape, offsetShapes, shapeContours, unionShapes } from 
 import type { Shape } from "@/lib/letters/types";
 import { bboxOf, distToContour, stadium, transform } from "./geom";
 import { orient } from "./shapes";
+import { caseText, isPlainStyle, styleContours, type TextStyle } from "./textStyle";
 import type { BuildContext, Contour, Pt } from "./types";
 
 export interface TextBlock {
@@ -26,18 +27,20 @@ export interface TextBlockOptions {
   spacing?: number;
   /** Characters the font lacks are added here. */
   missing?: string[];
+  /** Case, slant, width, thickening and curve (the defaults change nothing). */
+  style?: Partial<TextStyle>;
 }
 
 /** Lines of text (split on new lines) set as one block, centred on (0, 0). */
 export function textBlock(ctx: BuildContext, text: string, fontId: string, size: number, o: TextBlockOptions = {}): TextBlock {
-  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const lines = caseText(text, o.style?.case).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   if (!lines.length) return { contours: [], width: 0, height: 0, loading: false };
   if (!ctx.text) return { contours: [], width: 0, height: 0, loading: true };
   const lead = size * (o.lead ?? 1.35);
   const shaped = lines.map((l) => ctx.text!(l, fontId, size, o.spacing ?? 0));
   if (shaped.some((t) => !t)) return { contours: [], width: 0, height: 0, loading: true };
   const width = Math.max(...shaped.map((t) => t!.width));
-  const cs: Contour[] = [];
+  let cs: Contour[] = [];
   shaped.forEach((t, k) => {
     for (const c of t!.missing) if (o.missing && !o.missing.includes(c)) o.missing.push(c);
     const dx = o.align === "left" ? (t!.width - width) / 2 : o.align === "right" ? (width - t!.width) / 2 : 0;
@@ -45,6 +48,12 @@ export function textBlock(ctx: BuildContext, text: string, fontId: string, size:
     for (const c of t!.contours) cs.push(c.map(([x, y]) => [x + dx, y + dy] as Pt));
   });
   if (!cs.length) return { contours: [], width: 0, height: 0, loading: false };
+  if (!isPlainStyle(o.style)) {
+    const b0 = bboxOf(cs);
+    const mx = (b0.x0 + b0.x1) / 2, my = (b0.y0 + b0.y1) / 2;
+    cs = styleContours(cs.map((c) => c.map(([x, y]) => [x - mx, y - my] as Pt)), o.style!);
+    if (!cs.length) return { contours: [], width: 0, height: 0, loading: false };
+  }
   const b = bboxOf(cs);
   const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
   return { contours: cs.map((c) => c.map(([x, y]) => [x - cx, y - cy] as Pt)), width: b.x1 - b.x0, height: b.y1 - b.y0, loading: false };

@@ -310,7 +310,7 @@ function TextFields({ t, units, onResetToast, onChange }: {
 }) {
   return (
     <div className="grp" data-testid="text-fields">
-      <Select label="Font" hideLabel value={t.font} options={BUNDLED_FONTS.map((f) => ({ value: f.id, label: f.name }))} onChange={(font) => onChange("Font", { font }, true)} testId="text-font" />
+      <Select label="Font" hideLabel value={t.font} options={BUNDLED_FONTS.map((f) => ({ value: f.id, label: f.scripts.includes("arabic") ? `${f.name} (Persian)` : f.name }))} onChange={(font) => onChange("Font", { font }, true)} testId="text-font" />
       <NumberInput label="Size" value={t.size} length min={0.5} max={2000} defaultValue={DEFAULT_TEXT.size} units={units} onResetToast={onResetToast} onChange={(size, c) => onChange("Font Size", { size }, c)} testId="text-size" />
       <NumberInput label="Tracking" value={t.tracking} min={-500} max={2000} step={10} defaultValue={0} onResetToast={onResetToast} onChange={(tracking, c) => onChange("Tracking", { tracking }, c)} testId="text-tracking" />
       <NumberInput label="Leading" value={t.lineHeight} min={0.5} max={5} step={0.05} defaultValue={DEFAULT_TEXT.lineHeight} suffix="×" onResetToast={onResetToast} onChange={(lineHeight, c) => onChange("Leading", { lineHeight }, c)} testId="text-leading" />

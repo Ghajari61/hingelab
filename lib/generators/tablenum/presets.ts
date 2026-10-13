@@ -43,13 +43,6 @@ export const TABLENUM_PRESETS: GenPreset<TablenumParams>[] = [
     },
   },
   {
-    id: "persian-wedding", name: "میز عروسی", note: "Persian digits and label on arches with a flower",
-    params: {
-      name: "Persian table numbers", batch: { from: 1, to: 6, digits: "persian" }, plate: { shape: "arch", pad: 14 },
-      text: { label: "میز", labelFont: "lalezar", labelSize: 22, fontId: "lalezar", size: 60 }, motif: { kind: "flower", place: "above", size: 24, gap: 4 },
-    },
-  },
-  {
     id: "named-tables", name: "Named tables", note: "Flower names instead of numbers",
     params: {
       name: "Named tables", batch: { mode: "list", list: "Rose\nLily\nTulip\nDaisy" }, plate: { shape: "rounded", pad: 12, corner: 8 },
