@@ -308,6 +308,7 @@ export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: str
 
   let changes: { key: string; value: unknown }[] = [];
   let notes: string[] = [];
+  const refused: string[] = [];
   if (product.fields.length) {
     try {
       const start = product.id === "letters"
@@ -315,7 +316,12 @@ export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: str
         : (await designFromChanges(product.id as DesktopProductId, preset, [], from)).params;
       const out = await settings(req, product, choice.brief, start, ask, from ? name : undefined);
       if (out.name.trim()) name = cleanName(out.name, name);
-      changes = out.settings.slice(0, 60).map((s) => ({ key: s.key, value: valueOf(s.value, product.fields.find((f) => f.key === s.key)) }));
+      // Only the settings and options the model was offered: a Custom shape needs an outline it cannot draw.
+      changes = out.settings.slice(0, 60).flatMap((s) => {
+        const f = product.fields.find((x) => x.key === s.key);
+        if (!f || (f.kind === "choice" && !f.options.some((o) => o.v === s.value.trim()))) { refused.push(s.key); return []; }
+        return [{ key: s.key, value: f.kind === "choice" ? s.value.trim() : valueOf(s.value, f) }];
+      });
       notes = out.notes.slice(0, 2).map((n) => n.slice(0, 240));
     } catch (e) {
       console.error("ai design: settings failed", e);
@@ -337,12 +343,12 @@ export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: str
   if (product.id === "letters") {
     const r = buildLetters(preset, changes, name, from);
     const open = r.error ? undefined : openLink("letters", preset, name, r.params);
-    return { ...base, preset, params: r.params, summary: r.summary, notes: [...notes, ...ignoredNote(r.skipped)], ...(r.error ? { error: r.error } : {}), ...(open ? { open } : {}) };
+    return { ...base, preset, params: r.params, summary: r.summary, notes: [...notes, ...ignoredNote([...refused, ...r.skipped])], ...(r.error ? { error: r.error } : {}), ...(open ? { open } : {}) };
   }
   const r = await buildDesktopProduct(product.id as DesktopProductId, preset, changes, name, plan, from);
   const fixed = r.applied.length ? [`Fixed automatically: ${r.applied.slice(0, 4).join("; ")}.`] : [];
   return {
-    ...base, preset, params: r.params, summary: r.summary, notes: [...notes, ...ignoredNote(r.skipped), ...fixed],
+    ...base, preset, params: r.params, summary: r.summary, notes: [...notes, ...ignoredNote([...refused, ...r.skipped]), ...fixed],
     ...(r.svg ? { svg: r.svg, width: r.width, height: r.height } : {}),
     ...(r.locked ? { locked: r.locked } : {}), ...(r.error ? { error: r.error } : {}), ...(r.stats?.length ? { stats: r.stats } : {}),
   };

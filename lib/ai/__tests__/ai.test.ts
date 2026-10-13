@@ -114,6 +114,24 @@ describe("AI designer", () => {
     expect(d.notes.join(" ")).toContain("nope.key");
   });
 
+  it("never picks a Custom shape, whose outline the model cannot draw", async () => {
+    const menu = await aiMenu();
+    for (const [id, key] of [["puzzle", "shape.kind"], ["clock", "face.shape"], ["trophy", "emblem.kind"]] as const) {
+      const f = menu.find((p) => p.id === id)!.fields.find((x) => x.key === key)!;
+      expect(f.kind === "choice" && f.options.map((o) => o.v), `${id} ${key}`).not.toContain("custom");
+    }
+    const { model } = mock(
+      { product: "puzzle", preset: "kids-12", name: "California map puzzle", match: "exact", flat: false, brief: "California-shaped puzzle 280 mm" },
+      { settings: [{ key: "shape.kind", value: "custom" }, { key: "shape.path", value: "M 0 0 C" }, { key: "shape.width", value: "280" }], notes: [] },
+    );
+    const d = await designWithAI({ prompt: "California map puzzle" }, "pro", "user-1", model);
+    expect(d.error).toBeUndefined();
+    expect((d.params.shape as { kind: string }).kind).not.toBe("custom");
+    expect((d.params.shape as { width: number }).width).toBe(280);
+    expect(d.svg).toMatch(/^<\?xml|^<svg/);
+    expect(d.notes.join(" ")).toContain("shape.kind");
+  });
+
   it("sets Letters from the curated fields, clamped to their ranges", async () => {
     const { model } = mock(
       { product: "letters", preset: "name-box", name: "Salam letters", match: "exact", flat: false, brief: "Solid letters سلام 5 m tall" },

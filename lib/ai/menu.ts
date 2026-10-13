@@ -41,7 +41,16 @@ const SKIP = new Set(["T", "K", "bedW", "bedH", "gap", "sheet.nest", "sheet.labe
 /** Long text fields hold drawn outlines (SVG path data), which the model should not write. */
 const isOutline = (f: DField) => f.kind === "text" && (/path$/i.test(f.key) || f.maxLength > 5000);
 
-const usable = (p: DProduct): DField[] => p.sections.flatMap((s) => s.fields).filter((f) => !SKIP.has(f.key) && !isOutline(f));
+const group = (key: string) => key.replace(/\.[^.]+$/, "");
+
+/** The product's settings without the skipped and outline fields, and without the Custom choice that needs an outline. */
+function usable(p: DProduct): DField[] {
+  const all = p.sections.flatMap((s) => s.fields);
+  const drawn = new Set(all.filter(isOutline).map((f) => group(f.key)));
+  return all
+    .filter((f) => !SKIP.has(f.key) && !isOutline(f))
+    .map((f) => (f.kind === "choice" && drawn.has(group(f.key)) ? { ...f, options: f.options.filter((o) => o.v !== "custom") } : f));
+}
 
 let cached: Promise<MenuProduct[]> | null = null;
 
