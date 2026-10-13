@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useStore } from "zustand";
-import { AlignCenterHorizontal, Braces, FileText, Flame, History, Layers, LayoutGrid, RotateCw, Search, SlidersHorizontal, Sparkles, SquaresUnite, Wand2 } from "lucide-react";
+import { AlignCenterHorizontal, Braces, FileText, Flame, History, Layers, LayoutGrid, RotateCw, Search, SlidersHorizontal, Sparkles, SquaresUnite, Wand2, WandSparkles } from "lucide-react";
 import { LogoMark } from "@/components/site/LogoMark";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { ContextMenu, Dock, MenuBar, PanelSection, Toolbar, isMac, useToast, type MenuItem } from "@/components/ui";
@@ -48,10 +48,11 @@ import { Dialog } from "@/components/ui";
 const PANEL_ICONS: Record<PanelId, ReactNode> = {
   properties: <SlidersHorizontal size={16} />, layers: <Layers size={16} />, cutLayers: <Flame size={16} />,
   align: <AlignCenterHorizontal size={16} />, pathfinder: <SquaresUnite size={16} />, history: <History size={16} />, document: <FileText size={16} />, liveEffects: <Sparkles size={16} />,
-  inspector: <Braces size={16} />,
+  inspector: <Braces size={16} />, aiStudio: <WandSparkles size={16} />,
 };
 
 const TraceDialog = dynamic(() => import("./TraceDialog").then((m) => m.TraceDialog), { ssr: false });
+const AIStudioPanel = dynamic(() => import("./ai/AIStudioPanel").then((m) => m.AIStudioPanel), { ssr: false, loading: () => <p className="dlg-note" style={{ padding: 12 }}>Loading AI Studio…</p> });
 
 type SaveState = "saved" | "saving" | "error";
 type DialogId = EditorDialog | "revert";
@@ -133,7 +134,9 @@ function EditorShell({ opened }: { opened: Document }) {
 
   useEffect(() => {
     setKeymapState(loadKeymap());
-    setWs(loadWorkspaces());
+    const loaded = loadWorkspaces(), panel = new URLSearchParams(window.location.search).get("panel");
+    if (panel && panel in PANEL_LABELS) loaded.layouts[loaded.current] = showPanel(loaded.layouts[loaded.current], panel as PanelId);
+    setWs(loaded);
     const on = (e: Event) => setKeymapState((e as CustomEvent<Keymap>).detail);
     window.addEventListener("hingelab-keymap", on);
     return () => window.removeEventListener("hingelab-keymap", on);
@@ -298,6 +301,11 @@ function EditorShell({ opened }: { opened: Document }) {
       case "document": return <DocumentPanel toast={toast} />;
       case "liveEffects": return <LiveEffectsPanel toast={toast} />;
       case "inspector": return <InspectorPanel toast={toast} />;
+      case "aiStudio": return (
+        <AIStudioPanel toast={toast} notify={toastAction} viewCenter={() => canvasRef.current?.center() ?? { x: 0, y: 0 }}
+          beforeLeave={async () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } await persist(api.getState().doc); }}
+          preflight={(ids, label, cut) => runPreflight(api, toastAction, ids, label, cut)} />
+      );
     }
   };
   const dockTabs = [

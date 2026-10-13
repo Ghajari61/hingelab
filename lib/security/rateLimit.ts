@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { STUDIO_DAILY } from "@/lib/ai/studio/credits";
 import { memoryLimiter, type LimitResult, type LimitRule } from "./limiter";
 
 export type { LimitResult, LimitRule };
@@ -23,6 +24,10 @@ export const LIMITS = {
   aiDesign: { name: "ai-design", limit: 6, windowSec: 600 },
   aiDesignDayFree: { name: "ai-design-day-free", limit: 10, windowSec: 86_400 },
   aiDesignDayPro: { name: "ai-design-day-pro", limit: 60, windowSec: 86_400 },
+  /** AI Studio: a burst limit per request, and daily credits per plan (a job spends its cost in credits). */
+  aiStudio: { name: "ai-studio", limit: 30, windowSec: 600 },
+  aiStudioDayFree: { name: "ai-studio-day-free", limit: STUDIO_DAILY.free, windowSec: 86_400 },
+  aiStudioDayPro: { name: "ai-studio-day-pro", limit: STUDIO_DAILY.pro, windowSec: 86_400 },
 } satisfies Record<string, LimitRule>;
 
 const memory = memoryLimiter();

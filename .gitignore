@@ -12,6 +12,7 @@ public/hb
 next-env.d.ts
 .next-e2e
 .next-qa*
+.next-dev
 public/manifold
 public/ort
 public/models/**/*.onnx

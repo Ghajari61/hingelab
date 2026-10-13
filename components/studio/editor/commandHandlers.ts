@@ -596,7 +596,7 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   set("view.presentation", () => { st().setUi({ presentation: !st().ui.presentation }); requestAnimationFrame(() => ctx.canvas()?.fit("artboard")); }, true, undefined, s.ui.presentation);
   for (const t of ["dark", "darker", "light", "system"] as const) set(`view.theme.${t}`, () => ctx.setTheme(t), true, undefined, ctx.theme === t);
   // Window
-  const panels: [string, PanelId][] = [["properties", "properties"], ["layers", "layers"], ["cutLayers", "cutLayers"], ["align", "align"], ["pathfinder", "pathfinder"], ["history", "history"], ["document", "document"], ["liveEffects", "liveEffects"], ["inspector", "inspector"]];
+  const panels: [string, PanelId][] = [["properties", "properties"], ["layers", "layers"], ["cutLayers", "cutLayers"], ["align", "align"], ["pathfinder", "pathfinder"], ["history", "history"], ["document", "document"], ["liveEffects", "liveEffects"], ["inspector", "inspector"], ["aiStudio", "aiStudio"]];
   for (const [id, p] of panels) set(`window.panel.${id}`, () => ctx.showPanel(p));
   for (const w of ["essentials", "laser", "typography", "minimal"]) set(`window.workspace.${w}`, () => ctx.setWorkspace(w), true, undefined, ctx.workspace === w);
   set("window.workspace.reset", ctx.resetWorkspace);

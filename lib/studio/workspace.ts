@@ -2,12 +2,12 @@
  * Workspaces (spec §4.2): which panels the dock shows, in what order, which is open, and the dock and
  * toolbar layout. Built-ins can be changed by the user; "Reset workspace" restores the built-in layout.
  */
-export const PANEL_IDS = ["properties", "layers", "cutLayers", "align", "pathfinder", "history", "document", "liveEffects", "inspector"] as const;
+export const PANEL_IDS = ["properties", "layers", "cutLayers", "align", "pathfinder", "history", "document", "liveEffects", "inspector", "aiStudio"] as const;
 export type PanelId = (typeof PANEL_IDS)[number];
 
 export const PANEL_LABELS: Record<PanelId, string> = {
   properties: "Properties", layers: "Layers", cutLayers: "Cut Layers", align: "Align", pathfinder: "Pathfinder", history: "History", document: "Document", liveEffects: "Effects",
-  inspector: "Structure",
+  inspector: "Structure", aiStudio: "AI Studio",
 };
 
 export interface Workspace {
@@ -24,7 +24,7 @@ export interface Workspace {
 }
 
 export const WORKSPACES: Workspace[] = [
-  { id: "essentials", label: "Essentials", panels: ["properties", "layers", "cutLayers", "align", "pathfinder", "history", "document"], active: "properties", dockWidth: 320, toolbarColumns: 2, dockCollapsed: false, swatchBar: true },
+  { id: "essentials", label: "Essentials", panels: ["properties", "layers", "cutLayers", "align", "pathfinder", "history", "document", "aiStudio"], active: "properties", dockWidth: 320, toolbarColumns: 2, dockCollapsed: false, swatchBar: true },
   { id: "laser", label: "Laser Production", panels: ["cutLayers", "layers", "properties", "pathfinder", "document", "history"], active: "cutLayers", dockWidth: 320, toolbarColumns: 2, dockCollapsed: false, swatchBar: true },
   { id: "typography", label: "Typography", panels: ["properties", "layers", "history"], active: "properties", dockWidth: 320, toolbarColumns: 2, dockCollapsed: false, swatchBar: true },
   { id: "minimal", label: "Minimal", panels: ["properties", "layers"], active: "properties", dockWidth: 260, toolbarColumns: 1, dockCollapsed: false, swatchBar: false },

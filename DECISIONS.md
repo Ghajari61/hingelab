@@ -966,3 +966,16 @@ The owner asked to remove every Persian preset, template, sample and motif while
 - **Eid and Ramadan.** The topper presets `eid-mubarak` and `ramadan-plate` use Latin text and stay. None of the remaining presets has Arabic-script text.
 - **Kept.** The Persian fonts, the font list's Persian filter and "(Persian)" labels (to help find a font for typed text), HarfBuzz shaping, right-to-left text in the Studio, and the missing-glyph checks that suggest Vazirmatn when Arabic-script text is typed.
 - **Copy.** Generator blurbs, help, product cards and the AI designer prompts no longer mention Persian, Nowruz or Persian digits. Preset counts on the site come from the preset data.
+
+## D148. AI Studio panel
+
+The owner asked for an AI image and design toolkit inside the editor, with our own names and UI.
+
+- **Where.** A Studio dock panel `aiStudio` (Window → AI Studio, in the Essentials layout), `/home?new=ai` (a new project with the panel open, also the desktop's AI Studio tile) and the `?panel=` query on any editor URL.
+- **Local first.** Adjust, enhance, upscale, quick cutout, line art, cartoon, engraving dithering (Floyd–Steinberg, Jarvis, Stucki, Atkinson, ordered, halftone), vectorize, depth and relief run in the browser in a Web Worker (`lib/imaging`). They cost no credits and work signed out.
+- **Cloud.** Text to image, image to image, AI cutout, Redraw (inpainting) and Creative Expand (outpainting) go through `/api/ai/studio/image`; the Assistant through `/api/ai/studio/assistant`. Keys stay on the server. `lib/ai/providers` picks the AI Gateway or OpenAI and falls back to the next provider on errors but not on refusals. Model sizes are fixed, so pictures are padded to the nearest shape and cropped back (`lib/imaging/frame.ts`).
+- **Credits.** Free 12 and Pro 150 credits a day, spent through the existing rate limiter before the model call. The panel shows the allowance and a local count of what was used, because the limiter cannot be read back.
+- **Jobs.** Two at a time with progress and cancel. History is per project in local storage (40 jobs, pictures stripped); Again and Edit prompt re-run a job. Redraw and Expand re-open their dialog, because the brush mask is not kept.
+- **Cut safety.** Every vector result is checked against the material's thinnest safe part, the bed and loose pieces. Each issue has a fix and there is Fix all; fixes are sent to the worker as settings because functions cannot cross it. Placed results also run the normal preflight.
+- **Generators.** Toppers, signs and lamp panels are built in the Studio (`lib/ai/studio/layouts.ts`). Trophy, clock and puzzle open their editor with partial params through the start handoff; stacked relief opens Parametric with the photo.
+- **Geometry.** No generator math changed. The Hinge Box golden test is unchanged.

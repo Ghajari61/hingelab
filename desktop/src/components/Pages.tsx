@@ -36,6 +36,7 @@ const ONLINE_TILES: { id: string; name: string; blurb: string; art: [string, str
   { id: "letters", name: "Letters", blurb: "Letter boxes, solid and stencil letters in any script.", art: ["letters", "hello-sign"], section: "web-editors", path: "/app/editor/local?p=letters" },
   { id: "parametric", name: "Parametric Slicer", blurb: "Sliced sculptures from 3D files, photos or formulas.", art: ["parametric", "head-stack"], section: "web-editors", path: "/app/editor/local?p=parametric" },
   { id: "studio", name: "Studio", blurb: "Lay out designs, text and images on one sheet, plus trays, lamps, finger-joint boxes and test cards.", art: ["boxes", "organiser"], section: "web-studio", path: "/home" },
+  { id: "ai-studio", name: "AI Studio", blurb: "Pictures from words, photo clean-up, engraving, vectorizing with cut checks and an assistant, in a new Studio project.", art: ["sign", "layered-name"], section: "web-studio", path: "/home?new=ai" },
 ];
 
 export function Dashboard({ account, catalog, recent, defaultProduct, onNew, onPreset, onBrowse, onOpenRecent, onUpgrade, onOnline }: {

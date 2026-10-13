@@ -104,7 +104,37 @@ export const ARTICLES: HelpArticle[] = [
         "Free accounts get 10 AI designs a day and Pro accounts 60. Designs that use Pro shapes or generators still need Pro to preview and export.",
       ] },
     ],
-    related: ["getting-started", "presets", "checks-and-fixes"],
+    related: ["ai-studio", "getting-started", "presets", "checks-and-fixes"],
+  },
+  {
+    slug: "ai-studio", product: "general", title: "AI Studio",
+    summary: "Make pictures from words, clean up photos, prepare engravings and cut-ready outlines, and ask the assistant, all inside a Studio project.",
+    keywords: ["ai", "ai studio", "text to image", "image to image", "sketch", "dither", "engrave photo", "vectorize", "upscale", "cutout", "remove background", "inpaint", "outpaint", "depth", "relief", "assistant", "chat", "credits"],
+    blocks: [
+      { p: "Open a Studio project and pick AI Studio in the panel dock (or Window → AI Studio). In the Windows app, the AI Studio tile on the dashboard opens a new project with the panel showing." },
+      { h: "Create", list: [
+        "Text to image: describe the picture, pick a style (line art, flat vector, engraving hatch, woodcut, stencil, mandala, silhouette, sticker or layered) and the shape. The picture lands on the canvas as an image object.",
+        "Image to design: select a picture or a photo of a hand sketch and the model redraws it in the chosen style.",
+        "Design kits fill in the words for you (cake topper, pet coaster, door sign, trophy emblem, lantern pattern, kids' puzzle, mandala set, layered wall art) and take the result to the next step.",
+      ] },
+      { h: "Image", list: [
+        "Smart Adjust suggests black point, white point and mid-tones for the selected image; change them and apply. Auto enhance and Upscale 2× or 4× sharpen and enlarge it.",
+        "Cutout removes the background: Quick works on a plain background, AI cutout on any. Image Redraw repaints a part you brush over; Creative Expand adds room around the picture.",
+        "Line art, Portrait outline and Cartoon turn a photo into lines or flat colour areas.",
+      ] },
+      { h: "Laser", list: [
+        "Photo to engraving dithers the image for wood, acrylic, leather, slate or anodised aluminium (Floyd–Steinberg, Jarvis, Stucki, Atkinson, ordered or halftone) and can set the engrave layer's power, speed and line interval from the material library.",
+        "Vectorize with cut check traces the image with smoothing, a thinnest-part limit and bridges, then checks it against your material and machine: parts too thin, loose pieces, stencil pockets and a design bigger than the bed are listed with fixes, and Fix all applies the safe ones.",
+        "The same dialog makes a cake topper with its stake, a sign board with hanging holes, a perforated lamp panel, or opens the Trophy, Clock or Puzzle generator with the art.",
+        "Depth map and Stacked relief read the depth of a photo on this computer and cut it into sheets to glue in a stack; Open as a 3D relief hands the photo to Parametric.",
+      ] },
+      { h: "Assistant, jobs and credits", list: [
+        "The assistant knows the project's material, machine and layers. It suggests power and speed from the material library, makes finished designs (“a 120 mm hinge box with my name on the lid”) and prepares pictures; nothing changes until you press Apply.",
+        "Every job shows its progress in Jobs, where you can cancel it, select its result, run it again or change its prompt. Results are ordinary objects, so Ctrl+Z undoes them.",
+        "Tools that run on this computer are free. Cloud tools (pictures, redraw, expand, AI cutout and the assistant) use credits: 12 a day on the free plan and 150 on Pro. Sign in to use them.",
+      ] },
+    ],
+    related: ["ai-designer", "checks-and-fixes"],
   },
   {
     slug: "undo-and-reset", product: "general", title: "Undo, redo and reset",

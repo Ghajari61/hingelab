@@ -57,7 +57,12 @@ export default function StartScreen() {
     const g = p.get("generator");
     if (g && GENERATORS.some((x) => x.id === g)) setGen(g);
     else if (p.get("new") === "blank") setBlank(true);
-  }, []);
+    else if (p.get("new") === "ai") {
+      void listLocalProjects().then((l) => createLocalProject({ name: uniqueName("AI Studio project", l.map((x) => x.name)) }))
+        .then((id) => router.replace(editorPath(id, "aiStudio")))
+        .catch((e) => toast({ message: e instanceof Error ? e.message : "The project could not be created.", kind: "danger" }));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

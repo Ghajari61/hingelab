@@ -323,6 +323,7 @@ export const COMMANDS: CommandDef[] = [
   c("window.panel.document", "Document", "Window"),
   c("window.panel.liveEffects", "Live Effects", "Window", undefined, { inkscape: ["Ctrl+&"] }, "Non-destructive effects on the selected path: corners, offset, hatches, copies, mirror, living hinge", "path effects lpe editor"),
   c("window.panel.inspector", "Structure Inspector", "Window", undefined, { inkscape: ["Ctrl+Shift+X"] }, "Read-only tree of the selected objects: type, id, layer, transform, effects", "xml editor inspector structure json debug tree"),
+  c("window.panel.aiStudio", "AI Studio", "Window", undefined, undefined, "Make pictures from text, clean up photos, prepare engravings, vectorize with cut checks and ask the assistant", "ai artificial intelligence generate image text to image dither engrave photo vectorize upscale cutout background remove inpaint outpaint assistant chat"),
   c("window.workspace.essentials", "Essentials", "Window"),
   c("window.workspace.laser", "Laser Production", "Window"),
   c("window.workspace.typography", "Typography", "Window"),
@@ -399,7 +400,7 @@ export const MENUS: MenuDef[] = [
     { label: "Theme", items: ["view.theme.dark", "view.theme.darker", "view.theme.light", "view.theme.system"] },
   ] },
   { id: "window", label: "Window", items: [
-    "window.panel.properties", "window.panel.layers", "window.panel.cutLayers", "window.panel.align", "window.panel.history", "window.panel.document", "window.panel.liveEffects", "window.panel.inspector", "-",
+    "window.panel.properties", "window.panel.layers", "window.panel.cutLayers", "window.panel.align", "window.panel.history", "window.panel.document", "window.panel.liveEffects", "window.panel.inspector", "window.panel.aiStudio", "-",
     { label: "Workspace", items: ["window.workspace.essentials", "window.workspace.laser", "window.workspace.typography", "window.workspace.minimal", "-", "window.workspace.reset"] }, "-",
     "window.palette",
   ] },
