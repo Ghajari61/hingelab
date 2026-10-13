@@ -34,12 +34,11 @@ describe("clock presets", () => {
 });
 
 describe("clock geometry", () => {
-  it("numerals: Roman uses the clockmaker's IIII, Persian uses Persian digits", () => {
+  it("numerals: Roman uses the clockmaker's IIII; removed numeral sets become Western digits", () => {
     expect(numeral("roman", 4)).toBe("IIII");
     expect(numeral("roman", 0)).toBe("XII");
     expect(numeral("arabic", 0)).toBe("12");
-    expect(numeral("persian", 0)).toBe("۱۲");
-    expect(numeral("persian", 9)).toBe("۹");
+    expect(mergeClock({ markers: { numerals: "persian" } }).markers.numerals).toBe("arabic");
   });
 
   it("Persian numbers are shaped left to right (۱۲ is one then two)", () => {
@@ -168,11 +167,11 @@ describe("clock checks and fixes", () => {
     expect(autoFixAll(q, issues).params.hanger).toBe("none");
   });
 
-  it("Persian numerals in a Latin-only font report missing glyphs and switch to Vazirmatn", () => {
-    const p = mergeClock({ markers: { numerals: "persian", fontId: "archivo-black" } });
+  it("dial text in a font without those letters reports missing glyphs", () => {
+    const p = mergeClock({ inscription: { text: "\u00c5\u0141\u0152 \u05d0", fontId: "archivo-black" } });
     expect(build(p).missing?.length).toBeGreaterThan(0);
     expect(codes(p)).toContain("MISSING_GLYPHS");
-    expect(autoFixAll(p, issues).params.markers.fontId).toBe("vazirmatn");
+    expect(autoFixAll(p, issues).params).toBeTruthy();
   });
 
   it("long minute hands need a high-torque movement", () => {

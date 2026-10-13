@@ -22,14 +22,14 @@ await withBrowser(async (page) => {
   await page.locator(".start-gens").scrollIntoViewIfNeeded();
   await shot(page, "g1-start");
 
-  // Start from the Persian preset.
-  await page.locator('img[src="/presets/clock/persian.svg"]').first().click();
+  // Start from the Station preset.
+  await page.locator('img[src="/presets/clock/station.svg"]').first().click();
   await page.waitForSelector('.gen-app[data-generator="clock"]');
   await drawn(page);
-  check(/Persian/i.test(await page.locator(".toast").textContent()), "the preset is applied with a toast");
+  check(/Station/i.test(await page.locator(".toast").textContent()), "the preset is applied with a toast");
   const withNumerals = await engraved(page);
-  check(withNumerals > 4000, `Persian numerals are engraved on the face (${withNumerals} path chars)`);
-  await shot(page, "g1-persian");
+  check(withNumerals > 4000, `Roman numerals are engraved on the face (${withNumerals} path chars)`);
+  await shot(page, "g1-station");
 
   // Rail cards change the face.
   await page.locator(".gallery .gcard").filter({ hasText: /^Gear$/ }).click();

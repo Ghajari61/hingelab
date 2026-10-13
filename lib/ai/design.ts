@@ -71,7 +71,7 @@ const pickMenu = (menu: MenuProduct[]) => menu
   .filter((p) => !TEMPLATED.has(p.id))
   .map((p) => (FLAT_PRESETS[p.id] ? { ...p, presets: p.presets.filter((x) => !FLAT_PRESETS[p.id]!.has(x.id)) } : p));
 
-const PICK_SYSTEM = `You are the design assistant of HingeLab, a web app that makes laser-cut files. A user describes something they want to laser cut, or shows a photo of one, possibly in Persian or another language. Choose the one product below that can make it and the preset closest to it. Text that must appear on the product keeps its original language and script.
+const PICK_SYSTEM = `You are the design assistant of HingeLab, a web app that makes laser-cut files. A user describes something they want to laser cut, or shows a photo of one, possibly in another language. Choose the one product below that can make it and the preset closest to it. Text that must appear on the product keeps its original language and script.
 Which product: art is the default. It draws an original design from scratch for anything flat or made of a few flat pieces: signs, name plates, logos, ornaments, coasters, keychains, wall art, cake toppers, key holders, table numbers, trophies, phone and tablet stands, decorations, engraved pictures. Choose another product only for what needs its engineering and that it makes exactly (match "exact"); anything it would only approximate is art: round, oval or curved containers with bending walls are hinge; boxes, trays, drawers, money boxes and bird houses with finger joints are boxes; hollow letter boxes with walls are letters; sculptures made of many slices are parametric; jigsaw puzzles are puzzle; QR codes are qr; clocks with a movement hole are clock. Also choose a product when the user names it.
 The brief describes only what the user asked for or the photo shows, in under 80 words; do not add features. When the user writes about the photo (what it is, its size, text or changes they want), that wins over what the photo seems to show.
 
@@ -157,7 +157,7 @@ export function valueOf(raw: string, field: DField | undefined): unknown {
   const s = raw.trim();
   if (field?.kind === "toggle") return /^(true|yes|on)$/i.test(s) ? true : /^(false|no|off)$/i.test(s) ? false : s;
   if (field?.kind !== "number") return raw;
-  const m = /(-?\d+(?:[.,]\d+)?)\s*(mm|cm|m|inches|inch|in|")?(?![a-z])/i.exec(s.replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))));
+  const m = /(-?\d+(?:[.,]\d+)?)\s*(mm|cm|m|inches|inch|in|")?(?![a-z])/i.exec(s.replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0)));
   if (!m) return NaN;
   const n = Number(m[1].replace(",", "."));
   return field.unit === "mm" && m[2] ? n * TO_MM[m[2].toLowerCase()] : n;

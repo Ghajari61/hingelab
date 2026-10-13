@@ -30,7 +30,7 @@ const sections: SectionSpec<KeyrackParams>[] = [
     help: "Words on the board, with an optional motif beside them.",
     fields: [
       { kind: "text", key: "text.text", label: "Text", multiline: true, maxLength: 80, placeholder: "Home Sweet Home", help: "The words on the board; press Enter for a new line." },
-      { kind: "font", key: "text.fontId", label: "Font", sample: (p) => p.text.text || "Aa", help: "The typeface. Persian and Arabic fonts are under Persian in the font list." },
+      { kind: "font", key: "text.fontId", label: "Font", sample: (p) => p.text.text || "Aa", help: "The typeface." },
       { kind: "number", key: "text.size", label: "Letter height", unit: "mm", min: 5, max: 150, step: 1, help: "Cap height of the letters." },
       { kind: "number", key: "text.spacing", label: "Letter spacing", unit: "mm", min: -5, max: 10, step: 0.1, help: "Extra space between letters." },
       {

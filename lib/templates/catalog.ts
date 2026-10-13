@@ -133,7 +133,7 @@ const META: TemplateMeta[] = [
     description: "Eight 60 × 85 mm cards with hanging slots, holes for two pairs of earrings and an engraved motif each — for craft fairs and shops.",
     tags: ["earrings", "jewellery", "display", "cards", "shop", "craft fair"] },
   { id: "plant-markers", title: "Plant markers", category: "Home & decor", source: "studio", material: PLY, thickness: 3, difficulty: "Easy",
-    description: "Eight pointed garden stakes, each with an engraved leaf, flower, sprout, sun or fruit. Add plant names with the Type tool.",
+    description: "Eight pointed garden stakes, each with an engraved leaf, flower, sun, butterfly or tree. Add plant names with the Type tool.",
     tags: ["garden", "plants", "markers", "stakes", "herbs"] },
   { id: "mountain-shadow-box", title: "Mountain shadow box", category: "Home & decor", source: "studio", material: PLY, thickness: 3, difficulty: "Medium", featured: true,
     description: "Four 150 mm layers: three mountain ridges and a back panel with an engraved sun and birds. Stack them with spacers for depth; a strip of LEDs behind looks great.",

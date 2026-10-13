@@ -27,7 +27,7 @@ function Panel({ title, box, children }: { title: string; box: BBox; children: R
 export default function LettersDebug() {
   const [hb, setHb] = useState<HarfBuzz | null>(null);
   const [font, setFont] = useState<LoadedFont | null>(null);
-  const [p, setP] = useState<LetterParams>({ ...LETTER_DEFAULTS, text: "سام", fontId: "vazirmatn" });
+  const [p, setP] = useState<LetterParams>({ ...LETTER_DEFAULTS, text: "Sam", fontId: "fredoka" });
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => { loadHarfBuzz().then(setHb, (e: Error) => setErr(e.message)); }, []);

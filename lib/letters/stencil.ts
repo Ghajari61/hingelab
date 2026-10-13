@@ -1,5 +1,5 @@
 /**
- * Stencil mode: the text is cut out of a sheet. Counters (the material inside A, B, O, 8, ه …)
+ * Stencil mode: the text is cut out of a sheet. Counters (the material inside A, B, O, 8 …)
  * would fall out, so each gets one or two bridges across the letter stroke to the outside.
  */
 import { MIN_PIECE_AREA, bboxOfContours, differenceShapes, dropSpecks, makeShape, offsetShapes, pointInContour, shapeContours, signedArea, unionShapes } from "./polygon";

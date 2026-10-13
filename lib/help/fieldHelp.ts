@@ -33,7 +33,7 @@ export const HINGE_FIELD_HELP: Record<NumericKey, string> = {
 
 export const LETTER_FIELD_HELP: Record<LetterNumKey, string> = {
   size: "How tall the text is. Size measures picks whether this is the height of a capital letter or of the whole text.",
-  letterSpacing: "Extra space between letters. Letters that join, as in Persian, always stay joined.",
+  letterSpacing: "Extra space between letters. Letters that join, as in connected scripts, always stay joined.",
   thicken: "Grows every stroke outward by this much, to make thin fonts sturdy enough to cut.",
   stencilBridge: "The width of the bridges that hold letter centres in a stencil, or join dots and accents in Solid mode.",
   sheetMargin: "The border of sheet left round the text in a stencil.",

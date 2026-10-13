@@ -14,7 +14,7 @@ export function makeTextFn(hb: HarfBuzz, fontOf: (id: string) => LoadedFont | nu
     const key = `${fontId}\u0000${height}\u0000${spacing}\u0000${s}`;
     const hit = cache.get(key);
     if (hit) return hit;
-    // Numbers read left to right in every script (Persian ۱۲ is twelve), so digit-only text is LTR.
+    // Numbers read left to right in every script (also in scripts written right to left), so digit-only text is LTR.
     const direction = /\p{L}/u.test(s) ? "auto" : "ltr";
     const out = shapeText(hb, font, s, { direction, size: height, sizeMode: "capHeight", letterSpacing: Number.isFinite(spacing) ? spacing : 0 });
     const contours = shapeContours(unionShapes(out.glyphs.flatMap((g) => g.contours)));

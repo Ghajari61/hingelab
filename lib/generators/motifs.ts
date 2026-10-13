@@ -11,7 +11,7 @@ import { fitArt } from "./util";
 
 export const MOTIF_IDS = [
   "heart", "hearts", "star", "stars", "sparkle", "balloon", "balloons", "crown", "rings", "moon", "moonstar",
-  "lantern", "mosque", "sprout", "pomegranate", "watermelon", "cap", "feet", "stroller", "paw", "tree",
+  "lantern", "mosque", "cap", "feet", "stroller", "paw", "tree",
   "snowflake", "laurel", "flame", "cup", "gift", "cake", "cupcake", "flower", "butterfly", "note", "bell",
   "key", "house", "sun", "cloud", "infinity", "leaf", "gem",
 ] as const;
@@ -20,8 +20,8 @@ export type MotifId = (typeof MOTIF_IDS)[number];
 export const MOTIF_NAMES: Record<MotifId, string> = {
   heart: "Heart", hearts: "Two hearts", star: "Star", stars: "Stars", sparkle: "Sparkle", balloon: "Balloon",
   balloons: "Balloons", crown: "Crown", rings: "Wedding rings", moon: "Crescent", moonstar: "Crescent and star",
-  lantern: "Lantern", mosque: "Mosque", sprout: "Sprouts (Nowruz)", pomegranate: "Pomegranate (Yalda)",
-  watermelon: "Watermelon (Yalda)", cap: "Graduation cap", feet: "Baby feet", stroller: "Pram", paw: "Paw",
+  lantern: "Lantern", mosque: "Mosque",
+  cap: "Graduation cap", feet: "Baby feet", stroller: "Pram", paw: "Paw",
   tree: "Christmas tree", snowflake: "Snowflake", laurel: "Laurel wreath", flame: "Flame", cup: "Trophy cup",
   gift: "Gift", cake: "Cake", cupcake: "Cupcake", flower: "Flower", butterfly: "Butterfly", note: "Music note",
   bell: "Bell", key: "Key", house: "House", sun: "Sun", cloud: "Cloud", infinity: "Infinity", leaf: "Leaf", gem: "Diamond",
@@ -114,17 +114,6 @@ const BUILD: Record<MotifId, () => Piece[]> = {
     },
     { add: [circle(0, -44, 6)], sub: [circle(2.6, -46, 5)] },
   ],
-  sprout: () => [{
-    add: [at(leaf(46, 16), 0, 8, -90), at(leaf(40, 15), -2, 8, -135), at(leaf(40, 15), 2, 8, -45), poly([[-26, 8], [26, 8], [20, 45], [-20, 45]]), rect(-30, 4, 60, 9)],
-  }],
-  pomegranate: () => [{ add: [circle(0, 8, 40), poly([[-13, -26], [-17, -44], [-7, -36], [0, -48], [7, -36], [17, -44], [13, -26]])], sub: [circle(-14, -2, 4)] }],
-  watermelon: () => [{
-    add: [[...arc(0, -15, 48, 0, Math.PI)]],
-    sub: [
-      ...band(arc(0, -15, 39, 0.3, Math.PI - 0.3, 0.2), 2.2),
-      ...[[-18, 0], [0, 8], [18, 0], [-9, 16], [9, 16]].map(([x, y]) => at(ellipse(0, 0, 2.4, 4.2), x, y)),
-    ],
-  }],
   cap: () => [{
     add: [poly([[-50, -12], [0, -32], [50, -12], [0, 8]]), poly([[-28, -2], [28, -2], [28, 20], [0, 28], [-28, 20]]), stadium(30, -14, 38, 22, 3), poly([[34, 20], [42, 20], [44, 34], [32, 34]])],
   }],

@@ -131,7 +131,7 @@ export const TROPHY: GeneratorDef<TrophyParams> = {
   summary: (p) => `${EMBLEM_NAMES[p.emblem.kind]} trophy${p.plate.on && p.plate.name.trim() ? ` for ${p.plate.name.trim()}` : ""} · ${p.base.tiers}-tier base`,
   help: {
     intro: [
-      "The Trophy generator makes awards that stand up: an emblem (star, cup, shield, medal, flame, laurel wreath, any of 39 motifs or your own SVG outline), an optional stem and name plate with the award, the winner and the year, all in one upright piece that slots into a stepped base of one to three tiers.",
+      "The Trophy generator makes awards that stand up: an emblem (star, cup, shield, medal, flame, laurel wreath, any motif from the library or your own SVG outline), an optional stem and name plate with the award, the winner and the year, all in one upright piece that slots into a stepped base of one to three tiers.",
       "Cut it from one material, cut the figure from acrylic and the base from wood, or glue a mirror-acrylic emblem and name plate onto a wooden figure. The slot is the figure's own thickness plus a clearance you set, so mixed thicknesses still fit snugly.",
     ],
     tips: [

@@ -32,7 +32,7 @@ const sections: SectionSpec<TopperParams>[] = [
     help: "The words on the topper: each line is centred; script fonts join up into one piece.",
     fields: [
       { kind: "text", key: "text.text", label: "Text", multiline: true, maxLength: 80, placeholder: "Happy Birthday", help: "The words on the topper; press Enter for a new line." },
-      { kind: "font", key: "text.fontId", label: "Font", sample: (p) => p.text.text || "Aa", help: "Pacifico joins its letters like handwriting; Persian and Arabic fonts are under Persian in the font list." },
+      { kind: "font", key: "text.fontId", label: "Font", sample: (p) => p.text.text || "Aa", help: "Pacifico joins its letters like handwriting." },
       { kind: "number", key: "text.size", label: "Letter height", unit: "mm", min: 8, max: 200, step: 1, help: "Cap height of the letters; the topper grows with it." },
       { kind: "number", key: "text.spacing", label: "Letter spacing", unit: "mm", min: -5, max: 10, step: 0.1, help: "Extra space between letters; a little negative spacing makes script letters overlap so they hold together." },
       { kind: "number", key: "text.lead", label: "Line spacing", unit: "", min: 0.8, max: 2, step: 0.05, help: "Distance between lines as a multiple of the letter height; lower values make lines touch and join." },
@@ -59,7 +59,7 @@ const sections: SectionSpec<TopperParams>[] = [
   },
   {
     id: "motif", title: "Motif", open: true, show: main,
-    help: "A picture welded to the text: balloons, hearts, rings, a crescent, sprouts and more.",
+    help: "A picture welded to the text: balloons, hearts, rings, a crescent, stars and more.",
     fields: [
       { kind: "choice", key: "motif.kind", label: "Motif", rail: true, options: MOTIF_OPTIONS, help: "The picture added to the topper; it is joined to the letters." },
       {
@@ -180,18 +180,17 @@ export const TOPPER: GeneratorDef<TopperParams> = {
   },
   help: {
     intro: [
-      "The Cake Topper generator turns a few words into a topper ready to cut: script letters welded into one piece, a silhouette with the text engraved, mirror letters layered on a backing, or text engraved on a shaped plate. Add a motif (balloons, rings, a crescent, sprouts and 35 more) and sticks with pointed tips.",
+      "The Cake Topper generator turns a few words into a topper ready to cut: script letters welded into one piece, a silhouette with the text engraved, mirror letters layered on a backing, or text engraved on a shaped plate. Add a motif (balloons, rings, a crescent, stars and many more) and sticks with pointed tips.",
       "Cupcake picks come in sets: a disc, star, heart or any other shape, or the motif itself as a silhouette, each with an engraved or layered motif and a name from your list.",
       "Every topper is welded into a single piece, so nothing falls out of the sheet: touching letters are fused, and anything left apart is joined with a short bridge.",
     ],
     tips: [
       "Mirror acrylic scratches easily: leave its film on while cutting and peel it after.",
-      "For Persian and Arabic text pick a font under Persian in the font list; the letters join naturally.",
       "Thin script letters are fragile: raise the weld to 1 to 1.5 mm, or switch to the Outline style.",
       "Cut sticks along the length of the sheet's grain when using wood, so they do not snap.",
       "Wash acrylic toppers before they touch food, or wrap the sticks in food-safe film.",
     ],
-    keywords: ["cake topper", "cupcake topper", "birthday", "wedding", "Mr & Mrs", "Nowruz", "Eid", "acrylic", "mirror", "party"],
+    keywords: ["cake topper", "cupcake topper", "birthday", "wedding", "Mr & Mrs", "Eid", "acrylic", "mirror", "party"],
   },
 };
 

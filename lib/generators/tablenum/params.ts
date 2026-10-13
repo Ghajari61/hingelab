@@ -19,7 +19,6 @@ export interface TablenumParams extends GenBase {
     to: number;
     /** Leading zeros up to this many digits (0 = none). */
     pad: number;
-    digits: "latin" | "persian";
     list: string;
     /** Range mode: an optional second line per table (for example a family's name). */
     names: string;
@@ -58,7 +57,7 @@ export const TABLENUM_DEFAULTS: TablenumParams = {
   sheet: { ...SHEET_EXTRAS },
   job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
-  batch: { mode: "range", from: 1, to: 6, pad: 0, digits: "latin", list: "", names: "" },
+  batch: { mode: "range", from: 1, to: 6, pad: 0, list: "", names: "" },
   build: { kind: "stand", double: false },
   plate: { shape: "arch", auto: true, pad: 16, width: 110, height: 150, corner: 4 },
   text: { label: "Table", labelFont: "pacifico", labelSize: 18, labelBelow: false, fontId: "archivo-black", size: 60, spacing: 0, nameSize: 10, mark: "engrave" },
@@ -80,7 +79,6 @@ export function mergeTablenum(raw: unknown): TablenumParams {
   const d = TABLENUM_DEFAULTS;
   const p = mergeInto(clone(d), raw);
   if (p.batch.mode !== "range" && p.batch.mode !== "list") p.batch.mode = d.batch.mode;
-  if (p.batch.digits !== "latin" && p.batch.digits !== "persian") p.batch.digits = d.batch.digits;
   if (!BUILDS.includes(p.build.kind)) p.build.kind = d.build.kind;
   p.textStyle = cleanTextStyle(p.textStyle);
   if (!MARKS.includes(p.text.mark)) p.text.mark = d.text.mark;
@@ -113,8 +111,6 @@ export function tableList(p: TablenumParams, max = MAX_TABLES): { main: string; 
 
 export const MAX_TABLES = 60;
 
-const PERSIAN = "۰۱۲۳۴۵۶۷۸۹";
 export function formatNumber(n: number, p: Pick<TablenumParams, "batch">): string {
-  const s = String(n).padStart(p.batch.pad, "0");
-  return p.batch.digits === "persian" ? s.replace(/\d/g, (d) => PERSIAN[+d]) : s;
+  return String(n).padStart(p.batch.pad, "0");
 }

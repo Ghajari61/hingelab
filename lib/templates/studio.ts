@@ -286,7 +286,7 @@ const earringCards: Make = (b) => {
 };
 
 const plantMarkers: Make = (b) => {
-  const motifs: MotifId[] = ["leaf", "flower", "sprout", "sun", "butterfly", "tree", "pomegranate", "watermelon"];
+  const motifs: MotifId[] = ["leaf", "flower", "sun", "butterfly", "tree", "heart", "star", "cloud"];
   const stake = (cx: number): Subpath[] => {
     const top = 10, w = 40, lh = 30, sw = 10, tip = 140;
     const r = 8;

@@ -6,7 +6,7 @@ import { isObj, mergeInto } from "../util";
 export type FaceShape = "round" | "square" | "polygon" | "sunburst" | "gear" | "scallop" | "flower" | "heart" | "cloud" | "custom";
 export type FaceLayers = "single" | "ring" | "stack";
 export type MarkerStyle = "ticks" | "dots" | "numerals" | "mixed" | "none";
-export type NumeralSet = "arabic" | "roman" | "roman-iv" | "persian" | "eastern";
+export type NumeralSet = "arabic" | "roman" | "roman-iv";
 export type HandStyle = "baton" | "classic" | "spade" | "leaf" | "arrow" | "none";
 export type Hanger = "none" | "keyhole" | "hole";
 export type MovementId = "m8-5" | "m8-8" | "m8-13" | "custom";
@@ -115,5 +115,7 @@ export function mergeClock(raw: unknown): ClockParams {
   const p = mergeInto(clone(CLOCK_DEFAULTS), raw);
   const m = MOVEMENTS.find((q) => q.id === p.movement.id);
   if (m && isObj(raw) && isObj(raw.movement) && !("shaft" in raw.movement)) p.movement = { ...m };
+  // Numeral sets that were removed (Persian, Eastern Arabic) become Western digits.
+  if (!(["arabic", "roman", "roman-iv"] as string[]).includes(p.markers.numerals)) p.markers.numerals = "arabic";
   return p;
 }

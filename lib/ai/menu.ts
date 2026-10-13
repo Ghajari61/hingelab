@@ -60,7 +60,7 @@ export function aiMenu(): Promise<MenuProduct[]> {
     const fromCatalog = (p: DProduct): MenuProduct => ({ id: p.id, name: p.name, blurb: p.blurb, presets: p.presets.map(({ id, name, note }) => ({ id, name, note })), fields: usable(p) });
     const byId = new Map(cat.products.map((p) => [p.id as AIProduct, fromCatalog(p)]));
     byId.set("letters", {
-      id: "letters", name: "Letters", blurb: "Letter boxes (hollow letters with living-hinge or flat walls), solid cut-out letters and stencils from a word or name, in Latin or Persian/Arabic fonts.",
+      id: "letters", name: "Letters", blurb: "Letter boxes (hollow letters with living-hinge or flat walls), solid cut-out letters and stencils from a word or name, in any of the bundled fonts.",
       presets: LETTER_PRESETS.map(({ id, name, note }) => ({ id, name, note })), fields: LETTER_FIELDS,
     });
     byId.set("art", {

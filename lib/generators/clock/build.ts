@@ -14,9 +14,6 @@ import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { MOVEMENT_BOX, type ClockParams } from "./params";
 
 const ROMAN = ["XII", "I", "II", "III", "IIII", "V", "VI", "VII", "VIII", "IX", "X", "XI"];
-const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
-export const persianNumber = (n: number) => String(n).replace(/\d/g, (d) => PERSIAN_DIGITS[Number(d)]);
-const EASTERN_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 
 /** The label for hour h (0 = twelve). */
 export function numeral(set: ClockParams["markers"]["numerals"], h: number): string {
@@ -24,8 +21,6 @@ export function numeral(set: ClockParams["markers"]["numerals"], h: number): str
   switch (set) {
     case "roman": return ROMAN[h];
     case "roman-iv": return h === 4 ? "IV" : ROMAN[h];
-    case "persian": return persianNumber(n);
-    case "eastern": return String(n).replace(/\d/g, (d) => EASTERN_DIGITS[Number(d)]);
     default: return String(n);
   }
 }

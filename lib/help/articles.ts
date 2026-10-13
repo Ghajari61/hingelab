@@ -365,11 +365,11 @@ export const ARTICLES: HelpArticle[] = [
   {
     slug: "letters-text", product: "letters", title: "Text and font",
     summary: "Type your text, pick a font, and set its size, spacing and stroke weight.",
-    keywords: ["font", "arabic", "persian", "rtl", "upload", "weld", "direction"],
+    keywords: ["font", "upload", "weld", "direction"],
     fields: [{ product: "letters", secs: ["text"] }],
     blocks: [
       { list: [
-        "More than 50 free fonts, grouped as Sans, Rounded, Serif, Script, Display, Stencil and Calligraphy, with a Persian filter for fonts that cover Persian and Arabic. Search by name, and every font shows your own text. If your font has no glyph for a letter, the check suggests a font that has.",
+        "More than 50 free fonts, grouped as Sans, Rounded, Serif, Script, Display, Stencil and Calligraphy. Search by name, and every font shows your own text. If your font has no glyph for a letter, the check suggests a font that has.",
         "Upload your own font (TTF or OTF); it stays on this device.",
         "Size measures: Cap height measures a capital letter such as H; Total height measures the whole text, ascenders and descenders included.",
         "Weld: Whole word joins letters that touch into one piece; Each letter keeps every letter separate.",
@@ -442,7 +442,6 @@ export const ARTICLES: HelpArticle[] = [
       { list: [
         "Bold, rounded fonts make the strongest letter boxes; thin serifs are hard to wrap with a hinge.",
         "Thicken by 0.3 to 1 mm helps thin fonts survive cutting.",
-        "For Persian and Arabic, pick a font from the Persian filter of the font list; joined letters stay joined, and numbers and English words inside Persian text keep their order.",
         "In a letter box, cut flat dots and accents and glue them on the lid, or tick Stack to full height.",
         "Use two bridges for large stencils so the centres do not twist.",
       ] },

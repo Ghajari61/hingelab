@@ -29,12 +29,10 @@ describe("material library", () => {
 });
 
 describe("clock extras", () => {
-  it("numerals: modern Roman four and Eastern Arabic digits", () => {
+  it("numerals: modern Roman four", () => {
     expect(numeral("roman-iv", 4)).toBe("IV");
     expect(numeral("roman-iv", 9)).toBe("IX");
     expect(numeral("roman", 4)).toBe("IIII");
-    expect(numeral("eastern", 0)).toBe("١٢");
-    expect(numeral("eastern", 7)).toBe("٧");
   });
 
   it("flower, heart and cloud faces build around the movement", () => {

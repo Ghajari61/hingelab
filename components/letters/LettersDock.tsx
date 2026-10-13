@@ -113,7 +113,7 @@ export function LettersDock({
           { v: "ltr", text: "Left to right" },
           { v: "rtl", text: "Right to left" },
         ]} />
-        <p className="note">Letter spacing never separates letters that join, as in Persian. Thicken grows every stroke outward.</p>
+        <p className="note">Letter spacing never separates letters that join, as in connected scripts. Thicken grows every stroke outward.</p>
       </Sec>
       {box ? (
         <Sec title="Box" meta={params.wallStyle === "hinge" ? "Living hinge" : "Flat panels"} startOpen onReset={() => onResetSection("Box", ["depth", "minCornerRadius", "facetTol", "panelMin", "wallMaxLength", "islandArea", "smallIslands", "stackIslands", "marquee"])}>

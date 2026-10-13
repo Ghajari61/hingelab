@@ -199,9 +199,7 @@ export function checkClock(p: ClockParams, out: GenOutput): CIssue[] {
   }
 
   if (out.missing?.length) {
-    const arabicScript = m.numerals === "persian" || m.numerals === "eastern";
-    const font = arabicScript ? "vazirmatn" : "archivo-black";
-    const fixes: Fix<ClockParams>[] = [{ id: "font", label: arabicScript ? "Use Vazirmatn" : "Use Archivo Black", safe: true, apply: (q) => withMarkers(q, { fontId: font }) }];
+    const fixes: Fix<ClockParams>[] = [{ id: "font", label: "Use Archivo Black", safe: true, apply: (q) => withMarkers(q, { fontId: "archivo-black" }) }];
     if (p.inscription.text.trim()) fixes.push({ id: "text-font", label: "Use Vazirmatn for the text on the dial", safe: true, apply: (q) => withInscription(q, { fontId: "vazirmatn" }) });
     issues.push({
       code: "MISSING_GLYPHS", level: "error",

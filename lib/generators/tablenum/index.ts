@@ -23,7 +23,6 @@ const sections: SectionSpec<TablenumParams>[] = [
       { kind: "number", key: "batch.from", label: "From", unit: "", min: 0, max: 999, step: 1, int: true, show: (p) => p.batch.mode === "range", help: "The first table number." },
       { kind: "number", key: "batch.to", label: "To", unit: "", min: 0, max: 999, step: 1, int: true, show: (p) => p.batch.mode === "range", help: `The last table number; up to ${MAX_TABLES} tables per file.` },
       { kind: "number", key: "batch.pad", label: "Digits", unit: "", min: 0, max: 3, step: 1, int: true, show: (p) => p.batch.mode === "range", help: "Pads numbers with leading zeros to this many digits (2 gives 01, 02 and so on); 0 leaves them as they are." },
-      { kind: "choice", key: "batch.digits", label: "Numerals", show: (p) => p.batch.mode === "range", options: [{ v: "latin", text: "1 2 3" }, { v: "persian", text: "۱ ۲ ۳" }], help: "Western or Persian digits; Persian digits need a font from the Persian group of the font list." },
       { kind: "text", key: "batch.names", label: "Second line", multiline: true, maxLength: 2000, placeholder: "One per table, in order", show: (p) => p.batch.mode === "range", help: "An optional line under each number, such as a family's name or a course, one per table in order." },
       { kind: "text", key: "batch.list", label: "Table names", multiline: true, maxLength: 2000, placeholder: "Rose\nLily\nTulip", show: (p) => p.batch.mode === "list", help: "One table per line; each name takes the place of the number." },
     ],
@@ -184,7 +183,6 @@ export const TABLENUM: GeneratorDef<TablenumParams> = {
     tips: [
       "Make one spare of the most-used numbers in case one gets knocked over.",
       "For tent cards, use 3 mm plywood or MDF and bend slowly; acrylic will snap.",
-      "Persian digits read correctly with any font from the Persian group of the font list.",
       "A two-layer base hides the tab ends and lets the plates lift out for storage.",
     ],
     keywords: ["table numbers", "wedding", "restaurant", "event", "tent card", "place card", "batch", "stand"],

@@ -211,7 +211,7 @@ export function ParametricDock({
           { v: "library", text: "Library" },
           { v: "mesh", text: "3D file", title: "Import an STL, OBJ or GLB model", locked: sourceLocked("mesh") },
           { v: "image", text: "Photo", title: "Turn a photo into a relief using estimated depth", locked: sourceLocked("image") },
-          { v: "text", text: "Text", title: "Type a letter, word or name (Latin or Persian) and slice it", locked: sourceLocked("text") },
+          { v: "text", text: "Text", title: "Type a letter, word or name and slice it", locked: sourceLocked("text") },
           { v: "formula", text: "Formula", title: "A surface z = f(x, y) or a turned shape r = f(h)", locked: sourceLocked("formula") },
         ]} />
         {kind === "text" && (
@@ -227,7 +227,7 @@ export function ParametricDock({
               </select>
             </label>
             {textMissing.length > 0 && (
-              <p className="note warn" role="status">{fontInfo(src.font)?.name ?? "This font"} has no {textMissing.map((c) => `“${c}”`).join(" ")}. Pick a font marked (Persian) for Persian text.</p>
+              <p className="note warn" role="status">{fontInfo(src.font)?.name ?? "This font"} has no {textMissing.map((c) => `“${c}”`).join(" ")}. Pick a font that covers these letters.</p>
             )}
             <Choice label="Profile" value={src.profile} onPick={(v) => onEdit((q) => { if (q.source.kind === "text") q.source.profile = v; }, true)} options={[
               { v: "rounded", text: "Rounded", title: "Pillow letters: the fins rise from the edge to the full depth" },

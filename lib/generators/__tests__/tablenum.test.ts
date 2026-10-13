@@ -18,11 +18,11 @@ describe("table numbers", () => {
     }
   });
 
-  it("numbers a range in order, padded or in Persian digits, with names on a second line", () => {
+  it("numbers a range in order, padded, with names on a second line", () => {
     const p = mergeTablenum({ batch: { from: 8, to: 11, pad: 2, names: "Ali\nSara" } });
     expect(tableList(p)).toEqual([{ main: "08", sub: "Ali" }, { main: "09", sub: "Sara" }, { main: "10", sub: "" }, { main: "11", sub: "" }]);
     expect(tableList(mergeTablenum({ batch: { from: 3, to: 1 } })).map((t) => t.main)).toEqual(["3", "2", "1"]);
-    expect(formatNumber(12, mergeTablenum({ batch: { digits: "persian" } }))).toBe("۱۲");
+    expect(formatNumber(12, mergeTablenum({ batch: { pad: 3 } }))).toBe("012");
     expect(tableList(mergeTablenum({ batch: { mode: "list", list: "Rose\n\n Lily \n" } })).map((t) => t.main)).toEqual(["Rose", "Lily"]);
   });
 

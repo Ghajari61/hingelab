@@ -52,7 +52,7 @@ const sections: SectionSpec<SignParams>[] = [
     help: "The words on the sign.",
     fields: [
       { kind: "text", key: "text.text", label: "Text", multiline: true, maxLength: 160, placeholder: "Welcome", help: "The words on the sign; press Enter for a new line." },
-      { kind: "font", key: "text.fontId", label: "Font", sample: (p) => p.text.text || "Aa", help: "The typeface. Persian and Arabic fonts are under Persian in the font list." },
+      { kind: "font", key: "text.fontId", label: "Font", sample: (p) => p.text.text || "Aa", help: "The typeface." },
       { kind: "number", key: "text.size", label: "Letter height", unit: "mm", min: 5, max: 300, step: 1, help: "Cap height of the letters." },
       { kind: "number", key: "text.spacing", label: "Letter spacing", unit: "mm", min: -5, max: 20, step: 0.1, help: "Extra space between letters; negative values join script letters." },
       { kind: "number", key: "text.lead", label: "Line spacing", unit: "", min: 0.8, max: 3, step: 0.05, help: "Distance between lines, as a multiple of the letter height." },

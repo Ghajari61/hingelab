@@ -32,7 +32,7 @@ export function textStyleSection<P extends { textStyle: TextStyle }>(show?: (p: 
     help: "Fine-tune the lettering: capitals, slant, width, stroke weight and a curve.",
     fields: [
       {
-        kind: "choice", key: "textStyle.case", label: "Letters", help: "Keep the text as typed, or set it in capitals, small letters or Title Case. Persian has no capitals and stays as typed.",
+        kind: "choice", key: "textStyle.case", label: "Letters", help: "Keep the text as typed, or set it in capitals, small letters or Title Case. Scripts without capitals stay as typed.",
         options: [{ v: "as-typed", text: "As typed" }, { v: "upper", text: "ABC" }, { v: "lower", text: "abc" }, { v: "title", text: "Abc" }],
       },
       { kind: "number", key: "textStyle.slant", label: "Slant", unit: "deg", min: -20, max: 30, step: 1, help: "Leans the letters like italics; negative values lean them back." },

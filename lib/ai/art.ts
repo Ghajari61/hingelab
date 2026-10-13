@@ -85,7 +85,7 @@ Design quality:
 Paths: SVG path data (M L H V C S Q T A Z), numbers with at most 2 decimals, each closed shape its own subpath, every cut and engrave subpath closed with Z, everything inside the artboard.
 Notes: at most two short plain sentences for the user, only about something they should check (a guessed size, the material). Never about fonts, kerf, machine settings or what was fixed. Usually none.
 
-Text: never draw letters as paths; put words in texts. The app turns texts into outlines in the font, so the file needs no fonts. Persian or Arabic words need a font that covers them. Fonts:
+Text: never draw letters as paths; put words in texts. The app turns texts into outlines in the font, so the file needs no fonts. Words in other scripts need a font that covers them. Fonts:
 ${fontList}`;
 
 const DRAW_SYSTEM = `You are a senior laser-cut product designer and illustrator. You design original, attractive, production-ready laser cut and engrave files from scratch, never generic clip art or template layouts.
