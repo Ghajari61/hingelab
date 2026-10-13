@@ -51,15 +51,22 @@ function readOpen(hash: string): AIOpen | null {
   }
 }
 
-/** Leaves the design for the editor (over its preset, which carries Parametric's finish) and goes there. */
-async function handOff(o: AIOpen, note: string, replace = false) {
+/**
+ * Leaves the design for the editor (over its preset, which carries Parametric's finish) and goes
+ * there. A Parametric design also takes the photo, which the editor turns into the relief.
+ */
+async function handOff(o: AIOpen, note: string, replace = false, photo?: string | null) {
   let base: Record<string, unknown> & { params?: Record<string, unknown> } = {};
   if (o.preset && (o.product === "letters" || o.product === "parametric")) {
     const list = o.product === "letters" ? (await import("@/lib/letters/presets")).LETTER_PRESETS : (await import("@/lib/parametric/presets")).PARAMETRIC_PRESETS;
     base = (list as unknown as { id: string; params: Record<string, unknown> }[]).find((p) => p.id === o.preset) ?? {};
   }
   const preset = { ...base, id: `ai-${Date.now()}`, name: o.name, note, params: { ...base.params, ...o.params, name: o.name } };
-  sessionStorage.setItem(AI_START_KEY, JSON.stringify({ product: o.product, preset }));
+  try {
+    sessionStorage.setItem(AI_START_KEY, JSON.stringify({ product: o.product, preset: o.product === "parametric" && photo ? { ...preset, photo } : preset }));
+  } catch {
+    sessionStorage.setItem(AI_START_KEY, JSON.stringify({ product: o.product, preset }));
+  }
   const to = `/app/editor/local?p=${o.product}&ai=1`;
   if (replace) window.location.replace(to); else window.location.href = to;
 }
@@ -75,6 +82,8 @@ export function AIDesigner({ plan }: { plan: Plan }) {
   const [error, setError] = useState<string | null>(null);
   const [design, setDesign] = useState<AIDesign | null>(null);
   const [opening, setOpening] = useState(false);
+  /** The photo the shown design was made from. */
+  const [designPhoto, setDesignPhoto] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -126,6 +135,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
         return;
       }
       setDesign(body);
+      setDesignPhoto(photo);
       try { sessionStorage.setItem(LAST_KEY, JSON.stringify({ prompt: prompt.trim(), design: body })); } catch { /* too large to keep */ }
     } catch (err) {
       if ((err as Error).name !== "AbortError") setError("Could not reach HingeLab. Check your connection and try again.");
@@ -138,7 +148,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
   function openInEditor() {
     if (!design) return;
     setOpening(true);
-    void handOff({ product: design.product, preset: design.preset, name: design.name, params: design.params }, design.summary);
+    void handOff({ product: design.product, preset: design.preset, name: design.name, params: design.params }, design.summary, false, designPhoto);
   }
 
   function download() {
@@ -151,7 +161,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
   }
 
   function startOver() {
-    setDesign(null); setPrompt(""); setPhoto(null); setError(null);
+    setDesign(null); setPrompt(""); setPhoto(null); setDesignPhoto(null); setError(null);
     sessionStorage.removeItem(LAST_KEY);
   }
 

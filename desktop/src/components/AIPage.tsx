@@ -18,7 +18,7 @@ const EXAMPLES = [
 const MATCH: Record<AIMatch, string> = { exact: "Exact match", close: "Close match", loose: "Nearest product" };
 
 /** The page's last answer, kept while the app runs so a trip to the workspace and back finds it. */
-let kept: { prompt: string; design: AIDesign } | null = null;
+let kept: { prompt: string; design: AIDesign; fromPhoto: boolean } | null = null;
 
 async function photoJpeg(file: Blob): Promise<string> {
   const bmp = await createImageBitmap(file);
@@ -53,6 +53,7 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [design, setDesign] = useState<AIDesign | null>(kept?.design ?? null);
+  const [fromPhoto, setFromPhoto] = useState(kept?.fromPhoto ?? false);
   const fileRef = useRef<HTMLInputElement>(null);
   const run = useRef(0);
 
@@ -78,7 +79,8 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
       const d = await ipc.aiDesign({ prompt: prompt.trim(), ...(photo ? { image: photo } : {}) });
       if (n !== run.current) return;
       setDesign(d);
-      kept = { prompt: prompt.trim(), design: d };
+      setFromPhoto(!!photo);
+      kept = { prompt: prompt.trim(), design: d, fromPhoto: !!photo };
     } catch (e) {
       if (n !== run.current) return;
       const err = e as AppError;
@@ -159,6 +161,9 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
             <h2>{design.name}</h2>
             <p className="ai-summary">{design.summary}</p>
             {design.notes.length > 0 && <ul className="ai-notes">{design.notes.map((t) => <li key={t}>{t}</li>)}</ul>}
+            {design.product === "parametric" && fromPhoto && (
+              <p className="fine">To turn your photo itself into the relief, choose Source → Photo in the online editor and add the same photo, or use the AI designer on the website, which hands the photo over by itself.</p>
+            )}
             {design.locked && plan === "free" && (
               <p className="ai-locked">{design.locked} <button type="button" className="link-btn" onClick={onUpgrade}><Crown size={13} aria-hidden />Upgrade to Pro</button></p>
             )}

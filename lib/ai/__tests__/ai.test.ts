@@ -149,6 +149,16 @@ describe("AI designer", () => {
     expect(d.error).toBeUndefined();
   });
 
+  it("says a Parametric design from a photo becomes a relief of that photo (website only)", async () => {
+    const pick = { product: "parametric", preset: "slat-portrait", name: "Veiled face slat wall", match: "exact", brief: "Face relief in vertical slats" };
+    const web = await designWithAI({ prompt: "", image: PNG }, "pro", "user-1", mock(pick).model, { photoRelief: true });
+    expect(web.summary).toMatch(/^Your photo as a relief/);
+    expect(web.summary).not.toContain("sweeping strands");
+    expect(web.notes.join(" ")).toContain("Your photo becomes the relief");
+    const desk = await designWithAI({ prompt: "", image: PNG }, "pro", "user-1", mock(pick).model);
+    expect(desk.summary).not.toContain("Your photo");
+  });
+
   it("keeps the preset's values when the settings step fails", async () => {
     const { model } = mock({ product: "boxes", preset: "", name: "Box", match: "exact", brief: "A box" }, new Error("model down"));
     const d = await designWithAI({ prompt: "a box" }, "pro", "user-1", model);

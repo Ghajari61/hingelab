@@ -450,10 +450,25 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     toastMsg(`Opened “${name}”. Ctrl+Z returns to your last design.`);
   }
 
+  // A start design with a photo (from the AI designer) reads the photo's depth once the design is
+  // applied; this effect must stay above the start effect so it sees the applied params.
+  const startPhoto = useRef<string | null>(null);
+  useEffect(() => {
+    const url = startPhoto.current;
+    if (!url) return;
+    startPhoto.current = null;
+    const [head, data] = url.split(",");
+    const type = head.slice(5, head.indexOf(";"));
+    void importPhoto(new File([Uint8Array.from(atob(data), (c) => c.charCodeAt(0))], "AI designer photo.jpg", { type, lastModified: Date.now() }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
+
   const started = useRef(false);
   useEffect(() => {
     if (!start || started.current) return;
     started.current = true;
+    const photo = (start as { photo?: unknown }).photo;
+    if (typeof photo === "string" && /^data:image\/(jpeg|png|webp);base64,/.test(photo)) startPhoto.current = photo;
     replace(mergeParametricParams(start.params as Partial<ParametricParams>), true);
     const look = (start as { finish?: Finish }).finish;
     if (look) setFinish(look);

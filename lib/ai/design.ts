@@ -182,11 +182,11 @@ function buildParametric(preset: string | null, name: string) {
   const pr = PARAMETRIC_PRESETS.find((p) => p.id === preset) ?? PARAMETRIC_PRESETS[0];
   const p = mergeParametricParams({ ...pr.params, name });
   const error = parametricRequestError(p) ?? undefined;
-  return { params: p as unknown as Record<string, unknown>, summary: `${pr.name} · ${pr.note}`, skipped: [], error, preset: pr.id };
+  return { params: p as unknown as Record<string, unknown>, summary: `${pr.name} · ${pr.note}`, style: pr.name, skipped: [], error, preset: pr.id };
 }
 
 /** Designs one product from a description and/or photo, on the caller's plan. */
-export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: string, model?: LanguageModel): Promise<AIDesign> {
+export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: string, model?: LanguageModel, opts: { photoRelief?: boolean } = {}): Promise<AIDesign> {
   const menu = await aiMenu();
   const signal = AbortSignal.timeout(TIMEOUT_MS);
   const ask: Ask = { model, userId, signal };
@@ -219,7 +219,12 @@ export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: str
   if (product.id === "parametric") {
     const r = buildParametric(preset, name);
     const open = openLink("parametric", r.preset, name, r.params);
-    return { ...base, preset: r.preset, params: r.params, summary: r.summary, notes: [...notes, ...(preset ? [] : ["No preset matched closely, so the first sculpture preset was used."])], ...(r.error ? { error: r.error } : {}), ...(open ? { open } : {}) };
+    const photo = opts.photoRelief && req.image;
+    const summary = photo ? `Your photo as a relief, built like the "${r.style}" design` : r.summary;
+    const extra = photo
+      ? ["Your photo becomes the relief: the editor reads its depth when the design opens, which takes a few seconds."]
+      : preset ? [] : ["No preset matched closely, so the first sculpture preset was used."];
+    return { ...base, preset: r.preset, params: r.params, summary, notes: [...notes, ...extra], ...(r.error ? { error: r.error } : {}), ...(open ? { open } : {}) };
   }
   if (product.id === "letters") {
     const r = buildLetters(preset, changes, name);

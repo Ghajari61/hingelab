@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   const allowed = await aiAllowance(plan, userId);
   if (!allowed.ok) return json({ error: aiLimitMessage(plan, allowed.daily) }, 429, { "retry-after": String(Math.max(1, allowed.retryAfter)) });
   try {
-    return json(await designWithAI(req, plan, userId), 200, { "x-hingelab-plan": plan });
+    return json(await designWithAI(req, plan, userId, undefined, { photoRelief: true }), 200, { "x-hingelab-plan": plan });
   } catch (e) {
     if (e instanceof AIDesignError) return json({ error: e.message }, 502);
     console.error("ai design failed", e);
