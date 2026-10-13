@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.18",
-    "pub_date": "2026-10-13T13:52:34.782Z",
-    "notes": "AI drawings open in the workspace: resize them, choose the material, check the slots and see the parts in 3D.",
+    "version": "1.0.19",
+    "pub_date": "2026-10-13T15:57:13.884Z",
+    "notes": "AI Studio in the editor: AI pictures, photo engraving, vectorize with cut checks, toppers, signs and relief. Persian samples removed; Persian fonts kept.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.18_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnFrNW1FdjdqYzFrUW1vVjVKcmtXWjk3dXVON1R2M2VBWVA2QWtnNFhOWm1uMUV6bE9vUjJQK2lYSTZFQjdydXBLM2UzNkhBVHFwUGhLUk8xalFWNmdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxODk5NTQ4CWZpbGU6SGluZ2VMYWJfMS4wLjE4X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMTgKVUpWOWhqYlBHVkoydC9iMHZUSkFvMHFSeUpzV2oxbU5OdEFrMzl0Tm1XWGhwaXBlWDNpUkxvK3BvYkkxUGVmK0QzRTgvMUhrZ05qb0JmZnBOV1dsQ0E9PQo=",
-        "size": 3000457
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.19_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnU5djhUUXp6aEhnMlE3ODFXSVhwNXhvUkZNYmUvaWIwdk9Sdk10eXRGUWlVSEIxc1NJTFA2U09KLzBuWkY5UzFwcmo2WGQ3M0xkOFU0YmF1RzBVTWdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTA3MDEwCWZpbGU6SGluZ2VMYWJfMS4wLjE5X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMTkKcEhmWjVwQURxditsNUNpdXIxRFNlaGl4STIycGEyYStPMTNYNTFYUkU5YWhZOVdZMFRKWUJLem15YVlFbmQ3YkpKcmU2SzZCZ0lQTlFiaUhVYno2Q1E9PQo=",
+        "size": 2966111
       }
     }
   }
