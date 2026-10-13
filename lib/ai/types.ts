@@ -13,10 +13,15 @@ export const MAX_PROMPT = 1500;
 /** Largest photo (a data URL; the apps shrink pictures to 1024 px JPEG before sending). */
 export const MAX_IMAGE_CHARS = 1_400_000;
 
+/** Longest note about the photo, characters. */
+export const MAX_IMAGE_NOTE = 600;
+
 export interface AIDesignRequest {
   prompt: string;
   /** A photo of the product as a data URL (JPEG, PNG or WebP). */
   image?: string;
+  /** What the user says about the photo: what it shows, its size, what to change. Only sent with a photo. */
+  imageNote?: string;
 }
 
 /** How closely the products can make what was asked. */

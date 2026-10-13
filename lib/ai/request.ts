@@ -3,10 +3,12 @@ import "server-only";
 import type { Plan } from "@/lib/plans";
 import { LIMITS, rateLimit, type LimitResult } from "@/lib/security/rateLimit";
 import { isImageDataURL } from "@/lib/security/svg";
-import { MAX_IMAGE_CHARS, MAX_PROMPT, type AIDesignRequest } from "./types";
+import { MAX_IMAGE_CHARS, MAX_IMAGE_NOTE, MAX_PROMPT, type AIDesignRequest } from "./types";
 
-/** Largest body: the photo plus the description. */
+/** Largest body: the photo plus the description and the note about it. */
 export const MAX_AI_BODY = MAX_IMAGE_CHARS + 16 * 1024;
+
+const clean = (s: unknown) => (typeof s === "string" ? s.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").trim() : "");
 
 export function parseAIRequest(text: string): AIDesignRequest | { error: string } {
   let body: unknown;
@@ -16,15 +18,18 @@ export function parseAIRequest(text: string): AIDesignRequest | { error: string 
     return { error: "Invalid request." };
   }
   if (!body || typeof body !== "object" || Array.isArray(body)) return { error: "Invalid request." };
-  const { prompt, image } = body as Record<string, unknown>;
+  const { prompt, image, imageNote } = body as Record<string, unknown>;
   if (prompt !== undefined && typeof prompt !== "string") return { error: "The description must be text." };
-  const p = (prompt ?? "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").trim();
+  if (imageNote !== undefined && imageNote !== null && typeof imageNote !== "string") return { error: "The note about the photo must be text." };
+  const p = clean(prompt);
   if (p.length > MAX_PROMPT) return { error: `Keep the description under ${MAX_PROMPT} characters.` };
+  const note = clean(imageNote);
+  if (note.length > MAX_IMAGE_NOTE) return { error: `Keep the note about the photo under ${MAX_IMAGE_NOTE} characters.` };
   if (image !== undefined && image !== null && image !== "") {
     if (!isImageDataURL(image) || image.length > MAX_IMAGE_CHARS) return { error: "The photo must be a JPEG, PNG or WebP under 1 MB." };
   }
   if (!p && !image) return { error: "Describe the product or add a photo of it." };
-  return { prompt: p, ...(image ? { image: image as string } : {}) };
+  return { prompt: p, ...(image ? { image: image as string, ...(note ? { imageNote: note } : {}) } : {}) };
 }
 
 /** The burst limit, then the plan's daily allowance. */

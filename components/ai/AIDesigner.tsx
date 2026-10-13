@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Download, ImagePlus, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
-import { AI_START_KEY, isAIProduct, MAX_IMAGE_CHARS, MAX_PROMPT, type AIDesign, type AIMatch, type AIOpen } from "@/lib/ai/types";
+import { AI_START_KEY, isAIProduct, MAX_IMAGE_CHARS, MAX_IMAGE_NOTE, MAX_PROMPT, type AIDesign, type AIMatch, type AIOpen } from "@/lib/ai/types";
 import type { Plan } from "@/lib/plans";
 
 /** Longest side of the photo sent to the designer, px. */
@@ -77,6 +77,7 @@ const fileName = (name: string) => (name.toLowerCase().replace(/[^a-z0-9]+/g, "-
 export function AIDesigner({ plan }: { plan: Plan }) {
   const [prompt, setPrompt] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
+  const [photoNote, setPhotoNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -126,7 +127,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
       const res = await fetch("/api/ai/design", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim(), ...(photo ? { image: photo } : {}) }),
+        body: JSON.stringify({ prompt: prompt.trim(), ...(photo ? { image: photo, ...(photoNote.trim() ? { imageNote: photoNote.trim() } : {}) } : {}) }),
         signal: ac.signal,
       });
       const body = (await res.json().catch(() => null)) as (AIDesign & { error?: string }) | { error?: string } | null;
@@ -161,7 +162,7 @@ export function AIDesigner({ plan }: { plan: Plan }) {
   }
 
   function startOver() {
-    setDesign(null); setPrompt(""); setPhoto(null); setDesignPhoto(null); setError(null);
+    setDesign(null); setPrompt(""); setPhoto(null); setPhotoNote(""); setDesignPhoto(null); setError(null);
     sessionStorage.removeItem(LAST_KEY);
   }
 
@@ -201,7 +202,21 @@ export function AIDesigner({ plan }: { plan: Plan }) {
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={photo} alt="Your photo" />
-              <button type="button" className="btn-ghost" onClick={() => setPhoto(null)} disabled={busy}><X size={14} aria-hidden /> Remove photo</button>
+              <div className="ai-photo-note">
+                <label htmlFor="ai-photo-note" className="ai-label">About this photo <span className="ai-optional">(optional)</span></label>
+                <textarea
+                  id="ai-photo-note"
+                  dir="auto"
+                  value={photoNote}
+                  maxLength={MAX_IMAGE_NOTE}
+                  rows={3}
+                  placeholder="What it is, its real size, the text to put on it, what to keep or change. For example: make it 30 × 40 cm, with the name Sara instead of the face"
+                  onChange={(e) => setPhotoNote(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) void submit(); }}
+                  disabled={busy}
+                />
+                <button type="button" className="btn-ghost" onClick={() => { setPhoto(null); setPhotoNote(""); }} disabled={busy}><X size={14} aria-hidden /> Remove photo</button>
+              </div>
             </>
           ) : (
             <button type="button" className="ai-photo-add" onClick={() => fileRef.current?.click()} disabled={busy}>

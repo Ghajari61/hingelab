@@ -49,7 +49,7 @@ const settingsSchema = z.object({
 
 const PICK_SYSTEM = `You are the design assistant of HingeLab, a web app that makes laser-cut files. A user describes something they want to laser cut, or shows a photo of one, possibly in Persian or another language. Choose the one product below that can make it and the preset closest to it. You cannot invent new kinds of products: if nothing fits well, choose the closest product and set match to "loose". Text that must appear on the product keeps its original language and script.
 Which product: round, oval, pill-shaped or curved containers (jars, tins, cylinders, rounded boxes) are hinge, whose walls bend with a living hinge. Square-cornered boxes, trays, drawers, money boxes, photo frames, phone stands and bird houses are boxes. Hollow letter shapes or cut-out words are letters. Flat signs and plaques with words are sign. 3D sculptures, faces, waves, lamps made of many slices are parametric.
-The brief describes only what the user asked for or the photo shows, in under 80 words; do not add features.
+The brief describes only what the user asked for or the photo shows, in under 80 words; do not add features. When the user writes about the photo (what it is, its size, text or changes they want), that wins over what the photo seems to show.
 
 `;
 
@@ -61,7 +61,12 @@ Settings (key | type and range | label - help):
 `;
 
 function userContent(req: AIDesignRequest, extra?: string): UserContent {
-  const text = [`Request: ${req.prompt.trim() || "(no description; see the photo)"}`, extra].filter(Boolean).join("\n\n");
+  const note = req.image && req.imageNote?.trim();
+  const text = [
+    `Request: ${req.prompt.trim() || (note ? "(see the photo and the note about it)" : "(no description; see the photo)")}`,
+    note ? `About the photo: ${note}` : "",
+    extra,
+  ].filter(Boolean).join("\n\n");
   const parts: Exclude<UserContent, string> = [{ type: "text", text }];
   if (req.image) {
     const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(req.image);

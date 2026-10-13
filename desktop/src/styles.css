@@ -520,6 +520,8 @@ kbd { font: 12px var(--font); padding: 1px 6px; border: 1px solid var(--line-2);
 .ai-photo { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 10px; border: 1px dashed var(--line-2); border-radius: 10px; }
 .ai-photo.has { border-style: solid; }
 .ai-photo img { max-width: 220px; max-height: 140px; object-fit: contain; border-radius: 6px; background: var(--field); }
+.ai-photo-note { flex: 1 1 260px; display: grid; gap: 8px; justify-items: start; }
+.ai-photo-note textarea { min-height: 72px; }
 .ai-photo-add { display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 4px; color: var(--ink-2); font-size: 13px; text-align: left; cursor: pointer; }
 .ai-photo-add svg { flex: none; color: var(--accent); }
 .ai-photo-add b { color: var(--ink); }

@@ -897,3 +897,7 @@ A Parametric design from a photo used the chosen preset's own source model, so t
 ## D138. The AI designer can use the owner's OpenAI key
 
 The gateway's free tier only allows gpt-5-mini, and a ChatGPT subscription cannot be used by a server: OpenAI only grants programmatic access through API keys. So the deployment may set OPENAI_API_KEY and the designer calls OpenAI directly (via the Apache-2.0 @ai-sdk/openai provider, same AI SDK version line), keeping the gateway as the fallback so a bad key, an empty balance or an outage still produces a design. Users are identified to OpenAI only by the same hashed id the gateway gets.
+
+## D139. The note about a photo is its own field
+
+People describe a photo differently from a product they want: they correct it ("the real one is 30 × 40 cm"), change it ("my name instead of the face") or say which part matters. Mixing that into the main description loses whether it refers to the photo. A separate `imageNote` field, only kept with a photo and labelled for the model, lets the prompt say plainly that the user's words beat the model's reading of the picture, and keeps the main box for describing a product without a photo.

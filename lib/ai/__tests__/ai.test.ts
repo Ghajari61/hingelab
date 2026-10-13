@@ -3,7 +3,7 @@ import { MockLanguageModelV4 } from "ai/test";
 import { AIDesignError, designWithAI } from "../design";
 import { aiMenu, fieldsText, productsText } from "../menu";
 import { parseAIRequest } from "../request";
-import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_OPEN_PATH, MAX_PROMPT } from "../types";
+import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_IMAGE_NOTE, MAX_OPEN_PATH, MAX_PROMPT } from "../types";
 
 const usage = { inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined }, outputTokens: { total: 20, text: 20, reasoning: undefined } };
 
@@ -29,6 +29,13 @@ describe("AI designer request", () => {
     expect(parseAIRequest(JSON.stringify({ prompt: "  a pen box  " }))).toEqual({ prompt: "a pen box" });
     expect(parseAIRequest(JSON.stringify({ image: PNG }))).toEqual({ prompt: "", image: PNG });
     expect(parseAIRequest(JSON.stringify({ prompt: "this", image: PNG }))).toEqual({ prompt: "this", image: PNG });
+  });
+
+  it("keeps a note about the photo only when there is a photo", () => {
+    expect(parseAIRequest(JSON.stringify({ image: PNG, imageNote: "  30 × 40 cm  " }))).toEqual({ prompt: "", image: PNG, imageNote: "30 × 40 cm" });
+    expect(parseAIRequest(JSON.stringify({ prompt: "a box", imageNote: "30 cm" }))).toEqual({ prompt: "a box" });
+    expect(parseAIRequest(JSON.stringify({ image: PNG, imageNote: "x".repeat(MAX_IMAGE_NOTE + 1) }))).toHaveProperty("error");
+    expect(parseAIRequest(JSON.stringify({ image: PNG, imageNote: 5 }))).toHaveProperty("error");
   });
 
   it("refuses empty, oversized and malformed requests", () => {
@@ -157,6 +164,13 @@ describe("AI designer", () => {
     expect(web.notes.join(" ")).toContain("Your photo becomes the relief");
     const desk = await designWithAI({ prompt: "", image: PNG }, "pro", "user-1", mock(pick).model);
     expect(desk.summary).not.toContain("Your photo");
+  });
+
+  it("gives both steps the note about the photo", async () => {
+    const { model, calls } = mock({ product: "sign", preset: "", name: "Sign", match: "exact", brief: "A sign" }, { settings: [], notes: [] });
+    await designWithAI({ prompt: "", image: PNG, imageNote: "make it 30 × 40 cm with the name سارا" }, "pro", "user-1", model);
+    expect(calls).toHaveLength(2);
+    for (const c of calls) expect(JSON.stringify(c.prompt)).toContain("About the photo: make it 30 × 40 cm with the name سارا");
   });
 
   it("keeps the preset's values when the settings step fails", async () => {

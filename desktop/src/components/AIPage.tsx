@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Crown, Globe, ImagePlus, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
 import type { AIDesign, AIMatch } from "../../../lib/ai/types";
-import { MAX_IMAGE_CHARS, MAX_PROMPT } from "../../../lib/ai/types";
+import { MAX_IMAGE_CHARS, MAX_IMAGE_NOTE, MAX_PROMPT } from "../../../lib/ai/types";
 import type { DCatalog } from "../../../lib/desktop/types";
 import { ipc, type AppError } from "../ipc";
 
@@ -49,6 +49,7 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
 }) {
   const [prompt, setPrompt] = useState(kept?.prompt ?? "");
   const [photo, setPhoto] = useState<string | null>(null);
+  const [photoNote, setPhotoNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +77,7 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
     const n = ++run.current;
     setBusy(true); setElapsed(0); setError(null);
     try {
-      const d = await ipc.aiDesign({ prompt: prompt.trim(), ...(photo ? { image: photo } : {}) });
+      const d = await ipc.aiDesign({ prompt: prompt.trim(), ...(photo ? { image: photo, ...(photoNote.trim() ? { imageNote: photoNote.trim() } : {}) } : {}) });
       if (n !== run.current) return;
       setDesign(d);
       setFromPhoto(!!photo);
@@ -125,7 +126,21 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
           {photo ? (
             <>
               <img src={photo} alt="Your photo" />
-              <button type="button" className="btn" onClick={() => setPhoto(null)} disabled={busy}><X size={14} aria-hidden />Remove photo</button>
+              <div className="ai-photo-note">
+                <label htmlFor="ai-photo-note"><b>About this photo</b> <span className="fine">(optional)</span></label>
+                <textarea
+                  id="ai-photo-note"
+                  dir="auto"
+                  value={photoNote}
+                  maxLength={MAX_IMAGE_NOTE}
+                  rows={3}
+                  placeholder="What it is, its real size, the text to put on it, what to keep or change. For example: make it 30 × 40 cm, with the name Sara instead of the face"
+                  onChange={(e) => setPhotoNote(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); void submit(); } }}
+                  disabled={busy}
+                />
+                <button type="button" className="btn" onClick={() => { setPhoto(null); setPhotoNote(""); }} disabled={busy}><X size={14} aria-hidden />Remove photo</button>
+              </div>
             </>
           ) : (
             <button type="button" className="ai-photo-add" onClick={() => fileRef.current?.click()} disabled={busy}>
