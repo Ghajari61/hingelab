@@ -88,6 +88,14 @@ const ART: Record<string, React.ReactNode> = {
       <path className="cut snap" d="M112 46 c8 0 8 14 0 14 v20 h26 v-60 h-26 z" />
     </g>
   ),
+  "shadow-box": (
+    <g>
+      <rect className="cut" x="44" y="12" width="72" height="72" rx="4" />
+      {[30, 24, 18, 12, 6].map((r, i) => (
+        <rect key={r} className={`cut pop${i % 3 ? ` d${i % 3 + 1}` : ""}`} x={80 - r} y={48 - r} width={2 * r} height={2 * r} rx="1.5" transform={`rotate(${i * 9} 80 48)`} />
+      ))}
+    </g>
+  ),
   calibration: (
     <g>
       {Array.from({ length: 20 }, (_, i) => (

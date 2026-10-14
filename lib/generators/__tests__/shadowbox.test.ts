@@ -1,0 +1,123 @@
+import { describe, expect, it } from "vitest";
+import { makeShape, offsetShapes, totalArea, unionShapes } from "@/lib/letters/polygon";
+import { bboxOf, signedArea } from "../geom";
+import { SHADOWBOX } from "../shadowbox";
+import type { ShadowBoxOutput } from "../shadowbox/build";
+import { CELLS, FRAMES, MAT_MM, OPENINGS, PATTERNS, RIDGES, mergeShadowBox, type ShadowBoxParams } from "../shadowbox/params";
+import { SHADOWBOX_FEATURED } from "../shadowbox/featured";
+import { START_LAZY } from "../startPresets";
+import type { ChoiceSpec } from "../types";
+import { CTX } from "./ctx";
+
+const build = (raw: unknown) => SHADOWBOX.build(mergeShadowBox(raw), CTX) as ShadowBoxOutput;
+const layers = (out: ShadowBoxOutput) => out.parts.filter((p) => p.id.startsWith("layer"));
+const area = (p: { outer: [number, number][]; holes: [number, number][][] }) => Math.abs(signedArea(p.outer)) - p.holes.reduce((a, h) => a + Math.abs(signedArea(h)), 0);
+const choice = (key: string) => SHADOWBOX.sections.flatMap((s) => s.fields).find((f) => f.key === key) as ChoiceSpec<ShadowBoxParams>;
+
+describe("shadow box", () => {
+  it("has 100 presets that all build with no errors or warnings", () => {
+    expect(SHADOWBOX.presets).toHaveLength(100);
+    expect(new Set(SHADOWBOX.presets.map((p) => p.id)).size).toBe(100);
+    for (const pr of SHADOWBOX.presets) {
+      const p = SHADOWBOX.merge(pr.params);
+      const out = SHADOWBOX.build(p, CTX);
+      expect(out.error, pr.id).toBeUndefined();
+      expect(layers(out), pr.id).toHaveLength(p.stack.count);
+      expect(SHADOWBOX.check(p, out).filter((i) => i.level !== "info").map((i) => i.code), pr.id).toEqual([]);
+    }
+  });
+
+  it("the start page's featured cards match built-in presets", async () => {
+    const lazy = START_LAZY.shadowbox!;
+    expect(lazy.count).toBe(SHADOWBOX.presets.length);
+    expect(SHADOWBOX.presets.some((p) => p.id === lazy.cover)).toBe(true);
+    expect((await lazy.load()).map((p) => p.id)).toEqual(SHADOWBOX_FEATURED.map((c) => c.id));
+    for (const c of SHADOWBOX_FEATURED) expect(SHADOWBOX.presets.find((p) => p.id === c.id), c.id).toMatchObject({ name: c.name, note: c.note });
+  });
+
+  it("every layer keeps the frame's outline and its whole border", () => {
+    for (const frame of FRAMES) {
+      const out = build({ frame: { shape: frame, width: 200, height: 180, border: 12 }, design: { pattern: "tunnel", opening: "frame", max: 100, twist: 0 } });
+      const outline = bboxOf([out.parts[0].outer]);
+      for (const l of layers(out)) {
+        const b = bboxOf([l.outer]);
+        const r = (v: number) => Math.round(v * 10) / 10 + 0;
+        expect([b.x0, b.y0, b.x1, b.y1].map(r), `${frame} ${l.id}`).toEqual([outline.x0, outline.y0, outline.x1, outline.y1].map(r));
+        expect(Math.abs(signedArea(l.outer)), `${frame} ${l.id}`).toBeCloseTo(Math.abs(signedArea(out.parts[0].outer)), 0);
+      }
+      // The front layer's cut-out is the whole window, so what is left is the border ring.
+      const front = layers(out).at(-1)!;
+      const ring = offsetShapes([makeShape(out.parts[0].outer, [])], -12);
+      const want = Math.abs(signedArea(out.parts[0].outer)) - totalArea(ring);
+      expect(Math.abs(area(front) - want), frame).toBeLessThan(want * 0.005);
+    }
+  });
+
+  it("cut-outs grow from the back to the front", () => {
+    const out = build({ stack: { count: 8, back: true }, design: { pattern: "tunnel", opening: "polygon", sides: 6, min: 20, max: 90 } });
+    const holes = layers(out).map((l) => l.holes.reduce((a, h) => a + Math.abs(signedArea(h)), 0));
+    expect(holes[0]).toBe(0);
+    for (let k = 2; k < holes.length; k++) expect(holes[k]).toBeGreaterThan(holes[k - 1]);
+  });
+
+  it("leaves no paper narrower than the bridge width", () => {
+    for (const pattern of PATTERNS) {
+      const out = build({ design: { pattern, web: 2, count: 24, pitch: 12 } });
+      for (const l of layers(out)) {
+        const s = unionShapes([l.outer, ...l.holes], [], true);
+        const open = offsetShapes(offsetShapes(s, -0.95, "miter"), 0.95, "miter");
+        expect(totalArea(open) / totalArea(s), `${pattern} ${l.id}`).toBeGreaterThan(0.995);
+      }
+    }
+  });
+
+  it("every pattern, shape, ridge and cell builds", () => {
+    for (const opening of OPENINGS) for (const pattern of ["tunnel", "mandala"] as const) expect(build({ design: { pattern, opening } }).error, `${pattern} ${opening}`).toBeUndefined();
+    for (const ridge of RIDGES) for (const from of ["bottom", "top", "both"] as const) expect(build({ design: { pattern: "landscape", ridge, from } }).error, `${ridge} ${from}`).toBeUndefined();
+    for (const cell of CELLS) expect(layers(build({ design: { pattern: "lattice", cell } }))[3].holes.length, cell).toBeGreaterThan(10);
+    expect(layers(build({ design: { pattern: "sunburst", count: 12 } }))[3].holes).toHaveLength(1);
+  });
+
+  it("stacks the layers with foam or spacer frames", () => {
+    const foam = build({ T: 2, stack: { count: 6, spacer: "none", gap: 3 } });
+    expect(layers(foam).map((l) => l.place!.z)).toEqual([0, 5, 10, 15, 20, 25]);
+    expect(foam.info!.depth).toBe(27);
+    const framed = build({ T: 2, stack: { count: 6, spacer: "frames", per: 2 } });
+    expect(framed.parts.filter((p) => p.id.startsWith("spacer"))).toHaveLength(10);
+    expect(framed.info!.depth).toBe(6 * 2 + 5 * 4);
+    const zs = framed.parts.map((p) => p.place!.z);
+    expect(zs).toEqual([...zs].sort((a, b) => a - b));
+    expect(framed.stats.find((s) => s.label === "Spacer frames")!.value).toBe("10");
+  });
+
+  it("a light hole goes through the back board only", () => {
+    const out = build({ stack: { back: true }, design: { pattern: "landscape", moon: true } });
+    expect(layers(out)[0].holes).toHaveLength(1);
+    expect(build({ stack: { back: true } }).parts[0].holes).toHaveLength(0);
+  });
+
+  it("the blade cutter draws for a Cricut mat with no kerf, and pickers start each pattern sensibly", () => {
+    const p = choice("cutter.kind").apply!(mergeShadowBox({}), "blade");
+    expect(p).toMatchObject({ K: 0, bedW: MAT_MM, bedH: MAT_MM, material: "custom", cutter: { kind: "blade" } });
+    expect(choice("cutter.kind").apply!(p, "laser")).toMatchObject({ material: "card2", cutter: { kind: "laser" } });
+    const land = choice("design.ridge").apply!(mergeShadowBox({}), "waves");
+    expect(land.design).toMatchObject({ pattern: "landscape", ridge: "waves", min: 34, max: 84 });
+    const out = SHADOWBOX.build(land, CTX) as ShadowBoxOutput;
+    expect(out.info!.open).toBeLessThanOrEqual(1);
+  });
+
+  it("a border that leaves no window is an error with a fix", () => {
+    const p = mergeShadowBox({ frame: { width: 80, height: 80, border: 45 } });
+    const out = SHADOWBOX.build(p, CTX);
+    expect(out.error).toBeTruthy();
+    const issue = SHADOWBOX.check(p, out).find((i) => i.code === "NO_WINDOW")!;
+    expect(SHADOWBOX.build(issue.fixes[0].apply(p), CTX).error).toBeUndefined();
+  });
+
+  it("colours shade from the back to the front and paper looks matte", () => {
+    const out = build({ look: { palette: "ocean" }, stack: { count: 5 } });
+    expect(layers(out).map((l) => l.color)).toEqual(["#0b2545", "#13315c", "#1d7ea8", "#8dd3e8", "#e8f7fb"]);
+    expect(out.parts.every((p) => p.matte)).toBe(true);
+    expect(out.stacked).toBe(true);
+  });
+});

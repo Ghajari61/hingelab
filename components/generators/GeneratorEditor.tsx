@@ -36,8 +36,12 @@ import { getPath, setPath } from "@/lib/generators/path";
 import { loadGenerator } from "@/lib/generators/registry";
 import { makeTextFn } from "@/lib/generators/text";
 import type { AnyGenerator, BuildContext, ChoiceSpec, GenBase, GenPreset } from "@/lib/generators/types";
+import { GEN_RAIL_GROUPS } from "@/lib/generators/railArt.generated";
+import { addRailGroups } from "@/lib/railArt";
 import { GeneratorDock } from "./GeneratorDock";
 import "./generators.css";
+
+addRailGroups(GEN_RAIL_GROUPS);
 
 const GeneratorView3D = dynamic(() => import("./GeneratorView3D"), {
   ssr: false,
@@ -292,9 +296,12 @@ function GenEditor({ def, onProduct, onHome, start }: {
   useEffect(() => {
     if (!start || started.current) return;
     started.current = true;
-    replace(def.merge(start.params) as P, true);
+    // Start presets with no settings (featured cards, links) take the built-in preset with that id.
+    const from = !start.params || Object.keys(start.params).length === 0 ? def.presets.find((x) => x.id === start.id) : start;
+    if (!from) return;
+    replace(def.merge(from.params) as P, true);
     window.setTimeout(() => viewApi.fit(), 50);
-    toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
+    toastMsg(`Started from “${from.name}”. Ctrl+Z returns to your last design.`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

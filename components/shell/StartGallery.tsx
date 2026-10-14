@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Bookmark, Shapes, Trash2 } from "lucide-react";
 import type { PresetProduct } from "@/lib/userPresets";
 import { useMyPresets } from "./useMyPresets";
@@ -12,8 +12,8 @@ import { HINGE_PRESETS, hingePresetParams } from "@/lib/hinge/presets";
 import { LETTER_PRESETS } from "@/lib/letters/presets";
 import { PARAMETRIC_PRESETS } from "@/lib/parametric/presets";
 import { PRESET_PARTS } from "@/lib/parametric/presetParts";
-import { GENERATOR_IDS, GENERATOR_INFO, isGeneratorId } from "@/lib/generators/ids";
-import { GENERATOR_PRESETS } from "@/lib/generators/presets";
+import { GENERATOR_IDS, GENERATOR_INFO, isGeneratorId, type GeneratorId } from "@/lib/generators/ids";
+import { START_LAZY, START_PRESETS, type LazyStart } from "@/lib/generators/startPresets";
 import { hingeLocks, lettersLock, parametricLocks } from "@/lib/plans";
 import type { Preset } from "@/lib/presets";
 
@@ -52,12 +52,21 @@ export function StartGallery({ onPick }: { onPick: (choice: StartChoice) => void
     }
     return out;
   }, []);
+  const [late, setLate] = useState<Partial<Record<GeneratorId, AnyPreset[]>>>({});
+  useEffect(() => {
+    let live = true;
+    for (const [id, l] of Object.entries(START_LAZY) as [GeneratorId, LazyStart][]) {
+      l.load().then((list) => { if (live) setLate((s) => ({ ...s, [id]: list as unknown as AnyPreset[] })); }, () => {});
+    }
+    return () => { live = false; };
+  }, []);
   const lists: [Product, AnyPreset[]][] = [
     ["hinge", HINGE_PRESETS as unknown as AnyPreset[]],
     ["letters", LETTER_PRESETS as unknown as AnyPreset[]],
     ["parametric", PARAMETRIC_PRESETS as unknown as AnyPreset[]],
-    ...GENERATOR_IDS.map((id) => [id, GENERATOR_PRESETS[id] as unknown as AnyPreset[]] as [Product, AnyPreset[]]),
+    ...GENERATOR_IDS.map((id) => [id, late[id] ?? (START_PRESETS[id] as unknown as AnyPreset[])] as [Product, AnyPreset[]]),
   ];
+  const cover = (k: GeneratorId) => START_LAZY[k]?.cover ?? START_PRESETS[k][0]?.id;
   const mine = useMyPresets();
   const go = (k: Product) => (saved[k] ? <>Continue “{saved[k]}”</> : "Start designing");
 
@@ -85,7 +94,7 @@ export function StartGallery({ onPick }: { onPick: (choice: StartChoice) => void
           <div className="gen-tiles">
             {GENERATOR_IDS.map((k) => (
               <button key={k} type="button" className="gen-tile" aria-label={PRODUCT_INFO[k].name} onClick={() => onPick({ product: k })}>
-                {GENERATOR_PRESETS[k][0] && <span className="pic" aria-hidden><img src={`/presets/${k}/${GENERATOR_PRESETS[k][0].id}.svg`} alt="" loading="lazy" width={300} height={200} /></span>}
+                {cover(k) && <span className="pic" aria-hidden><img src={`/presets/${k}/${cover(k)}.svg`} alt="" loading="lazy" width={300} height={200} /></span>}
                 <span className="ico" aria-hidden>{PRODUCT_INFO[k].icon}</span>
                 <span className="nm">{PRODUCT_INFO[k].name}</span>
                 <span className="bl">{BLURB[k]}</span>
@@ -114,7 +123,7 @@ export function StartGallery({ onPick }: { onPick: (choice: StartChoice) => void
             </div>
           </section>
         )}
-        {lists.map(([product, list]) => (
+        {lists.filter(([, list]) => list.length > 0).map(([product, list]) => (
           <section key={product} className="start-presets" aria-label={`${PRODUCT_INFO[product].name} presets`}>
             <h2>{PRODUCT_INFO[product].icon}{PRODUCT_INFO[product].name} presets</h2>
             <div className="preset-grid">
@@ -126,6 +135,12 @@ export function StartGallery({ onPick }: { onPick: (choice: StartChoice) => void
                 </button>
               ))}
             </div>
+            {isGeneratorId(product) && START_LAZY[product] && (
+              <p className="start-more">
+                {START_LAZY[product].count} designs in all, in the editor&apos;s Presets panel.{" "}
+                <button type="button" onClick={() => onPick({ product })}>Open {PRODUCT_INFO[product].name}<ArrowRight size={13} aria-hidden /></button>
+              </p>
+            )}
           </section>
         ))}
       </main>

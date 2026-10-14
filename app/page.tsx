@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight, Award, Baby, Box, Cake, CheckCircle2, Clock, Download, FileDown, Gift, GraduationCap, Hash, Heart, KeyRound, Layers,
-  LayoutGrid, Moon, Package, Puzzle, QrCode, Ruler, ScanLine, Shapes, ShieldCheck, Signpost, Sparkles, TreePine, Trophy,
+  LayoutGrid, Moon, Package, Puzzle, QrCode, Ruler, ScanLine, Shapes, ShieldCheck, Signpost, Sparkles, SquareStack, TreePine, Trophy,
   Type, Wand2, Wrench, type LucideIcon,
 } from "lucide-react";
 import { sceneSVG } from "@/components/editor/scene3d";
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 
 const ICON: Record<SiteIcon, LucideIcon> = {
   hinge: Package, letters: Type, parametric: Layers, clock: Clock, puzzle: Puzzle, qr: QrCode, box: Box,
-  cake: Cake, key: KeyRound, sign: Signpost, hash: Hash, trophy: Trophy,
+  cake: Cake, key: KeyRound, sign: Signpost, hash: Hash, trophy: Trophy, layers: SquareStack,
 };
 
 const OCCASIONS: { name: string; icon: LucideIcon; preset: string }[] = [
@@ -57,7 +57,7 @@ const FEATURES: { icon: LucideIcon; title: string; text: string }[] = [
 const FAQ = [
   {
     q: "What can I make with HingeLab?",
-    a: "Living-hinge and finger-jointed boxes, cake and cupcake toppers for every occasion, key holders, wood and acrylic signs, wedding and restaurant table numbers, trophies and awards, wall clocks, jigsaw puzzles, QR code plates, letter boxes and sliced sculptures. Every product starts from ready-made designs you can change.",
+    a: "Living-hinge and finger-jointed boxes, cake and cupcake toppers for every occasion, key holders, wood and acrylic signs, wedding and restaurant table numbers, trophies and awards, wall clocks, jigsaw puzzles, QR code plates, layered 3D paper-cut shadow boxes for a laser or a Cricut, letter boxes and sliced sculptures. Every product starts from ready-made designs you can change.",
   },
   {
     q: "What is kerf, and do I need to measure it?",

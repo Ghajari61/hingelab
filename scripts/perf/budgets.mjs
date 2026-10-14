@@ -32,6 +32,7 @@ const LAZY_BUDGETS = {
   "Sign generator": { key: /registry\.ts -> \.\/sign$/, kb: 20 },
   "Table Numbers generator": { key: /registry\.ts -> \.\/tablenum$/, kb: 19 },
   "Trophy generator": { key: /registry\.ts -> \.\/trophy$/, kb: 18 },
+  "Shadow Box generator": { key: /registry\.ts -> \.\/shadowbox$/, kb: 20 },
 };
 
 const gz = new Map();

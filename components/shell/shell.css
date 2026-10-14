@@ -175,6 +175,9 @@ details.sec > summary:hover .sec-rst, .sec-rst:focus-visible { opacity: 1; }
 .start-presets { margin-bottom: 30px; }
 .start-presets h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 16px; }
 .preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 12px; }
+.start-more { margin: 10px 0 0; font-size: 13px; color: var(--fg-dim); }
+.start-more button { display: inline-flex; align-items: center; gap: 4px; padding: 0; background: none; border: 0; font: inherit; font-weight: 600; color: var(--cta); cursor: pointer; }
+.start-more button:hover { text-decoration: underline; }
 .preset-card {
   --card-fill: #F6EEDF; --card-fill-2: #E9DCC4; --card-ink: #3B3B40; --card-ink-soft: #8A6F45;
   display: grid; gap: 3px; text-align: start; padding: 8px 8px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; color: var(--fg);

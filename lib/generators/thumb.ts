@@ -4,7 +4,7 @@
  * them (a stand's base) are drawn edge on. Assemblies with turned or leaning parts (boxes) are drawn
  * in a three-quarter view instead. For preset thumbnails and help figures.
  */
-import { unionShapes } from "@/lib/letters/polygon";
+import { differenceShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { bboxOf, signedArea } from "./geom";
 import { placePoint, type V3 } from "./place";
 import type { Contour, GenOutput, GenPart } from "./types";
@@ -142,11 +142,21 @@ export function assembledSVG(out: GenOutput, T: number, w = 300, h = 200): strin
   const vb = [bb.x0 - pad, bb.y0 - pad, bb.x1 - bb.x0 + 2 * pad, bb.y1 - bb.y0 + 2 * pad].map((v) => Math.round(v * 100) / 100);
   const sw = Math.round(vb[2] / 260 * 100) / 100;
   const tol = vb[2] / 260;
+  // A stack of flat layers: each drawn only where the layers in front leave it showing.
+  const shown: Contour[][] = drawn.map((d) => d.f.cs);
+  if (out.stacked) {
+    let cover: Contour[] = [];
+    for (let i = drawn.length - 1; i >= 0; i--) {
+      const own = shapeContours(unionShapes(drawn[i].f.cs, [], true));
+      shown[i] = cover.length ? shapeContours(differenceShapes(own, cover)) : own;
+      cover = shapeContours(unionShapes([...cover, ...own]));
+    }
+  }
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${vb.join(" ")}">`;
   drawn.forEach(({ p, f }, i) => {
     const hand = /hand/i.test(p.name);
     const fill = p.color ?? (hand || (p.tone ?? 1) < 0.6 ? "#5A4130" : WOODS[i % WOODS.length]);
-    s += `<path d="${f.cs.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${fill}" fill-rule="evenodd" stroke="${EDGE}" stroke-width="${sw}"/>`;
+    if (shown[i].length) s += `<path d="${shown[i].map((c) => thumbD(c, true, tol)).join(" ")}" fill="${fill}" fill-rule="evenodd" stroke="${EDGE}" stroke-width="${sw}"/>`;
     if (f.cuts.length) s += `<path d="${f.cuts.map((c) => thumbD(c, false, tol)).join(" ")}" fill="none" stroke="${EDGE}" stroke-width="${sw}" stroke-linejoin="round"/>`;
     if (f.engrave.length) s += `<path d="${f.engrave.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${INK}" fill-rule="evenodd"/>`;
   });

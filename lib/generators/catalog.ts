@@ -1,5 +1,5 @@
 /**
- * The ten generators (spec §7) as metadata: what the start screen, the menus and the plan gates
+ * The generators (spec §7, and the Shadow Box after it) as metadata: what the start screen, the menus and the plan gates
  * need before any generator code is loaded. Each generator's code lives in lib/generators/{id}/.
  */
 export type GeneratorCategory = "Boxes" | "Hinges" | "Lettering" | "Sculpture" | "Home" | "Games" | "Tools";
@@ -33,6 +33,7 @@ export const GENERATORS: GeneratorMeta[] = [
   { id: "lamp", n: 8, name: "Lamp & Lantern", category: "Home", plan: "pro", opens: { templates: "/templates?c=Lamps+%26+light" }, blurb: "Lanterns and shades with parametric perforation patterns." },
   { id: "jigsaw", n: 9, name: "Jigsaw Puzzle", category: "Games", plan: "free", freeLimit: "Free up to 50 pieces", opens: { editor: "/app/editor/local?p=puzzle" }, blurb: "Puzzles of any shape with shared single-line cuts." },
   { id: "calibration", n: 10, name: "Test & Calibration", category: "Tools", plan: "free", opens: "studio", blurb: "Kerf gauge, slot-fit comb and living-hinge test strip for your material." },
+  { id: "shadow-box", n: 11, name: "3D Shadow Box", category: "Home", plan: "free", opens: { editor: "/app/editor/local?p=shadowbox" }, blurb: "Layered paper-cut panels from geometric patterns, for a laser or a Cricut: 100 designs." },
 ];
 
 export const generatorMeta = (id: string) => GENERATORS.find((g) => g.id === id);

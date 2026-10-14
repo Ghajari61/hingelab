@@ -115,6 +115,8 @@ export interface GenPart {
   material?: "main" | "second";
   /** Preview colour (thumbnails and 3D), e.g. gold mirror acrylic. */
   color?: string;
+  /** The preview colour is paper or card, without a shine. */
+  matte?: boolean;
 }
 
 export interface GenStat {
@@ -135,6 +137,8 @@ export interface GenOutput {
   missing?: string[];
   /** Names of the sheets' materials when some parts use the second material; `secondK` is its kerf. */
   materials?: { main: string; second: string; secondK?: number };
+  /** The parts are flat layers stacked face to face (thumbnails draw only what shows from the front). */
+  stacked?: boolean;
 }
 
 /** Glyph outlines for a string, centred on (0, 0), y down; `height` is the cap height in mm. */

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
-  keywords: ["laser cut generator", "living hinge box", "finger joint box", "cake topper SVG", "acrylic sign", "table numbers", "laser trophy", "key holder", "LightBurn", "xTool", "SVG generator", "laser cutter"],
+  keywords: ["laser cut generator", "living hinge box", "finger joint box", "cake topper SVG", "acrylic sign", "table numbers", "laser trophy", "key holder", "3D paper cut shadow box SVG", "LightBurn", "xTool", "SVG generator", "laser cutter"],
   openGraph: {
     type: "website",
     siteName: SITE_NAME,

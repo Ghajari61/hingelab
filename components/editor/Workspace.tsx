@@ -9,7 +9,7 @@ import { chooseInitial } from "@/lib/projects/sync";
 import { openNewCloudProject } from "./cloud";
 import type { ProductId } from "@/lib/supabase/types";
 import { isGeneratorId } from "@/lib/generators/ids";
-import { GENERATOR_PRESETS } from "@/lib/generators/presets";
+import { START_LAZY, START_PRESETS } from "@/lib/generators/startPresets";
 import { TEMPLATE_PRESETS } from "@/lib/templates/presets";
 import { AI_START_KEY } from "@/lib/ai/types";
 import { StartGallery, type StartChoice } from "@/components/shell/StartGallery";
@@ -66,8 +66,11 @@ function urlPreset(p: Product | null): StartChoice | null {
     if (t && t.product === p) return { product: p, preset: { id: `template-${tid}`, name: t.name, note: t.note, params: t.params } };
     if (!isGeneratorId(p)) return null;
     const id = q.get("preset");
-    const preset = id ? GENERATOR_PRESETS[p].find((x) => x.id === id) : undefined;
-    return preset ? { product: p, preset: preset as StartChoice["preset"] } : null;
+    if (!id) return null;
+    const preset = START_PRESETS[p].find((x) => x.id === id);
+    if (preset) return { product: p, preset: preset as StartChoice["preset"] };
+    // Presets the shell does not carry are looked up by id once the generator loads.
+    return START_LAZY[p] && /^[a-z0-9-]{1,60}$/.test(id) ? { product: p, preset: { id, name: id, note: "", params: {} } } : null;
   } catch {
     return null;
   }

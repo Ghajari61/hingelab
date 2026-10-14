@@ -50,7 +50,9 @@ export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D 
         if (p.color) {
           // A contrasting material (gold mirror acrylic and the like) keeps its own colour in every look.
           (mesh.material as THREE.Material).dispose();
-          mesh.material = new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.28, metalness: 0.55, side: THREE.DoubleSide });
+          mesh.material = p.matte
+            ? new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.92, metalness: 0, side: THREE.DoubleSide })
+            : new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.28, metalness: 0.55, side: THREE.DoubleSide });
           mesh.userData.keepMaterial = true;
         }
         spin.add(mesh);

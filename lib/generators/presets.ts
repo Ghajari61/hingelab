@@ -1,24 +1,10 @@
-/** Built-in presets of every generator: data only, so the start page can list them cheaply. */
-import { BOXES_PRESETS } from "./boxes/presets";
-import { CLOCK_PRESETS } from "./clock/presets";
-import { KEYRACK_PRESETS } from "./keyrack/presets";
-import { PUZZLE_PRESETS } from "./puzzle/presets";
-import { QR_PRESETS } from "./qr/presets";
-import { SIGN_PRESETS } from "./sign/presets";
-import { TABLENUM_PRESETS } from "./tablenum/presets";
-import { TROPHY_PRESETS } from "./trophy/presets";
-import { TOPPER_PRESETS } from "./topper/presets";
+/** Built-in presets of every generator, settings included (the start page uses the smaller START_PRESETS). */
+import { SHADOWBOX_PRESETS } from "./shadowbox/presets";
+import { START_PRESETS } from "./startPresets";
 import type { GeneratorId } from "./ids";
 import type { GenPreset } from "./types";
 
 export const GENERATOR_PRESETS: Record<GeneratorId, GenPreset<unknown>[]> = {
-  clock: CLOCK_PRESETS as GenPreset<unknown>[],
-  puzzle: PUZZLE_PRESETS as GenPreset<unknown>[],
-  qr: QR_PRESETS as GenPreset<unknown>[],
-  boxes: BOXES_PRESETS as GenPreset<unknown>[],
-  topper: TOPPER_PRESETS as GenPreset<unknown>[],
-  keyrack: KEYRACK_PRESETS as GenPreset<unknown>[],
-  sign: SIGN_PRESETS as GenPreset<unknown>[],
-  tablenum: TABLENUM_PRESETS as GenPreset<unknown>[],
-  trophy: TROPHY_PRESETS as GenPreset<unknown>[],
+  ...START_PRESETS,
+  shadowbox: SHADOWBOX_PRESETS as GenPreset<unknown>[],
 };

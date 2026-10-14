@@ -3,7 +3,7 @@
  * shipping anything from the server.
  */
 
-export type DesktopProductId = "hinge" | "clock" | "puzzle" | "qr" | "boxes" | "topper" | "keyrack" | "sign" | "tablenum" | "trophy";
+export type DesktopProductId = "hinge" | "clock" | "puzzle" | "qr" | "boxes" | "topper" | "keyrack" | "sign" | "tablenum" | "trophy" | "shadowbox";
 /** Everything the workspace opens: the products, and "art", a drawing from the AI designer. */
 export type WorkspaceProductId = DesktopProductId | "art";
 export type DesktopPlan = "free" | "pro";
@@ -32,7 +32,7 @@ export interface DProduct {
   id: WorkspaceProductId;
   name: string;
   blurb: string;
-  icon: "box" | "clock" | "puzzle" | "qr" | "cake" | "key" | "sign" | "hash" | "trophy" | "wand";
+  icon: "box" | "clock" | "puzzle" | "qr" | "cake" | "key" | "sign" | "hash" | "trophy" | "layers" | "wand";
   sections: DSection[];
   presets: DPreset[];
 }

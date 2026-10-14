@@ -1,6 +1,6 @@
 /** The AI designer's request and answer. Types and constants only, safe to import in the browser and the desktop app. */
 
-export const AI_PRODUCTS = ["art", "hinge", "letters", "parametric", "boxes", "sign", "trophy", "topper", "keyrack", "tablenum", "clock", "puzzle", "qr"] as const;
+export const AI_PRODUCTS = ["art", "hinge", "letters", "parametric", "boxes", "sign", "trophy", "topper", "keyrack", "tablenum", "clock", "puzzle", "qr", "shadowbox"] as const;
 export type AIProduct = (typeof AI_PRODUCTS)[number];
 
 export const isAIProduct = (v: unknown): v is AIProduct => typeof v === "string" && (AI_PRODUCTS as readonly string[]).includes(v);
