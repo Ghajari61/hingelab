@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Resvg } from "@resvg/resvg-js";
 import { MockLanguageModelV4 } from "ai/test";
 import { designWithAI } from "../design";
-import { decodePhoto, inkBitmap, isTwoTone, padShapes } from "../padTrace";
+import { decodePhoto, inkBitmap, isTwoTone, padFromPicture, padShapes } from "../padTrace";
 import { reviseOf } from "../types";
 import { parsePathData } from "@/lib/studio/svgImport";
 import type { Subpath } from "@/lib/studio/types";
@@ -55,6 +55,21 @@ describe("black-and-white pictures", () => {
     const ink = b.bits.reduce((n, v) => n + v, 0) / b.bits.length;
     expect(ink).toBeGreaterThan(0.1);
     expect(ink).toBeLessThan(0.2);
+  });
+
+  it("traces straight edges of a noisy picture as straight lines", async () => {
+    const r = decodePhoto(picture(`<polygon points="60,40 250,70 220,170 40,140"/>`))!;
+    let seed = 7;
+    const d = r.data as Uint8Array;
+    for (let i = 0; i < d.length; i += 4) {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      const v = Math.max(0, Math.min(255, d[i] + ((seed % 61) - 30)));
+      d[i] = d[i + 1] = d[i + 2] = v;
+    }
+    const { built } = await padFromPicture(r, [{ type: "text", text: "a plate" }], async () => { throw new Error("offline"); });
+    const nodes = built.art.shapes.filter((s) => s.layer === "engrave").flatMap((s) => parsePathData(s.d)).flatMap((s) => s.nodes);
+    expect(nodes.length).toBeGreaterThanOrEqual(4);
+    expect(nodes.length).toBeLessThanOrEqual(20);
   });
 });
 

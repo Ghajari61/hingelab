@@ -90,16 +90,56 @@ export function isTwoTone(r: Raster): boolean {
   return grey / n >= 0.97 && extreme / n >= 0.9 && Math.min(ink, n - ink) / n >= 0.002;
 }
 
-/** The artwork as ink: dark parts, or the light parts when the picture is light on a dark ground. */
-export function inkBitmap(r: Raster): Bitmap {
-  const lum = luminance(r), { width: w, height: h } = r;
-  const bits = new Uint8Array(w * h);
-  for (let i = 0; i < bits.length; i++) bits[i] = lum[i] < 128 ? 1 : 0;
+/** Gaussian blur (sigma in pixels), edges clamped. */
+function blur(v: Float32Array, w: number, h: number, sigma: number): Float32Array {
+  const r = Math.ceil(sigma * 2.5), k = Array.from({ length: 2 * r + 1 }, (_, i) => Math.exp(-((i - r) ** 2) / (2 * sigma * sigma)));
+  const sum = k.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < k.length; i++) k[i] /= sum;
+  const tmp = new Float32Array(w * h), out = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    let s = 0;
+    for (let i = -r; i <= r; i++) s += k[i + r] * v[y * w + Math.min(w - 1, Math.max(0, x + i))];
+    tmp[y * w + x] = s;
+  }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    let s = 0;
+    for (let i = -r; i <= r; i++) s += k[i + r] * tmp[Math.min(h - 1, Math.max(0, y + i)) * w + x];
+    out[y * w + x] = s;
+  }
+  return out;
+}
+
+/** JPEG noise along the edges is blurred away before the threshold. */
+const BLUR_PX = 0.9;
+/** The ink is cut out at up to this many times the picture's pixels (bilinear), so edges fall between pixels. */
+const UPSAMPLE = 3;
+const MAX_INK_PX = 3072;
+
+/**
+ * The artwork as ink: dark parts, or the light parts when the picture is light on a dark ground, at
+ * `up` times the picture's resolution.
+ */
+export function inkBitmap(r: Raster): Bitmap & { up: number } {
+  const { width: w, height: h } = r;
+  const lum = blur(luminance(r), w, h, BLUR_PX);
   let edge = 0, dark = 0;
-  for (let x = 0; x < w; x++) { edge += 2; dark += bits[x] + bits[(h - 1) * w + x]; }
-  for (let y = 1; y < h - 1; y++) { edge += 2; dark += bits[y * w] + bits[y * w + w - 1]; }
-  if (dark / Math.max(1, edge) > 0.6) for (let i = 0; i < bits.length; i++) bits[i] ^= 1;
-  return removeSpeckles({ width: w, height: h, bits }, Math.max(4, Math.round(w * h * 1e-5)));
+  const isDark = (x: number, y: number) => (lum[y * w + x] < 128 ? 1 : 0);
+  for (let x = 0; x < w; x++) { edge += 2; dark += isDark(x, 0) + isDark(x, h - 1); }
+  for (let y = 1; y < h - 1; y++) { edge += 2; dark += isDark(0, y) + isDark(w - 1, y); }
+  const inv = dark / Math.max(1, edge) > 0.6;
+  const up = Math.max(1, Math.min(UPSAMPLE, Math.floor(MAX_INK_PX / Math.max(w, h))));
+  const W = w * up, H = h * up, bits = new Uint8Array(W * H);
+  const at = (p: number, n: number) => { const s = Math.min(n - 1, Math.max(0, (p + 0.5) / up - 0.5)); const i = Math.min(n - 2, Math.floor(s)); return n < 2 ? { i: 0, f: 0 } : { i, f: s - i }; };
+  const xs = Array.from({ length: W }, (_, X) => at(X, w));
+  for (let Y = 0; Y < H; Y++) {
+    const { i: y0, f: fy } = at(Y, h), y1 = Math.min(h - 1, y0 + 1);
+    for (let X = 0; X < W; X++) {
+      const { i: x0, f: fx } = xs[X], x1 = Math.min(w - 1, x0 + 1);
+      const top = lum[y0 * w + x0] * (1 - fx) + lum[y0 * w + x1] * fx, bot = lum[y1 * w + x0] * (1 - fx) + lum[y1 * w + x1] * fx;
+      bits[Y * W + X] = ((top * (1 - fy) + bot * fy < 128) !== inv) ? 1 : 0;
+    }
+  }
+  return { ...removeSpeckles({ width: W, height: H, bits }, Math.max(4 * up * up, Math.round(W * H * 1e-5))), up };
 }
 
 // ---------- the pad ----------
@@ -194,6 +234,8 @@ export function padShapes(ink: Subpath[], spec: PadSpec): PadResult | null {
   return { engrave: pathD(move(got.art), 2), cut, width: got.box.x1 - got.box.x0, height: got.box.y1 - got.box.y0, scale: k };
 }
 
+/** Corner smoothing for `traceOutlines`: turns sharper than about 40° stay corners, so straight edges stay straight. */
+const SMOOTH = 0.4;
 /** Path optimisation levels (px), tried in turn until the file is small enough to edit. */
 const OPTIMIZE_PX = [0.5, 1, 1.6, 2.5, 4, 6];
 
@@ -266,7 +308,7 @@ export async function padFromPicture(r: Raster, request: UserContent, ask: ArtAs
   const spec = { size: s.size, pad: s.pad, hole: s.hole };
   let p: PadResult | null = null;
   for (const optimize of OPTIMIZE_PX) {
-    const ink = traceOutlines(bits, { smooth: 1, optimize });
+    const ink = traceOutlines(bits, { smooth: SMOOTH, optimize: optimize * bits.up });
     p = ink.length ? padShapes(ink, spec) : null;
     if (!p || fileChars(p) <= MAX_CHARS) break;
   }
