@@ -4,12 +4,14 @@ import { shapeArt, shapeOutline } from "../shapes";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { motif, type MotifId } from "../motifs";
 import { fitArt, namedFile } from "../util";
-import { buildShadowBox, frameOutline, unitOpening, type ShadowBoxOutput } from "./build";
+import { PHOTO_DITHERS, PHOTO_LOOKS, type PhotoDither, type PhotoLook } from "@/lib/imaging/photoSpec";
+import { buildShadowBox, frameOutline, unitOpening, windowBox, type ShadowBoxOutput } from "./build";
 import { checkShadowBox } from "./check";
 import {
-  CELLS, FRAMES, HOLES, LOOSE, MAT_MM, OPENINGS, PALETTES, PATTERNS, PETALS, PIC_MODES, RIDGES, SAMPLES, SHADOWBOX_DEFAULTS, SIZES, mergeShadowBox,
-  type Cell, type FrameShape, type Hole, type Loose, type Opening, type Pattern, type PicMode, type Ridge, type Sample, type ShadowBoxParams,
+  CELLS, DPIS, FRAMES, HOLES, LOOSE, MAT_MM, MOUNTS, OPENINGS, PALETTES, PATTERNS, PETALS, PIC_MODES, RIDGES, SAMPLES, SHADOWBOX_DEFAULTS, SIZES, mergeShadowBox,
+  type Cell, type Dpi, type FrameShape, type Hole, type Loose, type Mount, type Opening, type Pattern, type PicMode, type Ridge, type Sample, type ShadowBoxParams,
 } from "./params";
+import { centreOn, photoSpec } from "./photo";
 import { sampleArt } from "./picture";
 import { SHADOWBOX_PRESETS } from "./presets";
 
@@ -35,6 +37,21 @@ const MODE_NAMES: Named<PicMode> = {
   scale: ["Tunnel", "The shape nested from small at the back to large at the front"],
   grow: ["Rings", "The shape grown a little more on every layer toward the front"],
 };
+const LOOK_NAMES: Named<PhotoLook> = {
+  colour: "Colour", grey: "Grey", poster: ["Posterised", "A few flat grey tones, like a screen print"], engrave: ["Engraved", "Engraving dots for a laser"],
+};
+const DITHER_NAMES: Named<PhotoDither> = {
+  floyd: ["Fine grain", "Floyd–Steinberg: fine, even grain"], atkinson: ["High contrast", "Atkinson: clean lights and darks"],
+  jarvis: ["Smooth", "Jarvis: smoother tones, softer detail"], ordered: ["Cross-hatch", "An even, regular pattern that engraves fast"],
+  halftone: ["Halftone", "Round dots on a slanted grid, like print"],
+};
+const DPI_NAMES: Named<Dpi> = { 127: "0.2 mm (127 dpi)", 254: "0.1 mm (254 dpi)", 318: "0.08 mm (318 dpi)" };
+const MOUNT_NAMES: Named<Mount> = {
+  board: ["On the board", "Printed and glued on, or engraved, on the back board"],
+  slot: ["In a slot", "A print slid into a holder behind the layers, so it can be changed"],
+};
+/** Settings that change how the photo is made from its original. */
+const PHOTO_LOOK_KEYS = ["photo.look", "photo.bright", "photo.contrast", "photo.tones", "photo.dither", "photo.dpi", "photo.bg", "photo.tol"];
 const LOOSE_NAMES: Named<Loose> = {
   drop: ["Leave out", "Pieces nothing holds are not cut"],
   bridge: ["Bridges", "Thin bridges tie each piece to the nearest paper"],
@@ -178,10 +195,29 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
     id: "photo", title: "Photo", open: true,
     help: "A photo on the back board, seen through every layer: a portrait, a pet, a place or a wedding picture framed by the paper cut.",
     fields: [
-      { kind: "image", key: "photo.image", aspectKey: "photo.aspect", color: true, label: "Photo", help: "A photo (JPEG, PNG or WebP) printed on the back board; the back layer becomes a plain board and the photo takes the place of the light hole." },
+      {
+        kind: "image", key: "photo.image", aspectKey: "photo.aspect", color: true, label: "Photo",
+        help: "A photo (JPEG, PNG or WebP) printed or engraved on the back board; the back layer becomes a plain board and the photo takes the place of the light hole. The original stays on this device.",
+        look: {
+          keys: PHOTO_LOOK_KEYS, src: "photo.src", name: "photo.name", px: "photo.px",
+          spec: (p) => photoSpec(p, windowBox(p)),
+          centre: (p, s) => { const w = windowBox(p); return w ? centreOn(p, w, s) : p; },
+          paper: (p) => p.photo.paper,
+        },
+      },
+      { kind: "choice", key: "photo.look", label: "Photo look", show: hasPhoto, options: opts(PHOTO_LOOKS, LOOK_NAMES), help: "Colour or grey for a print, a few flat grey tones like a screen print, or engraving dots for a laser." },
+      { kind: "number", key: "photo.bright", label: "Brightness", unit: "%", min: -100, max: 100, step: 1, show: hasPhoto, help: "Lightens (positive) or darkens (negative) the photo." },
+      { kind: "number", key: "photo.contrast", label: "Contrast", unit: "%", min: -100, max: 100, step: 1, show: hasPhoto, help: "More contrast makes darks darker and lights lighter; less makes the photo flatter." },
+      { kind: "number", key: "photo.tones", label: "Tones", unit: "", min: 2, max: 8, step: 1, int: true, show: (p) => hasPhoto(p) && p.photo.look === "poster", help: "How many flat grey tones the posterised photo has." },
+      { kind: "choice", key: "photo.dither", label: "Dots", show: (p) => hasPhoto(p) && p.photo.look === "engrave", options: opts(PHOTO_DITHERS, DITHER_NAMES), help: "The pattern of engraving dots that makes the grey tones." },
+      { kind: "choice", key: "photo.dpi", label: "Dot spacing", show: (p) => hasPhoto(p) && p.photo.look === "engrave", options: opts(DPIS, DPI_NAMES), help: "The engraving's line interval: finer dots show more detail but take longer to engrave." },
+      { kind: "toggle", key: "photo.bg", label: "Remove the background", show: hasPhoto, help: "Makes the plain background around the subject white (the colour along the photo's edge, and what joins it)." },
+      { kind: "number", key: "photo.tol", label: "Background match", unit: "%", min: 2, max: 60, step: 1, show: (p) => hasPhoto(p) && p.photo.bg, help: "How far a colour may be from the background's and still be removed." },
       { kind: "number", key: "photo.zoom", label: "Photo zoom", unit: "%", min: 100, max: 300, step: 5, show: hasPhoto, help: "Enlarges the photo from the middle; 100 % just fills the window." },
       { kind: "number", key: "photo.x", label: "Move across", unit: "%", min: -100, max: 100, step: 1, show: hasPhoto, help: "Slides the photo left (negative) or right (positive) to choose which part shows, when it is wider than the window." },
       { kind: "number", key: "photo.y", label: "Move down", unit: "%", min: -100, max: 100, step: 1, show: hasPhoto, help: "Slides the photo up (negative) or down (positive) to choose which part shows, when it is taller than the window." },
+      { kind: "choice", key: "photo.mount", label: "Photo goes", show: hasPhoto, options: opts(MOUNTS, MOUNT_NAMES), help: "On the back board (printed and glued on, or engraved), or as a print slid into a holder behind the layers so it can be changed." },
+      { kind: "choice", key: "photo.paper", label: "Print paper", show: (p) => hasPhoto(p) && p.photo.look !== "engrave", options: opts(["a4", "letter"] as const, { a4: "A4", letter: "Letter" }), help: "The paper size of the photo print (PDF); a photo larger than the paper gets a page of its own size." },
     ],
   },
   {

@@ -5,6 +5,8 @@ import type { ShadowBoxParams } from "./params";
 
 /** Below this share of the window, the layers hide most of the photo (%). */
 const PHOTO_MIN_SHOWN = 25;
+/** Below this, a printed photo looks soft. */
+const PHOTO_MIN_DPI = 150;
 
 export function checkShadowBox(p: ShadowBoxParams, out: ShadowBoxOutput): Issue<ShadowBoxParams>[] {
   const issues: Issue<ShadowBoxParams>[] = [];
@@ -44,6 +46,13 @@ export function checkShadowBox(p: ShadowBoxParams, out: ShadowBoxOutput): Issue<
       message: `Only about ${info.photoShown}% of the photo shows through the layers in front of it.`,
       fixes: p.design.min < 80 ? [{ id: "open", label: max > p.design.max ? `Cut-outs ${min}–${max}%` : `Back cut-out ${min}%`, safe: false, apply: (q) => ({ ...q, design: { ...q.design, min, max } }) }] : [],
     });
+  }
+  if (info.photoDpi) {
+    if (p.photo.look === "engrave" && info.photoDpi < Number(p.photo.dpi) * 0.9) {
+      issues.push({ code: "PHOTO_DOTS", level: "info", message: `At this zoom the engraving dots come out at about ${info.photoDpi} dpi instead of ${p.photo.dpi}. Choose the dot spacing again to remake the engraving for this zoom, or zoom out.`, fixes: [] });
+    } else if (p.photo.look !== "engrave" && p.photo.mount === "board" && info.photoDpi < PHOTO_MIN_DPI) {
+      issues.push({ code: "PHOTO_SOFT", level: "info", message: `The photo in the SVG is about ${info.photoDpi} dpi at this size and may print soft. Print photo makes the print from the original on this device, at up to 300 dpi.`, fixes: [] });
+    }
   }
   if (info.dropped > 0) {
     const how = (loose: ShadowBoxParams["design"]["loose"]) => (q: ShadowBoxParams) => ({ ...q, design: { ...q.design, loose } });

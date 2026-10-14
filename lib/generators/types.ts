@@ -5,6 +5,7 @@
  */
 import type { FitSettings } from "@/lib/fit/fitToSheets";
 import type { Layers } from "@/lib/hinge/types";
+import type { Paper, PhotoSpec, Subject } from "@/lib/imaging/photoSpec";
 import type { Issue } from "@/lib/issues";
 import type { Contour } from "@/lib/letters/types";
 import type { GeneratorId } from "./ids";
@@ -34,6 +35,8 @@ export interface GenImage {
   clip?: Contour;
   /** Drawn mirrored left to right. */
   flip?: boolean;
+  /** Shown on the 3D model only, not in the cut file (a print that goes in by hand). */
+  only3d?: boolean;
 }
 
 /** Settings every generator has; the shell owns their panels. */
@@ -217,6 +220,23 @@ export interface ImageSpec<P> extends FieldCommon<P> {
    * outlines (shadowbox/picPath.ts) and `name` the file's name. SVG files are accepted too.
    */
   trace?: { levels: string; name: string };
+  /**
+   * Made from an original kept on this device (never in the settings): `spec` says how (colour or
+   * grey, tones, engraving dots, background) and at what size; changing a `keys` setting makes it
+   * again. `src`, `name` and `px` hold the original's id on the device, its file name and the made
+   * image's long side, px.
+   */
+  look?: {
+    keys: string[];
+    src: string;
+    name: string;
+    px: string;
+    spec: (p: P) => PhotoSpec;
+    /** Zoom and move the photo so a subject (its centre and height, shares of the photo) sits in the window. */
+    centre?: (p: P, s: Subject) => P;
+    /** Offers a print of the part that shows, as a PDF on this paper. */
+    paper?: (p: P) => Paper;
+  };
 }
 
 export type FieldSpec<P> = NumberSpec<P> | ChoiceSpec<P> | ToggleSpec<P> | TextSpec<P> | FontSpec<P> | ImageSpec<P>;

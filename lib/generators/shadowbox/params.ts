@@ -1,5 +1,6 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
+import { PHOTO_DITHERS, PHOTO_LOOKS, type Paper, type PhotoDither, type PhotoLook } from "@/lib/imaging/photoSpec";
 import { isImageDataURL } from "@/lib/security/svg";
 import type { ShapeKind } from "../shapes";
 import type { MotifId } from "../motifs";
@@ -38,6 +39,13 @@ export type PicMode = (typeof PIC_MODES)[number];
 /** Paper pieces the cut-outs leave loose: left out, bridged to the frame, or cut as parts to glue on. */
 export const LOOSE = ["drop", "bridge", "parts"] as const;
 export type Loose = (typeof LOOSE)[number];
+/** Engraving resolutions: a 0.2, 0.1 or 0.08 mm line interval. */
+export const DPIS = ["127", "254", "318"] as const;
+export type Dpi = (typeof DPIS)[number];
+export const MOUNTS = ["board", "slot"] as const;
+export type Mount = (typeof MOUNTS)[number];
+/** Longest stored photo, characters of its data URL (an engraving at 0.1 mm across a 10 in window fits). */
+export const MAX_PHOTO_CHARS = 1_200_000;
 
 /** Standard shadow box frames: the layers are 3 mm smaller than the frame's opening so they drop in. */
 export const SIZES = {
@@ -143,10 +151,37 @@ export interface ShadowBoxParams extends GenBase {
   /** Words cut into the front layer, standing on a paper bar across the window. */
   text: { text: string; fontId: string; size: number; place: Place };
   /**
-   * A photo on the back board, seen through every layer: a colour JPEG data URL ("" for none), its
-   * width / height, a zoom (100 % just covers the window) and a shift of the crop, % of the spare room.
+   * A photo on the back board, seen through every layer: the image as printed or engraved (a data URL,
+   * "" for none), its width / height, a zoom (100 % just covers the window) and a shift of the crop,
+   * % of the spare room. The image is made from the original kept on this device (`src`) in `look`.
    */
-  photo: { image: string; aspect: number; zoom: number; x: number; y: number };
+  photo: {
+    image: string;
+    aspect: number;
+    zoom: number;
+    x: number;
+    y: number;
+    /** The original's id on this device ("" when only the image is known), its file name and the image's long side, px. */
+    src: string;
+    name: string;
+    px: number;
+    look: PhotoLook;
+    /** −100 to 100. */
+    bright: number;
+    contrast: number;
+    /** Tones of a posterised photo. */
+    tones: number;
+    dither: PhotoDither;
+    /** Engraving resolution, dots per inch. */
+    dpi: Dpi;
+    /** The background is made white; `tol` is how far from its colour still counts, %. */
+    bg: boolean;
+    tol: number;
+    /** Printed or engraved on the back board, or a print slid into a holder behind the layers. */
+    mount: Mount;
+    /** Paper for the photo print (PDF). */
+    paper: Paper;
+  };
   /**
    * The picture pattern's source and how it becomes layers. `levels` holds the traced outlines (see
    * picture.ts; "" uses the sample shape) and `image` a small grey preview of what was traced.
@@ -203,7 +238,10 @@ export const SHADOWBOX_DEFAULTS: ShadowBoxParams = {
     web: 1.5, loose: "drop", bridge: 2, stretch: false, moon: false, hole: "circle", holeSize: 18,
   },
   text: { text: "", fontId: "lobster", size: 20, place: "bottom" },
-  photo: { image: "", aspect: 1.5, zoom: 100, x: 0, y: 0 },
+  photo: {
+    image: "", aspect: 1.5, zoom: 100, x: 0, y: 0, src: "", name: "", px: 0,
+    look: "colour", bright: 0, contrast: 0, tones: 4, dither: "floyd", dpi: "254", bg: false, tol: 18, mount: "board", paper: "a4",
+  },
   picture: {
     image: "", aspect: 1, levels: "", name: "", sample: "cat", mode: "grow",
     dark: 20, light: 80, cut: 50, invert: false, paper: false, size: 45, x: 0, y: 0, step: 6, detail: 1.5,
@@ -219,6 +257,7 @@ export function sizeOf(w: number, h: number): SizeId {
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const oneOf = <T extends string>(list: readonly T[], v: string, d: T): T => ((list as readonly string[]).includes(v) ? (v as T) : d);
+const cleanName = (v: unknown) => String(v ?? "").replace(/[^\p{L}\p{N}\p{Zs}_.,()+-]/gu, "").slice(0, 80);
 
 export function mergeShadowBox(raw: unknown): ShadowBoxParams {
   const d = SHADOWBOX_DEFAULTS;
@@ -247,17 +286,30 @@ export function mergeShadowBox(raw: unknown): ShadowBoxParams {
   t.size = clamp(t.size, 8, 60);
   t.place = oneOf(PLACES, t.place, d.text.place);
   const ph = p.photo;
-  if (typeof ph.image !== "string" || (ph.image && !isImageDataURL(ph.image))) ph.image = "";
+  if (typeof ph.image !== "string" || (ph.image && !isImageDataURL(ph.image)) || ph.image.length > MAX_PHOTO_CHARS) ph.image = "";
   ph.aspect = Number.isFinite(ph.aspect) && ph.aspect > 0 ? clamp(ph.aspect, 0.1, 10) : d.photo.aspect;
   ph.zoom = clamp(ph.zoom, 100, 300);
   ph.x = clamp(ph.x, -100, 100);
   ph.y = clamp(ph.y, -100, 100);
+  ph.src = typeof ph.src === "string" && /^[a-z0-9-]{1,40}$/.test(ph.src) ? ph.src : "";
+  ph.name = cleanName(ph.name);
+  ph.px = Number.isFinite(ph.px) ? clamp(Math.round(ph.px), 0, 10000) : 0;
+  ph.look = oneOf(PHOTO_LOOKS, ph.look, d.photo.look);
+  ph.bright = clamp(ph.bright, -100, 100);
+  ph.contrast = clamp(ph.contrast, -100, 100);
+  ph.tones = clamp(Math.round(ph.tones), 2, 8);
+  ph.dither = oneOf(PHOTO_DITHERS, ph.dither, d.photo.dither);
+  ph.dpi = oneOf(DPIS, ph.dpi, d.photo.dpi);
+  ph.bg = ph.bg === true;
+  ph.tol = clamp(ph.tol, 2, 60);
+  ph.mount = oneOf(MOUNTS, ph.mount, d.photo.mount);
+  ph.paper = ph.paper === "letter" ? "letter" : "a4";
   g.loose = oneOf(LOOSE, g.loose, d.design.loose);
   g.bridge = clamp(g.bridge, 0.5, 10);
   const pc = p.picture;
   if (!isPictureText(pc.levels)) pc.levels = "";
   if (typeof pc.image !== "string" || (pc.image && !isImageDataURL(pc.image))) pc.image = "";
-  pc.name = String(pc.name ?? "").replace(/[^\p{L}\p{N}\p{Zs}_.,()+-]/gu, "").slice(0, 80);
+  pc.name = cleanName(pc.name);
   pc.aspect = Number.isFinite(pc.aspect) && pc.aspect > 0 ? clamp(pc.aspect, 0.1, 10) : d.picture.aspect;
   pc.sample = oneOf(SAMPLES, pc.sample, d.picture.sample);
   pc.mode = oneOf(PIC_MODES, pc.mode, d.picture.mode);

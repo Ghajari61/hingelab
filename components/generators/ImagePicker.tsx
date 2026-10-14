@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { TraceError, traceFile, type TracedPicture } from "./levelsClient";
+import { PhotoError } from "./photoClient";
 
 /** Longest side of the stored picture, px (about 0.3 mm per pixel on a 300 mm puzzle). */
 const MAX_PX = 1000;
@@ -34,7 +35,7 @@ export async function pictureJpeg(file: Blob, color = false): Promise<{ url: str
   return { url, aspect: w / h };
 }
 
-export function ImagePicker({ label, value, color = false, onPick, onClear, onTrace, name }: {
+export function ImagePicker({ label, value, color = false, onPick, onClear, onTrace, name, onFile, working, children }: {
   label: string;
   value: string;
   color?: boolean;
@@ -44,9 +45,16 @@ export function ImagePicker({ label, value, color = false, onPick, onClear, onTr
   onTrace?: (t: TracedPicture) => void;
   /** File name of the traced picture. */
   name?: string;
+  /** Photo mode: the chosen file is handed over as it is (kept on this device and made into the photo there). */
+  onFile?: (f: File) => Promise<void>;
+  /** What is being done to the picture, while it is. */
+  working?: string;
+  /** More actions and notes for the picture. */
+  children?: ReactNode;
 }) {
   const ref = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
+  const [picking, setBusy] = useState(false);
+  const busy = picking || !!working;
   const [err, setErr] = useState<string | null>(null);
   return (
     <div className="gen-image">
@@ -57,16 +65,19 @@ export function ImagePicker({ label, value, color = false, onPick, onClear, onTr
           <img src={value} alt={label} />
           <div className="gen-image-acts">
             {name && <span className="gen-image-name" title={name}>{name}</span>}
-            <button type="button" className="btn-auto" onClick={() => ref.current?.click()}>Replace…</button>
-            <button type="button" className="btn-auto" onClick={onClear}><X size={14} /> Remove</button>
+            <button type="button" className="btn-auto" disabled={busy} onClick={() => ref.current?.click()}>Replace…</button>
+            <button type="button" className="btn-auto" disabled={busy} onClick={onClear}><X size={14} /> Remove</button>
           </div>
         </div>
       ) : (
         <button type="button" className="btn-auto gen-image-pick" disabled={busy} onClick={() => ref.current?.click()}>
-          <ImagePlus size={16} aria-hidden /> {busy ? (onTrace ? "Tracing…" : "Preparing…") : color ? "Choose a photo…" : onTrace ? "Choose a picture or SVG…" : "Choose a picture…"}
+          <ImagePlus size={16} aria-hidden /> {busy ? (working ?? (onTrace ? "Tracing…" : "Preparing…")) : color ? "Choose a photo…" : onTrace ? "Choose a picture or SVG…" : "Choose a picture…"}
         </button>
       )}
+      {value && working && <p className="note" role="status">{working}</p>}
+      {children}
       {onTrace && <p className="note gen-image-local">Your images stay on your device: the picture is traced here, in your browser.</p>}
+      {onFile && <p className="note gen-image-local">Your images stay on your device: the original photo is kept in this browser and never uploaded.</p>}
       {err && <p className="note err">{err}</p>}
       <input
         ref={ref} type="file" accept={onTrace ? "image/png,image/jpeg,image/webp,image/svg+xml,.svg" : "image/png,image/jpeg,image/webp"} hidden aria-label={label}
@@ -76,13 +87,14 @@ export function ImagePicker({ label, value, color = false, onPick, onClear, onTr
           if (!f) return;
           setBusy(true); setErr(null);
           try {
-            if (onTrace) onTrace(await traceFile(f));
+            if (onFile) await onFile(f);
+            else if (onTrace) onTrace(await traceFile(f));
             else {
               const { url, aspect } = await pictureJpeg(f, color);
               onPick(url, aspect);
             }
           } catch (x) {
-            setErr(x instanceof TraceError ? x.message : onTrace ? "That file could not be read. Try a JPEG, PNG or SVG." : "That picture could not be read. Try a JPEG or PNG.");
+            setErr(x instanceof TraceError || x instanceof PhotoError ? x.message : onTrace ? "That file could not be read. Try a JPEG, PNG or SVG." : "That picture could not be read. Try a JPEG or PNG.");
           } finally {
             setBusy(false);
           }

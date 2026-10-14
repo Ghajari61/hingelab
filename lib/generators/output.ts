@@ -229,7 +229,7 @@ export function genContent(lay: Layout<CutPart>): GenContent {
     for (const c of pt.score) L.hinge.push(pathD(c, false, ox, oy));
     L.fills.push([...pt.outline, ...pt.inner].map((c) => pathD(c, true, ox, oy)).join(" "));
     if (pt.engrave.length) L.engrave.push(pt.engrave.map((c) => pathD(c, true, ox, oy)).join(" "));
-    for (const im of pt.images) if (isImageDataURL(im.href)) L.images.push({ href: im.href, x: r3(im.x + ox), y: r3(im.y + oy), w: r3(im.w), h: r3(im.h), clip: im.clip ? pathD(im.clip, true, ox, oy) : undefined, ...(im.flip ? { flip: true } : {}) });
+    for (const im of pt.images) if (!im.only3d && isImageDataURL(im.href)) L.images.push({ href: im.href, x: r3(im.x + ox), y: r3(im.y + oy), w: r3(im.w), h: r3(im.h), clip: im.clip ? pathD(im.clip, true, ox, oy) : undefined, ...(im.flip ? { flip: true } : {}) });
   }
   return L;
 }

@@ -25,7 +25,7 @@ await withBrowser(async (page) => {
   const drawing = () => page.locator(".canvas svg").first().evaluate((s) => [...s.querySelectorAll("path")].map((p) => p.getAttribute("d")?.length ?? 0).join(","));
   const pattern = () => page.getByRole("group", { name: "Pattern", exact: true }).locator('.gcard[aria-pressed="true"]').getAttribute("data-v");
   check((await pattern()) === "picture", "the Cat rings preset uses the Your picture pattern");
-  check(await page.getByText("Your images stay on your device").isVisible(), "the picture field says images stay on the device");
+  check(await page.getByText("Your images stay on your device: the picture is traced here").isVisible(), "the picture field says images stay on the device");
   check(await page.getByRole("group", { name: "Sample shape" }).locator(".gcard").count() === 12, "12 sample shapes on the rail");
 
   // A sample shape changes the layers.

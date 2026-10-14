@@ -15,7 +15,11 @@ import type { BuildContext, Contour, GenImage, GenOutput, GenPart, Pt } from "..
 import { textBlock, weld } from "../weld";
 import { bridgeIslands } from "./islands";
 import { PALETTES, type FrameShape, type Opening, type Petal, type Ridge, type ShadowBoxParams } from "./params";
+import { photoDpi, photoPlace, type WinBox } from "./photo";
 import { pictureCuts, pictureMode, pictureSource, silhouette } from "./picture";
+
+/** Play each side of a photo slot, mm. */
+const SLOT_PLAY = 0.75;
 
 export interface ShadowBoxInfo {
   /** The window inside the frame's border, mm. */
@@ -39,6 +43,8 @@ export interface ShadowBoxInfo {
   textSize?: number;
   /** Share of the window left open by the tightest pattern layer: at most this much of the photo shows, %. */
   photoShown?: number;
+  /** Dots per inch the stored photo gives at its printed size. */
+  photoDpi?: number;
 }
 
 export type ShadowBoxOutput = GenOutput & { info?: ShadowBoxInfo };
@@ -435,19 +441,36 @@ function lightHole(p: ShadowBoxParams, w: Win): Contour[] {
 
 /**
  * The photo on the back board: it covers the window and a bleed round it (so no blank paper shows if
- * the layers sit a little off), zoomed from the middle and shifted by a share of the spare room.
+ * the layers sit a little off), zoomed from the middle and shifted by a share of the spare room. A
+ * photo in a slot is a rectangular print slid in by hand, so it is only drawn on the 3D model.
  */
 function photoOn(p: ShadowBoxParams, w: Win, win: Shape): GenImage | null {
-  const ph = p.photo;
-  if (!ph.image) return null;
-  const b = Math.min(3, p.frame.border / 2);
+  if (!p.photo.image) return null;
+  const { x, y, iw, ih, bw, bh, b } = photoPlace(p, w);
+  if (p.photo.mount === "slot") return { href: p.photo.image, x: r2(x), y: r2(y), w: r2(iw), h: r2(ih), clip: rect(w.cx - bw / 2, w.cy - bh / 2, bw, bh), only3d: true };
   const grown = offsetShapes([win], b, "round");
   const clip = grown.length ? orient(simplifyClosed(biggest(grown).outer, SIMPLIFY)) : win.outer;
-  const bw = w.w + 2 * b, bh = w.h + 2 * b, z = ph.zoom / 100, a = ph.aspect;
-  const [iw, ih] = a > bw / bh ? [bh * z * a, bh * z] : [bw * z, (bw * z) / a];
-  const x = w.cx - iw / 2 + ((iw - bw) / 2) * (ph.x / 100);
-  const y = w.cy - ih / 2 + ((ih - bh) / 2) * (ph.y / 100);
-  return { href: ph.image, x: r2(x), y: r2(y), w: r2(iw), h: r2(ih), clip };
+  return { href: p.photo.image, x: r2(x), y: r2(y), w: r2(iw), h: r2(ih), clip };
+}
+
+/**
+ * The holder a printed photo slides into: the frame with a channel the print's width (plus play) cut
+ * from the top edge down to the print's bottom edge, so the print rests on it behind the window.
+ */
+function photoHolder(p: ShadowBoxParams, w: Win, frame: Contour): Shape | null {
+  const { bw, bh } = photoPlace(p, w), fb = bboxOf([frame]);
+  const channel = rect(w.cx - bw / 2 - SLOT_PLAY, fb.y0 - 1, bw + 2 * SLOT_PLAY, w.cy + bh / 2 + SLOT_PLAY - fb.y0 + 1);
+  const left = differenceShapes([frame], [channel]).filter((s) => s.area > 1);
+  return left.length ? makeShape(simplifyClosed(biggest(left).outer, SIMPLIFY), biggest(left).holes.map((h) => simplifyClosed(h, SIMPLIFY))) : null;
+}
+
+/** The window's box inside the border, or null when the border leaves no window. */
+export function windowBox(p: ShadowBoxParams): WinBox | null {
+  const frame = orient(simplifyClosed(frameOutline(p.frame.shape, p.frame.width, p.frame.height, p.frame.corner), SIMPLIFY));
+  const wins = offsetShapes([makeShape(frame, [])], -p.frame.border);
+  if (!wins.length || biggest(wins).area < 100) return null;
+  const wb = bboxOf([biggest(wins).outer]);
+  return { x0: wb.x0, y0: wb.y0, w: wb.x1 - wb.x0, h: wb.y1 - wb.y0, cx: (wb.x0 + wb.x1) / 2, cy: (wb.y0 + wb.y1) / 2 };
 }
 
 interface TextCut { keep: Contour[]; clear: Contour[]; width: number; room: number; size: number; loading: boolean }
@@ -579,20 +602,28 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
   const parts: GenPart[] = [];
   const ringMain = biggest(ring);
   const spacer = makeShape(simplifyClosed(ringMain.outer, SIMPLIFY), ringMain.holes.map((h) => simplifyClosed(h, SIMPLIFY)));
+  // A slotted photo's holder is glued straight onto the back board, under everything else.
+  const holder = photo?.only3d ? photoHolder(p, w, frame) : null;
+  const lift = holder ? T : 0;
   let sp = 0;
   shapes.forEach((sh, k) => {
-    const z = k * (T + gapZ);
+    const z = k * (T + gapZ) + (k > 0 ? lift : 0);
     const color = layerColor(p, k, N);
     const name = `Layer ${k + 1}${k === 0 ? " (back)" : k === N - 1 ? " (front)" : ""}`;
     parts.push({ id: `layer${k + 1}`, name, outer: sh.outer, holes: sh.holes, color, matte: true, place: { x: 0, y: 0, z }, ...(k === 0 && photo ? { images: [photo] } : {}) });
+    if (k === 0 && holder) parts.push({ id: "holder", name: "Photo holder", outer: holder.outer, holes: holder.holes, color, matte: true, place: { x: 0, y: 0, z: T } });
     (pieces.get(k) ?? []).forEach((s, j) => parts.push({ id: `piece${k + 1}-${j + 1}`, name: `Layer ${k + 1} piece ${j + 1}`, outer: s.outer, holes: s.holes, color, matte: true, place: { x: 0, y: 0, z } }));
     if (k < N - 1) for (let j = 0; j < per; j++) {
       sp++;
-      parts.push({ id: `spacer${sp}`, name: `Spacer ${sp}`, outer: spacer.outer, holes: spacer.holes, color, matte: true, place: { x: 0, y: 0, z: z + T + j * T } });
+      parts.push({ id: `spacer${sp}`, name: `Spacer ${sp}`, outer: spacer.outer, holes: spacer.holes, color, matte: true, place: { x: 0, y: 0, z: z + T + (k === 0 ? lift : 0) + j * T } });
     }
   });
-  const depth = N * T + (N - 1) * gapZ;
+  const depth = N * T + (N - 1) * gapZ + lift;
   info.depth = r1(depth);
+  const dpi = photo ? Math.round(photoDpi(p, w)) : 0;
+  if (dpi) info.photoDpi = dpi;
+  const print = p.photo.look !== "engrave";
+  const slotted = !!holder;
 
   const blade = p.cutter.kind === "blade";
   const mat = blade ? "card" : MATERIALS[p.material]?.name ?? `${T} mm sheet`;
@@ -605,6 +636,7 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
       { label: "Depth", value: `${r1(depth)} mm` },
       ...(sp ? [{ label: "Spacer frames", value: String(sp) }] : []),
       ...(photo ? [{ label: "Photo shows", value: `${r0(w.w)} × ${r0(w.h)} mm` }] : []),
+      ...(dpi ? [{ label: print ? "Photo print" : "Engraving", value: `${dpi} dpi` }] : []),
       ...(info.bridges ? [{ label: "Bridges", value: String(info.bridges) }] : []),
       ...(info.pieces ? [{ label: "Loose pieces", value: String(info.pieces) }] : []),
     ],
@@ -615,11 +647,15 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
       frames
         ? `Glue ${per === 1 ? "a spacer frame" : `${per} spacer frames`} between each pair of layers, lining up the outlines.`
         : `Stick ${r1(gapZ)} mm foam tape around the border of every layer but the front one, with small foam squares behind wide areas of the pattern.`,
-      ...(photo
-        ? [blade
-          ? "The photo is on Layer 1, the back board, on the Engrave layer of the SVG: print the SVG at 100 % on photo paper or card and glue it on the back board, or print straight onto the card before cutting Layer 1."
-          : "The photo is on Layer 1, the back board, on the Engrave layer of the SVG: engrave it before cutting Layer 1 without moving the sheet, or glue a print of it on the back board."]
-        : []),
+      ...(slotted
+        ? [`Glue the photo holder onto the back board, outlines lined up. Print the photo (Print photo, PDF) at 100 %, cut it out along the crop marks (${r0(w.w + 2 * Math.min(3, border / 2))} × ${r0(w.h + 2 * Math.min(3, border / 2))} mm) and slide it into the holder from the top; it can be changed at any time.`]
+        : photo && !print
+          ? [`The photo is engraving dots on Layer 1, the back board, on the Engrave layer of the SVG: engrave it at ${p.photo.dpi} dpi (a ${(25.4 / Number(p.photo.dpi)).toFixed(2)} mm line interval) before cutting Layer 1, without moving the sheet.`]
+          : photo
+            ? [blade
+              ? "The photo is on Layer 1, the back board, on the Engrave layer of the SVG: print the photo (Print photo, PDF) at 100 % on photo paper and glue it on the back board, or print the SVG at 100 % straight onto the card before cutting Layer 1."
+              : "The photo is on Layer 1, the back board, on the Engrave layer of the SVG: print the photo (Print photo, PDF) at 100 % and glue it on the back board, or engrave it before cutting Layer 1 without moving the sheet."]
+            : []),
       ...(info.pieces
         ? [`Each layer's loose pieces are cut as parts named after it ("Layer 3 piece 1"): glue each one back where it was cut from, on a small foam square on the layer behind, so it floats in place.`]
         : []),

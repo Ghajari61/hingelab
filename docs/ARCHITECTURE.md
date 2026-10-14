@@ -7,7 +7,7 @@ A short map of how a design goes from settings to a cut file. Decisions and thei
 - **Next.js 15 (App Router) + React 19**, TypeScript, plain CSS per area (`components/*/…css`). Deployed on Vercel; Supabase for accounts and cloud projects; Stripe (test mode) for Pro.
 - **Geometry** is pure TypeScript in `lib/`, so the same code runs in the browser, on the server (export checks) and in Vitest. Booleans and offsets use `clipper-lib` through `lib/letters/polygon.ts` (`unionShapes`, `differenceShapes`, `intersectShapes`, `offsetShapes`); text is shaped with `harfbuzzjs`; 3D uses `three` and `manifold-3d`.
 - **Desktop app** (`desktop/`, Tauri) wraps the same web build and talks to `/api/desktop/*`.
-- **Workers** exist for the heavy jobs (`components/studio/editor/trace.worker.ts`, `imaging.worker.ts`, `components/parametric/slicer.worker.ts`, `depth.worker.ts`, `components/generators/levels.worker.ts`). Generator builds run on the main thread behind `useDeferredValue`.
+- **Workers** exist for the heavy jobs (`components/studio/editor/trace.worker.ts`, `imaging.worker.ts`, `components/parametric/slicer.worker.ts`, `depth.worker.ts`, `components/generators/levels.worker.ts`, `photo.worker.ts`). Generator builds run on the main thread behind `useDeferredValue`.
 
 ## Products
 
@@ -33,6 +33,8 @@ A generator is data plus pure functions (`GeneratorDef<P>`):
 Adding a field to a generator is enough for it to appear in the dock, undo/redo, autosave, saved projects, the server check and help.
 
 An `image` field with `trace` (Shadow Box's Your picture) also takes SVG files and traces the picture on the device: `components/generators/levelsClient.ts` scales it and hands it to `levels.worker.ts`, which runs `lib/imaging/levels.ts` (outlines at ten brightness levels, or an SVG's filled shapes). Only the outlines (`picPath` format, whole numbers in a 1000-unit box, at most 400 000 characters) and a small grey preview are kept in the settings; the picture itself is never stored or uploaded. The build reads the outlines synchronously, so the server rebuilds the same layers from settings.
+
+An `image` field with `look` (Shadow Box's Photo) is made from an original kept on the device. `components/generators/photoStore.ts` keeps originals in IndexedDB (`hingelab-photos`, the 12 most recent); the settings hold only the made image (a data URL), the original's id, its file name and the image's pixel size. `usePhotoLooks` (used by `GeneratorDock`) remakes the image in `photo.worker.ts` (`photoPipeline.ts`: decode, `lib/imaging/photoLook.ts`, then JPEG, or a grey PNG from `lib/imaging/png.ts`) whenever a `look.keys` setting is committed, and applies the setting and the new image as one undo step. Centre on the subject uses the browser's FaceDetector where it exists, otherwise the subject on a plain background; Print photo writes a PDF on the device (`lib/imaging/pdf.ts`) from the original at up to 300 dpi. Images marked `only3d` (a print that slides into a slot) are drawn in 3D but left out of the cut file.
 
 ## From settings to sheets (`lib/generators/output.ts`, `lib/fit`)
 

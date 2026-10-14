@@ -16,6 +16,7 @@ import { getPath, setPath } from "@/lib/generators/path";
 import { Dices } from "lucide-react";
 import { ImagePicker } from "./ImagePicker";
 import type { TracedPicture } from "./levelsClient";
+import { usePhotoLooks } from "./usePhotoLooks";
 import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, SHEET_EXTRAS, type AnyGenerator, type FieldSpec, type GenBase, type GenOutput, type NumberSpec } from "@/lib/generators/types";
 
 type P = GenBase & Record<string, unknown>;
@@ -38,7 +39,7 @@ const SHEET_FIELDS: BaseField[] = [
 ];
 
 export function GeneratorDock({
-  def, params, defaults, out, units, layerKeys, onSet, onApply, onMaterial, onResetSection, sheet, checks, locks,
+  def, params, defaults, out, units, layerKeys, onSet: setRaw, onApply, onMaterial, onResetSection, sheet, checks, locks,
 }: {
   /** Settings Randomise design keeps (by key). */
   locks?: { has: (key: string) => boolean; toggle: (key: string) => void };
@@ -57,6 +58,8 @@ export function GeneratorDock({
   sheet: SheetProps;
   checks: ReactNode;
 }) {
+  const photo = usePhotoLooks(def.sections.flatMap((s) => s.fields) as FieldSpec<P>[], params, setRaw, onApply);
+  const onSet = photo.set;
   const lockOf = (f: FieldSpec<P>) => ((f.kind === "number" || f.kind === "choice") && f.shuffle && locks
     ? { on: locks.has(f.key), toggle: () => locks.toggle(f.key) } : undefined);
   const num = (f: BaseField, value: number, def: number, hidden = false, lock?: { on: boolean; toggle: () => void }) => (
@@ -98,6 +101,28 @@ export function GeneratorDock({
             </select>
           )}
         </div>
+      );
+    }
+    if (f.kind === "image" && f.look) {
+      const look = f.look, st = photo.stateOf(f.key), has = !!value;
+      return (
+        <ImagePicker
+          key={f.key} label={f.label} value={String(value ?? "")} color={f.color}
+          name={String(getPath(params, look.name) ?? "") || undefined}
+          working={st.working}
+          onPick={() => {}}
+          onFile={(file) => photo.pick({ ...f, look }, file)}
+          onClear={() => photo.clear({ ...f, look })}
+        >
+          {has && (look.centre || look.paper) && (
+            <div className="gen-photo-acts">
+              {look.centre && <button type="button" className="btn-auto" disabled={!!st.working} onClick={() => void photo.centre({ ...f, look })}>Centre on the subject</button>}
+              {look.paper && <button type="button" className="btn-auto" disabled={!!st.working} onClick={() => void photo.print({ ...f, look }, out, def.fileName(params as never))}>Print photo (PDF)</button>}
+            </div>
+          )}
+          {has && st.note && <p className="note" role="status">{st.note}</p>}
+          {has && st.err && <p className="note err" role="alert">{st.err}</p>}
+        </ImagePicker>
       );
     }
     if (f.kind === "image") {
