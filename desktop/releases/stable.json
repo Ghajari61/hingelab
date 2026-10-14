@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.23",
-    "pub_date": "2026-10-14T03:29:53.481Z",
-    "notes": "CorelDRAW-style tools in Studio: 3-point rectangle, ellipse and curve, Smart Drawing, Crop, Virtual Segment Delete, Contour, Create Boundary, node align / reflect / extract, the Distort effect and a Twirl tweak. Submenus now open beside their menu and stay on screen.",
+    "version": "1.0.24",
+    "pub_date": "2026-10-14T04:02:03.938Z",
+    "notes": "AI designer: black-and-white pictures are traced with a cut border round them.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.23_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmxOanEwZDJQN3ZDeG5nSTJ2SVYrYnJhOUkyUGF4bEFYckYrMVpqc3N1bmppQi9xcUl0Rm9KMEphc3d3dEJFTW1WOVVHQkVJSm50Y0w2QWJxSXNoSmdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTQ4NTg0CWZpbGU6SGluZ2VMYWJfMS4wLjIzX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjMKemZIMW5icHdEQVRieEhKUTUzekk1T1BtYnpHazBXamNRbm9GaXlpVkg0QlAyQTlRZ08yaThWYnorZHpoMUNqOHM3Q212YmE0YkVmWXV2M2ZzUXZhREE9PQo=",
-        "size": 2967657
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.24_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm83Mk9JWVpvbUN2RDlDN0NLRWc2bzk0TjVKQ3V0eWErWVQ1d1M2WjdXSFo4WHMvdElqYVdzYTdZNHA1djMybk80YUR0MWRKZFEwY2NqMUxCZXJIZ2c0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTUwNTE1CWZpbGU6SGluZ2VMYWJfMS4wLjI0X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjQKRWxRRnM4WkVSaU5mTTZOeHZtYVFpa1JOc1AwM3psQWtFL3ZKMC8raU5uMDNKM3dwWW42MnJGNldlT2ZMVjhKNlJXclZxVFBvOGJPTzBBY25QU1VpRFE9PQo=",
+        "size": 2968565
       }
     }
   }
