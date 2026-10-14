@@ -104,7 +104,7 @@ function Keys() {
       <li><kbd>H</kbd> Hand tool · <kbd>Z</kbd> Zoom tool · hold <kbd>Space</kbd> to pan</li>
       <li><kbd>Ctrl/⌘ + 0</kbd> Fit sheet · <kbd>Ctrl/⌘ + 1</kbd> Actual size · <kbd>Ctrl/⌘ + / −</kbd> Zoom</li>
       <li><kbd>Ctrl/⌘ + Z</kbd> Undo · <kbd>Ctrl/⌘ + Shift + Z</kbd> Redo</li>
-      <li><kbd>Ctrl/⌘ + S</kbd> Save project · <kbd>Ctrl/⌘ + O</kbd> Open · <kbd>Ctrl/⌘ + E</kbd> Export SVG</li>
+      <li><kbd>Ctrl/⌘ + S</kbd> Save project · <kbd>Ctrl/⌘ + O</kbd> Open · <kbd>Ctrl/⌘ + E</kbd> Export SVG · <kbd>Ctrl/⌘ + Shift + E</kbd> More formats</li>
       <li>In a field: <kbd>↑</kbd> <kbd>↓</kbd> to step, with <kbd>Shift</kbd> for ×10. Drag a field label to scrub.</li>
     </ul>
   );

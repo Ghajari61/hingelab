@@ -47,6 +47,9 @@ import { Slicer } from "./slicerProtocol";
 import Viewport3D, { type ViewToggles } from "./Viewport3D";
 import type { DesignTab } from "./DesignStudio";
 import type { Finish } from "@/lib/parametric/presets";
+import { SHEET_SPACING } from "@/lib/fit/arrange";
+
+const ExportDialog = lazy(() => import("@/components/shell/ExportDialog"));
 
 const DesignStudio = lazy(() => import("./DesignStudio"));
 const FINISH_KEY = "hingelab-parametric-finish";
@@ -112,6 +115,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   const myPresets = useMyPresets();
   const thumbRef = useRef<() => string | null>(() => null);
   const [modal, setModal] = useState<ModalState>(null);
+  const [exporting, setExporting] = useState(false);
   const help = useHelpPanel("parametric");
   const [toast, setToast] = useState<string | null>(null);
   const [model, setModel] = useState<StoredModel | null>(null);
@@ -350,6 +354,17 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     offerFile(`${base()}.dxf`, svgToDXF(typeof out.data === "string" ? out.data : new TextDecoder().decode(out.data)).dxf, "application/dxf");
     if (out.marked) window.setTimeout(() => toastMsg("Exported with the small “Made with HingeLab” mark (Free plan)"), 1600);
   }
+  /** All sheets as the server or this device exports them, for the export dialog. */
+  async function exportedAllSVG(): Promise<string | null> {
+    const out = await exportData({ kind: "all" }, () => allSheetsSVG(result!, params));
+    if (!out) return null;
+    return typeof out.data === "string" ? out.data : new TextDecoder().decode(out.data);
+  }
+  /** Where each sheet is in the all-sheets SVG: stacked top to bottom. */
+  const stacked = useMemo(() => {
+    let y = 0;
+    return (result?.sheets ?? []).map((sh) => { const r = { x: 0, y, w: sh.width, h: sh.height }; y += sh.height + SHEET_SPACING; return r; });
+  }, [result]);
   function exportZipNow() { void exportWith({ kind: "zip" }, `${base()}.zip`, "application/zip", () => exportZip(result!, params)); }
   function exportSheetNow() {
     if (!ready()) return;
@@ -481,8 +496,9 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   function doRedo() { if (redo()) toastMsg("Redo"); }
   const select = (ids: string[]) => setSelected(ids);
 
-  const api = useRef({ exportAllNow, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef });
-  api.current = { exportAllNow, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef };
+  const openExport = () => setExporting(true);
+  const api = useRef({ exportAllNow, openExport, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef });
+  api.current = { exportAllNow, openExport, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef };
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -495,7 +511,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
         if (k === "z" && !inField) { e.preventDefault(); e.shiftKey ? va.doRedo() : va.doUndo(); }
         else if (k === "s") { e.preventDefault(); va.saveProject(); }
         else if (k === "o") { e.preventDefault(); va.openProject(); }
-        else if (k === "e") { e.preventDefault(); va.exportAllNow(); }
+        else if (k === "e") { e.preventDefault(); if (e.shiftKey) va.openExport(); else va.exportAllNow(); }
         else if (k === "n") { e.preventDefault(); va.newProject(); }
         else if (k === "0") { e.preventDefault(); va.fit(); }
         else if (k === "1") { e.preventDefault(); va.zoomCenter(PX_PER_MM / va.viewRef.current.z); }
@@ -538,6 +554,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
       "-",
       { label: "Export SVG (all sheets)…", kbd: "Ctrl+E", run: exportAllNow },
       { label: "Export DXF (all sheets)", kbd: "", run: () => void exportDXFNow() },
+      { label: "Export (PDF, LightBurn, per sheet)…", kbd: "Ctrl+Shift+E", run: openExport },
       { label: "Export all sheets (ZIP)", kbd: "", run: exportZipNow },
       { label: "Export this sheet (SVG)", kbd: "", run: exportSheetNow },
       { label: "Assembly guide (SVG)", kbd: "", run: guideNow },
@@ -670,7 +687,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
               />
             </section>
         </div>
-        <DockColumn onExport={exportAllNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export all sheets as a DXF (R12, mm)", run: () => void exportDXFNow() }]} units={units} onUnits={setUnits} onResetAll={resetAll}>
+        <DockColumn onExport={exportAllNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export all sheets as a DXF (R12, mm)", run: () => void exportDXFNow() }, { label: "More…", title: "PDF, LightBurn, one file per sheet, mirror, and a check against your machine's bed (Ctrl+Shift+E)", run: openExport }]} units={units} onUnits={setUnits} onResetAll={resetAll}>
         <ParametricDock
           params={params}
           result={result}
@@ -731,6 +748,15 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
         </Suspense>
       )}
       {toast && <div className="toast" role="status">{toast}</div>}
+      {exporting && (
+        <Suspense fallback={null}>
+          <ExportDialog
+            getSVG={exportedAllSVG} sheets={stacked}
+            size={{ w: Math.max(0, ...stacked.map((r) => r.w)), h: stacked.length ? stacked[stacked.length - 1].y + stacked[stacked.length - 1].h : 0 }}
+            base={base()} units={units} onClose={() => setExporting(false)} toast={toastMsg}
+          />
+        </Suspense>
+      )}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       <input
         ref={fileRef}

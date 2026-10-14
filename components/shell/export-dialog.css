@@ -1,0 +1,12 @@
+.modal.exp { width: min(520px, 100%); }
+.modal.exp .exp-row { display: grid; gap: 6px; }
+.modal.exp .exp-row .iconseg.full { display: flex; }
+.modal.exp .exp-row .iconseg.full button { flex: 1; justify-content: center; }
+.modal.exp .exp-bed { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.modal.exp .exp-bed label { display: grid; gap: 4px; font-size: 12px; }
+.modal.exp .exp-check { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); font-size: 12px; }
+.modal.exp .exp-check.ok { background: var(--field); }
+.modal.exp .exp-check.warn { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); background: color-mix(in srgb, var(--warn) 8%, var(--panel)); color: var(--fg); }
+.modal.exp .exp-about, .modal.exp .exp-note { font-size: 12px; }
+.modal.exp .exp-opts { display: grid; gap: 6px; }
+.modal.exp .btn-export { display: inline-flex; align-items: center; gap: 6px; }

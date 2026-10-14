@@ -292,6 +292,7 @@ export const ARTICLES: HelpArticle[] = [
       ] },
       { h: "Export", list: [
         "Export SVG saves every sheet in one file, sized in millimetres.",
+        "More… (Ctrl+Shift+E) opens the export window: pick your machine and it checks every sheet fits its bed, then save SVG, DXF, a PDF with a page per sheet, or a LightBurn project. Sheets can go in one file or one file each (a ZIP), mirrored for the back of clear acrylic, with hairline lines for Epilog, Trotec and Universal drivers, and DXF in inches. Laser power and speed are never set: use your own tested settings.",
         "Parametric exports every sheet as a ZIP or the current sheet as one SVG, and prints an assembly guide.",
       ] },
     ],
@@ -306,7 +307,7 @@ export const ARTICLES: HelpArticle[] = [
         "H: hand tool. Z: zoom tool. Hold Space to pan.",
         "Ctrl+0: fit sheet. Ctrl+1: actual size. Ctrl+Plus and Ctrl+Minus: zoom.",
         "Ctrl+Z: undo. Ctrl+Shift+Z: redo.",
-        "Ctrl+S: save project. Ctrl+O: open. Ctrl+E: export SVG.",
+        "Ctrl+S: save project. Ctrl+O: open. Ctrl+E: export SVG. Ctrl+Shift+E: more export formats.",
         "In a field: Up and Down step the value, with Shift for ten steps. Drag a field's label to scrub.",
         "On macOS, use ⌘ for Ctrl.",
         "In the Studio editor, every menu item shows its shortcut and the command palette (Ctrl+/) finds every command.",

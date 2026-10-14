@@ -46,6 +46,7 @@ import { usePlan } from "@/components/billing/usePlan";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 
+const ExportDialog = dynamic(() => import("@/components/shell/ExportDialog"), { ssr: false });
 const LetterPreview3D = dynamic(() => import("./LetterPreview3D"), {
   ssr: false,
   loading: () => <div id="preview3d" className="v3" aria-busy="true" />,
@@ -113,6 +114,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
   const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
+  const [exporting, setExporting] = useState(false);
   const help = useHelpPanel("letters");
   const [toast, setToast] = useState<string | null>(null);
   const [uploads, setUploads] = useState<StoredFontMeta[]>([]);
@@ -366,8 +368,9 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   function doUndo() { if (undo()) toastMsg("Undo"); }
   function doRedo() { if (redo()) toastMsg("Redo"); }
 
-  const api = useRef({ exportNow, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef });
-  api.current = { exportNow, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef };
+  const openExport = () => setExporting(true);
+  const api = useRef({ exportNow, openExport, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef });
+  api.current = { exportNow, openExport, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef };
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -380,7 +383,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
         if (k === "z" && !inField) { e.preventDefault(); e.shiftKey ? va.doRedo() : va.doUndo(); }
         else if (k === "s") { e.preventDefault(); va.saveProject(); }
         else if (k === "o") { e.preventDefault(); va.openProject(); }
-        else if (k === "e") { e.preventDefault(); va.exportNow(); }
+        else if (k === "e") { e.preventDefault(); if (e.shiftKey) va.openExport(); else void va.exportNow(); }
         else if (k === "n") { e.preventDefault(); va.newProject(); }
         else if (k === "0") { e.preventDefault(); va.fit(); }
         else if (k === "1") { e.preventDefault(); va.zoomCenter(PX_PER_MM / va.viewRef.current.z); }
@@ -420,6 +423,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
       "-",
       { label: "Export SVG…", kbd: "Ctrl+E", run: exportNow },
       { label: "Export DXF…", kbd: "", run: () => void exportDXFNow() },
+      { label: "Export (PDF, LightBurn, per sheet)…", kbd: "Ctrl+Shift+E", run: openExport },
       { label: "Copy SVG code", kbd: "", run: copySVG },
       "-",
       { label: "Rename…", kbd: "", run: () => setModal({ type: "rename", name: params.name }) },
@@ -524,7 +528,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
           />
         </section>
         </div>
-        <DockColumn onExport={exportNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export as DXF (R12, mm)", run: () => void exportDXFNow() }]} units={units} onUnits={setUnits} onResetAll={resetAll}>
+        <DockColumn onExport={exportNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export as DXF (R12, mm)", run: () => void exportDXFNow() }, { label: "More…", title: "PDF, LightBurn, one file per sheet, mirror, and a check against your machine's bed (Ctrl+Shift+E)", run: openExport }]} units={units} onUnits={setUnits} onResetAll={resetAll}>
         <LettersDock
           params={params}
           model={model}
@@ -569,6 +573,12 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
         }}
         onSavePreset={(name) => { setModal(null); void myPresets.save("letters", name, params).then(toastMsg); }}
       />
+      {exporting && (
+        <ExportDialog
+          getSVG={exportedSVG} sheets={arranged?.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
+          base={baseName(built)} units={units} onClose={() => setExporting(false)} toast={toastMsg}
+        />
+      )}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
       <input

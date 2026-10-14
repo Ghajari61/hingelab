@@ -1,0 +1,145 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Download } from "lucide-react";
+import type { Units } from "@/components/editor/format";
+import { makeExport, type ExportFile } from "@/lib/export/bundle";
+import { bedOf, CUSTOM_MACHINE, defaultExport, EXPORT_FORMATS, FORMAT_INFO, loadExport, overBed, saveExport, type ExportSettings, type Rect } from "@/lib/export/profiles";
+import { MACHINE_PROFILES } from "@/lib/studio/library";
+import { loadPrefs } from "@/lib/studio/prefs";
+import "./export-dialog.css";
+
+function download(f: ExportFile) {
+  const a = document.createElement("a");
+  const url = URL.createObjectURL(new Blob([f.data as BlobPart], { type: f.mime }));
+  a.href = url;
+  a.download = f.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+/**
+ * Export with more choices than the Export SVG button: the machine (its bed is checked against the
+ * sheets), SVG, DXF, PDF or a LightBurn project, every sheet in one file or one file per sheet, a
+ * mirrored copy and hairline strokes. The files are made from the same SVG the editor exports.
+ */
+export default function ExportDialog({ getSVG, sheets, size, base, units, onClose, toast }: {
+  /** The design's SVG, or null when it cannot be exported (the editor has said why). */
+  getSVG: () => Promise<string | null>;
+  sheets: Rect[] | null | undefined;
+  /** The whole layout, used when there are no sheets. */
+  size: { w: number; h: number };
+  base: string;
+  units: Units;
+  onClose: () => void;
+  toast: (msg: string) => void;
+}) {
+  const [s, setS] = useState<ExportSettings>(() => loadExport(loadPrefs().machineId));
+  const [busy, setBusy] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const upd = (p: Partial<ExportSettings>) => setS((o) => ({ ...o, ...p }));
+  const close = useRef(onClose);
+  close.current = onClose;
+  useEffect(() => {
+    ref.current?.querySelector<HTMLElement>("select")?.focus();
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") close.current(); };
+    document.addEventListener("keydown", key);
+    return () => document.removeEventListener("keydown", key);
+  }, []);
+
+  const rects = useMemo<Rect[]>(() => (sheets?.length ? sheets : [{ x: 0, y: 0, w: size.w, h: size.h }]), [sheets, size.w, size.h]);
+  const bed = bedOf(s);
+  const over = overBed(rects, bed);
+  const many = rects.length > 1;
+  const dims = (w: number, h: number) => (units === "in" ? `${(w / 25.4).toFixed(2)} × ${(h / 25.4).toFixed(2)} in` : `${Math.round(w * 10) / 10} × ${Math.round(h * 10) / 10} mm`);
+  const fmt = FORMAT_INFO[s.format];
+
+  function pickMachine(id: string) {
+    if (id === CUSTOM_MACHINE) upd({ machine: id });
+    else { const d = defaultExport(id); upd({ machine: id, format: d.format, bedW: d.bedW, bedH: d.bedH }); }
+  }
+
+  async function run() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const svg = await getSVG();
+      if (!svg) return;
+      const r = makeExport(svg, sheets, s, base);
+      download(r.file);
+      saveExport(s);
+      toast(`Downloading ${r.file.name}${r.count > 1 ? ` (${r.count} files)` : ""}`);
+      if (r.notes.length) window.setTimeout(() => toast(r.notes.join(" ")), 1800);
+      onClose();
+    } catch {
+      toast("Export failed. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const action = s.split && many ? "Download ZIP" : `Export ${fmt.name}`;
+  return (
+    <div className="modal-back" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal exp" role="dialog" aria-modal="true" aria-label="Export" ref={ref}>
+        <header>Export<button type="button" aria-label="Close" onClick={onClose}>×</button></header>
+        <div className="mb">
+          <label className="exp-row">
+            <span className="rowlabel">Machine</span>
+            <select className="sel" aria-label="Machine" value={s.machine} onChange={(e) => pickMachine(e.target.value)}>
+              {MACHINE_PROFILES.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              <option value={CUSTOM_MACHINE}>Other machine (enter the bed size)</option>
+            </select>
+          </label>
+          {s.machine === CUSTOM_MACHINE && (
+            <div className="exp-bed">
+              <label>Bed width (mm)<input className="sel" type="number" min={20} max={3000} value={s.bedW} onChange={(e) => upd({ bedW: Math.max(20, Number(e.target.value) || 20) })} /></label>
+              <label>Bed height (mm)<input className="sel" type="number" min={20} max={3000} value={s.bedH} onChange={(e) => upd({ bedH: Math.max(20, Number(e.target.value) || 20) })} /></label>
+            </div>
+          )}
+          <p className={`exp-check ${over.length ? "warn" : "ok"}`} role="status">
+            {over.length
+              ? `${over.length === rects.length && many ? "Every sheet is" : many ? `Sheet ${over.map((i) => i + 1).join(", ")} ${over.length === 1 ? "is" : "are"}` : "The design is"} larger than this bed (${dims(bed.w, bed.h)}). Set the sheet size in the Sheet section to the bed, or choose another machine.`
+              : `${many ? `All ${rects.length} sheets fit` : "It fits"} this machine's ${dims(bed.w, bed.h)} bed.`}
+          </p>
+
+          <div className="exp-row">
+            <span className="rowlabel">Format</span>
+            <div className="iconseg full" role="group" aria-label="Format">
+              {EXPORT_FORMATS.map((f) => <button key={f} type="button" aria-pressed={s.format === f} onClick={() => upd({ format: f })}>{FORMAT_INFO[f].name}</button>)}
+            </div>
+          </div>
+          <p className="exp-about">{fmt.about}</p>
+
+          {many && (
+            <div className="exp-row">
+              <span className="rowlabel">Sheets</span>
+              <div className="iconseg full" role="group" aria-label="Sheets">
+                <button type="button" aria-pressed={!s.split} onClick={() => upd({ split: false })}>{s.format === "pdf" ? "One PDF, a page each" : "All in one file"}</button>
+                <button type="button" aria-pressed={s.split} onClick={() => upd({ split: true })}>One file per sheet (ZIP)</button>
+              </div>
+            </div>
+          )}
+
+          <div className="exp-opts">
+            <label className="chk"><input type="checkbox" checked={s.mirror} onChange={(e) => upd({ mirror: e.target.checked })} />Mirror left to right (to engrave the back of clear acrylic)</label>
+            {(s.format === "svg" || s.format === "pdf") && (
+              <label className="chk"><input type="checkbox" checked={s.hairline} onChange={(e) => upd({ hairline: e.target.checked })} />Hairline lines, 0.001 in (Epilog, Trotec and Universal print drivers cut these)</label>
+            )}
+            {s.format === "dxf" && (
+              <label className="chk"><input type="checkbox" checked={s.inches} onChange={(e) => upd({ inches: e.target.checked })} />Numbers in inches (for software that reads a DXF as inches)</label>
+            )}
+          </div>
+
+          <p className="exp-note">Files are made on your device. Laser power and speed are not set: use your own tested settings for each layer.</p>
+          <div className="rename-row">
+            <button type="button" className="btn-ghost-sm" onClick={onClose}>Cancel</button>
+            <button type="button" className="btn-export" disabled={busy} onClick={() => void run()}><Download size={16} aria-hidden />{action}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

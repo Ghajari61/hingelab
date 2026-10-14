@@ -5,8 +5,8 @@
  * flattened to 0.02 mm), text stays text. Pictures cannot go into a DXF and are counted as skipped.
  */
 
-type M = [number, number, number, number, number, number];
-type P = [number, number];
+export type M = [number, number, number, number, number, number];
+export type P = [number, number];
 
 export interface DxfResult {
   dxf: string;
@@ -18,15 +18,15 @@ export interface DxfResult {
 }
 
 const TOL = 0.02;
-const ID: M = [1, 0, 0, 1, 0, 0];
-const mul = (a: M, b: M): M => [
+export const ID: M = [1, 0, 0, 1, 0, 0];
+export const mul = (a: M, b: M): M => [
   a[0] * b[0] + a[2] * b[1], a[1] * b[0] + a[3] * b[1],
   a[0] * b[2] + a[2] * b[3], a[1] * b[2] + a[3] * b[3],
   a[0] * b[4] + a[2] * b[5] + a[4], a[1] * b[4] + a[3] * b[5] + a[5],
 ];
-const ap = (m: M, [x, y]: P): P => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+export const ap = (m: M, [x, y]: P): P => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
 
-function parseTransform(s: string | undefined): M {
+export function parseTransform(s: string | undefined): M {
   let m = ID;
   if (!s) return m;
   for (const [, fn, args] of s.matchAll(/(\w+)\s*\(([^)]*)\)/g)) {
@@ -45,7 +45,7 @@ function parseTransform(s: string | undefined): M {
   return m;
 }
 
-const attrsOf = (s: string) => {
+export const attrsOf = (s: string) => {
   const o: Record<string, string> = {};
   for (const [, k, v1, v2] of s.matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) o[k] = v1 ?? v2;
   return o;
@@ -147,7 +147,7 @@ export function flattenPath(d: string): { pts: P[]; closed: boolean }[] {
   return out;
 }
 
-function ellipse(cx: number, cy: number, rx: number, ry: number): P[] {
+export function ellipse(cx: number, cy: number, rx: number, ry: number): P[] {
   const n = Math.max(12, Math.min(256, Math.ceil(Math.PI / Math.acos(Math.max(-1, 1 - TOL / Math.max(rx, ry, TOL))))));
   return Array.from({ length: n }, (_, k) => [cx + rx * Math.cos((2 * Math.PI * k) / n), cy + ry * Math.sin((2 * Math.PI * k) / n)] as P);
 }
@@ -171,15 +171,17 @@ export function aciOf(hex: string | undefined): number {
 
 const layerName = (s: string) => s.trim().replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "0";
 const f = (v: number) => (Math.round(v * 10000) / 10000).toString();
-const decode = (s: string) => s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
+export const decode = (s: string) => s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
 
-export function svgToDXF(svg: string): DxfResult {
+/** `inches` writes inches ($INSUNITS 1) for software that reads a DXF's numbers as inches. */
+export function svgToDXF(svg: string, opts: { inches?: boolean } = {}): DxfResult {
+  const k = opts.inches ? 1 / 25.4 : 1;
   const head = /<svg\b([^>]*)>/.exec(svg);
   const sa = attrsOf(head?.[1] ?? "");
   const vb = (sa.viewBox ?? "").split(/[\s,]+/).map(Number);
   const H = vb.length === 4 && Number.isFinite(vb[3]) ? vb[3] : parseFloat(sa.height ?? "0");
   const W = vb.length === 4 && Number.isFinite(vb[2]) ? vb[2] : parseFloat(sa.width ?? "0");
-  const root: M = vb.length === 4 ? [1, 0, 0, -1, -vb[0], H + vb[1]] : [1, 0, 0, -1, 0, H];
+  const root: M = vb.length === 4 ? [k, 0, 0, -k, -vb[0] * k, (H + vb[1]) * k] : [k, 0, 0, -k, 0, H * k];
 
   type Frame = { tag: string; m: M; layer: string | null; color?: string; hidden: boolean };
   const stack: Frame[] = [{ tag: "svg", m: root, layer: null, hidden: false }];
@@ -266,8 +268,8 @@ export function svgToDXF(svg: string): DxfResult {
   }
 
   const names = [...layers.keys()];
-  let s = "0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1009\n9\n$INSUNITS\n70\n4\n";
-  s += `9\n$EXTMIN\n10\n0\n20\n0\n30\n0\n9\n$EXTMAX\n10\n${f(W)}\n20\n${f(H)}\n30\n0\n0\nENDSEC\n`;
+  let s = `0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1009\n9\n$INSUNITS\n70\n${opts.inches ? 1 : 4}\n`;
+  s += `9\n$EXTMIN\n10\n0\n20\n0\n30\n0\n9\n$EXTMAX\n10\n${f(W * k)}\n20\n${f(H * k)}\n30\n0\n0\nENDSEC\n`;
   s += "0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLTYPE\n70\n1\n0\nLTYPE\n2\nCONTINUOUS\n70\n0\n3\nSolid line\n72\n65\n73\n0\n40\n0\n0\nENDTAB\n";
   s += `0\nTABLE\n2\nLAYER\n70\n${names.length + 1}\n0\nLAYER\n2\n0\n70\n0\n62\n7\n6\nCONTINUOUS\n`;
   for (const n of names) if (n !== "0") s += `0\nLAYER\n2\n${n}\n70\n0\n62\n${layers.get(n)}\n6\nCONTINUOUS\n`;
