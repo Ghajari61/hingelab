@@ -49,7 +49,8 @@
   background: radial-gradient(120% 90% at 50% 18%, #4A4A52 0%, #34343A 62%, #2A2A30 100%); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05);
 }
 @media (prefers-reduced-motion: reduce) { .gcard:hover .art.pic img { transform: none; } }
-.gcard .lbl { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; line-height: 1.2; }
+.gcard .lbl { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; font-size: 12px; font-weight: 500; line-height: 1.2; }
+.gcards.c3 .gcard .lbl { font-size: 11.5px; hyphens: auto; }
 .gcard:hover { background: var(--surface-hover); color: var(--fg); }
 .gcard[aria-pressed="true"] { background: var(--panel); border-color: var(--select); color: var(--fg); box-shadow: 0 0 0 1px var(--select); }
 .gcard:disabled { cursor: default; opacity: .5; }

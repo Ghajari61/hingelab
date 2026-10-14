@@ -8,9 +8,11 @@ import { differenceShapes, intersectShapes, makeShape, offsetShapes, shapeContou
 import type { Shape } from "@/lib/letters/types";
 import { MATERIALS } from "@/lib/hinge/defaults";
 import { simplifyClosed } from "@/lib/parametric/slice/clean";
-import { bboxOf, circle, ellipse, regularPolygon, TAU, transform } from "../geom";
+import { bboxOf, circle, ellipse, rect, regularPolygon, TAU, transform } from "../geom";
+import { motif } from "../motifs";
 import { heartCurve, orient, shapeOutline, starPolygon } from "../shapes";
-import type { Contour, GenOutput, GenPart, Pt } from "../types";
+import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
+import { textBlock, weld } from "../weld";
 import { PALETTES, type Opening, type Petal, type Ridge, type ShadowBoxParams } from "./params";
 
 export interface ShadowBoxInfo {
@@ -25,6 +27,11 @@ export interface ShadowBoxInfo {
   noWindow: boolean;
   /** Stack depth, mm. */
   depth: number;
+  /** Width of the front layer's words, and the window's width there less the padding, mm. */
+  textW?: number;
+  textRoom?: number;
+  /** The words' size after shrinking them to fit, mm. */
+  textSize?: number;
 }
 
 export type ShadowBoxOutput = GenOutput & { info?: ShadowBoxInfo };
@@ -173,6 +180,36 @@ function ridgeLine(kind: Ridge, bumps: number, rand: () => number): Pt[] {
       }
       break;
     }
+    case "trees": {
+      // Pines with three tiers of branches, standing on a low ground line with gaps between them.
+      const ground = -0.8;
+      let u = u0 - rand() / c;
+      out.push([u, ground]);
+      while (u < u1) {
+        const w = (0.45 + rand() * 0.45) / c, top = -0.1 + rand() * 1.1, mid = u + w / 2;
+        const tiers = 3, step = (top - ground) / tiers, side: Pt[] = [];
+        for (let t = 0; t < tiers; t++) {
+          const half = (w / 2) * (1 - t / (tiers + 0.4));
+          side.push([mid - half, ground + step * t + (t ? 0 : 0.06)]);
+          if (t < tiers - 1) side.push([mid - (w / 2) * (1 - (t + 1) / (tiers + 0.4)) * 0.45, ground + step * (t + 1)]);
+        }
+        out.push(...side, [mid, top], ...side.slice().reverse().map(([x, y]) => [2 * mid - x, y] as Pt));
+        u += w + (rand() * 0.25) / c;
+        out.push([u, ground]);
+      }
+      break;
+    }
+    case "clouds": {
+      // Overlapping round puffs on a low base line.
+      const puffs: { u: number; r: number; h: number }[] = [];
+      for (let u = u0 - 0.5 / c; u < u1 + 0.5 / c; u += (0.35 + rand() * 0.3) / c) puffs.push({ u, r: (0.3 + rand() * 0.25) / c, h: 0.6 + rand() * 1.1 });
+      sample((u) => {
+        let f = 0;
+        for (const q of puffs) { const x = (u - q.u) / q.r; if (x > -1 && x < 1) f = Math.max(f, q.h * Math.sqrt(1 - x * x)); }
+        return -0.8 + f;
+      });
+      break;
+    }
   }
   return out;
 }
@@ -310,14 +347,66 @@ function openingsOf(p: ShadowBoxParams, w: Win, win: Shape, i: number, L: number
   }
 }
 
-/** The light hole in the back layer. */
-function moonHole(p: ShadowBoxParams, w: Win): Contour {
-  if (p.design.pattern !== "landscape") return circle(w.cx, w.cy, w.R * 0.12, 0.05);
-  const low = p.design.from === "top";
-  return circle(w.x0 + w.w * (low ? 0.3 : 0.72), w.y0 + w.h * (low ? 0.78 : 0.22), w.R * 0.18, 0.05);
+/** The light hole in the back layer: in the middle, or in a landscape's sky. */
+function lightHole(p: ShadowBoxParams, w: Win): Contour[] {
+  const d = (2 * w.R * p.design.holeSize) / 100;
+  let cx = w.cx, cy = w.cy;
+  if (p.design.pattern === "landscape") {
+    const low = p.design.from === "top", m = d / 2 + 3;
+    cx = Math.min(w.x0 + w.w - m, Math.max(w.x0 + m, w.x0 + w.w * (low ? 0.3 : 0.72)));
+    cy = Math.min(w.y0 + w.h - m, Math.max(w.y0 + m, w.y0 + w.h * (low ? 0.78 : 0.22)));
+  }
+  if (p.design.hole === "circle") return [circle(cx, cy, d / 2, 0.05)];
+  const cs = motif(p.design.hole, d, cx, cy);
+  // Every piece is cut out whole: a motif's inner details would fall out of a hole anyway.
+  return shapeContours(unionShapes(cs.map(orient)).map((s) => makeShape(s.outer, [])));
 }
 
-export function buildShadowBox(p: ShadowBoxParams): ShadowBoxOutput {
+interface TextCut { keep: Contour[]; clear: Contour[]; width: number; room: number; size: number; loading: boolean }
+
+/** Words wider than the window shrink to fit it. */
+function textCut(p: ShadowBoxParams, w: Win, winCs: Contour[], ctx: BuildContext | undefined, missing: string[]): TextCut | null {
+  if (!p.text.text.trim()) return null;
+  if (!ctx) return { keep: [], clear: [], width: 0, room: 0, size: p.text.size, loading: true };
+  let size = p.text.size, out = textAt(p, size, w, winCs, ctx, missing);
+  for (let k = 0; k < 2 && !out.loading && out.room > 0 && out.width > out.room; k++) {
+    size = Math.max(4, size * (out.room / out.width) * 0.98);
+    out = textAt(p, size, w, winCs, ctx, []);
+  }
+  return out;
+}
+
+/**
+ * Words standing on a paper bar across the front layer's window: the bar runs along the baseline and
+ * meets the frame at both ends; a clear band around the words is cut away so they read on their own.
+ */
+function textAt(p: ShadowBoxParams, size: number, w: Win, winCs: Contour[], ctx: BuildContext, missing: string[]): TextCut {
+  const t = { ...p.text, size };
+  const b = textBlock(ctx, t.text, t.fontId, t.size, { missing, spacing: -t.size * 0.02 });
+  if (b.loading || !b.contours.length) return { keep: [], clear: [], width: 0, room: 0, size, loading: b.loading };
+  // The baseline: the most common lowest point of the glyphs (descenders and counters vote alone).
+  const bucket = Math.max(0.3, t.size * 0.05), votes = new Map<number, number>();
+  for (const c of b.contours) {
+    const k = Math.round(bboxOf([c]).y1 / bucket);
+    votes.set(k, (votes.get(k) ?? 0) + 1);
+  }
+  const base = [...votes.entries()].reduce((a, e) => (e[1] > a[1] || (e[1] === a[1] && e[0] > a[0]) ? e : a))[0] * bucket;
+  const bar = Math.max(2, t.size * 0.14), pad = Math.max(3, t.size * 0.25);
+  const top = -b.height / 2 - pad, bot = Math.max(b.height / 2, base + bar) + pad;
+  const at = t.place === "top" ? w.y0 + w.h * 0.2 : t.place === "middle" ? w.cy : w.y0 + w.h * 0.8;
+  const dy = Math.min(w.y0 + w.h - bot - 1, Math.max(w.y0 - top + 1, at - (top + bot) / 2));
+  const glyphs = b.contours.map((c) => c.map(([x, y]) => [w.cx + x, y + dy] as Pt));
+  const barC = rect(w.x0 - 5, base + dy - 0.3, w.w + 10, bar + 0.3);
+  const clear = [rect(w.x0 - 5, top + dy, w.w + 10, bot - top)];
+  const welded = weld([...glyphs, barC], { border: 0, minHole: 1.5, bridge: Math.max(1.2, t.size * 0.07) });
+  const keep = welded ? shapeContours(intersectShapes(shapeContours([welded]), winCs)) : [];
+  // The window's width along the words' middle line, less the padding.
+  const mid = intersectShapes([rect(w.x0 - 5, dy - 0.5, w.w + 10, 1)], winCs);
+  const room = mid.length ? bboxOf(mid.map((s) => s.outer)).x1 - bboxOf(mid.map((s) => s.outer)).x0 - 2 * pad : 0;
+  return { keep, clear, width: b.width, room, size, loading: false };
+}
+
+export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBoxOutput {
   const { width: W, height: H, border } = p.frame;
   const T = p.T, N = p.stack.count;
   const frame = orient(simplifyClosed(shapeOutline(p.frame.shape, W, H, p.frame.corner), SIMPLIFY));
@@ -338,14 +427,14 @@ export function buildShadowBox(p: ShadowBoxParams): ShadowBoxOutput {
   const ringArea = ring.reduce((a, s) => a + s.area, 0);
   const web = Math.max(0, p.design.web);
 
-  /** The frame with `cuts` taken out of its window, cleaned of slivers and loose pieces. */
-  const layerOf = (cuts: Contour[]): Shape => {
+  /** The frame with `cuts` taken out of its window, cleaned of slivers and loose pieces; `keep` is added back after the cleaning. */
+  const layerOf = (cuts: Contour[], keep: Contour[] = []): Shape => {
     if (!cuts.length) return frameShape;
     const merged = unionShapes(cuts.map(orient));
     const inWin = intersectShapes(shapeContours(merged), winCs);
     let body = differenceShapes([frame], shapeContours(inWin));
     if (web > 0) body = offsetShapes(offsetShapes(body, -web / 2, "miter"), web / 2, "miter");
-    const all = unionShapes([...shapeContours(body), ...shapeContours(ring)]);
+    const all = unionShapes([...shapeContours(body), ...shapeContours(ring), ...keep]);
     if (!all.length) return frameShape;
     const main = biggest(all);
     info.dropped += all.filter((s) => s !== main && s.area > 1).length;
@@ -355,9 +444,17 @@ export function buildShadowBox(p: ShadowBoxParams): ShadowBoxOutput {
 
   const L = p.stack.back ? N - 1 : N;
   const shapes: Shape[] = [];
-  const moon = p.design.moon ? [moonHole(p, w)] : [];
+  const moon = p.design.moon ? lightHole(p, w) : [];
+  const missing: string[] = [];
+  const text = textCut(p, w, winCs, ctx, missing);
+  if (text && !text.loading) { info.textW = r1(text.width); info.textRoom = r1(text.room); info.textSize = r1(text.size); }
   if (p.stack.back) shapes.push(moon.length ? layerOf(moon) : frameShape);
-  for (let i = 0; i < L; i++) shapes.push(layerOf([...openingsOf(p, w, win, i, L), ...(i === 0 && !p.stack.back ? moon : [])]));
+  for (let i = 0; i < L; i++) {
+    const front = i === L - 1 && text && !text.loading, dropped = info.dropped;
+    shapes.push(layerOf([...openingsOf(p, w, win, i, L), ...(i === 0 && !p.stack.back ? moon : []), ...(front ? text.clear : [])], front ? text.keep : []));
+    // Bits of the pattern cut off by the words' clear band are meant to go.
+    if (front) info.dropped = dropped;
+  }
 
   const frames = p.stack.spacer === "frames";
   const per = frames ? p.stack.per : 0;
@@ -398,10 +495,13 @@ export function buildShadowBox(p: ShadowBoxParams): ShadowBoxOutput {
         ? `Glue ${per === 1 ? "a spacer frame" : `${per} spacer frames`} between each pair of layers, lining up the outlines.`
         : `Stick ${r1(gapZ)} mm foam tape around the border of every layer but the front one, with small foam squares behind wide areas of the pattern.`,
       "Stack the layers in order from the back, pressing each one down evenly before the next.",
-      ...(p.design.moon ? ["For a lit box, put a battery LED strip or puck light behind the back layer's round hole."] : []),
+      ...(text && !text.loading ? [`The words stand on a paper bar across the front layer: cut it from a contrasting card so they read clearly.`] : []),
+      ...(p.design.moon ? ["For a lit box, put a battery LED strip or puck light behind the back layer's light hole."] : []),
       `Fit the stack into a shadow box frame at least ${Math.ceil(depth + 5)} mm deep, or glue a backing card on and hang it as it is.`,
     ],
     info,
     stacked: true,
+    notice: text?.loading ? "Loading the font." : undefined,
+    missing: missing.length ? missing : undefined,
   };
 }

@@ -1,6 +1,7 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import type { ShapeKind } from "../shapes";
+import type { MotifId } from "../motifs";
 import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 
@@ -10,7 +11,7 @@ export const OPENINGS = ["circle", "polygon", "star", "flower", "heart", "arch",
 export type Opening = (typeof OPENINGS)[number];
 export const PETALS = ["drop", "leaf", "diamond", "circle"] as const;
 export type Petal = (typeof PETALS)[number];
-export const RIDGES = ["hills", "mountains", "waves", "zigzag", "dunes", "skyline"] as const;
+export const RIDGES = ["hills", "mountains", "waves", "zigzag", "dunes", "skyline", "trees", "clouds"] as const;
 export type Ridge = (typeof RIDGES)[number];
 export const FROMS = ["bottom", "top", "both"] as const;
 export type From = (typeof FROMS)[number];
@@ -18,6 +19,24 @@ export const CELLS = ["hex", "circle", "square", "diamond", "triangle"] as const
 export type Cell = (typeof CELLS)[number];
 export const FRAMES = ["rect", "rounded", "circle", "arch", "hexagon", "octagon", "heart", "diamond", "scalloped", "house", "shield", "cloud"] as const satisfies readonly ShapeKind[];
 export type FrameShape = (typeof FRAMES)[number];
+/** Shapes of the light hole: a circle or a motif silhouette. */
+export const HOLES = ["circle", "moon", "moonstar", "star", "heart", "sun", "snowflake", "tree", "house", "butterfly", "flower", "paw", "cloud"] as const satisfies readonly ("circle" | MotifId)[];
+export type Hole = (typeof HOLES)[number];
+export const PLACES = ["bottom", "middle", "top"] as const;
+export type Place = (typeof PLACES)[number];
+
+/** Standard shadow box frames: the layers are 3 mm smaller than the frame's opening so they drop in. */
+export const SIZES = {
+  "6x6": { text: "6 × 6 in", w: 149, h: 149 },
+  "8x8": { text: "8 × 8 in", w: 200, h: 200 },
+  "10x10": { text: "10 × 10 in", w: 251, h: 251 },
+  "5x7": { text: "5 × 7 in", w: 124, h: 175 },
+  "7x5": { text: "7 × 5 in", w: 175, h: 124 },
+  "8x10": { text: "8 × 10 in", w: 200, h: 251 },
+  "10x8": { text: "10 × 8 in", w: 251, h: 200 },
+  a5: { text: "A5", w: 145, h: 207 },
+} as const;
+export type SizeId = keyof typeof SIZES | "custom";
 
 /** Paper colours from the back layer to the front one (previews only). */
 export const PALETTES = {
@@ -46,7 +65,7 @@ export const MAT_MM = 292;
 
 export interface ShadowBoxParams extends GenBase {
   cutter: { kind: "laser" | "blade" };
-  frame: { shape: FrameShape; width: number; height: number; border: number; corner: number };
+  frame: { shape: FrameShape; size: SizeId; width: number; height: number; border: number; corner: number };
   stack: {
     /** Layers, back to front. */
     count: number;
@@ -93,9 +112,14 @@ export interface ShadowBoxParams extends GenBase {
     web: number;
     /** Openings stretch with the window instead of keeping their shape. */
     stretch: boolean;
-    /** A round light hole in the back layer (moon or sun). */
+    /** A light hole in the back layer (moon, sun or a motif). */
     moon: boolean;
+    hole: Hole;
+    /** Light hole size, % of the window's smaller side. */
+    holeSize: number;
   };
+  /** Words cut into the front layer, standing on a paper bar across the window. */
+  text: { text: string; fontId: string; size: number; place: Place };
   look: { palette: PaletteId; reverse: boolean };
 }
 
@@ -112,17 +136,24 @@ export const SHADOWBOX_DEFAULTS: ShadowBoxParams = {
   job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   cutter: { kind: "blade" },
-  frame: { shape: "rounded", width: 200, height: 200, border: 12, corner: 8 },
+  frame: { shape: "rounded", size: "8x8", width: 200, height: 200, border: 12, corner: 8 },
   stack: { count: 10, back: true, spacer: "none", gap: 2, per: 1 },
   design: {
     pattern: "tunnel", opening: "star", sides: 6, inner: 55, petal: "drop",
     ridge: "mountains", from: "bottom", amp: 18, seed: 7, count: 12,
     cell: "hex", pitch: 18, fade: 40,
     min: 18, max: 118, twist: 6, rotate: 0, shiftX: 0, shiftY: 0, swirl: 0,
-    web: 1.5, stretch: false, moon: false,
+    web: 1.5, stretch: false, moon: false, hole: "circle", holeSize: 18,
   },
+  text: { text: "", fontId: "lobster", size: 20, place: "bottom" },
   look: { palette: "sunset", reverse: false },
 };
+
+/** The standard size these outer dimensions match, or "custom". */
+export function sizeOf(w: number, h: number): SizeId {
+  for (const [id, s] of Object.entries(SIZES)) if (s.w === w && s.h === h) return id as SizeId;
+  return "custom";
+}
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const oneOf = <T extends string>(list: readonly T[], v: string, d: T): T => ((list as readonly string[]).includes(v) ? (v as T) : d);
@@ -145,6 +176,13 @@ export function mergeShadowBox(raw: unknown): ShadowBoxParams {
   g.sides = clamp(Math.round(g.sides), 3, 16);
   g.count = clamp(Math.round(g.count), 3, 48);
   g.seed = clamp(Math.round(g.seed), 0, 99999);
+  g.hole = oneOf(HOLES, g.hole, d.design.hole);
+  g.holeSize = clamp(g.holeSize, 5, 45);
+  p.frame.size = sizeOf(p.frame.width, p.frame.height);
+  const t = p.text;
+  t.text = String(t.text ?? "").slice(0, 40);
+  t.size = clamp(t.size, 8, 60);
+  t.place = oneOf(PLACES, t.place, d.text.place);
   if (!isPalette(p.look.palette)) p.look.palette = d.look.palette;
   return p;
 }

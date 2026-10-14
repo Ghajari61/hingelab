@@ -1,4 +1,5 @@
 import type { Issue } from "@/lib/issues";
+import { missingGlyphs } from "../common";
 import type { ShadowBoxOutput } from "./build";
 import type { ShadowBoxParams } from "./params";
 
@@ -24,6 +25,14 @@ export function checkShadowBox(p: ShadowBoxParams, out: ShadowBoxOutput): Issue<
       message: `${info.open} layers are only the frame: their cut-outs fill the whole window.`,
       fixes: [{ id: "smaller", label: `Front cut-out ${max}%`, safe: false, apply: (q) => ({ ...q, design: { ...q.design, max } }) }],
     });
+  }
+  issues.push(...missingGlyphs<ShadowBoxParams>(out.missing, p.text.fontId, (q, fontId) => ({ ...q, text: { ...q.text, fontId } })));
+  const fitted = info.textSize;
+  if (fitted !== undefined && fitted < p.text.size - 0.5) {
+    const middle = p.text.place !== "middle" ? [{ id: "middle", label: "Words in the middle", safe: true, apply: (q: ShadowBoxParams) => ({ ...q, text: { ...q.text, place: "middle" as const } }) }] : [];
+    issues.push(fitted < 10
+      ? { code: "TEXT_SMALL", level: "warn", message: `The words only fit the window at ${fitted} mm: letters that small tear easily in paper. Use fewer words or a wider frame.`, fixes: middle }
+      : { code: "TEXT_FIT", level: "info", message: `The words were set at ${fitted} mm instead of ${p.text.size} mm to fit the window.`, fixes: [] });
   }
   if (info.dropped > 0) {
     issues.push({ code: "LOOSE", level: "info", message: `${info.dropped} loose piece${info.dropped > 1 ? "s" : ""} inside the cut-outs ${info.dropped > 1 ? "were" : "was"} left out: nothing held ${info.dropped > 1 ? "them" : "it"} to the frame.`, fixes: [] });

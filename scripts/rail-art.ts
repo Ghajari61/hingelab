@@ -192,7 +192,7 @@ for (const def of ALL_GENERATORS) {
     }
     const tokens = () => c.options.map((o) => [o.v, token(def.art?.(c.key, o.v) ?? [])] as [string, string]).filter(([, t]) => t);
     for (const o of c.options) {
-      const base = def.defaults();
+      const base = def.railPreview ? def.merge(def.railPreview(c.key, def.defaults())) : def.defaults();
       const p = def.merge(c.apply ? c.apply(base, o.v) : setPath(base, c.key, o.v));
       const r = def.build(p, genCtx);
       // An option that needs the user's own input (a pasted outline, text) shows its icon instead.

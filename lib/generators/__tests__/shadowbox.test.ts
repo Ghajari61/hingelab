@@ -3,7 +3,7 @@ import { makeShape, offsetShapes, totalArea, unionShapes } from "@/lib/letters/p
 import { bboxOf, signedArea } from "../geom";
 import { SHADOWBOX } from "../shadowbox";
 import type { ShadowBoxOutput } from "../shadowbox/build";
-import { CELLS, FRAMES, MAT_MM, OPENINGS, PATTERNS, RIDGES, mergeShadowBox, type ShadowBoxParams } from "../shadowbox/params";
+import { CELLS, FRAMES, HOLES, MAT_MM, OPENINGS, PATTERNS, RIDGES, SIZES, mergeShadowBox, type ShadowBoxParams } from "../shadowbox/params";
 import { SHADOWBOX_FEATURED } from "../shadowbox/featured";
 import { START_LAZY } from "../startPresets";
 import type { ChoiceSpec } from "../types";
@@ -112,6 +112,49 @@ describe("shadow box", () => {
     expect(out.error).toBeTruthy();
     const issue = SHADOWBOX.check(p, out).find((i) => i.code === "NO_WINDOW")!;
     expect(SHADOWBOX.build(issue.fixes[0].apply(p), CTX).error).toBeUndefined();
+  });
+
+  it("light holes take every shape and size, in the window", () => {
+    const backArea = (raw: unknown) => { const l = layers(build(raw))[0]; return l.holes.reduce((a, h) => a + Math.abs(signedArea(h)), 0); };
+    for (const hole of HOLES) {
+      const out = build({ stack: { back: true }, design: { pattern: "landscape", moon: true, hole, holeSize: 30 } });
+      const back = layers(out)[0];
+      expect(back.holes.length, hole).toBeGreaterThan(0);
+      const win = { x0: 12, y0: 12, x1: 188, y1: 188 };
+      const b = bboxOf(back.holes);
+      expect(b.x0 >= win.x0 && b.y0 >= win.y0 && b.x1 <= win.x1 && b.y1 <= win.y1, hole).toBe(true);
+    }
+    expect(backArea({ design: { moon: true, holeSize: 30 } })).toBeGreaterThan(backArea({ design: { moon: true, holeSize: 15 } }) * 3.5);
+    expect(choice("design.hole").apply!(mergeShadowBox({}), "heart").design).toMatchObject({ moon: true, hole: "heart" });
+  });
+
+  it("words on the front layer hold together and shrink to fit the window", () => {
+    const plain = build({ stack: { count: 6 }, design: { max: 200 } });
+    const out = build({ stack: { count: 6 }, design: { max: 200 }, text: { text: "Sweet dreams", fontId: "lobster", size: 20 } });
+    expect(out.error).toBeUndefined();
+    const [a, b] = [layers(plain), layers(out)];
+    // Only the front layer changes, and it is still one piece with more paper (the words and their bar).
+    for (let k = 0; k < 5; k++) expect(area(b[k]), `layer ${k}`).toBeCloseTo(area(a[k]), 3);
+    expect(area(b[5])).toBeGreaterThan(area(a[5]) + 500);
+    expect(out.info!.textSize).toBe(20);
+    expect(out.info!.dropped).toBe(0);
+    const long = mergeShadowBox({ text: { text: "Happy Birthday Alexander", size: 30 } });
+    const res = SHADOWBOX.build(long, CTX) as ShadowBoxOutput;
+    expect(res.info!.textSize!).toBeLessThan(30);
+    expect(res.info!.textW!).toBeLessThanOrEqual(res.info!.textRoom! + 0.5);
+    expect(SHADOWBOX.check(long, res).map((i) => i.code)).toContain("TEXT_FIT");
+    expect(SHADOWBOX.fonts!(long)).toEqual(["lobster"]);
+    expect(SHADOWBOX.fonts!(mergeShadowBox({}))).toEqual([]);
+    // Without a text renderer the build waits for the font.
+    expect(SHADOWBOX.build(long, {}).notice).toBe("Loading the font.");
+  });
+
+  it("frame sizes set the layers for standard frames, and other sizes read as custom", () => {
+    const p = choice("frame.size").apply!(mergeShadowBox({}), "8x10");
+    expect(p.frame).toMatchObject({ width: 200, height: 251 });
+    expect(mergeShadowBox(p).frame.size).toBe("8x10");
+    expect(mergeShadowBox({ frame: { width: 210, height: 251 } }).frame.size).toBe("custom");
+    for (const [id, s] of Object.entries(SIZES)) expect(mergeShadowBox({ frame: { width: s.w, height: s.h } }).frame.size, id).toBe(id);
   });
 
   it("colours shade from the back to the front and paper looks matte", () => {

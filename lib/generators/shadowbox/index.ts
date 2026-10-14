@@ -2,20 +2,25 @@ import { MATERIALS } from "@/lib/hinge/defaults";
 import { circle, rect, regularPolygon } from "../geom";
 import { shapeArt, shapeOutline } from "../shapes";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
+import { motif, type MotifId } from "../motifs";
 import { fitArt, namedFile } from "../util";
 import { buildShadowBox, unitOpening, type ShadowBoxOutput } from "./build";
 import { checkShadowBox } from "./check";
 import {
-  CELLS, FRAMES, MAT_MM, OPENINGS, PALETTES, PATTERNS, PETALS, RIDGES, SHADOWBOX_DEFAULTS, mergeShadowBox,
-  type Cell, type FrameShape, type Opening, type Pattern, type Ridge, type ShadowBoxParams,
+  CELLS, FRAMES, HOLES, MAT_MM, OPENINGS, PALETTES, PATTERNS, PETALS, RIDGES, SHADOWBOX_DEFAULTS, SIZES, mergeShadowBox,
+  type Cell, type FrameShape, type Hole, type Opening, type Pattern, type Ridge, type ShadowBoxParams,
 } from "./params";
 import { SHADOWBOX_PRESETS } from "./presets";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
-export const PATTERN_NAMES: Record<Pattern, string> = { tunnel: "Tunnel", mandala: "Mandala", sunburst: "Sunburst", landscape: "Landscape", lattice: "Lattice" };
-const OPENING_NAMES: Record<Opening, string> = { circle: "Circle", polygon: "Polygon", star: "Star", flower: "Flower", heart: "Heart", arch: "Arch", drop: "Drop", frame: "Frame shape" };
-const RIDGE_NAMES: Record<Ridge, string> = { hills: "Hills", mountains: "Mountains", waves: "Waves", zigzag: "Zigzag", dunes: "Dunes", skyline: "Skyline" };
+export const PATTERN_NAMES: Record<Pattern, string> = { tunnel: "Tunnel", mandala: "Mandala", sunburst: "Sunburst", landscape: "Scene", lattice: "Lattice" };
+const OPENING_NAMES: Record<Opening, string> = { circle: "Circle", polygon: "Polygon", star: "Star", flower: "Flower", heart: "Heart", arch: "Arch", drop: "Drop", frame: "As frame" };
+const RIDGE_NAMES: Record<Ridge, string> = { hills: "Hills", mountains: "Peaks", waves: "Waves", zigzag: "Zigzag", dunes: "Dunes", skyline: "City", trees: "Forest", clouds: "Clouds" };
+const HOLE_NAMES: Record<Hole, string> = {
+  circle: "Circle", moon: "Crescent", moonstar: "Moon & star", star: "Star", heart: "Heart", sun: "Sun", snowflake: "Snowflake",
+  tree: "Tree", house: "House", butterfly: "Butterfly", flower: "Flower", paw: "Paw", cloud: "Cloud",
+};
 const CELL_NAMES: Record<Cell, string> = { hex: "Honeycomb", circle: "Dots", square: "Squares", diamond: "Diamonds", triangle: "Triangles" };
 const FRAME_NAMES: Record<FrameShape, string> = {
   rect: "Rectangle", rounded: "Rounded", circle: "Circle / oval", arch: "Arch", hexagon: "Hexagon", octagon: "Octagon",
@@ -43,13 +48,13 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
     fields: [
       {
         kind: "choice", key: "design.pattern", label: "Pattern", rail: true,
-        help: "Tunnel nests one shape; Mandala rings it with petals and dots; Sunburst cuts rays; Landscape cuts ridges of hills, mountains, waves or a skyline; Lattice cuts a grid of holes.",
+        help: "Tunnel nests one shape; Mandala rings it with petals and dots; Sunburst cuts rays; Scene cuts layered ridges of hills, peaks, waves, a forest, clouds or a city; Lattice cuts a grid of holes.",
         options: PATTERNS.map((v) => ({ v, text: PATTERN_NAMES[v] })),
         apply: (p, v) => withDesign(p, { pattern: v as Pattern, ...PATTERN_START[v as Pattern] }),
       },
       {
-        kind: "choice", key: "design.opening", label: "Shape", rail: true, show: shaped,
-        help: "The shape of each layer's cut-out (the middle of a mandala). Frame shape repeats the frame's own outline as even rings.",
+        kind: "choice", key: "design.opening", label: "Cut-out", rail: true, show: shaped,
+        help: "The shape of each layer's cut-out (the middle of a mandala). As frame repeats the frame's own outline as even rings.",
         options: OPENINGS.map((v) => ({ v, text: OPENING_NAMES[v] })),
         apply: (p, v) => withDesign(p, { ...(shaped(p) ? {} : { pattern: "tunnel", ...PATTERN_START.tunnel }), opening: v as Opening }),
       },
@@ -59,14 +64,14 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
       { kind: "number", key: "design.count", label: "Count", unit: "", min: 3, max: 48, step: 1, int: true, show: (p) => isPat(p, "mandala", "sunburst", "landscape"), help: "Petals around a mandala, rays of a sunburst, or bumps across a landscape's front ridge (ridges further back have more)." },
       { kind: "number", key: "design.swirl", label: "Swirl", unit: "deg", min: -180, max: 180, step: 1, show: (p) => isPat(p, "sunburst"), help: "Curls the rays into a spiral." },
       {
-        kind: "choice", key: "design.ridge", label: "Ridges", rail: true, show: (p) => isPat(p, "landscape"),
-        help: "The line along the top of each landscape layer.",
+        kind: "choice", key: "design.ridge", label: "Scene", rail: true, show: (p) => isPat(p, "landscape"),
+        help: "The line along the top of each scene layer: rolling hills, mountain peaks, sea waves, zigzags, sand dunes, a city, a pine forest or puffy clouds.",
         options: RIDGES.map((v) => ({ v, text: RIDGE_NAMES[v] })),
         apply: (p, v) => withDesign(p, { ...(isPat(p, "landscape") ? {} : { pattern: "landscape", ...PATTERN_START.landscape }), ridge: v as Ridge }),
       },
       { kind: "choice", key: "design.from", label: "Rises from", show: (p) => isPat(p, "landscape"), options: [{ v: "bottom", text: "Bottom" }, { v: "top", text: "Top", title: "Hangs down like clouds or a cave roof" }, { v: "both", text: "Both", title: "A canyon" }], help: "Where the paper of each layer sits: under the ridge, above it, or both." },
       { kind: "number", key: "design.amp", label: "Ridge height", unit: "%", min: 0, max: 80, step: 1, show: (p) => isPat(p, "landscape"), help: "How tall the bumps are, as a share of the window's height." },
-      { kind: "number", key: "design.seed", label: "Variation", unit: "", min: 0, max: 99999, step: 1, int: true, random: true, show: (p) => isPat(p, "landscape"), help: "Picks a different random set of peaks and buildings." },
+      { kind: "number", key: "design.seed", label: "Variation", unit: "", min: 0, max: 99999, step: 1, int: true, random: true, show: (p) => isPat(p, "landscape"), help: "Picks a different random set of peaks, trees, clouds and buildings." },
       {
         kind: "choice", key: "design.cell", label: "Cells", rail: true, show: (p) => isPat(p, "lattice"),
         help: "The holes of the lattice.",
@@ -75,7 +80,25 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
       },
       { kind: "number", key: "design.pitch", label: "Cell size", unit: "mm", min: 8, max: 80, step: 0.5, show: (p) => isPat(p, "lattice"), help: "Distance between the holes' centres." },
       { kind: "number", key: "design.fade", label: "Fade", unit: "%", min: -100, max: 100, step: 1, show: (p) => isPat(p, "lattice"), help: "Holes grow toward the middle (positive) or toward the edge (negative)." },
-      { kind: "toggle", key: "design.moon", label: "Light hole", help: "A round hole in the back layer: a moon or sun in a landscape, or a spot of light behind the other patterns." },
+    ],
+  },
+  {
+    id: "text", title: "Words", open: true,
+    help: "A name, date or short message cut into the front layer, standing on a paper bar across the window.",
+    fields: [
+      { kind: "text", key: "text.text", label: "Text", maxLength: 40, placeholder: "Sweet dreams", help: "The words on the front layer; leave it empty for none." },
+      { kind: "font", key: "text.fontId", label: "Font", sample: (p) => p.text.text || "Aa", show: (p) => !!p.text.text.trim(), help: "The typeface: bold joined scripts and heavy capitals cut best from paper." },
+      { kind: "number", key: "text.size", label: "Text size", unit: "mm", min: 8, max: 60, step: 0.5, show: (p) => !!p.text.text.trim(), help: "Height of the capital letters; words too wide for the window shrink to fit." },
+      { kind: "choice", key: "text.place", label: "Place", show: (p) => !!p.text.text.trim(), options: [{ v: "bottom", text: "Bottom" }, { v: "middle", text: "Middle" }, { v: "top", text: "Top" }], help: "Where the words sit in the window." },
+    ],
+  },
+  {
+    id: "light", title: "Light hole", open: false,
+    help: "A hole in the back board that glows when a light sits behind the box: a moon, a sun or a little motif.",
+    fields: [
+      { kind: "toggle", key: "design.moon", label: "Light hole", help: "Cuts a hole in the back layer: in the sky of a scene, or in the middle of the other patterns." },
+      { kind: "choice", key: "design.hole", label: "Light shape", rail: true, show: (p) => p.design.moon, options: HOLES.map((v) => ({ v, text: HOLE_NAMES[v] })), apply: (p, v) => withDesign(p, { moon: true, hole: v as Hole }), help: "The shape of the light hole." },
+      { kind: "number", key: "design.holeSize", label: "Hole size", unit: "%", min: 5, max: 45, step: 1, show: (p) => p.design.moon, help: "Size of the light hole, as a share of the window's smaller side." },
     ],
   },
   {
@@ -94,10 +117,16 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
     ],
   },
   {
-    id: "frame", title: "Frame", open: false,
+    id: "frame", title: "Frame", open: true,
     help: "The outline every layer shares and the solid border around the pattern.",
     fields: [
-      { kind: "choice", key: "frame.shape", label: "Frame shape", rail: true, options: FRAMES.map((v) => ({ v, text: FRAME_NAMES[v] })), help: "The outline of every layer." },
+      { kind: "choice", key: "frame.shape", label: "Frame", rail: true, options: FRAMES.map((v) => ({ v, text: FRAME_NAMES[v] })), help: "The outline of every layer." },
+      {
+        kind: "choice", key: "frame.size", label: "Frame size",
+        options: [...Object.entries(SIZES).map(([v, s]) => ({ v, text: s.text, title: `Layers ${s.w} × ${s.h} mm` })), { v: "custom", text: "Custom" }],
+        apply: (p, v) => (v in SIZES ? { ...p, frame: { ...p.frame, width: SIZES[v as keyof typeof SIZES].w, height: SIZES[v as keyof typeof SIZES].h } } : p),
+        help: "Sizes the layers to drop into a standard shadow box frame (3 mm smaller than its opening), or set your own width and height.",
+      },
       { kind: "number", key: "frame.width", label: "Width", unit: "mm", min: 60, max: 1000, step: 1, help: "Width of the layers." },
       { kind: "number", key: "frame.height", label: "Height", unit: "mm", min: 60, max: 1000, step: 1, help: "Height of the layers." },
       { kind: "number", key: "frame.border", label: "Border", unit: "mm", min: 2, max: 150, step: 0.5, help: "The solid band around every layer that holds it together and takes the glue or foam." },
@@ -152,11 +181,17 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
     const o = v === "frame" ? shapeOutline("rounded", 2, 2, 0.3).map(([x, y]) => [x - 1, y - 1] as [number, number]) : unitOpening(v as Exclude<Opening, "frame">, 6, 0.5);
     return ring([rect(-1.3, -1.3, 2.6, 2.6), o]);
   }
+  if (key === "design.hole") return v === "circle" ? ring([rect(-1.3, -1.3, 2.6, 2.6), circle(0, 0, 0.8, 0.02)]) : ring([rect(-1.3, -1.3, 2.6, 2.6), ...motif(v as MotifId, 1.7)]);
+  if (key === "design.ridge" && v === "trees") {
+    const pts: [number, number][] = [[0, 30]];
+    for (const [x, h] of [[8, 14], [22, 6], [36, 12], [50, 4]]) pts.push([x - 6, 30], [x - 2, 22], [x - 4, 22], [x, h], [x + 4, 22], [x + 2, 22], [x + 6, 30]);
+    return ring([[...pts, [60, 30], [60, 34], [0, 34]]]);
+  }
   if (key === "design.ridge") {
     const pts: [number, number][] = [];
     for (let i = 0; i <= 40; i++) {
       const u = i / 40;
-      const f = v === "zigzag" ? 1 - 4 * Math.abs(((u * 3) % 1) - 0.5) : v === "waves" ? 1 - 2 * Math.pow(Math.abs(Math.sin(Math.PI * u * 3)), 0.7) : v === "skyline" ? [0.2, -0.4, 0.8, 0.1, -0.2, 0.6][Math.floor(u * 5.99)] : v === "mountains" ? 1 - 2 * Math.abs(((u * 2.2) % 1) - 0.5) * 2 : Math.sin(u * Math.PI * (v === "dunes" ? 3 : 2));
+      const f = v === "zigzag" ? 1 - 4 * Math.abs(((u * 3) % 1) - 0.5) : v === "waves" ? 1 - 2 * Math.pow(Math.abs(Math.sin(Math.PI * u * 3)), 0.7) : v === "skyline" ? [0.2, -0.4, 0.8, 0.1, -0.2, 0.6][Math.floor(u * 5.99)] : v === "mountains" ? 1 - 2 * Math.abs(((u * 2.2) % 1) - 0.5) * 2 : v === "clouds" ? 2 * Math.sqrt(Math.max(0, 1 - (2 * ((u * 3) % 1) - 1) ** 2)) - 1 : Math.sin(u * Math.PI * (v === "dunes" ? 3 : 2));
       pts.push([u * 60, 20 - f * 8]);
     }
     return ring([[...pts, [60, 34], [0, 34]]]);
@@ -178,7 +213,27 @@ function scaleShadowBox(p: ShadowBoxParams, s: number): ShadowBoxParams {
     ...p,
     frame: { ...p.frame, width: k(p.frame.width), height: k(p.frame.height), border: k(p.frame.border), corner: k(p.frame.corner) },
     design: { ...p.design, pitch: k(p.design.pitch) },
+    text: { ...p.text, size: k(p.text.size) },
   };
+}
+
+/**
+ * Rail cards: a few untwisted layers, so each card shows its own choice clearly instead of the busy
+ * default tunnel.
+ */
+function railPreview(key: string, p: ShadowBoxParams): ShadowBoxParams {
+  const d = (design: Partial<ShadowBoxParams["design"]>, count: number, more: Partial<ShadowBoxParams> = {}): ShadowBoxParams =>
+    ({ ...p, ...more, stack: { ...p.stack, count }, design: { ...p.design, twist: 0, rotate: 0, ...design } });
+  switch (key) {
+    case "design.pattern": return d({ count: 10, amp: 26, pitch: 34, sides: 5, inner: 50 }, 6);
+    case "design.opening": return d({ pattern: "tunnel", min: 22, max: 100, sides: 6, inner: 50 }, 5);
+    case "design.ridge": return d({ pattern: "landscape", ...PATTERN_START.landscape, count: 2, amp: 30 }, 5);
+    case "design.cell": return d({ pattern: "lattice", min: 40, max: 90, pitch: 40, fade: 30 }, 4);
+    case "design.hole": return d({ pattern: "tunnel", opening: "circle", min: 120, max: 130, moon: true, holeSize: 45 }, 2, { look: { palette: "night", reverse: false } });
+    case "frame.shape": return d({ pattern: "tunnel", opening: "frame", min: 35, max: 100 }, 5, { look: { ...p.look, reverse: true } });
+    case "look.palette": return d({ pattern: "tunnel", opening: "circle", min: 25, max: 105 }, 6);
+    default: return p;
+  }
 }
 
 export const SHADOWBOX: GeneratorDef<ShadowBoxParams> = {
@@ -189,16 +244,20 @@ export const SHADOWBOX: GeneratorDef<ShadowBoxParams> = {
   merge: mergeShadowBox,
   sections,
   presets: SHADOWBOX_PRESETS,
-  build: (p) => buildShadowBox(p),
+  build: (p, ctx) => buildShadowBox(p, ctx),
   check: (p, out) => checkShadowBox(p, out as ShadowBoxOutput),
+  fonts: (p) => (p.text.text.trim() ? [p.text.fontId] : []),
+  batch: () => "text.text",
   scale: scaleShadowBox,
   art,
+  railPreview,
   fileName: (p) => namedFile("shadow-box", p.name, p.design.pattern),
   summary: (p) => `${PATTERN_NAMES[p.design.pattern]} shadow box · ${p.stack.count} layers · ${Math.round(p.frame.width)} × ${Math.round(p.frame.height)} mm`,
   help: {
     intro: [
       "The Shadow Box generator makes layered 3D paper-cut art: a stack of frames with the same outline whose geometric cut-outs grow from the back layer to the front one, so the finished piece looks deep when the layers are stacked with foam tape or spacer frames between them.",
-      "Pick a pattern (a tunnel of nested circles, polygons, stars, flowers, hearts or arches; a mandala of petals and dots; a sunburst of straight or curled rays; a landscape of hills, mountains, waves, dunes or a city skyline; or a lattice of holes), then set the number of layers, how much the cut-outs grow, a twist for spirals and a vanishing point for tunnels that run off at an angle. It comes with 100 ready-made designs.",
+      "Pick a pattern (a tunnel of nested circles, polygons, stars, flowers, hearts or arches; a mandala of petals and dots; a sunburst of straight or curled rays; a scene of hills, peaks, waves, dunes, a pine forest, clouds or a city; or a lattice of holes), then set the number of layers, how much the cut-outs grow, a twist for spirals and a vanishing point for tunnels that run off at an angle. It comes with 100 ready-made designs.",
+      "Make it personal: put a name, date or short message on the front layer in any font, cut a light hole shaped like a crescent, a star, a heart or another motif into the back board, and size the layers for a standard 6 × 6, 8 × 8, 10 × 10, 5 × 7 or 8 × 10 in frame.",
       "It starts set for a Cricut or similar blade cutter: the layers are drawn on 12 × 12 in mats with no kerf, one SVG for all the layers. Choose Laser to cut card or thin plywood on a laser bed with kerf compensation.",
     ],
     tips: [
@@ -206,9 +265,10 @@ export const SHADOWBOX: GeneratorDef<ShadowBoxParams> = {
       "Foam tape 1 to 3 mm thick between the layers gives the strongest depth; spacer frames make a stiffer box from one sheet.",
       "Keep the narrowest bridge at 1.5 mm or more for card, and a little more for a laser, so the pattern does not tear or char.",
       "A light hole in the back board and a small LED puck light behind it turns the box into a night light.",
+      "For words on the front layer, pick a bold font and a size of 18 mm or more so the letters stay strong in paper; a name and date makes a popular nursery or wedding gift.",
       "Front cut-outs over 100% leave just the corners of the window, which frames a round tunnel nicely.",
     ],
-    keywords: ["shadow box", "3d paper cut", "papercraft", "layered paper art", "cricut", "svg layers", "light box", "mandala", "tunnel", "geometric art"],
+    keywords: ["shadow box", "3d paper cut", "papercraft", "layered paper art", "cricut", "svg layers", "light box", "mandala", "tunnel", "geometric art", "personalized name", "night light"],
   },
 };
 
