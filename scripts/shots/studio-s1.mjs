@@ -80,14 +80,14 @@ await withBrowser(async (page) => {
   check((await page.getByTestId("sheet-w").inputValue()).startsWith("300"), "reopened file keeps the sheet width");
 
   await page.goto(`${BASE}/home`);
-  await page.getByTestId("gen-finger-box").click();
+  await page.getByTestId("gen-calibration").click();
   await page.getByTestId("new-project-dialog").waitFor();
   await page.waitForTimeout(400);
   await shot(page, "studio-1-new-project");
   await page.getByTestId("create-project").click();
   await page.waitForURL(/\/editor\/local-/);
-  await page.getByRole("tab", { name: "Generator" }).waitFor();
-  check(true, "generator project opens with a Generator panel");
+  await page.getByText("Slot fit comb").first().waitFor();
+  check(true, "Test & Calibration opens with its test pieces on the sheet");
 
   await page.getByRole("button", { name: "View" }).click();
   await page.getByRole("menuitem", { name: "Theme" }).hover();

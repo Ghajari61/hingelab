@@ -9,7 +9,7 @@ import { AlignCenterHorizontal, Braces, FileText, Flame, History, Layers, Layout
 import { LogoMark } from "@/components/site/LogoMark";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { ContextMenu, Dock, MenuBar, PanelSection, Toolbar, isMac, useToast, type MenuItem } from "@/components/ui";
-import { generatorMeta } from "@/lib/generators/catalog";
+import { generatorHref, generatorMeta } from "@/lib/generators/catalog";
 import { bindingsFor, COMMAND_BY_ID, isSingleKey, MENUS, type MenuEntry, type ToolId } from "@/lib/studio/commands";
 import { loadKeymap, saveKeymap, type Keymap } from "@/lib/studio/keymap";
 import { isTypingTarget, matches } from "@/lib/studio/keys";
@@ -319,12 +319,16 @@ function EditorShell({ opened }: { opened: Document }) {
   };
   const dockTabs = [
     ...layout.panels.map((p) => ({ id: p, label: PANEL_LABELS[p], icon: PANEL_ICONS[p], content: panelContent(p) })),
-    ...(generators.length ? [{ id: "generator", label: "Generator", icon: <Wand2 size={16} />, content: (
-      <PanelSection title={generatorMeta((generators[0] as { generatorId: string }).generatorId)?.name ?? "Generator"}>
-        <p className="dlg-note">{generatorMeta((generators[0] as { generatorId: string }).generatorId)?.blurb}</p>
-        <p className="dlg-note">Live generator editing arrives with the generator framework.</p>
-      </PanelSection>
-    ) }] : []),
+    ...(generators.length ? [{ id: "generator", label: "Generator", icon: <Wand2 size={16} />, content: (() => {
+      const g = generatorMeta((generators[0] as { generatorId: string }).generatorId);
+      return (
+        <PanelSection title={g?.name ?? "Generator"}>
+          <p className="dlg-note">{g?.blurb}</p>
+          <p className="dlg-note">This project was made empty by an earlier version. {g ? `${g.name} now opens with a design ready to edit.` : ""}</p>
+          {g && <a className="ui-btn primary" href={generatorHref(g)} data-testid="generator-open">Open {g.name}</a>}
+        </PanelSection>
+      );
+    })() }] : []),
   ];
 
   return (

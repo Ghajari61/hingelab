@@ -1,11 +1,11 @@
 "use client";
 
-import { createDocument, IDENTITY, newId, type NewDocumentOptions } from "@/lib/studio/doc";
+import { createDocument, newId, type NewDocumentOptions } from "@/lib/studio/doc";
 import { openHingelab, packHingelab, projectFileName, type OpenedFile } from "@/lib/studio/file";
 import { getLocalAsset, listLocalProjects, newLocalId, putLocalAsset, saveLocalProject } from "@/lib/studio/localStore";
 import { uniqueName } from "@/lib/studio/naming";
 import { documentThumbnail } from "@/lib/studio/thumbnail";
-import type { Document, GeneratorNode, ImageNode } from "@/lib/studio/types";
+import type { Document, ImageNode } from "@/lib/studio/types";
 
 export const editorPath = (id: string, panel?: string) => `/editor/${id}${panel ? `?panel=${panel}` : ""}`;
 
@@ -16,14 +16,17 @@ export async function existingNames(): Promise<string[]> {
 /** Creates a project on this device and returns its id. */
 export async function createLocalProject(o: Omit<NewDocumentOptions, "id"> & { generatorId?: string }): Promise<string> {
   const id = newLocalId();
-  const doc = createDocument({ ...o, id, name: uniqueName(o.name, await existingNames()) });
-  if (o.generatorId) {
-    const g: GeneratorNode = { id: newId(), type: "generator", generatorId: o.generatorId, version: 0, params: null, transform: [...IDENTITY], layer: 2 };
-    doc.root.children.push(g);
-    doc.origin = { kind: "generator", id: o.generatorId };
+  if (!o.generatorId) {
+    const doc = createDocument({ ...o, id, name: uniqueName(o.name, await existingNames()) });
+    await saveLocalProject(doc, documentThumbnail(doc));
+    return id;
   }
-  await saveLocalProject(doc, documentThumbnail(doc));
-  return id;
+  const [{ buildGeneratorStarter }, { materialById }] = await Promise.all([import("@/lib/templates/studio"), import("@/lib/studio/library")]);
+  const starter = buildGeneratorStarter(o.generatorId, newId, (o.materialId && materialById(o.materialId)?.thickness) || 3);
+  if (!starter) throw new Error("This one opens in its own editor.");
+  const doc = createDocument({ ...o, id, sheet: starter.sheet, orientation: undefined, origin: { kind: "generator", id: o.generatorId } });
+  doc.root.children.push(...starter.nodes);
+  return saveNewProject(doc);
 }
 
 /** A project opened from a .hingelab file becomes a new project on this device. */

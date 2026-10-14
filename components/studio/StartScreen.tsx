@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { FileUp, FolderOpen, ImagePlus, Search, X } from "lucide-react";
 import { Badge, ContextMenu, Dialog, TextField, useToast, type MenuItem } from "@/components/ui";
 import { useAccount } from "@/components/auth/useAccount";
-import { GENERATORS, generatorMeta } from "@/lib/generators/catalog";
+import { GENERATORS, generatorHref, generatorMeta } from "@/lib/generators/catalog";
 import { inertSvgMarkup } from "@/lib/security/svg";
 import { fuzzyFilter } from "@/lib/studio/fuzzy";
 import { deleteLocalProject, listLocalProjects, loadLocalProject, newLocalId, saveLocalProject, type LocalProjectSummary } from "@/lib/studio/localStore";
@@ -49,13 +49,22 @@ export default function StartScreen() {
   const imageRef = useRef<HTMLInputElement>(null);
   const svgRef = useRef<HTMLInputElement>(null);
 
+  /** A card with its own editor or templates goes straight there; the Studio ones ask for name and material first. */
+  const openGenerator = (id: string) => {
+    const g = generatorMeta(id);
+    if (!g) return;
+    if (g.opens === "studio") { setGen(id); return; }
+    setPrefs((p) => noteGeneratorUse(p, id));
+    router.push(generatorHref(g));
+  };
+
   const refresh = useCallback(() => { listLocalProjects().then((l) => setRecents(l.slice(0, 12))).catch(() => setRecents([])); }, []);
   useEffect(refresh, [refresh]);
   useEffect(() => { if (prefsReady && !prefs.onboarded) setOnboarding(true); }, [prefsReady, prefs.onboarded]);
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     const g = p.get("generator");
-    if (g && GENERATORS.some((x) => x.id === g)) setGen(g);
+    if (g && GENERATORS.some((x) => x.id === g)) openGenerator(g);
     else if (p.get("new") === "blank") setBlank(true);
     else if (p.get("new") === "ai") {
       void listLocalProjects().then((l) => createLocalProject({ name: uniqueName("AI Studio project", l.map((x) => x.name)) }))
@@ -82,7 +91,7 @@ export default function StartScreen() {
     if (!q.trim()) return [];
     const all: Hit[] = [
       { kind: "action", id: "blank", label: "Blank canvas", hint: "New document", run: () => setBlank(true) },
-      ...GENERATORS.map((g) => ({ kind: "generator" as const, id: g.id, label: g.name, hint: `Generator · ${g.category}`, run: () => setGen(g.id) })),
+      ...GENERATORS.map((g) => ({ kind: "generator" as const, id: g.id, label: g.name, hint: `Generator · ${g.category}`, run: () => openGenerator(g.id) })),
       ...(recents ?? []).map((p) => ({ kind: "project" as const, id: p.id, label: p.name, hint: `Project · ${ago(p.openedAt)}`, run: () => router.push(editorPath(p.id)) })),
     ];
     const found = fuzzyFilter(all, q, (h) => `${h.label} ${h.hint}`).map((x) => x.item).slice(0, 8);
@@ -97,7 +106,7 @@ export default function StartScreen() {
     try {
       const id = await createLocalProject({ ...r, generatorId });
       if (generatorId) setPrefs((p) => noteGeneratorUse(p, generatorId));
-      router.push(editorPath(id, generatorId ? "generator" : undefined));
+      router.push(editorPath(id));
     } catch (e) {
       toast({ message: e instanceof Error ? e.message : "The project could not be created.", kind: "danger" });
     }
@@ -209,7 +218,7 @@ export default function StartScreen() {
             {GENERATORS.map((g) => {
               const lu = lastUsed(g.id);
               return (
-                <button key={g.id} type="button" className="gen-card" onClick={() => setGen(g.id)} data-testid={`gen-${g.id}`} aria-label={`${g.name}${g.plan === "pro" ? " (Pro)" : ""}: ${g.blurb}`}>
+                <button key={g.id} type="button" className="gen-card" onClick={() => openGenerator(g.id)} data-testid={`gen-${g.id}`} aria-label={`${g.name}${g.plan === "pro" ? " (Pro)" : ""}: ${g.blurb}`}>
                   <span className="art"><GeneratorArt id={g.id} /></span>
                   <span className="chips">{lu && <span className="chip">Last used {ago(lu.at)}</span>}{g.plan === "pro" && <Badge kind="pro" />}</span>
                   <span className="txt">

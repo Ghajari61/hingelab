@@ -6,7 +6,7 @@
 import { createEffect } from "@/lib/studio/effects";
 import { mul, PathBuilder, rotateAt, translate } from "@/lib/studio/geom";
 import { motif, type MotifId } from "@/lib/generators/motifs";
-import type { EffectKind, EffectParamsMap, GroupNode, LiveEffect, Mat, PathNode, SceneNode, ShapeNode, ShapeParams, Subpath } from "@/lib/studio/types";
+import type { EffectKind, EffectParamsMap, GroupNode, LiveEffect, Mat, PathNode, SceneNode, ShapeNode, ShapeParams, Subpath, TextNode } from "@/lib/studio/types";
 
 export interface StudioTemplate { sheet: { w: number; h: number }; nodes: SceneNode[] }
 
@@ -54,6 +54,10 @@ class Builder {
   around(count: number, dy: number, o: { dx?: number; rot?: number; start?: number; fuse?: boolean } = {}): LiveEffect {
     const a = ((o.rot ?? 0) * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a), dx = o.dx ?? 0;
     return this.fx("rotateCopies", { count, start: o.start ?? 0, cx: c * dx + s * dy, cy: -s * dx + c * dy, fuse: o.fuse ?? false });
+  }
+
+  text(s: string, x: number, y: number, size: number, layer: number, name?: string): TextNode {
+    return { id: this.id(), type: "text", text: s, font: "fredoka", size, tracking: 0, lineHeight: 1.2, align: "center", direction: "ltr", transform: translate(x, y), layer, ...(name ? { name } : {}) };
   }
 
   hinge(o: Partial<EffectParamsMap["livingHinge"]>): LiveEffect {
@@ -623,6 +627,56 @@ export const STUDIO_TEMPLATES: Record<string, Make> = {
   "heart-string-art": stringArt,
   "spinning-tops": spinningTops,
 };
+
+// ---------- start screen cards drawn in Studio ----------
+
+/** Hinge Pattern Fill: a panel already filled with a living hinge, to reshape or copy the effect from. */
+const hingeFill = (b: Builder): StudioTemplate => ({
+  sheet: { w: 300, h: 200 },
+  nodes: [b.shape(rect(180, 110, 8), 150, 100, CUT, { name: "Hinge panel", fx: [b.hinge({ pattern: "straight", margin: 10, keepOutline: true })] })],
+});
+
+/**
+ * Test & Calibration for material `t` mm thick: a kerf gauge (a 20 mm square cut from a 40 mm plate:
+ * kerf = (hole − square) ÷ 2), a comb of slots from t − 0.3 to t + 0.3 mm to find the press fit, and a
+ * strip with a living hinge between two flat ends to check the bend.
+ */
+const calibration = (b: Builder, t: number): StudioTemplate => {
+  const T = 18, depth = 14, pitch = 20, L = 75, R = 235;
+  const widths = Array.from({ length: 7 }, (_, i) => Math.round((t + (i - 3) * 0.1) * 100) / 100);
+  const comb = new PathBuilder().move(L, T + 34).line(R, T + 34).line(R, T);
+  widths.slice().reverse().forEach((w, k) => {
+    const cx = 95 + (widths.length - 1 - k) * pitch;
+    comb.line(cx + w / 2, T).line(cx + w / 2, T + depth).line(cx - w / 2, T + depth).line(cx - w / 2, T);
+  });
+  comb.line(L, T).close();
+  return {
+    sheet: { w: 250, h: 125 },
+    nodes: [
+      b.group("Kerf gauge", [
+        b.shape(rect(40, 40, 2), 35, 37, CUT, { name: "Plate" }),
+        b.shape(rect(20, 20), 35, 37, INNER, { name: "20 mm square" }),
+        b.text("KERF", 35, 24, 4, ENGRAVE, "Label"),
+      ]),
+      b.group("Slot fit comb", [
+        b.path(comb.done(), CUT, { name: "Comb" }),
+        ...widths.map((w, i) => b.text(w.toFixed(1), 95 + i * pitch, T + 25, 4, ENGRAVE, `${w.toFixed(1)} mm slot`)),
+      ]),
+      b.group("Hinge test strip", [
+        b.shape(rect(140, 40, 2), 85, 92, CUT, { name: "Strip" }),
+        b.shape(rect(60, 40, 0), 85, 92, CUT, { name: "Living hinge", fx: [b.hinge({ pattern: "straight", margin: 3 })] }),
+      ]),
+    ],
+  };
+};
+
+/** The starting design of a start screen card that opens in Studio, or null when the card opens elsewhere. */
+export function buildGeneratorStarter(id: string, makeId: () => string, thickness = 3): StudioTemplate | null {
+  const b = new Builder(makeId);
+  if (id === "hinge-fill") return hingeFill(b);
+  if (id === "calibration") return calibration(b, thickness);
+  return null;
+}
 
 /** Builds a Studio template's sheet and objects (document mm), or null for unknown ids. */
 export function buildStudioTemplate(id: string, makeId: () => string): StudioTemplate | null {
