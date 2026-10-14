@@ -11,6 +11,8 @@ export interface Scene3D {
   /** Size as shown, mm: x, y (height), z. */
   size: [number, number, number];
   dispose: () => void;
+  /** Settles when textures that load later (pictures) are in place. */
+  ready?: Promise<unknown>;
 }
 
 export interface FlatPart {

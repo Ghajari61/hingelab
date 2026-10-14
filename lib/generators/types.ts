@@ -202,10 +202,12 @@ export interface FontSpec<P> extends FieldCommon<P> {
   sample?: (p: P) => string;
 }
 
-/** A picture the user picks; stored as a grey JPEG data URL, its width / height in `aspectKey`. */
+/** A picture the user picks; stored as a JPEG data URL, its width / height in `aspectKey`. */
 export interface ImageSpec<P> extends FieldCommon<P> {
   kind: "image";
   aspectKey: string;
+  /** Kept in colour (a photo to print) instead of turned grey (a picture to engrave). */
+  color?: boolean;
 }
 
 export type FieldSpec<P> = NumberSpec<P> | ChoiceSpec<P> | ToggleSpec<P> | TextSpec<P> | FontSpec<P> | ImageSpec<P>;

@@ -5,13 +5,44 @@
 import * as THREE from "three";
 import { unionShapes } from "@/lib/letters/polygon";
 import { finishScene, slab, type Scene3D } from "@/lib/three/flat";
-import type { GenOutput } from "./types";
+import type { GenImage, GenOutput } from "./types";
 
 const ENGRAVE = new THREE.MeshStandardMaterial({ color: "#3a2a1c", roughness: 0.9 });
 ENGRAVE.userData.shared = true;
 
+/** A picture on a part's top face at height z: its clip outline (or its box) textured with it, shown once it has loaded. */
+function pictureSkin(im: GenImage, z: number, name: string, loads: Promise<void>[]): THREE.Mesh | null {
+  if (typeof Image === "undefined") return null;
+  const c = im.clip ?? [[im.x, im.y], [im.x + im.w, im.y], [im.x + im.w, im.y + im.h], [im.x, im.y + im.h]];
+  if (c.length < 3) return null;
+  const geo = new THREE.ShapeGeometry(new THREE.Shape(c.map(([x, y]) => new THREE.Vector2(x, -y))), 1);
+  const pos = geo.attributes.position, uv = geo.attributes.uv;
+  for (let i = 0; i < pos.count; i++) {
+    const u = (pos.getX(i) - im.x) / im.w;
+    uv.setXY(i, im.flip ? 1 - u : u, 1 - (-pos.getY(i) - im.y) / im.h);
+  }
+  geo.translate(0, 0, z);
+  const tex = new THREE.Texture();
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1 }));
+  mesh.name = name;
+  mesh.visible = false;
+  mesh.userData.keepMaterial = true;
+  mesh.userData.noMeasure = true;
+  mesh.userData.noPick = true;
+  loads.push(new Promise<void>((done) => {
+    const img = new Image();
+    img.onload = () => { tex.image = img; tex.needsUpdate = true; mesh.visible = true; done(); };
+    img.onerror = () => done();
+    img.src = im.href;
+  }));
+  return mesh;
+}
+
 export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D {
   const inner = new THREE.Group();
+  const loads: Promise<void>[] = [];
   const levels = [...new Set(out.parts.map((p) => p.place?.z ?? 0))].sort((a, b) => a - b);
   out.parts.forEach((p) => {
     const pl = p.place ?? { x: 0, y: 0, z: 0 };
@@ -66,9 +97,14 @@ export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D 
       e.userData.noMeasure = true;
       spin.add(e);
     }
+    if (!(p.pieces?.length && explode > 0)) for (const im of p.images ?? []) {
+      const m = pictureSkin(im, t, `${p.name} picture`, loads);
+      if (m) spin.add(m);
+    }
     stand.add(spin);
     wrap.add(stand);
     inner.add(wrap);
   });
-  return finishScene(inner);
+  const scene = finishScene(inner);
+  return loads.length ? { ...scene, ready: Promise.all(loads) } : scene;
 }

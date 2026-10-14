@@ -6,6 +6,7 @@ import type { ShadowBoxOutput } from "../shadowbox/build";
 import { CELLS, FRAMES, HOLES, MAT_MM, OPENINGS, PATTERNS, RIDGES, SIZES, mergeShadowBox, type ShadowBoxParams } from "../shadowbox/params";
 import { SHADOWBOX_FEATURED } from "../shadowbox/featured";
 import { START_LAZY } from "../startPresets";
+import { arrangeGenerator, genSVG } from "../output";
 import type { ChoiceSpec } from "../types";
 import { CTX } from "./ctx";
 
@@ -174,6 +175,53 @@ describe("shadow box", () => {
     const open = layers(flow).slice(1).map((l) => l.holes.reduce((a, h) => a + Math.abs(signedArea(h)), 0));
     for (let k = 1; k < open.length; k++) expect(open[k]).toBeGreaterThan(open[k - 1]);
     expect(flow.info!.dropped).toBe(0);
+  });
+
+  it("a photo sits on a plain back board, covers the window and replaces the light hole", () => {
+    const JPG = "data:image/jpeg;base64,AAAA";
+    const raw = { stack: { count: 6, back: false }, frame: { width: 200, height: 160, border: 12 }, design: { moon: true }, photo: { image: JPG, aspect: 0.75 } };
+    const out = build(raw);
+    const ls = layers(out);
+    expect(ls).toHaveLength(6);
+    expect(ls[0].holes).toEqual([]);
+    expect(ls[0].images).toHaveLength(1);
+    expect(ls.slice(1).every((l) => !l.images)).toBe(true);
+    // Every zoom and shift still covers the window and its bleed.
+    for (const zoom of [100, 180]) for (const x of [-100, 0, 100]) for (const y of [-100, 100]) for (const aspect of [0.5, 1.25, 3]) {
+      const im = build({ ...raw, photo: { image: JPG, aspect, zoom, x, y } }).parts[0].images![0];
+      const c = bboxOf([im.clip!]);
+      expect(im.x, `${zoom} ${x} ${y} ${aspect}`).toBeLessThanOrEqual(c.x0 + 0.01);
+      expect(im.y).toBeLessThanOrEqual(c.y0 + 0.01);
+      expect(im.x + im.w).toBeGreaterThanOrEqual(c.x1 - 0.01);
+      expect(im.y + im.h).toBeGreaterThanOrEqual(c.y1 - 0.01);
+      expect(im.w / im.h).toBeCloseTo(aspect, 2);
+    }
+    const im = ls[0].images![0], c = bboxOf([im.clip!]);
+    expect(c.x1 - c.x0).toBeCloseTo(176 + 6, 0);
+    expect(c.x0).toBeGreaterThan(bboxOf([ls[0].outer]).x0);
+    // Shifting right shows more of the photo's left side.
+    const left = build({ ...raw, photo: { image: JPG, aspect: 3, x: 100 } }).parts[0].images![0];
+    expect(left.x).toBeCloseTo(c.x0, 1);
+    expect(out.stats.find((s) => s.label === "Photo shows")?.value).toBe("176 × 136 mm");
+    expect(out.assembly!.some((a) => /photo is on Layer 1/.test(a))).toBe(true);
+    // Only picture data URLs are kept.
+    expect(mergeShadowBox({ photo: { image: "javascript:alert(1)" } }).photo.image).toBe("");
+    expect(mergeShadowBox({ photo: { image: 5, zoom: 900, x: -500, aspect: -1 } }).photo).toMatchObject({ image: "", zoom: 300, x: -100, aspect: 1.5 });
+    const svg = genSVG(SHADOWBOX, mergeShadowBox(raw), arrangeGenerator(SHADOWBOX, mergeShadowBox(raw), CTX).lay!);
+    expect(svg.match(/<image /g)).toHaveLength(1);
+    expect(svg).toMatch(/<image [^>]*clip-path="url\(#engrave-clip-0\)"[^>]*href="data:image\/jpeg;base64,AAAA"/);
+    // Without a photo nothing changes.
+    // Small back cut-outs hide the photo: a note says how much shows and the fix opens them up.
+    const portal = SHADOWBOX.merge({ ...SHADOWBOX.presets.find((x) => x.id === "oval-portal")!.params, photo: { image: JPG } });
+    const hidden = SHADOWBOX.check(portal, SHADOWBOX.build(portal, CTX)).find((i) => i.code === "PHOTO_HIDDEN")!;
+    expect(hidden.message).toMatch(/^Only about \d+% of the photo shows/);
+    const opened = hidden.fixes[0].apply(portal);
+    const after = SHADOWBOX.build(opened, CTX) as ShadowBoxOutput;
+    expect(after.info!.photoShown).toBeGreaterThanOrEqual(25);
+    expect(SHADOWBOX.check(opened, after).map((i) => i.code)).not.toContain("PHOTO_HIDDEN");
+    const plain = build({ ...raw, photo: { image: "" } }).parts[0];
+    expect(plain.holes.length).toBeGreaterThan(0);
+    expect(plain.images).toBeUndefined();
   });
 
   it("colours shade from the back to the front and paper looks matte", () => {

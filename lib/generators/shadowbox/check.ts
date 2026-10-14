@@ -3,6 +3,9 @@ import { missingGlyphs } from "../common";
 import type { ShadowBoxOutput } from "./build";
 import type { ShadowBoxParams } from "./params";
 
+/** Below this share of the window, the layers hide most of the photo (%). */
+const PHOTO_MIN_SHOWN = 25;
+
 export function checkShadowBox(p: ShadowBoxParams, out: ShadowBoxOutput): Issue<ShadowBoxParams>[] {
   const issues: Issue<ShadowBoxParams>[] = [];
   const info = out.info;
@@ -33,6 +36,14 @@ export function checkShadowBox(p: ShadowBoxParams, out: ShadowBoxOutput): Issue<
     issues.push(fitted < 10
       ? { code: "TEXT_SMALL", level: "warn", message: `The words only fit the window at ${fitted} mm: letters that small tear easily in paper. Use fewer words or a wider frame.`, fixes: middle }
       : { code: "TEXT_FIT", level: "info", message: `The words were set at ${fitted} mm instead of ${p.text.size} mm to fit the window.`, fixes: [] });
+  }
+  if (info.photoShown !== undefined && info.photoShown < PHOTO_MIN_SHOWN) {
+    const min = Math.max(p.design.min, 80), max = Math.max(p.design.max, min + 30);
+    issues.push({
+      code: "PHOTO_HIDDEN", level: "info",
+      message: `Only about ${info.photoShown}% of the photo shows through the layers in front of it.`,
+      fixes: p.design.min < 80 ? [{ id: "open", label: max > p.design.max ? `Cut-outs ${min}–${max}%` : `Back cut-out ${min}%`, safe: false, apply: (q) => ({ ...q, design: { ...q.design, min, max } }) }] : [],
+    });
   }
   if (info.dropped > 0) {
     issues.push({ code: "LOOSE", level: "info", message: `${info.dropped} loose piece${info.dropped > 1 ? "s" : ""} inside the cut-outs ${info.dropped > 1 ? "were" : "was"} left out: nothing held ${info.dropped > 1 ? "them" : "it"} to the frame.`, fixes: [] });

@@ -1,5 +1,6 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
+import { isImageDataURL } from "@/lib/security/svg";
 import type { ShapeKind } from "../shapes";
 import type { MotifId } from "../motifs";
 import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
@@ -128,6 +129,11 @@ export interface ShadowBoxParams extends GenBase {
   };
   /** Words cut into the front layer, standing on a paper bar across the window. */
   text: { text: string; fontId: string; size: number; place: Place };
+  /**
+   * A photo on the back board, seen through every layer: a colour JPEG data URL ("" for none), its
+   * width / height, a zoom (100 % just covers the window) and a shift of the crop, % of the spare room.
+   */
+  photo: { image: string; aspect: number; zoom: number; x: number; y: number };
   look: { palette: PaletteId; reverse: boolean };
 }
 
@@ -154,6 +160,7 @@ export const SHADOWBOX_DEFAULTS: ShadowBoxParams = {
     web: 1.5, stretch: false, moon: false, hole: "circle", holeSize: 18,
   },
   text: { text: "", fontId: "lobster", size: 20, place: "bottom" },
+  photo: { image: "", aspect: 1.5, zoom: 100, x: 0, y: 0 },
   look: { palette: "sunset", reverse: false },
 };
 
@@ -192,6 +199,12 @@ export function mergeShadowBox(raw: unknown): ShadowBoxParams {
   t.text = String(t.text ?? "").slice(0, 40);
   t.size = clamp(t.size, 8, 60);
   t.place = oneOf(PLACES, t.place, d.text.place);
+  const ph = p.photo;
+  if (typeof ph.image !== "string" || (ph.image && !isImageDataURL(ph.image))) ph.image = "";
+  ph.aspect = Number.isFinite(ph.aspect) && ph.aspect > 0 ? clamp(ph.aspect, 0.1, 10) : d.photo.aspect;
+  ph.zoom = clamp(ph.zoom, 100, 300);
+  ph.x = clamp(ph.x, -100, 100);
+  ph.y = clamp(ph.y, -100, 100);
   if (!isPalette(p.look.palette)) p.look.palette = d.look.palette;
   return p;
 }

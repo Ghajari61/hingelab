@@ -34,6 +34,8 @@ export interface QuadModel {
   dispose: () => void;
   /** 0 = assembled, 1 = fully exploded. Models without it are rebuilt by the caller instead. */
   explode?: (e: number) => void;
+  /** Settles when late textures (pictures) have loaded, so the views draw again. */
+  ready?: Promise<unknown>;
 }
 
 export interface QuadViewHandle {
@@ -439,6 +441,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
         model.explode?.(explode);
         s.scene.add(model.group);
         shown.current = model;
+        model.ready?.then(() => { if (shown.current === model) st.current?.request(); });
       }
       const reframe = !!frameKey && frameKey !== framed.current;
       if (reframe) framed.current = frameKey;

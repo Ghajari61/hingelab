@@ -11,7 +11,7 @@ import { simplifyClosed } from "@/lib/parametric/slice/clean";
 import { bboxOf, circle, ellipse, rect, regularPolygon, TAU, transform } from "../geom";
 import { motif } from "../motifs";
 import { heartCurve, orient, shapeOutline, starPolygon } from "../shapes";
-import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
+import type { BuildContext, Contour, GenImage, GenOutput, GenPart, Pt } from "../types";
 import { textBlock, weld } from "../weld";
 import { PALETTES, type FrameShape, type Opening, type Petal, type Ridge, type ShadowBoxParams } from "./params";
 
@@ -32,6 +32,8 @@ export interface ShadowBoxInfo {
   textRoom?: number;
   /** The words' size after shrinking them to fit, mm. */
   textSize?: number;
+  /** Share of the window left open by the tightest pattern layer: at most this much of the photo shows, %. */
+  photoShown?: number;
 }
 
 export type ShadowBoxOutput = GenOutput & { info?: ShadowBoxInfo };
@@ -42,6 +44,7 @@ const SIMPLIFY = 0.15;
 const DOT_TOL = 0.15;
 const r0 = (v: number) => Math.round(v);
 const r1 = (v: number) => Math.round(v * 10) / 10;
+const r2 = (v: number) => Math.round(v * 100) / 100;
 const biggest = (s: Shape[]) => s.reduce((a, b) => (b.area > a.area ? b : a));
 
 /** Seeded random numbers in [0, 1). */
@@ -423,6 +426,23 @@ function lightHole(p: ShadowBoxParams, w: Win): Contour[] {
   return shapeContours(unionShapes(cs.map(orient)).map((s) => makeShape(s.outer, [])));
 }
 
+/**
+ * The photo on the back board: it covers the window and a bleed round it (so no blank paper shows if
+ * the layers sit a little off), zoomed from the middle and shifted by a share of the spare room.
+ */
+function photoOn(p: ShadowBoxParams, w: Win, win: Shape): GenImage | null {
+  const ph = p.photo;
+  if (!ph.image) return null;
+  const b = Math.min(3, p.frame.border / 2);
+  const grown = offsetShapes([win], b, "round");
+  const clip = grown.length ? orient(simplifyClosed(biggest(grown).outer, SIMPLIFY)) : win.outer;
+  const bw = w.w + 2 * b, bh = w.h + 2 * b, z = ph.zoom / 100, a = ph.aspect;
+  const [iw, ih] = a > bw / bh ? [bh * z * a, bh * z] : [bw * z, (bw * z) / a];
+  const x = w.cx - iw / 2 + ((iw - bw) / 2) * (ph.x / 100);
+  const y = w.cy - ih / 2 + ((ih - bh) / 2) * (ph.y / 100);
+  return { href: ph.image, x: r2(x), y: r2(y), w: r2(iw), h: r2(ih), clip };
+}
+
 interface TextCut { keep: Contour[]; clear: Contour[]; width: number; room: number; size: number; loading: boolean }
 
 /** Words wider than the window shrink to fit it. */
@@ -503,18 +523,25 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
     return makeShape(main.outer, main.holes.map((h) => simplifyClosed(h, SIMPLIFY)));
   };
 
-  const L = p.stack.back ? N - 1 : N;
+  // A photo needs a whole back board to sit on, and takes the place of the light hole.
+  const photo = photoOn(p, w, win);
+  const back = p.stack.back || !!photo;
+  const L = back ? N - 1 : N;
   const shapes: Shape[] = [];
-  const moon = p.design.moon ? lightHole(p, w) : [];
+  const moon = p.design.moon && !photo ? lightHole(p, w) : [];
   const missing: string[] = [];
   const text = textCut(p, w, winCs, ctx, missing);
   if (text && !text.loading) { info.textW = r1(text.width); info.textRoom = r1(text.room); info.textSize = r1(text.size); }
-  if (p.stack.back) shapes.push(moon.length ? layerOf(moon) : frameShape);
+  if (back) shapes.push(moon.length ? layerOf(moon) : frameShape);
   for (let i = 0; i < L; i++) {
     const front = i === L - 1 && text && !text.loading, dropped = info.dropped;
-    shapes.push(layerOf([...openingsOf(p, w, win, i, L), ...(i === 0 && !p.stack.back ? moon : []), ...(front ? text.clear : [])], front ? text.keep : []));
+    shapes.push(layerOf([...openingsOf(p, w, win, i, L), ...(i === 0 && !back ? moon : []), ...(front ? text.clear : [])], front ? text.keep : []));
     // Bits of the pattern cut off by the words' clear band are meant to go.
     if (front) info.dropped = dropped;
+  }
+  if (photo && shapes.length > 1) {
+    const open = Math.min(...shapes.slice(1).map((s) => win.area - (s.area - ringArea)));
+    info.photoShown = Math.max(0, Math.min(100, Math.round((100 * open) / win.area)));
   }
 
   const frames = p.stack.spacer === "frames";
@@ -528,7 +555,7 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
     const z = k * (T + gapZ);
     const color = layerColor(p, k, N);
     const name = `Layer ${k + 1}${k === 0 ? " (back)" : k === N - 1 ? " (front)" : ""}`;
-    parts.push({ id: `layer${k + 1}`, name, outer: sh.outer, holes: sh.holes, color, matte: true, place: { x: 0, y: 0, z } });
+    parts.push({ id: `layer${k + 1}`, name, outer: sh.outer, holes: sh.holes, color, matte: true, place: { x: 0, y: 0, z }, ...(k === 0 && photo ? { images: [photo] } : {}) });
     if (k < N - 1) for (let j = 0; j < per; j++) {
       sp++;
       parts.push({ id: `spacer${sp}`, name: `Spacer ${sp}`, outer: spacer.outer, holes: spacer.holes, color, matte: true, place: { x: 0, y: 0, z: z + T + j * T } });
@@ -547,6 +574,7 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
       { label: "Window", value: `${r0(w.w)} × ${r0(w.h)} mm` },
       { label: "Depth", value: `${r1(depth)} mm` },
       ...(sp ? [{ label: "Spacer frames", value: String(sp) }] : []),
+      ...(photo ? [{ label: "Photo shows", value: `${r0(w.w)} × ${r0(w.h)} mm` }] : []),
     ],
     assembly: [
       blade
@@ -555,6 +583,11 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
       frames
         ? `Glue ${per === 1 ? "a spacer frame" : `${per} spacer frames`} between each pair of layers, lining up the outlines.`
         : `Stick ${r1(gapZ)} mm foam tape around the border of every layer but the front one, with small foam squares behind wide areas of the pattern.`,
+      ...(photo
+        ? [blade
+          ? "The photo is on Layer 1, the back board, on the Engrave layer of the SVG: print the SVG at 100 % on photo paper or card and glue it on the back board, or print straight onto the card before cutting Layer 1."
+          : "The photo is on Layer 1, the back board, on the Engrave layer of the SVG: engrave it before cutting Layer 1 without moving the sheet, or glue a print of it on the back board."]
+        : []),
       "Stack the layers in order from the back, pressing each one down evenly before the next.",
       ...(text && !text.loading ? [`The words stand on a paper bar across the front layer: cut it from a contrasting card so they read clearly.`] : []),
       ...(p.design.moon ? ["For a lit box, put a battery LED strip or puck light behind the back layer's light hole."] : []),

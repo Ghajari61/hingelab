@@ -96,7 +96,7 @@ export function GeneratorDock({
     if (f.kind === "image") {
       return (
         <ImagePicker
-          key={f.key} label={f.label} value={String(value ?? "")}
+          key={f.key} label={f.label} value={String(value ?? "")} color={f.color}
           onPick={(url, aspect) => onApply(setPath(setPath(params, f.key, url), f.aspectKey, aspect) as P)}
           onClear={() => onSet(f.key, "", true)}
         />

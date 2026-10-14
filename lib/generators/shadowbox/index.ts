@@ -65,6 +65,7 @@ const pickFrame = (p: ShadowBoxParams, v: string): ShadowBoxParams => {
 const isPat = (p: ShadowBoxParams, ...ks: Pattern[]) => ks.includes(p.design.pattern);
 const withDesign = (p: ShadowBoxParams, d: Partial<ShadowBoxParams["design"]>): ShadowBoxParams => ({ ...p, design: { ...p.design, ...d } });
 const shaped = (p: ShadowBoxParams) => isPat(p, "tunnel", "mandala");
+const hasPhoto = (p: ShadowBoxParams) => !!p.photo.image;
 const CORNERED: FrameShape[] = ["rect", "rounded", "arch", "hexagon", "octagon", "diamond", "house", "shield"];
 
 const sections: SectionSpec<ShadowBoxParams>[] = [
@@ -123,7 +124,17 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
     ],
   },
   {
-    id: "light", title: "Light hole", open: false,
+    id: "photo", title: "Photo", open: true,
+    help: "A photo on the back board, seen through every layer: a portrait, a pet, a place or a wedding picture framed by the paper cut.",
+    fields: [
+      { kind: "image", key: "photo.image", aspectKey: "photo.aspect", color: true, label: "Photo", help: "A photo (JPEG, PNG or WebP) printed on the back board; the back layer becomes a plain board and the photo takes the place of the light hole." },
+      { kind: "number", key: "photo.zoom", label: "Photo zoom", unit: "%", min: 100, max: 300, step: 5, show: hasPhoto, help: "Enlarges the photo from the middle; 100 % just fills the window." },
+      { kind: "number", key: "photo.x", label: "Move across", unit: "%", min: -100, max: 100, step: 1, show: hasPhoto, help: "Slides the photo left (negative) or right (positive) to choose which part shows, when it is wider than the window." },
+      { kind: "number", key: "photo.y", label: "Move down", unit: "%", min: -100, max: 100, step: 1, show: hasPhoto, help: "Slides the photo up (negative) or down (positive) to choose which part shows, when it is taller than the window." },
+    ],
+  },
+  {
+    id: "light", title: "Light hole", open: false, show: (p) => !hasPhoto(p),
     help: "A hole in the back board that glows when a light sits behind the box: a moon, a sun or a little motif.",
     fields: [
       { kind: "toggle", key: "design.moon", label: "Light hole", help: "Cuts a hole in the back layer: in the sky of a scene, or in the middle of the other patterns." },
@@ -136,7 +147,7 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
     help: "How many layers there are and how the cut-outs change from the back to the front.",
     fields: [
       { kind: "number", key: "stack.count", label: "Layers", unit: "", min: 2, max: 20, step: 1, int: true, help: "Layers in the stack, including the back board." },
-      { kind: "toggle", key: "stack.back", label: "Plain back board", help: "The back layer is uncut (apart from the light hole), so the box has a background." },
+      { kind: "toggle", key: "stack.back", label: "Plain back board", show: (p) => !hasPhoto(p), help: "The back layer is uncut (apart from the light hole), so the box has a background." },
       { kind: "number", key: "design.min", label: "Back cut-out", unit: "%", min: 0, max: 150, step: 1, help: "Size of the cut-out on the back pattern layer, as a share of the window." },
       { kind: "number", key: "design.max", label: "Front cut-out", unit: "%", min: 5, max: 200, step: 1, help: "Size of the cut-out on the front layer. Over 100% leaves only the corners of the window." },
       { kind: "number", key: "design.twist", label: "Twist", unit: "deg", min: -45, max: 45, step: 0.5, help: "Turns each layer's pattern a little more than the one behind it: a spiral." },
@@ -298,7 +309,7 @@ export const SHADOWBOX: GeneratorDef<ShadowBoxParams> = {
     intro: [
       "The Shadow Box generator makes layered 3D paper-cut art: a stack of frames with the same outline whose geometric cut-outs grow from the back layer to the front one, so the finished piece looks deep when the layers are stacked with foam tape or spacer frames between them.",
       "Pick a pattern (a tunnel of nested circles, polygons, stars, flowers, hearts or arches; a mandala of petals and dots; a sunburst of straight or curled rays; a scene of hills, peaks, waves, dunes, a pine forest, clouds or a city; or a lattice of holes; or flowing wavy stripes, ovals, squircles, sine-wave circles and crossed ellipses for softer looks), then set the number of layers, how much the cut-outs grow, a twist for spirals and a vanishing point for tunnels that run off at an angle. It comes with 120 ready-made designs.",
-      "Make it personal: put a name, date or short message on the front layer in any font, cut a light hole shaped like a crescent, a star, a heart or another motif into the back board, and size the layers for a standard 6 × 6, 8 × 8, 10 × 10, 5 × 7 or 8 × 10 in frame.",
+      "Make it personal: put a photo on the back board so the layers frame it, put a name, date or short message on the front layer in any font, cut a light hole shaped like a crescent, a star, a heart or another motif into the back board, and size the layers for a standard 6 × 6, 8 × 8, 10 × 10, 5 × 7 or 8 × 10 in frame.",
       "It starts set for a Cricut or similar blade cutter: the layers are drawn on 12 × 12 in mats with no kerf, one SVG for all the layers. Choose Laser to cut card or thin plywood on a laser bed with kerf compensation.",
     ],
     tips: [
@@ -308,8 +319,9 @@ export const SHADOWBOX: GeneratorDef<ShadowBoxParams> = {
       "A light hole in the back board and a small LED puck light behind it turns the box into a night light.",
       "For words on the front layer, pick a bold font and a size of 18 mm or more so the letters stay strong in paper; a name and date makes a popular nursery or wedding gift.",
       "Front cut-outs over 100% leave just the corners of the window, which frames a round tunnel nicely.",
+      "For a photo, a tunnel or a frame-shaped cut-out with a large back cut-out leaves the face clear; set the zoom and move it so the part you want sits in the middle.",
     ],
-    keywords: ["shadow box", "3d paper cut", "papercraft", "layered paper art", "cricut", "svg layers", "light box", "mandala", "tunnel", "geometric art", "personalized name", "night light"],
+    keywords: ["shadow box", "photo frame", "picture", "3d paper cut", "papercraft", "layered paper art", "cricut", "svg layers", "light box", "mandala", "tunnel", "geometric art", "personalized name", "night light"],
   },
 };
 
