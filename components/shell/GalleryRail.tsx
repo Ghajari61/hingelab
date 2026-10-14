@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useContext } from "react";
-import { Lightbulb, Redo2, Undo2 } from "lucide-react";
+import { Lightbulb, Redo2, Star, Undo2 } from "lucide-react";
 import { LockIcon } from "@/components/billing/Lock";
 import { HelpContext, HelpMark } from "@/components/help/HelpContext";
 import type { Opt } from "@/components/editor/ControlBar";
@@ -21,6 +21,14 @@ export type GalleryGroup = {
   value: string;
   options: Opt[];
   cols?: 2 | 3;
+  /** Shown under the heading (a search box). */
+  head?: ReactNode;
+  /** Shown instead of the cards when there are none. */
+  empty?: string;
+  /** A star on each card that adds it to (or removes it from) the favourites. */
+  fav?: { has: (v: string) => boolean; toggle: (v: string, text: string) => void };
+  /** A small control after the heading (a Randomise lock). */
+  tools?: ReactNode;
 };
 
 function TipsButton() {
@@ -64,20 +72,36 @@ export function GalleryRail({ title, icon, groups, history, children }: {
         {children}
         {groups.map((g) => (
           <section key={g.name} className="gallery-group">
-            <h3>{g.label}<HelpMark title={g.label} kind="rail" /></h3>
+            <h3>{g.label}<HelpMark title={g.label} kind="rail" />{g.tools}</h3>
+            {g.head}
+            {!g.options.length && g.empty && <p className="gempty">{g.empty}</p>}
             <div className={`gcards c${g.cols ?? 2}`} role="group" aria-label={g.name}>
-              {g.options.map((o) => (
-                <button
-                  key={o.v} type="button" data-v={o.v}
-                  className={`gcard${o.locked ? " locked" : ""}`}
-                  title={o.locked ? `${o.title ?? o.text} (Pro)` : o.title}
-                  aria-pressed={g.value === o.v} disabled={o.disabled} onClick={o.onClick}
-                >
-                  <CardArt pic={railPic(g.pics ?? g.art, o.v)}>{ART[`${g.art}:${o.v}`] ?? o.icon}</CardArt>
-                  <span className="lbl">{o.text}{o.locked && <LockIcon />}</span>
-                  {o.soon && <span className="soon">{o.soon}</span>}
-                </button>
-              ))}
+              {g.options.map((o) => {
+                const tip = o.title && o.title !== o.text ? `${o.text}: ${o.title}` : o.text;
+                const card = (
+                  <button
+                    key={o.v} type="button" data-v={o.v}
+                    className={`gcard${o.locked ? " locked" : ""}`}
+                    title={o.locked ? `${tip} (Pro)` : tip}
+                    aria-pressed={g.value === o.v} disabled={o.disabled} onClick={o.onClick}
+                  >
+                    <CardArt pic={railPic(g.pics ?? g.art, o.v)}>{ART[`${g.art}:${o.v}`] ?? o.icon}</CardArt>
+                    <span className="lbl"><span className="t">{o.text}</span>{o.locked && <LockIcon />}</span>
+                    {o.soon && <span className="soon">{o.soon}</span>}
+                  </button>
+                );
+                if (!g.fav) return card;
+                const on = g.fav.has(o.v);
+                return (
+                  <div key={o.v} className="gcell">
+                    {card}
+                    <button
+                      type="button" className="gfav" aria-pressed={on} aria-label={`${on ? "Remove" : "Add"} ${o.text} ${on ? "from" : "to"} favourites`}
+                      title={on ? "Remove from favourites" : "Add to favourites"} onClick={() => g.fav!.toggle(o.v, o.text)}
+                    ><Star size={13} aria-hidden /></button>
+                  </div>
+                );
+              })}
             </div>
           </section>
         ))}

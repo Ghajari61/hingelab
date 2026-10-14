@@ -137,7 +137,7 @@ const sections: SectionSpec<BoxesParams>[] = [
     id: "engrave", title: "Engraving", open: false, show: engraved,
     help: "Text, a motif and a border engraved on the lid (the cabinet top of a drawer box, the front of a money box).",
     fields: [
-      { kind: "text", key: "engrave.text", label: "Text", multiline: true, maxLength: 80, placeholder: "Tea", help: "Words engraved on the lid; each line is centred." },
+      { kind: "text", key: "engrave.text", label: "Text", multiline: true, maxLength: 80, placeholder: "e.g. Tea", help: "Words engraved on the lid; each line is centred." },
       { kind: "font", key: "engrave.fontId", label: "Font", show: (p) => !!p.engrave.text.trim(), sample: (p) => p.engrave.text || "Aa", help: "Typeface of the text (the same fonts as Letters)." },
       { kind: "number", key: "engrave.size", label: "Text height", unit: "mm", min: 4, max: 80, step: 0.5, show: (p) => !!p.engrave.text.trim(), help: "Cap height of the text." },
       { kind: "choice", key: "engrave.motif", label: "Motif", help: "A picture engraved above the text.", options: MOTIF_OPTIONS },
@@ -149,7 +149,7 @@ const sections: SectionSpec<BoxesParams>[] = [
     id: "sign", title: "Sign", open: true, show: is("sign"),
     help: "An engraved sign that stands in a slotted base.",
     fields: [
-      { kind: "text", key: "sign.text", label: "Text", multiline: true, maxLength: 80, placeholder: "Hello", help: "The words engraved on the sign; each line is centred." },
+      { kind: "text", key: "sign.text", label: "Text", multiline: true, maxLength: 80, placeholder: "e.g. Hello", help: "The words engraved on the sign; each line is centred." },
       { kind: "font", key: "sign.fontId", label: "Font", sample: (p) => p.sign.text || "Aa", help: "Typeface of the text (the same fonts as Letters)." },
       { kind: "number", key: "sign.size", label: "Text height", unit: "mm", min: 4, max: 150, step: 0.5, help: "Cap height of the text." },
       { kind: "number", key: "sign.width", label: "Width", unit: "mm", min: 60, max: 600, step: 1, help: "Width of the sign." },
@@ -187,7 +187,7 @@ const sections: SectionSpec<BoxesParams>[] = [
     id: "keys", title: "Key holder", open: true, show: is("keys"),
     help: "A wall board with hooks pushed through it and a name engraved above.",
     fields: [
-      { kind: "text", key: "keys.text", label: "Text", maxLength: 40, placeholder: "KEYS", help: "The words engraved above the hooks; leave empty for none." },
+      { kind: "text", key: "keys.text", label: "Text", maxLength: 40, placeholder: "e.g. KEYS", help: "The words engraved above the hooks; leave empty for none." },
       { kind: "font", key: "keys.fontId", label: "Font", show: (p) => !!p.keys.text.trim(), sample: (p) => p.keys.text || "Aa", help: "Typeface of the text (the same fonts as Letters)." },
       { kind: "number", key: "keys.size", label: "Text height", unit: "mm", min: 4, max: 60, step: 0.5, show: (p) => !!p.keys.text.trim(), help: "Cap height of the text." },
       { kind: "number", key: "keys.hooks", label: "Hooks", unit: "", min: 1, max: 12, step: 1, int: true, help: "Number of hooks, spaced evenly across the board." },

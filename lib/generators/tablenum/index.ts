@@ -60,7 +60,7 @@ const sections: SectionSpec<TablenumParams>[] = [
       { kind: "font", key: "text.fontId", label: "Number font", sample: () => "12", help: "The typeface of the numbers or table names." },
       { kind: "number", key: "text.size", label: "Number height", unit: "mm", min: 8, max: 200, step: 1, help: "Height of the numbers." },
       { kind: "number", key: "text.spacing", label: "Digit spacing", unit: "mm", min: -5, max: 10, step: 0.1, help: "Extra space between digits." },
-      { kind: "text", key: "text.label", label: "Label", maxLength: 40, placeholder: "Table", help: "A word above the number, such as Table; leave it empty for the number alone." },
+      { kind: "text", key: "text.label", label: "Label", maxLength: 40, placeholder: "e.g. Table", help: "A word above the number, such as Table; leave it empty for the number alone." },
       { kind: "font", key: "text.labelFont", label: "Label font", sample: (p) => p.text.label || "Table", help: "The typeface of the label and second line." },
       { kind: "number", key: "text.labelSize", label: "Label height", unit: "mm", min: 4, max: 80, step: 0.5, help: "Height of the label." },
       { kind: "toggle", key: "text.labelBelow", label: "Label below", help: "Puts the label under the number instead of above it." },

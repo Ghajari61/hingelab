@@ -29,7 +29,10 @@ export function evalNumberExpr(input: string, ctx: ExprContext): number | null {
     const v = (parseFloat(pct[1]) / 100) * ctx.current;
     return isFinite(v) ? v : null;
   }
-  const v = parse(s, ctx);
+  // One unit after a product or fraction belongs to all of it: `1/8in` is an eighth of an inch.
+  const whole = ctx.unit ? /^([\d.\s*/()]*[*/][\d.\s*/()]*?)\s*(mm|cm|in|pt|"|px)$/.exec(s) : null;
+  const head = whole ? parse(whole[1], { ...ctx, unit: null }) : null;
+  const v = whole ? (head === null ? null : toUnit(head, whole[2], ctx.unit!)) : parse(s, ctx);
   if (v === null || !isFinite(v)) return null;
   switch (rel) {
     case "+": return ctx.current + v;
@@ -38,6 +41,12 @@ export function evalNumberExpr(input: string, ctx: ExprContext): number | null {
     case "/": return v === 0 ? null : ctx.current / v;
     default: return v;
   }
+}
+
+/** `v` written in unit word `u`, expressed in the field unit. */
+function toUnit(v: number, u: string, unit: Units): number {
+  const mm = u === '"' ? v * 25.4 : u === "px" ? v * PX_MM : v * MM_PER[u as Units];
+  return mm / MM_PER[unit];
 }
 
 function parse(src: string, ctx: ExprContext): number | null {
@@ -71,9 +80,7 @@ function parse(src: string, ctx: ExprContext): number | null {
       return v;
     }
     i += m[0].length;
-    if (!ctx.unit) return v;
-    const mm = m[1] === '"' ? v * 25.4 : m[1] === "px" ? v * PX_MM : v * MM_PER[m[1] as Units];
-    return mm / MM_PER[ctx.unit];
+    return ctx.unit ? toUnit(v, m[1], ctx.unit) : v;
   }
 
   function product(): number {

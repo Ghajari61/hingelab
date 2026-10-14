@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { MATERIALS, type LayerKey } from "@/lib/hinge";
 import { NumberField } from "@/components/editor/NumberField";
+import { LockToggle } from "./LockToggle";
 import { LayersPanel } from "@/components/editor/LayersPanel";
 import { Sec, type SheetProps } from "@/components/editor/PanelDock";
 import { SheetSection } from "@/components/shell/SheetSection";
@@ -21,7 +22,7 @@ type P = GenBase & Record<string, unknown>;
 const UNIT_SUFFIX: Record<string, string> = { deg: " °", "%": " %" };
 
 export function numberField(f: NumberSpec<P>): BaseField {
-  return { id: f.key, label: f.label + (UNIT_SUFFIX[f.unit] ?? ""), len: f.unit === "mm", step: f.step, min: f.min, max: f.max, float: !f.int };
+  return { id: f.key, label: f.label + (UNIT_SUFFIX[f.unit] ?? ""), len: f.unit === "mm", step: f.step, min: f.min, max: f.max, float: !f.int, help: f.help };
 }
 
 const MAT_FIELDS: BaseField[] = [
@@ -36,8 +37,10 @@ const SHEET_FIELDS: BaseField[] = [
 ];
 
 export function GeneratorDock({
-  def, params, defaults, out, units, layerKeys, onSet, onApply, onMaterial, onResetSection, sheet, checks,
+  def, params, defaults, out, units, layerKeys, onSet, onApply, onMaterial, onResetSection, sheet, checks, locks,
 }: {
+  /** Settings Randomise design keeps (by key). */
+  locks?: { has: (key: string) => boolean; toggle: (key: string) => void };
   def: AnyGenerator;
   params: P;
   defaults: P;
@@ -53,9 +56,11 @@ export function GeneratorDock({
   sheet: SheetProps;
   checks: ReactNode;
 }) {
-  const num = (f: BaseField, value: number, def: number, hidden = false) => (
+  const lockOf = (f: FieldSpec<P>) => ((f.kind === "number" || f.kind === "choice") && f.shuffle && locks
+    ? { on: locks.has(f.key), toggle: () => locks.toggle(f.key) } : undefined);
+  const num = (f: BaseField, value: number, def: number, hidden = false, lock?: { on: boolean; toggle: () => void }) => (
     <NumberField
-      key={f.id} field={f} value={value} defaultValue={def} units={units} label={f.label} hidden={hidden}
+      key={f.id} field={f} value={value} defaultValue={def} units={units} label={f.label} hidden={hidden} extra={lock && <LockToggle {...lock} label={f.label} />}
       onLive={(v) => onSet(f.id, v, false, f.mat)}
       onCommit={(v) => onSet(f.id, v, true, f.mat)}
     />
@@ -64,7 +69,7 @@ export function GeneratorDock({
   const field = (f: FieldSpec<P>): ReactNode => {
     const hidden = f.show ? !f.show(params) : false;
     const value = getPath(params, f.key);
-    if (f.kind === "number") return num(numberField(f), value as number, getPath(defaults, f.key) as number, hidden);
+    if (f.kind === "number") return num(numberField(f), value as number, getPath(defaults, f.key) as number, hidden, lockOf(f));
     if (hidden) return null;
     if (f.kind === "toggle") {
       return (
@@ -76,9 +81,10 @@ export function GeneratorDock({
     if (f.kind === "choice") {
       const pick = (v: string) => (f.apply ? onApply(f.apply(params, v) as P) : onSet(f.key, v, true));
       const seg = f.options.length <= 4 && f.options.every((o) => o.text.length <= 16);
+      const lock = lockOf(f);
       return (
         <div className="gen-choice" key={f.key}>
-          <div className="rowlabel">{f.label}</div>
+          <div className="rowlabel" title={f.help}>{f.label}{lock && <LockToggle {...lock} label={f.label} />}</div>
           {seg ? (
             <div className="iconseg full" role="group" aria-label={f.label}>
               {f.options.map((o) => (

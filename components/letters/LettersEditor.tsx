@@ -169,7 +169,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   const issues = useMemo(() => (ready && arranged ? lettersIssues(deferred, fontsOf, hb!, arranged) : []), [ready, arranged, deferred, fontsOf, hb]);
 
   const viewApi = useCanvasView();
-  viewApi.fitArgs.current = { bedW: params.bedW, bedH: params.bedH, layW: lay?.width ?? 0, layH: lay?.height ?? 0 };
+  viewApi.fitArgs.current = { bedW: params.bedW, bedH: params.bedH, layW: lay?.width ?? 0, layH: lay?.height ?? 0, sheets: arranged?.sheets };
 
   function patch(partial: Partial<LetterParams>, record: boolean) {
     replace({ ...params, ...partial }, record);
@@ -404,11 +404,11 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   }, []);
 
   // Fit the sheet once the first layout exists.
-  const fittedOnce = useRef(false);
-  const fitView = viewApi.fit;
+  const fitKey = lay ? `${params.bedW}x${params.bedH}|${Math.round(lay.width)}x${Math.round(lay.height)}|${arranged?.sheets?.length ?? 0}` : "";
+  const refit = viewApi.refit;
   useEffect(() => {
-    if (lay && !fittedOnce.current) fittedOnce.current = fitView();
-  }, [lay, fitView]);
+    if (fitKey) refit();
+  }, [fitKey, refit]);
 
   const menus: Record<"file" | "edit" | "view" | "help", MenuEntry[]> = {
     file: [

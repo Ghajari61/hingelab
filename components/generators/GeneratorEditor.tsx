@@ -38,7 +38,11 @@ import { makeTextFn } from "@/lib/generators/text";
 import type { AnyGenerator, BuildContext, ChoiceSpec, GenBase, GenPreset } from "@/lib/generators/types";
 import { GEN_RAIL_GROUPS } from "@/lib/generators/railArt.generated";
 import { addRailGroups } from "@/lib/railArt";
+import { presetMatches, randomiseParams, shuffleFields } from "@/lib/generators/randomise";
+import { Dices } from "lucide-react";
 import { GeneratorDock } from "./GeneratorDock";
+import { useGenPrefs } from "./useGenPrefs";
+import { LockToggle } from "./LockToggle";
 import "./generators.css";
 
 addRailGroups(GEN_RAIL_GROUPS);
@@ -107,6 +111,8 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const helpMap = useMemo(() => generatorHelpMap(def), [def]);
   const help = useHelpPanel(helpMap);
   const myPresets = useMyPresets();
+  const prefs = useGenPrefs(def.id);
+  const [presetQuery, setPresetQuery] = useState("");
   const account = usePlan();
   const [upgrade, setUpgrade] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -173,7 +179,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
   }, [content]);
 
   const viewApi = useCanvasView();
-  viewApi.fitArgs.current = { bedW: params.bedW, bedH: params.bedH, layW: lay?.width ?? 0, layH: lay?.height ?? 0 };
+  viewApi.fitArgs.current = { bedW: params.bedW, bedH: params.bedH, layW: lay?.width ?? 0, layH: lay?.height ?? 0, sheets: arranged.sheets };
 
   function setField(key: string, value: unknown, record: boolean, mat?: boolean) {
     const next = setPath(params, key, value);
@@ -287,6 +293,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
   }
 
   function applyPreset(pr: GenPreset<unknown>) {
+    prefs.used(pr.id);
     replace(def.merge(pr.params) as P, true);
     window.setTimeout(() => viewApi.fit(), 50);
     toastMsg(`Preset “${pr.name}”. Ctrl+Z returns to your last design.`);
@@ -345,11 +352,11 @@ function GenEditor({ def, onProduct, onHome, start }: {
     };
   }, []);
 
-  const fittedOnce = useRef(false);
-  const fitView = viewApi.fit;
+  const fitKey = lay ? `${params.bedW}x${params.bedH}|${Math.round(lay.width)}x${Math.round(lay.height)}|${arranged.sheets?.length ?? 0}` : "";
+  const refit = viewApi.refit;
   useEffect(() => {
-    if (lay && !fittedOnce.current) fittedOnce.current = fitView();
-  }, [lay, fitView]);
+    if (fitKey) refit();
+  }, [fitKey, refit]);
 
   const noun = def.name.toLowerCase();
   const menus: Record<"file" | "edit" | "view" | "help", MenuEntry[]> = {
@@ -387,6 +394,8 @@ function GenEditor({ def, onProduct, onHome, start }: {
   };
 
   // Left rail: the definition's big choices as picture cards, then the presets.
+  const lockSet = new Set(prefs.locks);
+  const locks = { has: (k: string) => lockSet.has(k), toggle: prefs.toggleLock };
   const groups: GalleryGroup[] = [];
   for (const s of def.sections) {
     if (s.show && !s.show(params)) continue;
@@ -398,18 +407,42 @@ function GenEditor({ def, onProduct, onHome, start }: {
         icon: <ArtIcon paths={def.art?.(c.key, o.v) ?? []} />,
         onClick: () => (c.apply ? replace(c.apply(params, o.v), true) : setField(c.key, o.v, true)),
       }));
-      groups.push({ label: c.label, name: c.label, art: `gen-${def.id}`, pics: `gen-${def.id}-${c.key}`, value: String(getPath(params, c.key)), options, cols: options.length === 3 || options.length >= 5 ? 3 : 2 });
+      groups.push({
+        label: c.label, name: c.label, art: `gen-${def.id}`, pics: `gen-${def.id}-${c.key}`, value: String(getPath(params, c.key)), options, cols: options.length === 3 || options.length >= 5 ? 3 : 2,
+        tools: c.shuffle ? <LockToggle on={lockSet.has(c.key)} toggle={() => prefs.toggleLock(c.key)} label={c.label} /> : undefined,
+      });
     }
   }
-  groups.push({
-    label: "Presets", name: `${def.name} presets`, art: `gen-${def.id}-preset`, value: "", cols: 2,
-    options: def.presets.map((pr) => ({
-      v: pr.id, text: pr.name, title: pr.note,
-      // eslint-disable-next-line @next/next/no-img-element -- static preset thumbnails
-      icon: <img src={`/presets/${def.id}/${pr.id}.svg`} alt="" width={66} height={44} loading="lazy" />,
-      onClick: () => applyPreset(pr),
-    })),
+  const presetOpt = (pr: GenPreset<unknown>): Opt => ({
+    v: pr.id, text: pr.name, title: pr.note,
+    // eslint-disable-next-line @next/next/no-img-element -- static preset thumbnails
+    icon: <img src={`/presets/${def.id}/${pr.id}.svg`} alt="" width={66} height={44} loading="lazy" />,
+    onClick: () => applyPreset(pr),
   });
+  const byId = new Map(def.presets.map((pr) => [pr.id, pr] as const));
+  const listed = (ids: string[]) => ids.map((id) => byId.get(id)).filter((pr): pr is GenPreset<unknown> => !!pr);
+  const fav = { has: (v: string) => prefs.favs.includes(v), toggle: (v: string) => prefs.toggleFav(v) };
+  const art = `gen-${def.id}-preset`;
+  const favs = listed(prefs.favs).filter((pr) => presetMatches(presetQuery, pr));
+  if (favs.length) groups.push({ label: "Favourites", name: `${def.name} favourite presets`, art, value: "", cols: 2, fav, options: favs.map(presetOpt) });
+  const recent = presetQuery ? [] : listed(prefs.recent);
+  if (recent.length) groups.push({ label: "Recent", name: `${def.name} recent presets`, art, value: "", cols: 2, fav, options: recent.map(presetOpt) });
+  groups.push({
+    label: "Presets", name: `${def.name} presets`, art, value: "", cols: 2, fav,
+    head: def.presets.length > 6 ? (
+      <input
+        type="search" className="gsearch" placeholder={`Search ${def.presets.length} presets`} aria-label={`Search ${def.name} presets`}
+        value={presetQuery} onChange={(e) => setPresetQuery(e.target.value)}
+      />
+    ) : undefined,
+    empty: "No presets match. Try another word.",
+    options: def.presets.filter((pr) => presetMatches(presetQuery, pr)).map(presetOpt),
+  });
+  const canShuffle = useMemo(() => shuffleFields(def).length > 0, [def]);
+  function randomiseDesign() {
+    replace(randomiseParams(def, params, lockSet), true);
+    toastMsg(lockSet.size ? "New random design; locked settings kept. Ctrl+Z undoes it." : "New random design. Ctrl+Z undoes it.");
+  }
 
   const fitInfo = arranged.fit;
   const fitSet = cleanFit(params.fit);
@@ -442,7 +475,13 @@ function GenEditor({ def, onProduct, onHome, start }: {
         onSave={saveProject} onOpen={openProject}
       />
       <div className="main">
-        <GalleryRail title={PRODUCT_INFO[def.id].name} icon={PRODUCT_INFO[def.id].icon} groups={groups} history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }} />
+        <GalleryRail title={PRODUCT_INFO[def.id].name} icon={PRODUCT_INFO[def.id].icon} groups={groups} history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}>
+          {canShuffle && (
+            <button type="button" className="btn-auto gen-shuffle" onClick={randomiseDesign} title="A new random design. Lock a setting (its lock icon) to keep it. Ctrl+Z undoes it.">
+              <Dices size={15} aria-hidden /> Randomise design{prefs.locks.length ? ` · ${prefs.locks.length} locked` : ""}
+            </button>
+          )}
+        </GalleryRail>
         <div className={`stage${viewMode === "3d" ? " no-rulers" : ""}`}>
           <ViewToggle value={viewMode} onChange={setViewMode} />
           <div className="stage-3d" hidden={viewMode !== "3d"}>
@@ -483,6 +522,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
         <DockColumn onExport={exportNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export as DXF (R12, mm)", run: () => void exportDXFNow() }]} units={units} onUnits={setUnits} onResetAll={resetAll}>
           <GeneratorDock
             def={def}
+            locks={canShuffle ? locks : undefined}
             params={params}
             defaults={defaults}
             out={out}

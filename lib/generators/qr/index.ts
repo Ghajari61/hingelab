@@ -99,7 +99,7 @@ const sections: SectionSpec<QrParams>[] = [
     id: "label", title: "Label", open: false,
     help: "Text next to the code, such as “Scan for the menu” or a name.",
     fields: [
-      { kind: "text", key: "label.text", label: "Label", multiline: true, maxLength: 120, placeholder: "Scan for the menu", help: "Text below, above or beside the code; each line is centred (left-aligned beside it)." },
+      { kind: "text", key: "label.text", label: "Label", multiline: true, maxLength: 120, placeholder: "e.g. Scan for the menu", help: "Text below, above or beside the code; each line is centred (left-aligned beside it)." },
       {
         kind: "choice", key: "label.position", label: "Position", show: (p) => !!p.label.text.trim(),
         help: "Where the label sits.", options: [{ v: "below", text: "Below" }, { v: "above", text: "Above" }, { v: "right", text: "Beside" }],

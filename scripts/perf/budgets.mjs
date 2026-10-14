@@ -17,7 +17,8 @@ const PAGE_BUDGET = 250;
  * roughly 15–25 %; the slicer, depth model, HarfBuzz and fonts load later and are not counted.
  */
 const LAZY_BUDGETS = {
-  "Editor shell + Hinge Box": { key: /EditorRoot\.tsx -> \.\/Workspace$/, kb: 150 },
+  // Every editor's sheet grid, typed sums and units, and the rail's search and favourites (D159): 150 → 154 KB.
+  "Editor shell + Hinge Box": { key: /EditorRoot\.tsx -> \.\/Workspace$/, kb: 154 },
   "Letters editor": { key: /Workspace\.tsx -> @\/components\/letters\/LettersEditor$/, kb: 145 },
   "Parametric editor": { key: /Workspace\.tsx -> @\/components\/parametric\/ParametricEditor$/, kb: 330 },
   "3D view (three.js)": { key: /EditorApp\.tsx -> \.\/HingeView3D$/, kb: 195 },

@@ -49,8 +49,20 @@
   background: radial-gradient(120% 90% at 50% 18%, #4A4A52 0%, #34343A 62%, #2A2A30 100%); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05);
 }
 @media (prefers-reduced-motion: reduce) { .gcard:hover .art.pic img { transform: none; } }
-.gcard .lbl { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; font-size: 12px; font-weight: 500; line-height: 1.2; }
-.gcards.c3 .gcard .lbl { font-size: 11.5px; hyphens: auto; }
+.gcard .lbl { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; min-width: 0; font-size: 12px; font-weight: 500; line-height: 1.2; }
+/* Names never break inside a word: one line, an ellipsis when it cannot fit, the full name in the tooltip. */
+.gcard .lbl .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gcards.c3 .gcard .lbl { font-size: 11px; letter-spacing: -.01em; }
+.gcell { position: relative; display: grid; min-width: 0; }
+.gfav { position: absolute; top: 4px; right: 4px; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: var(--hud-bg); color: var(--fg-faint); cursor: pointer; opacity: 0; transition: opacity var(--dur-fast); }
+.gcell:hover .gfav, .gfav:focus-visible, .gfav[aria-pressed="true"] { opacity: 1; }
+.gfav:hover { color: var(--fg); }
+.gfav[aria-pressed="true"] { color: #E8A33D; }
+.gfav[aria-pressed="true"] svg { fill: currentColor; }
+@media (hover: none) { .gfav { opacity: .85; } }
+.gsearch { width: 100%; height: 30px; margin: 0 0 8px; padding: 0 10px; border: 1px solid transparent; border-radius: 8px; background: var(--field); color: var(--fg); font: 13px var(--font-ui); outline: none; }
+.gsearch:focus { border-color: var(--accent); }
+.gempty { margin: 0 4px; color: var(--fg-faint); font-size: 12px; }
 .gcard:hover { background: var(--surface-hover); color: var(--fg); }
 .gcard[aria-pressed="true"] { background: var(--panel); border-color: var(--select); color: var(--fg); box-shadow: 0 0 0 1px var(--select); }
 .gcard:disabled { cursor: default; opacity: .5; }
@@ -95,7 +107,7 @@
   .doc-title { display: none; }
   .product-tabs button { padding-inline: 8px; }
   .gcards.c3 .gcard { padding-inline: 3px; }
-  .gcards.c3 .gcard .lbl { font-size: 11px; max-width: 100%; hyphens: auto; overflow-wrap: anywhere; }
+  .gcards.c3 .gcard .lbl { font-size: 10.5px; }
 }
 @media (max-width: 860px) {
   .main { grid-template-columns: minmax(0, 1fr); }

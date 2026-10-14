@@ -174,6 +174,8 @@ export interface NumberSpec<P> extends FieldCommon<P> {
   int?: boolean;
   /** Offer a Randomise button (seeds). */
   random?: boolean;
+  /** Randomise design picks a new value: anywhere in min…max, or in the given narrower span. */
+  shuffle?: true | [number, number];
 }
 
 export interface ChoiceSpec<P> extends FieldCommon<P> {
@@ -183,6 +185,8 @@ export interface ChoiceSpec<P> extends FieldCommon<P> {
   rail?: boolean;
   /** Picking writes more than the key (for example a movement's sizes). */
   apply?: (p: P, v: string) => P;
+  /** Randomise design picks one of the (non-Pro) options. */
+  shuffle?: true;
 }
 
 export interface ToggleSpec<P> extends FieldCommon<P> {

@@ -17,6 +17,8 @@ export interface BaseField {
   float?: boolean;
   /** Editing this field switches the material preset to Custom. */
   mat?: boolean;
+  /** One-sentence explanation, shown in the label's tooltip. */
+  help?: string;
 }
 
 export interface FieldDef extends BaseField {

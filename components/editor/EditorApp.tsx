@@ -110,7 +110,13 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
     bedH: params.bedH,
     layW: lay?.width ?? 0,
     layH: lay?.height ?? 0,
+    sheets: arranged.sheets,
   };
+  const fitKey = lay ? `${params.bedW}x${params.bedH}|${Math.round(lay.width)}x${Math.round(lay.height)}|${arranged.sheets?.length ?? 0}` : "";
+  const refit = viewApi.refit;
+  useEffect(() => {
+    if (fitKey) refit();
+  }, [fitKey, refit]);
 
   const metaRef = useRef<HingeMeta | null>(null);
   const meta = metaRef.current = hingeMeta(params, model, metaRef.current, units);
@@ -144,7 +150,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
 
   function applyFit(next: Params) {
     const a = arrangeHinge(next);
-    viewApi.fitArgs.current = { bedW: next.bedW, bedH: next.bedH, layW: a.lay?.width ?? 0, layH: a.lay?.height ?? 0 };
+    viewApi.fitArgs.current = { bedW: next.bedW, bedH: next.bedH, layW: a.lay?.width ?? 0, layH: a.lay?.height ?? 0, sheets: a.sheets };
     viewApi.fit();
     return a;
   }

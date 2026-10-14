@@ -18,3 +18,4 @@
 .gen-image-row img { width: 96px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); background: var(--field); }
 .gen-image-acts { display: grid; gap: 6px; flex: 1; }
 .gen-random { align-self: end; margin-bottom: 2px; }
+.gen-shuffle { width: 100%; }

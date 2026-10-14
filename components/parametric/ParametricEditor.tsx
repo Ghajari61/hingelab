@@ -287,7 +287,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   const currentSheet = result ? Math.max(0, result.sheets.findIndex((s) => s.items.some((it) => it.partId === selected[0]))) : 0;
 
   const viewApi = useCanvasView();
-  viewApi.fitArgs.current = { bedW: layout.W || params.material.sheetW, bedH: layout.H || params.material.sheetH, layW: 0, layH: 0 };
+  viewApi.fitArgs.current = { bedW: layout.W || params.material.sheetW, bedH: layout.H || params.material.sheetH, layW: 0, layH: 0, sheets: sheetRects };
 
   function offerFile(filename: string, data: string | Uint8Array, mime: string) {
     try {
@@ -519,7 +519,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   }, []);
 
   // Fit the sheets whenever the Sheets tab opens or the sheet layout changes size.
-  const fitKey = `${tab}:${Math.round(layout.W)}x${Math.round(layout.H)}`;
+  const fitKey = `${tab}:${Math.round(layout.W)}x${Math.round(layout.H)}:${sheetRects.length}`;
   const fitView = viewApi.fit;
   useEffect(() => {
     if (tab === "sheets" && layout.W > 0) window.requestAnimationFrame(() => fitView());
