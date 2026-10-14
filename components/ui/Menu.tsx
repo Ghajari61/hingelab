@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Check } from "lucide-react";
 import { formatShortcut } from "./shortcut";
 
@@ -21,16 +21,54 @@ export type MenuItem =
 
 type Entry = Exclude<MenuItem, "-">;
 
-function MenuList({ items, onClose, label, style, className = "", autoFocus = true, onLeft, onRight }: {
+/** How long the pointer may cross other items on its way into an open submenu before it closes. */
+const SUBMENU_GRACE_MS = 250;
+
+function MenuList({ items, onClose, label, style, className = "", autoFocus = true, onLeft, onRight, submenu = false }: {
   items: MenuItem[]; onClose: () => void; label: string; style?: React.CSSProperties; className?: string; autoFocus?: boolean;
   onLeft?: () => void; onRight?: () => void;
+  /** Placed with fixed coordinates beside its parent item, so a scrolling parent menu cannot clip it. */
+  submenu?: boolean;
 }) {
   const [active, setActive] = useState(-1);
   const [sub, setSub] = useState<number | null>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const subTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const entries = items.map((it, i) => ({ it, i })).filter((x): x is { it: Entry; i: number } => x.it !== "-");
 
-  useEffect(() => { if (autoFocus) ref.current?.focus(); }, [autoFocus]);
+  useEffect(() => { if (autoFocus) ref.current?.focus({ preventScroll: true }); }, [autoFocus]);
+  useEffect(() => () => { if (subTimer.current) clearTimeout(subTimer.current); }, []);
+
+  useLayoutEffect(() => {
+    if (!submenu) return;
+    const el = ref.current, anchor = el?.parentElement;
+    if (!el || !anchor) return;
+    const a = anchor.getBoundingClientRect(), r = el.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let left = a.right + 2;
+    if (left + r.width > vw - 4) left = Math.max(4, a.left - r.width - 2);
+    const top = Math.max(4, Math.min(a.top - 5, vh - r.height - 4));
+    setPos({ left, top });
+  }, [submenu]);
+
+  useEffect(() => {
+    if (!submenu) return;
+    const parent = ref.current?.parentElement?.closest(".ui-menu");
+    if (!parent) return;
+    const close = () => onLeft?.();
+    parent.addEventListener("scroll", close);
+    return () => parent.removeEventListener("scroll", close);
+  }, [submenu, onLeft]);
+
+  const hover = (i: number, it: Entry) => {
+    if (subTimer.current) { clearTimeout(subTimer.current); subTimer.current = null; }
+    setActive(i);
+    const next = it.items && !it.disabled ? i : null;
+    if (sub === null || sub === i || next === sub) { setSub(next); return; }
+    subTimer.current = setTimeout(() => { subTimer.current = null; setSub(next); }, SUBMENU_GRACE_MS);
+  };
+  const closeSub = useCallback(() => { setSub(null); ref.current?.focus(); }, []);
 
   const move = (dir: 1 | -1) => {
     if (!entries.length) return;
@@ -54,7 +92,7 @@ function MenuList({ items, onClose, label, style, className = "", autoFocus = tr
       role="menu"
       aria-label={label}
       tabIndex={-1}
-      style={style}
+      style={submenu ? { ...style, left: pos?.left ?? 0, top: pos?.top ?? 0, visibility: pos ? undefined : "hidden" } : style}
       onKeyDown={(e) => {
         if (sub !== null) return;
         if (e.key === "ArrowDown") { e.preventDefault(); e.stopPropagation(); move(1); }
@@ -79,7 +117,7 @@ function MenuList({ items, onClose, label, style, className = "", autoFocus = tr
           aria-keyshortcuts={it.shortcut}
           className={active === i ? "active" : undefined}
           data-command={it.id}
-          onMouseEnter={() => { setActive(i); setSub(it.items && !it.disabled ? i : null); }}
+          onMouseEnter={() => hover(i, it)}
           onClick={(e) => { e.stopPropagation(); activate(i); }}
         >
           <span aria-hidden>{it.checked ? <Check size={13} /> : null}</span>
@@ -88,7 +126,7 @@ function MenuList({ items, onClose, label, style, className = "", autoFocus = tr
           <span className="sub-arrow" aria-hidden>{it.items ? "▶" : ""}</span>
           {it.disabled && it.reason ? <span className="why">{it.reason}</span> : null}
           {it.items && sub === i && (
-            <MenuList items={it.items} onClose={onClose} label={it.label} onLeft={() => { setSub(null); ref.current?.focus(); }} />
+            <MenuList items={it.items} onClose={onClose} label={it.label} submenu onLeft={closeSub} />
           )}
         </div>
       ))}
