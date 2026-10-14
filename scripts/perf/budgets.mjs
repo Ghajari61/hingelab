@@ -35,7 +35,9 @@ const LAZY_BUDGETS = {
   "Trophy generator": { key: /registry\.ts -> \.\/trophy$/, kb: 18 },
   // The Your picture pattern (D160): sample shapes, picture layers and bridges for loose pieces, 32 → 37 KB.
   // Photo looks, the slot holder and print checks (D161; the image work itself is in the photo worker), 37 → 40 KB.
-  "Shadow Box generator": { key: /registry\.ts -> \.\/shadowbox$/, kb: 40 },
+  // The enclosure (D162): light box, back, keyholes and feet, and finger-jointed walls from the Boxes
+  // joint code, which now sits in a chunk shared with Boxes, 40 → 45 KB.
+  "Shadow Box generator": { key: /registry\.ts -> \.\/shadowbox$/, kb: 45 },
 };
 
 const gz = new Map();

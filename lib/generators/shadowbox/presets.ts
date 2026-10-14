@@ -1,3 +1,4 @@
+import { MATERIALS } from "@/lib/hinge/defaults";
 import type { DeepPartial, GenPreset } from "../types";
 import type { FrameShape, PaletteId, Sample, ShadowBoxParams } from "./params";
 
@@ -32,6 +33,8 @@ const pic = (id: string, name: string, note: string, sample: Sample, pc: Pic, o:
   preset(id, name, note, { pattern: "picture", min: 20, max: 100, twist: 0, ...o.design }, { ...o, extra: { ...o.extra, picture: { sample, ...pc } } });
 const wide: Frame = { shape: "rect", width: 240, height: 180, corner: 0 };
 const BLADE: P = { cutter: { kind: "blade" }, material: "custom", T: 0.5, K: 0, bedW: 292, bedH: 292, gap: 3 };
+/** Laser-cut plywood (thickness and kerf from the material table), spacer frames between the layers. */
+const PLY: P = { cutter: { kind: "laser" }, material: "birch3", T: MATERIALS.birch3.T!, K: MATERIALS.birch3.K!, bedW: 600, bedH: 400, gap: 4 };
 
 export const SHADOWBOX_PRESETS: GenPreset<ShadowBoxParams>[] = [
   // Tunnels
@@ -177,4 +180,13 @@ export const SHADOWBOX_PRESETS: GenPreset<ShadowBoxParams>[] = [
   pic("home-cameo", "Home cameo", "A paper house with its own halos", "house", { mode: "grow", paper: true, size: 44, step: 8 }, { frame: "house", palette: "coral", design: { loose: "parts" } }),
   pic("moon-rings", "Moon rings", "A crescent and star in night rings", "moonstar", { mode: "grow", size: 40, step: 6 }, { frame: "circle", palette: "night" }),
   pic("flower-cameo", "Flower cameo", "A paper flower on pastel halos", "flower", { mode: "grow", paper: true, size: 46, step: 7 }, { frame: "blossom", palette: "pastel", design: { loose: "parts" } }),
+  // Boxes: plywood with a light box, a back, a way to hang or stand it and a finger-jointed box
+  preset("lit-forest-box", "Lit forest box", "Plywood forest layers in a finger-jointed box, lit from behind", land({ ridge: "trees", count: 3, amp: 30 }), {
+    frame: { shape: "rect", width: 240, height: 180, corner: 0, border: 16 }, palette: "forest", layers: 6,
+    extra: { ...PLY, stack: { back: false, spacer: "frames", per: 1 }, light: { on: true, depth: 12, cable: 6, diffuser: true, diffT: 3 }, box: { back: "screwed", hang: "keyhole", walls: true, lip: 3, pins: true, numbers: true } },
+  }),
+  preset("mandala-stand", "Mandala on feet", "A plywood mandala with a back board, standing in two feet", mandala({ count: 10, petal: "drop", min: 26, max: 104 }), {
+    frame: { shape: "squircle", border: 14 }, palette: "kraft", layers: 6,
+    extra: { ...PLY, stack: { spacer: "frames", per: 1 }, box: { back: "glued", hang: "stand", pins: true } },
+  }),
 ];

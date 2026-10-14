@@ -13,6 +13,7 @@ import { motif } from "../motifs";
 import { heartCurve, orient, shapeOutline, starPolygon } from "../shapes";
 import type { BuildContext, Contour, GenImage, GenOutput, GenPart, Pt } from "../types";
 import { textBlock, weld } from "../weld";
+import { bandPoint, digits, drillPart, feet, HEAD_DEPTH, keyholes, lightRings, notchedRings, pinHoles, ringCount, screwHoles, walls, WALL_PLAY, type Band } from "./enclosure";
 import { bridgeIslands } from "./islands";
 import { PALETTES, type FrameShape, type Opening, type Petal, type Ridge, type ShadowBoxParams } from "./params";
 import { photoDpi, photoPlace, type WinBox } from "./photo";
@@ -45,6 +46,16 @@ export interface ShadowBoxInfo {
   photoShown?: number;
   /** Dots per inch the stored photo gives at its printed size. */
   photoDpi?: number;
+  /** Width of the border band every part shares (where pins, screws and numbers go), mm. */
+  band?: number;
+  /** Light box rings. */
+  rings?: number;
+  /** The keyholes need a wider border: this wide, mm. */
+  keyBorder?: number;
+  /** The finger-jointed box, outside, mm. */
+  boxW?: number;
+  boxH?: number;
+  boxD?: number;
 }
 
 export type ShadowBoxOutput = GenOutput & { info?: ShadowBoxInfo };
@@ -517,6 +528,21 @@ function textAt(p: ShadowBoxParams, size: number, w: Win, winCs: Contour[], ctx:
   return { keep, clear, width: b.width, room, size, loading: false };
 }
 
+/** Steps for the back board, light box, pins and numbers, before the layers go on. */
+function enclosureSteps(p: ShadowBoxParams, rings: number, diffuser: boolean, N: number): string[] {
+  const out: string[] = [];
+  if (p.box.pins) out.push(`Push ${p.box.pin} mm pins, dowels or cocktail sticks through the two pin holes as you stack the parts, so every part lines up; trim them flush when the glue is dry.`);
+  if (p.box.numbers) out.push(`Each layer's number is scored on its bottom border (Layer 1 to Layer ${N - 1}; the front layer has none), so the stack goes together in order.`);
+  if (p.box.back !== "none") out.push(p.box.back === "screwed"
+    ? `The back board is screwed on with four ${p.box.screw} mm screws through its corner holes into the pilot holes above it, so it comes off${rings ? " to reach the lights" : ""}.`
+    : "Glue the back board on behind everything else, outlines lined up.");
+  if (rings) {
+    out.push(`Glue the ${rings} light box rings into one stack on the back board${p.light.cable > 0 ? ", the notched ones at the back" : ""}. Stick an LED strip round the inside of the rings, facing in${p.light.cable > 0 ? ", and lead its cable out through the notch at the bottom" : ""}.`);
+    if (diffuser) out.push("Lay the diffuser on the light box: it spreads the light evenly behind the layers. Cut it from white or frosted acrylic, or glue tracing paper onto a frame.");
+  }
+  return out;
+}
+
 export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBoxOutput {
   const { width: W, height: H, border } = p.frame;
   const T = p.T, N = p.stack.count;
@@ -600,26 +626,92 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
   const per = frames ? p.stack.per : 0;
   const gapZ = frames ? per * T : Math.max(0, p.stack.gap);
   const parts: GenPart[] = [];
-  const ringMain = biggest(ring);
+  // Narrow spacer frames: the frame less its inside, spacerW in from the edge.
+  const narrow = frames && p.stack.spacerW > 0 && p.stack.spacerW < border
+    ? differenceShapes([frame], shapeContours(offsetShapes([frameShape], -p.stack.spacerW))) : [];
+  const ringMain = biggest(narrow.length ? narrow : ring);
   const spacer = makeShape(simplifyClosed(ringMain.outer, SIMPLIFY), ringMain.holes.map((h) => simplifyClosed(h, SIMPLIFY)));
+
+  // Behind the stack: the back board, the light box's rings and the diffuser.
+  const band: Band = { frame, win: win.outer, width: narrow.length ? p.stack.spacerW : border, cx: w.cx, cy: w.cy };
+  info.band = r1(band.width);
+  const backColor = layerColor(p, 0, N);
+  let base = 0;
+  if (p.box.back !== "none") {
+    parts.push({ id: "backboard", name: "Back board", outer: frame, holes: [], color: backColor, matte: true, place: { x: 0, y: 0, z: 0 } });
+    base += T;
+  }
+  const ringZ0 = base;
+  const rings = lightRings(p, band, ringCount(p));
+  rings.forEach((r, i) => parts.push({ id: `ring${i + 1}`, name: `Light box ring ${i + 1}`, outer: simplifyClosed(r.outer, SIMPLIFY), holes: r.holes.map((h) => simplifyClosed(h, SIMPLIFY)), color: backColor, matte: true, place: { x: 0, y: 0, z: base + i * T } }));
+  base += rings.length * T;
+  if (rings.length) info.rings = rings.length;
+  const diffuser = p.light.on && p.light.diffuser;
+  if (diffuser) {
+    parts.push({ id: "diffuser", name: "Diffuser", outer: frame, holes: [], material: "second", t: p.light.diffT, color: "#F4F4F0", place: { x: 0, y: 0, z: base } });
+    base += p.light.diffT;
+  }
   // A slotted photo's holder is glued straight onto the back board, under everything else.
   const holder = photo?.only3d ? photoHolder(p, w, frame) : null;
   const lift = holder ? T : 0;
   let sp = 0;
   shapes.forEach((sh, k) => {
-    const z = k * (T + gapZ) + (k > 0 ? lift : 0);
+    const z = base + k * (T + gapZ) + (k > 0 ? lift : 0);
     const color = layerColor(p, k, N);
     const name = `Layer ${k + 1}${k === 0 ? " (back)" : k === N - 1 ? " (front)" : ""}`;
     parts.push({ id: `layer${k + 1}`, name, outer: sh.outer, holes: sh.holes, color, matte: true, place: { x: 0, y: 0, z }, ...(k === 0 && photo ? { images: [photo] } : {}) });
-    if (k === 0 && holder) parts.push({ id: "holder", name: "Photo holder", outer: holder.outer, holes: holder.holes, color, matte: true, place: { x: 0, y: 0, z: T } });
+    if (k === 0 && holder) parts.push({ id: "holder", name: "Photo holder", outer: holder.outer, holes: holder.holes, color, matte: true, place: { x: 0, y: 0, z: base + T } });
     (pieces.get(k) ?? []).forEach((s, j) => parts.push({ id: `piece${k + 1}-${j + 1}`, name: `Layer ${k + 1} piece ${j + 1}`, outer: s.outer, holes: s.holes, color, matte: true, place: { x: 0, y: 0, z } }));
     if (k < N - 1) for (let j = 0; j < per; j++) {
       sp++;
       parts.push({ id: `spacer${sp}`, name: `Spacer ${sp}`, outer: spacer.outer, holes: spacer.holes, color, matte: true, place: { x: 0, y: 0, z: z + T + (k === 0 ? lift : 0) + j * T } });
     }
   });
-  const depth = N * T + (N - 1) * gapZ + lift;
+  const depth = base + N * T + (N - 1) * gapZ + lift;
   info.depth = r1(depth);
+
+  // Holes through the parts that share the border band, and numbers on it.
+  const banded = (q: GenPart) => q.place && !q.place.upright && !q.id.startsWith("piece");
+  const drill = (ok: (q: GenPart) => boolean, cs: Contour[]) => {
+    for (let i = 0; i < parts.length; i++) if (banded(parts[i]) && ok(parts[i])) for (const c of cs) parts[i] = drillPart(parts[i], c);
+  };
+  if (p.box.pins) drill(() => true, pinHoles(p, band));
+  if (p.box.back === "screwed") {
+    const sc = screwHoles(p, band);
+    drill((q) => q.id === "backboard", sc.clear);
+    drill((q) => (rings.length ? q.id.startsWith("ring") : q.id === "layer1"), sc.pilot);
+  }
+  const lowest = parts.find(banded);
+  if (p.box.hang === "keyhole" && lowest) {
+    const inCavity = lowest.id === "backboard" && rings.length > 0;
+    const kh = keyholes(p, band, inCavity);
+    if (kh.needBorder) info.keyBorder = kh.needBorder;
+    drill((q) => q === lowest, kh.cuts);
+    const z0 = (lowest.place?.z ?? 0) + (lowest.t ?? T);
+    drill((q) => q !== lowest && (q.place?.z ?? 0) >= z0 - 1e-6 && (q.place?.z ?? 0) < z0 + HEAD_DEPTH, kh.room);
+  }
+  if (p.box.numbers) {
+    const at = bandPoint(band, Math.PI / 2), hNum = Math.min(6, band.width * 0.5);
+    if (at && hNum >= 2) for (const q of parts) {
+      const m = /^layer(\d+)$/.exec(q.id);
+      if (m && Number(m[1]) < N) q.score = [...(q.score ?? []), ...digits(Number(m[1]), at[0], at[1], hNum)];
+    }
+  }
+
+  // Round it all: the finger-jointed box, and the feet it stands in.
+  const fb = bboxOf([frame]);
+  const boxD = p.box.walls ? depth + p.box.lip : 0;
+  if (p.box.walls) {
+    const k = Math.min(rings.length, notchedRings(p));
+    parts.push(...walls(p, fb, boxD, rings.length && p.light.cable > 0 ? ringZ0 + (k * T) / 2 : null));
+    info.boxW = r1(fb.x1 - fb.x0 + 2 * (WALL_PLAY + T));
+    info.boxH = r1(fb.y1 - fb.y0 + 2 * (WALL_PLAY + T));
+    info.boxD = r1(boxD);
+  }
+  if (p.box.hang === "stand") {
+    const outline = p.box.walls ? rect(fb.x0 - WALL_PLAY - T, fb.y0 - WALL_PLAY - T, fb.x1 - fb.x0 + 2 * (WALL_PLAY + T), fb.y1 - fb.y0 + 2 * (WALL_PLAY + T)) : frame;
+    parts.push(...feet(p, outline, p.box.walls ? boxD : depth));
+  }
   const dpi = photo ? Math.round(photoDpi(p, w)) : 0;
   if (dpi) info.photoDpi = dpi;
   const print = p.photo.look !== "engrave";
@@ -637,6 +729,9 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
       ...(sp ? [{ label: "Spacer frames", value: String(sp) }] : []),
       ...(photo ? [{ label: "Photo shows", value: `${r0(w.w)} × ${r0(w.h)} mm` }] : []),
       ...(dpi ? [{ label: print ? "Photo print" : "Engraving", value: `${dpi} dpi` }] : []),
+      ...(rings.length ? [{ label: "Light box", value: `${rings.length} rings, ${r1(rings.length * T)} mm deep` }] : []),
+      ...(diffuser ? [{ label: "Diffuser", value: `${p.light.diffT} mm` }] : []),
+      ...(p.box.walls ? [{ label: "Box", value: `${r0(info.boxW!)} × ${r0(info.boxH!)} × ${r0(boxD)} mm` }] : []),
       ...(info.bridges ? [{ label: "Bridges", value: String(info.bridges) }] : []),
       ...(info.pieces ? [{ label: "Loose pieces", value: String(info.pieces) }] : []),
     ],
@@ -644,6 +739,7 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
       blade
         ? `Cut every layer from its own colour of ${mat}; Layer 1 is the back and Layer ${N} the front.`
         : `Cut the ${N} layers from ${mat}; Layer 1 is the back and Layer ${N} the front.`,
+      ...enclosureSteps(p, rings.length, diffuser, N),
       frames
         ? `Glue ${per === 1 ? "a spacer frame" : `${per} spacer frames`} between each pair of layers, lining up the outlines.`
         : `Stick ${r1(gapZ)} mm foam tape around the border of every layer but the front one, with small foam squares behind wide areas of the pattern.`,
@@ -662,9 +758,16 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
       "Stack the layers in order from the back, pressing each one down evenly before the next.",
       ...(text && !text.loading ? [`The words stand on a paper bar across the front layer: cut it from a contrasting card so they read clearly.`] : []),
       ...(p.design.moon ? ["For a lit box, put a battery LED strip or puck light behind the back layer's light hole."] : []),
-      `Fit the stack into a shadow box frame at least ${Math.ceil(depth + 5)} mm deep, or glue a backing card on and hang it as it is.`,
+      ...(p.box.walls
+        ? [`Fit the four box walls together round the stack, finger joints interlocking (the top and bottom walls hold the corners), and glue them to each other and to the stack's edges; the walls stand ${r1(p.box.lip)} mm proud of the front layer.`]
+        : p.box.back === "none" && !rings.length
+          ? [`Fit the stack into a shadow box frame at least ${Math.ceil(depth + 5)} mm deep, or glue a backing card on and hang it as it is.`]
+          : []),
+      ...(p.box.hang === "keyhole" ? [`Hang it on two screws or nails ${r0((fb.x1 - fb.x0) / 2)} mm apart, level, through the keyholes near the top: slip the heads through the round ends and let the box drop onto them.`] : []),
+      ...(p.box.hang === "stand" ? ["Stand the box upright in the two feet, its lower edge pushed fully into their slots."] : []),
     ],
     info,
+    materials: diffuser ? { main: mat, second: `Diffuser ${p.light.diffT} mm (white or frosted acrylic, or tracing paper)` } : undefined,
     stacked: true,
     notice: text?.loading ? "Loading the font." : undefined,
     missing: missing.length ? missing : undefined,

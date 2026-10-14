@@ -44,6 +44,10 @@ export const DPIS = ["127", "254", "318"] as const;
 export type Dpi = (typeof DPIS)[number];
 export const MOUNTS = ["board", "slot"] as const;
 export type Mount = (typeof MOUNTS)[number];
+export const BACKS = ["none", "glued", "screwed"] as const;
+export type Back = (typeof BACKS)[number];
+export const HANGS = ["none", "keyhole", "stand"] as const;
+export type HangKind = (typeof HANGS)[number];
 /** Longest stored photo, characters of its data URL (an engraving at 0.1 mm across a 10 in window fits). */
 export const MAX_PHOTO_CHARS = 1_200_000;
 
@@ -100,6 +104,38 @@ export interface ShadowBoxParams extends GenBase {
     gap: number;
     /** Spacer frames between two layers. */
     per: number;
+    /** Spacer frame width, mm (0: the frame's border). */
+    spacerW: number;
+  };
+  /** A light box behind the layers: rings deep enough for an LED strip, a cable notch and a diffuser. */
+  light: {
+    on: boolean;
+    /** Room for the LED strip, mm (rounded up to whole rings). */
+    depth: number;
+    /** Cable notch width and the hole in the box's bottom wall, mm. */
+    cable: number;
+    diffuser: boolean;
+    /** Diffuser thickness, mm. */
+    diffT: number;
+  };
+  /** Round the stack: back board, hanging, a finger-jointed box and alignment aids. */
+  box: {
+    back: Back;
+    /** Screw size, mm. */
+    screw: number;
+    hang: HangKind;
+    /** Keyhole head diameter, mm. */
+    head: number;
+    walls: boolean;
+    /** Walls stand this far in front of the front layer, mm. */
+    lip: number;
+    /** Finger width of the walls' joints, mm. */
+    finger: number;
+    /** Pin holes through every part, and their diameter, mm. */
+    pins: boolean;
+    pin: number;
+    /** Layer numbers scored on the border. */
+    numbers: boolean;
   };
   design: {
     pattern: Pattern;
@@ -229,7 +265,9 @@ export const SHADOWBOX_DEFAULTS: ShadowBoxParams = {
   layers: clone(HINGE.layers),
   cutter: { kind: "blade" },
   frame: { shape: "rounded", size: "8x8", width: 200, height: 200, border: 12, corner: 8 },
-  stack: { count: 10, back: true, spacer: "none", gap: 2, per: 1 },
+  stack: { count: 10, back: true, spacer: "none", gap: 2, per: 1, spacerW: 0 },
+  light: { on: false, depth: 12, cable: 6, diffuser: true, diffT: 3 },
+  box: { back: "none", screw: 3, hang: "none", head: 8, walls: false, lip: 3, finger: 10, pins: false, pin: 3, numbers: false },
   design: {
     pattern: "tunnel", opening: "star", sides: 6, inner: 55, petal: "drop",
     ridge: "mountains", from: "bottom", amp: 18, seed: 7, count: 12,
@@ -267,6 +305,24 @@ export function mergeShadowBox(raw: unknown): ShadowBoxParams {
   p.stack.spacer = p.stack.spacer === "frames" ? "frames" : "none";
   p.stack.count = clamp(Math.round(p.stack.count), 2, 20);
   p.stack.per = clamp(Math.round(p.stack.per), 1, 4);
+  p.stack.spacerW = clamp(p.stack.spacerW, 0, 60);
+  const l = p.light;
+  l.on = l.on === true;
+  l.diffuser = l.diffuser === true;
+  l.depth = clamp(l.depth, 3, 60);
+  l.cable = clamp(l.cable, 0, 20);
+  l.diffT = clamp(l.diffT, 0.1, 6);
+  const bx = p.box;
+  bx.back = oneOf(BACKS, bx.back, d.box.back);
+  bx.hang = oneOf(HANGS, bx.hang, d.box.hang);
+  bx.screw = clamp(bx.screw, 1.5, 8);
+  bx.head = clamp(bx.head, 4, 16);
+  bx.walls = bx.walls === true;
+  bx.lip = clamp(bx.lip, 0, 30);
+  bx.finger = clamp(bx.finger, 4, 40);
+  bx.pins = bx.pins === true;
+  bx.pin = clamp(bx.pin, 1, 8);
+  bx.numbers = bx.numbers === true;
   const g = p.design;
   g.pattern = oneOf(PATTERNS, g.pattern, d.design.pattern);
   g.opening = oneOf(OPENINGS, g.opening, d.design.opening);

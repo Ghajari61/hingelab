@@ -1,12 +1,15 @@
 import type { Issue } from "@/lib/issues";
 import { missingGlyphs } from "../common";
 import type { ShadowBoxOutput } from "./build";
+import { MIN_WALL } from "./enclosure";
 import type { ShadowBoxParams } from "./params";
 
 /** Below this share of the window, the layers hide most of the photo (%). */
 const PHOTO_MIN_SHOWN = 25;
 /** Below this, a printed photo looks soft. */
 const PHOTO_MIN_DPI = 150;
+/** Thinnest board finger-jointed walls and feet hold in, mm. */
+const MIN_BOX_T = 2;
 
 export function checkShadowBox(p: ShadowBoxParams, out: ShadowBoxOutput): Issue<ShadowBoxParams>[] {
   const issues: Issue<ShadowBoxParams>[] = [];
@@ -62,6 +65,45 @@ export function checkShadowBox(p: ShadowBoxParams, out: ShadowBoxOutput): Issue<
       fixes: p.design.loose === "drop"
         ? [{ id: "bridge", label: "Hold them with bridges", safe: false, apply: how("bridge") }, { id: "parts", label: "Cut them as parts", safe: false, apply: how("parts") }]
         : [],
+    });
+  }
+  const solidBack = (p.stack.back && !p.design.moon) || !!p.photo.image;
+  if (p.light.on && solidBack) {
+    issues.push({
+      code: "LIGHT_BLOCKED", level: "warn",
+      message: p.photo.image
+        ? "The photo's back board is solid, so the light box behind it only glows through the paper of the photo."
+        : "The back layer is a whole board, so the light box behind it cannot shine through the pattern.",
+      fixes: p.photo.image ? [] : [
+        { id: "pattern", label: "Make the back layer a pattern layer", safe: false, apply: (q) => ({ ...q, stack: { ...q.stack, back: false } }) },
+        { id: "hole", label: "Cut a light hole in it", safe: false, apply: (q) => ({ ...q, design: { ...q.design, moon: true } }) },
+      ],
+    });
+  }
+  const holes = [p.box.pins ? p.box.pin : 0, p.box.back === "screwed" ? p.box.screw : 0];
+  const needBand = Math.max(...holes) + 2 * MIN_WALL;
+  if (info.band !== undefined && Math.max(...holes) > 0 && info.band < needBand) {
+    const border = Math.ceil(Math.max(p.frame.border, needBand));
+    const narrow = p.stack.spacer === "frames" && p.stack.spacerW > 0 && p.stack.spacerW < needBand;
+    issues.push({
+      code: "BAND_TIGHT", level: "warn",
+      message: `The border is ${info.band} mm wide where the parts overlap: too narrow for ${Math.max(...holes)} mm holes with ${MIN_WALL} mm of material round them.`,
+      fixes: [{ id: "wider", label: narrow ? `Spacer frames ${Math.ceil(needBand)} mm wide` : `Border ${border} mm`, safe: true, apply: (q) => (narrow ? { ...q, stack: { ...q.stack, spacerW: Math.ceil(needBand) } } : { ...q, frame: { ...q.frame, border } }) }],
+    });
+  }
+  if (info.keyBorder) {
+    const border = info.keyBorder;
+    issues.push({
+      code: "KEYHOLE_ROOM", level: "warn",
+      message: `The keyholes need a border at least ${border} mm wide at the top${p.light.on ? "" : ", or a back board with a light box behind it to sit in"}.`,
+      fixes: [{ id: "border", label: `Border ${border} mm`, safe: true, apply: (q) => ({ ...q, frame: { ...q.frame, border } }) }],
+    });
+  }
+  if ((p.box.walls || p.box.hang === "stand") && p.T < MIN_BOX_T) {
+    issues.push({
+      code: "BOX_THIN", level: "warn",
+      message: `${p.box.walls ? "Finger-jointed walls" : "The feet"} need board at least ${MIN_BOX_T} mm thick to hold; at ${p.T} mm cut ${p.box.walls ? "them" : "the feet"} from thicker board, or leave ${p.box.walls ? "them" : "the feet"} out.`,
+      fixes: [{ id: "off", label: p.box.walls ? "No box walls" : "No feet", safe: false, apply: (q) => ({ ...q, box: { ...q.box, ...(p.box.walls ? { walls: false } : { hang: "none" as const }) } }) }],
     });
   }
   if (p.design.pattern === "picture") {

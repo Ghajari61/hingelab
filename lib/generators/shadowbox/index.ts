@@ -8,8 +8,8 @@ import { PHOTO_DITHERS, PHOTO_LOOKS, type PhotoDither, type PhotoLook } from "@/
 import { buildShadowBox, frameOutline, unitOpening, windowBox, type ShadowBoxOutput } from "./build";
 import { checkShadowBox } from "./check";
 import {
-  CELLS, DPIS, FRAMES, HOLES, LOOSE, MAT_MM, MOUNTS, OPENINGS, PALETTES, PATTERNS, PETALS, PIC_MODES, RIDGES, SAMPLES, SHADOWBOX_DEFAULTS, SIZES, mergeShadowBox,
-  type Cell, type Dpi, type FrameShape, type Hole, type Loose, type Mount, type Opening, type Pattern, type PicMode, type Ridge, type Sample, type ShadowBoxParams,
+  BACKS, CELLS, DPIS, FRAMES, HANGS, HOLES, LOOSE, MAT_MM, MOUNTS, OPENINGS, PALETTES, PATTERNS, PETALS, PIC_MODES, RIDGES, SAMPLES, SHADOWBOX_DEFAULTS, SIZES, mergeShadowBox,
+  type Back, type Cell, type Dpi, type HangKind, type FrameShape, type Hole, type Loose, type Mount, type Opening, type Pattern, type PicMode, type Ridge, type Sample, type ShadowBoxParams,
 } from "./params";
 import { centreOn, photoSpec } from "./photo";
 import { sampleArt } from "./picture";
@@ -50,6 +50,8 @@ const MOUNT_NAMES: Named<Mount> = {
   board: ["On the board", "Printed and glued on, or engraved, on the back board"],
   slot: ["In a slot", "A print slid into a holder behind the layers, so it can be changed"],
 };
+const BACK_NAMES: Named<Back> = { none: "None", glued: ["Glued", "A whole board glued on behind"], screwed: ["Screwed", "Screwed on, so it comes off"] };
+const HANG_NAMES: Named<HangKind> = { none: "None", keyhole: ["Keyholes", "Two keyholes near the top, for screws or nails"], stand: ["Feet", "Two slotted feet to stand it on a shelf"] };
 /** Settings that change how the photo is made from its original. */
 const PHOTO_LOOK_KEYS = ["photo.look", "photo.bright", "photo.contrast", "photo.tones", "photo.dither", "photo.dpi", "photo.bg", "photo.tol"];
 const LOOSE_NAMES: Named<Loose> = {
@@ -278,9 +280,37 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
       { kind: "choice", key: "stack.spacer", label: "Spacers", options: [{ v: "none", text: "Foam tape" }, { v: "frames", text: "Spacer frames", title: "Border rings cut from the same sheet" }], help: "Keep the layers apart with foam tape, or cut spacer frames from the same sheet and glue them between the layers." },
       { kind: "number", key: "stack.gap", label: "Foam thickness", unit: "mm", min: 0, max: 20, step: 0.5, show: (p) => p.stack.spacer === "none", help: "Thickness of the foam tape between layers (for the depth and the 3D view)." },
       { kind: "number", key: "stack.per", label: "Frames per gap", unit: "", min: 1, max: 4, step: 1, int: true, show: (p) => p.stack.spacer === "frames", help: "Spacer frames between each pair of layers: more makes a deeper box." },
+      { kind: "number", key: "stack.spacerW", label: "Spacer width", unit: "mm", min: 0, max: 60, step: 0.5, show: (p) => p.stack.spacer === "frames", help: "Width of the spacer frames from the outside edge; narrower ones use less sheet and hide behind the border. 0 makes them as wide as the border." },
       { kind: "number", key: "design.web", label: "Narrowest bridge", unit: "mm", min: 0, max: 10, step: 0.1, help: "Paper narrower than this between cut-outs is cut away, so nothing too thin to hold is left." },
       { kind: "choice", key: "design.loose", label: "Loose pieces", options: opts(LOOSE, LOOSE_NAMES), help: "Paper pieces nothing holds (the middle of an O, a light spot in a picture): leave them out, tie each to the nearest paper with a thin bridge, or cut them as parts to glue back in place." },
       { kind: "number", key: "design.bridge", label: "Bridge width", unit: "mm", min: 0.5, max: 10, step: 0.1, show: (p) => p.design.loose === "bridge", help: "Width of the bridges that hold loose pieces; never narrower than the narrowest bridge." },
+    ],
+  },
+  {
+    id: "lightbox", title: "Light box", open: false,
+    help: "A shallow box behind the layers for an LED strip, so the pattern glows from behind.",
+    fields: [
+      { kind: "toggle", key: "light.on", label: "Light box behind the layers", help: "Adds rings of the frame's border behind the stack, deep enough for an LED strip stuck round their inside." },
+      { kind: "number", key: "light.depth", label: "Light depth", unit: "mm", min: 3, max: 60, step: 0.5, show: (p) => p.light.on, help: "Room behind the layers for the LED strip: at least the strip's width (check your strip), rounded up to whole rings of the sheet." },
+      { kind: "number", key: "light.cable", label: "Cable notch", unit: "mm", min: 0, max: 20, step: 0.5, show: (p) => p.light.on, help: "Width of the notch at the bottom of the light box that lets the LED cable out; 0 for none (a battery light inside)." },
+      { kind: "toggle", key: "light.diffuser", label: "Diffuser", show: (p) => p.light.on, help: "A whole sheet between the light box and the layers that spreads the light evenly; it is laid out on its own sheets." },
+      { kind: "number", key: "light.diffT", label: "Diffuser thickness", unit: "mm", min: 0.1, max: 6, step: 0.1, show: (p) => p.light.on && p.light.diffuser, help: "Thickness of the diffuser sheet, for the depth and the 3D view." },
+    ],
+  },
+  {
+    id: "box", title: "Back, hanging and box", open: false,
+    help: "A back board, a way to hang or stand the shadow box, a finger-jointed box around it and aids that line the layers up.",
+    fields: [
+      { kind: "choice", key: "box.back", label: "Back board", options: opts(BACKS, BACK_NAMES), help: "An extra whole board behind everything: glued on, or screwed on so it comes off (to reach the lights)." },
+      { kind: "number", key: "box.screw", label: "Screw size", unit: "mm", min: 1.5, max: 8, step: 0.5, show: (p) => p.box.back === "screwed", help: "Diameter of the screws that hold the back board; the parts it screws into get smaller pilot holes." },
+      { kind: "choice", key: "box.hang", label: "Hang or stand", options: opts(HANGS, HANG_NAMES), help: "Two keyholes near the top to hang it on screws or nails, or two slotted feet to stand it on a shelf." },
+      { kind: "number", key: "box.head", label: "Keyhole size", unit: "mm", min: 4, max: 16, step: 0.5, show: (p) => p.box.hang === "keyhole", help: "Diameter of the keyholes' round ends: a little more than the head of the screw or nail it hangs on." },
+      { kind: "toggle", key: "box.walls", label: "Finger-jointed box", help: "Four walls with finger joints around the stack, so it becomes a box of its own; for a laser and board at least 2 mm thick." },
+      { kind: "number", key: "box.lip", label: "Wall lip", unit: "mm", min: 0, max: 30, step: 0.5, show: (p) => p.box.walls, help: "How far the walls stand in front of the front layer." },
+      { kind: "number", key: "box.finger", label: "Finger width", unit: "mm", min: 4, max: 40, step: 0.5, show: (p) => p.box.walls, help: "Width of the fingers at the box's corners; the count is odd so both ends match." },
+      { kind: "toggle", key: "box.pins", label: "Pin holes", help: "Two holes through every part, in the border, for pins or cocktail sticks that line the stack up while the glue sets; they are placed so a part cannot go in turned round." },
+      { kind: "number", key: "box.pin", label: "Pin size", unit: "mm", min: 1, max: 8, step: 0.1, show: (p) => p.box.pins, help: "Diameter of the pin holes." },
+      { kind: "toggle", key: "box.numbers", label: "Layer numbers", help: "Scores each layer's number on its bottom border, hidden by the layer in front." },
     ],
   },
   {
