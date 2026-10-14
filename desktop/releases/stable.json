@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.22",
-    "pub_date": "2026-10-14T01:07:14.820Z",
-    "notes": "A cleaner one-screen Generators page: compact product tabs, simpler preset cards, and pages you flip with the arrows, the dots or the mouse wheel instead of scrolling.",
+    "version": "1.0.23",
+    "pub_date": "2026-10-14T03:29:53.481Z",
+    "notes": "CorelDRAW-style tools in Studio: 3-point rectangle, ellipse and curve, Smart Drawing, Crop, Virtual Segment Delete, Contour, Create Boundary, node align / reflect / extract, the Distort effect and a Twirl tweak. Submenus now open beside their menu and stay on screen.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.22_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnMyVEJ2T2JpMHltUUZRb2NrSXZMcmsyWnNBS1FialJ5bHF2dXhmaVNTNUNtMU9qQzJ0OUFwU05QWHZ0TmtzeUdGL0hTVjhZNGtNdm1STm9UN0plVUFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTQwMDI2CWZpbGU6SGluZ2VMYWJfMS4wLjIyX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjIKK3BmUXZPVTBmci9IZWErS3R6Mkc5clNCUllZb2YzNnpxbE96UkNxR2pJOHA4WWxIR29OWFZ1T0lwQVZib2w5ZEIvUkNpVG5WeUNnOU15bXZOVHRBQkE9PQo=",
-        "size": 2968061
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.23_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmxOanEwZDJQN3ZDeG5nSTJ2SVYrYnJhOUkyUGF4bEFYckYrMVpqc3N1bmppQi9xcUl0Rm9KMEphc3d3dEJFTW1WOVVHQkVJSm50Y0w2QWJxSXNoSmdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTQ4NTg0CWZpbGU6SGluZ2VMYWJfMS4wLjIzX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjMKemZIMW5icHdEQVRieEhKUTUzekk1T1BtYnpHazBXamNRbm9GaXlpVkg0QlAyQTlRZ08yaThWYnorZHpoMUNqOHM3Q212YmE0YkVmWXV2M2ZzUXZhREE9PQo=",
+        "size": 2967657
       }
     }
   }
