@@ -2,7 +2,9 @@
 
 import { useRef } from "react";
 import { RotateCcw } from "lucide-react";
-import { DEFAULTS, MATERIALS, type Params } from "@/lib/hinge";
+import { DEFAULTS, type Params } from "@/lib/hinge";
+import type { MaterialInfo } from "@/lib/materials/library";
+import { MaterialPicker } from "@/components/shell/MaterialPicker";
 import { FIELDS, type NumericKey } from "./fields";
 import { NumberField } from "./NumberField";
 import { AnalysisPanel } from "./AnalysisPanel";
@@ -66,9 +68,11 @@ export function Sec({ title, meta, startOpen, onReset, children }: {
 
 export function PanelDock({
   params, model, error, units, dimsMeta, patMeta,
-  onLive, onCommit, onMaterial, onSplit, onCutStyle, onAutoFit, onTestStrip,
+  onLive, onCommit, onMaterial, onPatch, onSplit, onCutStyle, onAutoFit, onTestStrip,
   onVis, onExp, onLabels, onResetSection, sheet, checks,
 }: {
+  /** Several settings at once, as one undo step. */
+  onPatch: (next: Params) => void;
   /** The checks list with its fixes (under Bend Analysis). */
   checks?: React.ReactNode;
   params: Params;
@@ -79,7 +83,7 @@ export function PanelDock({
   patMeta: string;
   onLive: (id: NumericKey, v: number, mat?: boolean) => void;
   onCommit: (id: NumericKey, v: number, mat?: boolean) => void;
-  onMaterial: (id: string) => void;
+  onMaterial: (id: string, info: MaterialInfo | null) => void;
   onSplit: (n: number) => void;
   onCutStyle: (v: CutStyle) => void;
   onAutoFit: () => void;
@@ -94,8 +98,8 @@ export function PanelDock({
     <NumberField
       key={f.id}
       field={f}
-      value={params[f.id]}
-      defaultValue={DEFAULTS[f.id]}
+      value={params[f.id] ?? f.unset?.(params) ?? 0}
+      defaultValue={DEFAULTS[f.id] ?? f.unset?.(params)}
       units={units}
       label={f.lab ? f.lab(params) : f.label}
       hidden={f.show ? !f.show(params) : false}
@@ -109,11 +113,23 @@ export function PanelDock({
 
         <div className="grid2">{fields("secDims")}</div>
       </Sec>
-      <Sec title="Material" startOpen onReset={() => onResetSection("Material", ["material", "T", "K"])}>
-        <select className="sel" aria-label="Material preset" value={params.material} onChange={(e) => onMaterial(e.target.value)}>
-          {Object.entries(MATERIALS).map(([k, m]) => <option key={k} value={k}>{m.name}</option>)}
-        </select>
+      <Sec title="Material" startOpen onReset={() => onResetSection("Material", ["material", "T", "K", "Ky", "gamma", "minFeature"])}>
+        <MaterialPicker
+          value={params.material} units={units} onPick={onMaterial}
+          current={{ T: params.T, kx: params.K, ky: params.Ky ?? params.K, minFeature: params.minFeature ?? 0 }}
+        />
         <div className="grid2">{fields("secMat")}</div>
+        <label className="chk" title="For a machine that cuts wider along one axis: measure both with the Test Cards generator">
+          <input
+            type="checkbox" checked={params.Ky != null}
+            onChange={(e) => {
+              const next: Params = { ...params };
+              if (e.target.checked) next.Ky = params.K;
+              else delete next.Ky;
+              onPatch(next);
+            }}
+          /> Separate X and Y kerf
+        </label>
       </Sec>
       <Sec title="Hinge Pattern" meta={patMeta} startOpen onReset={() => onResetSection("Hinge pattern", ["pattern", "cutStyle", "slotW", "slit", "bridge", "pitch", "overrun", "stretch"])}>
         <div className="rowlabel">Cut style</div>
@@ -144,6 +160,24 @@ export function PanelDock({
           <button type="button" aria-pressed={params.split === 2} onClick={() => onSplit(2)}>Two halves</button>
         </div>
         <p className="note">Two halves fits long walls on small beds. Seams land in the middle of flat sides.</p>
+      </Sec>
+      <Sec title="Lid" onReset={() => onResetSection("Lid", ["lidOver", "lidHole", "lidHoleD", "lidLip"])}>
+        <div className="grid2">{fields("secLid")}</div>
+        <div className="rowlabel">Hole</div>
+        <div className="iconseg" role="group" aria-label="Lid hole">
+          {([["none", "None"], ["finger", "Finger"], ["knob", "Knob"]] as const).map(([v, text]) => (
+            <button
+              key={v} type="button" aria-pressed={(params.lidHole ?? "none") === v}
+              onClick={() => { const next: Params = { ...params, lidHole: v }; delete next.lidHoleD; onPatch(next); }}
+            >{text}</button>
+          ))}
+        </div>
+        {params.lid === "removable" && (
+          <label className="chk" title="A second plate under the lid that sits inside the walls and keeps it in place">
+            <input type="checkbox" checked={params.lidLip !== false} onChange={(e) => onPatch({ ...params, lidLip: e.target.checked })} /> Lip under the lid
+          </label>
+        )}
+        <p className="note">Overhang makes a flat top wider than the box. A finger hole lifts a removable lid; a knob hole takes a knob&apos;s screw.</p>
       </Sec>
       <Sec title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
         <LayersPanel layers={params.layers} labels={params.labels} onVis={onVis} onExp={onExp} onLabels={onLabels} />

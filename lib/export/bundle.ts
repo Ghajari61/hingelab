@@ -6,6 +6,7 @@
 import { strToU8, zipSync } from "fflate";
 import { svgToDXF } from "./dxf";
 import { sceneLBRN } from "./lbrn2";
+import type { LaserOp, LaserSetting } from "@/lib/materials/library";
 import { scenePDF } from "./pdfVector";
 import { FORMAT_INFO, HAIRLINE_MM, type ExportSettings, type Rect } from "./profiles";
 import { readScene } from "./scene";
@@ -21,7 +22,10 @@ export interface ExportResult {
   notes: string[];
 }
 
-export function makeExport(svg: string, sheets: Rect[] | null | undefined, s: ExportSettings, base: string): ExportResult {
+/** The user's own laser settings for the LightBurn file, and the material they belong to. */
+export interface LaserFromMaterial { name: string; laser: Partial<Record<LaserOp, LaserSetting>> }
+
+export function makeExport(svg: string, sheets: Rect[] | null | undefined, s: ExportSettings, base: string, mat?: LaserFromMaterial): ExportResult {
   const fmt = FORMAT_INFO[s.format];
   const notes: string[] = [];
   const plain = !s.mirror && !s.hairline;
@@ -35,7 +39,7 @@ export function makeExport(svg: string, sheets: Rect[] | null | undefined, s: Ex
   const places: Place[] = split ? rects.map((_, i) => sheetPlace(i)) : [whole];
   const svgOf = (pl: Place) => (pl.sheet === null && plain ? svg : sceneSVG(scene, rects, pl, { hairline: s.hairline ? HAIRLINE_MM : undefined }));
   const files: ExportFile[] = [];
-  let skipped = 0;
+  let skipped = 0, set = 0;
 
   if (s.format === "pdf") {
     // One PDF, a page per sheet; with "one file per sheet", one PDF per sheet.
@@ -53,13 +57,15 @@ export function makeExport(svg: string, sheets: Rect[] | null | undefined, s: Ex
         skipped += r.skipped;
         files.push({ name, data: r.dxf, mime: fmt.mime });
       } else {
-        const r = sceneLBRN(scene, rects, pl);
+        const r = sceneLBRN(scene, rects, pl, mat?.laser);
         skipped += r.skipped;
+        set = Math.max(set, r.set);
         files.push({ name, data: r.xml, mime: fmt.mime });
       }
     });
     if (skipped && s.format === "dxf") notes.push("Pictures cannot go into a DXF: engrave them from the SVG.");
     if (skipped && s.format === "lbrn2") notes.push("Text and pictures are not in the LightBurn file: import the SVG into LightBurn for those.");
+    if (set && mat) notes.push(`Your laser settings for “${mat.name}” are in the LightBurn file. Check them in LightBurn before you cut.`);
   }
   if (!split && rects.length > 1 && s.format !== "pdf") notes.push(`The ${rects.length} sheets are stacked in one file. Choose One file per sheet to cut them one at a time.`);
   if (files.length === 1) return { file: files[0], count: 1, notes };

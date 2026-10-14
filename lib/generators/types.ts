@@ -79,9 +79,21 @@ export interface SheetExtras {
   labels: boolean;
   /** Sets of parts to cut (an array of the whole design, packed together). */
   copies: number;
+  /** Kerf differs by axis: `K` is across cuts along Y, `kerfY` across cuts along X (missing in old saves: off). */
+  kerfXY?: boolean;
+  kerfY?: number;
+  /** Narrowest bar the material holds, mm; parts with thinner features are flagged (0: no check). */
+  minFeature?: number;
 }
 
+/** What a save without sheet extras means. */
 export const SHEET_EXTRAS: SheetExtras = { nest: "box", calibration: false, labels: false, copies: 1 };
+/** A new design's sheet extras: every key, so merging a save keeps the material ones. */
+export const SHEET_DEFAULTS: Required<SheetExtras> = { ...SHEET_EXTRAS, kerfXY: false, kerfY: 0.15, minFeature: 0 };
+export const MAX_KERF = 2;
+/** Only a guard against hand-made requests: no laser cuts anywhere near this thick. */
+export const MAX_THICKNESS = 100;
+export const MAX_FEATURE = 50;
 export const MAX_COPIES = 50;
 
 /** One flat part, in its own frame: mm, y down. Geometry is nominal; the shell applies the kerf. */
@@ -102,6 +114,10 @@ export interface GenPart {
   images?: GenImage[];
   /** The pieces the cuts make (puzzles): drawn separately in 3D. */
   pieces?: Contour[];
+  /** The geometry is already kerf-compensated (test cards cut each tooth with its own kerf): the shell leaves it. */
+  ownKerf?: boolean;
+  /** Keep the part upright when nesting by outline (its X and Y are what it measures). */
+  upright?: boolean;
   /**
    * Where the part sits when assembled (3D): its frame is moved by (x, y), lifted to z, turned rot° in
    * its plane. Upright parts stand on edge: their frame's y points down from height -y, they sit at
@@ -142,6 +158,15 @@ export interface GenOutput {
   materials?: { main: string; second: string; secondK?: number };
   /** The parts are flat layers stacked face to face (thumbnails draw only what shows from the front). */
   stacked?: boolean;
+}
+
+/** Values a test card measured, to save into the design's material. */
+export interface GenMeasured {
+  T?: number;
+  kx?: number;
+  ky?: number;
+  /** What was measured, one sentence. */
+  note: string;
 }
 
 /** Glyph outlines for a string, centred on (0, 0), y down; `height` is the cap height in mm. */
@@ -285,6 +310,8 @@ export interface GeneratorDef<P extends GenBase> {
   art?(key: string, value: string): { d: string; fill?: boolean }[];
   /** The params a rail card renders for a choice key (simpler than the defaults, so the cards differ clearly). */
   railPreview?(key: string, p: P, value: string): P;
+  /** What the design measured (test cards), offered as "Save to my material"; null until the user picks a result. */
+  measured?(p: P): GenMeasured | null;
   /** File name without extension. */
   fileName(p: P): string;
   /** One line under the title, e.g. "Clock · 300 mm · Roman". */

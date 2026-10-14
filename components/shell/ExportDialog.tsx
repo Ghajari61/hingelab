@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Download } from "lucide-react";
 import type { Units } from "@/components/editor/format";
-import { makeExport, type ExportFile } from "@/lib/export/bundle";
+import { makeExport, type ExportFile, type LaserFromMaterial } from "@/lib/export/bundle";
+import { loadMaterials } from "@/lib/materials/library";
 import { bedOf, CUSTOM_MACHINE, defaultExport, EXPORT_FORMATS, FORMAT_INFO, loadExport, overBed, saveExport, type ExportSettings, type Rect } from "@/lib/export/profiles";
 import { MACHINE_PROFILES } from "@/lib/studio/library";
 import { loadPrefs } from "@/lib/studio/prefs";
@@ -25,7 +26,9 @@ function download(f: ExportFile) {
  * sheets), SVG, DXF, PDF or a LightBurn project, every sheet in one file or one file per sheet, a
  * mirrored copy and hairline strokes. The files are made from the same SVG the editor exports.
  */
-export default function ExportDialog({ getSVG, sheets, size, base, units, onClose, toast }: {
+export default function ExportDialog({ getSVG, sheets, size, base, units, material, onClose, toast }: {
+  /** The design's material id: the user's own laser settings for it go into a LightBurn file. */
+  material?: string;
   /** The design's SVG, or null when it cannot be exported (the editor has said why). */
   getSVG: () => Promise<string | null>;
   sheets: Rect[] | null | undefined;
@@ -38,6 +41,10 @@ export default function ExportDialog({ getSVG, sheets, size, base, units, onClos
 }) {
   const [s, setS] = useState<ExportSettings>(() => loadExport(loadPrefs().machineId));
   const [busy, setBusy] = useState(false);
+  const [mat] = useState<LaserFromMaterial | undefined>(() => {
+    const m = material ? loadMaterials().find((x) => x.id === material) : undefined;
+    return m && Object.keys(m.laser).length ? { name: m.name, laser: m.laser } : undefined;
+  });
   const ref = useRef<HTMLDivElement>(null);
   const upd = (p: Partial<ExportSettings>) => setS((o) => ({ ...o, ...p }));
   const close = useRef(onClose);
@@ -67,7 +74,7 @@ export default function ExportDialog({ getSVG, sheets, size, base, units, onClos
     try {
       const svg = await getSVG();
       if (!svg) return;
-      const r = makeExport(svg, sheets, s, base);
+      const r = makeExport(svg, sheets, s, base, mat);
       download(r.file);
       saveExport(s);
       toast(`Downloading ${r.file.name}${r.count > 1 ? ` (${r.count} files)` : ""}`);
@@ -133,7 +140,11 @@ export default function ExportDialog({ getSVG, sheets, size, base, units, onClos
             )}
           </div>
 
-          <p className="exp-note">Files are made on your device. Laser power and speed are not set: use your own tested settings for each layer.</p>
+          <p className="exp-note">
+            {s.format === "lbrn2" && mat
+              ? `Files are made on your device. The LightBurn file carries the speed, power and passes you saved for “${mat.name}”; layers without your settings keep LightBurn's own.`
+              : "Files are made on your device. Laser power and speed are not set: use your own tested settings for each layer."}
+          </p>
           <div className="rename-row">
             <button type="button" className="btn-ghost-sm" onClick={onClose}>Cancel</button>
             <button type="button" className="btn-export" disabled={busy} onClick={() => void run()}><Download size={16} aria-hidden />{action}</button>

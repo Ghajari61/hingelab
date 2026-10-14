@@ -4,7 +4,8 @@ export type Point = [number, number];
 
 export type Shape = "rect" | "pill" | "poly" | "cyl";
 export type Lid = "open" | "fixed" | "removable";
-export type Pattern = "straight" | "wave" | "relief" | "serpentine";
+export type Pattern = "straight" | "wave" | "relief" | "serpentine" | "honeycomb";
+export type LidHole = "none" | "finger" | "knob";
 export type CutStyle = "slot" | "line";
 
 export interface LayerFlags {
@@ -26,7 +27,14 @@ export interface Params {
   cylFlats: number;
   material: string;
   T: number;
+  /** Kerf, mm; with `Ky` it is the kerf across cuts that run along Y (vertical edges). */
   K: number;
+  /** Kerf across cuts that run along X, when the machine's axes cut differently (missing: same as K). */
+  Ky?: number;
+  /** Hinge stiffness of a material that is not built in (the user's own); built-ins use their table value. */
+  gamma?: number;
+  /** Narrowest bar the material holds, mm (missing: 0.9 mm, the general rule). */
+  minFeature?: number;
   cutStyle: CutStyle;
   slotW: number;
   slit: number;
@@ -37,6 +45,14 @@ export interface Params {
   tabW: number;
   slotClr: number;
   lidGap: number;
+  /** The lid overhangs the walls by this much, mm (missing: 0). */
+  lidOver?: number;
+  /** A hole through the middle of a removable lid: to lift it with a finger or to fix a knob (missing: none). */
+  lidHole?: LidHole;
+  /** That hole's diameter, mm. */
+  lidHoleD?: number;
+  /** A removable lid has a lip under it that drops inside the walls (missing: true). */
+  lidLip?: boolean;
   split: number;
   bedW: number;
   bedH: number;
@@ -102,7 +118,12 @@ export interface WallPart {
 export interface PlatePart {
   kind: "plate";
   name: string;
+  /** Corner radius of the outline; with `ek` it is before kerf. */
   r: number;
+  /** Kerf across vertical and horizontal edges when they differ: the outline grows by that ellipse. */
+  ek?: [number, number];
+  /** Radius of the centred finger or knob hole, when there is one (the label moves below it). */
+  hole?: number;
   edges: Edge[];
   slots: Point[][];
   bbox: BBox;

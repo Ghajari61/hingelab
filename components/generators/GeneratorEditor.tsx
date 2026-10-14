@@ -2,7 +2,8 @@
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { MATERIALS, type LayerKey } from "@/lib/hinge";
+import type { LayerKey } from "@/lib/hinge";
+import { genWithMaterial } from "@/lib/materials/apply";
 import type { HarfBuzz, LoadedFont } from "@/lib/letters/fonts";
 import { useHistory } from "@/hooks/useHistory";
 import { readStored, useAutosave } from "@/hooks/useAutosave";
@@ -534,12 +535,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
             layerKeys={layerKeys}
             onSet={setField}
             onApply={(next) => replace(next, true)}
-            onMaterial={(mid) => {
-              const m = MATERIALS[mid];
-              const next: P = { ...params, material: mid };
-              if (m && m.T != null && m.K != null) { next.T = m.T; next.K = m.K; }
-              replace(next, true);
-            }}
+            onMaterial={(mid, info) => replace(genWithMaterial(params, mid, info), true)}
             onResetSection={resetSection}
             sheet={sheetProps}
             checks={<IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} />}
@@ -567,7 +563,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       {exporting && (
         <ExportDialog
           getSVG={exportedSVG} sheets={arranged.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
-          base={def.fileName(built)} units={units} onClose={() => setExporting(false)} toast={toastMsg}
+          base={def.fileName(built)} units={units} material={params.material} onClose={() => setExporting(false)} toast={toastMsg}
         />
       )}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}

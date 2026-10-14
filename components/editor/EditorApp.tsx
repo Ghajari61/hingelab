@@ -2,10 +2,11 @@
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
-  autoFit, clone, DEFAULTS, exportSVG, layerContent, MATERIALS, mergeParams,
+  autoFit, clone, cutWidth, DEFAULTS, exportSVG, layerContent, mergeParams, withFittedLattice,
   type CutStyle, type LayerContent, type Layout, type Model, type Params,
 } from "@/lib/hinge";
 import { arrangeHinge } from "@/lib/fit/hinge";
+import { hingeWithMaterial } from "@/lib/materials/apply";
 import { usedArea, usedText } from "@/lib/fit/arrange";
 import { autoFixAll, type Fix } from "@/lib/issues";
 import { explainHingeError, hingeIssues } from "@/lib/issues/hinge";
@@ -170,6 +171,20 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   function setChoice(key: "shape" | "lid" | "pattern" | "cutStyle", value: string) {
     const next: Params = { ...params, [key]: value };
     if (key === "shape" && value === "pill") next.R = Math.min(next.W, next.D) / 2;
+    // Honeycomb takes its cell width from the slot width, so it starts from a fitted lattice instead.
+    if (key === "pattern" && value === "honeycomb" && params.pattern !== "honeycomb") {
+      const wall = Math.max(0.9, 0.35 * next.T, next.minFeature ?? 0);
+      next.slotW = Math.round((2 * next.pitch - wall) * 100) / 100;
+      if (model) {
+        const res = autoFit(next, model.hBody, model.rN);
+        if (res.ok) Object.assign(next, withFittedLattice(next, res.q));
+      }
+    }
+    // Its cells are far wider than any slot, so leaving it goes back to the default slot width.
+    if (key === "pattern" && value !== "honeycomb" && params.pattern === "honeycomb") {
+      next.slotW = DEFAULTS.slotW;
+      if (next.pitch <= cutWidth(next) + 0.3) next.pitch = DEFAULTS.pitch;
+    }
     patch(next, true);
     if ((key === "shape" || key === "pattern") && hingeLocks(account.plan, next).length > locks.length) {
       toastMsg("Pro feature: preview it freely. Export and cloud save need Pro.");
@@ -270,18 +285,22 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   function runAutoFit() {
     if (!model) { toastMsg("Fix the settings first"); return; }
     const res = autoFit(params, model.hBody, model.rN);
-    const next: Params = { ...params, pitch: res.q.pitch, bridge: res.q.bridge };
-    if (next.pattern !== "serpentine") next.slit = res.q.slit;
+    const next = withFittedLattice(params, res.q);
     patch(next, true);
     toastMsg(res.ok
-      ? `Fitted: spacing ${fmtLen(next.pitch, units, true)}, bridge ${fmtLen(next.bridge, units, true)}${next.pattern !== "serpentine" ? `, slit ${fmtLen(next.slit, units, true)}` : ""}`
+      ? next.pattern === "honeycomb"
+        ? `Fitted: spacing ${fmtLen(next.pitch, units, true)}, cell width ${fmtLen(next.slotW, units, true)}`
+        : `Fitted: spacing ${fmtLen(next.pitch, units, true)}, bridge ${fmtLen(next.bridge, units, true)}${next.pattern !== "serpentine" ? `, slit ${fmtLen(next.slit, units, true)}` : ""}`
       : "No lattice reaches this radius safely. Try Serpentine or a larger corner radius.");
   }
 
   function resetSection(title: string, keys: (keyof Params)[]) {
     const next = { ...params };
     const def = clone(DEFAULTS);
-    for (const k of keys) (next as Record<keyof Params, unknown>)[k] = def[k];
+    for (const k of keys) {
+      if (def[k] === undefined) delete next[k];
+      else (next as Record<keyof Params, unknown>)[k] = def[k];
+    }
     patch(next, true);
     toastMsg(`${title} reset. Ctrl+Z undoes it.`);
   }
@@ -468,12 +487,8 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
           patMeta={meta.pat}
           onLive={(id, v, mat) => setField(id, v, mat, false)}
           onCommit={(id, v, mat) => setField(id, v, mat, true)}
-          onMaterial={(id) => {
-            const m = MATERIALS[id];
-            const next: Params = { ...params, material: id };
-            if (m && m.T != null && m.K != null) { next.T = m.T; next.K = m.K; }
-            patch(next, true);
-          }}
+          onMaterial={(id, info) => patch(hingeWithMaterial(params, id, info), true)}
+          onPatch={(next) => patch(next, true)}
           onSplit={(n) => patch({ ...params, split: n }, true)}
           onCutStyle={(v: CutStyle) => setChoice("cutStyle", v)}
           onAutoFit={runAutoFit}
@@ -514,7 +529,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
       {exporting && (
         <ExportDialog
           getSVG={exportedSVG} sheets={arranged.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
-          base={baseName(built)} units={units} onClose={() => setExporting(false)} toast={toastMsg}
+          base={baseName(built)} units={units} material={params.material} onClose={() => setExporting(false)} toast={toastMsg}
         />
       )}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}

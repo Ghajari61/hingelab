@@ -19,7 +19,7 @@ export const FREE_SHAPES: readonly Params["shape"][] = ["rect"];
 export const FREE_PATTERNS: readonly Params["pattern"][] = ["straight"];
 
 export const SHAPE_NAMES: Record<Params["shape"], string> = { rect: "Rounded", pill: "Pill", poly: "Polygon", cyl: "Cylinder" };
-export const PATTERN_NAMES: Record<Params["pattern"], string> = { straight: "Straight", wave: "Wave", relief: "Relief", serpentine: "Serpentine" };
+export const PATTERN_NAMES: Record<Params["pattern"], string> = { straight: "Straight", wave: "Wave", relief: "Relief", serpentine: "Serpentine", honeycomb: "Honeycomb" };
 
 /** Rows of the pricing table (landing page and upgrade dialog). */
 export const PLAN_ROWS: { feature: string; free: string; pro: string }[] = [
@@ -35,7 +35,7 @@ export const PRO_BENEFITS = [
   "Clean SVG export, no mark",
   "Unlimited cloud projects",
   "Pill, polygon and cylinder boxes",
-  "Wave, relief and serpentine hinges",
+  "Wave, relief, serpentine and honeycomb hinges",
   "Letters and every future tool",
   "Parametric sculptures from your own 3D files and photos",
 ];

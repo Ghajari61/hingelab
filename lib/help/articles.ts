@@ -205,15 +205,22 @@ export const ARTICLES: HelpArticle[] = [
   {
     slug: "material-and-kerf", product: "general", title: "Material, thickness and kerf",
     summary: "Pick a material preset, then measure your real sheet thickness and your laser's kerf.",
-    keywords: ["kerf", "thickness", "plywood", "mdf", "acrylic", "calibration", "material"],
+    keywords: ["kerf", "thickness", "plywood", "mdf", "acrylic", "calibration", "material", "my materials", "kerf x", "kerf y", "min feature", "lightburn settings"],
     fields: [{ product: "hinge", secs: ["secMat"], alsoFor: ["letters"] }],
     blocks: [
       { p: "Material presets fill in a typical thickness and kerf, and pick how the 3D view looks (plywood, MDF, card or acrylic). Changing either number switches the preset to Custom." },
-      { h: "Measure your thickness", p: "Measure the sheet with calipers in a few places. Sheet sold as 3 mm is often 2.7 to 3.2 mm, and slots cut for the wrong thickness are loose or will not close." },
+      { h: "Measure your thickness", p: "Measure the sheet with calipers in a few places, or cut a thickness card with the Test Cards generator. Sheet sold as 3 mm is often 2.7 to 3.2 mm, and slots cut for the wrong thickness are loose or will not close." },
       { h: "Measure your kerf", list: [
-        "Cut a 20 mm square and measure it with calipers.",
-        "Kerf is 20 minus the measured size. For example, a 19.84 mm square means a 0.16 mm kerf.",
+        "Cut a kerf test card with the Test Cards generator: the comb tooth that fits its gauge slot snugly gives your kerf.",
+        "Or cut a 20 mm square and measure it with calipers: kerf is 20 minus the measured size, so a 19.84 mm square means a 0.16 mm kerf.",
         "HingeLab offsets every outline by half the kerf, so parts come out at their true size and joints fit.",
+      ] },
+      { h: "Separate X and Y kerf", p: "Some machines cut wider along one axis. Tick Separate X and Y kerf and enter both: Kerf X is across cuts that run up and down the sheet, Kerf Y across cuts that run left to right. A kerf card with both combs measures them." },
+      { h: "My materials", list: [
+        "Manage materials… at the bottom of the material list keeps your own sheets: thickness, kerf X and Y, the narrowest feature it holds and what it bends like.",
+        "Save to my material on a test card writes what you measured straight into one.",
+        "Add your own tested speed, power and passes for cut, score and engrave: a LightBurn export then carries them. HingeLab never suggests laser settings.",
+        "Your materials stay on this device. Export them as a file to use them on another computer.",
       ] },
     ],
     related: ["box-joints", "hinge-pattern", "parametric-material"],
@@ -351,12 +358,13 @@ export const ARTICLES: HelpArticle[] = [
   {
     slug: "hinge-pattern", product: "hinge", title: "Hinge pattern",
     summary: "How the living hinge is cut: the pattern, the cut style and the size of every slit and bar.",
-    keywords: ["living hinge", "slit", "bridge", "spacing", "lattice", "wave", "relief", "serpentine", "auto-fit", "kerf bending"],
+    keywords: ["living hinge", "slit", "bridge", "spacing", "lattice", "wave", "relief", "serpentine", "honeycomb", "hexagon", "auto-fit", "kerf bending"],
     images: [
       svg("pattern-straight", "Straight hinge close-up", "Straight: the classic lattice"),
       svg("pattern-wave", "Wave hinge close-up", "Wave: parallel waves"),
       svg("pattern-relief", "Relief hinge close-up", "Relief: round holes at the cut ends"),
       svg("pattern-serpentine", "Serpentine hinge close-up", "Serpentine: cuts from alternate edges"),
+      svg("pattern-honeycomb", "Honeycomb hinge close-up", "Honeycomb: nested hexagon cells"),
     ],
     fields: [{ product: "hinge", secs: ["secHinge"], alsoFor: ["letters"] }],
     blocks: [
@@ -366,6 +374,7 @@ export const ARTICLES: HelpArticle[] = [
         "Wave: every cut is a parallel copy of the same wave, so bars keep one width. A little softer than Straight, and it hides the slits.",
         "Relief: Straight with a small round hole at every cut end, which spreads stress and resists cracking in brittle sheet such as MDF.",
         "Serpentine: cuts run in from alternate edges, turning the wall into a spring. Bends very tightly but stretches, so glue the wall.",
+        "Honeycomb: columns of hexagon cells, each column nested half a cell down from the last. Cell width sets the hexagons and Spacing the distance between columns; the walls between them are what bends. Stiffer than Straight, so it suits large corner radii: auto-fit or the radius fix finds a pair that bends.",
       ] },
       { h: "Cut style", list: [
         "Slots: each cut is a round-ended slot of set width. Best for thick or stiff sheet.",
@@ -406,6 +415,20 @@ export const ARTICLES: HelpArticle[] = [
       ] },
     ],
     related: ["material-and-kerf", "sheet-and-fit"],
+  },
+  {
+    slug: "hinge-lid", product: "hinge", title: "Lid options",
+    summary: "A flat top wider than the box, a finger or knob hole, and the lip under a removable lid.",
+    keywords: ["lid", "overhang", "flat top", "finger hole", "knob", "lip", "removable"],
+    fields: [{ product: "hinge", secs: ["secLid"] }],
+    blocks: [
+      { list: [
+        "Overhang: the lid reaches this far past the walls all round, so a flat top has an edge to lift by. 0 keeps it flush with the box.",
+        "Hole: a finger hole (about 22 mm) to lift a removable lid, or a knob hole sized for your knob's screw. A hole too big for the lid is left out, and Checks says so.",
+        "Lip under the lid (removable lids): a second plate that sits inside the walls and keeps the lid in place. Turn it off for a lid that simply rests on top.",
+      ] },
+    ],
+    related: ["box-joints", "hinge-dimensions"],
   },
   {
     slug: "hinge-tips", product: "hinge", title: "Tips for the Hinge Box",

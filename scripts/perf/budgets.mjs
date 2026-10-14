@@ -18,7 +18,8 @@ const PAGE_BUDGET = 250;
  */
 const LAZY_BUDGETS = {
   // Every editor's sheet grid, typed sums and units, and the rail's search and favourites (D159): 150 → 154 KB.
-  "Editor shell + Hinge Box": { key: /EditorRoot\.tsx -> \.\/Workspace$/, kb: 154 },
+  // The honeycomb pattern, lid options, kerf Y and the material picker (D164): 154 → 160 KB.
+  "Editor shell + Hinge Box": { key: /EditorRoot\.tsx -> \.\/Workspace$/, kb: 160 },
   "Letters editor": { key: /Workspace\.tsx -> @\/components\/letters\/LettersEditor$/, kb: 145 },
   "Parametric editor": { key: /Workspace\.tsx -> @\/components\/parametric\/ParametricEditor$/, kb: 330 },
   "3D view (three.js)": { key: /EditorApp\.tsx -> \.\/HingeView3D$/, kb: 195 },
@@ -38,6 +39,7 @@ const LAZY_BUDGETS = {
   // The enclosure (D162): light box, back, keyholes and feet, and finger-jointed walls from the Boxes
   // joint code, which now sits in a chunk shared with Boxes, 40 → 45 KB.
   "Shadow Box generator": { key: /registry\.ts -> \.\/shadowbox$/, kb: 45 },
+  "Test Cards generator": { key: /registry\.ts -> \.\/testcard$/, kb: 10 },
 };
 
 const gz = new Map();

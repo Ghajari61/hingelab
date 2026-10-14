@@ -540,10 +540,10 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
           onAutoFit={runAutoFit}
           onPatch={patch}
           onField={setField}
-          onMaterial={(id) => {
-            const m = MATERIALS[id];
+          onMaterial={(id, info) => {
             const next: Partial<LetterParams> = { material: id };
-            if (m && m.T != null && m.K != null) { next.T = m.T; next.K = m.K; }
+            if (info?.T != null) next.T = info.T;
+            if (info?.kx != null) next.K = info.kx;
             patch(next, true);
           }}
           onPick={(id) => patch({ fontId: id }, true)}
@@ -576,7 +576,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
       {exporting && (
         <ExportDialog
           getSVG={exportedSVG} sheets={arranged?.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
-          base={baseName(built)} units={units} onClose={() => setExporting(false)} toast={toastMsg}
+          base={baseName(built)} units={units} material={params.material} onClose={() => setExporting(false)} toast={toastMsg}
         />
       )}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}

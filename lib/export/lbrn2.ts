@@ -1,11 +1,12 @@
 /**
  * A LightBurn project (.lbrn2, XML) from a scene: one cut setting per SVG layer, on the LightBurn
  * colour its name or colour matches (00 black, 01 blue, 02 red, 03 green…), in the SVG's cut
- * order, and every outline as a path shape in millimetres with y up. No power or speed is written,
- * so LightBurn uses its own defaults until you set them. Text and pictures are counted as skipped:
- * LightBurn imports them from the SVG.
+ * order, and every outline as a path shape in millimetres with y up. Power, speed and passes are
+ * written only from the user's own material settings; otherwise LightBurn uses its defaults. Text
+ * and pictures are counted as skipped: LightBurn imports them from the SVG.
  */
 import { nearestLayer } from "@/lib/studio/cutLayers";
+import type { LaserOp, LaserSetting } from "@/lib/materials/library";
 import type { Rect } from "./profiles";
 import type { Scene } from "./scene";
 import { itemsOn, placePoint, type Place } from "./sheets";
@@ -19,20 +20,30 @@ export function cutIndex(label: string, color: string): number {
   return m && +m[1] < 30 ? +m[1] : nearestLayer(color);
 }
 
-export interface LbrnResult { xml: string; shapes: number; skipped: number }
+export interface LbrnResult { xml: string; shapes: number; skipped: number; /** Layers given the user's laser settings. */ set: number }
 
-export function sceneLBRN(scene: Scene, rects: Rect[], pl: Place): LbrnResult {
+/** Which of the user's laser settings an SVG layer takes: fills engrave, score and mark lines score. */
+export function layerOp(label: string, fill: boolean): LaserOp {
+  if (fill || /engrav|raster|image|photo/i.test(label)) return "engrave";
+  if (/score|mark|fold|label/i.test(label)) return "score";
+  return "cut";
+}
+
+export function sceneLBRN(scene: Scene, rects: Rect[], pl: Place, laser: Partial<Record<LaserOp, LaserSetting>> = {}): LbrnResult {
   const H = pl.rect.h;
   const settings: string[] = [];
   const shapes: string[] = [];
   const used = new Set<number>();
-  let skipped = 0, priority = 0;
+  let skipped = 0, priority = 0, set = 0;
   for (const { layer, items } of itemsOn(scene, rects, pl.sheet)) {
     if (!items.length) continue;
     const idx = cutIndex(layer.label, layer.color);
     if (!used.has(idx)) {
       used.add(idx);
-      settings.push(`    <CutSetting type="${layer.fill ? "Scan" : "Cut"}">\n        <index Value="${idx}"/>\n        <name Value="${esc(layer.label || `C${String(idx).padStart(2, "0")}`)}"/>\n        <priority Value="${priority++}"/>\n    </CutSetting>`);
+      const s = laser[layerOp(layer.label, !!layer.fill)];
+      const own = s ? `\n        <speed Value="${f(s.speed)}"/>\n        <maxPower Value="${f(s.power)}"/>\n        <minPower Value="${f(s.power)}"/>\n        <numPasses Value="${Math.round(s.passes)}"/>` : "";
+      if (s) set++;
+      settings.push(`    <CutSetting type="${layer.fill ? "Scan" : "Cut"}">\n        <index Value="${idx}"/>\n        <name Value="${esc(layer.label || `C${String(idx).padStart(2, "0")}`)}"/>\n        <priority Value="${priority++}"/>${own}\n    </CutSetting>`);
     }
     for (const { it, dy } of items) {
       skipped += it.texts.length + it.images.length;
@@ -51,5 +62,5 @@ export function sceneLBRN(scene: Scene, rects: Rect[], pl: Place): LbrnResult {
     }
   }
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<LightBurnProject AppVersion="1.0.00" FormatVersion="1" MaterialHeight="0" MirrorX="False" MirrorY="False">\n${settings.join("\n")}\n${shapes.join("\n")}\n</LightBurnProject>\n`;
-  return { xml, shapes: shapes.length, skipped };
+  return { xml, shapes: shapes.length, skipped, set };
 }

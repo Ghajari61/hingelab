@@ -1,5 +1,5 @@
 import type { ExportLayer, LayerContent, Layers, Layout, Model, Params } from "./types";
-import { roundedPath } from "./core";
+import { roundedPath, roundedPointsXY } from "./core";
 import { polyD } from "./polygon";
 import { colSegments, hingeCutPaths } from "./hinge";
 import { outlinePath } from "./wall";
@@ -24,11 +24,12 @@ export function layerContent(model: Model, lay: Layout, p: Params): LayerContent
       for (const c of pt.cols) L.hinge.push(...hingeCutPaths(c.x, colSegments(c.kind, model.hs, pt.hBody, p.bridge), pt.hBody, p, ox, oy));
       if (pt.label) L.labels.push({ x: pt.label.x + ox, y: pt.label.y + oy, text: pt.name, size: pt.label.vertical ? clamp(pt.hBody / 11, 2.5, 5) : clamp(pt.hBody / 7, 3, 7), rot: pt.label.vertical ? -90 : 0 });
     } else {
-      const d = roundedPath(pt.edges, pt.r, ox, oy);
+      const d = pt.ek ? polyD(roundedPointsXY(pt.edges, pt.r, pt.ek[0], pt.ek[1]), ox, oy) : roundedPath(pt.edges, pt.r, ox, oy);
       L.outline.push(d); L.fills.push(d);
       for (const s of pt.slots) L.slots.push(polyD(s, ox, oy));
       const w = pt.bbox.x1 - pt.bbox.x0, h = pt.bbox.y1 - pt.bbox.y0;
-      L.labels.push({ x: ox, y: oy, text: pt.name, size: clamp(Math.min(w, h) / 9, 3, 8) });
+      const size = clamp(Math.min(w, h) / 9, 3, 8);
+      L.labels.push({ x: ox, y: pt.hole ? oy + pt.hole + size : oy, text: pt.name, size });
     }
   }
   return L;
@@ -38,7 +39,8 @@ export function layerContent(model: Model, lay: Layout, p: Params): LayerContent
 export function exportSVG(model: Model, lay: Layout, p: Params) {
   const LC = layerContent(model, lay, p);
   const m = p.shape === "cyl" ? `cylinder Ø${r3(p.dia)}` : `${r3(p.W)}x${p.shape === "poly" ? p.sides + "-gon" : r3(p.D)}`;
-  const comment = `HingeLab living-hinge box: ${m} x ${r3(p.H)} mm, ${p.lid} lid, ${p.pattern} pattern. Material ${p.T} mm, kerf ${p.K} mm (compensated). Cut order: slots, hinge, outline.`;
+  const kerf = p.Ky != null && p.Ky !== p.K ? `kerf ${p.K} mm across vertical edges and ${p.Ky} mm across horizontal ones` : `kerf ${p.K} mm`;
+  const comment = `HingeLab living-hinge box: ${m} x ${r3(p.H)} mm, ${p.lid} lid, ${p.pattern} pattern. Material ${p.T} mm, ${kerf} (compensated). Cut order: slots, hinge, outline.`;
   return layeredSVG(lay.width, lay.height, comment, LC, p.layers, p.labels);
 }
 

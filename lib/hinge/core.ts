@@ -1,5 +1,6 @@
 import type { Edge, Params, Point } from "./types";
 import { TAU, r3 } from "./util";
+import { kerfPoint } from "@/lib/materials/axes";
 
 /**
  * Convex core whose Minkowski sum with a disk of radius R is the plate outline.
@@ -56,6 +57,21 @@ export function roundedPath(edges: Edge[], r: number, ox = 0, oy = 0) {
     d += ` L${pt(e.p1, e.n)} A${r3(r)},${r3(r)} 0 ${e.sweep > Math.PI ? 1 : 0} 1 ${pt(nx.p0, nx.n)}`;
   });
   return d + " Z";
+}
+
+/**
+ * The rounded core offset by r, then grown by the kerf ellipse (half-axes kx/2, ky/2), as points:
+ * straight sides move out by the cut width across them and each corner follows its normal.
+ */
+export function roundedPointsXY(edges: Edge[], r: number, kx: number, ky: number): Point[] {
+  const out: Point[] = [];
+  const at = (q: Point, n: Point): Point => { const e = kerfPoint(n, kx, ky); return [q[0] + n[0] * r + e[0], q[1] + n[1] * r + e[1]]; };
+  for (const e of edges) {
+    out.push(at(e.p0, e.n), at(e.p1, e.n));
+    const a1 = Math.atan2(e.n[1], e.n[0]), steps = Math.max(2, Math.ceil(e.sweep / (Math.PI / 36)));
+    for (let s = 1; s < steps; s++) { const a = a1 + e.sweep * s / steps; out.push(at(e.p1, [Math.cos(a), Math.sin(a)])); }
+  }
+  return out.filter((q, i) => { const n = out[(i + 1) % out.length]; return Math.hypot(q[0] - n[0], q[1] - n[1]) > 1e-6; });
 }
 
 /** Axis-aligned extent of the rounded outline, sampled along each corner arc. */

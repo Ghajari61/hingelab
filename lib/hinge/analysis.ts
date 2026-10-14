@@ -1,17 +1,19 @@
 /** Bend estimate and the auto-fit search. */
 import type { AutoFitResult, BendResult, Params } from "./types";
 import { MATERIALS } from "./defaults";
-import { cutWidth, hingeSegments } from "./hinge";
+import { barWidth, cutWidth, hingeSegments, honeyLattice } from "./hinge";
 import { r3 } from "./util";
 
 /* Bend estimate from torsion-bar strain. Each bar between two neighbouring cuts twists; the sum of
    the twists over a zone gives the bend. rMin = pitch * barWidth / (1.2 * gamma * barLength). */
 export function bendAnalysis(p: Params, hBody: number, rN: number): BendResult {
-  const mat = MATERIALS[p.material] || MATERIALS.custom;
+  const mat = MATERIALS[p.material] || (p.gamma != null ? { gamma: p.gamma } : MATERIALS.custom);
   const hs = hingeSegments(hBody, p.slit, p.bridge);
-  const barW = Math.min(p.pitch - cutWidth(p), p.T);
+  const barW = Math.min(p.pattern === "honeycomb" ? barWidth(p) : p.pitch - cutWidth(p), p.T);
   let barLen;
   if (p.pattern === "serpentine") barLen = Math.max(0.1, (hBody - 2 * p.bridge) / 2);
+  // Honeycomb (p from honeyLattice): each wall between nested cells twists over about half a cell's height.
+  else if (p.pattern === "honeycomb") barLen = Math.max(0.1, hs.Lp / 2);
   else barLen = Math.max(0.1, (hs.Lp - p.bridge) / 2) * (p.pattern === "wave" ? 1.12 : 1);
   const gamma = mat.gamma * (p.pattern === "relief" ? 1.1 : 1);
   const rMin = (p.pitch * barW) / (1.2 * gamma * barLen);
@@ -22,6 +24,7 @@ export function bendAnalysis(p: Params, hBody: number, rN: number): BendResult {
 /* Auto-fit: search spacing, bridge and slit length for the STIFFEST lattice that still reaches the
    needed radius with a 30% safety margin. Stiffer = fewer cuts, less charring, stronger wall. */
 export function autoFit(p: Params, hBody: number, rN: number): AutoFitResult {
+  if (p.pattern === "honeycomb") return honeyFit(p, hBody, rN);
   const t = p.T;
   let best: { q: Params; a: BendResult } | null = null, fallback: { q: Params; a: BendResult } | null = null;
   const minBar = Math.max(0.9, 0.35 * t);
@@ -38,4 +41,32 @@ export function autoFit(p: Params, hBody: number, rN: number): AutoFitResult {
     }
   }
   return best ? { ok: true, ...best } : { ok: false, ...fallback! };
+}
+
+/* Honeycomb auto-fit: the same search over column spacing and wall thickness (the cell width follows). */
+function honeyFit(p: Params, hBody: number, rN: number): AutoFitResult {
+  const t = p.T;
+  let best: { q: Params; a: BendResult } | null = null, fallback: { q: Params; a: BendResult } | null = null;
+  const minBar = Math.max(0.9, 0.35 * t, p.minFeature ?? 0);
+  for (let pitch = Math.max(0.45 * t, (p.K + 0.6 + minBar) / 2); pitch <= 1.5 * t + minBar + 1e-9; pitch += 0.05 * t) {
+    for (let wall = minBar; wall <= Math.max(minBar, t) + 1e-9; wall += 0.05 * t) {
+      const cell = 2 * pitch - wall;
+      if (cell < p.K + 0.6) continue;
+      const q = honeyLattice({ ...p, pitch: r3(pitch), slotW: r3(cell) });
+      if (hBody < 2 * q.bridge + 6) continue;
+      const a = bendAnalysis(q, hBody, rN);
+      if (!fallback || a.rMin < fallback.a.rMin) fallback = { q, a };
+      if (a.rMin * 1.3 <= rN && (!best || a.rMin > best.a.rMin + 1e-6 || (Math.abs(a.rMin - best.a.rMin) < 0.3 && q.pitch > best.q.pitch))) best = { q, a };
+    }
+  }
+  if (best) return { ok: true, ...best };
+  return { ok: false, ...(fallback ?? { q: p, a: bendAnalysis(honeyLattice(p), hBody, rN) }) };
+}
+
+/** The design with Auto-fit's lattice: spacing, bridge and slit (not for serpentine); spacing and cell width for honeycomb. */
+export function withFittedLattice(p: Params, q: Params): Params {
+  if (p.pattern === "honeycomb") return { ...p, pitch: q.pitch, slotW: q.slotW };
+  const next = { ...p, pitch: q.pitch, bridge: q.bridge };
+  if (p.pattern !== "serpentine") next.slit = q.slit;
+  return next;
 }

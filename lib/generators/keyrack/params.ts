@@ -4,7 +4,7 @@ import { clamp } from "../common";
 import { isMotifId } from "../motifs";
 import { isShapeKind, type ShapeKind } from "../shapes";
 import { SECOND_MATERIALS } from "../material2";
-import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
+import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
 import { TEXT_STYLE, cleanTextStyle, type TextStyle } from "../textStyle";
 import { mergeInto } from "../util";
 
@@ -51,7 +51,7 @@ export const KEYRACK_DEFAULTS: KeyrackParams = {
   bedH: 400,
   gap: 4,
   fit: { ...FIT_OFF },
-  sheet: { ...SHEET_EXTRAS },
+  sheet: { ...SHEET_DEFAULTS },
   job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   board: { shape: "rounded", width: 260, height: 120, corner: 8, frame: false },

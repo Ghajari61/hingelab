@@ -28,10 +28,13 @@ import type { DCatalog, D3Model, DesktopProductId, DField, DForm, DIssue, DProdu
 
 const FONTS_BY_STYLE = FONT_CATEGORIES.flatMap((c) => BUNDLED_FONTS.filter((f) => f.category === c.id));
 
-export const DESKTOP_PRODUCTS: DesktopProductId[] = ["hinge", ...GENERATOR_IDS];
+/** The desktop app's generators: all but the test cards, which save to the web app's material library. */
+type DesktopGenerator = Exclude<GeneratorId, "testcard">;
+const DESKTOP_GENERATORS = GENERATOR_IDS.filter((id): id is DesktopGenerator => id !== "testcard");
+export const DESKTOP_PRODUCTS: DesktopProductId[] = ["hinge", ...DESKTOP_GENERATORS];
 export const CATALOG_VERSION = 1;
 
-export const isDesktopProduct = (v: unknown): v is DesktopProductId => v === "hinge" || isGeneratorId(v);
+export const isDesktopProduct = (v: unknown): v is DesktopProductId => v === "hinge" || (isGeneratorId(v) && v !== "testcard");
 
 const MATERIAL_OPTIONS = Object.entries(MATERIALS).map(([v, m]) => ({ v, text: m.name }));
 
@@ -64,7 +67,7 @@ function hingeProduct(): DProduct {
     ],
     secMat: [{ kind: "choice", key: "material", label: "Material", options: MATERIAL_OPTIONS }],
     secHinge: [
-      { kind: "choice", key: "pattern", label: "Pattern", options: (["straight", "wave", "relief", "serpentine"] as const).map((v) => ({ v, text: PATTERN_NAMES[v], pro: !FREE_PATTERNS.includes(v) })) },
+      { kind: "choice", key: "pattern", label: "Pattern", options: (["straight", "wave", "relief", "serpentine", "honeycomb"] as const).map((v) => ({ v, text: PATTERN_NAMES[v], pro: !FREE_PATTERNS.includes(v) })) },
       { kind: "choice", key: "cutStyle", label: "Cut style", options: [{ v: "slot", text: "Slots" }, { v: "line", text: "Single line" }] },
     ],
   };
@@ -77,7 +80,7 @@ function hingeProduct(): DProduct {
   };
   const sections: DSection[] = HINGE_SECTIONS.map((s) => ({
     id: s.id, title: s.title, help: s.help,
-    fields: [...(extra[s.id] ?? []), ...FIELDS.filter((f) => f.sec === s.id).map(hingeNumber), ...(tail[s.id] ?? [])],
+    fields: [...(extra[s.id] ?? []), ...FIELDS.filter((f) => f.sec === s.id && !f.unset).map(hingeNumber), ...(tail[s.id] ?? [])],
   }));
   const presets = HINGE_PRESETS.map((pr) => ({ id: pr.id, name: pr.name, note: pr.note, pro: hingeLocks("free", hingePresetParams(pr.params)).length > 0 }));
   return { id: "hinge", name: "Hinge Box", blurb: "Living-hinge boxes in rounded, pill, polygon and cylinder shapes, with tabs and a lid.", icon: "box", sections, presets };
@@ -133,8 +136,8 @@ function genField(f: FieldSpec<GenBase>): DField | null {
   }
 }
 
-function genProduct(id: GeneratorId, def: AnyGenerator): DProduct {
-  const info = GENERATOR_INFO[id];
+function genProduct(id: DesktopGenerator, def: AnyGenerator): DProduct {
+  const info = GENERATOR_INFO[id] as { name: string; blurb: string; icon: DProduct["icon"] };
   const sections: DSection[] = def.sections.map((s) => ({ id: s.id, title: s.title, help: s.help, fields: s.fields.map(genField).filter((f): f is DField => !!f) })).filter((s) => s.fields.length);
   return {
     id, name: info.name, blurb: info.blurb, icon: info.icon, sections: [...sections, GEN_SHEET],
@@ -159,7 +162,7 @@ let catalog: Promise<DCatalog> | null = null;
 
 export function desktopCatalog(): Promise<DCatalog> {
   catalog ??= (async () => {
-    const gens = await Promise.all(GENERATOR_IDS.map(async (id) => genProduct(id, await loadGenerator[id]())));
+    const gens = await Promise.all(DESKTOP_GENERATORS.map(async (id) => genProduct(id, await loadGenerator[id]())));
     const { ART_PRODUCT } = await import("./art");
     return { version: CATALOG_VERSION, products: [hingeProduct(), ...gens], art: ART_PRODUCT };
   })();
@@ -380,7 +383,7 @@ export function fileNameOf(name: string, fallback: string): string {
   return `${base || fallback}.svg`;
 }
 
-async function generateGenerator(r: GenerateRequest, id: GeneratorId, product: DProduct, plan: Plan): Promise<GenerateResult> {
+async function generateGenerator(r: GenerateRequest, id: DesktopGenerator, product: DProduct, plan: Plan): Promise<GenerateResult> {
   const def = await loadGenerator[id]();
   let p: GenBase;
   if (typeof r.preset === "string") {

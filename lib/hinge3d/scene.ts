@@ -5,6 +5,7 @@
  */
 import * as THREE from "three";
 import type { Edge, LayerContent, Layout, Model, Params, Point } from "@/lib/hinge";
+import { honeyLattice } from "@/lib/hinge/hinge";
 import { finishScene, flatScene, slab, type FlatPart, type Scene3D } from "@/lib/three/flat";
 
 /** Points around the core at offset r: flat sides plus `perArc` points per quarter turn of corner. */
@@ -88,8 +89,8 @@ function slitLines(edges: Edge[], r: number, z0: number, h: number, pitch: numbe
   return lines;
 }
 
-function plate(edges: Edge[], r: number, z0: number, t: number, name: string, tint: number) {
-  const m = slab(outline(edges, r), [], z0, t, name);
+function plate(edges: Edge[], r: number, z0: number, t: number, name: string, tint: number, holes: Point[][] = []) {
+  const m = slab(outline(edges, r), holes, z0, t, name);
   m.userData.tint = tint;
   return m;
 }
@@ -104,13 +105,18 @@ export function buildHingeScene(model: Model, p: Params, explode = 0): Scene3D {
   inner.add(plate(edges, plateR, 0, t, "base", 0.93));
   const z0 = t + wallLift;
   inner.add(wallBand(edges, R, R - t, z0, hBody));
-  inner.add(slitLines(edges, R + 0.15, z0, hBody, p.pitch, p.bridge));
+  inner.add(slitLines(edges, R + 0.15, z0, hBody, p.pitch, honeyLattice(p).bridge));
   const top = t + hBody;
-  if (p.lid === "fixed") inner.add(plate(edges, plateR, top + lidLift, t, "lid", 1.04));
+  const lidR = plateR + Math.max(0, p.lidOver ?? 0);
+  const lid = model.parts.find((pt) => pt.kind === "plate" && pt.name === "LID");
+  const base = model.parts.find((pt) => pt.kind === "plate" && pt.name === "BASE");
+  // The tabs fill the tab slots, so only the finger or knob hole (after them) shows.
+  const holes = lid?.kind === "plate" ? lid.slots.slice(p.lid === "fixed" && base?.kind === "plate" ? base.slots.length : 0) : [];
+  if (p.lid === "fixed") inner.add(plate(edges, lidR, top + lidLift, t, "lid", 1.04, holes));
   if (p.lid === "removable") {
     const lipR = R - t - p.lidGap + p.K / 2;
-    if (lipR > 0.5) inner.add(plate(edges, lipR, top - t + lidLift, t, "lid lip", 0.86));
-    inner.add(plate(edges, plateR, top + lidLift, t, "lid", 1.04));
+    if (lipR > 0.5 && p.lidLip !== false) inner.add(plate(edges, lipR, top - t + lidLift, t, "lid lip", 0.86, holes));
+    inner.add(plate(edges, lidR, top + lidLift, t, "lid", 1.04, holes));
   }
   return finishScene(inner);
 }

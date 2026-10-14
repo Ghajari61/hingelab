@@ -5,10 +5,10 @@ export { buildCore, roundedPath, plateExtent } from "./core";
 export { simplify, offsetRect, polyD, bboxOf } from "./polygon";
 export {
   hingeSegments, makeCols, colSegments, waveParams, reliefRadius, slitPaths,
-  cutWidth, mergesEdgeCuts, stadiumD, hingeCutPaths,
+  cutWidth, mergesEdgeCuts, stadiumD, hingeCutPaths, honeyLattice, barWidth,
 } from "./hinge";
 export { tabCount, wallOutline, outlinePath, P_slotW, buildWalls, buildTestStrip } from "./wall";
-export { bendAnalysis, autoFit } from "./analysis";
+export { bendAnalysis, autoFit, withFittedLattice } from "./analysis";
 export { computeModel } from "./model";
 export { layoutParts } from "./layout";
 export { EXPORT_LAYERS, layerContent, exportSVG, layeredSVG } from "./export";

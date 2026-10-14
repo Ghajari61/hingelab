@@ -72,8 +72,39 @@ export function slitPaths(x: number, segs: [number, number][], h: number, p: Par
    inset by kerf/2 and the removed strip is exactly slotW wide). Cuts that reach the top or bottom edge
    become rounded notches in the wall outline itself, so the part has one clean outer contour.
    Wave keeps its edge cuts as wavy slots that run past the edge into the waste. */
-export const cutWidth = (p: Params) => p.cutStyle === "slot" ? p.slotW : p.K;
-export const mergesEdgeCuts = (p: Params) => p.cutStyle === "slot" && p.pattern !== "wave";
+/** Honeycomb cells are always closed shapes, so they use the slot geometry whatever the cut style. */
+export const slotLike = (p: Params) => p.cutStyle === "slot" || p.pattern === "honeycomb";
+export const cutWidth = (p: Params) => slotLike(p) ? p.slotW : p.K;
+export const mergesEdgeCuts = (p: Params) => slotLike(p) && p.pattern !== "wave";
+/** Kerf across cuts along X (missing Ky: the same as K). */
+export const kerfY = (p: Params) => p.Ky ?? p.K;
+
+/** Rise of a honeycomb cell's pointed end: a regular hexagon's, for half-width `hw`. */
+export const honeyRise = (hw: number) => hw / Math.sqrt(3);
+
+/*
+ * Honeycomb: regular hexagon cells (width = slotW) on columns `pitch` apart, neighbouring columns
+ * half a cell apart, so the cells nest and the material left is a honeycomb with walls 2*pitch - slotW
+ * thick. The cell height and the gap between cells down a column follow from that, so the slit and
+ * bridge settings are not used.
+ */
+export function honeyLattice(p: Params): Params {
+  if (p.pattern !== "honeycomb") return p;
+  const cell = (2 * p.slotW) / Math.sqrt(3), period = 2 * Math.sqrt(3) * p.pitch;
+  return { ...p, slit: r3(cell), bridge: r3(Math.max(0.5, period - cell)) };
+}
+
+/** Width of the material left between neighbouring cuts (the torsion bars, or the honeycomb walls). */
+export const barWidth = (p: Params) => p.pattern === "honeycomb" ? 2 * p.pitch - p.slotW : p.pitch - cutWidth(p);
+
+/** Pointy-ended hexagon cell from ya to yb, half-width hw (a diamond when it is too short for straight sides). */
+export function hexCellD(x: number, ya: number, yb: number, hw: number, ox: number, oy: number) {
+  const rise = Math.min(honeyRise(hw), (yb - ya) / 2), m = (ya + yb) / 2;
+  const pts: [number, number][] = yb - ya > 2 * rise + 0.01
+    ? [[x, ya], [x + hw, ya + rise], [x + hw, yb - rise], [x, yb], [x - hw, yb - rise], [x - hw, ya + rise]]
+    : [[x, ya], [x + hw, m], [x, yb], [x - hw, m]];
+  return "M" + pts.map(([px, py]) => `${r3(px + ox)},${r3(py + oy)}`).join(" L") + " Z";
+}
 
 /** Closed stadium (round-ended slot) path, or a circle when the slot is too short. */
 export function stadiumD(x: number, ya: number, yb: number, rr: number, ox: number, oy: number) {
@@ -84,13 +115,17 @@ export function stadiumD(x: number, ya: number, yb: number, rr: number, ox: numb
 
 /** Cut paths for one column in either cut style. */
 export function hingeCutPaths(x: number, segs: [number, number][], h: number, p: Params, ox: number, oy: number) {
-  if (p.cutStyle !== "slot") return slitPaths(x, segs, h, p, ox, oy);
-  const out: string[] = [], rr = (p.slotW - p.K) / 2, k2 = p.K / 2;
+  if (!slotLike(p)) return slitPaths(x, segs, h, p, ox, oy);
+  const out: string[] = [], rr = (p.slotW - p.K) / 2, k2 = kerfY(p) / 2;
   for (const [y1, y2] of segs) {
     const atEdge = y1 < 0 || y2 > h;
     if (atEdge && mergesEdgeCuts(p)) continue;          // drawn as an outline notch instead
     if (y2 - y1 < p.slotW * 0.8) continue;
-    if (p.pattern === "wave") {
+    if (p.pattern === "honeycomb") {
+      // Inset by half the kerf: the 120° points move in by k/2 / sin 60°.
+      const tip = (2 * k2) / Math.sqrt(3);
+      out.push(hexCellD(x, y1 + tip, y2 - tip, rr, ox, oy));
+    } else if (p.pattern === "wave") {
       const { A, lambda } = waveParams(p);
       const ya = y1 + k2 + rr, yb = y2 - k2 - rr, len = yb - ya, steps = Math.max(6, Math.ceil(len / 0.6));
       const L: [number, number][] = [], Rt: [number, number][] = [];

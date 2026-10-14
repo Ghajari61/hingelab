@@ -28,6 +28,10 @@ export const HINGE_FIELD_HELP: Record<NumericKey, string> = {
   sides: "How many sides a polygon box has.",
   cylFlats: "A cylinder has short flat stretches at the base where the tabs sit. More flats give more tabs and a rounder look.",
   T, K,
+  Ky: "The kerf across cuts that run left to right, for a machine that cuts wider on one axis. Measure both with the Test Cards generator; Kerf is then the kerf across cuts that run up and down.",
+  minFeature: "The narrowest bar your material holds without breaking or burning away. Auto-fit keeps hinge bars at least this wide; 0 uses the usual minimum.",
+  lidOver: "How far the lid reaches past the walls all round, for a flat top with an edge to lift. 0 keeps the lid flush.",
+  lidHoleD: "The diameter of the lid's hole: about 22 mm for a fingertip, or the size of your knob's screw.",
   ...HINGE,
 };
 

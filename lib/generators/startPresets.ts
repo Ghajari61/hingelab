@@ -10,6 +10,7 @@ import { PUZZLE_PRESETS } from "./puzzle/presets";
 import { QR_PRESETS } from "./qr/presets";
 import { SIGN_PRESETS } from "./sign/presets";
 import { TABLENUM_PRESETS } from "./tablenum/presets";
+import { TESTCARD_PRESETS } from "./testcard/presets";
 import { TROPHY_PRESETS } from "./trophy/presets";
 import { TOPPER_PRESETS } from "./topper/presets";
 import type { GeneratorId } from "./ids";
@@ -26,6 +27,7 @@ export const START_PRESETS: Record<GeneratorId, GenPreset<unknown>[]> = {
   tablenum: TABLENUM_PRESETS as GenPreset<unknown>[],
   trophy: TROPHY_PRESETS as GenPreset<unknown>[],
   shadowbox: [],
+  testcard: TESTCARD_PRESETS as GenPreset<unknown>[],
 };
 
 export interface LazyStart {

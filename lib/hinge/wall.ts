@@ -1,7 +1,7 @@
 /** The unfolded wall: tabs, outline (with slot-style edge notches), strip pieces and the bend test strip. */
 import type { Edge, HingeCol, HingeSegments, Params, Point, Seg, WallPart } from "./types";
-import { bboxOf, offsetRect, polyD, simplify } from "./polygon";
-import { colSegments, hingeSegments, makeCols, mergesEdgeCuts } from "./hinge";
+import { bboxOf, offsetPolyXY, offsetRect, offsetRectXY, polyD, simplify } from "./polygon";
+import { colSegments, hingeSegments, honeyRise, kerfY, makeCols, mergesEdgeCuts, slotLike } from "./hinge";
 import { r3 } from "./util";
 
 /** How many tabs fit on a flat of length `len`. Seam flats keep an even count so the seam stays clear. */
@@ -16,7 +16,7 @@ export function tabCount(len: number, tabW: number, seam: boolean) {
 
 /* Wall outline: body rectangle, tabs, and (in slot mode) rounded notches for edge-reaching cuts. */
 export function wallOutline(w: number, h: number, topTabs: number[], bottomTabs: number[], cols: HingeCol[], p: Params, hs: HingeSegments) {
-  const t = p.T, k = p.K, a = p.tabW, r = p.slotW / 2;
+  const t = p.T, k = p.K, ky = kerfY(p), a = p.tabW, r = p.slotW / 2;
   const top: { x: number; d: number }[] = [], bot: { x: number; d: number }[] = [];
   if (mergesEdgeCuts(p)) for (const c of cols) for (const [y1, y2] of colSegments(c.kind, hs, h, p.bridge)) {
     if (y1 < 0 && y2 > 0) top.push({ x: c.x, d: y2 });
@@ -25,17 +25,22 @@ export function wallOutline(w: number, h: number, topTabs: number[], bottomTabs:
   type Ev = { x: number; tab: true } | { x: number; d: number; tab?: undefined };
   const ev = (list: { x: number; d: number }[], tabs: number[]): Ev[] => [...tabs.map(x => ({ x, tab: true as const })), ...list].sort((m, n) => m.x - n.x);
   const pts: Point[] = [[0, 0]];
+  // Honeycomb edge cells are half hexagons: the notch is the cut-away shape, pointed at its far end.
+  const honey = p.pattern === "honeycomb", rise = honeyRise(r);
   for (const e of ev(top, topTabs)) {
     if (e.tab) pts.push([e.x - a / 2, 0], [e.x - a / 2, -t], [e.x + a / 2, -t], [e.x + a / 2, 0]);
-    else { const yc = Math.max(0.2, e.d - r + k / 2); pts.push([e.x - r, 0], [e.x - r, yc], [e.x + r, yc], [e.x + r, 0]); }
+    else if (honey) { const yc = Math.max(0.2, e.d - rise); pts.push([e.x - r, 0], [e.x - r, yc], [e.x, yc + rise], [e.x + r, yc], [e.x + r, 0]); }
+    else { const yc = Math.max(0.2, e.d - r + ky / 2); pts.push([e.x - r, 0], [e.x - r, yc], [e.x + r, yc], [e.x + r, 0]); }
   }
   pts.push([w, 0], [w, h]);
   for (const e of ev(bot, bottomTabs).reverse()) {
     if (e.tab) pts.push([e.x + a / 2, h], [e.x + a / 2, h + t], [e.x - a / 2, h + t], [e.x - a / 2, h]);
-    else { const yc = h - Math.max(0.2, e.d - r + k / 2); pts.push([e.x + r, h], [e.x + r, yc], [e.x - r, yc], [e.x - r, h]); }
+    else if (honey) { const yc = h - Math.max(0.2, e.d - rise); pts.push([e.x + r, h], [e.x + r, yc], [e.x, yc - rise], [e.x - r, yc], [e.x - r, h]); }
+    else { const yc = h - Math.max(0.2, e.d - r + ky / 2); pts.push([e.x + r, h], [e.x + r, yc], [e.x - r, yc], [e.x - r, h]); }
   }
   pts.push([0, h]);
-  const outline = offsetRect(simplify(pts), k / 2);
+  if (honey) return { outline: offsetPolyXY(simplify(pts), k, ky), caps: [] };
+  const outline = ky === k ? offsetRect(simplify(pts), k / 2) : offsetRectXY(simplify(pts), k / 2, ky / 2);
   const caps: number[] = [], capLen = p.slotW - k, xs = [...top, ...bot].map(e => e.x);
   for (let i = 0; i < outline.length; i++) {
     const A = outline[i], B = outline[(i + 1) % outline.length];
@@ -121,7 +126,7 @@ export function buildWalls(p: Params, edges: Edge[], rN: number, hBody: number, 
     cuts = [[0, xs], [xs, L]];
   }
   const parts: WallPart[] = [];
-  const edgeMargin = p.cutStyle === "slot" ? Math.max(0.4, p.slotW) : 0.4;
+  const edgeMargin = slotLike(p) ? Math.max(0.4, p.slotW) : 0.4;
   cuts.forEach(([x0, x1], pi) => {
     const w = x1 - x0;
     const tabsHere = tabX.filter(tx => tx > x0 && tx < x1).map(tx => tx - x0).sort((m, n) => m - n);

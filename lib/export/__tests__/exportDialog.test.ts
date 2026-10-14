@@ -7,7 +7,7 @@ import { ALL_GENERATORS } from "@/lib/generators/all";
 import { addWatermark } from "@/lib/plans";
 import { makeExport } from "../bundle";
 import { flattenPath, svgToDXF } from "../dxf";
-import { cutIndex, sceneLBRN } from "../lbrn2";
+import { cutIndex, layerOp, sceneLBRN } from "../lbrn2";
 import { pdfImage, scenePDF } from "../pdfVector";
 import { bedOf, cleanExport, CUSTOM_MACHINE, defaultExport, HAIRLINE_MM, overBed, type ExportSettings } from "../profiles";
 import { readScene } from "../scene";
@@ -236,6 +236,24 @@ describe("LightBurn project", () => {
     expect(cutIndex("02 Outline cut", "#00FF00")).toBe(2);
     expect(cutIndex("Cut", "#0000FF")).toBe(1);
     expect(cutIndex("Engrave", "#000000")).toBe(0);
+  });
+
+  it("writes the user's own laser settings, and only those", () => {
+    expect([layerOp("02 Outline cut", false), layerOp("03 Inner cuts", false), layerOp("01 Score lines", false), layerOp("00 Engrave", true), layerOp("00 Labels", false)])
+      .toEqual(["cut", "cut", "score", "engrave", "score"]);
+    const svg = hingeSVG();
+    const sc = readScene(svg);
+    const rect = { x: 0, y: 0, w: sc.W, h: sc.H };
+    const r = sceneLBRN(sc, [rect], { rect, sheet: null, mirror: false }, { cut: { speed: 12.5, power: 65, passes: 2 } });
+    const cuts = [...r.xml.matchAll(/<CutSetting type="Cut">[\s\S]*?<\/CutSetting>/g)].map((m) => m[0]);
+    const named = (n: string) => cuts.find((c) => c.includes(n))!;
+    expect(named("Outline")).toMatch(/<speed Value="12.5"\/>\s*<maxPower Value="65"\/>\s*<minPower Value="65"\/>\s*<numPasses Value="2"\/>/);
+    expect(cuts.filter((c) => /speed/.test(c)).length).toBe(r.set);
+    expect(named("Hinge slits")).toMatch(/speed/);
+    expect(named("labels")).not.toMatch(/speed/);
+    const res = makeExport(svg, null, set({ format: "lbrn2" }), "box", { name: "My birch", laser: { cut: { speed: 12.5, power: 65, passes: 2 } } });
+    expect(res.notes.join(" ")).toMatch(/My birch.*Check them in LightBurn/);
+    expect(makeExport(svg, null, set({ format: "lbrn2" }), "box").notes.join(" ")).not.toMatch(/laser settings/);
   });
 });
 

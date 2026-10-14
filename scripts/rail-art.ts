@@ -111,7 +111,7 @@ function hingePanel(q: Partial<Params>): string {
     `<path d="${edgeR}" fill="rgb(150,112,62)"/><path d="${edgeB}" fill="rgb(172,132,78)"/>${face}` +
     `<path d="M${c.map(P).join("L")}Z" fill="none" stroke="rgba(60,40,20,.45)" stroke-width=".6"/></svg>`;
 }
-putGroup("pattern", (["straight", "wave", "relief", "serpentine"] as const).map((v) => [v, hingePanel({ pattern: v })]));
+putGroup("pattern", (["straight", "wave", "relief", "serpentine", "honeycomb"] as const).map((v) => [v, hingePanel({ pattern: v })]));
 putGroup("variant", HINGE_VARIANTS.map((v) => [v.id, hingePanel(v.params)]));
 
 /* ---------- Letters ---------- */

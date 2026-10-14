@@ -1,6 +1,6 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
-import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
+import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
 import { isImageDataURL } from "@/lib/security/svg";
 import { mergeInto } from "../util";
 
@@ -71,7 +71,7 @@ export const PUZZLE_DEFAULTS: PuzzleParams = {
   bedH: 400,
   gap: 4,
   fit: { ...FIT_OFF },
-  sheet: { ...SHEET_EXTRAS },
+  sheet: { ...SHEET_DEFAULTS },
   job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   shape: { kind: "rect", width: 300, height: 200, corner: 0, path: "" },

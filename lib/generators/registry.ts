@@ -16,4 +16,5 @@ export const loadGenerator: Record<GeneratorId, () => Promise<AnyGenerator>> = {
   tablenum: () => import("./tablenum").then((m) => m.TABLENUM as AnyGenerator),
   trophy: () => import("./trophy").then((m) => m.TROPHY as AnyGenerator),
   shadowbox: () => import("./shadowbox").then((m) => m.SHADOWBOX as AnyGenerator),
+  testcard: () => import("./testcard").then((m) => m.TESTCARD as AnyGenerator),
 };

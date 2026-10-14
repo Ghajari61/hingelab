@@ -1,5 +1,5 @@
 /** Hinge Box checks: the model's own messages, with fixes where a setting change solves them. */
-import { autoFit, computeModel, cutWidth, r3, type Model, type Params } from "@/lib/hinge";
+import { autoFit, barWidth, computeModel, cutWidth, r3, withFittedLattice, type Model, type Params } from "@/lib/hinge";
 import { arrangeHinge } from "@/lib/fit/hinge";
 import { cleanFit } from "@/lib/fit/fitToSheets";
 import type { Fix, Issue } from "./index";
@@ -8,12 +8,9 @@ type HIssue = Issue<Params>;
 
 const up = (v: number, step = 0.5) => Math.ceil(v / step - 1e-9) * step;
 
-/** The hinge lattice from Auto-fit (spacing, bridge and, unless serpentine, slit length). */
+/** The hinge lattice from Auto-fit (spacing, bridge and, unless serpentine, slit length; honeycomb: spacing and cell). */
 function fitted(p: Params, m: Model): Params {
-  const res = autoFit(p, m.hBody, m.rN);
-  const q = { ...p, pitch: res.q.pitch, bridge: res.q.bridge };
-  if (p.pattern !== "serpentine") q.slit = res.q.slit;
-  return q;
+  return withFittedLattice(p, autoFit(p, m.hBody, m.rN).q);
 }
 
 const fitsBed = (p: Params, a = arrangeHinge(p)) => {
@@ -64,6 +61,7 @@ export function hingeIssues(p: Params): HIssue[] {
   if ("error" in res) {
     const fixes: Fix<Params>[] = [];
     if (/Slit spacing is too tight/.test(res.error)) fixes.push({ id: "pitch", label: `Spacing ${r3(up(cutWidth(p) + 1, 0.05))} mm`, safe: true, apply: (q) => ({ ...q, pitch: r3(up(cutWidth(q) + 1, 0.05)) }) });
+    if (/Honeycomb walls are too thin/.test(res.error)) fixes.push({ id: "cell", label: `Cell width ${r3(Math.max(p.K + 0.6, 2 * p.pitch - 1))} mm`, safe: true, apply: (q) => ({ ...q, slotW: r3(Math.max(q.K + 0.6, 2 * q.pitch - 1)) }) });
     if (/Corner radius must be at least/.test(res.error)) fixes.push({ id: "radius", label: `Radius ${up(p.T + 1)} mm`, safe: true, apply: (q) => ({ ...q, R: up(q.T + 1) }) });
     const small = RADIUS_TOO_BIG.test(res.error) ? underTwiceRadius(p) : [];
     if (small.length) {
@@ -87,6 +85,12 @@ export function hingeIssues(p: Params): HIssue[] {
     const serp: Params = { ...p, pattern: "serpentine" };
     const sm = p.pattern !== "serpentine" ? computeModel(serp) : null;
     if (sm && !("error" in sm) && sm.analysis.verdict === "ok") fixes.push({ id: "serpentine", label: "Use Serpentine", safe: false, apply: (q) => ({ ...q, pattern: "serpentine" }) });
+    if (!auto.ok && (p.shape === "rect" || p.shape === "poly")) {
+      // A rounder corner needs less bend: the radius the hinge reaches with the usual 30% margin.
+      const R = up(a.rMin * 1.3 + p.T / 2);
+      const rm = computeModel({ ...p, R });
+      if (!("error" in rm) && rm.analysis.verdict === "ok") fixes.push({ id: "radius-bend", label: `Radius ${R} mm`, safe: false, apply: (q) => ({ ...q, R }) });
+    }
     out.push({
       code: "BEND",
       level: a.verdict === "err" ? "error" : "warn",
@@ -105,7 +109,7 @@ export function hingeIssues(p: Params): HIssue[] {
     });
   }
 
-  if (p.pitch - cutWidth(p) < 0.9) {
+  if (barWidth(p) < 0.9) {
     out.push({
       code: "WEAK_BARS", level: "warn",
       message: "Torsion bars are under 0.9 mm wide and may char or snap.",

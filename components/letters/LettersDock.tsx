@@ -1,6 +1,8 @@
 "use client";
 
-import { MATERIALS, type CutStyle, type LayerKey, type Pattern } from "@/lib/hinge";
+import type { CutStyle, LayerKey, Pattern } from "@/lib/hinge";
+import type { MaterialInfo } from "@/lib/materials/library";
+import { MaterialPicker } from "@/components/shell/MaterialPicker";
 import { LETTER_DEFAULTS, bridgeWidthOf, cornerRadiusOf, wallMaxLengthOf, type LetterModel, type LetterParams } from "@/lib/letters";
 import { NumberField } from "@/components/editor/NumberField";
 import { LayersPanel } from "@/components/editor/LayersPanel";
@@ -49,7 +51,7 @@ export function LettersDock({
   onAutoFit: () => void;
   onPatch: Patch;
   onField: (id: LetterNumKey, v: number, mat: boolean, record: boolean) => void;
-  onMaterial: (id: string) => void;
+  onMaterial: (id: string, info: MaterialInfo | null) => void;
   onPick: (id: string) => void;
   onUpload: (file: File) => void;
   onDeleteFont: (id: string) => void;
@@ -172,9 +174,7 @@ export function LettersDock({
         </Sec>
       )}
       <Sec title="Material" startOpen onReset={() => onResetSection("Material", ["material", "T", "K"])}>
-        <select className="sel" aria-label="Material preset" value={params.material} onChange={(e) => onMaterial(e.target.value)}>
-          {Object.entries(MATERIALS).map(([k, m]) => <option key={k} value={k}>{m.name}</option>)}
-        </select>
+        <MaterialPicker value={params.material} units={units} onPick={onMaterial} current={{ T: params.T, kx: params.K, ky: params.K, minFeature: 0 }} />
         <div className="grid2">{fields("mat")}</div>
       </Sec>
       {hinge && (

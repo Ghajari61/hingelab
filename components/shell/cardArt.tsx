@@ -53,6 +53,7 @@ export const ART: Record<string, ReactNode> = {
   "variant:flexible": <Art><rect x="6" y="6" width="52" height="32" rx="3" fill={W} />{slots("M18 9v17M18 29v6M26 9v3M26 15v17M34 9v17M34 29v6M42 9v3M42 15v17M50 9v17M50 29v6")}</Art>,
   "variant:stiff": <Art><rect x="6" y="6" width="52" height="32" rx="3" fill={W} />{slots("M20 9v9M20 25v10M36 9v2M36 16v13M52 9v9M52 25v10")}</Art>,
   "variant:line": <Art><rect x="6" y="6" width="52" height="32" rx="3" fill={W} /><path d="M18 9v12M18 25v10M26 9v4M26 17v12M26 33v2M34 9v12M34 25v10M42 9v4M42 17v12M42 33v2" strokeWidth=".8" /></Art>,
+  "pattern:honeycomb": <Art><rect x="6" y="6" width="52" height="32" rx="3" fill={W} />{slits("M14 9l2 2v6l-2 2-2-2v-6zM14 25l2 2v6l-2 2-2-2v-6zM24 6v5l2 2v6l-2 2-2-2v-6l2-2M24 21v6l2 2v6l-2 2M24 27l-2 2v6l2 2M34 9l2 2v6l-2 2-2-2v-6zM34 25l2 2v6l-2 2-2-2v-6zM44 6v5l2 2v6l-2 2-2-2v-6l2-2M44 21v6l2 2v6l-2 2M44 27l-2 2v6l2 2M54 9l2 2v6l-2 2-2-2v-6zM54 25l2 2v6l-2 2-2-2v-6z")}</Art>,
   "pattern:serpentine": <Art><rect x="6" y="6" width="52" height="32" rx="3" fill={W} />{slits("M14 6v24M22 14v24M30 6v24M38 14v24M46 6v24M54 14v24")}</Art>,
 
   "mode:box": <Art><path d="M20 36l10-27h6l10 27h-6l-2.5-7h-9l-2.5 7z" fill={W2} transform="translate(4 -3)" /><path d="M20 36l10-27h6l10 27h-6l-2.5-7h-9l-2.5 7zM28.5 23.5l4.5-12.5 4.5 12.5z" fill={W} /></Art>,

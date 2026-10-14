@@ -1,0 +1,21 @@
+.modal.mats { width: min(720px, 100%); }
+.modal.mats .mats-grid { display: grid; grid-template-columns: 220px 1fr; gap: 14px; align-items: start; }
+.modal.mats .mats-side { display: grid; gap: 8px; }
+.modal.mats .mats-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 280px; overflow: auto; }
+.modal.mats .mats-list button {
+  width: 100%; display: grid; gap: 2px; text-align: left; padding: 6px 8px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--field); color: var(--fg); cursor: pointer;
+}
+.modal.mats .mats-list button[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
+.modal.mats .mats-list small { color: var(--fg-dim); font-size: 11px; }
+.modal.mats .mats-empty { font-size: 12px; color: var(--fg-dim); }
+.modal.mats .mats-io { display: flex; gap: 6px; }
+.modal.mats .mats-edit { display: grid; gap: 8px; }
+.modal.mats .mats-name { display: grid; gap: 4px; font-size: 12px; }
+.modal.mats .mats-laser { width: 100%; border-collapse: collapse; font-size: 12px; }
+.modal.mats .mats-laser th { text-align: left; font-weight: 500; padding: 2px 4px; }
+.modal.mats .mats-laser td { padding: 2px 4px; }
+.modal.mats .mats-laser input { width: 100%; min-width: 0; }
+@media (max-width: 640px) {
+  .modal.mats .mats-grid { grid-template-columns: 1fr; }
+}

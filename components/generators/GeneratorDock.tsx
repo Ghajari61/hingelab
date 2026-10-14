@@ -1,7 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { MATERIALS, type LayerKey } from "@/lib/hinge";
+import { useState, type ReactNode } from "react";
+import type { LayerKey } from "@/lib/hinge";
+import { materialInfo, saveMaterials, saveMeasured, type MaterialInfo } from "@/lib/materials/library";
+import { MaterialPicker } from "@/components/shell/MaterialPicker";
+import { useMaterials } from "@/components/shell/useMaterials";
 import { NumberField } from "@/components/editor/NumberField";
 import { LockToggle } from "./LockToggle";
 import { LayersPanel } from "@/components/editor/LayersPanel";
@@ -17,7 +20,7 @@ import { Dices } from "lucide-react";
 import { ImagePicker } from "./ImagePicker";
 import type { TracedPicture } from "./levelsClient";
 import { usePhotoLooks } from "./usePhotoLooks";
-import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, SHEET_EXTRAS, type AnyGenerator, type FieldSpec, type GenBase, type GenOutput, type NumberSpec } from "@/lib/generators/types";
+import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, MAX_FEATURE, MAX_KERF, MAX_THICKNESS, SHEET_EXTRAS, type AnyGenerator, type FieldSpec, type GenBase, type GenOutput, type NumberSpec } from "@/lib/generators/types";
 
 type P = GenBase & Record<string, unknown>;
 
@@ -28,9 +31,11 @@ export function numberField(f: NumberSpec<P>): BaseField {
 }
 
 const MAT_FIELDS: BaseField[] = [
-  { id: "T", label: "Thick", len: true, step: 0.1, min: 0.5, max: 30, mat: true },
-  { id: "K", label: "Kerf", len: true, step: 0.01, min: 0, max: 1, mat: true },
+  { id: "T", label: "Thick", len: true, step: 0.1, min: 0.5, max: MAX_THICKNESS, mat: true },
+  { id: "K", label: "Kerf", len: true, step: 0.01, min: 0, max: MAX_KERF, mat: true },
 ];
+const KERF_Y_FIELD: BaseField = { id: "sheet.kerfY", label: "Kerf Y", len: true, step: 0.01, min: 0, max: MAX_KERF, mat: true, help: "Kerf across cuts that run left to right, for a machine that cuts wider on one axis." };
+const FEATURE_FIELD: BaseField = { id: "sheet.minFeature", label: "Min feature", len: true, step: 0.1, min: 0, max: MAX_FEATURE, mat: true, help: "The narrowest bar or tab your material holds; Checks warns about parts with thinner ones. 0 turns the check off." };
 const COPIES_FIELD: BaseField = { id: "sheet.copies", label: "Copies", step: 1, min: 1, max: MAX_COPIES };
 const SHEET_FIELDS: BaseField[] = [
   { id: "bedW", label: "Bed W", len: true, step: 10, min: 50 },
@@ -53,13 +58,25 @@ export function GeneratorDock({
   /** Write one setting (dot path); `record` makes it an undo step. */
   onSet: (key: string, value: unknown, record: boolean, mat?: boolean) => void;
   onApply: (next: P) => void;
-  onMaterial: (id: string) => void;
+  onMaterial: (id: string, info: MaterialInfo | null) => void;
   onResetSection: (title: string, keys: string[]) => void;
   sheet: SheetProps;
   checks: ReactNode;
 }) {
   const photo = usePhotoLooks(def.sections.flatMap((s) => s.fields) as FieldSpec<P>[], params, setRaw, onApply);
   const onSet = photo.set;
+  const mats = useMaterials();
+  const [savedNote, setSavedNote] = useState<string | null>(null);
+  const measured = def.measured?.(params as never) ?? null;
+  const own = mats.find((m) => m.id === params.material);
+  function saveMeasuredValues() {
+    if (!measured) return;
+    const r = saveMeasured(mats, params.material, params.T, params.K, measured);
+    saveMaterials(r.list);
+    const name = materialInfo(r.id, r.list)?.name ?? "your material";
+    if (r.id !== params.material) onApply({ ...params, material: r.id });
+    setSavedNote(`${r.created ? "Saved as" : "Updated"} “${name}”. Pick it from the material list in any design.`);
+  }
   const lockOf = (f: FieldSpec<P>) => ((f.kind === "number" || f.kind === "choice") && f.shuffle && locks
     ? { on: locks.has(f.key), toggle: () => locks.toggle(f.key) } : undefined);
   const num = (f: BaseField, value: number, def: number, hidden = false, lock?: { on: boolean; toggle: () => void }) => (
@@ -206,11 +223,31 @@ export function GeneratorDock({
           {body(s.fields as FieldSpec<P>[])}
         </Sec>
       )))}
-      <Sec title="Material" startOpen onReset={() => onResetSection("Material", ["material", "T", "K"])}>
-        <select className="sel" aria-label="Material preset" value={params.material} onChange={(e) => onMaterial(e.target.value)}>
-          {Object.entries(MATERIALS).map(([k, m]) => <option key={k} value={k}>{m.name}</option>)}
-        </select>
-        <div className="grid2">{MAT_FIELDS.map((f) => num(f, params[f.id as "T" | "K"], defaults[f.id as "T" | "K"]))}</div>
+      {def.measured && (
+        <Sec title="Save to my material" startOpen>
+          <p className="note" role="status">{measured ? measured.note : "Pick your result above to save it."}</p>
+          <button type="button" className="btn-auto" disabled={!measured} onClick={saveMeasuredValues}>
+            {own ? `Update “${own.name}”` : "Save as my material"}
+          </button>
+          {savedNote && <p className="note">{savedNote}</p>}
+        </Sec>
+      )}
+      <Sec title="Material" startOpen onReset={() => onResetSection("Material", ["material", "T", "K", "sheet.kerfXY", "sheet.kerfY", "sheet.minFeature"])}>
+        <MaterialPicker
+          value={params.material} units={units} onPick={onMaterial}
+          current={{ T: params.T, kx: params.K, ky: extras.kerfXY ? extras.kerfY ?? params.K : params.K, minFeature: extras.minFeature ?? 0 }}
+        />
+        <div className="grid2">
+          {MAT_FIELDS.map((f) => num(f.id === "K" && extras.kerfXY ? { ...f, label: "Kerf X" } : f, params[f.id as "T" | "K"], defaults[f.id as "T" | "K"]))}
+          {extras.kerfXY && num(KERF_Y_FIELD, extras.kerfY ?? params.K, params.K)}
+          {num(FEATURE_FIELD, extras.minFeature ?? 0, 0)}
+        </div>
+        <label className="chk" title="For a machine that cuts wider along one axis: measure both with the Test Cards generator">
+          <input
+            type="checkbox" checked={!!extras.kerfXY}
+            onChange={(e) => onApply(setPath(setPath(params, "sheet.kerfXY", e.target.checked), "sheet.kerfY", extras.kerfY ?? params.K) as P)}
+          /> Separate X and Y kerf
+        </label>
       </Sec>
       <Sec title="Checks" startOpen meta={out?.stats.length ? `${out.parts.length} parts` : undefined}>
         {out && out.stats.length > 0 && (

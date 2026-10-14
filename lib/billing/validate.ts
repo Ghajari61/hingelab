@@ -5,6 +5,7 @@
  */
 import { PARAM_FIELDS } from "@/components/parametric/fields";
 import type { Params } from "@/lib/hinge";
+import { honeyLattice } from "@/lib/hinge/hinge";
 import type { ParametricParams } from "@/lib/parametric";
 import { RELIEF_IDS } from "@/lib/parametric/source/reliefs";
 
@@ -13,14 +14,19 @@ const finite = (v: unknown): v is number => typeof v === "number" && Number.isFi
 const HINGE_ENUMS: Partial<Record<keyof Params, readonly string[]>> = {
   shape: ["rect", "pill", "poly", "cyl"],
   lid: ["open", "fixed", "removable"],
-  pattern: ["straight", "wave", "relief", "serpentine"],
+  pattern: ["straight", "wave", "relief", "serpentine", "honeycomb"],
   cutStyle: ["slot", "line"],
+};
+
+/** Settings added later: optional, but in range when present. */
+const HINGE_OPTIONAL: Partial<Record<keyof Params, [number, number]>> = {
+  Ky: [0, 5], lidOver: [0, 100], lidHoleD: [0, 500], gamma: [0.001, 1], minFeature: [0, 50],
 };
 
 /** [min, max] per Hinge Box number; the minimums are the editor's, the maximums are generous. */
 export const HINGE_RANGES: Partial<Record<keyof Params, [number, number]>> = {
   W: [10, 3000], D: [10, 3000], H: [10, 3000], R: [0, 1500], dia: [20, 3000],
-  sides: [3, 12], cylFlats: [3, 16], T: [0.5, 50], K: [0, 5],
+  sides: [3, 12], cylFlats: [3, 16], T: [0.5, 100], K: [0, 5],
   slotW: [0, 50], slit: [3, 3000], bridge: [0.5, 500], pitch: [0.5, 500], overrun: [0, 500], stretch: [0, 8],
   tabW: [3, 1000], slotClr: [-0.5, 50], lidGap: [0, 50], split: [1, 8],
   bedW: [50, 10000], bedH: [50, 10000], gap: [0, 1000],
@@ -38,9 +44,16 @@ export function hingeRequestError(p: Params): string | null {
     const v = p[k];
     if (!finite(v) || v < lo || v > hi) return `${k} must be a number between ${lo} and ${hi}.`;
   }
+  for (const [k, [lo, hi]] of Object.entries(HINGE_OPTIONAL) as [keyof Params, [number, number]][]) {
+    const v = p[k];
+    if (v !== undefined && (!finite(v) || v < lo || v > hi)) return `${k} must be a number between ${lo} and ${hi}.`;
+  }
+  if (p.lidHole !== undefined && !["none", "finger", "knob"].includes(p.lidHole)) return "Invalid value for lidHole.";
+  if (p.lidLip !== undefined && typeof p.lidLip !== "boolean") return "Invalid value for lidLip.";
   const around = p.shape === "cyl" ? Math.PI * p.dia : 2 * (p.W + (p.shape === "poly" ? p.W : p.D));
   const columns = around / p.pitch;
-  const rows = p.H / Math.max(p.slit + p.bridge, 1);
+  const lattice = honeyLattice(p);
+  const rows = p.H / Math.max(lattice.slit + lattice.bridge, 1);
   if (columns * rows > MAX_HINGE_SLITS) return "This hinge has too many slits to build on the server. Use a larger slit spacing or a smaller box.";
   return null;
 }

@@ -4,7 +4,7 @@ import { PHOTO_DITHERS, PHOTO_LOOKS, type Paper, type PhotoDither, type PhotoLoo
 import { isImageDataURL } from "@/lib/security/svg";
 import type { ShapeKind } from "../shapes";
 import type { MotifId } from "../motifs";
-import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
+import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 import { isPictureText } from "./picPath";
 
@@ -260,7 +260,7 @@ export const SHADOWBOX_DEFAULTS: ShadowBoxParams = {
   bedH: MAT_MM,
   gap: 3,
   fit: { ...FIT_OFF },
-  sheet: { ...SHEET_EXTRAS },
+  sheet: { ...SHEET_DEFAULTS },
   job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   cutter: { kind: "blade" },

@@ -7,7 +7,7 @@ import { DEFAULTS, clone, computeModel, inspectorSVG, type Params } from "@/lib/
 const dir = join(process.cwd(), "public", "help", "svg");
 mkdirSync(dir, { recursive: true });
 
-for (const pattern of ["straight", "wave", "relief", "serpentine"] as const) {
+for (const pattern of ["straight", "wave", "relief", "serpentine", "honeycomb"] as const) {
   const p: Params = { ...clone(DEFAULTS), pattern };
   const m = computeModel(p);
   if ("error" in m) throw new Error(`${pattern}: ${m.error}`);

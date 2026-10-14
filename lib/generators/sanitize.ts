@@ -6,15 +6,17 @@
  */
 import { isImageDataURL } from "@/lib/security/svg";
 import { getPath, setPath } from "./path";
-import { MAX_BATCH_TEXT, MAX_COPIES, type GenBase, type GeneratorDef } from "./types";
+import { MAX_BATCH_TEXT, MAX_COPIES, MAX_FEATURE, MAX_KERF, MAX_THICKNESS, type GenBase, type GeneratorDef } from "./types";
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 
 /** The shell's own fields (material, sheet, extras), with the ranges the dock allows. */
 const BASE_RANGES: { key: string; min: number; max: number; int?: boolean }[] = [
-  { key: "T", min: 0.5, max: 30 },
-  { key: "K", min: 0, max: 1 },
+  { key: "T", min: 0.5, max: MAX_THICKNESS },
+  { key: "K", min: 0, max: MAX_KERF },
+  { key: "sheet.kerfY", min: 0, max: MAX_KERF },
+  { key: "sheet.minFeature", min: 0, max: MAX_FEATURE },
   { key: "bedW", min: 50, max: 10000 },
   { key: "bedH", min: 50, max: 10000 },
   { key: "gap", min: 0, max: 1000 },

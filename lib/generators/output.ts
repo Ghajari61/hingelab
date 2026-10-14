@@ -11,12 +11,13 @@ import type { BBox, LayerContent, LayerKey, Layout } from "@/lib/hinge/types";
 import { r3 } from "@/lib/hinge/util";
 import type { Issue } from "@/lib/issues";
 import { differenceShapes, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
+import { offsetShapesXY } from "@/lib/materials/kerf";
 import { rotatePoint } from "@/lib/nest/outline";
 import { finLabel } from "@/lib/parametric/label";
 import { isImageDataURL, xmlCommentText } from "@/lib/security/svg";
 import { bboxOf, pathD } from "./geom";
 import { setPath } from "./path";
-import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, type BuildContext, type Contour, type GenBase, type GenImage, type GenOutput, type GenPart, type GeneratorDef, type JobExtras, type SheetExtras } from "./types";
+import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, MAX_FEATURE, MAX_KERF, SHEET_EXTRAS, type BuildContext, type Contour, type GenBase, type GenImage, type GenOutput, type GenPart, type GeneratorDef, type JobExtras, type SheetExtras } from "./types";
 
 /** Layer names in the generators' panels and SVG files (keys and colours shared with every product). */
 export const GEN_LAYER_NAMES: Record<LayerKey, string> = {
@@ -43,20 +44,29 @@ export interface CutPart {
   turned?: number;
   /** The part's material name, in designs that mix two materials. */
   tag?: string;
+  /** Kerf across cuts along Y and along X, when they differ (a quarter turn compensates again). */
+  kerf?: [number, number];
 }
 
-/** Kerf applied once: the part grows by K/2, so outlines move out and holes shrink. */
-export function cutPart(p: GenPart, K: number): CutPart {
-  let outline: Contour[] = [p.outer], inner: Contour[] = p.holes;
-  if (K > 0) {
-    const shapes = offsetShapes(unionShapes([p.outer, ...p.holes], [], true), K / 2);
-    outline = shapes.map((s) => s.outer);
-    inner = shapes.flatMap((s) => s.holes);
-  }
+function compensate(outer: Contour, holes: Contour[], kx: number, ky: number) {
+  if (kx <= 0 && ky <= 0) return { outline: [outer], inner: holes };
+  const shapes = kx === ky
+    ? offsetShapes(unionShapes([outer, ...holes], [], true), kx / 2)
+    : offsetShapesXY(unionShapes([outer, ...holes], [], true), kx / 2, ky / 2);
+  return { outline: shapes.map((s) => s.outer), inner: shapes.flatMap((s) => s.holes) };
+}
+
+/**
+ * Kerf applied once: the part grows by K/2, so outlines move out and holes shrink. With `Ky` the
+ * growth is K/2 across vertical edges and Ky/2 across horizontal ones.
+ */
+export function cutPart(p: GenPart, K: number, Ky = K): CutPart {
+  const { outline, inner } = p.ownKerf ? { outline: [p.outer], inner: p.holes } : compensate(p.outer, p.holes, K, Ky);
   return {
     src: p, id: p.id, name: p.name, outline, inner,
     cuts: p.cuts ?? [], score: p.score ?? [], engrave: p.engrave ?? [], images: p.images ?? [],
     bbox: bboxOf(outline),
+    ...(!p.ownKerf && K !== Ky ? { kerf: [K, Ky] as [number, number] } : {}),
   };
 }
 
@@ -71,6 +81,12 @@ export type GenArranged<P> = Arranged<P, GenModel, CutPart>;
 export function turnCutPart(pt: CutPart, angle: number): CutPart {
   if (!angle) return pt;
   const r = (cs: Contour[]) => cs.map((c) => c.map((q) => rotatePoint(q, angle)));
+  if (pt.kerf && angle % 180 !== 0) {
+    // Its vertical edges become horizontal on the sheet: compensate the turned nominal part again.
+    const [o] = r([pt.src.outer]);
+    const { outline, inner } = compensate(o, r(pt.src.holes), pt.kerf[0], pt.kerf[1]);
+    return { ...pt, outline, inner, cuts: r(pt.cuts), score: r(pt.score), engrave: r(pt.engrave), bbox: bboxOf(outline), turned: angle };
+  }
   const outline = r(pt.outline);
   return { ...pt, outline, inner: r(pt.inner), cuts: r(pt.cuts), score: r(pt.score), engrave: r(pt.engrave), bbox: bboxOf(outline), turned: angle };
 }
@@ -97,7 +113,20 @@ export function cleanJob(x: unknown): { mirror: boolean; names: string[] } {
 export function cleanExtras(x: unknown): SheetExtras {
   const q = (x && typeof x === "object" ? x : {}) as Partial<SheetExtras>;
   const copies = typeof q.copies === "number" && Number.isFinite(q.copies) ? Math.max(1, Math.min(MAX_COPIES, Math.round(q.copies))) : 1;
-  return { nest: q.nest === "outline" ? "outline" : "box", calibration: q.calibration === true, labels: q.labels === true, copies };
+  const len = (v: unknown, hi: number) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(hi, v)) : undefined);
+  const out: SheetExtras = { nest: q.nest === "outline" ? "outline" : "box", calibration: q.calibration === true, labels: q.labels === true, copies };
+  // The material settings stay missing in saves that never had them.
+  if (q.kerfXY !== undefined) out.kerfXY = q.kerfXY === true;
+  const ky = len(q.kerfY, MAX_KERF), mf = len(q.minFeature, MAX_FEATURE);
+  if (ky !== undefined) out.kerfY = ky;
+  if (mf !== undefined) out.minFeature = mf;
+  return out;
+}
+
+/** The kerf across cuts along Y and along X. */
+export function kerfOf(p: GenBase): [number, number] {
+  const x = cleanExtras(p.sheet);
+  return [p.K, x.kerfXY ? x.kerfY ?? p.K : p.K];
 }
 
 /** The part's name in the single-stroke font, placed where it fits clear of cuts and engraving. */
@@ -182,15 +211,16 @@ export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, 
     if (out.error) return { params: q, result: { error: out.error } };
     const mixed = out.parts.some((pt) => pt.material === "second");
     const names = { main: out.materials?.main ?? `Main material ${q.T} mm`, second: out.materials?.second ?? "Second material" };
+    const [kx, ky] = kerfOf(q);
     let parts = out.parts.map((pt) => {
-      if (!mixed) return cutPart(pt, q.K);
+      if (!mixed) return cutPart(pt, kx, ky);
       const two = pt.material === "second";
-      return { ...cutPart(pt, two && out.materials?.secondK != null ? out.materials.secondK : q.K), tag: two ? names.second : names.main };
+      return { ...(two && out.materials?.secondK != null ? cutPart(pt, out.materials.secondK) : cutPart(pt, kx, ky)), tag: two ? names.second : names.main };
     });
     if (job.mirror) parts = parts.map(mirrorCutPart);
     return { params: q, result: { parts: x.copies > 1 ? copiesOf(parts, x.copies) : parts, out } };
   }, {
-    pack: byMaterial(x.nest === "outline" ? outlinePacker<CutPart>((pt) => (pt.images.length ? [0] : [0, 90, 180, 270])) : boxPacker),
+    pack: byMaterial(x.nest === "outline" ? outlinePacker<CutPart>((pt) => (pt.images.length || pt.src.upright ? [0] : [0, 90, 180, 270])) : boxPacker),
     turn: turnCutPart,
     reserve: x.calibration ? CAL_STRIP : 0,
   });
@@ -248,7 +278,9 @@ export function genSVG<P extends GenBase>(def: GeneratorDef<P>, p: P, lay: Layou
   const parts = tags.length > 1
     ? tags.map((t) => `${t}: ${lay.items.filter((it) => it.pt.tag === t).map((it) => it.pt.name).join(", ")}`).join("; ") + " (each material on its own sheets)" + (untagged.length ? `; ${untagged.join(", ")}` : "")
     : lay.items.map((it) => it.pt.name).join(", ");
-  const note = `HingeLab ${def.name}: ${p.name}. ${def.summary(p)}. Material ${p.T} mm, kerf ${p.K} mm (compensated). Parts: ${parts}.${comment ? " " + comment : ""}`;
+  const [kx, ky] = kerfOf(p);
+  const kerf = kx === ky ? `kerf ${p.K} mm` : `kerf ${kx} mm across vertical edges and ${ky} mm across horizontal ones`;
+  const note = `HingeLab ${def.name}: ${p.name}. ${def.summary(p)}. Material ${p.T} mm, ${kerf} (compensated). Parts: ${parts}.${comment ? " " + comment : ""}`;
   let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"${C.images.length ? ' xmlns:xlink="http://www.w3.org/1999/xlink"' : ""} width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">\n`;
   s += `<!-- ${xmlCommentText(esc(note))} -->\n`;
   const layer = (key: LayerKey, paths: string[], fill: boolean) => {
@@ -287,6 +319,36 @@ export function sheetIssues<P extends GenBase>(def: GeneratorDef<P>, p: P, arran
     if (def.scale) fixes.push({ id: "fit-1", label: "Fit to 1 sheet", safe: true, apply: (q) => ({ ...q, fit: { mode: "sheets", sheets: 1 } }) });
     fixes.push({ id: "big-sheet", label: "Use a 600 × 400 mm sheet", safe: false, apply: (q) => ({ ...q, bedW: Math.max(q.bedW, 600), bedH: Math.max(q.bedH, 400) }) });
     out.push({ code: "TOO_BIG", level: "error", message: "A part is larger than the sheet.", fixes });
+  }
+  const w = cleanExtras(p.sheet).minFeature ?? 0;
+  if (w > 0 && arranged.result && !("error" in arranged.result)) {
+    const thin = thinParts(arranged.result.parts, w);
+    if (thin.length) {
+      const list = thin.length > 4 ? `${thin.slice(0, 4).join(", ")} and ${thin.length - 4} more` : thin.join(", ");
+      out.push({ code: "THIN", level: "warn", message: `Some features are narrower than the ${r3(w)} mm your material holds: ${list}. They may break or burn away.`, fixes: [] });
+    }
+  }
+  return out;
+}
+
+/** Most parts the narrow-feature check looks at (it offsets each part twice). */
+const MAX_THIN_PARTS = 150;
+
+/**
+ * Names of parts with a bar, tab or spike narrower than `w`: opening the part (in by w/2, out again)
+ * removes such features, so a removed piece larger than w² is one (a corner only loses ~0.05 w²).
+ */
+export function thinParts(parts: CutPart[], w: number): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const pt of parts.slice(0, MAX_THIN_PARTS)) {
+    const key = pt.src.id;
+    if (seen.has(key) || pt.id.includes("~")) continue;
+    seen.add(key);
+    const shape = unionShapes([...pt.outline, ...pt.inner], [], true);
+    const opened = offsetShapes(offsetShapes(shape, -w / 2), w / 2);
+    const lost = differenceShapes(shapeContours(shape), shapeContours(opened));
+    if (lost.some((s) => s.area > w * w)) out.push(pt.name);
   }
   return out;
 }

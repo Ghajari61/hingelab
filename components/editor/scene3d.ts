@@ -61,13 +61,17 @@ export function sceneSVG(model: Model, p: Params, yaw: number, explode: number) 
     items.push(...walls(outer, t, zBodyTop, { only: "back" }).sort((a, b) => a.depth - b.depth));
   }
   items.push(...walls(outer, 0, zBodyTop, { only: "front", hinge: true }).sort((a, b) => a.depth - b.depth));
-  if (p.lid === "fixed") items.push(cap(outer, p.H, 1.02));
+  const lidRing = p.lidOver ? ring(edges, R + p.lidOver, 10) : outer;
+  if (p.lid === "fixed") {
+    if (p.lidOver) items.push(...walls(lidRing, p.H - t, p.H, { only: "front" }));
+    items.push(cap(lidRing, p.H, 1.02));
+  }
   if (p.lid === "removable") {
     const z0 = p.H - t + lidLift;
     const lipR = R - t - p.lidGap;
-    if (lipR > 0.5 && lidLift > 0.5) items.push(...walls(ring(edges, lipR, 8), z0 - t, z0, { only: "front" }));
-    items.push(...walls(outer, z0, z0 + t, { only: "front" }));
-    items.push(cap(outer, z0 + t, 1.02));
+    if (lipR > 0.5 && lidLift > 0.5 && p.lidLip !== false) items.push(...walls(ring(edges, lipR, 8), z0 - t, z0, { only: "front" }));
+    items.push(...walls(lidRing, z0, z0 + t, { only: "front" }));
+    items.push(cap(lidRing, z0 + t, 1.02));
   }
   const all = items.flatMap(it => it.q);
   const xs = all.map(q => q[0]), ys = all.map(q => q[1]);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Box, Cake, ChevronDown, Clock, Hash, KeyRound, Layers, Package, Puzzle, QrCode, Shapes, Signpost, SquareStack, Trophy, Type } from "lucide-react";
+import { Box, Cake, ChevronDown, Clock, Hash, KeyRound, Layers, Package, Puzzle, QrCode, Ruler, Shapes, Signpost, SquareStack, Trophy, Type } from "lucide-react";
 import type { Params } from "@/lib/hinge";
 import { HINGE_VARIANTS, hingeVariantOf, type HingeVariant } from "@/lib/hinge/presets";
 import { GENERATOR_IDS, GENERATOR_INFO, isGeneratorId, type GeneratorId, type GeneratorInfo } from "@/lib/generators/ids";
@@ -27,6 +27,7 @@ const GEN_ICON: Record<GeneratorInfo["icon"], ReactNode> = {
   hash: <Hash size={16} aria-hidden />,
   trophy: <Trophy size={16} aria-hidden />,
   layers: <SquareStack size={16} aria-hidden />,
+  ruler: <Ruler size={16} aria-hidden />,
 };
 
 export const PRODUCT_INFO: Record<Product, { name: string; icon: ReactNode }> = {
@@ -125,6 +126,7 @@ export function hingeGroups({ params, plan = "pro", onShape, onLid, onPattern, o
     { v: "wave", text: "Wave", title: "Wave lattice: parallel waves, constant bar width", onClick: () => onPattern("wave") },
     { v: "relief", text: "Relief", title: "Lattice with round relief holes at every cut end", onClick: () => onPattern("relief") },
     { v: "serpentine", text: "Serpentine", title: "Serpentine: cuts from alternating edges, for very tight bends", onClick: () => onPattern("serpentine") },
+    { v: "honeycomb", text: "Honeycomb", title: "Honeycomb: nested hexagon cells, a stiff, even bend for large radii", onClick: () => onPattern("honeycomb") },
   ].map((o) => ({ ...o, locked: !canUsePattern(plan, o.v as Params["pattern"]) }));
   return [
     { label: "Shape", name: "Box shape", art: "shape", value: params.shape, options: shape },
