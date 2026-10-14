@@ -1001,3 +1001,13 @@ The owner asked for a modern Dashboard that is a single page with no scrolling.
 - **Small windows.** At the 960×620 minimum the side column narrows to 224px, gaps tighten and the online tiles drop their pictures, so names stay readable. Long names end in an ellipsis.
 - **Checked.** 960×620 with the sidebar open and collapsed, 1280×720, 1366×728, 1360×860 and 1920×1040, light and dark, Free and Pro, with none, six and ten recent designs: no scroll and no clipped content. Hover lifts are off with reduced motion.
 - **Unchanged.** The e2e hooks (`.tile`, `.tile-media`, `.idea-media`, `.hero-card`, `.rcard-media.drawn`, `#dash-recent`) stay. No geometry changed.
+
+## D151. One-screen desktop Generators page
+
+The owner asked for a modern, uncluttered Generators page that is a single screen.
+
+- **Fit, then page.** `PresetPager` measures the grid with a ResizeObserver and fits columns of at least 200px (at most six) and rows of at least 168px. What does not fit goes onto further pages, so a product with 33 presets pages instead of scrolling. The footer holds the design count and the pager (arrows and dots); the mouse wheel over the grid turns one page per gesture.
+- **Less on screen.** The generic page subtitle is replaced by the selected product's description, the New button sits in the header, notes are one line with the full text in the tooltip, and the favorite star only shows on hover, on focus or when set.
+- **Tabs.** A pill tab bar with roving focus (arrow keys, Home and End). Under 1040px of page width only the selected tab keeps its label; the others show their icon with the name as a tooltip and accessible name.
+- **Checked.** 960×620 (sidebar open and collapsed), 1366×728, 1360×860 and 1920×1040, light and dark: no scroll, the tab bar never overflows, the footer stays inside the window.
+- **Unchanged.** No geometry changed.

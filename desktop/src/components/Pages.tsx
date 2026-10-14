@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ArrowRight, Box, Cake, Clock, Clock3, Crown, ExternalLink, FolderOpen, Globe, Hash, History, KeyRound, Keyboard, LayoutGrid, LifeBuoy, Lock, Plus, Puzzle, QrCode, Signpost, Star, Trash2, Trophy, Wand2 } from "lucide-react";
+import { useLayoutEffect, useRef, useState, type KeyboardEvent, type WheelEvent } from "react";
+import { ArrowRight, Box, Cake, ChevronLeft, ChevronRight, Clock, Clock3, Crown, ExternalLink, FolderOpen, Globe, Hash, History, KeyRound, Keyboard, LayoutGrid, LifeBuoy, Lock, Plus, Puzzle, QrCode, Signpost, Star, Trash2, Trophy, Wand2 } from "lucide-react";
 import type { DCatalog, DProduct } from "../../../lib/desktop/types";
 import { onlineArt, presetArt, productArt, showcase } from "../art";
 import type { WebRoute } from "./Web";
@@ -224,42 +224,109 @@ export function Generators({ catalog, plan, initial, favorites, onPreset, onNew,
   const [tab, setTab] = useState(initial);
   const product = catalog?.products.find((p) => p.id === tab) ?? catalog?.products[0];
   if (!catalog || !product) return <div className="page"><div className="sk tall" /></div>;
+  const ids = catalog.products.map((p) => p.id);
+  const onTabKey = (e: KeyboardEvent) => {
+    const i = ids.indexOf(product.id);
+    const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: ids.length - 1 }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    const id = ids[(next + ids.length) % ids.length];
+    setTab(id);
+    document.getElementById(`gen-tab-${id}`)?.focus();
+  };
   return (
-    <div className="page">
-      <header className="page-head">
-        <h1>Generators</h1>
-        <p>Start from a ready-made design and adjust it, or from the defaults.</p>
+    <div className="page gen">
+      <header className="gen-head">
+        <div className="gen-title">
+          <h1>Generators</h1>
+          <p>{product.blurb}</p>
+        </div>
+        <button type="button" className="btn primary" onClick={() => onNew(product.id)}><Plus size={15} aria-hidden />New {product.name}</button>
       </header>
-      <div className="tabs" role="tablist" aria-label="Generators">
-        {catalog.products.map((p) => (
-          <button key={p.id} type="button" role="tab" aria-selected={p.id === product.id} onClick={() => setTab(p.id)}>
-            <ProductIcon product={p} size={15} />{p.name}
-          </button>
-        ))}
-      </div>
-      <div className="tab-intro">
-        <p>{product.blurb}</p>
-        <button type="button" className="btn primary" onClick={() => onNew(product.id)}>New {product.name}</button>
-      </div>
-      <div className="presets" role="list">
-        {product.presets.map((pr) => {
-          const fav = favorites.some((f) => f.product === product.id && f.preset === pr.id);
-          const src = presetArt(product.id, pr.id);
+      <div className="gen-tabs" role="tablist" aria-label="Generators" onKeyDown={onTabKey}>
+        {catalog.products.map((p) => {
+          const on = p.id === product.id;
           return (
-            <div key={pr.id} className="preset" role="listitem">
-              <button type="button" className="preset-open" onClick={() => onPreset(product.id, pr.id)}>
-                {src && <span className="preset-media"><img src={src} alt="" loading="lazy" /></span>}
-                <b>{pr.name}{pr.pro && plan !== "pro" && <span className="badge"><Lock size={10} aria-hidden />Pro</span>}</b>
-                <small>{pr.note}</small>
-              </button>
-              <button type="button" className="icon-btn star" aria-pressed={fav} title={fav ? "Remove from favorites" : "Add to favorites"} onClick={() => onFavorite(product, pr)}>
-                <Star size={14} fill={fav ? "currentColor" : "none"} aria-hidden />
-              </button>
-            </div>
+            <button key={p.id} id={`gen-tab-${p.id}`} type="button" role="tab" aria-selected={on} aria-controls="gen-panel" tabIndex={on ? 0 : -1} title={p.name} onClick={() => setTab(p.id)}>
+              <ProductIcon product={p} size={15} /><span className="gen-tab-label">{p.name}</span>
+            </button>
           );
         })}
       </div>
+      <PresetPager key={product.id} product={product} plan={plan} favorites={favorites} onPreset={onPreset} onFavorite={onFavorite} />
     </div>
+  );
+}
+
+const CARD_MIN_W = 200;
+const CARD_MIN_H = 168;
+const CARD_GAP = 12;
+
+/** Shows as many presets as fit the space and pages through the rest, so the page never scrolls. */
+function PresetPager({ product, plan, favorites, onPreset, onFavorite }: {
+  product: DProduct; plan: "free" | "pro"; favorites: Favorite[];
+  onPreset: (product: string, preset: string) => void; onFavorite: (product: DProduct, preset: { id: string; name: string; note: string }) => void;
+}) {
+  const ref = useRef<HTMLUListElement>(null);
+  const [fit, setFit] = useState({ cols: 4, rows: 3 });
+  const [page, setPage] = useState(0);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => {
+      const { width, height } = e.contentRect;
+      const cols = Math.min(6, Math.max(1, Math.floor((width + CARD_GAP) / (CARD_MIN_W + CARD_GAP))));
+      const rows = Math.max(1, Math.floor((height + CARD_GAP) / (CARD_MIN_H + CARD_GAP)));
+      setFit((f) => (f.cols === cols && f.rows === rows ? f : { cols, rows }));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const per = fit.cols * fit.rows;
+  const pages = Math.max(1, Math.ceil(product.presets.length / per));
+  const at = Math.min(page, pages - 1);
+  const shown = product.presets.slice(at * per, at * per + per);
+  const wheelAt = useRef(-Infinity);
+  const onWheel = (e: WheelEvent) => {
+    if (pages < 2 || Math.abs(e.deltaY) < 20 || e.timeStamp - wheelAt.current < 450) return;
+    const next = at + Math.sign(e.deltaY);
+    if (next < 0 || next >= pages) return;
+    wheelAt.current = e.timeStamp;
+    setPage(next);
+  };
+  return (
+    <>
+      <ul ref={ref} id="gen-panel" role="tabpanel" onWheel={onWheel} aria-labelledby={`gen-tab-${product.id}`} className="presets" style={{ gridTemplateColumns: `repeat(${fit.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${fit.rows}, minmax(0, 1fr))` }}>
+        {shown.map((pr) => {
+          const fav = favorites.some((f) => f.product === product.id && f.preset === pr.id);
+          const src = presetArt(product.id, pr.id);
+          return (
+            <li key={pr.id} className="preset">
+              <button type="button" className="preset-open" title={pr.note} onClick={() => onPreset(product.id, pr.id)}>
+                <span className="preset-media">{src ? <img src={src} alt="" /> : <ProductIcon product={product} size={32} />}</span>
+                <span className="preset-text"><b>{pr.name}</b><small>{pr.note}</small></span>
+              </button>
+              {pr.pro && plan !== "pro" && <span className="badge preset-pro"><Lock size={10} aria-hidden />Pro</span>}
+              <button type="button" className="icon-btn star" aria-pressed={fav} aria-label={`${fav ? "Remove" : "Add"} ${pr.name} ${fav ? "from" : "to"} favorites`} title={fav ? "Remove from favorites" : "Add to favorites"} onClick={() => onFavorite(product, pr)}>
+                <Star size={14} fill={fav ? "currentColor" : "none"} aria-hidden />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <nav className="gen-foot" aria-label="Preset pages">
+        <span className="gen-count">{product.presets.length} designs</span>
+        {pages > 1 && (
+          <span className="pager">
+            <button type="button" className="icon-btn" aria-label="Previous page" disabled={at === 0} onClick={() => setPage(at - 1)}><ChevronLeft size={16} aria-hidden /></button>
+            {Array.from({ length: pages }, (_, i) => (
+              <button key={i} type="button" className="pg-dot" aria-label={`Page ${i + 1} of ${pages}`} aria-current={i === at ? "page" : undefined} onClick={() => setPage(i)} />
+            ))}
+            <button type="button" className="icon-btn" aria-label="Next page" disabled={at === pages - 1} onClick={() => setPage(at + 1)}><ChevronRight size={16} aria-hidden /></button>
+          </span>
+        )}
+      </nav>
+    </>
   );
 }
 
