@@ -21,6 +21,7 @@ import { LETTER_PRESETS } from "@/lib/letters/presets";
 import type { Plan } from "@/lib/plans";
 import { aiMenu, fieldsText, LETTER_FIELDS, productsText, type MenuProduct } from "./menu";
 import { artDesign, artSchema, drawArt, editArt, type ArtOptions } from "./art";
+import { decodePhoto, editPad, isTwoTone, padDesign, padFromPicture, PadError, padOf } from "./padTrace";
 import { gatewayConfigured } from "./request";
 import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_OPEN_PATH, type AIDesign, type AIDesignRequest, type AIOpen, type AIProduct, type AIRevise } from "./types";
 
@@ -242,6 +243,16 @@ async function withArt(model: LanguageModel | undefined, userId: string, job: (o
   }
 }
 
+/** A traced-picture job, with its own messages for the user. */
+async function padJob<T>(job: () => Promise<T>): Promise<T> {
+  try {
+    return await job();
+  } catch (e) {
+    if (e instanceof PadError) throw new AIDesignError(e.message);
+    throw e;
+  }
+}
+
 /** What the design being edited makes now (summary and sizes), so an edit can scale from it. */
 async function currentResult(rev: AIRevise, plan: Plan): Promise<string> {
   try {
@@ -269,7 +280,24 @@ export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: str
   if (rev?.product === "art") {
     const current = artSchema.safeParse((rev.params as { art?: unknown }).art);
     if (!current.success) throw new AIDesignError("This design cannot be edited. Start over and try again.");
+    const pad = padOf(rev.params);
+    if (pad) {
+      return withArt(model, userId, async (o) => {
+        const r = await padJob(() => editPad(current.data, pad, req.prompt, o.ask));
+        const other = r.other ? [`Only the size, border, hanging hole and material of a traced picture change here; open it in Studio for this: ${r.other.slice(0, 120)}.`] : [];
+        return padDesign(r.built, r.spec, plan, rev.match, other);
+      });
+    }
     return withArt(model, userId, async (o) => artDesign(await editArt(current.data, req.prompt, o), plan, rev.match));
+  }
+  if (!rev && req.image) {
+    const raster = decodePhoto(req.image);
+    if (raster && isTwoTone(raster)) {
+      return withArt(model, userId, async (o) => {
+        const r = await padJob(() => padFromPicture(raster, userContent(req), o.ask));
+        return padDesign(r.built, r.spec, plan, "exact", ["Your black-and-white picture was traced as it is and engraved, with a cut border round it."]);
+      });
+    }
   }
   const revising = rev ? menu.find((p) => p.id === rev.product) : undefined;
   if (rev && !revising) throw new AIDesignError("This design cannot be edited here. Start over and try again.");

@@ -94,6 +94,7 @@ export const ARTICLES: HelpArticle[] = [
       { list: [
         "Write what you want to make, with sizes if you know them: “a round tea tin, 9 cm across and 12 cm tall, with a removable lid”. Any language works, and words that go on the product keep their own script.",
         "Or add a photo of a product (pick a file, drop it or paste it). A description and a photo together work best.",
+        "A black-and-white picture (a logo, silhouette, line drawing or name) is traced as it is: the artwork goes on the engrave layer and a cut border is drawn round it as one piece, with a hanging hole for keychains, tags and ornaments. Say what it is for, the size or the border width, for example “keychain, 50 mm, 4 mm border”. Revise can then change the size, border, hole and material; open it in Studio for anything else.",
         "Choose Design it. In 10 to 30 seconds you get the product it picked, the design's settings and, for the Hinge Box and generators, the cut file.",
         "Open in editor applies the design over your current one as a single undo step, so Ctrl+Z brings your last design back. Download SVG saves the cut file straight away.",
       ] },
