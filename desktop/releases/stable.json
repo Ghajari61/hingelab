@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.24",
-    "pub_date": "2026-10-14T04:02:03.938Z",
-    "notes": "AI designer: black-and-white pictures are traced with a cut border round them.",
+    "version": "1.0.25",
+    "pub_date": "2026-10-14T05:41:47.568Z",
+    "notes": "New Shadow Box generator: layered 3D paper-cut shadow boxes from geometric patterns for a Cricut or a laser, with 100 ready-made designs.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.24_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm83Mk9JWVpvbUN2RDlDN0NLRWc2bzk0TjVKQ3V0eWErWVQ1d1M2WjdXSFo4WHMvdElqYVdzYTdZNHA1djMybk80YUR0MWRKZFEwY2NqMUxCZXJIZ2c0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTUwNTE1CWZpbGU6SGluZ2VMYWJfMS4wLjI0X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjQKRWxRRnM4WkVSaU5mTTZOeHZtYVFpa1JOc1AwM3psQWtFL3ZKMC8raU5uMDNKM3dwWW42MnJGNldlT2ZMVjhKNlJXclZxVFBvOGJPTzBBY25QU1VpRFE9PQo=",
-        "size": 2968565
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.25_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm9IeXBTVk42blJBTFR0V2RLRXdDaXROVXJWL0xrZy8wN2VTakR5Q01ucUZNQlZjSTlBTnVJQno2K1NwcUZpZ0ZaNHp1eC90NkZST1dqQmd1UmU1SGdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTU2NDk4CWZpbGU6SGluZ2VMYWJfMS4wLjI1X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjUKWFJiRXExVTIrTnIvS1l6djBsaENPR1IxSzBGL0hlcFArSFJXc0xLTVNHSkYzSVJqSlIyeW9iWGQyRmR0alMzcVRPZ3VXNWpzd3ZIZzVYcHlpN3dWQnc9PQo=",
+        "size": 3507181
       }
     }
   }
