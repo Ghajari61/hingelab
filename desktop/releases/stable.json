@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.21",
-    "pub_date": "2026-10-13T23:09:58.995Z",
-    "notes": "A new one-screen dashboard: your products, ready-made designs, online editors, recent designs and plan all fit the window without scrolling.",
+    "version": "1.0.22",
+    "pub_date": "2026-10-14T01:07:14.820Z",
+    "notes": "A cleaner one-screen Generators page: compact product tabs, simpler preset cards, and pages you flip with the arrows, the dots or the mouse wheel instead of scrolling.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.21_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnRBbk1oTUZBb2RBam5uc0JhZGE2QTJlZzhwOTZTRkNFNXdlV2xYOFgvd2NrWmtHODVnREIxR1BodmRYQlFBU3ltMlRaUm9aTGNaZzI2d3JnUjlhSkFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTMyOTgxCWZpbGU6SGluZ2VMYWJfMS4wLjIxX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjEKMlhPcVFnZTl6WEk2QlIvZERSRVZjZU9ubzhZNklWd2tTYnM5ZVYwY2ZuVkozNjFSZENTbmJkN2NhUHBSdDhFcDBPUGQ3U1UrdVo5eVBITStvRHozQ1E9PQo=",
-        "size": 2968552
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.22_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnMyVEJ2T2JpMHltUUZRb2NrSXZMcmsyWnNBS1FialJ5bHF2dXhmaVNTNUNtMU9qQzJ0OUFwU05QWHZ0TmtzeUdGL0hTVjhZNGtNdm1STm9UN0plVUFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTQwMDI2CWZpbGU6SGluZ2VMYWJfMS4wLjIyX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjIKK3BmUXZPVTBmci9IZWErS3R6Mkc5clNCUllZb2YzNnpxbE96UkNxR2pJOHA4WWxIR29OWFZ1T0lwQVZib2w5ZEIvUkNpVG5WeUNnOU15bXZOVHRBQkE9PQo=",
+        "size": 2968061
       }
     }
   }
