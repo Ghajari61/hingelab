@@ -25,6 +25,7 @@ const mandala = (g: G): G => ({ pattern: "mandala", opening: "circle", min: 25, 
 const sunburst = (g: G): G => ({ pattern: "sunburst", min: 22, max: 100, twist: 0, ...g });
 const land = (g: G): G => ({ pattern: "landscape", min: 34, max: 84, twist: 0, ...g });
 const lattice = (g: G): G => ({ pattern: "lattice", min: 25, max: 95, twist: 0, ...g });
+const flow = (g: G): G => ({ pattern: "flow", min: 25, max: 85, count: 7, waves: 3, amp: 30, swirl: 90, twist: 0, ...g });
 const wide: Frame = { shape: "rect", width: 240, height: 180, corner: 0 };
 const BLADE: P = { cutter: { kind: "blade" }, material: "custom", T: 0.5, K: 0, bedW: 292, bedH: 292, gap: 3 };
 
@@ -138,4 +139,25 @@ export const SHADOWBOX_PRESETS: GenPreset<ShadowBoxParams>[] = [
   preset("tri-twist", "Triangle twist", "Triangles turning layer by layer", lattice({ cell: "triangle", pitch: 28, fade: 30, twist: 6 }), { palette: "coral" }),
   preset("dotted-heart", "Dotted heart", "Dots in a heart frame", lattice({ cell: "circle", pitch: 30, fade: 50 }), { frame: { shape: "heart", width: 210, height: 190 }, palette: "rose" }),
   preset("diamond-mosaic", "Diamond mosaic", "Large diamonds turning in green", lattice({ cell: "diamond", pitch: 32, fade: 30, twist: 8 }), { palette: "forest" }),
+  // Soft curves: ovals, squircles, sine waves and flowing stripes
+  preset("oval-portal", "Oval portal", "Nested ovals in a tall oval frame", tunnel({ opening: "oval", min: 18, max: 112 }), { frame: { shape: "circle", width: 170, height: 230 }, palette: "pastel" }),
+  preset("squircle-steps", "Squircle steps", "Soft-cornered squares stepping back", tunnel({ opening: "squircle", min: 16, max: 108 }), { frame: "squircle", palette: "sage" }),
+  preset("ripple", "Ripple", "Wavy rings spreading like a drop in water", tunnel({ opening: "wavy", sides: 10, inner: 86, twist: 3, min: 16, max: 120 }), { frame: "circle", palette: "ocean" }),
+  preset("sine-bloom", "Sine bloom", "A five-wave flower turning in a blossom frame", tunnel({ opening: "wavy", sides: 5, inner: 62, twist: 7, min: 18, max: 118 }), { frame: "blossom", palette: "candy" }),
+  preset("orbit-rosette", "Orbit rosette", "Three crossed ellipses, like an atom", tunnel({ opening: "orbit", sides: 3, inner: 34, min: 20, max: 115 }), { frame: "circle", palette: "lavender" }),
+  preset("orbit-spin", "Orbit spin", "Four ellipses spinning into the distance", tunnel({ opening: "orbit", sides: 4, inner: 30, twist: 9, min: 18, max: 120 }), { palette: "night", layers: 10 }),
+  preset("soft-mandala", "Soft mandala", "Round petals around a wavy middle", mandala({ opening: "wavy", sides: 8, inner: 80, petal: "circle", count: 12 }), { frame: "blossom", palette: "rose" }),
+  preset("egg-nest", "Egg nest", "Ovals sinking toward the bottom", tunnel({ opening: "oval", min: 16, max: 110, shiftY: 35 }), { frame: { shape: "pill", width: 170, height: 230 }, palette: "kraft" }),
+  preset("capsule-tunnel", "Capsule tunnel", "Rings of a capsule frame", tunnel({ opening: "frame", min: 20, max: 100 }), { frame: { shape: "pill", width: 240, height: 150 }, palette: "mint" }),
+  preset("blossom-rings", "Blossom rings", "Wavy-edged rings in a blossom frame", tunnel({ opening: "frame", min: 22, max: 100 }), { frame: "blossom", palette: "coral" }),
+  preset("gentle-flow", "Gentle flow", "Slow wavy stripes rippling in depth", flow({ count: 7, waves: 2, amp: 30 }), { frame: wide, palette: "ocean" }),
+  preset("silk-ribbons", "Silk ribbons", "Five broad ribbons swinging high", flow({ count: 5, waves: 3, amp: 45, swirl: 180 }), { frame: "squircle", palette: "rose" }),
+  preset("ripple-stripes", "Ripple stripes", "Ten fine wavy stripes in pastels", flow({ count: 10, waves: 4, amp: 24 }), { frame: "rounded", palette: "pastel" }),
+  preset("diagonal-flow", "Diagonal flow", "Wavy stripes on the slant", flow({ count: 8, waves: 2, amp: 32, rotate: 30 }), { frame: "rect", palette: "sage" }),
+  preset("sea-swell", "Sea swell", "Smooth sine swells under a sun", land({ ridge: "sine", count: 2, amp: 26, moon: true, hole: "sun", holeSize: 18 }), { frame: wide, palette: "ocean" }),
+  preset("calm-water", "Calm water", "Low ripples with Breathe on the front", land({ ridge: "sine", count: 4, amp: 12 }), { frame: "squircle", palette: "pastel", extra: { text: { text: "Breathe", fontId: "great-vibes", size: 30 } } }),
+  preset("sine-canyon", "Sine canyon", "Smooth waves above and below", land({ ridge: "sine", from: "both", count: 2, amp: 20 }), { frame: wide, palette: "autumn" }),
+  preset("pebbles", "Pebbles", "Ovals that grow toward the middle", lattice({ cell: "oval", pitch: 34, fade: 60 }), { frame: "squircle", palette: "desert" }),
+  preset("oval-weave", "Oval weave", "Turned ovals in mint", lattice({ cell: "oval", pitch: 30, fade: 30, rotate: 45 }), { frame: "circle", palette: "mint" }),
+  preset("hello-baby", "Hello baby", "Soft squircles, a moon and star, and a name", tunnel({ opening: "squircle", min: 18, max: 108, moon: true, hole: "moonstar", holeSize: 20 }), { frame: "squircle", palette: "pastel", extra: { text: { text: "Hello baby", fontId: "pacifico", size: 22 } } }),
 ];

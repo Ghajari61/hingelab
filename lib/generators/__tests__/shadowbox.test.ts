@@ -15,9 +15,9 @@ const area = (p: { outer: [number, number][]; holes: [number, number][][] }) => 
 const choice = (key: string) => SHADOWBOX.sections.flatMap((s) => s.fields).find((f) => f.key === key) as ChoiceSpec<ShadowBoxParams>;
 
 describe("shadow box", () => {
-  it("has 100 presets that all build with no errors or warnings", () => {
-    expect(SHADOWBOX.presets).toHaveLength(100);
-    expect(new Set(SHADOWBOX.presets.map((p) => p.id)).size).toBe(100);
+  it("has 120 presets that all build with no errors or warnings", () => {
+    expect(SHADOWBOX.presets).toHaveLength(120);
+    expect(new Set(SHADOWBOX.presets.map((p) => p.id)).size).toBe(120);
     for (const pr of SHADOWBOX.presets) {
       const p = SHADOWBOX.merge(pr.params);
       const out = SHADOWBOX.build(p, CTX);
@@ -155,6 +155,25 @@ describe("shadow box", () => {
     expect(mergeShadowBox(p).frame.size).toBe("8x10");
     expect(mergeShadowBox({ frame: { width: 210, height: 251 } }).frame.size).toBe("custom");
     for (const [id, s] of Object.entries(SIZES)) expect(mergeShadowBox({ frame: { width: s.w, height: s.h } }).frame.size, id).toBe(id);
+    // A capsule on a square frame would be a circle: picking it turns the frame landscape.
+    expect(mergeShadowBox(choice("frame.shape").apply!(mergeShadowBox({}), "pill")).frame).toMatchObject({ shape: "pill", width: 175, height: 124, size: "7x5" });
+    expect(choice("frame.shape").apply!(mergeShadowBox({ frame: { width: 220, height: 220 } }), "pill").frame).toMatchObject({ width: 220, height: 136 });
+    expect(choice("frame.shape").apply!(mergeShadowBox({ frame: { width: 240, height: 150 } }), "pill").frame).toMatchObject({ width: 240, height: 150 });
+  });
+
+  it("soft shapes, flowing stripes and sine ridges build as one piece per layer", () => {
+    for (const opening of ["oval", "squircle", "wavy", "orbit"] as const) {
+      const out = build({ design: { pattern: "tunnel", opening, twist: 0 } });
+      expect(out.error, opening).toBeUndefined();
+      expect(layers(out)[3].holes.length, opening).toBe(1);
+    }
+    for (const frame of ["squircle", "blossom", "pill"] as const) expect(build({ frame: { shape: frame } }).error, frame).toBeUndefined();
+    const flow = build({ stack: { count: 6 }, design: { pattern: "flow", count: 6, waves: 2, amp: 30, min: 25, max: 85, web: 1.5 } });
+    const slots = layers(flow).slice(1).map((l) => l.holes.length);
+    expect(Math.min(...slots)).toBeGreaterThanOrEqual(6);
+    const open = layers(flow).slice(1).map((l) => l.holes.reduce((a, h) => a + Math.abs(signedArea(h)), 0));
+    for (let k = 1; k < open.length; k++) expect(open[k]).toBeGreaterThan(open[k - 1]);
+    expect(flow.info!.dropped).toBe(0);
   });
 
   it("colours shade from the back to the front and paper looks matte", () => {

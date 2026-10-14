@@ -253,7 +253,7 @@ export interface GeneratorDef<P extends GenBase> {
   /** Rail card picture for a choice value: SVG paths in a 64 × 44 box (filled ones first). */
   art?(key: string, value: string): { d: string; fill?: boolean }[];
   /** The params a rail card renders for a choice key (simpler than the defaults, so the cards differ clearly). */
-  railPreview?(key: string, p: P): P;
+  railPreview?(key: string, p: P, value: string): P;
   /** File name without extension. */
   fileName(p: P): string;
   /** One line under the title, e.g. "Clock · 300 mm · Roman". */

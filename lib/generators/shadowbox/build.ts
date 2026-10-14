@@ -13,7 +13,7 @@ import { motif } from "../motifs";
 import { heartCurve, orient, shapeOutline, starPolygon } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { textBlock, weld } from "../weld";
-import { PALETTES, type Opening, type Petal, type Ridge, type ShadowBoxParams } from "./params";
+import { PALETTES, type FrameShape, type Opening, type Petal, type Ridge, type ShadowBoxParams } from "./params";
 
 export interface ShadowBoxInfo {
   /** The window inside the frame's border, mm. */
@@ -58,10 +58,46 @@ function rng(seed: number): () => number {
 
 // ---------------------------------------------------------------- Shapes
 
+/** A superellipse (|x|⁴ + |y|⁴ = 1): a square with soft, continuous corners, ±rx by ±ry. */
+function squircle(rx: number, ry: number, m = 144): Contour {
+  const out: Contour = [];
+  for (let i = 0; i < m; i++) {
+    const t = (TAU * i) / m, c = Math.cos(t), s = Math.sin(t);
+    out.push([rx * Math.sign(c) * Math.sqrt(Math.abs(c)), ry * Math.sign(s) * Math.sqrt(Math.abs(s))]);
+  }
+  return out;
+}
+
+/** A circle whose edge swells in and out on a sine: `n` waves, troughs at `inner` of the radius. */
+function wavyCircle(n: number, inner: number, m = Math.max(144, n * 24)): Contour {
+  const out: Contour = [];
+  for (let i = 0; i < m; i++) {
+    const t = (TAU * i) / m, r = 1 - (1 - inner) * (0.5 - 0.5 * Math.cos(n * t));
+    out.push([r * Math.sin(t), -r * Math.cos(t)]);
+  }
+  return out;
+}
+
+/** The outline of a frame shape filling (0, 0)–(w, h). */
+export function frameOutline(kind: FrameShape, w: number, h: number, corner: number): Contour {
+  if (kind === "squircle") return squircle(w / 2, h / 2, 192).map(([x, y]) => [x + w / 2, y + h / 2] as Pt);
+  if (kind === "blossom") return wavyCircle(8, 0.86, 256).map(([x, y]) => [w / 2 + (x * w) / 2, h / 2 + (y * h) / 2] as Pt);
+  return shapeOutline(kind, w, h, corner);
+}
+
 /** An opening shape centred on 0 within ±1, first point or petal up. */
-export function unitOpening(kind: Exclude<Opening, "frame">, n: number, inner: number): Contour {
+export function unitOpening(kind: Exclude<Opening, "frame">, sides: number, inner: number): Contour {
+  const n = Math.max(3, sides);
   switch (kind) {
     case "circle": return ellipse(0, 0, 1, 1, 144);
+    case "oval": return ellipse(0, 0, 0.7, 1, 144);
+    case "squircle": return squircle(1, 1);
+    case "wavy": return wavyCircle(n, inner);
+    case "orbit": {
+      // Ellipses crossing in the middle, turned evenly: a soft rosette.
+      const cs = Array.from({ length: n }, (_, k) => transform(ellipse(0, 0, Math.max(0.12, inner), 1, 96), { x: 0, y: 0, rot: (180 * k) / n, sx: 1, sy: 1 }));
+      return biggest(unionShapes(cs.map(orient))).outer;
+    }
     case "polygon": return regularPolygon(n, 1);
     case "star": return starPolygon(n, 1, inner);
     case "flower": {
@@ -129,6 +165,11 @@ function ridgeLine(kind: Ridge, bumps: number, rand: () => number): Pt[] {
     case "hills": {
       const a = rand() * TAU, b = rand() * TAU, k = 1.6 + rand() * 0.6;
       sample((u) => 0.65 * Math.sin(TAU * c * u * 0.5 + a) + 0.35 * Math.sin(TAU * c * u * 0.5 * k + b));
+      break;
+    }
+    case "sine": {
+      const a = rand() * TAU;
+      sample((u) => Math.sin(TAU * c * u * 0.5 + a));
       break;
     }
     case "dunes": {
@@ -321,6 +362,7 @@ function openingsOf(p: ShadowBoxParams, w: Win, win: Shape, i: number, L: number
         switch (g.cell) {
           case "hex": c = regularPolygon(6, (k * pitch) / Math.sqrt(3), rot, gx, gy); break;
           case "circle": c = circle(gx, gy, (k * pitch) / 2, DOT_TOL); break;
+          case "oval": c = transform(ellipse(0, 0, k * pitch * 0.3, k * pitch * 0.48, 40), { x: gx, y: gy, rot, sx: 1, sy: 1 }); break;
           case "square": c = regularPolygon(4, ((k * pitch) / 2) * Math.SQRT2, rot + 45, gx, gy); break;
           case "diamond": c = regularPolygon(4, (k * pitch) / 2, rot, gx, gy); break;
           case "triangle": c = regularPolygon(3, (k * pitch) / Math.sqrt(3), rot + (kind === "down" ? 180 : 0), gx, gy); break;
@@ -333,7 +375,7 @@ function openingsOf(p: ShadowBoxParams, w: Win, win: Shape, i: number, L: number
         for (let j = -n * 2; j <= n * 2; j++) for (let k = -n; k <= n; k++) hole(w.cx + k * pitch + (j % 2 ? pitch / 2 : 0), w.cy + j * dy, null);
       } else if (g.cell === "square") {
         for (let j = -n; j <= n; j++) for (let k = -n; k <= n; k++) hole(w.cx + k * pitch, w.cy + j * pitch, null);
-      } else if (g.cell === "diamond") {
+      } else if (g.cell === "diamond" || g.cell === "oval") {
         for (let j = -n * 2; j <= n * 2; j++) for (let k = -n; k <= n; k++) hole(w.cx + k * pitch + (j % 2 ? pitch / 2 : 0), w.cy + (j * pitch) / 2, null);
       } else {
         const h = (pitch * Math.sqrt(3)) / 2;
@@ -343,6 +385,25 @@ function openingsOf(p: ShadowBoxParams, w: Win, win: Shape, i: number, L: number
         }
       }
       return out;
+    }
+    case "flow": {
+      // Wavy slots across the window; the paper between them runs from one side of the frame to the other.
+      const n = Math.max(2, g.count), pitch = w.h / n, reach = Math.hypot(w.w, w.h) / 2 + pitch;
+      const th = Math.min(pitch - g.web, pitch * s * 0.9), amp = (g.amp / 100) * pitch * 1.6;
+      if (th <= 0) return [];
+      const k = (TAU * Math.max(1, g.waves)) / (w.w * 2), phase = rad(g.swirl) * t;
+      const m = Math.ceil(((2 * reach) / w.w) * Math.max(1, g.waves) * 20);
+      const out: Contour[] = [];
+      for (let j = -Math.ceil(reach / pitch); j <= Math.ceil(reach / pitch); j++) {
+        const yc = w.cy + (j + (n % 2 ? 0 : 0.5)) * pitch, top: Pt[] = [], bot: Pt[] = [];
+        for (let q = 0; q <= m; q++) {
+          const x = w.cx - reach + (2 * reach * q) / m, y = yc + amp * Math.sin(k * (x - w.x0) + phase);
+          top.push([x, y - th / 2]);
+          bot.push([x, y + th / 2]);
+        }
+        out.push([...top, ...bot.reverse()]);
+      }
+      return turn(out, rot, w.cx, w.cy);
     }
   }
 }
@@ -409,7 +470,7 @@ function textAt(p: ShadowBoxParams, size: number, w: Win, winCs: Contour[], ctx:
 export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBoxOutput {
   const { width: W, height: H, border } = p.frame;
   const T = p.T, N = p.stack.count;
-  const frame = orient(simplifyClosed(shapeOutline(p.frame.shape, W, H, p.frame.corner), SIMPLIFY));
+  const frame = orient(simplifyClosed(frameOutline(p.frame.shape, W, H, p.frame.corner), SIMPLIFY));
   const frameShape = makeShape(frame, []);
   const wins = offsetShapes([frameShape], -border);
   const info: ShadowBoxInfo = { winW: 0, winH: 0, open: 0, dropped: 0, noWindow: false, depth: 0 };

@@ -1,10 +1,10 @@
 import { MATERIALS } from "@/lib/hinge/defaults";
-import { circle, rect, regularPolygon } from "../geom";
+import { circle, ellipse, rect, regularPolygon } from "../geom";
 import { shapeArt, shapeOutline } from "../shapes";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { motif, type MotifId } from "../motifs";
 import { fitArt, namedFile } from "../util";
-import { buildShadowBox, unitOpening, type ShadowBoxOutput } from "./build";
+import { buildShadowBox, frameOutline, unitOpening, type ShadowBoxOutput } from "./build";
 import { checkShadowBox } from "./check";
 import {
   CELLS, FRAMES, HOLES, MAT_MM, OPENINGS, PALETTES, PATTERNS, PETALS, RIDGES, SHADOWBOX_DEFAULTS, SIZES, mergeShadowBox,
@@ -14,18 +14,36 @@ import { SHADOWBOX_PRESETS } from "./presets";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
-export const PATTERN_NAMES: Record<Pattern, string> = { tunnel: "Tunnel", mandala: "Mandala", sunburst: "Sunburst", landscape: "Scene", lattice: "Lattice" };
-const OPENING_NAMES: Record<Opening, string> = { circle: "Circle", polygon: "Polygon", star: "Star", flower: "Flower", heart: "Heart", arch: "Arch", drop: "Drop", frame: "As frame" };
-const RIDGE_NAMES: Record<Ridge, string> = { hills: "Hills", mountains: "Peaks", waves: "Waves", zigzag: "Zigzag", dunes: "Dunes", skyline: "City", trees: "Forest", clouds: "Clouds" };
-const HOLE_NAMES: Record<Hole, string> = {
-  circle: "Circle", moon: "Crescent", moonstar: "Moon & star", star: "Star", heart: "Heart", sun: "Sun", snowflake: "Snowflake",
-  tree: "Tree", house: "House", butterfly: "Butterfly", flower: "Flower", paw: "Paw", cloud: "Cloud",
+type Named<K extends string> = Record<K, string | [string, string]>;
+/** Choice options from a name table; a pair is [label, tooltip]. */
+const opts = <K extends string>(keys: readonly K[], names: Named<K>) =>
+  keys.map((v) => { const n = names[v]; return typeof n === "string" ? { v, text: n } : { v, text: n[0], title: n[1] }; });
+
+export const PATTERN_NAMES: Named<Pattern> = {
+  tunnel: ["Tunnel", "One shape nested from the back to the front"], mandala: ["Mandala", "A ring of petals and dots round a middle shape"],
+  sunburst: ["Sunburst", "Straight or curled rays"], landscape: ["Scene", "Layered hills, peaks, waves, a forest, clouds or a city"],
+  lattice: ["Lattice", "A grid of holes"], flow: ["Flow", "Wavy stripes that widen toward the front"],
 };
-const CELL_NAMES: Record<Cell, string> = { hex: "Honeycomb", circle: "Dots", square: "Squares", diamond: "Diamonds", triangle: "Triangles" };
-const FRAME_NAMES: Record<FrameShape, string> = {
-  rect: "Rectangle", rounded: "Rounded", circle: "Circle / oval", arch: "Arch", hexagon: "Hexagon", octagon: "Octagon",
-  heart: "Heart", diamond: "Diamond", scalloped: "Scalloped", house: "House", shield: "Shield", cloud: "Cloud",
+const OPENING_NAMES: Named<Opening> = {
+  circle: "Circle", oval: "Oval", squircle: ["Squircle", "A square with soft, round corners"], polygon: "Polygon", star: "Star",
+  flower: "Flower", wavy: ["Wavy", "A circle with a sine-wave edge"], orbit: ["Orbit", "Ellipses crossing in the middle"],
+  heart: "Heart", arch: "Arch", drop: "Drop", frame: ["As frame", "Rings in the frame's own outline"],
 };
+const RIDGE_NAMES: Named<Ridge> = {
+  hills: "Hills", mountains: "Peaks", waves: "Waves", zigzag: "Zigzag", dunes: "Dunes", skyline: "City", trees: "Forest", clouds: "Clouds",
+  sine: ["Sine", "Smooth, even sine waves"],
+};
+const HOLE_NAMES: Named<Hole> = {
+  circle: "Circle", moon: "Crescent", moonstar: ["Moon & star", "A crescent moon and a star"], star: "Star", sparkle: "Sparkle", heart: "Heart",
+  sun: "Sun", snowflake: "Snowflake", tree: "Tree", leaf: "Leaf", house: "House", butterfly: "Butterfly", flower: "Flower", paw: "Paw", cloud: "Cloud",
+};
+const CELL_NAMES: Named<Cell> = { hex: "Honeycomb", circle: "Dots", oval: "Ovals", square: "Squares", diamond: "Diamonds", triangle: "Triangles" };
+const FRAME_NAMES: Named<FrameShape> = {
+  rect: "Rectangle", rounded: "Rounded", squircle: ["Squircle", "A square with soft, round corners"], circle: ["Circle", "A circle, or an oval when the width and height differ"],
+  pill: ["Capsule", "Straight sides with round ends"], arch: "Arch", hexagon: "Hexagon", octagon: "Octagon", diamond: "Diamond", heart: "Heart",
+  scalloped: "Scalloped", blossom: ["Blossom", "A circle with a soft wavy edge"], house: "House", shield: "Shield", cloud: "Cloud",
+};
+const label = <K extends string>(names: Named<K>, k: K) => { const n = names[k]; return typeof n === "string" ? n : n[0]; };
 
 /** Cut-out sizes and counts each pattern starts from when it is picked. */
 const PATTERN_START: Record<Pattern, Partial<ShadowBoxParams["design"]>> = {
@@ -34,6 +52,14 @@ const PATTERN_START: Record<Pattern, Partial<ShadowBoxParams["design"]>> = {
   sunburst: { min: 22, max: 100, count: 16 },
   landscape: { min: 34, max: 84, count: 3, amp: 24 },
   lattice: { min: 25, max: 95, pitch: 20 },
+  flow: { min: 25, max: 85, count: 7, waves: 3, amp: 30, swirl: 90 },
+};
+const CURVED: Opening[] = ["polygon", "star", "flower", "wavy", "orbit"];
+/** A capsule on a square frame would be a plain circle, so it turns landscape (a standard 7 × 5 in when that size was picked). */
+const pickFrame = (p: ShadowBoxParams, v: string): ShadowBoxParams => {
+  const f = { ...p.frame, shape: v as FrameShape };
+  if (v === "pill" && Math.abs(f.width - f.height) < 1) Object.assign(f, f.size === "custom" ? { height: Math.round(f.width * 0.62) } : { width: SIZES["7x5"].w, height: SIZES["7x5"].h });
+  return { ...p, frame: f };
 };
 
 const isPat = (p: ShadowBoxParams, ...ks: Pattern[]) => ks.includes(p.design.pattern);
@@ -48,25 +74,29 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
     fields: [
       {
         kind: "choice", key: "design.pattern", label: "Pattern", rail: true,
-        help: "Tunnel nests one shape; Mandala rings it with petals and dots; Sunburst cuts rays; Scene cuts layered ridges of hills, peaks, waves, a forest, clouds or a city; Lattice cuts a grid of holes.",
-        options: PATTERNS.map((v) => ({ v, text: PATTERN_NAMES[v] })),
+        help: "Tunnel nests one shape; Mandala rings it with petals and dots; Sunburst cuts rays; Scene cuts layered ridges of hills, peaks, waves, a forest, clouds or a city; Lattice cuts a grid of holes; Flow cuts wavy stripes.",
+        options: opts(PATTERNS, PATTERN_NAMES),
         apply: (p, v) => withDesign(p, { pattern: v as Pattern, ...PATTERN_START[v as Pattern] }),
       },
       {
         kind: "choice", key: "design.opening", label: "Cut-out", rail: true, show: shaped,
         help: "The shape of each layer's cut-out (the middle of a mandala). As frame repeats the frame's own outline as even rings.",
-        options: OPENINGS.map((v) => ({ v, text: OPENING_NAMES[v] })),
+        options: opts(OPENINGS, OPENING_NAMES),
         apply: (p, v) => withDesign(p, { ...(shaped(p) ? {} : { pattern: "tunnel", ...PATTERN_START.tunnel }), opening: v as Opening }),
       },
-      { kind: "number", key: "design.sides", label: "Points", unit: "", min: 3, max: 16, step: 1, int: true, show: (p) => shaped(p) && ["polygon", "star", "flower"].includes(p.design.opening), help: "Corners of the polygon, points of the star or petals of the flower." },
-      { kind: "number", key: "design.inner", label: "Inner size", unit: "%", min: 5, max: 95, step: 1, show: (p) => (shaped(p) && ["star", "flower"].includes(p.design.opening)) || isPat(p, "sunburst"), help: "How deep a star's or flower's notches go, or how wide the sunburst's rays are." },
+      { kind: "number", key: "design.sides", label: "Points", unit: "", min: 3, max: 16, step: 1, int: true, show: (p) => shaped(p) && CURVED.includes(p.design.opening), help: "Corners of the polygon, points of the star, petals of the flower, waves round the wavy circle or ellipses of the orbit." },
+      { kind: "number", key: "design.inner", label: "Inner size", unit: "%", min: 5, max: 95, step: 1, show: (p) => (shaped(p) && ["star", "flower", "wavy", "orbit"].includes(p.design.opening)) || isPat(p, "sunburst"), help: "How deep a star's, flower's or wavy circle's notches go, how wide the orbit's ellipses are, or how wide the sunburst's rays are." },
+      { kind: "number", key: "design.count", label: "Stripes", unit: "", min: 3, max: 48, step: 1, int: true, show: (p) => isPat(p, "flow"), help: "Wavy stripes down the window." },
+      { kind: "number", key: "design.waves", label: "Waves", unit: "", min: 1, max: 12, step: 1, int: true, show: (p) => isPat(p, "flow"), help: "Waves along each stripe, across the window." },
+      { kind: "number", key: "design.amp", label: "Wave height", unit: "%", min: 0, max: 80, step: 1, show: (p) => isPat(p, "flow"), help: "How far the stripes swing up and down." },
+      { kind: "number", key: "design.swirl", label: "Drift", unit: "deg", min: -180, max: 180, step: 1, show: (p) => isPat(p, "flow"), help: "Slides the waves along from the back layer to the front one, so the stripes ripple in depth." },
       { kind: "choice", key: "design.petal", label: "Petals", show: (p) => isPat(p, "mandala"), options: PETALS.map((v) => ({ v, text: v[0].toUpperCase() + v.slice(1) })), help: "The shape of the mandala's petals." },
       { kind: "number", key: "design.count", label: "Count", unit: "", min: 3, max: 48, step: 1, int: true, show: (p) => isPat(p, "mandala", "sunburst", "landscape"), help: "Petals around a mandala, rays of a sunburst, or bumps across a landscape's front ridge (ridges further back have more)." },
       { kind: "number", key: "design.swirl", label: "Swirl", unit: "deg", min: -180, max: 180, step: 1, show: (p) => isPat(p, "sunburst"), help: "Curls the rays into a spiral." },
       {
         kind: "choice", key: "design.ridge", label: "Scene", rail: true, show: (p) => isPat(p, "landscape"),
         help: "The line along the top of each scene layer: rolling hills, mountain peaks, sea waves, zigzags, sand dunes, a city, a pine forest or puffy clouds.",
-        options: RIDGES.map((v) => ({ v, text: RIDGE_NAMES[v] })),
+        options: opts(RIDGES, RIDGE_NAMES),
         apply: (p, v) => withDesign(p, { ...(isPat(p, "landscape") ? {} : { pattern: "landscape", ...PATTERN_START.landscape }), ridge: v as Ridge }),
       },
       { kind: "choice", key: "design.from", label: "Rises from", show: (p) => isPat(p, "landscape"), options: [{ v: "bottom", text: "Bottom" }, { v: "top", text: "Top", title: "Hangs down like clouds or a cave roof" }, { v: "both", text: "Both", title: "A canyon" }], help: "Where the paper of each layer sits: under the ridge, above it, or both." },
@@ -75,7 +105,7 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
       {
         kind: "choice", key: "design.cell", label: "Cells", rail: true, show: (p) => isPat(p, "lattice"),
         help: "The holes of the lattice.",
-        options: CELLS.map((v) => ({ v, text: CELL_NAMES[v] })),
+        options: opts(CELLS, CELL_NAMES),
         apply: (p, v) => withDesign(p, { ...(isPat(p, "lattice") ? {} : { pattern: "lattice", ...PATTERN_START.lattice }), cell: v as Cell }),
       },
       { kind: "number", key: "design.pitch", label: "Cell size", unit: "mm", min: 8, max: 80, step: 0.5, show: (p) => isPat(p, "lattice"), help: "Distance between the holes' centres." },
@@ -97,7 +127,7 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
     help: "A hole in the back board that glows when a light sits behind the box: a moon, a sun or a little motif.",
     fields: [
       { kind: "toggle", key: "design.moon", label: "Light hole", help: "Cuts a hole in the back layer: in the sky of a scene, or in the middle of the other patterns." },
-      { kind: "choice", key: "design.hole", label: "Light shape", rail: true, show: (p) => p.design.moon, options: HOLES.map((v) => ({ v, text: HOLE_NAMES[v] })), apply: (p, v) => withDesign(p, { moon: true, hole: v as Hole }), help: "The shape of the light hole." },
+      { kind: "choice", key: "design.hole", label: "Light shape", rail: true, show: (p) => p.design.moon, options: opts(HOLES, HOLE_NAMES), apply: (p, v) => withDesign(p, { moon: true, hole: v as Hole }), help: "The shape of the light hole." },
       { kind: "number", key: "design.holeSize", label: "Hole size", unit: "%", min: 5, max: 45, step: 1, show: (p) => p.design.moon, help: "Size of the light hole, as a share of the window's smaller side." },
     ],
   },
@@ -111,8 +141,8 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
       { kind: "number", key: "design.max", label: "Front cut-out", unit: "%", min: 5, max: 200, step: 1, help: "Size of the cut-out on the front layer. Over 100% leaves only the corners of the window." },
       { kind: "number", key: "design.twist", label: "Twist", unit: "deg", min: -45, max: 45, step: 0.5, help: "Turns each layer's pattern a little more than the one behind it: a spiral." },
       { kind: "number", key: "design.rotate", label: "Turn", unit: "deg", min: -180, max: 180, step: 1, help: "Turns the whole pattern." },
-      { kind: "number", key: "design.shiftX", label: "Vanishing point X", unit: "%", min: -90, max: 90, step: 1, show: (p) => !isPat(p, "landscape"), help: "Moves the back cut-outs left or right, so the tunnel runs off at an angle." },
-      { kind: "number", key: "design.shiftY", label: "Vanishing point Y", unit: "%", min: -90, max: 90, step: 1, show: (p) => !isPat(p, "landscape"), help: "Moves the back cut-outs up or down." },
+      { kind: "number", key: "design.shiftX", label: "Vanishing point X", unit: "%", min: -90, max: 90, step: 1, show: (p) => !isPat(p, "landscape", "flow"), help: "Moves the back cut-outs left or right, so the tunnel runs off at an angle." },
+      { kind: "number", key: "design.shiftY", label: "Vanishing point Y", unit: "%", min: -90, max: 90, step: 1, show: (p) => !isPat(p, "landscape", "flow"), help: "Moves the back cut-outs up or down." },
       { kind: "toggle", key: "design.stretch", label: "Stretch to the window", show: shaped, help: "Cut-outs stretch to the window's width and height instead of keeping their shape." },
     ],
   },
@@ -120,7 +150,7 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
     id: "frame", title: "Frame", open: true,
     help: "The outline every layer shares and the solid border around the pattern.",
     fields: [
-      { kind: "choice", key: "frame.shape", label: "Frame", rail: true, options: FRAMES.map((v) => ({ v, text: FRAME_NAMES[v] })), help: "The outline of every layer." },
+      { kind: "choice", key: "frame.shape", label: "Frame", rail: true, options: opts(FRAMES, FRAME_NAMES), apply: pickFrame, help: "The outline of every layer." },
       {
         kind: "choice", key: "frame.size", label: "Frame size",
         options: [...Object.entries(SIZES).map(([v, s]) => ({ v, text: s.text, title: `Layers ${s.w} × ${s.h} mm` })), { v: "custom", text: "Custom" }],
@@ -165,7 +195,10 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
 
 function art(key: string, v: string): { d: string; fill?: boolean }[] {
   const ring = (cs: Contour[]) => { const [o, ...h] = fitArt(cs, 36); return [{ d: [o, ...h].join(" "), fill: true }]; };
-  if (key === "frame.shape") return shapeArt(v as FrameShape);
+  if (key === "frame.shape") {
+    if (v !== "squircle" && v !== "blossom") return shapeArt(v as Exclude<FrameShape, "squircle" | "blossom">);
+    return [{ d: fitArt([frameOutline(v, 36, 36, 0)], 38)[0], fill: true }];
+  }
   if (key === "look.palette") return [0, 1, 2, 3].map((i) => ({ d: fitArt([rect(-20, -14, 40, 28), rect(-20 + i * 10, -14, 10, 28)], 36)[1], fill: i % 2 === 0 }));
   if (key === "design.pattern") {
     const box = rect(-1.2, -1.2, 2.4, 2.4);
@@ -175,6 +208,11 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
       case "sunburst": return ring([box, ...Array.from({ length: 10 }, (_, i) => { const a = (i * Math.PI) / 5; return [[0.15 * Math.sin(a), -0.15 * Math.cos(a)], [Math.sin(a - 0.14), -Math.cos(a - 0.14)], [Math.sin(a + 0.14), -Math.cos(a + 0.14)]] as Contour; })]);
       case "landscape": return ring([box, [[-1, -1], [1, -1], [1, 0.1], [0.5, -0.5], [0, 0.2], [-0.5, -0.7], [-1, 0]]]);
       case "lattice": return art("design.cell", "hex");
+      case "flow": return ring([box, ...[-0.7, 0, 0.7].map((y) => {
+        const top: [number, number][] = [], bot: [number, number][] = [];
+        for (let i = 0; i <= 24; i++) { const x = -1.2 + (2.4 * i) / 24, c = y + 0.22 * Math.sin(x * Math.PI * 1.3); top.push([x, c - 0.16]); bot.push([x, c + 0.16]); }
+        return [...top, ...bot.reverse()] as Contour;
+      })]);
     }
   }
   if (key === "design.opening") {
@@ -191,7 +229,7 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
     const pts: [number, number][] = [];
     for (let i = 0; i <= 40; i++) {
       const u = i / 40;
-      const f = v === "zigzag" ? 1 - 4 * Math.abs(((u * 3) % 1) - 0.5) : v === "waves" ? 1 - 2 * Math.pow(Math.abs(Math.sin(Math.PI * u * 3)), 0.7) : v === "skyline" ? [0.2, -0.4, 0.8, 0.1, -0.2, 0.6][Math.floor(u * 5.99)] : v === "mountains" ? 1 - 2 * Math.abs(((u * 2.2) % 1) - 0.5) * 2 : v === "clouds" ? 2 * Math.sqrt(Math.max(0, 1 - (2 * ((u * 3) % 1) - 1) ** 2)) - 1 : Math.sin(u * Math.PI * (v === "dunes" ? 3 : 2));
+      const f = v === "zigzag" ? 1 - 4 * Math.abs(((u * 3) % 1) - 0.5) : v === "waves" ? 1 - 2 * Math.pow(Math.abs(Math.sin(Math.PI * u * 3)), 0.7) : v === "skyline" ? [0.2, -0.4, 0.8, 0.1, -0.2, 0.6][Math.floor(u * 5.99)] : v === "mountains" ? 1 - 2 * Math.abs(((u * 2.2) % 1) - 0.5) * 2 : v === "sine" ? Math.sin(u * Math.PI * 5) : v === "clouds" ? 2 * Math.sqrt(Math.max(0, 1 - (2 * ((u * 3) % 1) - 1) ** 2)) - 1 : Math.sin(u * Math.PI * (v === "dunes" ? 3 : 2));
       pts.push([u * 60, 20 - f * 8]);
     }
     return ring([[...pts, [60, 34], [0, 34]]]);
@@ -200,7 +238,7 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
     const cs: Contour[] = [rect(-2, -2, 40, 28)];
     for (let y = 0; y < 3; y++) for (let x = 0; x < 4; x++) {
       const cx = 4 + x * 10 + (v === "hex" || v === "circle" ? (y % 2) * 5 : 0), cy = 4 + y * 8;
-      cs.push(v === "circle" ? circle(cx, cy, 3, 0.2) : v === "hex" ? regularPolygon(6, 3.4, 0, cx, cy) : v === "square" ? rect(cx - 3, cy - 3, 6, 6) : v === "diamond" ? regularPolygon(4, 3.8, 0, cx, cy) : regularPolygon(3, 3.6, (x + y) % 2 ? 180 : 0, cx, cy));
+      cs.push(v === "oval" ? ellipse(cx, cy, 2.2, 3.4, 24) : v === "circle" ? circle(cx, cy, 3, 0.2) : v === "hex" ? regularPolygon(6, 3.4, 0, cx, cy) : v === "square" ? rect(cx - 3, cy - 3, 6, 6) : v === "diamond" ? regularPolygon(4, 3.8, 0, cx, cy) : regularPolygon(3, 3.6, (x + y) % 2 ? 180 : 0, cx, cy));
     }
     return ring(cs);
   }
@@ -221,17 +259,20 @@ function scaleShadowBox(p: ShadowBoxParams, s: number): ShadowBoxParams {
  * Rail cards: a few untwisted layers, so each card shows its own choice clearly instead of the busy
  * default tunnel.
  */
-function railPreview(key: string, p: ShadowBoxParams): ShadowBoxParams {
+function railPreview(key: string, p: ShadowBoxParams, value: string): ShadowBoxParams {
+  if (key === "frame.shape") p = pickFrame(p, value);
   const d = (design: Partial<ShadowBoxParams["design"]>, count: number, more: Partial<ShadowBoxParams> = {}): ShadowBoxParams =>
     ({ ...p, ...more, stack: { ...p.stack, count }, design: { ...p.design, twist: 0, rotate: 0, ...design } });
   switch (key) {
-    case "design.pattern": return d({ count: 10, amp: 26, pitch: 34, sides: 5, inner: 50 }, 6);
+    case "design.pattern": return d({ amp: 26, pitch: 34, sides: 5, inner: 50 }, 6);
     case "design.opening": return d({ pattern: "tunnel", min: 22, max: 100, sides: 6, inner: 50 }, 5);
     case "design.ridge": return d({ pattern: "landscape", ...PATTERN_START.landscape, count: 2, amp: 30 }, 5);
     case "design.cell": return d({ pattern: "lattice", min: 40, max: 90, pitch: 40, fade: 30 }, 4);
     case "design.hole": return d({ pattern: "tunnel", opening: "circle", min: 120, max: 130, moon: true, holeSize: 45 }, 2, { look: { palette: "night", reverse: false } });
-    case "frame.shape": return d({ pattern: "tunnel", opening: "frame", min: 35, max: 100 }, 5, { look: { ...p.look, reverse: true } });
-    case "look.palette": return d({ pattern: "tunnel", opening: "circle", min: 25, max: 105 }, 6);
+    // The frame alone: a dark border ring over a light back board, so the card shows the outline and nothing else.
+    case "frame.shape": return d({ pattern: "tunnel", opening: "circle", min: 300, max: 300 }, 2, { look: { palette: "sunset", reverse: true } });
+    // Bands of every colour in order, like a swatch strip, from the back (top) to the front (bottom).
+    case "look.palette": return d({ pattern: "landscape", ridge: "sine", from: "bottom", min: 10, max: 82, count: 3, amp: 22, seed: 3 }, 6, { frame: { ...p.frame, shape: "rounded" } });
     default: return p;
   }
 }
@@ -252,11 +293,11 @@ export const SHADOWBOX: GeneratorDef<ShadowBoxParams> = {
   art,
   railPreview,
   fileName: (p) => namedFile("shadow-box", p.name, p.design.pattern),
-  summary: (p) => `${PATTERN_NAMES[p.design.pattern]} shadow box · ${p.stack.count} layers · ${Math.round(p.frame.width)} × ${Math.round(p.frame.height)} mm`,
+  summary: (p) => `${label(PATTERN_NAMES, p.design.pattern)} shadow box · ${p.stack.count} layers · ${Math.round(p.frame.width)} × ${Math.round(p.frame.height)} mm`,
   help: {
     intro: [
       "The Shadow Box generator makes layered 3D paper-cut art: a stack of frames with the same outline whose geometric cut-outs grow from the back layer to the front one, so the finished piece looks deep when the layers are stacked with foam tape or spacer frames between them.",
-      "Pick a pattern (a tunnel of nested circles, polygons, stars, flowers, hearts or arches; a mandala of petals and dots; a sunburst of straight or curled rays; a scene of hills, peaks, waves, dunes, a pine forest, clouds or a city; or a lattice of holes), then set the number of layers, how much the cut-outs grow, a twist for spirals and a vanishing point for tunnels that run off at an angle. It comes with 100 ready-made designs.",
+      "Pick a pattern (a tunnel of nested circles, polygons, stars, flowers, hearts or arches; a mandala of petals and dots; a sunburst of straight or curled rays; a scene of hills, peaks, waves, dunes, a pine forest, clouds or a city; or a lattice of holes; or flowing wavy stripes, ovals, squircles, sine-wave circles and crossed ellipses for softer looks), then set the number of layers, how much the cut-outs grow, a twist for spirals and a vanishing point for tunnels that run off at an angle. It comes with 120 ready-made designs.",
       "Make it personal: put a name, date or short message on the front layer in any font, cut a light hole shaped like a crescent, a star, a heart or another motif into the back board, and size the layers for a standard 6 × 6, 8 × 8, 10 × 10, 5 × 7 or 8 × 10 in frame.",
       "It starts set for a Cricut or similar blade cutter: the layers are drawn on 12 × 12 in mats with no kerf, one SVG for all the layers. Choose Laser to cut card or thin plywood on a laser bed with kerf compensation.",
     ],

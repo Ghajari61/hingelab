@@ -23,5 +23,5 @@ export const GENERATOR_INFO: Record<GeneratorId, GeneratorInfo> = {
   sign: { name: "Sign", blurb: "Wall, door, shop and desk signs in wood, acrylic or both: engraved, layered lettering, cut-out words, flush inlays, neon-look acrylic or paint stencils, with frames and stands.", icon: "sign", storageKey: "hingelab-gen-sign-v1" },
   tablenum: { name: "Table Numbers", blurb: "A whole set of table numbers in one file: stands in slotted bases, living-hinge tent cards or plaques, with labels and names.", icon: "hash", storageKey: "hingelab-gen-tablenum-v1" },
   trophy: { name: "Trophy", blurb: "Awards that stand up: a star, cup, shield, medal, flame, laurel or motif with a name plate, slotted into a stepped base in wood, acrylic or both.", icon: "trophy", storageKey: "hingelab-gen-trophy-v1" },
-  shadowbox: { name: "Shadow Box", blurb: "Layered 3D paper-cut art from geometric patterns, for a Cricut or a laser: 100 designs.", icon: "layers", storageKey: "hingelab-gen-shadowbox-v1" },
+  shadowbox: { name: "Shadow Box", blurb: "Layered 3D paper-cut art from geometric patterns, for a Cricut or a laser: 120 designs.", icon: "layers", storageKey: "hingelab-gen-shadowbox-v1" },
 };
