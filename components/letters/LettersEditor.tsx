@@ -4,8 +4,8 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import dynamic from "next/dynamic";
 import { autoFit, clone, MATERIALS } from "@/lib/hinge";
 import {
-  baseOffset, exportLetterSVG, fontFamilyName, hingeParamsOf, LETTER_DEFAULTS,
-  letterLayerContent, loadFont, mergeLetterParams, wallHeightOf, zoneOverlay,
+  baseOffset, exportLetterSVG, hingeParamsOf, LETTER_DEFAULTS,
+  letterLayerContent, mergeLetterParams, wallHeightOf, zoneOverlay,
   type HarfBuzz, type LetterParams, type LoadedFont,
 } from "@/lib/letters";
 import { useHistory } from "@/hooks/useHistory";
@@ -34,8 +34,8 @@ import { Dialogs, type ModalState } from "@/components/editor/dialogs";
 import { lettersGroups } from "./LettersControlBar";
 import { LettersDock } from "./LettersDock";
 import { MARQUEE_KEYS, isMarqueeKey, type LetterNumKey } from "./fields";
-import { deleteStoredFont, getStoredFont, listStoredFonts, putStoredFont, type StoredFontMeta } from "./fontStore";
-import { forgetFont, getLoadedFont, isUploadId, loadHarfBuzz, UPLOAD_PREFIX } from "./runtime";
+import { deleteStoredFont, getStoredFont, listStoredFonts, type StoredFontMeta } from "./fontStore";
+import { addFontFile, forgetFont, getLoadedFont, isUploadId, loadHarfBuzz } from "./runtime";
 import { autoFixAll, type Fix } from "@/lib/issues";
 import { lettersIssues } from "@/lib/issues/letters";
 import { IssueList } from "@/components/shell/IssueList";
@@ -55,8 +55,6 @@ const LetterPreview3D = dynamic(() => import("./LetterPreview3D"), {
 const KEY = "hingelab-letters-v2";
 /** Saved before Letter Box: its hinge settings were never chosen in Letters, so the letter defaults replace them. */
 const KEY_V1 = "hingelab-letters-v1";
-const MAX_FONT_BYTES = 20 * 1024 * 1024;
-
 const PRE_BOX_KEYS = ["slit", "bridge", "pitch", "overrun", "stretch", "pattern", "cutStyle", "slotW", "tabW", "slotClr", "lidGap", "lid", "wallStyle"] as const;
 
 const mergeParams = mergeLetterParams;
@@ -303,15 +301,8 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   }
 
   async function uploadFont(file: File) {
-    if (!/\.(ttf|otf)$/i.test(file.name)) { toastMsg("Use a .ttf or .otf font file"); return; }
-    if (file.size > MAX_FONT_BYTES) { toastMsg("That font file is larger than 20 MB"); return; }
-    if (!hb) { toastMsg("Still loading, try again in a moment"); return; }
     try {
-      const bytes = await file.arrayBuffer();
-      const id = UPLOAD_PREFIX + crypto.randomUUID();
-      const probe = loadFont(hb, id, file.name, bytes.slice(0));
-      const name = fontFamilyName(probe) || file.name.replace(/\.(ttf|otf)$/i, "");
-      await putStoredFont({ id, name, fileName: file.name, added: Date.now(), bytes });
+      const { id, name } = await addFontFile(file);
       setUploads(await listStoredFonts());
       patch({ fontId: id }, true);
       toastMsg(`Added ${name} on this device`);

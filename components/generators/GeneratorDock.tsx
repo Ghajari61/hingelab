@@ -11,6 +11,7 @@ import { LayersPanel } from "@/components/editor/LayersPanel";
 import { Sec, type SheetProps } from "@/components/editor/PanelDock";
 import { SheetSection } from "@/components/shell/SheetSection";
 import { FontPicker } from "@/components/letters/FontPicker";
+import type { StoredFontMeta } from "@/components/letters/fontStore";
 import type { BaseField } from "@/components/editor/fields";
 import type { Units } from "@/components/editor/format";
 import { cleanFit } from "@/lib/fit/fitToSheets";
@@ -44,8 +45,10 @@ const SHEET_FIELDS: BaseField[] = [
 ];
 
 export function GeneratorDock({
-  def, params, defaults, out, units, layerKeys, onSet: setRaw, onApply, onMaterial, onResetSection, sheet, checks, locks,
+  def, params, defaults, out, units, layerKeys, onSet: setRaw, onApply, onMaterial, onResetSection, sheet, checks, locks, fonts,
 }: {
+  /** Fonts uploaded on this device. */
+  fonts?: { uploads: StoredFontMeta[]; onUpload: (key: string, file: File) => void; onDelete: (id: string) => void };
   /** Settings Randomise design keeps (by key). */
   locks?: { has: (key: string) => boolean; toggle: (key: string) => void };
   def: AnyGenerator;
@@ -159,7 +162,10 @@ export function GeneratorDock({
       return (
         <div className="gen-font" key={f.key}>
           <div className="rowlabel">{f.label}</div>
-          <FontPicker fontId={String(value)} text={f.sample?.(params) ?? "Aa"} uploads={[]} onPick={(id) => onSet(f.key, id, true)} onDelete={() => {}} />
+          <FontPicker
+            compact fontId={String(value)} text={f.sample?.(params) ?? "Aa"} uploads={fonts?.uploads ?? []} onPick={(id) => onSet(f.key, id, true)}
+            onUpload={fonts && ((file) => fonts.onUpload(f.key, file))} onDelete={(id) => fonts?.onDelete(id)}
+          />
         </div>
       );
     }

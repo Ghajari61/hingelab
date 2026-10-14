@@ -165,7 +165,15 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
         help: "A photo or drawing (JPEG, PNG or WebP) or an SVG file. It is traced here, in your browser, into outlines at ten brightness levels; the picture itself stays on your device.",
       },
       {
-        kind: "choice", key: "picture.sample", label: "Sample shape", rail: true, shuffle: true, show: (p) => isPat(p, "picture") && !p.picture.levels,
+        kind: "text", key: "picture.word", label: "Word as the shape", maxLength: 12, placeholder: "A word or initials (optional)", show: (p) => isPat(p, "picture") && !p.picture.levels,
+        help: "A word, initials or a number set in a font and used as the shape instead of the sample, nested or grown through the layers like any other shape; leave it empty for the sample.",
+      },
+      {
+        kind: "font", key: "picture.wordFont", label: "Shape font", sample: (p) => p.picture.word || "Aa", show: (p) => isPat(p, "picture") && !p.picture.levels && !!p.picture.word.trim(),
+        help: "The typeface of the word: heavy capitals keep the most paper between the layers.",
+      },
+      {
+        kind: "choice", key: "picture.sample", label: "Sample shape", rail: true, shuffle: true, show: (p) => isPat(p, "picture") && !p.picture.levels && !p.picture.word.trim(),
         help: "A ready-made silhouette to start from, used until you add your own picture.",
         options: opts(SAMPLES, SAMPLE_NAMES),
         apply: (p, v) => withPicture(isPat(p, "picture") ? p : withDesign(p, { pattern: "picture", ...PATTERN_START.picture }), { sample: v as Sample, levels: "", image: "", name: "" }),
@@ -185,12 +193,14 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
   },
   {
     id: "text", title: "Words", open: true,
-    help: "A name, date or short message cut into the front layer, standing on a paper bar across the window.",
+    help: "A name, date or short message cut into a layer (the front one unless you choose another), standing on a paper bar across the window, or engraved on it with a laser.",
     fields: [
-      { kind: "text", key: "text.text", label: "Text", maxLength: 40, placeholder: "Add words (optional)", help: "The words on the front layer; leave it empty for none." },
+      { kind: "text", key: "text.text", label: "Text", maxLength: 40, placeholder: "Add words (optional)", help: "The words on the front layer, or on the layer you choose below; leave it empty for none." },
       { kind: "font", key: "text.fontId", label: "Font", sample: (p) => p.text.text || "Aa", show: (p) => !!p.text.text.trim(), help: "The typeface: bold joined scripts and heavy capitals cut best from paper." },
       { kind: "number", key: "text.size", label: "Text size", unit: "mm", min: 8, max: 60, step: 0.5, show: (p) => !!p.text.text.trim(), help: "Height of the capital letters; words too wide for the window shrink to fit." },
       { kind: "choice", key: "text.place", label: "Place", show: (p) => !!p.text.text.trim(), options: [{ v: "bottom", text: "Bottom" }, { v: "middle", text: "Middle" }, { v: "top", text: "Top" }], help: "Where the words sit in the window." },
+      { kind: "number", key: "text.layer", label: "On layer", unit: "", min: 0, max: 20, step: 1, int: true, show: (p) => !!p.text.text.trim(), help: "The layer the words are on, counted from the back (Layer 1); 0 puts them on the front layer. Words further back are framed by the layers in front of them." },
+      { kind: "toggle", key: "text.engrave", label: "Engrave the words", show: (p) => !!p.text.text.trim() && p.cutter.kind === "laser", help: "The words are engraved on the layer's paper instead of cut out on a bar, so nothing is cut away; parts of letters that fall over a cut-out are left out." },
     ],
   },
   {
@@ -424,7 +434,10 @@ export const SHADOWBOX: GeneratorDef<ShadowBoxParams> = {
   presets: SHADOWBOX_PRESETS,
   build: (p, ctx) => buildShadowBox(p, ctx),
   check: (p, out) => checkShadowBox(p, out as ShadowBoxOutput),
-  fonts: (p) => (p.text.text.trim() ? [p.text.fontId] : []),
+  fonts: (p) => [
+    ...(p.text.text.trim() ? [p.text.fontId] : []),
+    ...(p.design.pattern === "picture" && !p.picture.levels && p.picture.word.trim() ? [p.picture.wordFont] : []),
+  ],
   batch: () => "text.text",
   scale: scaleShadowBox,
   art,

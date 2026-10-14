@@ -137,6 +137,7 @@ function scaleSign(p: SignParams, s: number): SignParams {
     ...p,
     board: { ...p.board, width: k(p.board.width), height: k(p.board.height), pad: k(p.board.pad), corner: k(p.board.corner) },
     text: { ...p.text, size: k(p.text.size) },
+    textForm: { ...p.textForm, circle: k(p.textForm.circle) },
     motif: { ...p.motif, size: k(p.motif.size), gap: k(p.motif.gap) },
     border: { ...p.border, width: k(p.border.width), inset: k(p.border.inset) },
   };

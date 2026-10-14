@@ -106,11 +106,14 @@ export interface LoadedFont {
 
 /** Parse font bytes. Throws a readable error for files that are not fonts. */
 export function loadFont(hb: HarfBuzz, id: string, name: string, bytes: ArrayBuffer): LoadedFont {
+  const sig = bytes.byteLength >= 4 ? new DataView(bytes).getUint32(0) : 0;
+  // WOFF is unpacked to its TTF or OTF when it is added (woff.ts); HarfBuzz reads only the unpacked font.
+  if (sig === 0x774f4646 || sig === 0x774f4632) throw new Error("This web font must be unpacked first. Add it with Upload font….");
   let ot: OTFont;
   try {
     ot = parseOpenType(bytes);
   } catch {
-    throw new Error("This file is not a font HingeLab can read. Use a .ttf or .otf file.");
+    throw new Error("This file is not a font HingeLab can read. Use a .ttf, .otf or .woff file.");
   }
   const font = new hb.Font(new hb.Face(new hb.Blob(bytes)));
   const upm = ot.unitsPerEm || 1000;

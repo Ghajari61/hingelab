@@ -470,12 +470,14 @@ export const ARTICLES: HelpArticle[] = [
   {
     slug: "letters-text", product: "letters", title: "Text and font",
     summary: "Type your text, pick a font, and set its size, spacing and stroke weight.",
-    keywords: ["font", "upload", "weld", "direction"],
+    keywords: ["font", "upload", "weld", "direction", "woff", "persian", "arabic", "farsi", "nastaliq", "right to left", "circle", "stencil bridges"],
     fields: [{ product: "letters", secs: ["text"] }],
     blocks: [
       { list: [
         "More than 50 free fonts, grouped as Sans, Rounded, Serif, Script, Display, Stencil and Calligraphy. Search by name, and every font shows your own text. If your font has no glyph for a letter, the check suggests a font that has.",
-        "Upload your own font (TTF or OTF); it stays on this device.",
+        "Persian and Arabic fonts (Vazirmatn, Lalezar, Noto Nastaliq Urdu, Amiri and more) are shaped like a word processor does it: right to left, with the joined letter forms.",
+        "Upload your own font (TTF, OTF or WOFF); it stays on this device. Every font list in the generators has the same Upload button, and a font you upload once is in all of them. A WOFF2 web font must be converted to TTF first.",
+        "In the Sign, Cake Topper, Key Holder and Table Numbers generators, Text style also sets the letters round a full circle (Round a circle, its diameter) and adds stencil bridges, so the centres of O, A, B and R stay attached when the letters are cut out of a plate.",
         "Size measures: Cap height measures a capital letter such as H; Total height measures the whole text, ascenders and descenders included.",
         "Weld: Whole word joins letters that touch into one piece; Each letter keeps every letter separate.",
         "Direction: Auto follows the script; force Left to right or Right to left if you need to.",

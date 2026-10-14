@@ -403,7 +403,7 @@ async function generateGenerator(r: GenerateRequest, id: DesktopGenerator, produ
   const base = (q: GenBase, issues: DIssue[] = [], applied: string[] = []): GenerateResponse => ({
     product: id, params: q as unknown as Record<string, unknown>, form: genForm(def, q), issues, stats: [], summary: def.summary(q), applied,
   });
-  if (!ctx) return { status: 422, body: { ...base(p), error: "This design uses a font that is not available. Pick another font." } };
+  if (!ctx || "error" in ctx) return { status: 422, body: { ...base(p), error: "This design uses a font that is not available. Pick another font." } };
 
   const issuesOf = (q: GenBase): Issue<GenBase>[] => {
     const a = arrangeGenerator(def, q, ctx);

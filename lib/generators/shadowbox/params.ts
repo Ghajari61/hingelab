@@ -184,8 +184,11 @@ export interface ShadowBoxParams extends GenBase {
     /** Light hole size, % of the window's smaller side. */
     holeSize: number;
   };
-  /** Words cut into the front layer, standing on a paper bar across the window. */
-  text: { text: string; fontId: string; size: number; place: Place };
+  /**
+   * Words cut into a layer, standing on a paper bar across the window, or engraved on it. `layer` counts
+   * from the back (Layer 1); 0 is the front layer.
+   */
+  text: { text: string; fontId: string; size: number; place: Place; layer: number; engrave: boolean };
   /**
    * A photo on the back board, seen through every layer: the image as printed or engraved (a data URL,
    * "" for none), its width / height, a zoom (100 % just covers the window) and a shift of the crop,
@@ -247,6 +250,9 @@ export interface ShadowBoxParams extends GenBase {
     step: number;
     /** Cut-out details narrower than this are left uncut, mm. */
     detail: number;
+    /** A word or a few letters used as the shape instead of the sample ("" for none), and its font. */
+    word: string;
+    wordFont: string;
   };
   look: { palette: PaletteId; reverse: boolean };
 }
@@ -275,7 +281,7 @@ export const SHADOWBOX_DEFAULTS: ShadowBoxParams = {
     min: 18, max: 118, twist: 6, rotate: 0, shiftX: 0, shiftY: 0, swirl: 0, waves: 3,
     web: 1.5, loose: "drop", bridge: 2, stretch: false, moon: false, hole: "circle", holeSize: 18,
   },
-  text: { text: "", fontId: "lobster", size: 20, place: "bottom" },
+  text: { text: "", fontId: "lobster", size: 20, place: "bottom", layer: 0, engrave: false },
   photo: {
     image: "", aspect: 1.5, zoom: 100, x: 0, y: 0, src: "", name: "", px: 0,
     look: "colour", bright: 0, contrast: 0, tones: 4, dither: "floyd", dpi: "254", bg: false, tol: 18, mount: "board", paper: "a4",
@@ -283,6 +289,7 @@ export const SHADOWBOX_DEFAULTS: ShadowBoxParams = {
   picture: {
     image: "", aspect: 1, levels: "", name: "", sample: "cat", mode: "grow",
     dark: 20, light: 80, cut: 50, invert: false, paper: false, size: 45, x: 0, y: 0, step: 6, detail: 1.5,
+    word: "", wordFont: "archivo-black",
   },
   look: { palette: "sunset", reverse: false },
 };
@@ -341,6 +348,8 @@ export function mergeShadowBox(raw: unknown): ShadowBoxParams {
   t.text = String(t.text ?? "").slice(0, 40);
   t.size = clamp(t.size, 8, 60);
   t.place = oneOf(PLACES, t.place, d.text.place);
+  t.layer = clamp(Math.round(t.layer), 0, p.stack.count);
+  t.engrave = t.engrave === true;
   const ph = p.photo;
   if (typeof ph.image !== "string" || (ph.image && !isImageDataURL(ph.image)) || ph.image.length > MAX_PHOTO_CHARS) ph.image = "";
   ph.aspect = Number.isFinite(ph.aspect) && ph.aspect > 0 ? clamp(ph.aspect, 0.1, 10) : d.photo.aspect;
@@ -377,6 +386,8 @@ export function mergeShadowBox(raw: unknown): ShadowBoxParams {
   pc.y = clamp(pc.y, -100, 100);
   pc.step = clamp(pc.step, 0, 40);
   pc.detail = clamp(pc.detail, 0, 10);
+  pc.word = String(pc.word ?? "").slice(0, 12);
+  if (typeof pc.wordFont !== "string" || !pc.wordFont) pc.wordFont = d.picture.wordFont;
   if (!isPalette(p.look.palette)) p.look.palette = d.look.palette;
   return p;
 }

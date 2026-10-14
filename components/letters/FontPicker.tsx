@@ -21,14 +21,18 @@ function Chevron({ open }: { open: boolean }) {
 
 type Filter = "all" | "persian" | "yours" | FontInfo["category"];
 
+const UPLOAD_NOTE = "Uploaded .ttf, .otf or .woff files are kept in this browser on this device. When you are signed in, an export built on the server sends the font to HingeLab only to build that one file; it is not stored or shared. You are responsible for having a license that lets you use the font this way.";
+
 const matches = (f: FontInfo, filter: Filter, q: string) =>
   (filter === "all" || (filter === "persian" ? f.scripts.includes("arabic") : f.category === filter)) &&
   (!q || `${f.name} ${f.note} ${f.category}`.toLowerCase().includes(q));
 
 /** Font list with live previews of the typed text, search and style filters, plus uploads stored on this device. */
 export function FontPicker({
-  fontId, text, uploads, onPick, onUpload, onDelete,
+  fontId, text, uploads, onPick, onUpload, onDelete, compact,
 }: {
+  /** The upload note goes in the button's tooltip (for docks with several font fields). */
+  compact?: boolean;
   fontId: string;
   text: string;
   uploads: StoredFontMeta[];
@@ -144,14 +148,14 @@ export function FontPicker({
       )}
       {onUpload && (
         <>
-          <button type="button" className="btn-auto" onClick={() => { if (fileRef.current) { fileRef.current.value = ""; fileRef.current.click(); } }}>
+          <button type="button" className="btn-auto" title={compact ? UPLOAD_NOTE : undefined} onClick={() => { if (fileRef.current) { fileRef.current.value = ""; fileRef.current.click(); } }}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M7 10V2M4 5l3-3 3 3M2 12h10" /></svg>Upload font…
           </button>
-          <p className="note">Uploaded .ttf or .otf files are kept in this browser on this device. When you are signed in, exporting sends the font to HingeLab only to build that one file; it is not stored or shared. You are responsible for having a license that lets you use the font this way.</p>
+          {!compact && <p className="note">{UPLOAD_NOTE}</p>}
           <input
             ref={fileRef}
             type="file"
-            accept=".ttf,.otf,font/ttf,font/otf,application/x-font-ttf,application/x-font-otf"
+            accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2,application/x-font-ttf,application/x-font-otf"
             hidden
             onChange={(e) => {
               const f = e.target.files?.[0];

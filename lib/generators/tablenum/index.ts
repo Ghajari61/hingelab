@@ -146,6 +146,7 @@ function scaleTablenum(p: TablenumParams, s: number): TablenumParams {
     ...p,
     plate: { ...p.plate, width: k(p.plate.width), height: k(p.plate.height), pad: k(p.plate.pad) },
     text: { ...p.text, size: k(p.text.size), labelSize: k(p.text.labelSize), nameSize: Math.max(3, k(p.text.nameSize)) },
+    textForm: { ...p.textForm, circle: k(p.textForm.circle) },
     motif: { ...p.motif, size: k(p.motif.size), gap: k(p.motif.gap) },
     base: { ...p.base, width: k(p.base.width), depth: k(p.base.depth) },
   };

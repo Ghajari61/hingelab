@@ -17,7 +17,7 @@ import { bandPoint, digits, drillPart, feet, HEAD_DEPTH, keyholes, lightRings, n
 import { bridgeIslands } from "./islands";
 import { PALETTES, type FrameShape, type Opening, type Petal, type Ridge, type ShadowBoxParams } from "./params";
 import { photoDpi, photoPlace, type WinBox } from "./photo";
-import { pictureCuts, pictureMode, pictureSource, silhouette } from "./picture";
+import { pictureCuts, pictureMode, pictureSource, silhouette, wordSource, type PicSource } from "./picture";
 
 /** Play each side of a photo slot, mm. */
 const SLOT_PLAY = 0.75;
@@ -484,12 +484,30 @@ export function windowBox(p: ShadowBoxParams): WinBox | null {
   return { x0: wb.x0, y0: wb.y0, w: wb.x1 - wb.x0, h: wb.y1 - wb.y0, cx: (wb.x0 + wb.x1) / 2, cy: (wb.y0 + wb.y1) / 2 };
 }
 
-interface TextCut { keep: Contour[]; clear: Contour[]; width: number; room: number; size: number; loading: boolean }
+interface TextCut { keep: Contour[]; clear: Contour[]; glyphs: Contour[]; width: number; room: number; size: number; loading: boolean }
+
+/**
+ * The index (0 = Layer 1, the back) of the layer carrying the words: Text layer counts from the back
+ * and 0 is the front. Cut words need a pattern layer; engraved ones may sit on the back board too.
+ */
+export function textLayer(p: ShadowBoxParams, N: number, back: boolean, engrave: boolean): number {
+  if (p.text.layer <= 0) return N - 1;
+  return Math.max(engrave || !back ? 0 : 1, Math.min(N - 1, Math.round(p.text.layer) - 1));
+}
+
+/** The picture pattern's source: the traced picture, the word set in its font, or the sample shape. */
+function picSource(p: ShadowBoxParams, ctx: BuildContext | undefined, missing: string[]): { src: PicSource; loading: boolean } {
+  const word = p.picture.word.trim();
+  if (p.picture.levels || !word) return { src: pictureSource(p.picture), loading: false };
+  const b = ctx ? textBlock(ctx, word, p.picture.wordFont, 100, { missing }) : null;
+  if (b && !b.loading && b.contours.length) return { src: wordSource(b.contours), loading: false };
+  return { src: pictureSource(p.picture), loading: !b || b.loading };
+}
 
 /** Words wider than the window shrink to fit it. */
 function textCut(p: ShadowBoxParams, w: Win, winCs: Contour[], ctx: BuildContext | undefined, missing: string[]): TextCut | null {
   if (!p.text.text.trim()) return null;
-  if (!ctx) return { keep: [], clear: [], width: 0, room: 0, size: p.text.size, loading: true };
+  if (!ctx) return { keep: [], clear: [], glyphs: [], width: 0, room: 0, size: p.text.size, loading: true };
   let size = p.text.size, out = textAt(p, size, w, winCs, ctx, missing);
   for (let k = 0; k < 2 && !out.loading && out.room > 0 && out.width > out.room; k++) {
     size = Math.max(4, size * (out.room / out.width) * 0.98);
@@ -499,13 +517,13 @@ function textCut(p: ShadowBoxParams, w: Win, winCs: Contour[], ctx: BuildContext
 }
 
 /**
- * Words standing on a paper bar across the front layer's window: the bar runs along the baseline and
+ * Words standing on a paper bar across a layer's window: the bar runs along the baseline and
  * meets the frame at both ends; a clear band around the words is cut away so they read on their own.
  */
 function textAt(p: ShadowBoxParams, size: number, w: Win, winCs: Contour[], ctx: BuildContext, missing: string[]): TextCut {
   const t = { ...p.text, size };
   const b = textBlock(ctx, t.text, t.fontId, t.size, { missing, spacing: -t.size * 0.02 });
-  if (b.loading || !b.contours.length) return { keep: [], clear: [], width: 0, room: 0, size, loading: b.loading };
+  if (b.loading || !b.contours.length) return { keep: [], clear: [], glyphs: [], width: 0, room: 0, size, loading: b.loading };
   // The baseline: the most common lowest point of the glyphs (descenders and counters vote alone).
   const bucket = Math.max(0.3, t.size * 0.05), votes = new Map<number, number>();
   for (const c of b.contours) {
@@ -525,7 +543,7 @@ function textAt(p: ShadowBoxParams, size: number, w: Win, winCs: Contour[], ctx:
   // The window's width along the words' middle line, less the padding.
   const mid = intersectShapes([rect(w.x0 - 5, dy - 0.5, w.w + 10, 1)], winCs);
   const room = mid.length ? bboxOf(mid.map((s) => s.outer)).x1 - bboxOf(mid.map((s) => s.outer)).x0 - 2 * pad : 0;
-  return { keep, clear, width: b.width, room, size, loading: false };
+  return { keep, clear, glyphs, width: b.width, room, size, loading: false };
 }
 
 /** Steps for the back board, light box, pins and numbers, before the layers go on. */
@@ -605,18 +623,26 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
   const missing: string[] = [];
   const text = textCut(p, w, winCs, ctx, missing);
   if (text && !text.loading) { info.textW = r1(text.width); info.textRoom = r1(text.room); info.textSize = r1(text.size); }
-  const pic = p.design.pattern === "picture" ? pictureSource(p.picture) : null;
+  const source = p.design.pattern === "picture" ? picSource(p, ctx, missing) : null;
+  const pic = source?.src ?? null;
   const sil = pic && pictureMode(p.picture, pic) !== "levels" ? silhouette(p.picture, pic) : [];
+  const words = text && !text.loading;
+  const engraved = !!words && p.text.engrave && p.cutter.kind === "laser";
+  const wordsOn = words ? textLayer(p, N, back, engraved) : -1;
   if (back) shapes.push(moon.length ? layerOf(moon) : frameShape);
   for (let i = 0; i < L; i++) {
-    const front = i === L - 1 && text && !text.loading, dropped = info.dropped;
-    const extra = [...(i === 0 && !back ? moon : []), ...(front ? text.clear : [])];
+    const cutWords = !engraved && wordsOn === shapes.length && text && !text.loading ? text : null, dropped = info.dropped;
+    const extra = [...(i === 0 && !back ? moon : []), ...(cutWords ? cutWords.clear : [])];
     // Bits of the pattern cut off by the words' clear band are meant to go.
     shapes.push(pic
-      ? layerOf([...pictureCuts(p, pic, sil, w, winCs, i, L), ...extra.map(orient)], front ? text.keep : [], true, front ? "drop" : loose)
-      : layerOf([...openingsOf(p, w, win, i, L), ...extra], front ? text.keep : [], false, front ? "drop" : loose));
-    if (front) info.dropped = dropped;
+      ? layerOf([...pictureCuts(p, pic, sil, w, winCs, i, L), ...extra.map(orient)], cutWords ? cutWords.keep : [], true, cutWords ? "drop" : loose)
+      : layerOf([...openingsOf(p, w, win, i, L), ...extra], cutWords ? cutWords.keep : [], false, cutWords ? "drop" : loose));
+    if (cutWords) info.dropped = dropped;
   }
+  // Engraved words are kept to the paper of their layer: over a cut-out there is nothing to engrave.
+  const engraveCs = engraved && text && shapes[wordsOn]
+    ? shapeContours(intersectShapes(shapeContours(unionShapes(text.glyphs, [], true)), shapeContours([shapes[wordsOn]])))
+    : [];
   if (photo && shapes.length > 1) {
     const open = Math.min(...shapes.slice(1).map((s) => win.area - (s.area - ringArea)));
     info.photoShown = Math.max(0, Math.min(100, Math.round((100 * open) / win.area)));
@@ -659,7 +685,10 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
     const z = base + k * (T + gapZ) + (k > 0 ? lift : 0);
     const color = layerColor(p, k, N);
     const name = `Layer ${k + 1}${k === 0 ? " (back)" : k === N - 1 ? " (front)" : ""}`;
-    parts.push({ id: `layer${k + 1}`, name, outer: sh.outer, holes: sh.holes, color, matte: true, place: { x: 0, y: 0, z }, ...(k === 0 && photo ? { images: [photo] } : {}) });
+    parts.push({
+      id: `layer${k + 1}`, name, outer: sh.outer, holes: sh.holes, color, matte: true, place: { x: 0, y: 0, z },
+      ...(k === 0 && photo ? { images: [photo] } : {}), ...(k === wordsOn && engraveCs.length ? { engrave: engraveCs } : {}),
+    });
     if (k === 0 && holder) parts.push({ id: "holder", name: "Photo holder", outer: holder.outer, holes: holder.holes, color, matte: true, place: { x: 0, y: 0, z: base + T } });
     (pieces.get(k) ?? []).forEach((s, j) => parts.push({ id: `piece${k + 1}-${j + 1}`, name: `Layer ${k + 1} piece ${j + 1}`, outer: s.outer, holes: s.holes, color, matte: true, place: { x: 0, y: 0, z } }));
     if (k < N - 1) for (let j = 0; j < per; j++) {
@@ -756,7 +785,11 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
         ? [`Each layer's loose pieces are cut as parts named after it ("Layer 3 piece 1"): glue each one back where it was cut from, on a small foam square on the layer behind, so it floats in place.`]
         : []),
       "Stack the layers in order from the back, pressing each one down evenly before the next.",
-      ...(text && !text.loading ? [`The words stand on a paper bar across the front layer: cut it from a contrasting card so they read clearly.`] : []),
+      ...(words
+        ? [engraved
+          ? `The words are engraved on ${wordsOn === N - 1 ? "the front layer" : `Layer ${wordsOn + 1}`}, on the Engrave layer of the SVG: engrave them before cutting that layer, without moving the sheet.`
+          : `The words stand on a paper bar across ${wordsOn === N - 1 ? "the front layer" : `Layer ${wordsOn + 1}`}: cut it from a contrasting card so they read clearly.`]
+        : []),
       ...(p.design.moon ? ["For a lit box, put a battery LED strip or puck light behind the back layer's light hole."] : []),
       ...(p.box.walls
         ? [`Fit the four box walls together round the stack, finger joints interlocking (the top and bottom walls hold the corners), and glue them to each other and to the stack's edges; the walls stand ${r1(p.box.lip)} mm proud of the front layer.`]
@@ -769,7 +802,7 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
     info,
     materials: diffuser ? { main: mat, second: `Diffuser ${p.light.diffT} mm (white or frosted acrylic, or tracing paper)` } : undefined,
     stacked: true,
-    notice: text?.loading ? "Loading the font." : undefined,
+    notice: text?.loading || source?.loading ? "Loading the font." : undefined,
     missing: missing.length ? missing : undefined,
   };
 }

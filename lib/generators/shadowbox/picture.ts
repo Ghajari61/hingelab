@@ -113,6 +113,13 @@ export function pictureSource(pic: Pic): PicSource {
   return { levels: [s.shapes], w: s.w, h: s.h, traced: false };
 }
 
+/** Set letters (any scale, y down) as the shape, in a box with its longest side PIC_BOX units. */
+export function wordSource(cs: Contour[]): PicSource {
+  const b = bboxOf(cs), k = PIC_BOX / Math.max(1e-6, b.x1 - b.x0, b.y1 - b.y0);
+  const out = cs.map((c) => c.map(([x, y]) => [(x - b.x0) * k, (y - b.y0) * k] as Pt));
+  return { levels: [unionShapes(out, [], true)], w: (b.x1 - b.x0) * k, h: (b.y1 - b.y0) * k, traced: false };
+}
+
 /** The level nearest a brightness cut-off (%), of `n` evenly spaced from 5 % to 95 %. */
 export const levelAt = (pct: number, n: number) => (n <= 1 ? 0 : Math.max(0, Math.min(n - 1, Math.round(((pct - 5) / 90) * (n - 1)))));
 

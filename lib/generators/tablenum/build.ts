@@ -71,9 +71,9 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
   // Each table's content, centred on (0, 0).
   let loading = false;
   const blocks = tables.map(({ main, sub }) => {
-    const lab = p.text.label.trim() ? textBlock(ctx, p.text.label, p.text.labelFont, p.text.labelSize, { missing, style: p.textStyle }) : null;
-    const num = textBlock(ctx, main, p.text.fontId, p.text.size, { spacing: p.text.spacing, missing, style: p.textStyle });
-    const nm = sub ? textBlock(ctx, sub, p.text.labelFont, p.text.nameSize, { missing, style: p.textStyle }) : null;
+    const lab = p.text.label.trim() ? textBlock(ctx, p.text.label, p.text.labelFont, p.text.labelSize, { missing, style: { ...p.textStyle, ...p.textForm } }) : null;
+    const num = textBlock(ctx, main, p.text.fontId, p.text.size, { spacing: p.text.spacing, missing, style: { ...p.textStyle, ...p.textForm } });
+    const nm = sub ? textBlock(ctx, sub, p.text.labelFont, p.text.nameSize, { missing, style: { ...p.textStyle, ...p.textForm } }) : null;
     for (const b of [lab, num, nm]) if (b?.loading) loading = true;
     const stack = (p.text.labelBelow ? [num, lab, nm] : [lab, num, nm]).filter((b): b is NonNullable<typeof b> => !!b && b.contours.length > 0);
     const gaps = stack.map((b) => Math.max(3, b.height * 0.28));

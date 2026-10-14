@@ -4,7 +4,7 @@ import { isMotifId } from "../motifs";
 import { isShapeKind, type ShapeKind } from "../shapes";
 import { SECOND_MATERIALS } from "../material2";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
-import { TEXT_STYLE, cleanTextStyle, type TextStyle } from "../textStyle";
+import { TEXT_FORM, TEXT_STYLE, cleanTextForm, cleanTextStyle, type TextForm, type TextStyle } from "../textStyle";
 import { mergeInto } from "../util";
 
 export type SignStyle = "engraved" | "layered" | "word" | "inlay" | "neon" | "stencil";
@@ -18,6 +18,7 @@ export interface SignParams extends GenBase {
   board: { shape: ShapeKind; auto: boolean; pad: number; width: number; height: number; corner: number };
   text: { text: string; fontId: string; size: number; spacing: number; lead: number; align: "left" | "center" | "right"; offset: number };
   textStyle: TextStyle;
+  textForm: TextForm;
   motif: { kind: string; side: MotifSide; size: number; gap: number };
   border: { kind: BorderKind; width: number; inset: number };
   mount: { kind: SignMount; hole: number; depth: number };
@@ -40,6 +41,7 @@ export const SIGN_DEFAULTS: SignParams = {
   board: { shape: "arch", auto: true, pad: 18, width: 300, height: 200, corner: 6 },
   text: { text: "Welcome", fontId: "pacifico", size: 40, spacing: 0, lead: 1.3, align: "center", offset: 0 },
   textStyle: { ...TEXT_STYLE },
+  textForm: { ...TEXT_FORM },
   motif: { kind: "flower", side: "above", size: 36, gap: 6 },
   border: { kind: "score", width: 4, inset: 6 },
   mount: { kind: "keyhole", hole: 5, depth: 70 },
@@ -61,6 +63,7 @@ export function mergeSign(raw: unknown): SignParams {
   if (!isShapeKind(p.board.shape)) p.board.shape = d.board.shape;
   if (!ALIGNS.includes(p.text.align)) p.text.align = d.text.align;
   p.textStyle = cleanTextStyle(p.textStyle);
+  p.textForm = cleanTextForm(p.textForm);
   if (p.motif.kind !== "none" && !isMotifId(p.motif.kind)) p.motif.kind = "none";
   if (!SIDES.includes(p.motif.side)) p.motif.side = d.motif.side;
   if (!BORDERS.includes(p.border.kind)) p.border.kind = d.border.kind;

@@ -147,6 +147,7 @@ function scaleTopper(p: TopperParams, s: number): TopperParams {
   return {
     ...p,
     text: { ...p.text, size: k(p.text.size) },
+    textForm: { ...p.textForm, circle: k(p.textForm.circle) },
     motif: { ...p.motif, size: k(p.motif.size), gap: k(p.motif.gap) },
     plate: { ...p.plate, width: k(p.plate.width), height: k(p.plate.height), pad: k(p.plate.pad) },
     sticks: { ...p.sticks, length: k(p.sticks.length) },

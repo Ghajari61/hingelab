@@ -26,6 +26,7 @@ import { HelpContext, useHelpPanel } from "@/components/help/HelpContext";
 import { usePlan } from "@/components/billing/usePlan";
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 import { getLoadedFont, loadHarfBuzz } from "@/components/letters/runtime";
+import { fontsForExport, useFontUploads } from "@/components/letters/useFontUploads";
 import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
 import { usedArea, usedText } from "@/lib/fit/arrange";
 import { autoFixAll, type Fix, type Issue } from "@/lib/issues";
@@ -142,6 +143,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
     if (!fontKey || hb) return;
     loadHarfBuzz().then(setHb, () => setFontError("The text shaper could not load. Reload the page to try again."));
   }, [fontKey, hb]);
+  useEffect(() => { setFontError(null); }, [fontKey]);
   useEffect(() => {
     if (!hb || !fontKey) return;
     let live = true;
@@ -183,6 +185,14 @@ function GenEditor({ def, onProduct, onHome, start }: {
 
   const viewApi = useCanvasView();
   viewApi.fitArgs.current = { bedW: params.bedW, bedH: params.bedH, layW: lay?.width ?? 0, layH: lay?.height ?? 0, sheets: arranged.sheets };
+
+  const fontFiles = useFontUploads(toastMsg);
+  /** Font fields set to a removed upload go back to their default font. */
+  function withoutFont(q: P, id: string): P {
+    let next = q;
+    for (const s of def.sections) for (const f of s.fields) if (f.kind === "font" && getPath(next, f.key) === id) next = setPath(next, f.key, getPath(defaults, f.key));
+    return next;
+  }
 
   function setField(key: string, value: unknown, record: boolean, mat?: boolean) {
     const next = setPath(params, key, value);
@@ -232,7 +242,9 @@ function GenEditor({ def, onProduct, onHome, start }: {
     if (locked) { setUpgrade(lock); return null; }
     // A Pro design: the server checks the plan and builds it again.
     try {
-      const res = await fetch("/api/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ product: def.id, params }) });
+      const fonts = await fontsForExport(def.fonts?.(built) ?? []);
+      if ("error" in fonts) { toastMsg(fonts.error); return null; }
+      const res = await fetch("/api/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ product: def.id, params, ...(fonts.length ? { fonts } : {}) }) });
       if (res.ok) return await res.text();
       const err = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Export failed. Try again.";
       if (res.status === 403) setUpgrade(err);
@@ -536,6 +548,11 @@ function GenEditor({ def, onProduct, onHome, start }: {
             onSet={setField}
             onApply={(next) => replace(next, true)}
             onMaterial={(mid, info) => replace(genWithMaterial(params, mid, info), true)}
+            fonts={{
+              uploads: fontFiles.uploads,
+              onUpload: async (key, file) => { const id = await fontFiles.add(file); if (id) setField(key, id, true); },
+              onDelete: async (id) => { if (await fontFiles.remove(id)) replace(withoutFont(params, id), true); },
+            }}
             onResetSection={resetSection}
             sheet={sheetProps}
             checks={<IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} />}

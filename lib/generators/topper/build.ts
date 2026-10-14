@@ -84,7 +84,7 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
   let right = 0;
 
   if (p.kit.kind !== "cupcake") {
-    const t = textBlock(ctx, p.text.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, lead: p.text.lead, missing, style: p.textStyle });
+    const t = textBlock(ctx, p.text.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, lead: p.text.lead, missing, style: { ...p.textStyle, ...p.textForm } });
     if (t.loading) loading = true;
     else {
       const mot = isMotifId(p.motif.kind) ? placeMotif(p.motif.kind, p.motif, t.width, t.height, t.contours.length > 0) : [];

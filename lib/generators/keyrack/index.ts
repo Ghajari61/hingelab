@@ -111,6 +111,7 @@ function scaleKeyrack(p: KeyrackParams, s: number): KeyrackParams {
     ...p,
     board: { ...p.board, width: k(p.board.width), height: k(p.board.height), corner: k(p.board.corner) },
     text: { ...p.text, size: k(p.text.size) },
+    textForm: { ...p.textForm, circle: k(p.textForm.circle) },
     motif: { ...p.motif, size: k(p.motif.size), gap: k(p.motif.gap) },
     hooks: { ...p.hooks, margin: k(p.hooks.margin), labelSize: Math.max(3, k(p.hooks.labelSize)) },
     shelf: { ...p.shelf, at: k(p.shelf.at), depth: k(p.shelf.depth) },

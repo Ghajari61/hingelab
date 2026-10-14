@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { exportGeneratorForPlan } from "@/lib/billing/exportGenerator";
+import { exportGeneratorForPlan, fontUploads } from "@/lib/billing/exportGenerator";
 import { exportHingeForPlan } from "@/lib/billing/exportHinge";
 import { exportLettersForPlan, parseLetterRequest } from "@/lib/billing/exportLetters";
 import { exportParametricForPlan, parseParametricRequest } from "@/lib/billing/exportParametric";
@@ -18,10 +18,10 @@ export const maxDuration = 60;
 /** Hinge Box and Letters settings are a few kB; a Letters request may carry an uploaded font. */
 const MAX_PARAMS_BODY = 256 * 1024;
 const MAX_FONT_BODY = 4.4 * 1024 * 1024;
-/** A generator design may carry an engraved picture (a grey JPEG of at most 700 kB). */
+/** A generator design may carry an engraved picture (a grey JPEG of at most 700 kB), and uploaded fonts. */
 const MAX_GENERATOR_BODY = 1.2 * 1024 * 1024;
 
-type Body = { product?: unknown; params?: unknown; what?: unknown; font?: { name?: unknown; data?: unknown } };
+type Body = { product?: unknown; params?: unknown; what?: unknown; font?: { name?: unknown; data?: unknown }; fonts?: unknown };
 
 /**
  * SVG export with the caller's plan applied on the server. Hinge Box: Free gets the
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     if (text.length > MAX_FONT_BODY) return NextResponse.json({ error: "Request too large." }, { status: 413 });
     body = JSON.parse(text);
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error();
-    if (isGeneratorId(body.product) && text.length > MAX_GENERATOR_BODY) return NextResponse.json({ error: "Request too large." }, { status: 413 });
+    if (isGeneratorId(body.product) && !Array.isArray(body.fonts) && text.length > MAX_GENERATOR_BODY) return NextResponse.json({ error: "Request too large." }, { status: 413 });
     if (!(body.product === "letters" && body.font) && !isGeneratorId(body.product) && text.length > MAX_PARAMS_BODY) return NextResponse.json({ error: "Request too large." }, { status: 413 });
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   if (!limited.ok) return tooManyRequests(limited);
 
   if (isGeneratorId(body.product)) {
-    const out = await exportGeneratorForPlan(body.product, body.params, plan);
+    const out = await exportGeneratorForPlan(body.product, body.params, plan, fontUploads(body.fonts));
     if (!out.ok) return NextResponse.json({ error: out.error }, { status: out.status });
     return new NextResponse(out.svg, { headers: { ...downloadHeaders("image/svg+xml; charset=utf-8", out.fileName), "x-hingelab-plan": plan } });
   }

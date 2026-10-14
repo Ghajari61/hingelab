@@ -7,7 +7,7 @@ import { dropSpecks, makeShape, offsetShapes, shapeContours, unionShapes } from 
 import type { Shape } from "@/lib/letters/types";
 import { bboxOf, distToContour, stadium, transform } from "./geom";
 import { orient } from "./shapes";
-import { caseText, isPlainStyle, styleContours, type TextStyle } from "./textStyle";
+import { caseText, isPlainStyle, styleContours, type FullTextStyle } from "./textStyle";
 import type { BuildContext, Contour, Pt } from "./types";
 
 export interface TextBlock {
@@ -27,8 +27,8 @@ export interface TextBlockOptions {
   spacing?: number;
   /** Characters the font lacks are added here. */
   missing?: string[];
-  /** Case, slant, width, thickening and curve (the defaults change nothing). */
-  style?: Partial<TextStyle>;
+  /** Case, slant, width, thickening, curve or circle, and stencil bridges (the defaults change nothing). */
+  style?: FullTextStyle;
 }
 
 /** Lines of text (split on new lines) set as one block, centred on (0, 0). */
