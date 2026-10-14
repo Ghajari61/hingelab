@@ -1,5 +1,5 @@
 import { MATERIALS } from "@/lib/hinge/defaults";
-import { circle, ellipse, rect, regularPolygon } from "../geom";
+import { bboxOf, circle, ellipse, rect, regularPolygon, transform } from "../geom";
 import { shapeArt, shapeOutline } from "../shapes";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { motif, type MotifId } from "../motifs";
@@ -7,9 +7,10 @@ import { fitArt, namedFile } from "../util";
 import { buildShadowBox, frameOutline, unitOpening, type ShadowBoxOutput } from "./build";
 import { checkShadowBox } from "./check";
 import {
-  CELLS, FRAMES, HOLES, MAT_MM, OPENINGS, PALETTES, PATTERNS, PETALS, RIDGES, SHADOWBOX_DEFAULTS, SIZES, mergeShadowBox,
-  type Cell, type FrameShape, type Hole, type Opening, type Pattern, type Ridge, type ShadowBoxParams,
+  CELLS, FRAMES, HOLES, LOOSE, MAT_MM, OPENINGS, PALETTES, PATTERNS, PETALS, PIC_MODES, RIDGES, SAMPLES, SHADOWBOX_DEFAULTS, SIZES, mergeShadowBox,
+  type Cell, type FrameShape, type Hole, type Loose, type Opening, type Pattern, type PicMode, type Ridge, type Sample, type ShadowBoxParams,
 } from "./params";
+import { sampleArt } from "./picture";
 import { SHADOWBOX_PRESETS } from "./presets";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
@@ -23,6 +24,21 @@ export const PATTERN_NAMES: Named<Pattern> = {
   tunnel: ["Tunnel", "One shape nested from the back to the front"], mandala: ["Mandala", "A ring of petals and dots round a middle shape"],
   sunburst: ["Sunburst", "Straight or curled rays"], landscape: ["Scene", "Layered hills, peaks, waves, a forest, clouds or a city"],
   lattice: ["Lattice", "A grid of holes"], flow: ["Flow", "Wavy stripes that widen toward the front"],
+  picture: ["Your picture", "A photo, drawing, SVG or sample shape turned into layers"],
+};
+const SAMPLE_NAMES: Named<Sample> = {
+  cat: "Cat", fish: "Fish", bird: "Bird", pear: "Pear", butterfly: "Butterfly", heart: "Heart", tree: "Pine tree", leaf: "Leaf",
+  paw: "Paw", house: "House", moonstar: ["Moon & star", "A crescent moon and a star"], flower: "Flower",
+};
+const MODE_NAMES: Named<PicMode> = {
+  levels: ["Levels", "Each layer cuts away the darker parts of the picture, so dark parts sit deepest"],
+  scale: ["Tunnel", "The shape nested from small at the back to large at the front"],
+  grow: ["Rings", "The shape grown a little more on every layer toward the front"],
+};
+const LOOSE_NAMES: Named<Loose> = {
+  drop: ["Leave out", "Pieces nothing holds are not cut"],
+  bridge: ["Bridges", "Thin bridges tie each piece to the nearest paper"],
+  parts: ["Cut as parts", "Cut each piece on its own, to glue back in place on foam"],
 };
 const OPENING_NAMES: Named<Opening> = {
   circle: "Circle", oval: "Oval", squircle: ["Squircle", "A square with soft, round corners"], polygon: "Polygon", star: "Star",
@@ -53,6 +69,7 @@ const PATTERN_START: Record<Pattern, Partial<ShadowBoxParams["design"]>> = {
   landscape: { min: 34, max: 84, count: 3, amp: 24 },
   lattice: { min: 25, max: 95, pitch: 20 },
   flow: { min: 25, max: 85, count: 7, waves: 3, amp: 30, swirl: 90 },
+  picture: { min: 20, max: 100 },
 };
 const CURVED: Opening[] = ["polygon", "star", "flower", "wavy", "orbit"];
 /** A capsule on a square frame would be a plain circle, so it turns landscape (a standard 7 × 5 in when that size was picked). */
@@ -66,6 +83,13 @@ const isPat = (p: ShadowBoxParams, ...ks: Pattern[]) => ks.includes(p.design.pat
 const withDesign = (p: ShadowBoxParams, d: Partial<ShadowBoxParams["design"]>): ShadowBoxParams => ({ ...p, design: { ...p.design, ...d } });
 const shaped = (p: ShadowBoxParams) => isPat(p, "tunnel", "mandala");
 const hasPhoto = (p: ShadowBoxParams) => !!p.photo.image;
+/** A photo or drawing was traced (several brightness levels), not an SVG or a sample. */
+const traced = (p: ShadowBoxParams) => p.picture.levels.includes("|");
+/** The picture pattern's mode as built: levels need a traced picture, one shape grows instead. */
+const picMode = (p: ShadowBoxParams): PicMode | null => (!isPat(p, "picture") ? null : p.picture.mode === "levels" && !traced(p) ? "grow" : p.picture.mode);
+/** Shown for every pattern but the picture, and for the picture in these modes. */
+const exceptPicture = (...modes: PicMode[]) => (p: ShadowBoxParams) => { const m = picMode(p); return m === null || modes.includes(m); };
+const withPicture = (p: ShadowBoxParams, c: Partial<ShadowBoxParams["picture"]>): ShadowBoxParams => ({ ...p, picture: { ...p.picture, ...c } });
 const CORNERED: FrameShape[] = ["rect", "rounded", "arch", "hexagon", "octagon", "diamond", "house", "shield"];
 
 const sections: SectionSpec<ShadowBoxParams>[] = [
@@ -75,7 +99,7 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
     fields: [
       {
         kind: "choice", key: "design.pattern", label: "Pattern", rail: true, shuffle: true,
-        help: "Tunnel nests one shape; Mandala rings it with petals and dots; Sunburst cuts rays; Scene cuts layered ridges of hills, peaks, waves, a forest, clouds or a city; Lattice cuts a grid of holes; Flow cuts wavy stripes.",
+        help: "Tunnel nests one shape; Mandala rings it with petals and dots; Sunburst cuts rays; Scene cuts layered ridges of hills, peaks, waves, a forest, clouds or a city; Lattice cuts a grid of holes; Flow cuts wavy stripes; Your picture turns a photo, drawing, SVG or sample shape into layers.",
         options: opts(PATTERNS, PATTERN_NAMES),
         apply: (p, v) => withDesign(p, { pattern: v as Pattern, ...PATTERN_START[v as Pattern] }),
       },
@@ -114,6 +138,33 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
     ],
   },
   {
+    id: "picture", title: "Picture", open: true, show: (p) => isPat(p, "picture"),
+    help: "Your own photo, drawing or SVG (or a sample shape) turned into the layers' cut-outs. Pictures are traced on this device and never uploaded.",
+    fields: [
+      {
+        kind: "image", key: "picture.image", aspectKey: "picture.aspect", trace: { levels: "picture.levels", name: "picture.name" }, label: "Picture",
+        help: "A photo or drawing (JPEG, PNG or WebP) or an SVG file. It is traced here, in your browser, into outlines at ten brightness levels; the picture itself stays on your device.",
+      },
+      {
+        kind: "choice", key: "picture.sample", label: "Sample shape", rail: true, shuffle: true, show: (p) => isPat(p, "picture") && !p.picture.levels,
+        help: "A ready-made silhouette to start from, used until you add your own picture.",
+        options: opts(SAMPLES, SAMPLE_NAMES),
+        apply: (p, v) => withPicture(isPat(p, "picture") ? p : withDesign(p, { pattern: "picture", ...PATTERN_START.picture }), { sample: v as Sample, levels: "", image: "", name: "" }),
+      },
+      { kind: "choice", key: "picture.mode", label: "Layers from", shuffle: true, options: opts(PIC_MODES, MODE_NAMES), help: "Levels cuts each layer at a brightness level of a photo or drawing; Tunnel nests the shape from small to large; Rings grows it a little on every layer." },
+      { kind: "number", key: "picture.dark", label: "Back level", unit: "%", min: 0, max: 100, step: 1, show: (p) => picMode(p) === "levels", help: "The brightness the back pattern layer cuts at: only parts darker than this are cut away there." },
+      { kind: "number", key: "picture.light", label: "Front level", unit: "%", min: 0, max: 100, step: 1, show: (p) => picMode(p) === "levels", help: "The brightness the front layer cuts at: everything darker than this is cut away there, so only the lightest parts stay." },
+      { kind: "number", key: "picture.cut", label: "Shape level", unit: "%", min: 0, max: 100, step: 1, show: (p) => traced(p) && picMode(p) !== "levels", help: "The brightness that separates the shape from its background: parts of the picture darker than this make the shape." },
+      { kind: "toggle", key: "picture.invert", label: "Swap dark and light", show: traced, help: "Light parts sit deepest (levels), or the light parts make the shape." },
+      { kind: "toggle", key: "picture.paper", label: "Keep the shape as paper", show: (p) => picMode(p) === "scale" || picMode(p) === "grow", help: "The shape stays as paper and the window around it is cut away, like a cameo; set Loose pieces to Cut as parts or Bridges so it is held." },
+      { kind: "number", key: "picture.size", label: "Picture size", unit: "%", min: 10, max: 300, step: 1, show: (p) => picMode(p) === "levels" || picMode(p) === "grow", help: "Levels: 100 % just covers the window. Rings: 100 % makes the shape fill the window." },
+      { kind: "number", key: "picture.step", label: "Ring step", unit: "mm", min: 0, max: 40, step: 0.5, shuffle: [3, 12], show: (p) => picMode(p) === "grow", help: "How much the shape grows from one layer to the next." },
+      { kind: "number", key: "picture.x", label: "Move across", unit: "%", min: -100, max: 100, step: 1, show: (p) => picMode(p) === "levels" || picMode(p) === "grow", help: "Slides the picture left (negative) or right (positive)." },
+      { kind: "number", key: "picture.y", label: "Move down", unit: "%", min: -100, max: 100, step: 1, show: (p) => picMode(p) === "levels" || picMode(p) === "grow", help: "Slides the picture up (negative) or down (positive)." },
+      { kind: "number", key: "picture.detail", label: "Smallest detail", unit: "mm", min: 0, max: 10, step: 0.1, help: "Cut-out details narrower than this are left uncut, so specks and hairlines of a traced picture do not weaken the paper." },
+    ],
+  },
+  {
     id: "text", title: "Words", open: true,
     help: "A name, date or short message cut into the front layer, standing on a paper bar across the window.",
     fields: [
@@ -148,12 +199,12 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
     fields: [
       { kind: "number", key: "stack.count", label: "Layers", unit: "", min: 2, max: 20, step: 1, int: true, shuffle: [4, 10], help: "Layers in the stack, including the back board." },
       { kind: "toggle", key: "stack.back", label: "Plain back board", show: (p) => !hasPhoto(p), help: "The back layer is uncut (apart from the light hole), so the box has a background." },
-      { kind: "number", key: "design.min", label: "Back cut-out", unit: "%", min: 0, max: 150, step: 1, shuffle: [15, 35], help: "Size of the cut-out on the back pattern layer, as a share of the window." },
-      { kind: "number", key: "design.max", label: "Front cut-out", unit: "%", min: 5, max: 200, step: 1, shuffle: [85, 115], help: "Size of the cut-out on the front layer. Over 100% leaves only the corners of the window." },
-      { kind: "number", key: "design.twist", label: "Twist", unit: "deg", min: -45, max: 45, step: 0.5, shuffle: [-8, 8], help: "Turns each layer's pattern a little more than the one behind it: a spiral." },
+      { kind: "number", key: "design.min", label: "Back cut-out", unit: "%", min: 0, max: 150, step: 1, shuffle: [15, 35], show: exceptPicture("scale"), help: "Size of the cut-out on the back pattern layer, as a share of the window." },
+      { kind: "number", key: "design.max", label: "Front cut-out", unit: "%", min: 5, max: 200, step: 1, shuffle: [85, 115], show: exceptPicture("scale"), help: "Size of the cut-out on the front layer. Over 100% leaves only the corners of the window." },
+      { kind: "number", key: "design.twist", label: "Twist", unit: "deg", min: -45, max: 45, step: 0.5, shuffle: [-8, 8], show: exceptPicture("scale"), help: "Turns each layer's pattern a little more than the one behind it: a spiral." },
       { kind: "number", key: "design.rotate", label: "Turn", unit: "deg", min: -180, max: 180, step: 1, shuffle: [-30, 30], help: "Turns the whole pattern." },
-      { kind: "number", key: "design.shiftX", label: "Vanishing point X", unit: "%", min: -90, max: 90, step: 1, shuffle: [-40, 40], show: (p) => !isPat(p, "landscape", "flow"), help: "Moves the back cut-outs left or right, so the tunnel runs off at an angle." },
-      { kind: "number", key: "design.shiftY", label: "Vanishing point Y", unit: "%", min: -90, max: 90, step: 1, shuffle: [-40, 40], show: (p) => !isPat(p, "landscape", "flow"), help: "Moves the back cut-outs up or down." },
+      { kind: "number", key: "design.shiftX", label: "Vanishing point X", unit: "%", min: -90, max: 90, step: 1, shuffle: [-40, 40], show: (p) => !isPat(p, "landscape", "flow") && exceptPicture("scale")(p), help: "Moves the back cut-outs left or right, so the tunnel runs off at an angle." },
+      { kind: "number", key: "design.shiftY", label: "Vanishing point Y", unit: "%", min: -90, max: 90, step: 1, shuffle: [-40, 40], show: (p) => !isPat(p, "landscape", "flow") && exceptPicture("scale")(p), help: "Moves the back cut-outs up or down." },
       { kind: "toggle", key: "design.stretch", label: "Stretch to the window", show: shaped, help: "Cut-outs stretch to the window's width and height instead of keeping their shape." },
     ],
   },
@@ -192,6 +243,8 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
       { kind: "number", key: "stack.gap", label: "Foam thickness", unit: "mm", min: 0, max: 20, step: 0.5, show: (p) => p.stack.spacer === "none", help: "Thickness of the foam tape between layers (for the depth and the 3D view)." },
       { kind: "number", key: "stack.per", label: "Frames per gap", unit: "", min: 1, max: 4, step: 1, int: true, show: (p) => p.stack.spacer === "frames", help: "Spacer frames between each pair of layers: more makes a deeper box." },
       { kind: "number", key: "design.web", label: "Narrowest bridge", unit: "mm", min: 0, max: 10, step: 0.1, help: "Paper narrower than this between cut-outs is cut away, so nothing too thin to hold is left." },
+      { kind: "choice", key: "design.loose", label: "Loose pieces", options: opts(LOOSE, LOOSE_NAMES), help: "Paper pieces nothing holds (the middle of an O, a light spot in a picture): leave them out, tie each to the nearest paper with a thin bridge, or cut them as parts to glue back in place." },
+      { kind: "number", key: "design.bridge", label: "Bridge width", unit: "mm", min: 0.5, max: 10, step: 0.1, show: (p) => p.design.loose === "bridge", help: "Width of the bridges that hold loose pieces; never narrower than the narrowest bridge." },
     ],
   },
   {
@@ -224,7 +277,12 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
         for (let i = 0; i <= 24; i++) { const x = -1.2 + (2.4 * i) / 24, c = y + 0.22 * Math.sin(x * Math.PI * 1.3); top.push([x, c - 0.16]); bot.push([x, c + 0.16]); }
         return [...top, ...bot.reverse()] as Contour;
       })]);
+      case "picture": return ring([box, [[-1, 0.95], [-0.35, -0.15], [0.05, 0.4], [0.45, 0], [1, 0.95]], circle(0.42, -0.52, 0.24, 0.02)]);
     }
+  }
+  if (key === "picture.sample") {
+    const cs = sampleArt(v as Sample), b = bboxOf(cs), k = 1.9 / Math.max(b.x1 - b.x0, b.y1 - b.y0);
+    return ring([rect(-1.3, -1.3, 2.6, 2.6), ...cs.map((c) => transform(c, { x: -((b.x0 + b.x1) / 2) * k, y: -((b.y0 + b.y1) / 2) * k, sx: k }))]);
   }
   if (key === "design.opening") {
     const o = v === "frame" ? shapeOutline("rounded", 2, 2, 0.3).map(([x, y]) => [x - 1, y - 1] as [number, number]) : unitOpening(v as Exclude<Opening, "frame">, 6, 0.5);
@@ -262,6 +320,7 @@ function scaleShadowBox(p: ShadowBoxParams, s: number): ShadowBoxParams {
     ...p,
     frame: { ...p.frame, width: k(p.frame.width), height: k(p.frame.height), border: k(p.frame.border), corner: k(p.frame.corner) },
     design: { ...p.design, pitch: k(p.design.pitch) },
+    picture: { ...p.picture, step: k(p.picture.step) },
     text: { ...p.text, size: k(p.text.size) },
   };
 }
@@ -279,6 +338,7 @@ function railPreview(key: string, p: ShadowBoxParams, value: string): ShadowBoxP
     case "design.opening": return d({ pattern: "tunnel", min: 22, max: 100, sides: 6, inner: 50 }, 5);
     case "design.ridge": return d({ pattern: "landscape", ...PATTERN_START.landscape, count: 2, amp: 30 }, 5);
     case "design.cell": return d({ pattern: "lattice", min: 40, max: 90, pitch: 40, fade: 30 }, 4);
+    case "picture.sample": return { ...d({ pattern: "picture" }, 5), picture: { ...p.picture, sample: value as Sample, levels: "", mode: "grow", paper: false, size: 74, step: 5, x: 0, y: 0 } };
     case "design.hole": return d({ pattern: "tunnel", opening: "circle", min: 120, max: 130, moon: true, holeSize: 45 }, 2, { look: { palette: "night", reverse: false } });
     // The frame alone: a dark border ring over a light back board, so the card shows the outline and nothing else.
     case "frame.shape": return d({ pattern: "tunnel", opening: "circle", min: 300, max: 300 }, 2, { look: { palette: "sunset", reverse: true } });
@@ -304,11 +364,12 @@ export const SHADOWBOX: GeneratorDef<ShadowBoxParams> = {
   art,
   railPreview,
   fileName: (p) => namedFile("shadow-box", p.name, p.design.pattern),
-  summary: (p) => `${label(PATTERN_NAMES, p.design.pattern)} shadow box · ${p.stack.count} layers · ${Math.round(p.frame.width)} × ${Math.round(p.frame.height)} mm`,
+  summary: (p) => `${p.design.pattern === "picture" ? `${p.picture.levels ? "Picture" : label(SAMPLE_NAMES, p.picture.sample)} (${label(MODE_NAMES, picMode(p)!).toLowerCase()})` : label(PATTERN_NAMES, p.design.pattern)} shadow box · ${p.stack.count} layers · ${Math.round(p.frame.width)} × ${Math.round(p.frame.height)} mm`,
   help: {
     intro: [
       "The Shadow Box generator makes layered 3D paper-cut art: a stack of frames with the same outline whose geometric cut-outs grow from the back layer to the front one, so the finished piece looks deep when the layers are stacked with foam tape or spacer frames between them.",
-      "Pick a pattern (a tunnel of nested circles, polygons, stars, flowers, hearts or arches; a mandala of petals and dots; a sunburst of straight or curled rays; a scene of hills, peaks, waves, dunes, a pine forest, clouds or a city; or a lattice of holes; or flowing wavy stripes, ovals, squircles, sine-wave circles and crossed ellipses for softer looks), then set the number of layers, how much the cut-outs grow, a twist for spirals and a vanishing point for tunnels that run off at an angle. It comes with 120 ready-made designs.",
+      "Pick a pattern (a tunnel of nested circles, polygons, stars, flowers, hearts or arches; a mandala of petals and dots; a sunburst of straight or curled rays; a scene of hills, peaks, waves, dunes, a pine forest, clouds or a city; or a lattice of holes; or flowing wavy stripes, ovals, squircles, sine-wave circles and crossed ellipses for softer looks), then set the number of layers, how much the cut-outs grow, a twist for spirals and a vanishing point for tunnels that run off at an angle. It comes with 132 ready-made designs.",
+      "Or start from your own picture: a photo or drawing is traced on your device (it is never uploaded) into outlines at ten brightness levels, so each layer can cut away the darker parts and the picture reads in depth; a single shape, from an SVG file or one of the sample silhouettes (a cat, a fish, a bird, a pear and more), can be nested as a tunnel or grown into soft contour rings, or kept as paper with halos behind it like a cameo. Loose pieces are left out, held with thin bridges, or cut as parts to glue back on foam.",
       "Make it personal: put a photo on the back board so the layers frame it, put a name, date or short message on the front layer in any font, cut a light hole shaped like a crescent, a star, a heart or another motif into the back board, and size the layers for a standard 6 × 6, 8 × 8, 10 × 10, 5 × 7 or 8 × 10 in frame.",
       "It starts set for a Cricut or similar blade cutter: the layers are drawn on 12 × 12 in mats with no kerf, one SVG for all the layers. Choose Laser to cut card or thin plywood on a laser bed with kerf compensation.",
     ],
@@ -320,8 +381,9 @@ export const SHADOWBOX: GeneratorDef<ShadowBoxParams> = {
       "For words on the front layer, pick a bold font and a size of 18 mm or more so the letters stay strong in paper; a name and date makes a popular nursery or wedding gift.",
       "Front cut-outs over 100% leave just the corners of the window, which frames a round tunnel nicely.",
       "For a photo, a tunnel or a frame-shaped cut-out with a large back cut-out leaves the face clear; set the zoom and move it so the part you want sits in the middle.",
+      "To turn a picture into layers, high-contrast images trace best: a logo, a silhouette, line art or a landscape with a clear sky. Raise Smallest detail if a photo leaves specks, and use Bridges or Cut as parts for pieces that would fall out.",
     ],
-    keywords: ["shadow box", "photo frame", "picture", "3d paper cut", "papercraft", "layered paper art", "cricut", "svg layers", "light box", "mandala", "tunnel", "geometric art", "personalized name", "night light"],
+    keywords: ["shadow box", "photo frame", "picture", "3d paper cut", "papercraft", "layered paper art", "cricut", "svg layers", "light box", "mandala", "tunnel", "geometric art", "personalized name", "night light", "image to layers", "svg to layered", "photo to paper cut", "silhouette", "cameo"],
   },
 };
 

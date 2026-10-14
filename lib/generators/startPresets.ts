@@ -1,6 +1,6 @@
 /**
  * Presets the start page and `?preset=` links read, kept small for the editor shell. Most generators list
- * every preset; Shadow Box (120 designs) loads a few featured cards after the page, with no settings:
+ * every preset; Shadow Box (132 designs) loads a few featured cards after the page, with no settings:
  * the generator editor takes those from the generator's own presets.
  */
 import { BOXES_PRESETS } from "./boxes/presets";
@@ -38,7 +38,7 @@ export interface LazyStart {
 
 export const START_LAZY: Partial<Record<GeneratorId, LazyStart>> = {
   shadowbox: {
-    count: 120,
+    count: 132,
     cover: "star-tunnel",
     load: () => import("./shadowbox/featured").then((m) => m.SHADOWBOX_FEATURED.map((c) => ({ ...c, params: {} }))),
   },

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
+import { TraceError, traceFile, type TracedPicture } from "./levelsClient";
 
 /** Longest side of the stored picture, px (about 0.3 mm per pixel on a 300 mm puzzle). */
 const MAX_PX = 1000;
@@ -33,12 +34,16 @@ export async function pictureJpeg(file: Blob, color = false): Promise<{ url: str
   return { url, aspect: w / h };
 }
 
-export function ImagePicker({ label, value, color = false, onPick, onClear }: {
+export function ImagePicker({ label, value, color = false, onPick, onClear, onTrace, name }: {
   label: string;
   value: string;
   color?: boolean;
   onPick: (url: string, aspect: number) => void;
   onClear: () => void;
+  /** Trace mode: SVG files are accepted too and the picture is traced into outlines on this device. */
+  onTrace?: (t: TracedPicture) => void;
+  /** File name of the traced picture. */
+  name?: string;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -51,28 +56,33 @@ export function ImagePicker({ label, value, color = false, onPick, onClear }: {
           {/* eslint-disable-next-line @next/next/no-img-element -- a local data URL */}
           <img src={value} alt={label} />
           <div className="gen-image-acts">
+            {name && <span className="gen-image-name" title={name}>{name}</span>}
             <button type="button" className="btn-auto" onClick={() => ref.current?.click()}>Replace…</button>
             <button type="button" className="btn-auto" onClick={onClear}><X size={14} /> Remove</button>
           </div>
         </div>
       ) : (
         <button type="button" className="btn-auto gen-image-pick" disabled={busy} onClick={() => ref.current?.click()}>
-          <ImagePlus size={16} aria-hidden /> {busy ? "Preparing…" : color ? "Choose a photo…" : "Choose a picture…"}
+          <ImagePlus size={16} aria-hidden /> {busy ? (onTrace ? "Tracing…" : "Preparing…") : color ? "Choose a photo…" : onTrace ? "Choose a picture or SVG…" : "Choose a picture…"}
         </button>
       )}
+      {onTrace && <p className="note gen-image-local">Your images stay on your device: the picture is traced here, in your browser.</p>}
       {err && <p className="note err">{err}</p>}
       <input
-        ref={ref} type="file" accept="image/png,image/jpeg,image/webp" hidden aria-label={label}
+        ref={ref} type="file" accept={onTrace ? "image/png,image/jpeg,image/webp,image/svg+xml,.svg" : "image/png,image/jpeg,image/webp"} hidden aria-label={label}
         onChange={async (e) => {
           const f = e.target.files?.[0];
           e.target.value = "";
           if (!f) return;
           setBusy(true); setErr(null);
           try {
-            const { url, aspect } = await pictureJpeg(f, color);
-            onPick(url, aspect);
-          } catch {
-            setErr("That picture could not be read. Try a JPEG or PNG.");
+            if (onTrace) onTrace(await traceFile(f));
+            else {
+              const { url, aspect } = await pictureJpeg(f, color);
+              onPick(url, aspect);
+            }
+          } catch (x) {
+            setErr(x instanceof TraceError ? x.message : onTrace ? "That file could not be read. Try a JPEG, PNG or SVG." : "That picture could not be read. Try a JPEG or PNG.");
           } finally {
             setBusy(false);
           }

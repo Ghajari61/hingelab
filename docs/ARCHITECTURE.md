@@ -7,7 +7,7 @@ A short map of how a design goes from settings to a cut file. Decisions and thei
 - **Next.js 15 (App Router) + React 19**, TypeScript, plain CSS per area (`components/*/…css`). Deployed on Vercel; Supabase for accounts and cloud projects; Stripe (test mode) for Pro.
 - **Geometry** is pure TypeScript in `lib/`, so the same code runs in the browser, on the server (export checks) and in Vitest. Booleans and offsets use `clipper-lib` through `lib/letters/polygon.ts` (`unionShapes`, `differenceShapes`, `intersectShapes`, `offsetShapes`); text is shaped with `harfbuzzjs`; 3D uses `three` and `manifold-3d`.
 - **Desktop app** (`desktop/`, Tauri) wraps the same web build and talks to `/api/desktop/*`.
-- **Workers** exist for the heavy jobs (`components/studio/editor/trace.worker.ts`, `imaging.worker.ts`, `components/parametric/slicer.worker.ts`, `depth.worker.ts`). Generator builds run on the main thread behind `useDeferredValue`.
+- **Workers** exist for the heavy jobs (`components/studio/editor/trace.worker.ts`, `imaging.worker.ts`, `components/parametric/slicer.worker.ts`, `depth.worker.ts`, `components/generators/levels.worker.ts`). Generator builds run on the main thread behind `useDeferredValue`.
 
 ## Products
 
@@ -31,6 +31,8 @@ A generator is data plus pure functions (`GeneratorDef<P>`):
 - Optional `fonts`, `batch` (names list), `scale` (Fit to sheets), `art` (rail line art), `pro`.
 
 Adding a field to a generator is enough for it to appear in the dock, undo/redo, autosave, saved projects, the server check and help.
+
+An `image` field with `trace` (Shadow Box's Your picture) also takes SVG files and traces the picture on the device: `components/generators/levelsClient.ts` scales it and hands it to `levels.worker.ts`, which runs `lib/imaging/levels.ts` (outlines at ten brightness levels, or an SVG's filled shapes). Only the outlines (`picPath` format, whole numbers in a 1000-unit box, at most 400 000 characters) and a small grey preview are kept in the settings; the picture itself is never stored or uploaded. The build reads the outlines synchronously, so the server rebuilds the same layers from settings.
 
 ## From settings to sheets (`lib/generators/output.ts`, `lib/fit`)
 

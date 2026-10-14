@@ -17,7 +17,7 @@ function toField(f: FieldSpec<unknown>, sec: string): GenHelpField {
   const range = f.kind === "choice" ? f.options.map((o) => o.text).join(", ")
     : f.kind === "toggle" ? "on or off"
       : f.kind === "font" ? "any Letters font"
-        : f.kind === "image" ? "a JPEG, PNG or WebP picture" : "text";
+        : f.kind === "image" ? (f.trace ? "a JPEG, PNG or WebP picture, or an SVG" : "a JPEG, PNG or WebP picture") : "text";
   return { id: f.key, label: f.label, sec, step: 0, range };
 }
 

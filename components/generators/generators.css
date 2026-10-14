@@ -16,6 +16,8 @@
 .gen-image-pick { width: 100%; }
 .gen-image-row { display: flex; gap: 10px; align-items: center; }
 .gen-image-row img { width: 96px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); background: var(--field); }
-.gen-image-acts { display: grid; gap: 6px; flex: 1; }
+.gen-image-acts { display: grid; gap: 6px; flex: 1; min-width: 0; }
+.gen-image-name { font-size: 12px; color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gen-image-local { margin: 0; font-size: 12px; }
 .gen-random { align-self: end; margin-bottom: 2px; }
 .gen-shuffle { width: 100%; }

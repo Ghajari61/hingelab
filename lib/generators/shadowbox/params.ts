@@ -5,8 +5,9 @@ import type { ShapeKind } from "../shapes";
 import type { MotifId } from "../motifs";
 import { JOB_EXTRAS, SHEET_EXTRAS, type GenBase } from "../types";
 import { mergeInto } from "../util";
+import { isPictureText } from "./picPath";
 
-export const PATTERNS = ["tunnel", "mandala", "sunburst", "landscape", "lattice", "flow"] as const;
+export const PATTERNS = ["tunnel", "mandala", "sunburst", "landscape", "lattice", "flow", "picture"] as const;
 export type Pattern = (typeof PATTERNS)[number];
 export const OPENINGS = ["circle", "oval", "squircle", "polygon", "star", "flower", "wavy", "orbit", "heart", "arch", "drop", "frame"] as const;
 export type Opening = (typeof OPENINGS)[number];
@@ -29,6 +30,14 @@ export const HOLES = ["circle", "moon", "moonstar", "star", "sparkle", "heart", 
 export type Hole = (typeof HOLES)[number];
 export const PLACES = ["bottom", "middle", "top"] as const;
 export type Place = (typeof PLACES)[number];
+/** Built-in silhouettes for the picture pattern (four drawn here, the rest shared motifs). */
+export const SAMPLES = ["cat", "fish", "bird", "pear", "butterfly", "heart", "tree", "leaf", "paw", "house", "moonstar", "flower"] as const;
+export type Sample = (typeof SAMPLES)[number];
+export const PIC_MODES = ["levels", "scale", "grow"] as const;
+export type PicMode = (typeof PIC_MODES)[number];
+/** Paper pieces the cut-outs leave loose: left out, bridged to the frame, or cut as parts to glue on. */
+export const LOOSE = ["drop", "bridge", "parts"] as const;
+export type Loose = (typeof LOOSE)[number];
 
 /** Standard shadow box frames: the layers are 3 mm smaller than the frame's opening so they drop in. */
 export const SIZES = {
@@ -119,6 +128,10 @@ export interface ShadowBoxParams extends GenBase {
     swirl: number;
     /** Narrowest paper left between cut-outs, mm. */
     web: number;
+    /** What happens to paper pieces the cut-outs leave loose. */
+    loose: Loose;
+    /** Width of the bridges that hold loose pieces, mm. */
+    bridge: number;
     /** Openings stretch with the window instead of keeping their shape. */
     stretch: boolean;
     /** A light hole in the back layer (moon, sun or a motif). */
@@ -134,6 +147,36 @@ export interface ShadowBoxParams extends GenBase {
    * width / height, a zoom (100 % just covers the window) and a shift of the crop, % of the spare room.
    */
   photo: { image: string; aspect: number; zoom: number; x: number; y: number };
+  /**
+   * The picture pattern's source and how it becomes layers. `levels` holds the traced outlines (see
+   * picture.ts; "" uses the sample shape) and `image` a small grey preview of what was traced.
+   */
+  picture: {
+    image: string;
+    aspect: number;
+    levels: string;
+    /** File name of the traced picture or SVG, for the panel. */
+    name: string;
+    sample: Sample;
+    mode: PicMode;
+    /** Brightness cut-offs of the back and front pattern layers (levels), and of the silhouette, %. */
+    dark: number;
+    light: number;
+    cut: number;
+    /** Light parts are deep (levels), or the light parts are the silhouette. */
+    invert: boolean;
+    /** The silhouette stays as paper and the window around it is cut away. */
+    paper: boolean;
+    /** Levels: 100 % covers the window; grow: 100 % fills it. */
+    size: number;
+    /** Shift, % of the spare room (levels) or of half the window (grow). */
+    x: number;
+    y: number;
+    /** Growth from one layer to the next, mm. */
+    step: number;
+    /** Cut-out details narrower than this are left uncut, mm. */
+    detail: number;
+  };
   look: { palette: PaletteId; reverse: boolean };
 }
 
@@ -157,10 +200,14 @@ export const SHADOWBOX_DEFAULTS: ShadowBoxParams = {
     ridge: "mountains", from: "bottom", amp: 18, seed: 7, count: 12,
     cell: "hex", pitch: 18, fade: 40,
     min: 18, max: 118, twist: 6, rotate: 0, shiftX: 0, shiftY: 0, swirl: 0, waves: 3,
-    web: 1.5, stretch: false, moon: false, hole: "circle", holeSize: 18,
+    web: 1.5, loose: "drop", bridge: 2, stretch: false, moon: false, hole: "circle", holeSize: 18,
   },
   text: { text: "", fontId: "lobster", size: 20, place: "bottom" },
   photo: { image: "", aspect: 1.5, zoom: 100, x: 0, y: 0 },
+  picture: {
+    image: "", aspect: 1, levels: "", name: "", sample: "cat", mode: "grow",
+    dark: 20, light: 80, cut: 50, invert: false, paper: false, size: 45, x: 0, y: 0, step: 6, detail: 1.5,
+  },
   look: { palette: "sunset", reverse: false },
 };
 
@@ -205,6 +252,23 @@ export function mergeShadowBox(raw: unknown): ShadowBoxParams {
   ph.zoom = clamp(ph.zoom, 100, 300);
   ph.x = clamp(ph.x, -100, 100);
   ph.y = clamp(ph.y, -100, 100);
+  g.loose = oneOf(LOOSE, g.loose, d.design.loose);
+  g.bridge = clamp(g.bridge, 0.5, 10);
+  const pc = p.picture;
+  if (!isPictureText(pc.levels)) pc.levels = "";
+  if (typeof pc.image !== "string" || (pc.image && !isImageDataURL(pc.image))) pc.image = "";
+  pc.name = String(pc.name ?? "").replace(/[^\p{L}\p{N}\p{Zs}_.,()+-]/gu, "").slice(0, 80);
+  pc.aspect = Number.isFinite(pc.aspect) && pc.aspect > 0 ? clamp(pc.aspect, 0.1, 10) : d.picture.aspect;
+  pc.sample = oneOf(SAMPLES, pc.sample, d.picture.sample);
+  pc.mode = oneOf(PIC_MODES, pc.mode, d.picture.mode);
+  pc.dark = clamp(pc.dark, 0, 100);
+  pc.light = clamp(pc.light, 0, 100);
+  pc.cut = clamp(pc.cut, 0, 100);
+  pc.size = clamp(pc.size, 10, 300);
+  pc.x = clamp(pc.x, -100, 100);
+  pc.y = clamp(pc.y, -100, 100);
+  pc.step = clamp(pc.step, 0, 40);
+  pc.detail = clamp(pc.detail, 0, 10);
   if (!isPalette(p.look.palette)) p.look.palette = d.look.palette;
   return p;
 }

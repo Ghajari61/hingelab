@@ -15,6 +15,7 @@ import { cleanExtras, cleanJob, GEN_LAYER_NAMES } from "@/lib/generators/output"
 import { getPath, setPath } from "@/lib/generators/path";
 import { Dices } from "lucide-react";
 import { ImagePicker } from "./ImagePicker";
+import type { TracedPicture } from "./levelsClient";
 import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, SHEET_EXTRAS, type AnyGenerator, type FieldSpec, type GenBase, type GenOutput, type NumberSpec } from "@/lib/generators/types";
 
 type P = GenBase & Record<string, unknown>;
@@ -104,7 +105,11 @@ export function GeneratorDock({
         <ImagePicker
           key={f.key} label={f.label} value={String(value ?? "")} color={f.color}
           onPick={(url, aspect) => onApply(setPath(setPath(params, f.key, url), f.aspectKey, aspect) as P)}
-          onClear={() => onSet(f.key, "", true)}
+          onClear={() => onApply((f.trace ? setPath(setPath(setPath(params, f.key, ""), f.trace.levels, ""), f.trace.name, "") : setPath(params, f.key, "")) as P)}
+          {...(f.trace && {
+            name: String(getPath(params, f.trace.name) ?? "") || undefined,
+            onTrace: (t: TracedPicture) => onApply(setPath(setPath(setPath(setPath(params, f.key, t.preview), f.aspectKey, t.aspect), f.trace!.levels, t.levels), f.trace!.name, t.name) as P),
+          })}
         />
       );
     }

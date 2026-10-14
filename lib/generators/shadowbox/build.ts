@@ -13,7 +13,9 @@ import { motif } from "../motifs";
 import { heartCurve, orient, shapeOutline, starPolygon } from "../shapes";
 import type { BuildContext, Contour, GenImage, GenOutput, GenPart, Pt } from "../types";
 import { textBlock, weld } from "../weld";
+import { bridgeIslands } from "./islands";
 import { PALETTES, type FrameShape, type Opening, type Petal, type Ridge, type ShadowBoxParams } from "./params";
+import { pictureCuts, pictureMode, pictureSource, silhouette } from "./picture";
 
 export interface ShadowBoxInfo {
   /** The window inside the frame's border, mm. */
@@ -23,6 +25,9 @@ export interface ShadowBoxInfo {
   open: number;
   /** Loose pieces left out. */
   dropped: number;
+  /** Bridges added to hold loose pieces, and loose pieces cut as parts of their own. */
+  bridges?: number;
+  pieces?: number;
   /** The border leaves no window. */
   noWindow: boolean;
   /** Stack depth, mm. */
@@ -408,6 +413,8 @@ function openingsOf(p: ShadowBoxParams, w: Win, win: Shape, i: number, L: number
       }
       return turn(out, rot, w.cx, w.cy);
     }
+    case "picture":
+      return [];
   }
 }
 
@@ -508,18 +515,35 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
   const ringArea = ring.reduce((a, s) => a + s.area, 0);
   const web = Math.max(0, p.design.web);
 
-  /** The frame with `cuts` taken out of its window, cleaned of slivers and loose pieces; `keep` is added back after the cleaning. */
-  const layerOf = (cuts: Contour[], keep: Contour[] = []): Shape => {
+  const loose = p.design.loose;
+  /** Loose pieces cut as parts of their own, by layer index. */
+  const pieces = new Map<number, Shape[]>();
+  /**
+   * The frame with `cuts` taken out of its window, cleaned of slivers and loose pieces; `keep` is added
+   * back after the cleaning. `oriented` cuts keep their holes (outers positive, holes negative).
+   */
+  const layerOf = (cuts: Contour[], keep: Contour[] = [], oriented = false, how = loose): Shape => {
     if (!cuts.length) return frameShape;
-    const merged = unionShapes(cuts.map(orient));
+    const merged = unionShapes(oriented ? cuts : cuts.map(orient));
     const inWin = intersectShapes(shapeContours(merged), winCs);
     let body = differenceShapes([frame], shapeContours(inWin));
     if (web > 0) body = offsetShapes(offsetShapes(body, -web / 2, "miter"), web / 2, "miter");
     const all = unionShapes([...shapeContours(body), ...shapeContours(ring), ...keep]);
     if (!all.length) return frameShape;
-    const main = biggest(all);
-    info.dropped += all.filter((s) => s !== main && s.area > 1).length;
-    if (main.area < ringArea * 1.01 + 1) info.open++;
+    let main = biggest(all);
+    const rest = all.filter((s) => s !== main && s.area > 1);
+    if (rest.length && how === "bridge") {
+      const b = bridgeIslands(main, rest, Math.max(p.design.bridge, web));
+      main = b.shape;
+      info.bridges = (info.bridges ?? 0) + b.bridges;
+      info.dropped += b.left;
+    } else if (rest.length && how === "parts") {
+      // Called as `shapes.push(layerOf(...))`, so this layer's index is the current length.
+      pieces.set(shapes.length, rest.map((s) => makeShape(simplifyClosed(s.outer, SIMPLIFY), s.holes.map((h) => simplifyClosed(h, SIMPLIFY)))));
+      info.pieces = (info.pieces ?? 0) + rest.length;
+    } else info.dropped += rest.length;
+    // A frame whose pieces are cut as parts is not an empty layer: the pieces sit in its window.
+    if (main.area < ringArea * 1.01 + 1 && !(how === "parts" && rest.length)) info.open++;
     return makeShape(main.outer, main.holes.map((h) => simplifyClosed(h, SIMPLIFY)));
   };
 
@@ -532,11 +556,16 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
   const missing: string[] = [];
   const text = textCut(p, w, winCs, ctx, missing);
   if (text && !text.loading) { info.textW = r1(text.width); info.textRoom = r1(text.room); info.textSize = r1(text.size); }
+  const pic = p.design.pattern === "picture" ? pictureSource(p.picture) : null;
+  const sil = pic && pictureMode(p.picture, pic) !== "levels" ? silhouette(p.picture, pic) : [];
   if (back) shapes.push(moon.length ? layerOf(moon) : frameShape);
   for (let i = 0; i < L; i++) {
     const front = i === L - 1 && text && !text.loading, dropped = info.dropped;
-    shapes.push(layerOf([...openingsOf(p, w, win, i, L), ...(i === 0 && !back ? moon : []), ...(front ? text.clear : [])], front ? text.keep : []));
+    const extra = [...(i === 0 && !back ? moon : []), ...(front ? text.clear : [])];
     // Bits of the pattern cut off by the words' clear band are meant to go.
+    shapes.push(pic
+      ? layerOf([...pictureCuts(p, pic, sil, w, winCs, i, L), ...extra.map(orient)], front ? text.keep : [], true, front ? "drop" : loose)
+      : layerOf([...openingsOf(p, w, win, i, L), ...extra], front ? text.keep : [], false, front ? "drop" : loose));
     if (front) info.dropped = dropped;
   }
   if (photo && shapes.length > 1) {
@@ -556,6 +585,7 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
     const color = layerColor(p, k, N);
     const name = `Layer ${k + 1}${k === 0 ? " (back)" : k === N - 1 ? " (front)" : ""}`;
     parts.push({ id: `layer${k + 1}`, name, outer: sh.outer, holes: sh.holes, color, matte: true, place: { x: 0, y: 0, z }, ...(k === 0 && photo ? { images: [photo] } : {}) });
+    (pieces.get(k) ?? []).forEach((s, j) => parts.push({ id: `piece${k + 1}-${j + 1}`, name: `Layer ${k + 1} piece ${j + 1}`, outer: s.outer, holes: s.holes, color, matte: true, place: { x: 0, y: 0, z } }));
     if (k < N - 1) for (let j = 0; j < per; j++) {
       sp++;
       parts.push({ id: `spacer${sp}`, name: `Spacer ${sp}`, outer: spacer.outer, holes: spacer.holes, color, matte: true, place: { x: 0, y: 0, z: z + T + j * T } });
@@ -575,6 +605,8 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
       { label: "Depth", value: `${r1(depth)} mm` },
       ...(sp ? [{ label: "Spacer frames", value: String(sp) }] : []),
       ...(photo ? [{ label: "Photo shows", value: `${r0(w.w)} × ${r0(w.h)} mm` }] : []),
+      ...(info.bridges ? [{ label: "Bridges", value: String(info.bridges) }] : []),
+      ...(info.pieces ? [{ label: "Loose pieces", value: String(info.pieces) }] : []),
     ],
     assembly: [
       blade
@@ -587,6 +619,9 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
         ? [blade
           ? "The photo is on Layer 1, the back board, on the Engrave layer of the SVG: print the SVG at 100 % on photo paper or card and glue it on the back board, or print straight onto the card before cutting Layer 1."
           : "The photo is on Layer 1, the back board, on the Engrave layer of the SVG: engrave it before cutting Layer 1 without moving the sheet, or glue a print of it on the back board."]
+        : []),
+      ...(info.pieces
+        ? [`Each layer's loose pieces are cut as parts named after it ("Layer 3 piece 1"): glue each one back where it was cut from, on a small foam square on the layer behind, so it floats in place.`]
         : []),
       "Stack the layers in order from the back, pressing each one down evenly before the next.",
       ...(text && !text.loading ? [`The words stand on a paper bar across the front layer: cut it from a contrasting card so they read clearly.`] : []),

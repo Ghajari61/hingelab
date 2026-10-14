@@ -46,7 +46,22 @@ export function checkShadowBox(p: ShadowBoxParams, out: ShadowBoxOutput): Issue<
     });
   }
   if (info.dropped > 0) {
-    issues.push({ code: "LOOSE", level: "info", message: `${info.dropped} loose piece${info.dropped > 1 ? "s" : ""} inside the cut-outs ${info.dropped > 1 ? "were" : "was"} left out: nothing held ${info.dropped > 1 ? "them" : "it"} to the frame.`, fixes: [] });
+    const how = (loose: ShadowBoxParams["design"]["loose"]) => (q: ShadowBoxParams) => ({ ...q, design: { ...q.design, loose } });
+    issues.push({
+      code: "LOOSE", level: "info",
+      message: `${info.dropped} loose piece${info.dropped > 1 ? "s" : ""} inside the cut-outs ${info.dropped > 1 ? "were" : "was"} left out: nothing held ${info.dropped > 1 ? "them" : "it"} to the frame.`,
+      fixes: p.design.loose === "drop"
+        ? [{ id: "bridge", label: "Hold them with bridges", safe: false, apply: how("bridge") }, { id: "parts", label: "Cut them as parts", safe: false, apply: how("parts") }]
+        : [],
+    });
+  }
+  if (p.design.pattern === "picture") {
+    if (!p.picture.levels) {
+      issues.push({ code: "PICTURE_SAMPLE", level: "info", message: "The layers show a sample shape. Add your own picture or SVG in the Picture section; it is traced on this device and never uploaded.", fixes: [] });
+    }
+    if (p.picture.mode === "levels" && p.picture.levels && !p.picture.levels.includes("|")) {
+      issues.push({ code: "PICTURE_ONE_LEVEL", level: "info", message: "Brightness levels need a photo or drawing: an SVG has a single shape, so it grows from layer to layer instead.", fixes: [] });
+    }
   }
   return issues;
 }

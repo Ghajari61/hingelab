@@ -1,5 +1,5 @@
 import type { DeepPartial, GenPreset } from "../types";
-import type { FrameShape, PaletteId, ShadowBoxParams } from "./params";
+import type { FrameShape, PaletteId, Sample, ShadowBoxParams } from "./params";
 
 type P = DeepPartial<ShadowBoxParams>;
 type G = DeepPartial<ShadowBoxParams["design"]>;
@@ -26,6 +26,10 @@ const sunburst = (g: G): G => ({ pattern: "sunburst", min: 22, max: 100, twist: 
 const land = (g: G): G => ({ pattern: "landscape", min: 34, max: 84, twist: 0, ...g });
 const lattice = (g: G): G => ({ pattern: "lattice", min: 25, max: 95, twist: 0, ...g });
 const flow = (g: G): G => ({ pattern: "flow", min: 25, max: 85, count: 7, waves: 3, amp: 30, swirl: 90, twist: 0, ...g });
+type Pic = DeepPartial<ShadowBoxParams["picture"]>;
+/** A picture-pattern design from a built-in sample shape. */
+const pic = (id: string, name: string, note: string, sample: Sample, pc: Pic, o: Opts & { design?: G } = {}) =>
+  preset(id, name, note, { pattern: "picture", min: 20, max: 100, twist: 0, ...o.design }, { ...o, extra: { ...o.extra, picture: { sample, ...pc } } });
 const wide: Frame = { shape: "rect", width: 240, height: 180, corner: 0 };
 const BLADE: P = { cutter: { kind: "blade" }, material: "custom", T: 0.5, K: 0, bedW: 292, bedH: 292, gap: 3 };
 
@@ -160,4 +164,17 @@ export const SHADOWBOX_PRESETS: GenPreset<ShadowBoxParams>[] = [
   preset("pebbles", "Pebbles", "Ovals that grow toward the middle", lattice({ cell: "oval", pitch: 34, fade: 60 }), { frame: "squircle", palette: "desert" }),
   preset("oval-weave", "Oval weave", "Turned ovals in mint", lattice({ cell: "oval", pitch: 30, fade: 30, rotate: 45 }), { frame: "circle", palette: "mint" }),
   preset("hello-baby", "Hello baby", "Soft squircles, a moon and star, and a name", tunnel({ opening: "squircle", min: 18, max: 108, moon: true, hole: "moonstar", holeSize: 20 }), { frame: "squircle", palette: "pastel", extra: { text: { text: "Hello baby", fontId: "pacifico", size: 22 } } }),
+  // Your picture: sample shapes in rings, tunnels and paper cameos (add your own picture or SVG to replace them)
+  pic("cat-rings", "Cat rings", "A sitting cat in soft contour rings", "cat", { mode: "grow", size: 42, step: 6 }, { palette: "lavender" }),
+  pic("goldfish-pond", "Goldfish pond", "A fish deep in rippling water", "fish", { mode: "grow", size: 36, step: 7 }, { frame: { shape: "rounded", width: 175, height: 251 }, palette: "ocean", layers: 8, design: { loose: "bridge" } }),
+  pic("pear-contours", "Pear contours", "A pear in warm stepped rings", "pear", { mode: "grow", size: 40, step: 6 }, { palette: "autumn" }),
+  pic("bird-tunnel", "Bird tunnel", "Birds nested into the distance", "bird", { mode: "scale" }, { design: { min: 22, max: 82, loose: "bridge" }, palette: "sunset", layers: 9 }),
+  pic("butterfly-cameo", "Butterfly cameo", "A paper butterfly floating in halos", "butterfly", { mode: "grow", paper: true, size: 48, step: 7 }, { palette: "rose", design: { loose: "parts" } }),
+  pic("heart-rings", "Heart rings", "A heart in widening rings", "heart", { mode: "grow", size: 34, step: 7 }, { frame: "circle", palette: "candy" }),
+  pic("tree-tunnel", "Tree tunnel", "Pine trees nested in green", "tree", { mode: "scale" }, { design: { min: 20, max: 96 }, palette: "forest", layers: 8 }),
+  pic("leaf-rings", "Leaf rings", "A leaf in sage contour rings", "leaf", { mode: "grow", size: 40, step: 6 }, { frame: "squircle", palette: "sage", design: { loose: "bridge" } }),
+  pic("paw-steps", "Paw steps", "Paw pads that join as they grow", "paw", { mode: "grow", size: 40, step: 5 }, { palette: "kraft", design: { loose: "bridge" } }),
+  pic("home-cameo", "Home cameo", "A paper house with its own halos", "house", { mode: "grow", paper: true, size: 44, step: 8 }, { frame: "house", palette: "coral", design: { loose: "parts" } }),
+  pic("moon-rings", "Moon rings", "A crescent and star in night rings", "moonstar", { mode: "grow", size: 40, step: 6 }, { frame: "circle", palette: "night" }),
+  pic("flower-cameo", "Flower cameo", "A paper flower on pastel halos", "flower", { mode: "grow", paper: true, size: 46, step: 7 }, { frame: "blossom", palette: "pastel", design: { loose: "parts" } }),
 ];

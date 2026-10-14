@@ -212,6 +212,11 @@ export interface ImageSpec<P> extends FieldCommon<P> {
   aspectKey: string;
   /** Kept in colour (a photo to print) instead of turned grey (a picture to engrave). */
   color?: boolean;
+  /**
+   * Traced on the device instead of kept: the key gets a small grey preview, `levels` the traced
+   * outlines (shadowbox/picPath.ts) and `name` the file's name. SVG files are accepted too.
+   */
+  trace?: { levels: string; name: string };
 }
 
 export type FieldSpec<P> = NumberSpec<P> | ChoiceSpec<P> | ToggleSpec<P> | TextSpec<P> | FontSpec<P> | ImageSpec<P>;
