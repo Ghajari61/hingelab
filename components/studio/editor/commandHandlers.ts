@@ -4,8 +4,8 @@ import type { StoreApi } from "zustand";
 import { newId } from "@/lib/studio/doc";
 import { boxCenter, emptyBox, invert, isEmptyBox, mul, rotateAt, scaleAt, translate, unionBox } from "@/lib/studio/geom";
 import {
-  anchorsCenter, breakAt, canJoinEnds, curveSegments, deleteSegments, editAnchors, hasSelectedSegment, insertMidpoints, joinAnchors, setKinds,
-  straightenSegments, transformSelected, type MSub, type NodeRef,
+  alignSelected, anchorsCenter, breakAt, canJoinEnds, curveSegments, deleteSegments, editAnchors, extractSubpaths, hasSelectedSegment, insertMidpoints, joinAnchors,
+  setKinds, straightenSegments, transformSelected, type MSub, type NodeRef,
 } from "@/lib/studio/nodeOps";
 import { cutPathNodes, flattenNodes, fractureNodes, insetOutsetNodes, removeDuplicateNodesIn, splitPathNodes } from "@/lib/studio/pathMenu";
 import { clipToSvg, copyNodes, loadClip, storeClip } from "@/lib/studio/clipboard";
@@ -18,7 +18,7 @@ import { alignAnchors, alignTarget, exchangePositions, removeOverlaps } from "@/
 import { cloneNodes, clonesOf, originalsOf, relinkClones, removeClonesOf, unlinkClones, wouldCycle } from "@/lib/studio/links";
 import { canCarryText, canHoldText, clearManual, flowIntoShape, hasManual, putOnPath, removeFromPath, setVertical, unflow } from "@/lib/studio/textOps";
 import { clipBox, pasteSize, pasteStyle } from "@/lib/studio/pasteOps";
-import { BOOLEAN_LABELS, booleanOp, cleanupForLaser, editPaths, smoothSubpath, type BooleanOp } from "@/lib/studio/pathfinder";
+import { BOOLEAN_LABELS, booleanOp, cleanupForLaser, createBoundary, editPaths, smoothSubpath, type BooleanOp } from "@/lib/studio/pathfinder";
 import {
   alignNodes, arrangeNodes, distributeNodes, duplicateNodes, expandNodes, findNode, groupNodes, isEditable, pasteNodes, removeNodes, selectionBox,
   topLevel, transformNodes, ungroupNodes, walk, type AlignMode,
@@ -36,7 +36,7 @@ import { textLayoutNow } from "./textRuntime";
 
 export interface Handler { run: () => void; enabled?: boolean; reason?: string; checked?: boolean }
 
-export type EditorDialog = "documentSetup" | "move" | "shortcuts" | "preferences" | "palette" | "resetPrefs" | "offset" | "simplify" | "corners"
+export type EditorDialog = "documentSetup" | "move" | "shortcuts" | "preferences" | "palette" | "resetPrefs" | "offset" | "contour" | "simplify" | "corners"
   | "stepRepeat" | "transformEach" | "gridArray" | "circularArray" | "pathArray" | "strokeToPath" | "joinNearby" | "transform" | "arrange" | "tiledClones" | "traceBitmap";
 
 export interface CommandContext {
@@ -420,6 +420,13 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   const outlines = sel.filter((id) => { const t = findNode(s.doc.root, id)?.type; return t === "path" || t === "shape" || t === "text" || t === "group"; });
   const anyOutline = outlines.length > 0, twoOutlines = outlines.length >= 2 || groups.length > 0;
   set("path.offset", () => ctx.dialog("offset"), anyOutline, "Select a path, shape or text");
+  set("path.contour", () => ctx.dialog("contour"), anyOutline, "Select a path, shape or text");
+  set("path.boundary", () => {
+    const ids = selected(st());
+    let out: string | null = null;
+    st().edit("Create Boundary", (d) => { out = createBoundary(d, ids, st().currentLayer); });
+    if (out) st().select([out]); else ctx.toast("Select closed shapes to draw a boundary round.");
+  }, anyOutline, "Select closed shapes");
   set("path.simplify", () => ctx.dialog("simplify"), anyOutline, "Select a path, shape or text");
   set("path.roundCorners", () => ctx.dialog("corners"), anyOutline, "Select a path, shape or text");
   const fxTargets = (state: EditorState) => selected(state).filter((id) => { const n = findNode(state.doc.root, id); return !!n && canHaveEffects(n); });
@@ -532,6 +539,25 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
   const angleStep = ctx.snapAngle ?? 15;
   set("node.rotateCCW", nodeTransform("Rotate Nodes", (c) => rotateAt(-angleStep, c.x, c.y)), refs.length > 0, NEED_NODES);
   set("node.rotateCW", nodeTransform("Rotate Nodes", (c) => rotateAt(angleStep, c.x, c.y)), refs.length > 0, NEED_NODES);
+  set("node.reflectH", nodeTransform("Reflect Nodes", (c) => scaleAt(-1, 1, c.x, c.y)), refs.length > 0, NEED_NODES);
+  set("node.reflectV", nodeTransform("Reflect Nodes", (c) => scaleAt(1, -1, c.x, c.y)), refs.length > 0, NEED_NODES);
+  for (const [cmd, axis] of [["node.alignH", "y"], ["node.alignV", "x"]] as const) {
+    set(cmd, () => {
+      const r = st().anchors;
+      const c = anchorsCenter(st().doc, r);
+      if (!c) return;
+      let out: NodeRef[] = r;
+      st().edit("Align Nodes", (d) => { out = editAnchors(d, r, (ms, world) => alignSelected(ms, world, axis, axis === "x" ? c.x : c.y)); });
+      st().setAnchors(out);
+    }, refs.length > 1, "Select two or more nodes with Direct Selection");
+  }
+  set("node.extract", () => {
+    const r = st().anchors;
+    let out: string[] = [];
+    st().edit("Extract Subpath", (d) => { out = extractSubpaths(d, r, newId); });
+    if (out.length) { st().setAnchors([]); st().select(out); }
+    else ctx.toast("Select a node on one subpath of a path with several.");
+  }, refs.length > 0, NEED_NODES);
   set("path.cleanup", () => {
     const ids = selected(st());
     let r = { points: 0, closed: 0, removed: 0, duplicates: 0 };

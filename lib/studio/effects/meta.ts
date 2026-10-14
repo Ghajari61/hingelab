@@ -17,11 +17,12 @@ export const EFFECT_META: Record<EffectKind, { label: string; description: strin
   powerStroke: { label: "Power Stroke", description: "A filled stroke whose width you set at points along the path", keywords: "power stroke variable width profile brush fill outline pressure" },
   measureSegments: { label: "Measure Segments", description: "Length labels on every segment; shown on the canvas, never cut", keywords: "measure segments dimension length label ruler annotate" },
   liveBoolean: { label: "Live Boolean", description: "Union, difference, intersection and more with another object that stays editable", keywords: "boolean operation live pathfinder union difference intersection exclusion division cut path combine" },
+  distort: { label: "Distort", description: "Push & Pull, Zipper or Twister distortion that stays editable", keywords: "distort push pull zipper zigzag wave twister twirl swirl pucker bloat corel" },
 };
 
 export const EFFECT_ORDER: EffectKind[] = [
   "corners", "offset", "hatches", "rotateCopies", "mirror", "livingHinge",
-  "patternAlongPath", "bend", "envelope", "roughen", "interpolate", "taperStroke", "powerStroke", "measureSegments", "liveBoolean",
+  "patternAlongPath", "bend", "envelope", "roughen", "distort", "interpolate", "taperStroke", "powerStroke", "measureSegments", "liveBoolean",
 ];
 
 /**

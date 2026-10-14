@@ -399,6 +399,7 @@ function EditorShell({ opened }: { opened: Document }) {
       <PreferencesDialog open={dialog === "preferences"} onClose={() => setDialog(null)} prefs={prefs} setPrefs={setPrefs} openShortcuts={() => setDialog("shortcuts")} toast={toastAction} />
       <MoveDialog open={dialog === "move"} onClose={() => setDialog(null)} />
       <OffsetDialog open={dialog === "offset"} onClose={() => setDialog(null)} onDone={(ids) => runPreflight(api, toastAction, ids, "Offset Path")} />
+      <OffsetDialog contour open={dialog === "contour"} onClose={() => setDialog(null)} onDone={(ids) => runPreflight(api, toastAction, ids, "Contour")} />
       <SimplifyDialog open={dialog === "simplify"} onClose={() => setDialog(null)} />
       <CornersDialog open={dialog === "corners"} onClose={() => setDialog(null)} />
       <StrokeToPathDialog open={dialog === "strokeToPath"} onClose={() => setDialog(null)} />

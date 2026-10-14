@@ -30,6 +30,7 @@ export const TOOL_IDS = [
   "grid", "spiral", "text", "rotate", "scale", "reflect", "hand", "zoom",
   "lasso", "magicWand", "curvature", "scissors", "knife", "eraser", "shear", "shapeBuilder", "eyedropper", "measure",
   "fill", "calligraphy", "tweak", "spray", "connector",
+  "rect3", "ellipse3", "curve3", "smartDraw", "crop", "segmentDelete",
 ] as const;
 export type ToolId = (typeof TOOL_IDS)[number];
 
@@ -69,9 +70,15 @@ export const TOOL_INFO: Record<ToolId, { label: string; description: string; key
   measure: { label: "Measure", description: "Drag to measure distance, angle and the lengths of the paths it crosses; Enter keeps it as a dimension.", keywords: "ruler distance dimension length" },
   fill: { label: "Fill Bounded Area", description: "Click inside an area closed by any mix of paths to fill it with a new shape. Shift+click adds to the last fill, Alt+click removes.", keywords: "paint bucket live paint flood fill region" },
   calligraphy: { label: "Calligraphy", description: "Draw with a flat nib: the stroke becomes a filled outline whose width follows the nib angle, speed and pressure.", keywords: "brush nib ink lettering pen" },
-  tweak: { label: "Tweak", description: "Brush over objects or nodes to push, shrink, attract, roughen, move, scale or rotate them. Alt inverts.", keywords: "sculpt push brush warp" },
+  tweak: { label: "Tweak", description: "Brush over objects or nodes to push, shrink, attract, roughen, twirl, move, scale or rotate them. Alt inverts.", keywords: "sculpt push brush warp smear twirl attract repel corel" },
   spray: { label: "Spray", description: "Spray copies or clones of the selection around the brush, or one combined path. Optional no-overlap for laser parts.", keywords: "scatter spray can copies" },
   connector: { label: "Connector", description: "Drag from one object to another to join them with a line that follows them when they move. Straight or right-angled.", keywords: "connector diagram flowchart link line attach orthogonal" },
+  rect3: { label: "3-Point Rectangle", description: "Drag one side at any angle, then move to set the height and click. Shift keeps 45° steps, Ctrl+Shift the snap angle.", keywords: "rotated rectangle angled box three point corel" },
+  ellipse3: { label: "3-Point Ellipse", description: "Drag one axis at any angle, then move to set the other radius and click. Shift keeps 45° steps, Ctrl+Shift the snap angle.", keywords: "rotated ellipse angled oval three point corel" },
+  curve3: { label: "3-Point Curve", description: "Drag from the start to the end, then move to bend the curve through the pointer and click.", keywords: "arc bend curve three point corel" },
+  smartDraw: { label: "Smart Drawing", description: "Sketch freehand: lines, polylines, triangles, rectangles, polygons and ellipses become clean shapes; anything else is smoothed.", keywords: "shape recognition sketch recognise corel smart" },
+  crop: { label: "Crop", description: "Drag a rectangle around what to keep, then click inside it (or press Enter) to crop. Click outside or Esc cancels. Works on the selection, or everything.", keywords: "crop trim cut away outside corel" },
+  segmentDelete: { label: "Virtual Segment Delete", description: "Click a piece of a path between the points where it crosses other paths to delete just that piece.", keywords: "virtual segment delete trim intersection corel" },
 };
 
 const TOOL_KEYS: Partial<Record<ToolId, { keys?: string; sets?: CommandDef["sets"] }>> = {
@@ -104,6 +111,7 @@ const TOOL_KEYS: Partial<Record<ToolId, { keys?: string; sets?: CommandDef["sets
   tweak: { sets: { inkscape: ["W", "Shift+F2"] } },
   spray: { sets: { inkscape: ["A", "Shift+F3"] } },
   connector: { sets: { inkscape: ["O", "Ctrl+F2"] } },
+  smartDraw: { sets: { corel: ["Shift+S"] } },
 };
 
 const LAYER_KEYS = Array.from({ length: 30 }, (_, k) =>
@@ -224,7 +232,7 @@ export const COMMANDS: CommandDef[] = [
   c("path.reverse", "Reverse Direction", "Path", undefined, { inkscape: ["Shift+R"] }),
   c("path.breakApart", "Break Apart", "Path", undefined, { corel: ["Ctrl+K"], inkscape: ["Ctrl+Shift+K"] }),
   c("path.addAnchors", "Add Anchor Points", "Path"),
-  c("path.offset", "Offset Path…", "Path", undefined, { corel: ["Ctrl+F9"] }, "Grow or shrink outlines by a distance — kerf compensation, inlays, borders", "contour outset inset kerf"),
+  c("path.offset", "Offset Path…", "Path", undefined, undefined, "Grow or shrink outlines by a distance — kerf compensation, inlays, borders", "contour outset inset kerf"),
   c("path.simplify", "Simplify…", "Path", undefined, { inkscape: ["Ctrl+L"] }, "Fewer anchor points within a tolerance"),
   c("path.smooth", "Smooth", "Path", undefined, undefined, "Turn every anchor into a smooth curve point"),
   c("path.roundCorners", "Round Corners…", "Path", undefined, undefined, "Fillet or chamfer sharp corners"),
@@ -261,6 +269,13 @@ export const COMMANDS: CommandDef[] = [
   c("node.scaleDown", "Scale Nodes Down", "Path", undefined, { inkscape: ["<"] }, "Draw the selected nodes 10% towards their centre"),
   c("node.rotateCCW", "Rotate Nodes Counter-clockwise", "Path", undefined, { inkscape: ["["] }, "Turn the selected nodes by the snap angle (Preferences) around their centre"),
   c("node.rotateCW", "Rotate Nodes Clockwise", "Path", undefined, { inkscape: ["]"] }, "Turn the selected nodes by the snap angle (Preferences) around their centre"),
+  c("node.alignH", "Align Nodes Horizontally", "Path", undefined, undefined, "Line the selected nodes up in a row at their middle height", "align nodes level same height corel"),
+  c("node.alignV", "Align Nodes Vertically", "Path", undefined, undefined, "Line the selected nodes up in a column at their middle", "align nodes plumb same x corel"),
+  c("node.reflectH", "Reflect Nodes Left–Right", "Path", undefined, undefined, "Mirror the selected nodes around their centre", "reflect mirror flip nodes horizontal corel"),
+  c("node.reflectV", "Reflect Nodes Top–Bottom", "Path", undefined, undefined, "Mirror the selected nodes around their centre", "reflect mirror flip nodes vertical corel"),
+  c("node.extract", "Extract Subpath", "Path", undefined, undefined, "Each subpath with a selected node becomes its own object", "extract subpath separate break out corel"),
+  c("path.boundary", "Create Boundary", "Path", undefined, undefined, "A new outline round the outside of the selected shapes; the originals stay", "boundary outline perimeter silhouette weld copy corel"),
+  c("path.contour", "Contour…", "Path", undefined, { corel: ["Ctrl+F9"] }, "Several evenly spaced outlines outside or inside, or inwards to the centre", "contour steps rings concentric offset corel"),
   c("path.pf.trim", "Trim", "Path", undefined, undefined, "Remove the hidden parts of each shape"),
   c("path.pf.crop", "Crop", "Path", undefined, undefined, "Cut the shapes behind to the front shape"),
   c("path.cleanup", "Clean Up for Laser", "Path", undefined, undefined, "Close near-closed paths, drop stray points, empty paths and double cuts"),
@@ -378,12 +393,13 @@ export const MENUS: MenuDef[] = [
   { id: "select", label: "Select", items: ["edit.selectAll", "select.none", "select.inverse", "-", { label: "Same", items: ["select.sameLayer", "select.sameType"] }, { label: "Object", items: ["select.openPaths"] }, "-", "select.next", "select.prev"] },
   { id: "path", label: "Path", items: [
     "path.join", "path.close", "path.reverse", "path.breakApart", "path.splitPath", "path.addAnchors", "-",
-    "path.offset", "path.inset", "path.outset", "path.dynamicOffset", "object.clone.linkedOffset", "path.strokeToPath", "path.simplify", "path.smooth", "path.roundCorners", "-",
-    { label: "Shape Modes", items: ["path.pf.unite", "path.pf.minusFront", "path.pf.minusBack", "path.pf.intersect", "path.pf.exclude"] },
+    "path.offset", "path.contour", "path.inset", "path.outset", "path.dynamicOffset", "object.clone.linkedOffset", "path.strokeToPath", "path.simplify", "path.smooth", "path.roundCorners", "-",
+    { label: "Shape Modes", items: ["path.pf.unite", "path.pf.minusFront", "path.pf.minusBack", "path.pf.intersect", "path.pf.exclude", "-", "path.boundary"] },
     { label: "Pathfinders", items: ["path.pf.divide", "path.pf.trim", "path.pf.crop", "-", "path.fracture", "path.flatten", "path.cutPath"] },
     { label: "Nodes", items: [
-      "node.insert", "node.break", "node.join", "node.joinSegment", "node.deleteSegment", "-",
+      "node.insert", "node.break", "node.join", "node.joinSegment", "node.deleteSegment", "node.extract", "-",
       "node.corner", "node.smooth", "node.symmetric", "node.auto", "-", "node.straighten", "node.curve", "-",
+      "node.alignH", "node.alignV", "node.reflectH", "node.reflectV", "-",
       "node.scaleUp", "node.scaleDown", "node.rotateCCW", "node.rotateCW",
     ] }, "-",
     "path.removeDuplicates", "path.joinNearby", "path.cleanup", "-", "path.traceBitmap", "-",

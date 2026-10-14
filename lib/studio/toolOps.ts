@@ -5,7 +5,7 @@
 import * as ClipperLib from "clipper-lib";
 import type { Path, Paths } from "clipper-lib";
 import { newId } from "./doc";
-import { catmullRom, EPS, flatten, insertAnchor, invert, nearestOnSubpaths, nodePaths, pathD, transformSubpaths } from "./geom";
+import { catmullRom, cubicAt, EPS, flatten, insertAnchor, invert, nearestOnSubpaths, nodePaths, pathD, segments, splitCubic, transformSubpaths } from "./geom";
 import {
   areaOfPaths, closedAreas, divideFaces, FLAT_TOL, fromPath, inter, MIN_AREA, minus, pieces, regionOf, replaceWithAreas, toPath, toSubpaths, union,
   UNIT, type AreaOut, type Item,
@@ -289,4 +289,178 @@ export function curvaturePath(pts: Vec[], corners: Set<number>, closed: boolean)
 /** Shear around `c`: horizontal moves x by k·(y − c.y), vertical moves y by k·(x − c.x). */
 export function shearAt(k: number, axis: "x" | "y", c: Vec): Mat {
   return axis === "x" ? [1, 0, k, 1, -k * c.y, 0] : [1, k, 0, 1, 0, -k * c.x];
+}
+
+// ---------- Crop ----------
+
+/**
+ * Crop tool: keeps only what lies inside the box (world mm). Objects wholly inside are untouched,
+ * objects wholly outside are deleted, and the rest are clipped to it (areas and open lines alike).
+ * Works on the selection, or on everything when nothing is selected. Returns the ids that changed.
+ */
+export function cropToBox(d: Document, ids: string[] | null, b: { minX: number; minY: number; maxX: number; maxY: number }): string[] {
+  if (b.maxX - b.minX <= EPS || b.maxY - b.minY <= EPS) return [];
+  const rect: Paths = [toPath([{ x: b.minX, y: b.minY }, { x: b.maxX, y: b.minY }, { x: b.maxX, y: b.maxY }, { x: b.minX, y: b.maxY }])];
+  const rb = pathsBox(rect);
+  const changed: string[] = [];
+  const drop: string[] = [];
+  for (const l of candidates(d, ids)) {
+    const world = transformSubpaths(nodePaths(l.node), l.world);
+    const lines = world.filter((s) => !s.closed && s.nodes.length > 1).map((s) => toPath(flatten(s, FLAT_TOL)));
+    const region = regionOf(world);
+    if (!region.length && !lines.length) continue;
+    const ob = pathsBox([...region, ...lines]);
+    if (ob.minX >= rb.minX && ob.maxX <= rb.maxX && ob.minY >= rb.minY && ob.maxY <= rb.maxY) continue;
+    const subs: Subpath[] = ob.maxX < rb.minX || ob.minX > rb.maxX || ob.maxY < rb.minY || ob.minY > rb.maxY ? [] : [
+      ...(region.length ? toSubpaths(inter(region, rect)) : []),
+      ...clipOpenInside(lines, rect).filter((q) => q.length > 1).map((q) => ({ closed: false, nodes: fromPath(q).map((v) => ({ x: v.x, y: v.y })) })),
+    ];
+    changed.push(l.node.id);
+    if (!subs.length) { drop.push(l.node.id); continue; }
+    asPath(l).subpaths = transformSubpaths(subs, invert(l.world));
+  }
+  if (drop.length) removeEmptied(d, drop);
+  return changed;
+}
+
+// ---------- Virtual Segment Delete ----------
+
+/** A subpath sampled finely; `us` holds each point's position as segment index + t. */
+interface Sampled { pts: Vec[]; us: number[]; closed: boolean; minX: number; minY: number; maxX: number; maxY: number }
+
+function sampleSubpath(s: Subpath): Sampled {
+  const pts: Vec[] = [], us: number[] = [];
+  segments(s).forEach((g, k) => {
+    const n = g.line ? 1 : 48;
+    for (let j = k ? 1 : 0; j <= n; j++) { pts.push(g.line ? (j ? g.p3 : g.p0) : cubicAt(g, j / n)); us.push(k + j / n); }
+  });
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of pts) { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }
+  return { pts, us, closed: s.closed, minX, minY, maxX, maxY };
+}
+
+/** Parameters `u` on `a` where it crosses or touches `b` (or itself, when `b` is `a`). */
+function crossings(a: Sampled, b: Sampled, out: number[]) {
+  if (a.maxX < b.minX - 1e-6 || a.minX > b.maxX + 1e-6 || a.maxY < b.minY - 1e-6 || a.minY > b.maxY + 1e-6) return;
+  const self = a === b, na = a.pts.length - 1, nb = b.pts.length - 1;
+  for (let i = 0; i < na; i++) {
+    const p = a.pts[i], p2 = a.pts[i + 1];
+    const rx = p2.x - p.x, ry = p2.y - p.y;
+    const lx = Math.min(p.x, p2.x), hx = Math.max(p.x, p2.x), ly = Math.min(p.y, p2.y), hy = Math.max(p.y, p2.y);
+    for (let j = self ? i + 2 : 0; j < nb; j++) {
+      if (self && a.closed && i === 0 && j === nb - 1) continue;
+      const q = b.pts[j], q2 = b.pts[j + 1];
+      if (Math.max(q.x, q2.x) < lx - 1e-9 || Math.min(q.x, q2.x) > hx + 1e-9 || Math.max(q.y, q2.y) < ly - 1e-9 || Math.min(q.y, q2.y) > hy + 1e-9) continue;
+      const sx = q2.x - q.x, sy = q2.y - q.y;
+      const den = rx * sy - ry * sx;
+      if (Math.abs(den) < 1e-14) continue;
+      const t = ((q.x - p.x) * sy - (q.y - p.y) * sx) / den, w = ((q.x - p.x) * ry - (q.y - p.y) * rx) / den;
+      if (t < -1e-9 || t > 1 + 1e-9 || w < -1e-9 || w > 1 + 1e-9) continue;
+      const u = a.us[i] + Math.max(0, Math.min(1, t)) * (a.us[i + 1] - a.us[i]);
+      out.push(u);
+      if (self) out.push(a.us[j] + Math.max(0, Math.min(1, w)) * (a.us[j + 1] - a.us[j]));
+    }
+  }
+}
+
+/** The part of `s` from u1 to u2 (segment index + t) as an open subpath; on a closed one it may wrap. */
+export function subpathPiece(s: Subpath, u1: number, u2: number): Subpath {
+  const segs = segments(s);
+  const n = segs.length, count = s.nodes.length;
+  if (s.closed && u2 <= u1 + 1e-12) u2 += n;
+  const nodes: Anchor[] = [];
+  let u = u1;
+  while (u < u2 - 1e-9) {
+    const k = Math.floor(u + 1e-9);
+    const g = segs[((k % n) + n) % n];
+    const t0 = Math.max(0, u - k), end = Math.min(u2, k + 1), t1 = Math.min(1, end - k);
+    const lerp = (t: number): Vec => ({ x: g.p0.x + (g.p3.x - g.p0.x) * t, y: g.p0.y + (g.p3.y - g.p0.y) * t });
+    let part = g.line ? { ...g, p0: lerp(t0), p3: lerp(t1) } : t1 < 1 ? splitCubic(g, t1)[0] : g;
+    if (!g.line && t0 > 1e-12) part = splitCubic(part, t0 / t1)[1];
+    if (!nodes.length) {
+      const kind = t0 <= 1e-12 ? s.nodes[((k % count) + count) % count].k : undefined;
+      nodes.push({ x: part.p0.x, y: part.p0.y, ...(kind ? { k: kind } : {}) });
+    }
+    if (!g.line) nodes[nodes.length - 1].o = { x: part.c1.x, y: part.c1.y };
+    const kind = t1 >= 1 ? s.nodes[(((k + 1) % count) + count) % count].k : undefined;
+    nodes.push({ x: part.p3.x, y: part.p3.y, ...(g.line ? {} : { i: { x: part.c2.x, y: part.c2.y } }), ...(kind ? { k: kind } : {}) });
+    u = end;
+  }
+  return { closed: false, nodes };
+}
+
+export interface VirtualSegment {
+  id: string;
+  sub: number;
+  /** Segment index + t where the piece starts and ends; `whole` when it is the entire subpath. */
+  from: number;
+  to: number;
+  whole: boolean;
+  /** The piece in world space, for highlighting. */
+  world: Subpath;
+}
+
+const sampleCache = new WeakMap<object, { key: string; subs: Sampled[] }>();
+
+function sampledWorld(l: Located): { world: Subpath[]; subs: Sampled[] } {
+  const world = transformSubpaths(nodePaths(l.node), l.world);
+  const key = l.world.join(",");
+  const hit = sampleCache.get(l.node);
+  if (hit && hit.key === key) return { world, subs: hit.subs };
+  const subs = world.map(sampleSubpath);
+  sampleCache.set(l.node, { key, subs });
+  return { world, subs };
+}
+
+/**
+ * Virtual Segment Delete: the piece of the path nearest to `p` (within `tol` mm) that lies between the
+ * neighbouring points where it crosses or touches any path (itself included). A subpath that crosses
+ * nothing is the piece entire. Text is skipped.
+ */
+export function virtualSegmentAt(d: Document, p: Vec, tol: number): VirtualSegment | null {
+  const all = candidates(d, null).filter((l) => l.node.type !== "text");
+  let best: { l: Located; sub: number; u: number; dist: number } | null = null;
+  for (const l of all) {
+    const near = nearestOnSubpaths(p, transformSubpaths(nodePaths(l.node), l.world));
+    if (near && near.dist <= tol && (!best || near.dist < best.dist)) best = { l, sub: near.sub, u: near.seg + near.t, dist: near.dist };
+  }
+  if (!best) return null;
+  const { world, subs } = sampledWorld(best.l);
+  const target = subs[best.sub], ws = world[best.sub];
+  const n = segments(ws).length;
+  const raw: number[] = [];
+  for (const l of all) for (const other of l === best.l ? subs : sampledWorld(l).subs) crossings(target, other, raw);
+  const cuts = raw.filter((u) => ws.closed || (u > 1e-6 && u < n - 1e-6)).map((u) => (ws.closed ? ((u % n) + n) % n : u)).sort((a, b) => a - b);
+  const uniq = cuts.filter((u, k) => !k || u - cuts[k - 1] > 1e-6);
+  if (ws.closed && uniq.length > 1 && uniq[0] + n - uniq[uniq.length - 1] <= 1e-6) uniq.pop();
+  const id = best.l.node.id, sub = best.sub, u0 = best.u;
+  const whole = (): VirtualSegment => ({ id, sub, from: 0, to: n, whole: true, world: ws });
+  if (ws.closed) {
+    if (uniq.length < 2) return whole();
+    const lo = [...uniq].reverse().find((u) => u <= u0) ?? uniq[uniq.length - 1];
+    const hi = uniq.find((u) => u > u0) ?? uniq[0];
+    return { id, sub, from: lo, to: hi, whole: false, world: subpathPiece(ws, lo, hi) };
+  }
+  if (!uniq.length) return whole();
+  const lo = [...uniq].reverse().find((u) => u <= u0) ?? 0;
+  const hi = uniq.find((u) => u > u0) ?? n;
+  return { id, sub, from: lo, to: hi, whole: false, world: subpathPiece(ws, lo, hi) };
+}
+
+/** Deletes the piece found by `virtualSegmentAt`. Returns the id that changed (or was deleted). */
+export function deleteVirtualSegment(d: Document, p: Vec, tol: number): string[] | null {
+  const v = virtualSegmentAt(d, p, tol);
+  if (!v) return null;
+  const l = candidates(d, null).find((c) => c.node.id === v.id);
+  if (!l) return null;
+  const path = asPath(l);
+  const s = path.subpaths[v.sub];
+  const n = segments(s).length;
+  const keep: Subpath[] = v.whole ? [] : s.closed ? [subpathPiece(s, v.to, v.from)] : [
+    ...(v.from > 1e-9 ? [subpathPiece(s, 0, v.from)] : []),
+    ...(v.to < n - 1e-9 ? [subpathPiece(s, v.to, n)] : []),
+  ];
+  path.subpaths.splice(v.sub, 1, ...keep.filter((q) => q.nodes.length > 1));
+  if (!path.subpaths.length) removeEmptied(d, [path.id]);
+  return [path.id];
 }

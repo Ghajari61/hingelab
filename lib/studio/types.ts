@@ -201,6 +201,25 @@ export interface MeasureSegmentsParams {
 export type LiveBooleanOp = "union" | "difference" | "intersection" | "exclusion" | "division" | "cut";
 export interface LiveBooleanParams extends LinkedParams { op: LiveBooleanOp }
 
+export interface DistortParams {
+  mode: "pushPull" | "zipper" | "twister";
+  /** Push & Pull, −100…100 %: positive pushes the nodes out (pointed), negative pulls them in (petals). */
+  amount: number;
+  /** Zipper: height of each zigzag, mm. */
+  amplitude: number;
+  /** Zipper: zigzags per segment. */
+  frequency: number;
+  /** Zipper: rounded waves instead of sharp teeth. */
+  smooth: boolean;
+  /** Zipper: seeded random heights. */
+  random: boolean;
+  seed: number;
+  /** Twister: turn at the farthest point from the centre, degrees (negative: anticlockwise). */
+  angle: number;
+  /** Centre for Push & Pull and Twister (object coordinates). */
+  cx: number; cy: number;
+}
+
 export interface EffectParamsMap {
   corners: CornersParams;
   offset: OffsetParams;
@@ -217,6 +236,7 @@ export interface EffectParamsMap {
   powerStroke: PowerStrokeParams;
   measureSegments: MeasureSegmentsParams;
   liveBoolean: LiveBooleanParams;
+  distort: DistortParams;
 }
 
 export type EffectKind = keyof EffectParamsMap;

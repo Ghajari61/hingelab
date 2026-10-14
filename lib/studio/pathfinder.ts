@@ -211,6 +211,44 @@ export function offsetNodes(d: Document, ids: string[], delta: number, join: Joi
   return out;
 }
 
+/** Most outlines Contour makes in one go. */
+export const MAX_CONTOUR_STEPS = 200;
+
+/**
+ * Contour: `steps` outlines `step` mm apart (each offset from the original, so spacing never drifts);
+ * negative steps go inwards. `toCentre` keeps going inwards until each closed shape is used up.
+ * Returns the new path ids; originals are kept.
+ */
+export function contourNodes(d: Document, ids: string[], step: number, steps: number, toCentre: boolean, join: JoinKind = "round", miterLimit = 4, id: IdFactory = newId): string[] {
+  const delta = toCentre ? -Math.abs(step) : step;
+  if (Math.abs(delta) < 1e-3) return [];
+  const scope = toCentre ? areaItems(d, ids).filter((it) => regionOf(it.subs).length).map((it) => it.l.node.id) : ids;
+  const n = toCentre ? MAX_CONTOUR_STEPS : Math.max(1, Math.min(MAX_CONTOUR_STEPS, Math.round(steps)));
+  const out: string[] = [];
+  for (let k = 1; k <= n && scope.length; k++) {
+    const got = offsetNodes(d, scope, delta * k, join, miterLimit, id);
+    if (!got.length) break;
+    out.push(...got);
+  }
+  return out;
+}
+
+/**
+ * Create Boundary: one new path around the outside of the selected shapes' combined area (holes and
+ * inner edges left out), above the top-most of them; the originals stay. Null when nothing is closed.
+ */
+export function createBoundary(d: Document, ids: string[], layer: number, id: IdFactory = newId): string | null {
+  const items = closedAreas(d, ids);
+  if (!items.length) return null;
+  const outer = union(items.map((i) => i.region)).filter((q) => ClipperLib.Clipper.Area(q) > 0);
+  const top = items[items.length - 1];
+  const subs = transformSubpaths(toSubpaths(outer), invert(top.l.parentWorld));
+  if (!subs.length) return null;
+  const n: PathNode = { id: id(), type: "path", name: "Boundary", transform: [1, 0, 0, 1, 0, 0], layer, subpaths: subs };
+  top.l.parent.children.splice(top.l.parent.children.indexOf(top.l.node) + 1, 0, n);
+  return n.id;
+}
+
 // ---------- simplify, smooth, corners ----------
 
 /** Fewer anchors within `tol` mm of the original; curves are refitted unless `straight`. */

@@ -8,7 +8,7 @@ import { boxCenter, flatten, insertAnchor, invert, isEmptyBox, nodeBasePaths, no
 import { expandNodes, isEditable, locate, topLevel, transformNodesEach, walk } from "./scene";
 import type { Document, Mat, PathNode, Subpath, Vec } from "./types";
 
-export type TweakMode = "move" | "moveInOut" | "jitter" | "scale" | "rotate" | "push" | "shrinkGrow" | "attract" | "roughen";
+export type TweakMode = "move" | "moveInOut" | "jitter" | "scale" | "rotate" | "push" | "shrinkGrow" | "attract" | "roughen" | "twirl";
 
 export const TWEAK_MODES: { id: TweakMode; label: string; nodes: boolean; hint: string }[] = [
   { id: "move", label: "Move objects", nodes: false, hint: "Drag to move objects under the brush." },
@@ -20,6 +20,7 @@ export const TWEAK_MODES: { id: TweakMode; label: string; nodes: boolean; hint: 
   { id: "shrinkGrow", label: "Shrink / grow paths", nodes: true, hint: "Outlines under the brush move inwards; Alt moves them out." },
   { id: "attract", label: "Attract / repel nodes", nodes: true, hint: "Nodes under the brush gather to its centre; Alt spreads them out." },
   { id: "roughen", label: "Roughen paths", nodes: true, hint: "Outlines under the brush get rough and organic." },
+  { id: "twirl", label: "Twirl paths", nodes: true, hint: "Outlines under the brush swirl clockwise as you move; Alt swirls them the other way." },
 ];
 
 export interface TweakParams { mode: TweakMode; /** mm */ radius: number; /** 0–100 */ force: number; /** 0–100: more nodes are added under the brush so path edits stay smooth */ fidelity: number }
@@ -54,6 +55,10 @@ export function nodeShift(mode: TweakMode, q: Vec, out: Vec, b: TweakBrush): Vec
     case "shrinkGrow": return { x: -sgn * out.x * w * b.r * 0.04, y: -sgn * out.y * w * b.r * 0.04 };
     case "attract": return { x: sgn * (b.c.x - q.x) * w * 0.15, y: sgn * (b.c.y - q.y) * w * 0.15 };
     case "roughen": { const a = b.rnd() * Math.PI * 2, m = b.rnd() * w * b.r * 0.06; return { x: Math.cos(a) * m, y: Math.sin(a) * m }; }
+    case "twirl": {
+      const a = sgn * w * 0.2, c = Math.cos(a), s = Math.sin(a), dx = q.x - b.c.x, dy = q.y - b.c.y;
+      return { x: (c - 1) * dx - s * dy, y: s * dx + (c - 1) * dy };
+    }
     default: return { x: 0, y: 0 };
   }
 }

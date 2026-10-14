@@ -21,7 +21,7 @@ import { fmtLength, fromMM } from "@/lib/studio/units";
 import type { Anchor, Document, GridSpec, Mat, PathNode, SceneNode, ShapeKind, Subpath, TextNode, Vec } from "@/lib/studio/types";
 import type { ToolId } from "@/lib/studio/commands";
 import { layerCode } from "@/lib/studio/cutLayers";
-import { builderFaces, buildShapes, curvaturePath, eraseAlong, eraseTouching, faceAt, knifeCut, lassoHits, scissorsAt, shearAt } from "@/lib/studio/toolOps";
+import { builderFaces, buildShapes, curvaturePath, deleteVirtualSegment, eraseAlong, eraseTouching, faceAt, knifeCut, lassoHits, scissorsAt, shearAt, virtualSegmentAt } from "@/lib/studio/toolOps";
 import { measureAcross, measureTargets, type MeasureTarget } from "@/lib/studio/measure";
 import { connectObjects } from "@/lib/studio/connectors";
 import { isPlainText } from "@/lib/studio/text";
@@ -33,6 +33,7 @@ import {
 import { rotationCentre, selectionKey, useEditor, useEditorApi, type AnchorRef, type EraserMode } from "./store";
 import { TextEditor } from "./TextEditor";
 import { fillClick, measureToItem, startCalligraphy, startSpray, startTweak, type ToolPointer, type ToolSession } from "./tools/brushTools";
+import { startCrop, startSmartDraw, startThreePoint, type DrawCtx } from "./tools/drawSessions";
 import { MeasureOverlay } from "./tools/MeasureOverlay";
 import { useImageUrls } from "./assetUrls";
 
@@ -111,7 +112,7 @@ const snapPoint = (p: Vec, t: SnapTargets, tol: number, s: CanvasSnap) => snapPo
 
 /** Pen pressure 0–1; a mouse (or a device without pressure) counts as a steady half press. */
 const penPressure = (e: React.PointerEvent) => (e.pointerType === "mouse" || !e.pressure ? 0.5 : e.pressure);
-const toolPointer = (e: React.PointerEvent, p: Vec): ToolPointer => ({ p, shift: e.shiftKey, alt: e.altKey, pressure: penPressure(e), t: e.timeStamp });
+const toolPointer = (e: React.PointerEvent, p: Vec): ToolPointer => ({ p, shift: e.shiftKey, alt: e.altKey, ctrl: e.ctrlKey || e.metaKey, pressure: penPressure(e), t: e.timeStamp });
 
 /** Eraser preview/commit in either mode. */
 const erase = (d: Document, mode: EraserMode, ids: string[], pts: Vec[], size: number) => {
@@ -196,6 +197,10 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
   const space = useRef(false);
   const pen = useRef<{ nodes: Anchor[]; hoverClose: boolean } | null>(null);
   const curve = useRef<{ pts: Vec[]; corners: Set<number>; hoverClose: boolean } | null>(null);
+  /** A tool session waiting for its next click (3-point tools, Crop); it follows the pointer meanwhile. */
+  const pending = useRef<ToolSession | null>(null);
+  /** Virtual Segment Delete: the piece under the pointer (document-space path data). */
+  const segHover = useRef<string | null>(null);
   const [hoverFace, setHoverFace] = useState(-1);
   const fitted = useRef(false);
   const faces = useMemo(() => {
@@ -318,7 +323,12 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
     if (!fitted.current && size.w > 100) { fitted.current = true; fitBox(sheetsBox(api.getState().doc), false); }
   }, [size, fitBox, sheetsBox, api]);
 
-  useEffect(() => { if ((tool !== "pen" && pen.current) || (tool !== "curvature" && curve.current)) finishPen(); setHoverFace(-1); }, [tool, finishPen]);
+  useEffect(() => {
+    if ((tool !== "pen" && pen.current) || (tool !== "curvature" && curve.current)) finishPen();
+    setHoverFace(-1);
+    pending.current = null;
+    segHover.current = null;
+  }, [tool, finishPen]);
 
   useEffect(() => {
     const el = stageRef.current;
@@ -359,13 +369,20 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
       const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
       if (e.key === " ") { if (!space.current) { space.current = true; setCursor("grab"); } stop(); return; }
       if (e.key === "Escape") {
-        if (drag.current) { s.end("", null); drag.current = null; setLines([]); setHud(null); rerender(); stop(); return; }
+        if (drag.current) { s.end("", null); drag.current = null; pending.current = null; setLines([]); setHud(null); rerender(); stop(); return; }
+        if (pending.current) { pending.current = null; rerender(); stop(); return; }
         if (pen.current || curve.current) { finishPen(); stop(); return; }
         if (s.anchors.length) { s.setAnchors([]); stop(); return; }
         if (s.selection.length) { s.select([]); stop(); }
         return;
       }
       if (e.key === "Enter" && (pen.current || curve.current)) { finishPen(); stop(); return; }
+      if (e.key === "Enter" && pending.current?.enter && !drag.current) {
+        const run = pending.current.enter;
+        pending.current = null;
+        run();
+        rerender(); stop(); return;
+      }
       if (e.key === "Enter" && s.tool === "measure" && s.measure && !drag.current && !e.ctrlKey && !e.altKey) { measureToItem(api, onToast); stop(); return; }
       if ((e.key === "Backspace" || e.key === "Delete") && pen.current) {
         pen.current.nodes.pop();
@@ -642,6 +659,13 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
         return;
       }
     }
+    if (pending.current) {
+      drag.current = { kind: "session", session: pending.current };
+      pending.current = null;
+      drag.current.session.move(toolPointer(e, p));
+      rerender();
+      return;
+    }
     switch (s.tool) {
       case "select": {
         const h = handleAt(sp);
@@ -782,6 +806,17 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
         return;
       }
       case "fill": fillClick(api, toolPointer(e, p), onToast); return;
+      case "rect3": case "ellipse3": case "curve3": drag.current = { kind: "session", session: startThreePoint(api, toolPointer(e, p), drawCtx(), s.tool) }; rerender(); return;
+      case "smartDraw": drag.current = { kind: "session", session: startSmartDraw(api, toolPointer(e, p), drawCtx()) }; return;
+      case "crop": drag.current = { kind: "session", session: startCrop(api, toolPointer(e, p), drawCtx()) }; rerender(); return;
+      case "segmentDelete": {
+        let out: string[] | null = null;
+        s.edit("Virtual Segment Delete", (d) => { out = deleteVirtualSegment(d, p, 6 / s.view.zoom); });
+        if (!out) onToast("Click a path to delete the piece between the points where it crosses other paths.");
+        segHover.current = null;
+        rerender();
+        return;
+      }
       case "calligraphy": drag.current = { kind: "session", session: startCalligraphy(api, toolPointer(e, p), { zoom: s.view.zoom, widthMm: size.w / s.view.zoom }) }; return;
       case "tweak": drag.current = { kind: "session", session: startTweak(api, toolPointer(e, p)) }; rerender(); return;
       case "spray": {
@@ -838,6 +873,14 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
           drag.current = { kind: "draw", tool: s.tool, start: q, cur: q, shift: e.shiftKey, alt: e.altKey };
         }
     }
+  }
+
+  function drawCtx(): DrawCtx {
+    const s = api.getState();
+    const settings = snapSettings(s.doc);
+    const targets = snapTargets(s.doc, new Set(), settings);
+    const z = s.view.zoom;
+    return { snap: (q) => snapPoint(q, targets, 6 / z, settings).p, px: 1 / z, snapAngle: snapAngleRef.current, smooth: pencilTolerance(s.pencilSmoothing) / z, toast: onToast };
   }
 
   function startMove(p: Vec, ids: string[], dup: boolean, pointerId: number, settings: SnapSettings, under: string | null = null) {
@@ -900,6 +943,12 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
         curve.current.hoverClose = curve.current.pts.length >= 2 && Math.hypot(sp.x - f.x, sp.y - f.y) <= 7;
       }
       if (s.tool === "shapeBuilder") setHoverFace(faceAt(faces, p));
+      if (pending.current) { pending.current.move(toolPointer(e, p)); rerender(); }
+      if (s.tool === "segmentDelete" && !space.current) {
+        const v = virtualSegmentAt(s.doc, p, tol);
+        const d = v ? pathD([v.world]) : null;
+        if (d !== segHover.current) { segHover.current = d; rerender(); }
+      }
       const overFx = (s.tool === "select" || s.tool === "direct") && !space.current && fxView.length > 0 && !!fxHandleAt(sp);
       if (s.tool === "select" && !space.current) {
         const h = handleAt(sp);
@@ -1204,7 +1253,7 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
         rerender();
         return;
       }
-      case "session": dr.session.up(toolPointer(e, p)); rerender(); return;
+      case "session": pending.current = dr.session.up(toolPointer(e, p)) || null; rerender(); return;
       case "build": {
         let out: string[] = [];
         s.edit(dr.remove ? "Shape Builder: Delete" : "Shape Builder", (d) => { out = buildShapes(d, dr.ids, dr.remove ? [] : dr.faces, dr.remove ? dr.faces : []); });
@@ -1508,7 +1557,9 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
   const curveState = curve.current;
   const measure = useEditor((s) => s.measure);
   const brushRadius = useEditor((s) => (s.tool === "eraser" ? s.eraserSize / 2 : s.tool === "tweak" ? s.tweak.radius : s.tool === "spray" ? s.spray.radius : null));
-  const sessionDraft = dr?.kind === "session" && dr.session.draft ? dr.session.draft() : null;
+  const liveSession = dr?.kind === "session" ? dr.session : pending.current;
+  const sessionDraft = liveSession?.draft ? liveSession.draft() : null;
+  const sessionOutline = liveSession?.outline ? liveSession.outline() : null;
 
   const box = (b: Box) => { const a = S({ x: b.minX, y: b.minY }), c = S({ x: b.maxX, y: b.maxY }); return { x: a.x, y: a.y, w: c.x - a.x, h: c.y - a.y }; };
   const selRect = !isEmptyBox(selBox) ? box(selBox) : null;
@@ -1598,6 +1649,13 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
               strokeDasharray={dr?.kind === "lasso" || (dr?.kind === "connector" && !dr.to) ? "4 3" : undefined} data-testid={dr?.kind === "connector" ? "connector-draft" : undefined} />
           )}
           {sessionDraft && <path d={sessionDraft} fill="var(--accent)" fillOpacity={0.55} fillRule="nonzero" stroke="none" data-testid="calligraphy-draft" />}
+          {sessionOutline && (
+            <path d={sessionOutline} fill={tool === "crop" ? "color-mix(in srgb, var(--accent) 8%, transparent)" : "none"} stroke="var(--accent)" strokeWidth={1.5}
+              strokeDasharray={tool === "crop" ? "5 3" : undefined} vectorEffect="non-scaling-stroke" pointerEvents="none" data-testid="tool-outline" />
+          )}
+          {tool === "segmentDelete" && segHover.current && !dr && (
+            <path d={segHover.current} fill="none" stroke="var(--danger, #e5484d)" strokeWidth={3} strokeLinecap="round" vectorEffect="non-scaling-stroke" pointerEvents="none" data-testid="segment-hover" />
+          )}
         </g>
         {curveState && curveState.pts.length > 0 && (() => {
           const pts = curveState.pts.map(S);

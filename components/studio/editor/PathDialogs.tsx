@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { areaItems, editPaths, offsetNodes, roundCorners, simplifySubpath, type JoinKind } from "@/lib/studio/pathfinder";
+import { areaItems, contourNodes, editPaths, MAX_CONTOUR_STEPS, offsetNodes, roundCorners, simplifySubpath, type JoinKind } from "@/lib/studio/pathfinder";
 import { joinNearbyEndpoints, strokeToPathNodes, type CapKind } from "@/lib/studio/pathMenu";
 import { isEditable, topLevel } from "@/lib/studio/scene";
 import type { Document } from "@/lib/studio/types";
@@ -57,15 +57,23 @@ export function Footer({ onCancel, onOk, okLabel = "OK", preview, setPreview }: 
 
 // ---------- Offset Path… ----------
 
-export function OffsetDialog({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone?: (ids: string[]) => void }) {
+type ContourDir = "outside" | "inside" | "centre";
+
+/** Offset Path…, or with `contour` CorelDRAW's Contour: several outlines a step apart. */
+export function OffsetDialog({ open, onClose, onDone, contour = false }: { open: boolean; onClose: () => void; onDone?: (ids: string[]) => void; contour?: boolean }) {
   const api = useEditorApi();
   const units = useEditor((s) => s.doc.units);
   const [delta, setDelta] = useState(2);
   const [join, setJoin] = useState<JoinKind>("round");
   const [miter, setMiter] = useState(4);
   const [show, setShow] = useState(true);
-  const lp = useLivePreview(open, "Offset Path");
-  const run = (d: Document, ids: string[]) => offsetNodes(d, ids, delta, join, miter);
+  const [dir, setDir] = useState<ContourDir>("outside");
+  const [steps, setSteps] = useState(3);
+  const title = contour ? "Contour" : "Offset Path";
+  const lp = useLivePreview(open, title);
+  const run = (d: Document, ids: string[]) => contour
+    ? contourNodes(d, ids, dir === "inside" ? -Math.abs(delta) : Math.abs(delta), steps, dir === "centre", join, miter)
+    : offsetNodes(d, ids, delta, join, miter);
   useEffect(() => { if (open) lp.preview(show, run); }); // every render: values, preview toggle
   const ok = () => {
     const out = lp.apply(run);
@@ -73,16 +81,26 @@ export function OffsetDialog({ open, onClose, onDone }: { open: boolean; onClose
     onClose();
   };
   return (
-    <Dialog open={open} title="Offset Path" onClose={onClose} size="narrow" testId="offset-dialog"
+    <Dialog open={open} title={title} onClose={onClose} size="narrow" testId={contour ? "contour-dialog" : "offset-dialog"}
       footer={<Footer onCancel={onClose} onOk={ok} preview={show} setPreview={setShow} />}>
       <div style={{ display: "grid", gap: 12 }}>
-        <NumberInput label="Offset" value={delta} length units={units} min={-200} max={200} defaultValue={2} onChange={(v) => setDelta(v)} testId="offset-delta" />
+        {contour && (
+          <SegmentedControl label="Direction" value={dir} onChange={setDir} full
+            options={[{ value: "outside", label: "Outside" }, { value: "inside", label: "Inside" }, { value: "centre", label: "To centre" }]} />
+        )}
+        {contour
+          ? <NumberInput label="Spacing" value={Math.abs(delta)} length units={units} min={0.01} max={200} defaultValue={2} onChange={(v) => setDelta(Math.abs(v))} testId="contour-step" />
+          : <NumberInput label="Offset" value={delta} length units={units} min={-200} max={200} defaultValue={2} onChange={(v) => setDelta(v)} testId="offset-delta" />}
+        {contour && dir !== "centre" && (
+          <NumberInput label="Steps" value={steps} integer min={1} max={MAX_CONTOUR_STEPS} defaultValue={3} onChange={(v) => setSteps(v)} testId="contour-steps" />
+        )}
         <SegmentedControl label="Joins" value={join} onChange={setJoin} full options={[{ value: "round", label: "Round" }, { value: "miter", label: "Miter" }, { value: "bevel", label: "Bevel" }]} />
         {join === "miter" && <NumberInput label="Miter limit" value={miter} min={1} max={20} defaultValue={4} onChange={(v) => setMiter(v)} />}
       </div>
       <p className="dlg-note" style={{ marginTop: 10 }}>
-        Positive grows each outline, negative shrinks it; open lines become an outline on both sides. The originals stay — for kerf
-        compensation offset by half the beam width.
+        {contour
+          ? "Each outline is offset from the original by a whole number of steps, so the spacing stays exact. To centre keeps going inwards until each closed shape is used up. The originals stay."
+          : "Positive grows each outline, negative shrinks it; open lines become an outline on both sides. The originals stay — for kerf compensation offset by half the beam width."}
       </p>
     </Dialog>
   );

@@ -17,12 +17,17 @@ import type { Document, PathNode, Vec } from "@/lib/studio/types";
 import type { EditorState } from "../store";
 
 type Api = StoreApi<EditorState>;
-export interface ToolPointer { p: Vec; shift: boolean; alt: boolean; /** 0–1, a mouse reports 0.5 */ pressure: number; /** ms */ t: number }
+export interface ToolPointer { p: Vec; shift: boolean; alt: boolean; ctrl?: boolean; /** 0–1, a mouse reports 0.5 */ pressure: number; /** ms */ t: number }
 export interface ToolSession {
   move: (e: ToolPointer) => void;
-  up: (e: ToolPointer) => void;
-  /** Live outline (document space) drawn while dragging. */
+  /** May return a follow-up session that gets the hover moves and then the next click (3-point tools, Crop). */
+  up: (e: ToolPointer) => ToolSession | void;
+  /** Live filled shape (document space) drawn while dragging. */
   draft?: () => string | null;
+  /** Live outline (document space). */
+  outline?: () => string | null;
+  /** Enter while the session waits for its click. */
+  enter?: () => void;
 }
 
 const editableSelection = (s: EditorState) => s.selection.filter((id) => isEditable(s.doc.root, id));

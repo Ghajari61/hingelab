@@ -160,6 +160,33 @@ export const ARTICLES: HelpArticle[] = [
     related: ["view-3d", "checks-and-fixes", "box-joints"],
   },
   {
+    slug: "studio-corel-tools", product: "general", title: "CorelDRAW-style tools in Studio",
+    summary: "3-point shapes, Smart Drawing, Crop, Virtual Segment Delete, Contour, Create Boundary, node alignment and the Distort effect.",
+    keywords: ["coreldraw", "corel", "3-point rectangle", "3-point ellipse", "3-point curve", "smart drawing", "shape recognition", "crop", "virtual segment delete", "contour", "boundary", "distort", "push and pull", "zipper", "twister", "twirl", "align nodes", "reflect nodes", "extract subpath"],
+    blocks: [
+      { p: "These tools work like their CorelDRAW namesakes. Pick the CorelDRAW shortcut set in Settings to get its keys (Ctrl+F9 for Contour, Shift+S for Smart Drawing); every tool and command is also in the command palette (Ctrl+/)." },
+      { h: "Drawing", list: [
+        "3-Point Rectangle and 3-Point Ellipse (in the shape flyout): drag the base line, release, move to set the height and click. A rectangle drawn at an angle stays a live rectangle. Clicking on the base line itself makes a square or a circle. Shift turns the base line in 45° steps; Escape cancels.",
+        "3-Point Curve (in the pen flyout): drag from start to end, then move to bend the curve and click.",
+        "Smart Drawing (in the pencil flyout): draw freehand and the stroke becomes a line, polyline, triangle, polygon, rectangle or ellipse when it is close enough; anything else is kept as a smoothed curve.",
+      ] },
+      { h: "Cutting away", list: [
+        "Crop (in the eraser flyout): drag a box, then click inside it or press Enter. Everything outside the box is removed from the selection, or from the whole page when nothing is selected. Click outside to cancel. Images are not cropped.",
+        "Virtual Segment Delete: hover a line and the piece between its nearest crossings turns red; click to delete that piece. It works on loops in one path and on overlapping paths.",
+      ] },
+      { h: "Path commands", list: [
+        "Contour… (Path menu) adds evenly spaced outlines outside or inside the selection, or steps to the centre, with a spacing and a number of steps.",
+        "Create Boundary (Path → Shape Modes) adds one outline round everything selected and keeps the originals.",
+        "With the node tool: Align Nodes Horizontally or Vertically lines the selected nodes up; Reflect Nodes mirrors them about their centre; Extract Subpath makes the selected subpaths separate objects.",
+      ] },
+      { h: "Distort and Twirl", list: [
+        "Distort is a Live Effect (Effects panel): Push & Pull bows the sides in or out, Zipper adds teeth or waves along the outline (amplitude, teeth per segment, random heights), Twister swirls the shape round its centre. Drag the pink centre handle to move the centre; it stays editable until you expand the effect.",
+        "The Tweak tool has a Twirl mode that turns the nodes under the brush round its centre.",
+      ] },
+    ],
+    related: ["shortcuts", "checks-and-fixes"],
+  },
+  {
     slug: "undo-and-reset", product: "general", title: "Undo, redo and reset",
     summary: "Every change can be undone. Reset a field, a section or the whole design back to its defaults.",
     keywords: ["undo", "redo", "reset", "defaults", "history"],

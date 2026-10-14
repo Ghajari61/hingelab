@@ -9,6 +9,7 @@ import { newId } from "../doc";
 import { nodeBasePaths, transformSubpaths } from "../geom";
 import type { EffectKind, EffectParamsMap, LiveEffect, Mat, SceneNode, Subpath, Units, Vec } from "../types";
 import { applyCorners } from "./corners";
+import { applyDistort } from "./distort";
 import { applyMirror, applyRotateCopies, boxOf } from "./copies";
 import { applyHatches } from "./hatches";
 import { applyInterpolate } from "./interpolate";
@@ -192,6 +193,24 @@ export const EFFECTS: { [K in EffectKind]: EffectDef<K> } = {
     ...EFFECT_META.liveBoolean,
     defaults: () => ({ op: "difference" }),
     apply: (subs, p) => applyLiveBoolean(subs, p),
+  },
+  distort: {
+    ...EFFECT_META.distort,
+    defaults: (input) => {
+      const b = boxOf(input);
+      return { mode: "pushPull", amount: 40, amplitude: 1, frequency: 5, smooth: false, random: false, seed: 1, angle: 90, cx: (b.minX + b.maxX) / 2, cy: (b.minY + b.maxY) / 2 };
+    },
+    presets: [
+      { name: "Push 40%", params: { mode: "pushPull", amount: 40 } },
+      { name: "Pull 40%", params: { mode: "pushPull", amount: -40 } },
+      { name: "Zipper", params: { mode: "zipper", amplitude: 1, frequency: 5, smooth: false } },
+      { name: "Wave", params: { mode: "zipper", amplitude: 1, frequency: 4, smooth: true } },
+      { name: "Twister 90°", params: { mode: "twister", angle: 90 } },
+      { name: "Twister 360°", params: { mode: "twister", angle: 360 } },
+    ],
+    apply: (subs, p) => applyDistort(subs, p),
+    handles: (p) => (p.mode === "zipper" ? [] : [{ x: p.cx, y: p.cy }]),
+    drag: (_p, _k, at) => ({ cx: at.x, cy: at.y }),
   },
 };
 

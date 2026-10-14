@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import {
   AudioWaveform, Blend, Brush, ChevronDown, ChevronRight, ChevronUp, CopyPlus, Dices, Eye, EyeOff, Feather, FlipHorizontal2, Flower2, Grid2x2, Link2, Plus, RotateCcw, Route,
-  Rows3, RulerDimensionLine, Spline, SquareRoundCorner, SquareSquare, SquaresUnite, Trash2, Unlink, X,
+  Rows3, RulerDimensionLine, Spline, SquareRoundCorner, SquareSquare, SquaresUnite, Tornado, Trash2, Unlink, X,
 } from "lucide-react";
 import { MATERIALS } from "@/lib/hinge/defaults";
 import { loadClip } from "@/lib/studio/clipboard";
@@ -19,7 +19,7 @@ import {
 import { bendGuide, envelopeCorners } from "@/lib/studio/effects/warp";
 import { findNode, isEditable, locate, topLevel } from "@/lib/studio/scene";
 import type {
-  BendParams, CornerMode, CornersParams, Document, EffectKind, EnvelopeParams, HatchParams, InterpolateParams, LinkedParams, LiveBooleanOp, LiveBooleanParams, LiveEffect,
+  BendParams, CornerMode, CornersParams, DistortParams, Document, EffectKind, EnvelopeParams, HatchParams, InterpolateParams, LinkedParams, LiveBooleanOp, LiveBooleanParams, LiveEffect,
   LivingHingeParams, Mat, MeasureSegmentsParams, MirrorParams, OffsetParams, PatternAlongPathParams, PatternMode, PowerStrokeParams, RotateCopiesParams, RoughenParams,
   SceneNode, TaperStrokeParams, Units, Vec,
 } from "@/lib/studio/types";
@@ -51,6 +51,7 @@ export const EFFECT_ICONS: Record<EffectKind, (size?: number) => ReactNode> = {
   powerStroke: (s = 16) => <Brush size={s} strokeWidth={1.5} />,
   measureSegments: (s = 16) => <RulerDimensionLine size={s} strokeWidth={1.5} />,
   liveBoolean: (s = 16) => <SquaresUnite size={s} strokeWidth={1.5} />,
+  distort: (s = 16) => <Tornado size={s} strokeWidth={1.5} />,
 };
 
 const PATTERN_MODES: { value: PatternMode; label: string }[] = [
@@ -487,6 +488,46 @@ function Params({ node, world, effect, index, units, anchors, set, num, doc, oth
           </div>
           <Check label="Crosshatch (second set at 90°)" checked={p.cross} onChange={(cross) => set<HatchParams>("Crosshatch", { cross })()} testId="fx-hatch-cross" />
           <Check label="Keep outline" checked={p.keepOutline} onChange={(keepOutline) => set<HatchParams>("Keep Outline", { keepOutline })()} />
+        </>
+      );
+    }
+    case "distort": {
+      const p = effect.params as DistortParams;
+      const centre = () => { const b = boxOf(input()); set<DistortParams>("Centre on Object", { cx: (b.minX + b.maxX) / 2, cy: (b.minY + b.maxY) / 2 })(); };
+      return (
+        <>
+          <SegmentedControl label="Distortion" value={p.mode} full onChange={(mode) => set<DistortParams>("Distortion Type", { mode })()}
+            options={[{ value: "pushPull", label: "Push & Pull" }, { value: "zipper", label: "Zipper" }, { value: "twister", label: "Twister" }]} />
+          {p.mode === "pushPull" && (
+            <NumberInput label="Amount" value={p.amount} suffix="%" min={-100} max={100} defaultValue={40} onChange={num("Push and Pull", "amount")} testId="fx-distort-amount" />
+          )}
+          {p.mode === "zipper" && (
+            <>
+              <NumberInput label="Amplitude" value={p.amplitude} length units={units} min={0} max={1000} step={0.1} defaultValue={1} onChange={num("Zipper Amplitude", "amplitude")} testId="fx-distort-amplitude" />
+              <NumberInput label="Teeth" value={p.frequency} integer min={1} max={200} defaultValue={5} onChange={num("Zipper Frequency", "frequency")} testId="fx-distort-frequency" />
+              <Check label="Smooth (waves instead of teeth)" checked={p.smooth} onChange={(smooth) => set<DistortParams>("Zipper Smooth", { smooth })()} testId="fx-distort-smooth" />
+              <Check label="Random heights" checked={p.random} onChange={(random) => set<DistortParams>("Zipper Random", { random })()} />
+              {p.random && (
+                <div className="fx-row">
+                  <NumberInput label="Seed" value={p.seed} integer min={0} max={999999} defaultValue={1} onChange={num("Zipper Seed", "seed")} />
+                  <IconButton label="New seed" description="Other random heights" icon={<Dices size={14} />}
+                    onClick={() => set<DistortParams>("New Seed", { seed: 1 + Math.floor(Math.random() * 999998) })()} />
+                </div>
+              )}
+            </>
+          )}
+          {p.mode === "twister" && (
+            <NumberInput label="Turn" value={p.angle} suffix="°" min={-3600} max={3600} defaultValue={90} onChange={num("Twister Angle", "angle")} testId="fx-distort-angle" />
+          )}
+          {p.mode !== "zipper" && (
+            <>
+              <NumberInput label="Centre X" value={f.x(p.cx)} length units={units} onChange={(v, c) => set<DistortParams>("Centre", { cx: f.fromX(v) })(c)} />
+              <NumberInput label="Centre Y" value={f.y(p.cy)} length units={units} onChange={(v, c) => set<DistortParams>("Centre", { cy: f.fromY(v) })(c)} />
+              {!f.plain && <p className="fx-note">The object is rotated or scaled: the centre is in its own coordinates.</p>}
+              <div className="pn-btns"><button type="button" className="ui-btn" onClick={centre}>Centre on object</button></div>
+              <p className="fx-note">Drag the pink centre handle on the canvas.</p>
+            </>
+          )}
         </>
       );
     }

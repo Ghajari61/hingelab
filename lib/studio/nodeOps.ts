@@ -278,6 +278,25 @@ export function transformSelected(ms: MSub[], m: Mat): MSub[] | null {
   return any ? out.map(refreshAuto) : null;
 }
 
+/** Align Nodes: each selected node (with its handles) moves so its world x (`axis` "x") or y is `at`. */
+export function alignSelected(ms: MSub[], world: Mat, axis: "x" | "y", at: number): MSub[] | null {
+  const inv = invert(world);
+  let any = false;
+  const out = ms.map((s) => ({
+    closed: s.closed,
+    nodes: s.nodes.map((a) => {
+      if (!a.s) return a;
+      const w = apply(world, a);
+      const q = apply(inv, axis === "x" ? { x: at, y: w.y } : { x: w.x, y: at });
+      const dx = q.x - a.x, dy = q.y - a.y;
+      if (Math.abs(dx) < 1e-12 && Math.abs(dy) < 1e-12) return a;
+      any = true;
+      return { ...a, x: q.x, y: q.y, ...(a.i ? { i: { x: a.i.x + dx, y: a.i.y + dy } } : {}), ...(a.o ? { o: { x: a.o.x + dx, y: a.o.y + dy } } : {}) };
+    }),
+  }));
+  return any ? out.map(refreshAuto) : null;
+}
+
 // ---------- document level ----------
 
 /** World-space bounds of the referenced anchors. */
@@ -373,6 +392,29 @@ export function joinAnchors(d: Document, refs: NodeRef[], merge: boolean): NodeR
   let ok = false;
   const out = editAnchors(d, rs, (ms) => { const r = joinEnds(ms, merge); ok = !!r; return r; });
   return ok ? out : null;
+}
+
+/**
+ * Extract Subpath: every subpath holding a selected node becomes its own path just above the original
+ * (same place, cut layer and transform). A path keeps at least one subpath. Returns the new ids.
+ */
+export function extractSubpaths(d: Document, refs: NodeRef[], id: () => string): string[] {
+  const bySubs = new Map<string, Set<number>>();
+  for (const r of refs) bySubs.set(r.id, (bySubs.get(r.id) ?? new Set()).add(r.sub));
+  const out: string[] = [];
+  for (const [nid, subs] of bySubs) {
+    if (findNode(d.root, nid)?.type === "shape") expandNodes(d, [nid], true);
+    const l = locate(d.root, nid);
+    if (!l || l.node.type !== "path") continue;
+    const p = l.node;
+    const take = [...subs].filter((k) => k < p.subpaths.length).sort((a, b) => a - b);
+    if (!take.length || take.length >= p.subpaths.length) continue;
+    const made: PathNode[] = take.map((k) => ({ id: id(), type: "path", transform: [...p.transform] as Mat, layer: p.layer, subpaths: [p.subpaths[k]] }));
+    p.subpaths = p.subpaths.filter((_, k) => !subs.has(k));
+    l.parent.children.splice(l.parent.children.indexOf(p) + 1, 0, ...made);
+    out.push(...made.map((m) => m.id));
+  }
+  return out;
 }
 
 /** Snaps `p` onto the nearest outline within `tol` (world space), for node dragging. */
