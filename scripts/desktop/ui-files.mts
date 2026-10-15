@@ -12,6 +12,7 @@ let failed = 0;
 const check = (ok: boolean, msg: string) => { console.log(`${ok ? "ok" : "FAIL"} ${msg}`); if (!ok) failed++; };
 let designId = 0;
 let aiRuns = 0;
+let offline = false;
 const calls: { cmd: string; args: Record<string, unknown> }[] = [];
 const titles: string[] = [];
 const HINGE_FILE = JSON.stringify({ app: "HingeLab", product: "hinge-box", version: 1, params: { name: "Opened box", W: 91 } });
@@ -66,6 +67,7 @@ async function command(cmd: string, args: Record<string, unknown>) {
       return { product: "hinge", productName: "Hinge Box", match: "exact", name: `AI ${aiRuns}`, summary: req.prompt, notes: [], params: { W: 60 + aiRuns } };
     }
     case "generate": {
+      if (offline) return { __err: { kind: "network", message: "No connection." } };
       const req = args.request as { product: string };
       const r = await generateDesign(req, "pro");
       if (!("product" in r.body)) return { __err: { kind: "invalid", message: (r.body as { error: string }).error } };
@@ -340,6 +342,22 @@ try {
   await page.getByRole("button", { name: "Choose…" }).click();
   check(await until(async () => (last("trace_picture")?.args.request as { kind?: string } | undefined)?.kind === "svg"), "an SVG picture is sent to be traced");
   check(await until(async () => (await page.locator(".picture-name").innerText()) === "Square"), "a traced picture shows its file name");
+  if (process.env.E2E_SHOTS) await page.screenshot({ path: `${process.env.E2E_SHOTS}/desk-picture.png` });
+
+  // Offline: a change that cannot be sent is marked, sent when the app is back online, and is then one undo step.
+  const copies = page.getByLabel("Copies", { exact: true });
+  const copiesBefore = await copies.inputValue();
+  offline = true;
+  await copies.fill("2");
+  await copies.press("Enter");
+  await copies.blur();
+  check(await until(async () => await page.getByText("Not sent, offline").isVisible()), "a change made offline is marked as not sent");
+  offline = false;
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  check(await until(async () => !(await page.getByText("Not sent, offline").isVisible()) && !(await page.locator(".overlay").count())), "back online, the change is sent");
+  await page.locator(".ws-summary").click();
+  await page.keyboard.press("Control+z");
+  check(await until(async () => (await copies.inputValue()) === copiesBefore), "the change sent late is one undo step");
 
   await page.locator(".sidebar").getByRole("button", { name: "AI Studio" }).click();
   check(await until(async () => calls.some((c) => c.cmd === "web_open" && c.args.path === "/home?new=ai")), "the sidebar opens AI Studio in the website view");

@@ -116,6 +116,13 @@ export function App() {
     if (design.state.error?.kind === "network") setOnline(false);
     else if (design.state.result && !design.state.error) setOnline(true);
   }, [design.state.error, design.state.result]);
+  // Back online: the change that could not be sent goes now.
+  const unsent = useRef(false);
+  unsent.current = design.state.unsent;
+  const { refresh } = design;
+  useEffect(() => {
+    if (online && unsent.current) refresh();
+  }, [online, refresh]);
 
   // Theme.
   useEffect(() => {

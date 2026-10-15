@@ -247,7 +247,9 @@ export function Workspace(p: Props) {
             {r?.stats.map((s) => <span key={s.label}><b>{s.label}</b> {s.value}</span>)}
             {r?.watermark && <span className="wm" title="Free plan exports carry a small Made with HingeLab mark below the parts.">Free plan mark included</span>}
             <span className="spacer" />
-            {!p.online && <span className="offline"><WifiOff size={13} aria-hidden />Offline</span>}
+            {design.unsent
+              ? <span className="offline" role="status" title="Your last change is in the settings (and in a saved project) but the preview is older. It is sent when HingeLab is back online."><WifiOff size={13} aria-hidden />Not sent, offline</span>
+              : !p.online && <span className="offline"><WifiOff size={13} aria-hidden />Offline</span>}
             {design.busy && <span className="sync">Updating…</span>}
           </footer>
         </main>

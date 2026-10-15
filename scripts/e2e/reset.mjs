@@ -12,7 +12,7 @@ await withBrowser(async (page) => {
   page.on("pageerror", (e) => errors.push(e.message));
   const settle = () => page.waitForTimeout(500);
   const pressed = (group) => page.getByRole("group", { name: group, exact: true }).locator('[aria-pressed="true"]').first().innerText();
-  const reset = (label) => page.getByRole("button", { name: `Reset ${label}`, exact: true });
+  const reset = (label) => page.locator(`button.rst-mark[aria-label="Reset to default"][data-field="${label}"]`);
 
   /** Pick another option in a button group, then its ↺ brings the default back. */
   const choice = async (where, group, label, other) => {

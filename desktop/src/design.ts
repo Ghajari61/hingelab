@@ -36,6 +36,8 @@ export interface DesignState {
   file: DesignFile | null;
   /** The settings as last saved to (or opened from) `file`, as JSON. */
   savedJson: string | null;
+  /** The last change never reached the server (offline): it is sent again, as an undo step, when the app is back online. */
+  unsent: boolean;
 }
 
 /** Changes since the design was opened or last saved. */
@@ -45,7 +47,7 @@ const TYPE_DELAY = 450;
 const MAX_HISTORY = 100;
 
 export function useDesign(onFatal: (e: AppError) => void) {
-  const [state, setState] = useState<DesignState>({ product: null, params: null, result: null, status: 0, busy: false, error: null, canUndo: false, canRedo: false, file: null, savedJson: null });
+  const [state, setState] = useState<DesignState>({ product: null, params: null, result: null, status: 0, busy: false, error: null, canUndo: false, canRedo: false, file: null, savedJson: null, unsent: false });
   /** The first answer after opening a file sets what "saved" means (the server fills in defaults). */
   const cleanNext = useRef(false);
   const seq = useRef(0);
@@ -58,6 +60,7 @@ export function useDesign(onFatal: (e: AppError) => void) {
   const retryTimer = useRef<number | null>(null);
   const lastRequest = useRef<GenerateRequest | null>(null);
   /** The 3D view is open: builds also bring the assembled model. */
+  const unsent = useRef(false);
   const want3d = useRef(false);
   const hasModel = useRef(false);
 
@@ -75,6 +78,7 @@ export function useDesign(onFatal: (e: AppError) => void) {
       const next = out.body.params;
       params.current = next;
       hasModel.current = !!out.body.model;
+      unsent.current = false;
       if (record) {
         const prev = past.current[past.current.length - 1];
         if (!prev || JSON.stringify(prev) !== JSON.stringify(next)) {
@@ -84,19 +88,20 @@ export function useDesign(onFatal: (e: AppError) => void) {
       }
       const clean = cleanNext.current ? JSON.stringify(next) : null;
       cleanNext.current = false;
-      setState((s) => ({ ...s, product: out.body.product, params: next, result: out.body, status: out.status, busy: false, error: null, ...flags(), ...(clean ? { savedJson: clean } : {}) }));
+      setState((s) => ({ ...s, product: out.body.product, params: next, result: out.body, status: out.status, busy: false, error: null, unsent: false, ...flags(), ...(clean ? { savedJson: clean } : {}) }));
       // The 3D view opened while this build was on its way: build again with the model.
       if (want3d.current && !req.model && out.status === 200) void send({ product: out.body.product, params: next }, false);
     } catch (e) {
       if (id !== seq.current) return;
       const err = e as AppError;
       if (err.kind === "unauthorized" || err.kind === "update_required") onFatal(err);
+      if (err.kind === "network" && record) unsent.current = true;
       if (err.kind === "rate_limited") {
         retryTimer.current = window.setTimeout(() => {
           if (lastRequest.current) void send(lastRequest.current, record);
         }, Math.min(60, err.retryAfter ?? 5) * 1000);
       }
-      setState((s) => ({ ...s, busy: false, error: err }));
+      setState((s) => ({ ...s, busy: false, error: err, unsent: unsent.current }));
     }
   }, [onFatal]);
 
@@ -116,7 +121,8 @@ export function useDesign(onFatal: (e: AppError) => void) {
     past.current = [];
     future.current = [];
     cleanNext.current = !!from.file;
-    setState({ product: p, params: from.params ?? null, result: null, status: 0, busy: true, error: null, canUndo: false, canRedo: false, file: from.file ?? null, savedJson: null });
+    unsent.current = false;
+    setState({ product: p, params: from.params ?? null, result: null, status: 0, busy: true, error: null, canUndo: false, canRedo: false, file: from.file ?? null, savedJson: null, unsent: false });
     void send({ product: p as GenerateRequest["product"], preset: from.preset, params: from.params, ...(from.version ? { version: from.version } : {}) });
   }, [send]);
 
@@ -171,7 +177,8 @@ export function useDesign(onFatal: (e: AppError) => void) {
   const autofix = useCallback(() => request({ autofix: true }), [request]);
   /** The whole design scaled by `s` (the 3D scale gizmo), on the server as one edit. */
   const scaleBy = useCallback((s: number) => request({ scale: s }), [request]);
-  const refresh = useCallback(() => request({}, false), [request]);
+  /** Builds again; a change that never reached the server is recorded once it does. */
+  const refresh = useCallback(() => request({}, unsent.current), [request]);
   /** A new random design on the server (one undo step); `locked` settings stay. */
   const randomise = useCallback((locked: string[]) => request({ randomise: { locked } }), [request]);
 

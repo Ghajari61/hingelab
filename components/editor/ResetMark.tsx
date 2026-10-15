@@ -15,12 +15,16 @@ export function RandomMark({ label, onRandom }: { label: string; onRandom: () =>
   );
 }
 
-/** The ↺ beside a setting that differs from its default; one click restores the default. */
+/**
+ * The ↺ beside a setting that differs from its default; one click restores the default. Its name
+ * leaves out the setting's label (given as its description), so the label names only the setting.
+ */
 export function ResetMark({ label, show, to, onReset }: { label: string; show: boolean; to?: string; onReset: () => void }) {
   if (!show) return null;
   return (
     <button
-      type="button" className="rst-mark" aria-label={`Reset ${label}`} title={to ? `Reset to ${to}` : "Reset to the default"}
+      type="button" className="rst-mark" aria-label="Reset to default" aria-description={label} data-field={label}
+      title={to ? `Reset to ${to}` : "Reset to the default"}
       onPointerDown={(e) => e.preventDefault()} onClick={onReset}
     >
       <RotateCcw size={12} strokeWidth={2.2} />
