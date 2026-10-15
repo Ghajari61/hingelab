@@ -51,15 +51,17 @@ function CardArt({ pic, children }: { pic?: string; children: ReactNode }) {
 export type History = { canUndo: boolean; canRedo: boolean; undo: () => void; redo: () => void };
 
 /** Left rail: undo/redo on top, then the product's big choices as picture cards (Atomm-style), grouped. */
-export function GalleryRail({ title, icon, groups, history, children }: {
+export function GalleryRail({ title, icon, groups, history, children, inert }: {
   title: string;
   icon?: ReactNode;
   groups: GalleryGroup[];
   history: History;
   children?: ReactNode;
+  /** A shared design being viewed: nothing here can be changed. */
+  inert?: boolean;
 }) {
   return (
-    <aside className="gallery" aria-label={`${title} options`}>
+    <aside className="gallery" aria-label={`${title} options`} inert={inert || undefined}>
       <div className="gallery-head">
         {icon}<span>{title}</span>
         <span className="hist">

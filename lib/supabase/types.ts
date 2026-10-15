@@ -38,9 +38,26 @@ export type UserPresetRow = {
   created_at: string | null;
 };
 
+export type GalleryRow = {
+  id: string;
+  user_id: string;
+  product: string;
+  name: string;
+  params: Json;
+  thumbnail: string;
+  hidden: boolean;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
+      gallery_designs: {
+        Row: GalleryRow;
+        Insert: Partial<GalleryRow> & { product: string; name: string; params: Json; thumbnail: string };
+        Update: Partial<GalleryRow>;
+        Relationships: [];
+      };
       user_presets: {
         Row: UserPresetRow;
         Insert: Partial<UserPresetRow> & { product: ProductId; name: string; params: Json };

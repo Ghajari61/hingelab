@@ -357,6 +357,68 @@ export const ARTICLES: HelpArticle[] = [
     related: ["view-3d", "batch-personalisation"],
   },
   {
+    slug: "share-links", product: "general", title: "Share links and remixing",
+    summary: "Send a design as a link: it opens read-only, and Remix makes it the other person's design.",
+    keywords: ["share", "link", "url", "send", "remix", "copy", "friend", "customer", "read-only", "view"],
+    blocks: [
+      { p: "File › Share link… makes a link that carries every setting of the design. The settings are compressed inside the link itself (after the #), so nothing is uploaded and HingeLab never sees the design." },
+      { list: [
+        "Whoever opens the link sees the design read-only: they can look round it in 2D and 3D, but the panels are locked and nothing is saved over their own design.",
+        "Remix makes it their design: the panels unlock and it autosaves as usual. Ctrl+Z returns to the design they had before.",
+        "Back to my design leaves the shared design without changing anything.",
+        "Pictures stay out of the link unless you tick Include my pictures; the link then gets much longer. Uploaded fonts never travel in a link: the link uses the default font. Send a project file to share those.",
+        "Links over 8,000 characters are cut off by some chat and mail apps; the window warns you.",
+      ] },
+    ],
+    related: ["project-files", "gallery", "batch-personalisation"],
+  },
+  {
+    slug: "project-files", product: "general", title: "Project files (.hingelab.json)",
+    summary: "Back up a design, or move it to another computer, with its pictures and uploaded fonts inside.",
+    keywords: ["save", "open", "project", "file", "backup", "move", "device", "computer", "json", "hingelab", "fonts"],
+    blocks: [
+      { p: "File › Save project (Ctrl+S) downloads a .hingelab.json file; File › Open project… (Ctrl+O) opens one. Opening a project is one step: Ctrl+Z returns to the design you had." },
+      { list: [
+        "The file holds every setting, the pictures in the design and the fonts you uploaded that it uses (up to eight).",
+        "Opening the file on another device adds those fonts to that device, so the text looks the same.",
+        "3D models and photos imported into Parametric are kept on the device that imported them; import them again after opening the project elsewhere.",
+        "Your design is also autosaved in this browser as you work; a project file is the copy you keep.",
+      ] },
+    ],
+    related: ["share-links", "undo-and-reset"],
+  },
+  {
+    slug: "gallery", product: "general", title: "Community gallery",
+    summary: "Publish a design with a preview so others can open and remix it (when the gallery is open).",
+    keywords: ["gallery", "community", "publish", "remix", "browse", "ideas", "inspiration"],
+    blocks: [
+      { p: "The gallery is being prepared and is not open on every site yet. When it is, File › Share link… shows Publish to the gallery for signed-in users." },
+      { list: [
+        "Give the design a name and press Publish. The gallery shows a preview of its outlines; the settings go with it so others can open and remix it.",
+        "Pictures stay out unless you included them in the link. Uploaded fonts never go to the gallery.",
+        "Open and remix on a gallery card opens the design read-only, with Remix, exactly like a share link.",
+        "Remove takes your own design out of the gallery at any time. Each account can publish up to 20 designs a day.",
+      ] },
+    ],
+    related: ["share-links", "project-files"],
+  },
+  {
+    slug: "free-and-pro", product: "general", title: "Free and Pro features",
+    summary: "Which features may need the Pro plan, and how you will know before you start.",
+    keywords: ["pro", "free", "plan", "upgrade", "locked", "limit", "subscription", "price"],
+    blocks: [
+      { p: "Today every feature on this page is open to every plan. HingeLab may later keep some of them for Pro; if it does, the feature says so where you use it and the rest of the design is untouched." },
+      { list: [
+        "Batch personalisation (a ZIP of files for a list of names).",
+        "LightBurn project export (.lbrn2). SVG, DXF and PDF stay free.",
+        "Nesting parts by their outlines. Packing by box stays free.",
+        "Exporting designs with an engraved photo. Designing with a photo stays free.",
+        "More than two uploaded fonts on a device.",
+      ] },
+    ],
+    related: ["batch-personalisation", "layers-and-export"],
+  },
+  {
     slug: "shortcuts", product: "general", title: "Keyboard shortcuts",
     summary: "Move round the sheet, undo, save and export from the keyboard.",
     keywords: ["keyboard", "keys", "hotkeys"],

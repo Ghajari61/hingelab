@@ -34,7 +34,11 @@ import { Dialogs, type ModalState } from "@/components/editor/dialogs";
 import { lettersGroups } from "./LettersControlBar";
 import { LettersDock } from "./LettersDock";
 import { MARQUEE_KEYS, isMarqueeKey, type LetterNumKey } from "./fields";
-import { deleteStoredFont, getStoredFont, listStoredFonts, type StoredFontMeta } from "./fontStore";
+import { deleteStoredFont, FONTS_EVENT, getStoredFont, listStoredFonts, type StoredFontMeta } from "./fontStore";
+import { useSharedView } from "@/components/shell/SharedView";
+import { useFlags } from "@/components/shell/useFlags";
+import { FREE_FONT_UPLOADS, gateLock } from "@/lib/gates";
+import { SHARED_ID } from "@/lib/share/id";
 import { addFontFile, forgetFont, getLoadedFont, isUploadId, loadHarfBuzz } from "./runtime";
 import { autoFixAll, type Fix } from "@/lib/issues";
 import { lettersIssues } from "@/lib/issues/letters";
@@ -48,6 +52,7 @@ import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 
 const ExportDialog = dynamic(() => import("@/components/shell/ExportDialog"), { ssr: false });
 const JobEstimate = dynamic(() => import("@/components/shell/JobEstimate"), { ssr: false });
+const ShareDialog = dynamic(() => import("@/components/shell/ShareDialog"), { ssr: false });
 const LetterPreview3D = dynamic(() => import("./LetterPreview3D"), {
   ssr: false,
   loading: () => <div id="preview3d" className="v3" aria-busy="true" />,
@@ -114,6 +119,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
   const [exporting, setExporting] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const help = useHelpPanel("letters");
   const [toast, setToast] = useState<string | null>(null);
   const [uploads, setUploads] = useState<StoredFontMeta[]>([]);
@@ -123,7 +129,9 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   const fileRef = useRef<HTMLInputElement>(null);
   const toastT = useRef<number>(0);
   const onStatus = useCallback((s: string) => setSaved(s), []);
-  useAutosave(params, units, onStatus, KEY, !cloud);
+  const shared = useSharedView(start, start?.name ?? "Letters", (m) => toastMsg(m));
+  const flags = useFlags();
+  useAutosave(params, units, onStatus, KEY, !cloud && !shared.viewing);
   const thumbSrc = useRef<{ content: ReturnType<typeof letterLayerContent> | null; w: number; h: number }>({ content: null, w: 0, h: 0 });
   useCloudAutosave(cloud, params, () => (thumbSrc.current.content ? thumbnailSVG(thumbSrc.current.content, thumbSrc.current.w, thumbSrc.current.h) : null), onStatus);
 
@@ -136,6 +144,9 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   useEffect(() => {
     loadHarfBuzz().then(setHb, () => setLoadError("The text shaper could not load. Reload the page to try again."));
     listStoredFonts().then(setUploads, () => {});
+    const relist = () => { listStoredFonts().then(setUploads, () => {}); };
+    window.addEventListener(FONTS_EVENT, relist);
+    return () => window.removeEventListener(FONTS_EVENT, relist);
   }, []);
 
   useEffect(() => {
@@ -284,8 +295,9 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
     }
   }
 
-  function saveProject() {
-    offerFile(baseName(params) + ".hingelab.json", JSON.stringify({ app: "HingeLab", product: "letters", version: 1, params }, null, 2), "application/json");
+  async function saveProject() {
+    const { projectText } = await import("@/components/shell/projectFile");
+    offerFile(baseName(params) + ".hingelab.json", await projectText({ app: "HingeLab", product: "letters", version: 1 }, params), "application/json");
   }
 
   function openProject() {
@@ -304,6 +316,8 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   }
 
   async function uploadFont(file: File) {
+    const limit = gateLock("customFonts", account.plan, flags);
+    if (limit && uploads.length >= FREE_FONT_UPLOADS) { setUpgrade(limit); return; }
     try {
       const { id, name } = await addFontFile(file);
       setUploads(await listStoredFonts());
@@ -355,7 +369,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
     started.current = true;
     replace(mergeParams(start.params as Partial<LetterParams>), true);
     window.setTimeout(() => viewApi.fit(), 50);
-    toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
+    if (start.id !== SHARED_ID) toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -414,6 +428,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
       { label: "Open project…", kbd: "Ctrl+O", run: openProject },
       { label: "Save project", kbd: "Ctrl+S", run: saveProject },
       { label: "Save as my preset…", kbd: "", run: () => setModal({ type: "preset", name: params.name }) },
+      { label: "Share link…", kbd: "", run: () => setSharing(true) },
       "-",
       { label: "Export SVG…", kbd: "Ctrl+E", run: exportNow },
       { label: "Export DXF…", kbd: "", run: () => void exportDXFNow() },
@@ -484,6 +499,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
             onMode: (m) => patch({ mode: m }, true), onWallStyle: (w) => patch({ wallStyle: w }, true), onLid: (l) => patch({ lid: l }, true),
           })}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
+          inert={shared.viewing}
         />
         <div className={`stage${viewMode === "3d" ? " no-rulers" : ""}`}>
         <ViewToggle value={viewMode} onChange={setViewMode} />
@@ -522,7 +538,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
           />
         </section>
         </div>
-        <DockColumn onExport={exportNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export as DXF (R12, mm)", run: () => void exportDXFNow() }, { label: "More…", title: "PDF, LightBurn, one file per sheet, mirror, and a check against your machine's bed (Ctrl+Shift+E)", run: openExport }]} units={units} onUnits={setUnits} onResetAll={resetAll}>
+        <DockColumn onExport={exportNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export as DXF (R12, mm)", run: () => void exportDXFNow() }, { label: "More…", title: "PDF, LightBurn, one file per sheet, mirror, and a check against your machine's bed (Ctrl+Shift+E)", run: openExport }]} units={units} onUnits={setUnits} onResetAll={resetAll} inert={shared.viewing}>
         <LettersDock
           params={params}
           model={model}
@@ -558,7 +574,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
         zoom={zoom}
         parts={model && lay ? { count: model.parts.length, used: usedText(usedArea(lay, arranged?.sheets ?? null), (mm) => fmtLen(mm, units, true)) } : null}
         fit={fit}
-        saved={saved}
+        saved={shared.viewing ? "Shared design, not saved" : saved}
       />
       <Dialogs
         modal={modal}
@@ -576,6 +592,13 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
           base={baseName(built)} units={units} material={params.material} onClose={() => setExporting(false)} toast={toastMsg}
         />
       )}
+      {sharing && (
+        <ShareDialog
+          product="letters" params={params as unknown as Record<string, unknown>} defaults={LETTER_DEFAULTS} svg={localSVG} signedIn={account.signedIn}
+          onClose={() => setSharing(false)} toast={toastMsg}
+        />
+      )}
+      {shared.banner}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
       <input
@@ -587,24 +610,27 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
           const f = e.target.files?.[0];
           if (!f) return;
           const rd = new FileReader();
-          rd.onload = () => {
+          rd.onload = async () => {
+            let j: { product?: string; params?: Partial<LetterParams> };
+            try {
+              j = JSON.parse(String(rd.result));
+            } catch {
+              toastMsg("That file is not a HingeLab project");
+              return;
+            }
+            const fontsAdded = j?.product === "letters" ? await (await import("@/components/shell/projectFile")).restoreProjectAssets(j).catch(() => 0) : 0;
             if (cloud) {
               toastMsg(`Opening ${f.name}…`);
               void importIntoCloud(String(rd.result)).then((err) => { if (err) toastMsg(err); });
               return;
             }
-            try {
-              const j = JSON.parse(String(rd.result)) as { product?: string; params?: Partial<LetterParams> };
-              if (j.product !== "letters" || !j.params) {
-                toastMsg(j.params ? "That is a Hinge Box project. Switch to Hinge Box to open it." : "That file is not a HingeLab project");
-                return;
-              }
-              patch(mergeParams(j.params), true);
-              window.setTimeout(() => viewApi.fit(), 50);
-              toastMsg(`Opened ${f.name}`);
-            } catch {
-              toastMsg("That file is not a HingeLab project");
+            if (j?.product !== "letters" || !j.params) {
+              toastMsg(j?.params ? "That is a Hinge Box project. Switch to Hinge Box to open it." : "That file is not a HingeLab project");
+              return;
             }
+            patch(mergeParams(j.params), true);
+            window.setTimeout(() => viewApi.fit(), 50);
+            toastMsg(`Opened ${f.name}${fontsAdded ? ` and added ${fontsAdded} font${fontsAdded > 1 ? "s" : ""} on this device` : ""}`);
           };
           rd.readAsText(f);
         }}

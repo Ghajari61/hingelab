@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PRICES, PRO_BENEFITS } from "@/lib/plans";
 import { startCheckout } from "./billingClient";
 
@@ -12,6 +12,16 @@ export function UpgradeDialog({ reason, signedIn, onClose }: { reason: string; s
   const [busy, setBusy] = useState<"month" | "year" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const yearlySaving = Math.round((1 - PRICES.yearly / (PRICES.monthly * 12)) * 100);
+  const ref = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
+  useEffect(() => {
+    const back = document.activeElement as HTMLElement | null;
+    ref.current?.querySelector<HTMLElement>(".upgrade-buy .btn-export")?.focus();
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") close.current(); };
+    document.addEventListener("keydown", key);
+    return () => { document.removeEventListener("keydown", key); back?.focus?.(); };
+  }, []);
 
   async function buy(interval: "month" | "year") {
     setBusy(interval);
@@ -22,7 +32,7 @@ export function UpgradeDialog({ reason, signedIn, onClose }: { reason: string; s
 
   return (
     <div className="modal-back" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal upgrade" role="dialog" aria-modal="true" aria-label="Upgrade to Pro">
+      <div className="modal upgrade" role="dialog" aria-modal="true" aria-label="Upgrade to Pro" ref={ref}>
         <header>Upgrade to Pro<button type="button" aria-label="Close" onClick={onClose}>×</button></header>
         <div className="mb">
           <p className="upgrade-reason">{reason}</p>

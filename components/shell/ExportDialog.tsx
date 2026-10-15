@@ -8,6 +8,9 @@ import { loadMaterials } from "@/lib/materials/library";
 import { bedOf, CUSTOM_MACHINE, defaultExport, EXPORT_FORMATS, FORMAT_INFO, loadExport, overBed, saveExport, type ExportSettings, type Rect } from "@/lib/export/profiles";
 import { MACHINE_PROFILES } from "@/lib/studio/library";
 import { loadPrefs } from "@/lib/studio/prefs";
+import { gateLock } from "@/lib/gates";
+import { usePlan } from "@/components/billing/usePlan";
+import { useFlags } from "./useFlags";
 import JobEstimate from "./JobEstimate";
 import "./export-dialog.css";
 
@@ -65,6 +68,9 @@ export default function ExportDialog({ getSVG, localSVG, sheets, size, base, uni
   const many = rects.length > 1;
   const dims = (w: number, h: number) => (units === "in" ? `${(w / 25.4).toFixed(2)} × ${(h / 25.4).toFixed(2)} in` : `${Math.round(w * 10) / 10} × ${Math.round(h * 10) / 10} mm`);
   const fmt = FORMAT_INFO[s.format];
+  const account = usePlan();
+  const flags = useFlags();
+  const locked = s.format === "lbrn2" ? gateLock("lbrn2", account.plan, flags) : null;
 
   function pickMachine(id: string) {
     if (id === CUSTOM_MACHINE) upd({ machine: id });
@@ -72,7 +78,7 @@ export default function ExportDialog({ getSVG, localSVG, sheets, size, base, uni
   }
 
   async function run() {
-    if (busy) return;
+    if (busy || locked) return;
     setBusy(true);
     try {
       const svg = await getSVG();
@@ -122,6 +128,7 @@ export default function ExportDialog({ getSVG, localSVG, sheets, size, base, uni
             </div>
           </div>
           <p className="exp-about">{fmt.about}</p>
+          {locked && <p className="exp-check warn" role="status">{locked} <a href="/app/billing" target="_blank" rel="noopener">See Pro</a></p>}
 
           {many && (
             <div className="exp-row">
@@ -152,7 +159,7 @@ export default function ExportDialog({ getSVG, localSVG, sheets, size, base, uni
           </p>
           <div className="rename-row">
             <button type="button" className="btn-ghost-sm" onClick={onClose}>Cancel</button>
-            <button type="button" className="btn-export" disabled={busy} onClick={() => void run()}><Download size={16} aria-hidden />{action}</button>
+            <button type="button" className="btn-export" disabled={busy || !!locked} onClick={() => void run()}><Download size={16} aria-hidden />{action}</button>
           </div>
         </div>
       </div>

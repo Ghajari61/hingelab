@@ -1,19 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { deleteStoredFont, getStoredFont, listStoredFonts, type StoredFontMeta } from "./fontStore";
+import { deleteStoredFont, FONTS_EVENT, getStoredFont, listStoredFonts, type StoredFontMeta } from "./fontStore";
 import { addFontFile, forgetFont, isUploadId } from "./runtime";
+import { FREE_FONT_UPLOADS } from "@/lib/gates";
 
 /** Largest uploaded font a server export request carries (base64 keeps the body under 4.5 MB). */
 const MAX_EXPORT_FONT_BYTES = 3 * 1024 * 1024;
 
-/** Fonts uploaded on this device, with adding and removing them. Messages go to `toast`. */
-export function useFontUploads(toast: (msg: string) => void) {
+/**
+ * Fonts uploaded on this device, with adding and removing them. Messages go to `toast`. `limit` is
+ * the custom-font gate's message when it applies to this account (see `lib/gates.ts`).
+ */
+export function useFontUploads(toast: (msg: string) => void, limit?: string | null) {
   const [uploads, setUploads] = useState<StoredFontMeta[]>([]);
-  useEffect(() => { listStoredFonts().then(setUploads, () => {}); }, []);
+  useEffect(() => {
+    const again = () => { listStoredFonts().then(setUploads, () => {}); };
+    again();
+    window.addEventListener(FONTS_EVENT, again);
+    return () => window.removeEventListener(FONTS_EVENT, again);
+  }, []);
 
   /** The new font's id, or null when the file could not be added. */
   async function add(file: File): Promise<string | null> {
+    if (limit && uploads.length >= FREE_FONT_UPLOADS) { toast(limit); return null; }
     try {
       const { id, name } = await addFontFile(file);
       setUploads(await listStoredFonts());

@@ -35,6 +35,10 @@ import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
 import type { Preset } from "@/lib/presets";
 import { useMyPresets } from "@/components/shell/useMyPresets";
+import { useSharedView } from "@/components/shell/SharedView";
+import { useFlags } from "@/components/shell/useFlags";
+import { gateLock } from "@/lib/gates";
+import { SHARED_ID } from "@/lib/share/id";
 import { Canvas } from "@/components/editor/Canvas";
 import { rulerSvg } from "@/components/editor/Rulers";
 import { StatusBar } from "@/components/editor/StatusBar";
@@ -50,6 +54,7 @@ import type { Finish } from "@/lib/parametric/presets";
 import { SHEET_SPACING } from "@/lib/fit/arrange";
 
 const ExportDialog = lazy(() => import("@/components/shell/ExportDialog"));
+const ShareDialog = lazy(() => import("@/components/shell/ShareDialog"));
 
 const DesignStudio = lazy(() => import("./DesignStudio"));
 const FINISH_KEY = "hingelab-parametric-finish";
@@ -116,6 +121,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   const thumbRef = useRef<() => string | null>(() => null);
   const [modal, setModal] = useState<ModalState>(null);
   const [exporting, setExporting] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const help = useHelpPanel("parametric");
   const [toast, setToast] = useState<string | null>(null);
   const [model, setModel] = useState<StoredModel | null>(null);
@@ -142,7 +148,9 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   const fileRef = useRef<HTMLInputElement>(null);
   const toastT = useRef<number>(0);
   const onStatus = useCallback((s: string) => setSaved(s), []);
-  useAutosave(params, units, onStatus, KEY, !cloud);
+  const shared = useSharedView(start, start?.name ?? "Parametric", (m) => toastMsg(m));
+  const flags = useFlags();
+  useAutosave(params, units, onStatus, KEY, !cloud && !shared.viewing);
   useCloudAutosave(cloud, params, () => thumbRef.current(), onStatus);
 
   function toastMsg(msg: string) {
@@ -323,7 +331,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
    */
   async function exportData(what: ExportWhat, build: () => string | Uint8Array): Promise<{ data: string | Uint8Array; marked: boolean } | null> {
     if (!ready()) return null;
-    const lock = parametricLock(account.plan, params, result!.stats.partCount);
+    const lock = parametricLock(account.plan, params, result!.stats.partCount) ?? (params.material.nest === "outline" ? gateLock("nesting", account.plan, flags) : null);
     if (lock) { setUpgrade(lock); return null; }
     if (!account.configured || account.plan === "pro") return { data: build(), marked: false };
     try {
@@ -371,8 +379,9 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     void exportWith({ kind: "sheet", index: currentSheet }, `${base()}-${sheetFileName(currentSheet, result!.sheets.length)}`, "image/svg+xml", () => sheetSVG(result!, currentSheet, params));
   }
   function guideNow() { void exportWith({ kind: "guide" }, `${base()}-assembly-guide.svg`, "image/svg+xml", () => assemblyGuideSVG(result!, params)); }
-  function saveProject() {
-    offerFile(`${base()}.hingelab.json`, JSON.stringify({ app: "HingeLab", product: "parametric", version: 1, params }, null, 2), "application/json");
+  async function saveProject() {
+    const { projectText } = await import("@/components/shell/projectFile");
+    offerFile(`${base()}.hingelab.json`, await projectText({ app: "HingeLab", product: "parametric", version: 1 }, params), "application/json");
   }
   function openProject() { if (fileRef.current) { fileRef.current.value = ""; fileRef.current.click(); } }
   function newProject() {
@@ -488,7 +497,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     const look = (start as { finish?: Finish }).finish;
     if (look) setFinish(look);
     setSelected([]);
-    toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
+    if (start.id !== SHARED_ID) toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -550,6 +559,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
       { label: "Open project…", kbd: "Ctrl+O", run: openProject },
       { label: "Save project", kbd: "Ctrl+S", run: saveProject },
       { label: "Save as my preset…", kbd: "", run: () => setModal({ type: "preset", name: params.name }) },
+      { label: "Share link…", kbd: "", run: () => setSharing(true) },
       { label: "Import 3D model…", kbd: "", run: () => { const i = document.querySelector<HTMLInputElement>('input[aria-label="Import model"]'); i?.click(); } },
       "-",
       { label: "Export SVG (all sheets)…", kbd: "Ctrl+E", run: exportAllNow },
@@ -614,6 +624,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
             if (m === "folded" && q.material.T > 1) q.material = { ...q.material, id: "custom", T: 0.3, K: 0.05 };
           }, true) })}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
+          inert={shared.viewing}
         >
           <section className="gallery-group" aria-label="Designs">
             <h3>Designs</h3>
@@ -687,7 +698,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
               />
             </section>
         </div>
-        <DockColumn onExport={exportAllNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export all sheets as a DXF (R12, mm)", run: () => void exportDXFNow() }, { label: "More…", title: "PDF, LightBurn, one file per sheet, mirror, and a check against your machine's bed (Ctrl+Shift+E)", run: openExport }]} units={units} onUnits={setUnits} onResetAll={resetAll}>
+        <DockColumn onExport={exportAllNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export all sheets as a DXF (R12, mm)", run: () => void exportDXFNow() }, { label: "More…", title: "PDF, LightBurn, one file per sheet, mirror, and a check against your machine's bed (Ctrl+Shift+E)", run: openExport }]} units={units} onUnits={setUnits} onResetAll={resetAll} inert={shared.viewing}>
         <ParametricDock
           params={params}
           result={result}
@@ -723,7 +734,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
         zoom={zoom}
         parts={result ? { count: result.stats.partCount, used: `${result.sheets.length} sheet${result.sheets.length === 1 ? "" : "s"}, ${Math.round(result.stats.materialUsage * 100)}%` } : null}
         fit={fit}
-        saved={saved}
+        saved={shared.viewing ? "Shared design, not saved" : saved}
       />
       <Dialogs
         modal={modal}
@@ -757,6 +768,17 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
           />
         </Suspense>
       )}
+      {sharing && (
+        <Suspense fallback={null}>
+          <ShareDialog
+            product="parametric" params={params as unknown as Record<string, unknown>} defaults={PARAMETRIC_DEFAULTS}
+            svg={() => (result ? allSheetsSVG(result, params) : null)} signedIn={account.signedIn}
+            note={params.source.kind === "mesh" || params.source.kind === "image" ? "Imported 3D models and photos stay on this device; whoever opens the link imports their own." : undefined}
+            onClose={() => setSharing(false)} toast={toastMsg}
+          />
+        </Suspense>
+      )}
+      {shared.banner}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       <input
         ref={fileRef}
@@ -767,24 +789,27 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
           const f = e.target.files?.[0];
           if (!f) return;
           const rd = new FileReader();
-          rd.onload = () => {
+          rd.onload = async () => {
+            let j: { product?: string; params?: Partial<ParametricParams> };
             try {
-              const j = JSON.parse(String(rd.result)) as { product?: string; params?: Partial<ParametricParams> };
-              if (j.product !== "parametric" || !j.params) {
-                toastMsg(j.params ? "That is a Hinge Box or Letters project. Switch products to open it." : "That file is not a HingeLab project");
-                return;
-              }
-              if (cloud) {
-                toastMsg("Opening as a new cloud project…");
-                void importIntoCloud(String(rd.result)).then((err) => { if (err) toastMsg(err); });
-                return;
-              }
-              replace(mergeParametricParams(j.params), true);
-              setSelected([]);
-              toastMsg(`Opened ${f.name}`);
+              j = JSON.parse(String(rd.result));
             } catch {
               toastMsg("That file is not a HingeLab project");
+              return;
             }
+            if (j?.product !== "parametric" || !j.params) {
+              toastMsg(j?.params ? "That is a Hinge Box or Letters project. Switch products to open it." : "That file is not a HingeLab project");
+              return;
+            }
+            const fontsAdded = await (await import("@/components/shell/projectFile")).restoreProjectAssets(j).catch(() => 0);
+            if (cloud) {
+              toastMsg("Opening as a new cloud project…");
+              void importIntoCloud(String(rd.result)).then((err) => { if (err) toastMsg(err); });
+              return;
+            }
+            replace(mergeParametricParams(j.params), true);
+            setSelected([]);
+            toastMsg(`Opened ${f.name}${fontsAdded ? ` and added ${fontsAdded} font${fontsAdded > 1 ? "s" : ""} on this device` : ""}`);
           };
           rd.readAsText(f);
         }}

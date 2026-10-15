@@ -102,10 +102,24 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
   });
   const [product, setProduct] = useState<Product | null>(() => (doc ? fromId(doc.product) : urlProduct()));
   const [start, setStart] = useState<StartChoice | null>(() => (doc ? null : urlPreset(product)));
+  // A share link (`#share=…`) opens its design read-only; the decoder loads only for such links.
+  const [opening, setOpening] = useState(() => !doc && !!product && /(?:^#|&)share=/.test(window.location.hash));
   useEffect(() => {
     if (!start || doc) return;
     setUrlProduct(start.product);
     try { sessionStorage.removeItem(AI_START_KEY); } catch { /* storage off */ }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!opening || !product) return;
+    void import("@/lib/share").then(({ readShareHash, productName, SHARED_ID }) => {
+      const s = readShareHash(window.location.hash, (x) => x === product);
+      if (s) {
+        const name = typeof s.params.name === "string" && s.params.name.trim() ? s.params.name.trim().slice(0, 80) : productName(product);
+        setStart({ product, preset: { id: SHARED_ID, name, note: "Shared design", params: s.params } });
+      } else {
+        window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+      }
+    }, () => {}).finally(() => setOpening(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const choose = (p: Product) => {
@@ -135,6 +149,7 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
     setUrlProduct(null);
   };
 
+  if (opening) return <div className="boot">Opening the shared design…</div>;
   if (!product) return <StartGallery onPick={pick} />;
   const preset = start?.product === product ? start.preset : undefined;
   const key = `${product}|${preset?.id ?? "autosave"}`;

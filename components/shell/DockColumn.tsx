@@ -5,8 +5,10 @@ import { Download, RotateCcw } from "lucide-react";
 import type { Units } from "@/components/editor/format";
 
 /** Right column: units and Reset all on top, the scrolling panel dock, the export button pinned underneath. */
-export function DockColumn({ children, onExport, exportLabel, alt = [], units, onUnits, onResetAll, extra }: {
+export function DockColumn({ children, onExport, exportLabel, alt = [], units, onUnits, onResetAll, extra, inert }: {
   children: ReactNode;
+  /** A shared design being viewed: nothing here can be changed. */
+  inert?: boolean;
   onExport: () => void;
   exportLabel: string;
   /** Other formats beside the main export (DXF). */
@@ -29,7 +31,7 @@ export function DockColumn({ children, onExport, exportLabel, alt = [], units, o
   }, [confirm]);
 
   return (
-    <div className="dock-col">
+    <div className="dock-col" inert={inert || undefined}>
       <div className="dock-head">
         <span className="unit-toggle" role="group" aria-label="Units">
           <button type="button" data-u="mm" aria-pressed={units === "mm"} onClick={() => onUnits("mm")}>mm</button>

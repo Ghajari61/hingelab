@@ -45,6 +45,10 @@ import { Dices } from "lucide-react";
 import { GeneratorDock } from "./GeneratorDock";
 import { useGenPrefs } from "./useGenPrefs";
 import { LockToggle } from "./LockToggle";
+import { useSharedView } from "@/components/shell/SharedView";
+import { useFlags } from "@/components/shell/useFlags";
+import { designGates, gateLock } from "@/lib/gates";
+import { SHARED_ID } from "@/lib/share/id";
 import "./generators.css";
 
 addRailGroups(GEN_RAIL_GROUPS);
@@ -52,6 +56,7 @@ addRailGroups(GEN_RAIL_GROUPS);
 const ExportDialog = dynamic(() => import("@/components/shell/ExportDialog"), { ssr: false });
 const JobEstimate = dynamic(() => import("@/components/shell/JobEstimate"), { ssr: false });
 const BatchDialog = dynamic(() => import("./BatchDialog"), { ssr: false });
+const ShareDialog = dynamic(() => import("@/components/shell/ShareDialog"), { ssr: false });
 const GeneratorView3D = dynamic(() => import("./GeneratorView3D"), {
   ssr: false,
   loading: () => <div id="preview3d" className="v3" aria-busy="true" />,
@@ -115,6 +120,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const [modal, setModal] = useState<ModalState>(null);
   const [exporting, setExporting] = useState(false);
   const [batching, setBatching] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const helpMap = useMemo(() => generatorHelpMap(def), [def]);
   const help = useHelpPanel(helpMap);
   const myPresets = useMyPresets();
@@ -126,7 +132,9 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const toastT = useRef<number>(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const onStatus = useCallback((s: string) => setSaved(s), []);
-  useAutosave(params, units, onStatus, KEY, true, def.version);
+  const shared = useSharedView(start, start?.name ?? def.name, toastMsg);
+  useAutosave(params, units, onStatus, KEY, !shared.viewing, def.version);
+  const flags = useFlags();
 
   function toastMsg(msg: string) {
     setToast(msg);
@@ -168,7 +176,9 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const error = fontError ?? ("error" in arranged.result ? arranged.result.error : null);
   const lay = model ? arranged.lay : null;
   const content = useMemo(() => (lay ? genContent(lay) : null), [lay]);
-  const lock = out && def.pro ? def.pro(built, out) : null;
+  const photos = out ? out.parts.reduce((n, pt) => n + (pt.images?.length ?? 0), 0) : 0;
+  const gated = out ? designGates(built as { sheet?: { nest?: unknown } }, photos, account.plan, flags) : [];
+  const lock = [out && def.pro ? def.pro(built, out) : null, ...gated].filter(Boolean).join(" ") || null;
   const locked = !!lock && account.plan !== "pro";
   const issues = useMemo<Issue<P>[]>(
     () => (out ? [
@@ -189,7 +199,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const viewApi = useCanvasView();
   viewApi.fitArgs.current = { bedW: params.bedW, bedH: params.bedH, layW: lay?.width ?? 0, layH: lay?.height ?? 0, sheets: arranged.sheets };
 
-  const fontFiles = useFontUploads(toastMsg);
+  const fontFiles = useFontUploads(toastMsg, gateLock("customFonts", account.plan, flags));
   /** Font fields set to a removed upload go back to their default font. */
   function withoutFont(q: P, id: string): P {
     let next = q;
@@ -285,8 +295,9 @@ function GenEditor({ def, onProduct, onHome, start }: {
     }
   }
 
-  function saveProject() {
-    offerFile(def.fileName(params) + ".hingelab.json", JSON.stringify({ app: "HingeLab", product: def.id, version: def.version, params }, null, 2), "application/json");
+  async function saveProject() {
+    const { projectText } = await import("@/components/shell/projectFile");
+    offerFile(def.fileName(params) + ".hingelab.json", await projectText({ app: "HingeLab", product: def.id, version: def.version }, params), "application/json");
   }
 
   function openProject() {
@@ -328,7 +339,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
     if (!from) return;
     replace(def.merge(from.params) as P, true);
     window.setTimeout(() => viewApi.fit(), 50);
-    toastMsg(`Started from “${from.name}”. Ctrl+Z returns to your last design.`);
+    if (start.id !== SHARED_ID) toastMsg(`Started from “${from.name}”. Ctrl+Z returns to your last design.`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -387,6 +398,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       { label: "Open project…", kbd: "Ctrl+O", run: openProject },
       { label: "Save project", kbd: "Ctrl+S", run: saveProject },
       { label: "Save as my preset…", kbd: "", run: () => setModal({ type: "preset", name: params.name }) },
+      { label: "Share link…", kbd: "", run: () => setSharing(true) },
       "-",
       { label: "Export SVG…", kbd: "Ctrl+E", run: exportNow },
       { label: "Export DXF…", kbd: "", run: () => void exportDXFNow() },
@@ -497,7 +509,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
         onSave={saveProject} onOpen={openProject}
       />
       <div className="main">
-        <GalleryRail title={PRODUCT_INFO[def.id].name} icon={PRODUCT_INFO[def.id].icon} groups={groups} history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}>
+        <GalleryRail title={PRODUCT_INFO[def.id].name} icon={PRODUCT_INFO[def.id].icon} groups={groups} history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }} inert={shared.viewing}>
           {canShuffle && (
             <button type="button" className="btn-auto gen-shuffle" onClick={randomiseDesign} title="A new random design. Lock a setting (its lock icon) to keep it. Ctrl+Z undoes it.">
               <Dices size={15} aria-hidden /> Randomise design{prefs.locks.length ? ` · ${prefs.locks.length} locked` : ""}
@@ -541,7 +553,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
             />
           </section>
         </div>
-        <DockColumn onExport={exportNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export as DXF (R12, mm)", run: () => void exportDXFNow() }, { label: "More…", title: "PDF, LightBurn, one file per sheet, mirror, and a check against your machine's bed (Ctrl+Shift+E)", run: openExport }]} units={units} onUnits={setUnits} onResetAll={resetAll}>
+        <DockColumn onExport={exportNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export as DXF (R12, mm)", run: () => void exportDXFNow() }, { label: "More…", title: "PDF, LightBurn, one file per sheet, mirror, and a check against your machine's bed (Ctrl+Shift+E)", run: openExport }]} units={units} onUnits={setUnits} onResetAll={resetAll} inert={shared.viewing}>
           <GeneratorDock
             def={def}
             locks={canShuffle ? locks : undefined}
@@ -560,7 +572,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
             }}
             onResetSection={resetSection}
             sheet={sheetProps}
-            onBatch={() => setBatching(true)}
+            onBatch={() => { const l = gateLock("batch", account.plan, flags); if (l) setUpgrade(l); else setBatching(true); }}
             checks={<>
               <IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} />
               {lay && <JobEstimate svg={localSVG} version={lay} sheets={arranged.sheets} material={params.material} units={units === "in" ? "in" : "mm"} />}
@@ -574,7 +586,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
         zoom={zoom}
         parts={out && lay ? { count: lay.items.filter((it) => it.i >= 0).length, used: usedText(usedArea(lay, arranged.sheets), (mm) => fmtLen(mm, units, true)) } : null}
         fit={fit}
-        saved={saved}
+        saved={shared.viewing ? "Shared design, not saved" : saved}
       />
       <Dialogs
         modal={modal}
@@ -598,6 +610,13 @@ function GenEditor({ def, onProduct, onHome, start }: {
           base={def.fileName(built)} onClose={() => setBatching(false)} toast={toastMsg}
         />
       )}
+      {sharing && (
+        <ShareDialog
+          product={def.id} params={params} defaults={defaults} svg={localSVG} signedIn={account.signedIn}
+          onClose={() => setSharing(false)} toast={toastMsg}
+        />
+      )}
+      {shared.banner}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
       <input
@@ -609,16 +628,17 @@ function GenEditor({ def, onProduct, onHome, start }: {
           const f = e.target.files?.[0];
           if (!f) return;
           const rd = new FileReader();
-          rd.onload = () => {
+          rd.onload = async () => {
             try {
               const j = JSON.parse(String(rd.result)) as { product?: string; version?: number; params?: unknown };
               if (j.product !== def.id || !j.params) {
                 toastMsg(j.params ? `That is not a ${noun} project. Switch to its product to open it.` : "That file is not a HingeLab project");
                 return;
               }
+              const fontsAdded = await (await import("@/components/shell/projectFile")).restoreProjectAssets(j);
               replace(def.merge(def.migrate ? def.migrate(j.params, typeof j.version === "number" ? j.version : 1) : j.params) as P, true);
               window.setTimeout(() => viewApi.fit(), 50);
-              toastMsg(`Opened ${f.name}`);
+              toastMsg(`Opened ${f.name}${fontsAdded ? ` and added ${fontsAdded} font${fontsAdded > 1 ? "s" : ""} on this device` : ""}`);
             } catch {
               toastMsg("That file is not a HingeLab project");
             }

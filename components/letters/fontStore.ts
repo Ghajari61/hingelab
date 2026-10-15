@@ -14,6 +14,9 @@ export interface StoredFont extends StoredFontMeta {
   bytes: ArrayBuffer;
 }
 
+/** Fired after fonts are added from a project file, so open font lists refresh. */
+export const FONTS_EVENT = "hingelab-fonts";
+
 const DB_NAME = "hingelab-fonts";
 const STORE = "fonts";
 

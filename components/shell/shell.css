@@ -281,6 +281,10 @@ details.sec > summary:hover .sec-rst, .sec-rst:focus-visible { opacity: 1; }
 .v3-photo-go[aria-disabled="true"] { opacity: .6; cursor: progress; }
 .v3-photo p { margin: 0; color: var(--fg-dim); font-size: 11px; }
 @media (max-width: 640px) { .v3-photo { right: 8px; top: 120px; } }
+.share-bar { position: fixed; z-index: 40; top: 56px; left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; align-items: center; gap: 10px; max-width: min(860px, calc(100vw - 24px)); padding: 8px 12px; border: 1px solid var(--accent); border-radius: 10px; background: var(--panel); color: var(--fg); box-shadow: var(--shadow-2); font-size: 13px; }
+.share-bar > span { flex: 1 1 260px; }
+.share-bar .btn-export { display: inline-flex; gap: 6px; align-items: center; width: auto; padding: 0 14px; height: 32px; }
+.gallery[inert], .dock-col[inert] { opacity: .55; }
 .v3-pick { position: absolute; z-index: 3; right: 6px; bottom: 2px; padding: 1px 8px; border-radius: 6px; background: var(--panel); border: 1px solid var(--line); font-size: 12px; color: var(--fg-dim); box-shadow: var(--shadow-1); }
 .v3-hint { position: absolute; z-index: 3; left: 8px; bottom: 5px; max-width: calc(100% - 260px); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 11px; color: rgba(20, 22, 30, .72); pointer-events: none; }
 :root[data-theme="dark"] .v3-hint, :root[data-theme="darker"] .v3-hint { color: rgba(230, 232, 240, .6); }

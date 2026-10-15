@@ -35,6 +35,8 @@ import { DockColumn } from "@/components/shell/DockColumn";
 import type { Preset } from "@/lib/presets";
 import { hingePresetParams } from "@/lib/hinge/presets";
 import { useMyPresets } from "@/components/shell/useMyPresets";
+import { useSharedView } from "@/components/shell/SharedView";
+import { SHARED_ID } from "@/lib/share/id";
 import { Canvas } from "./Canvas";
 import { rulerSvg } from "./Rulers";
 import { PanelDock } from "./PanelDock";
@@ -44,6 +46,7 @@ import { Dialogs, type ModalState } from "./dialogs";
 
 const ExportDialog = dynamic(() => import("@/components/shell/ExportDialog"), { ssr: false });
 const JobEstimate = dynamic(() => import("@/components/shell/JobEstimate"), { ssr: false });
+const ShareDialog = dynamic(() => import("@/components/shell/ShareDialog"), { ssr: false });
 const HingeView3D = dynamic(() => import("./HingeView3D"), {
   ssr: false,
   loading: () => <div id="preview3d" className="v3" aria-busy="true" />,
@@ -83,6 +86,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
   const [exporting, setExporting] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const help = useHelpPanel("hinge");
   const [toast, setToast] = useState<string | null>(null);
   const [upgrade, setUpgrade] = useState<string | null>(null);
@@ -105,7 +109,8 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   const checked = useDeferredValue(params);
   const issues = useMemo(() => hingeIssues(checked), [checked]);
 
-  useAutosave(params, units, onStatus, undefined, !cloud);
+  const shared = useSharedView(start, start?.name ?? "Hinge Box", (m) => toastMsg(m));
+  useAutosave(params, units, onStatus, undefined, !cloud && !shared.viewing);
   useCloudAutosave(cloud, params, () => (content && lay ? thumbnailSVG(content, lay.width, lay.height) : null), onStatus);
 
   const viewApi = useCanvasView();
@@ -322,7 +327,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
     const next = hingePresetParams(start.params as Partial<Params>);
     patch(next, true);
     applyFit(next);
-    toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
+    if (start.id !== SHARED_ID) toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -374,6 +379,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
       { label: "Open project…", kbd: "Ctrl+O", run: openProject },
       { label: "Save project", kbd: "Ctrl+S", run: saveProject },
       { label: "Save as my preset…", kbd: "", run: () => setModal({ type: "preset", name: params.name }) },
+      { label: "Share link…", kbd: "", run: () => setSharing(true) },
       "-",
       { label: "Export SVG…", kbd: "Ctrl+E", run: exportNow },
       { label: "Export DXF…", kbd: "", run: () => void exportDXFNow() },
@@ -442,6 +448,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
           title={PRODUCT_INFO.hinge.name} icon={PRODUCT_INFO.hinge.icon}
           groups={hingeGroups({ params, plan: account.plan, onShape: (v) => setChoice("shape", v), onLid: (v) => setChoice("lid", v), onPattern: (v) => setChoice("pattern", v), onVariant: (v) => { patch({ ...params, ...v.params }, true); toastMsg(`${v.name} hinge style`); } })}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
+          inert={shared.viewing}
         />
         <div className={`stage${viewMode === "3d" ? " no-rulers" : ""}`}>
         <ViewToggle value={viewMode} onChange={setViewMode} />
@@ -480,7 +487,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
           />
         </section>
         </div>
-        <DockColumn onExport={exportNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export as DXF (R12, mm)", run: () => void exportDXFNow() }, { label: "More…", title: "PDF, LightBurn, one file per sheet, mirror, and a check against your machine's bed (Ctrl+Shift+E)", run: openExport }]} units={units} onUnits={setUnits} onResetAll={resetAll}>
+        <DockColumn onExport={exportNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export as DXF (R12, mm)", run: () => void exportDXFNow() }, { label: "More…", title: "PDF, LightBurn, one file per sheet, mirror, and a check against your machine's bed (Ctrl+Shift+E)", run: openExport }]} units={units} onUnits={setUnits} onResetAll={resetAll} inert={shared.viewing}>
         <PanelDock
           params={params}
           model={model}
@@ -520,7 +527,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
         zoom={zoom}
         parts={model && lay ? { count: model.parts.length, used: usedText(usedArea(lay, arranged.sheets), (mm) => fmtLen(mm, units, true)) } : null}
         fit={fit}
-        saved={saved}
+        saved={shared.viewing ? "Shared design, not saved" : saved}
       />
       <Dialogs
         modal={modal}
@@ -538,6 +545,13 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
           base={baseName(built)} units={units} material={params.material} onClose={() => setExporting(false)} toast={toastMsg}
         />
       )}
+      {sharing && (
+        <ShareDialog
+          product="hinge" params={params as unknown as Record<string, unknown>} defaults={DEFAULTS} svg={localSVG} signedIn={account.signedIn}
+          onClose={() => setSharing(false)} toast={toastMsg}
+        />
+      )}
+      {shared.banner}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
       <input
