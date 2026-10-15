@@ -4,12 +4,12 @@
  */
 import type { DProduct } from "../../lib/desktop/types";
 
-const FILES = import.meta.glob<string>("../../public/presets/{hinge,clock,puzzle,qr,boxes,topper,keyrack,sign,tablenum,trophy,shadowbox}/*.svg", { query: "?url", import: "default", eager: true });
+const FILES = import.meta.glob<string>("../../public/presets/{hinge,clock,puzzle,qr,boxes,topper,keyrack,sign,tablenum,trophy,shadowbox,letters,parametric}/*.svg", { query: "?url", import: "default", eager: true });
 
 export const presetArt = (product: string, preset: string): string | undefined => FILES[`../../public/presets/${product}/${preset}.svg`];
 
-/** Pictures for the editors that only exist online (they open inside the window). */
-const ONLINE = import.meta.glob<string>("../../public/presets/{letters/hello-sign,parametric/head-stack,boxes/organiser,sign/layered-name}.svg", { query: "?url", import: "default", eager: true });
+/** Pictures for the website sections that open inside the window. */
+const ONLINE = import.meta.glob<string>("../../public/presets/{boxes/organiser,sign/layered-name,hinge/card-box}.svg", { query: "?url", import: "default", eager: true });
 export const onlineArt = (product: string, preset: string): string | undefined => ONLINE[`../../public/presets/${product}/${preset}.svg`];
 
 const FEATURED: Record<string, string[]> = {

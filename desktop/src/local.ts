@@ -69,7 +69,15 @@ export interface Favorite {
   at: number;
 }
 
-const KEYS = { prefs: "hl-prefs-v1", recent: "hl-recent-v1", favorites: "hl-favorites-v1", last: "hl-last-v1", catalog: "hl-catalog-v1", account: "hl-account-v1", locks: "hl-locks-v1" };
+/** A sheet the user cuts often: its thickness and kerf, mm. */
+export interface MyMaterial {
+  id: string;
+  name: string;
+  T: number;
+  K: number;
+}
+
+const KEYS = { materials: "hl-materials-v1", prefs: "hl-prefs-v1", recent: "hl-recent-v1", favorites: "hl-favorites-v1", last: "hl-last-v1", catalog: "hl-catalog-v1", account: "hl-account-v1", locks: "hl-locks-v1" };
 export const DEFAULT_PREFS: LocalPrefs = { theme: "system", units: "mm", autoCheckUpdates: true, reuseLastSettings: true, defaultProduct: "hinge", sidebarCollapsed: false, sheetTone: "plywood", sheetGrid: true, view3d: false, view3dQuad: true, view3dShade: "shaded", view3dDims: true, decimals: 1, openIn: "last", confirmReset: true, uiZoom: 100, reduceMotion: false, openLast: false };
 const MAX_RECENT = 24;
 const MAX_ITEM = 300_000;
@@ -126,6 +134,8 @@ export const usePrefs = () => {
 };
 export const useRecent = () => useStored<SavedDesign[]>(KEYS.recent, EMPTY);
 export const useFavorites = () => useStored<Favorite[]>(KEYS.favorites, EMPTY);
+export const useMyMaterials = () => useStored<MyMaterial[]>(KEYS.materials, EMPTY);
+export const MAX_MY_MATERIALS = 40;
 
 const NO_LOCKS: Record<string, string[]> = {};
 /** The settings Randomise keeps, per product. */

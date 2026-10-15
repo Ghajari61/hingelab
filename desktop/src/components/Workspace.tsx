@@ -3,7 +3,7 @@ import { AlertTriangle, Box, CircleAlert, Dices, Download, FileDown, FolderOpen,
 import type { DProduct } from "../../../lib/desktop/types";
 import { isDirty, type DesignState } from "../design";
 import { desktopGrips } from "../grips";
-import type { AppError } from "../ipc";
+import type { AppError, ExportAs } from "../ipc";
 import { DEFAULT_PREFS, usePrefs, type LocalPrefs, type Shade3D, type SheetTone, type Units } from "../local";
 import { Canvas, zoomLabel, type CanvasHandle } from "./Canvas";
 import { Menu } from "./Menu";
@@ -13,6 +13,7 @@ import type { PaneId } from "./View3D";
 const View3D = lazy(() => import("./View3D"));
 
 const SHEET_TONES: [SheetTone, string][] = [["plywood", "Plywood"], ["grey", "Soft grey"], ["white", "White"], ["dark", "Dark"]];
+const EXPORT_AS: [ExportAs, string][] = [["dxf", "Export DXF"], ["pdf", "Export PDF"], ["lbrn2", "Export LightBurn (.lbrn2)"]];
 const SHADES: [Shade3D, string, string][] = [["shaded", "Shaded", "Shaded"], ["edges", "Edges", "Shaded with edges (F4)"]];
 
 interface Props {
@@ -26,6 +27,8 @@ interface Props {
   onChange: (key: string, value: unknown, immediate: boolean) => void;
   /** Several settings as one edit (the 3D scale gizmo). */
   onChangeMany: (values: Record<string, unknown>) => void;
+  /** Settings no field edits (a picked picture), as one undo step. */
+  onSetValues?: (values: Record<string, unknown>) => void;
   /** Scales the whole design (the 3D scale gizmo, on a design without handles of its own). */
   onScale: (s: number) => void;
   onRename: (name: string) => void;
@@ -40,6 +43,8 @@ interface Props {
   onExport: () => void;
   /** Export, always asking where. */
   onExportAs: () => void;
+  /** Export as DXF, PDF or LightBurn (converted on the server). */
+  onExportFormat?: (format: ExportAs) => void;
   /** Every setting back to its default, as one undo step. */
   onResetAll?: () => void;
   /** A new random design (unlocked style settings only), as one undo step. */
@@ -146,6 +151,10 @@ export function Workspace(p: Props) {
               "-",
               { label: "Export SVG", shortcut: "Ctrl+E", icon: <FileDown size={14} />, disabled: !canSave, onSelect: p.onExport },
               { label: isArt ? "Save SVG…" : "Export SVG as…", shortcut: "Ctrl+Shift+E", disabled: !canSave, onSelect: p.onExportAs },
+              ...(p.onExportFormat ? [
+                "-" as const,
+                ...EXPORT_AS.map(([f, label]) => ({ label, disabled: !canSave || !p.online, onSelect: () => p.onExportFormat!(f) })),
+              ] : []),
             ]} />
             <Menu label="Edit" items={[
               { label: "Undo", shortcut: "Ctrl+Z", icon: <Undo2 size={14} />, disabled: !design.canUndo, onSelect: p.onUndo },
@@ -250,7 +259,7 @@ export function Workspace(p: Props) {
             </button>
           )}
           {design.params ? (
-            <SettingsPanel product={product} params={design.params} form={r?.form ?? null} units={p.units} plan={p.plan} onChange={p.onChange} onChangeMany={p.onChangeMany} locks={p.locks} />
+            <SettingsPanel product={product} params={design.params} form={r?.form ?? null} units={p.units} plan={p.plan} onChange={p.onChange} onChangeMany={p.onChangeMany} locks={p.locks} onSetValues={p.onSetValues} />
           ) : (
             <div className="panel-loading" aria-busy="true"><div className="sk" /><div className="sk" /><div className="sk short" /></div>
           )}

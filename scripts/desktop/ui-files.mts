@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { chromium } from "playwright";
 import { createServer } from "vite";
 import { desktopCatalog, generateDesign } from "@/lib/desktop/products";
+import { traceForDesktop } from "@/lib/desktop/trace";
 
 const PORT = 5198;
 let failed = 0;
@@ -15,6 +16,8 @@ const calls: { cmd: string; args: Record<string, unknown> }[] = [];
 const titles: string[] = [];
 const HINGE_FILE = JSON.stringify({ app: "HingeLab", product: "hinge-box", version: 1, params: { name: "Opened box", W: 91 } });
 const LETTERS_FILE = JSON.stringify({ app: "HingeLab", product: "letters", version: 1, params: { text: "HI" } });
+const UPLOADED_FONT_FILE = JSON.stringify({ app: "HingeLab", product: "letters", version: 1, params: { text: "HI", fontId: "upload:abc" } });
+const SQUARE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><rect x="20" y="10" width="160" height="80"/></svg>';
 let nextOpen: { path: string; name: string; text: string | null } | null = null;
 let pendingLaunch: string | null = "C:\\Projects\\Launch box.oclc";
 const prefs: Record<string, unknown> = { exportDir: null, lastDir: null, openAfterExport: false, projectDir: null, recentFiles: [], homeDir: null, recentMax: 0 };
@@ -51,6 +54,12 @@ async function command(cmd: string, args: Record<string, unknown>) {
       return f;
     }
     case "web_open_file": return "/app/editor/local?desktop-open=1";
+    case "export_design_as": return { path: `C:\\Out\\design.${String(args.format)}` };
+    case "pick_picture": return { name: "Square", svg: SQUARE_SVG, data: null, mime: null };
+    case "trace_picture": {
+      const r = traceForDesktop(args.request);
+      return r.status === 200 ? r.body : { __err: { kind: "invalid", message: (r.body as { message: string }).message } };
+    }
     case "ai_design": {
       const req = args.request as { prompt: string };
       aiRuns++;
@@ -140,15 +149,21 @@ try {
   const clock = JSON.parse(String(last("save_project_as")?.args.content ?? "{}"));
   check(clock.product === "clock" && typeof clock.version === "number" && clock.version >= 1, `a generator file carries its settings version (${clock.version})`);
 
-  // Ctrl+O: a Hinge Box file opens here; a Letters file goes to the website view.
+  // Ctrl+O: Hinge Box and Letters files open here; a design with a font uploaded on the website goes to the website view.
+  nextOpen = { path: "C:\\Projects\\Hi.oclc", name: "Hi.oclc", text: LETTERS_FILE };
+  await page.keyboard.press("Control+o");
+  await page.waitForFunction(() => document.querySelector(".ws-file")?.textContent === "Hi.oclc", null, { timeout: 15000 });
+  check((await page.locator(".ws-product").innerText()) === "Letters", "Ctrl+O opens a Letters file in Letters, in the app");
+  await page.locator('img[alt="Preview of the cut file"]').waitFor({ timeout: 30000 }).then(() => check(true, "the Letters design is built"), () => check(false, "the Letters design is built"));
+  check(count("web_open_file") === 0, "a Letters file is not handed to the website");
   nextOpen = { path: "C:\\Projects\\Other.oclc", name: "Other.oclc", text: HINGE_FILE };
   await page.keyboard.press("Control+o");
   await page.waitForFunction(() => document.querySelector(".ws-file")?.textContent === "Other.oclc", null, { timeout: 15000 });
   check((await page.locator(".ws-product").innerText()) === "Hinge Box", "Ctrl+O opens a Hinge Box file in Hinge Box");
-  nextOpen = { path: "C:\\Projects\\Hi.oclc", name: "Hi.oclc", text: LETTERS_FILE };
+  nextOpen = { path: "C:\\Projects\\Font.oclc", name: "Font.oclc", text: UPLOADED_FONT_FILE };
   await page.keyboard.press("Control+o");
   await after(800);
-  check(last("web_open_file")?.args.path === "C:\\Projects\\Hi.oclc", "a Letters file is handed to the website view");
+  check(last("web_open_file")?.args.path === "C:\\Projects\\Font.oclc", "a Letters file with an uploaded font is handed to the website view");
   check(calls.some((c) => c.cmd === "web_open" && c.args.path === "/app/editor/local?desktop-open=1"), "the website view opens the hand-off page");
   nextOpen = { path: "C:\\Projects\\Bad.oclc", name: "Bad.oclc", text: "{\"nothing\":1}" };
   await page.keyboard.press("Control+o");
@@ -275,6 +290,59 @@ try {
   await page.getByRole("button", { name: "Reset these settings" }).click();
   check(await page.evaluate(() => document.documentElement.style.zoom) === "", "Settings: Reset these settings restores the interface size");
   check(await page.getByRole("checkbox", { name: "Ask before Reset all settings" }).isChecked(), "Settings: Reset these settings turns Ask before Reset all back on");
+
+  // Letters and Parametric are products of the app; Studio, AI Studio and cloud projects open the website here.
+  await page.locator(".sidebar").getByRole("button", { name: "Generators" }).click();
+  await page.locator(".ws-head").waitFor({ timeout: 15000 });
+  await page.locator(".sidebar").getByRole("button", { name: "Generators" }).click();
+  check(await page.getByRole("tab", { name: /Letters/ }).isVisible() && await page.getByRole("tab", { name: /Parametric/ }).isVisible(), "Generators lists Letters and Parametric");
+  await page.getByRole("tab", { name: /Puzzle/ }).click();
+  await page.getByRole("button", { name: "New Puzzle" }).click();
+  await page.locator(".ws-head").waitFor({ timeout: 15000 });
+  await page.getByRole("group", { name: "Workspace view" }).getByRole("button", { name: "2D sheet" }).click();
+  await page.locator('img[alt="Preview of the cut file"]').waitFor({ timeout: 30000 });
+
+  // A grey picture for the puzzle, picked and shrunk here.
+  await page.getByRole("radio", { name: "Picture", exact: true }).click();
+  await page.getByRole("button", { name: "Choose…" }).waitFor({ timeout: 15000 });
+  await page.getByRole("button", { name: "Choose…" }).click();
+  check(await until(async () => ((await page.locator(".picture-row img").getAttribute("src").catch(() => "")) ?? "").startsWith("data:image/jpeg")), "a picked picture is shown in its setting");
+  check(await until(async () => !(await page.locator(".issue", { hasText: /picture/i }).count())), "the puzzle uses the picture (no missing-picture issue)");
+  await page.keyboard.press("Control+z");
+  check(await until(async () => !(await page.locator(".picture-row img").count())), "Ctrl+Z takes a picked picture back");
+
+  // My materials: save the current thickness and kerf, then choose it.
+  await page.getByRole("button", { name: "Save this thickness and kerf as my material" }).click();
+  await page.getByPlaceholder("Name, for example Birch 3 mm").fill("Test birch");
+  await page.getByRole("button", { name: "Save", exact: true }).last().click();
+  check(await until(async () => (await page.getByRole("combobox", { name: "My materials" }).locator("option").allInnerTexts()).some((t) => t.startsWith("Test birch"))), "a material is saved to My materials");
+  const thick = page.getByLabel("Thick", { exact: true });
+  await thick.fill("6");
+  await thick.press("Enter");
+  await thick.blur();
+  check(await until(async () => (await page.getByRole("combobox", { name: "My materials" }).inputValue()) === ""), "changing the thickness leaves My materials");
+  const mine = await page.getByRole("combobox", { name: "My materials" }).locator("option").nth(1).getAttribute("value");
+  await page.getByRole("combobox", { name: "My materials" }).selectOption(mine!);
+  check(await until(async () => (await thick.inputValue()) !== "6"), "choosing one of My materials sets the thickness back");
+
+  // Export as DXF, PDF and LightBurn from the File menu.
+  await page.getByRole("button", { name: "File", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Export DXF" }).click();
+  check(await until(async () => last("export_design_as")?.args.format === "dxf"), "File > Export DXF asks the app for a DXF");
+
+  // A traced picture: the Shadow Box's own picture pattern.
+  await page.locator(".sidebar").getByRole("button", { name: "Generators" }).click();
+  await page.getByRole("tab", { name: /Shadow/ }).click();
+  await page.getByRole("button", { name: /^New Shadow/ }).click();
+  await page.locator('img[alt="Preview of the cut file"]').waitFor({ timeout: 30000 });
+  await page.getByRole("combobox", { name: "Pattern" }).selectOption("picture");
+  await page.getByRole("button", { name: "Choose…" }).waitFor({ timeout: 15000 });
+  await page.getByRole("button", { name: "Choose…" }).click();
+  check(await until(async () => (last("trace_picture")?.args.request as { kind?: string } | undefined)?.kind === "svg"), "an SVG picture is sent to be traced");
+  check(await until(async () => (await page.locator(".picture-name").innerText()) === "Square"), "a traced picture shows its file name");
+
+  await page.locator(".sidebar").getByRole("button", { name: "AI Studio" }).click();
+  check(await until(async () => calls.some((c) => c.cmd === "web_open" && c.args.path === "/home?new=ai")), "the sidebar opens AI Studio in the website view");
 
   check(!errors.length, `no page errors${errors.length ? ": " + errors.join(" | ") : ""}`);
 } finally {

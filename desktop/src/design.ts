@@ -152,6 +152,15 @@ export function useDesign(onFatal: (e: AppError) => void) {
     flush();
   }, [flush]);
 
+  /** Settings no field edits (a picked picture): sent as the design's settings, one undo step. */
+  const setValues = useCallback((values: Params) => {
+    if (!product.current || !params.current || !Object.keys(values).length) return;
+    flush();
+    for (const k of Object.keys(values)) params.current = setPath(params.current, k, values[k]);
+    setState((s) => ({ ...s, params: params.current }));
+    void send({ product: product.current as GenerateRequest["product"], params: params.current });
+  }, [flush, send]);
+
   const request = useCallback((extra: Partial<GenerateRequest>, record = true) => {
     if (!product.current) return;
     flush();
@@ -201,5 +210,5 @@ export function useDesign(onFatal: (e: AppError) => void) {
     if (retryTimer.current) window.clearTimeout(retryTimer.current);
   }, []);
 
-  return { state, open, markSaved, current, change, changeMany, scaleBy, flush, fix, autofix, refresh, randomise, setWant3d, undo: () => travel(-1), redo: () => travel(1) };
+  return { state, open, markSaved, current, change, changeMany, setValues, scaleBy, flush, fix, autofix, refresh, randomise, setWant3d, undo: () => travel(-1), redo: () => travel(1) };
 }

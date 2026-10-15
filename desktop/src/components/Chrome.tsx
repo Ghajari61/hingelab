@@ -1,5 +1,5 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { ArrowDownCircle, Clock3, Cloud, CreditCard, FolderOpen, Globe, HelpCircle, LayoutDashboard, LayoutTemplate, Loader2, PanelLeftClose, PanelLeftOpen, PenTool, Settings as Cog, Shapes, ShieldCheck, Sparkles, Star, X } from "lucide-react";
+import { ArrowDownCircle, Clock3, Cloud, CreditCard, FolderOpen, Globe, HelpCircle, LayoutDashboard, LayoutTemplate, Loader2, PanelLeftClose, PanelLeftOpen, PenTool, Settings as Cog, Shapes, ShieldCheck, Sparkles, Star, WandSparkles, X } from "lucide-react";
 import { avatarBackground, avatarInitials } from "../../../lib/account/avatar";
 import type { DesktopAccount } from "../ipc";
 import type { UpdateStatus } from "../updater";
@@ -39,6 +39,7 @@ const NAV: { id: Route; label: string; icon: typeof LayoutDashboard }[] = [
 const ONLINE: { id: WebRoute; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "web-editors", label: "All editors", icon: PenTool },
   { id: "web-studio", label: "Studio", icon: LayoutTemplate },
+  { id: "web-ai", label: "AI Studio", icon: WandSparkles },
   { id: "web-projects", label: "Cloud projects", icon: Cloud },
 ];
 

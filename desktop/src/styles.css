@@ -437,6 +437,12 @@ kbd { font: 12px var(--font); padding: 1px 6px; border: 1px solid var(--line-2);
 .num .unit { padding: 0 8px 0 2px; color: var(--ink-3); font-size: 12px; }
 .field.invalid .num { border-color: var(--err); }
 .field-error { grid-column: 1 / -1; color: var(--err); font-size: 12px; }
+.btn.small { height: 28px; padding: 0 10px; font-size: 12.5px; border-radius: 7px; }
+.picture-row, .my-mat-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.picture-row img, .picture-empty { flex: none; width: 44px; height: 44px; border-radius: 6px; border: 1px solid var(--line-2); background: #fff; object-fit: contain; }
+.picture-empty { display: grid; place-items: center; background: var(--field); color: var(--ink-3); }
+.picture-name { flex: 1; min-width: 0; font-size: 12.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.field.select .my-mat-row select, .my-mat-row input { flex: 1; min-width: 0; width: auto; height: 30px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--field); padding: 0 8px; }
 .checks { padding: 12px 14px 16px; }
 .checks-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .checks h3 { font: 600 13px var(--font); }

@@ -139,8 +139,65 @@ pub fn looks_like_svg(s: &str) -> bool {
     (t.starts_with("<?xml") || t.starts_with("<svg")) && t.contains("<svg") && t.trim_end().ends_with("</svg>")
 }
 
+/// A picture file's type from its extension, for the generators' picture settings.
+pub fn picture_type(path: &Path) -> Option<&'static str> {
+    let ext = path.extension()?.to_string_lossy().to_ascii_lowercase();
+    Some(match ext.as_str() {
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "webp" => "image/webp",
+        "bmp" => "image/bmp",
+        "gif" => "image/gif",
+        "svg" => "image/svg+xml",
+        _ => return None,
+    })
+}
+
+/// The other cut-file formats the server converts a design to: extension and Save dialog filter.
+pub fn export_format(format: &str) -> Option<(&'static str, &'static str)> {
+    match format {
+        "dxf" => Some(("dxf", "DXF drawing")),
+        "pdf" => Some(("pdf", "PDF document")),
+        "lbrn2" => Some(("lbrn2", "LightBurn project")),
+        _ => None,
+    }
+}
+
+/// Only a file of that format as the server's export writers make it.
+pub fn looks_like(format: &str, b: &[u8]) -> bool {
+    match format {
+        "dxf" => std::str::from_utf8(b).is_ok_and(|t| t.starts_with("0\nSECTION\n") && t.trim_end().ends_with("\nEOF")),
+        "pdf" => b.starts_with(b"%PDF-") && b.len() > 16 && b[b.len().saturating_sub(16)..].windows(5).any(|w| w == b"%%EOF"),
+        "lbrn2" => std::str::from_utf8(b).is_ok_and(|t| t.starts_with("<?xml") && t.contains("<LightBurnProject") && t.trim_end().ends_with("</LightBurnProject>")),
+        _ => false,
+    }
+}
+
+/// `name.ext` for a design's `name.svg`.
+pub fn renamed(file_name: &str, ext: &str) -> String {
+    let stem = file_name.strip_suffix(".svg").or_else(|| file_name.strip_suffix(".SVG")).unwrap_or(file_name);
+    format!("{stem}.{ext}")
+}
+
+/// The path with the given extension (a user may type a name without one, or another one).
+pub fn with_extension_of(p: PathBuf, ext: &str) -> PathBuf {
+    match p.extension().and_then(|e| e.to_str()) {
+        Some(e) if e.eq_ignore_ascii_case(ext) => p,
+        _ => {
+            let mut s = p.into_os_string();
+            s.push(".");
+            s.push(ext);
+            PathBuf::from(s)
+        }
+    }
+}
+
 pub fn write_svg(path: &Path, svg: &str) -> CmdResult<()> {
-    std::fs::write(path, svg.as_bytes()).map_err(|e| {
+    write_bytes(path, svg.as_bytes())
+}
+
+pub fn write_bytes(path: &Path, bytes: &[u8]) -> CmdResult<()> {
+    std::fs::write(path, bytes).map_err(|e| {
         let msg = if e.kind() == std::io::ErrorKind::PermissionDenied { "Windows did not allow saving there. Pick another folder." } else { "The file could not be saved." };
         CmdError::new("io", msg)
     })
@@ -180,6 +237,27 @@ mod tests {
         assert!(looks_like_svg("<?xml version=\"1.0\"?>\n<svg></svg>\n"));
         assert!(!looks_like_svg("MZ\u{90}binary"));
         assert!(!looks_like_svg("<html><svg></svg></html>"));
+    }
+
+    #[test]
+    fn other_formats() {
+        assert!(looks_like("dxf", b"0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nEOF\n"));
+        assert!(!looks_like("dxf", b"MZ\x90\x00"));
+        assert!(looks_like("pdf", b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\nstartxref\n9\n%%EOF\n"));
+        assert!(!looks_like("pdf", b"%PDF-1.4 but cut short"));
+        assert!(looks_like("lbrn2", b"<?xml version=\"1.0\"?>\n<LightBurnProject AppVersion=\"1\">\n</LightBurnProject>\n"));
+        assert!(!looks_like("lbrn2", b"<?xml version=\"1.0\"?>\n<svg></svg>"));
+        assert!(!looks_like("exe", b"MZ"));
+        assert_eq!(export_format("pdf"), Some(("pdf", "PDF document")));
+        assert_eq!(export_format("exe"), None);
+        assert_eq!(renamed("Gift box.svg", "dxf"), "Gift box.dxf");
+        assert_eq!(with_extension_of(PathBuf::from("C:/x/a"), "pdf"), PathBuf::from("C:/x/a.pdf"));
+        assert_eq!(picture_type(Path::new("C:/x/Cat.JPG")), Some("image/jpeg"));
+        assert_eq!(picture_type(Path::new("C:/x/logo.svg")), Some("image/svg+xml"));
+        assert_eq!(picture_type(Path::new("C:/x/run.exe")), None);
+        assert_eq!(picture_type(Path::new("C:/x/noext")), None);
+        assert_eq!(with_extension_of(PathBuf::from("C:/x/a.PDF"), "pdf"), PathBuf::from("C:/x/a.PDF"));
+        assert_eq!(with_extension_of(PathBuf::from("C:/x/a.exe"), "dxf"), PathBuf::from("C:/x/a.exe.dxf"));
     }
 
     #[test]

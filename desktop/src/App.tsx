@@ -10,7 +10,7 @@ import { AIPage } from "./components/AIPage";
 import { isWebRoute, WEB_HOME, WebHost, type WebRequest, type WebRoute } from "./components/Web";
 import type { CanvasHandle } from "./components/Canvas";
 import { isDirty, useDesign, type Params } from "./design";
-import { ipc, type AppError, type DCatalog, type DesktopAccount, type Prefs, type RecentProject, type WebDownloadEvent, type WebPage } from "./ipc";
+import { ipc, type AppError, type DCatalog, type DesktopAccount, type ExportAs, type Prefs, type RecentProject, type WebDownloadEvent, type WebPage } from "./ipc";
 import { projectText, readProject } from "./projectFile";
 import { designThumb } from "./thumb";
 import { addRecent, setRecentThumb, cacheAccount, cacheCatalog, cachedAccount, cachedCatalog, lastParams, rememberParams, useFavorites, useLocks, usePrefs, useRecent, type Favorite, type SavedDesign } from "./local";
@@ -204,7 +204,7 @@ export function App() {
   const doReset = () => {
     setAskReset(false);
     if (!product || !design.state.params) return;
-    const values = resetValues(product.sections.flatMap((s) => s.fields), design.state.params);
+    const values = resetValues(product.sections.flatMap((s) => s.fields), design.state.params, design.state.result?.form);
     if (!Object.keys(values).length) return toast({ text: "Every setting is already at its default.", kind: "ok" });
     design.changeMany(values);
     toast({ text: "All settings reset. Ctrl+Z undoes it.", kind: "ok" });
@@ -341,11 +341,11 @@ export function App() {
     void getCurrentWindow().setTitle(titleName ? `${titleDirty ? "\u2022 " : ""}${titleName} \u2014 HingeLab` : "HingeLab").catch(() => {});
   }, [titleName, titleDirty]);
 
-  const save = useCallback(async (how: "save" | "export") => {
+  const save = useCallback(async (how: "save" | "export" | ExportAs) => {
     const id = design.state.result?.designId;
     if (!id) return;
     try {
-      const out = how === "save" ? await ipc.saveDesign(id) : await ipc.exportDesign(id);
+      const out = how === "save" ? await ipc.saveDesign(id) : how === "export" ? await ipc.exportDesign(id) : await ipc.exportDesignAs(id, how);
       if (out.path) toast({ text: `Saved ${out.path.split(/[\\/]/).pop()}`, kind: "ok", path: out.path });
     } catch (e) {
       toast({ text: (e as AppError).message, kind: "err" });
@@ -456,6 +456,7 @@ export function App() {
             favorite={!!currentFavorite}
             onChange={design.change}
             onChangeMany={design.changeMany}
+            onSetValues={design.setValues}
             onScale={design.scaleBy}
             onRename={(name) => design.change("name", name, true)}
             onFix={design.fix}
@@ -472,6 +473,7 @@ export function App() {
             randomLabel={product.id === "hinge" ? "Randomise pattern" : undefined}
             locks={product.id === "hinge" ? undefined : { has: locks.has, toggle: locks.toggle, count: locks.list.length }}
             onExport={() => void save("export")}
+            onExportFormat={(f) => void save(f)}
             onUpgrade={() => web("upgrade")}
             onRefreshPlan={refreshPlan}
             onFavorite={toggleFavorite}

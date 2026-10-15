@@ -6,8 +6,8 @@ import { declaredLength, isJSONRequest } from "@/lib/security/request";
 
 export const maxDuration = 60;
 
-/** Desktop settings are a few kB; generator text fields (custom outlines) can be larger. */
-const MAX_BODY = 256 * 1024;
+/** Desktop settings are a few kB; custom outlines and traced pictures (up to 400 kB of outlines) are larger. */
+const MAX_BODY = 1024 * 1024;
 
 /**
  * Builds a desktop design on the server with the caller's plan applied: settings in, checks and

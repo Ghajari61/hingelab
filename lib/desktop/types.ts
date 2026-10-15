@@ -3,26 +3,55 @@
  * shipping anything from the server.
  */
 
-export type DesktopProductId = "hinge" | "clock" | "puzzle" | "qr" | "boxes" | "topper" | "keyrack" | "sign" | "tablenum" | "trophy" | "shadowbox";
+export type DesktopProductId = "hinge" | "clock" | "puzzle" | "qr" | "boxes" | "topper" | "keyrack" | "sign" | "tablenum" | "trophy" | "shadowbox" | "letters" | "parametric";
 /** Everything the workspace opens: the products, and "art", a drawing from the AI designer. */
 export type WorkspaceProductId = DesktopProductId | "art";
 export type DesktopPlan = "free" | "pro";
 
 /**
  * `default`: the value a new design starts with, which the field's reset restores. `shuffle`: Randomise
- * design may change it (a lock keeps it). `random`: a number with its own dice (a seed).
+ * design may change it (a lock keeps it). `random`: a number with its own dice (a seed). `pictureOptions`:
+ * choices that need a picture (a section's `pictures`), listed only by apps that can pick one (1.0.30).
  */
 export type DField =
-  | { kind: "number"; key: string; label: string; help?: string; default?: number; shuffle?: boolean; random?: boolean; unit: "mm" | "deg" | "" | "%"; min: number; max: number; step: number; int?: boolean }
-  | { kind: "choice"; key: string; label: string; help?: string; default?: string; shuffle?: boolean; options: { v: string; text: string; title?: string; pro?: boolean }[] }
+  | { kind: "number"; key: string; label: string; help?: string; default?: number; shuffle?: boolean; random?: boolean; unit: "mm" | "deg" | "" | "%"; min: number; max: number; step: number; int?: boolean; auto?: string }
+  | { kind: "choice"; key: string; label: string; help?: string; default?: string; shuffle?: boolean; options: DOption[]; pictureOptions?: DOption[] }
   | { kind: "toggle"; key: string; label: string; help?: string; default?: boolean; shuffle?: boolean }
   | { kind: "text"; key: string; label: string; help?: string; default?: string; placeholder?: string; multiline?: boolean; maxLength: number };
+
+/** One choice of a choice field. */
+export interface DOption { v: string; text: string; title?: string; pro?: boolean }
 
 export interface DSection {
   id: string;
   title: string;
   help?: string;
   fields: DField[];
+  /** Pictures picked on this computer (apps from 1.0.30); hidden like fields, by `key`. */
+  pictures?: DPicture[];
+}
+
+/**
+ * A picture setting. "grey": a grey JPEG data URL in `key` (engraved as it is). "trace": the server
+ * traces it (POST /api/desktop/trace) into outlines kept in `levels`; `key` holds a small grey preview
+ * and `name` the file's name. Both keep width / height in `aspectKey`.
+ */
+export interface DPicture {
+  key: string;
+  label: string;
+  help?: string;
+  mode: "grey" | "trace";
+  aspectKey: string;
+  levels?: string;
+  name?: string;
+}
+
+/** POST /api/desktop/trace: a picture shrunk on the computer (one grey byte a pixel), or an SVG file. */
+export type TraceRequest = { kind: "raster"; width: number; height: number; grey: string } | { kind: "svg"; text: string };
+export interface TraceResponse {
+  /** Outlines per brightness level, `|` between them. */
+  levels: string;
+  aspect: number;
 }
 
 export interface DPreset {
@@ -36,7 +65,7 @@ export interface DProduct {
   id: WorkspaceProductId;
   name: string;
   blurb: string;
-  icon: "box" | "clock" | "puzzle" | "qr" | "cake" | "key" | "sign" | "hash" | "trophy" | "layers" | "wand";
+  icon: "box" | "clock" | "puzzle" | "qr" | "cake" | "key" | "sign" | "hash" | "trophy" | "layers" | "wand" | "type" | "shapes";
   sections: DSection[];
   presets: DPreset[];
   /** The whole design can be scaled (GenerateRequest.scale): the 3D gizmo's fallback. */
@@ -46,6 +75,8 @@ export interface DProduct {
 export interface DCatalog {
   version: number;
   products: DProduct[];
+  /** Letters and Parametric: listed by apps from 1.0.30, which read their `form.values` and `auto` fields. */
+  more?: DProduct[];
   /** The AI designer's drawings; not in `products`, so apps that do not know it never list it. */
   art?: DProduct;
 }
@@ -55,6 +86,8 @@ export interface DForm {
   hidden: string[];
   hiddenSections: string[];
   labels: Record<string, string>;
+  /** Values of fields that are not a plain path in the settings (read these before the settings). */
+  values?: Record<string, unknown>;
 }
 
 export interface DIssue {

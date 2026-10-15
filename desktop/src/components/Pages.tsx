@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type WheelEvent } from "react";
-import { ArrowRight, Box, Cake, ChevronLeft, ChevronRight, Clock, Clock3, Crown, ExternalLink, FolderOpen, Globe, Hash, History, KeyRound, Keyboard, LayoutGrid, LifeBuoy, Lock, Plus, Puzzle, QrCode, RotateCcw, Signpost, SquareStack, Star, Trash2, Trophy, Wand2 } from "lucide-react";
+import { ArrowRight, Box, Cake, ChevronLeft, ChevronRight, Clock, Clock3, Crown, ExternalLink, FolderOpen, Globe, Hash, History, KeyRound, Keyboard, LayoutGrid, LifeBuoy, Lock, Plus, Puzzle, QrCode, RotateCcw, Shapes, Signpost, SquareStack, Star, Trash2, Trophy, Type, Wand2 } from "lucide-react";
 import type { DCatalog, DProduct } from "../../../lib/desktop/types";
 import { onlineArt, presetArt, productArt, showcase } from "../art";
 import type { WebRoute } from "./Web";
@@ -8,7 +8,7 @@ import { DEFAULT_PREFS, UI_ZOOMS, type Favorite, type LocalPrefs, type SavedDesi
 import type { UpdateStatus } from "../updater";
 import { formatBytes } from "../updater";
 
-export const ICONS = { box: Box, clock: Clock, puzzle: Puzzle, qr: QrCode, cake: Cake, key: KeyRound, sign: Signpost, hash: Hash, trophy: Trophy, layers: SquareStack, wand: Wand2 } as const;
+export const ICONS = { box: Box, clock: Clock, puzzle: Puzzle, qr: QrCode, cake: Cake, key: KeyRound, sign: Signpost, hash: Hash, trophy: Trophy, layers: SquareStack, wand: Wand2, type: Type, shapes: Shapes } as const;
 
 export function ProductIcon({ product, size = 18 }: { product: DProduct; size?: number }) {
   const I = ICONS[product.icon] ?? Box;
@@ -33,12 +33,11 @@ const HERO_PRODUCTS = ["clock", "hinge", "boxes"];
 
 const PRO_PERKS = ["Pill, polygon and cylinder boxes", "Wave, relief and serpentine hinges", "Large puzzles and every generator design", "Exports without the HingeLab mark"];
 
-/** Editors that run on the website; they open inside the window, signed in. */
+/** Website sections that open inside the window, signed in. */
 const ONLINE_TILES: { id: string; name: string; blurb: string; art: [string, string]; section: WebRoute; path: string }[] = [
-  { id: "letters", name: "Letters", blurb: "Letter boxes, solid and stencil letters in any script.", art: ["letters", "hello-sign"], section: "web-editors", path: "/app/editor/local?p=letters" },
-  { id: "parametric", name: "Parametric Slicer", blurb: "Sliced sculptures from 3D files, photos or formulas.", art: ["parametric", "head-stack"], section: "web-editors", path: "/app/editor/local?p=parametric" },
   { id: "studio", name: "Studio", blurb: "Lay out designs, text and images on one sheet, plus trays, lamps and finger-joint boxes.", art: ["boxes", "organiser"], section: "web-studio", path: "/home" },
-  { id: "ai-studio", name: "AI Studio", blurb: "Pictures from words, photo clean-up, engraving, vectorizing with cut checks and an assistant, in a new Studio project.", art: ["sign", "layered-name"], section: "web-studio", path: "/home?new=ai" },
+  { id: "ai-studio", name: "AI Studio", blurb: "Pictures from words, photo clean-up, engraving, vectorizing with cut checks and an assistant, in a new Studio project.", art: ["sign", "layered-name"], section: "web-ai", path: "/home?new=ai" },
+  { id: "projects", name: "Cloud projects", blurb: "Designs saved to your account on the website, from any computer.", art: ["hinge", "card-box"], section: "web-projects", path: "/app" },
 ];
 
 export function Dashboard({ account, catalog, recent, files, defaultProduct, onNew, onPreset, onBrowse, onOpenRecent, onOpenFile, onUpgrade, onOnline }: {
@@ -128,7 +127,7 @@ export function Dashboard({ account, catalog, recent, files, defaultProduct, onN
 
           <section className="dash-card dash-online" aria-labelledby="dash-online">
             <div className="sec-head">
-              <h2 id="dash-online" className="sub">More editors, online</h2>
+              <h2 id="dash-online" className="sub">From the website</h2>
               <button type="button" className="link-btn" onClick={() => onOnline("web-editors", "/app/editor/local")}>All editors<ArrowRight size={13} aria-hidden /></button>
             </div>
             <div className="online">

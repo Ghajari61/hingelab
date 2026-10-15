@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-trace-picture"
+description = "Enables the trace_picture command without any pre-configured scope."
+commands.allow = ["trace_picture"]
+
+[[permission]]
+identifier = "deny-trace-picture"
+description = "Denies the trace_picture command without any pre-configured scope."
+commands.deny = ["trace_picture"]

@@ -25,20 +25,20 @@ import { generatorScene } from "@/lib/generators/scene3d";
 import { buildHingeScene } from "@/lib/hinge3d/scene";
 import type { Scene3D } from "@/lib/three/flat";
 import { sceneModel } from "./model3d";
-import type { DCatalog, D3Model, DesktopProductId, DField, DForm, DIssue, DProduct, DSection, GenerateRequest, GenerateResponse } from "./types";
+import type { DCatalog, D3Model, DesktopProductId, DField, DForm, DIssue, DPicture, DProduct, DSection, GenerateRequest, GenerateResponse } from "./types";
 
-const FONTS_BY_STYLE = FONT_CATEGORIES.flatMap((c) => BUNDLED_FONTS.filter((f) => f.category === c.id));
+export const FONTS_BY_STYLE = FONT_CATEGORIES.flatMap((c) => BUNDLED_FONTS.filter((f) => f.category === c.id));
 
 const DESKTOP_GENERATORS: readonly GeneratorId[] = GENERATOR_IDS;
-export const DESKTOP_PRODUCTS: DesktopProductId[] = ["hinge", ...DESKTOP_GENERATORS];
+export const DESKTOP_PRODUCTS: DesktopProductId[] = ["hinge", ...DESKTOP_GENERATORS, "letters", "parametric"];
 export const CATALOG_VERSION = 1;
 
-export const isDesktopProduct = (v: unknown): v is DesktopProductId => v === "hinge" || isGeneratorId(v);
+export const isDesktopProduct = (v: unknown): v is DesktopProductId => v === "hinge" || v === "letters" || v === "parametric" || isGeneratorId(v);
 
-const MATERIAL_OPTIONS = Object.entries(MATERIALS).map(([v, m]) => ({ v, text: m.name }));
+export const MATERIAL_OPTIONS = Object.entries(MATERIALS).map(([v, m]) => ({ v, text: m.name }));
 
 /** The field with its starting value, when that value is one the field accepts. */
-function withDefault(f: DField, v: unknown): DField {
+export function withDefault(f: DField, v: unknown): DField {
   switch (f.kind) {
     case "number": return typeof v === "number" && Number.isFinite(v) && v >= f.min && v <= f.max ? { ...f, default: v } : f;
     case "choice": return v != null && f.options.some((o) => o.v === String(v)) ? { ...f, default: String(v) } : f;
@@ -137,14 +137,28 @@ function genField(f: FieldSpec<GenBase>): DField | null {
   const common = { key: f.key, label: f.label, help: f.help, ...("shuffle" in f && f.shuffle ? { shuffle: true } : {}) };
   switch (f.kind) {
     case "number": return { kind: "number", ...common, ...(f.random ? { random: true } : {}), unit: f.unit, min: f.min, max: f.max, step: f.step, ...(f.int ? { int: true } : {}) };
-    case "choice": return { kind: "choice", ...common, options: f.options.filter((o) => o.input !== "picture").map((o) => ({ v: o.v, text: o.text, ...(o.title ? { title: o.title } : {}), ...(o.pro ? { pro: true } : {}) })) };
+    case "choice": {
+      const opt = (o: (typeof f.options)[number]) => ({ v: o.v, text: o.text, ...(o.title ? { title: o.title } : {}), ...(o.pro ? { pro: true } : {}) });
+      const pictures = f.options.filter((o) => o.input === "picture").map(opt);
+      return { kind: "choice", ...common, options: f.options.filter((o) => o.input !== "picture").map(opt), ...(pictures.length ? { pictureOptions: pictures } : {}) };
+    }
     case "toggle": return { kind: "toggle", ...common };
     case "text": return { kind: "text", ...common, placeholder: f.placeholder, multiline: f.multiline, maxLength: f.maxLength ?? 2000 };
     case "font": return { kind: "choice", ...common, options: FONTS_BY_STYLE.map((b) => ({ v: b.id, text: b.scripts.includes("arabic") ? `${b.name} (Persian)` : b.name, title: `${FONT_CATEGORIES.find((c) => c.id === b.category)?.name}: ${b.note}` })) };
-    // Pictures are not offered in the desktop app yet.
     case "image": return null;
   }
 }
+
+const TRACE_HELP = "A photo or drawing (JPEG, PNG or WebP) or an SVG file. HingeLab shrinks it on this computer and the server traces it into outlines; the picture is not kept.";
+
+/** A picture setting the app can fill: grey pictures and traced ones (colour photos stay on the website). */
+function genPicture(f: FieldSpec<GenBase>): DPicture | null {
+  if (f.kind !== "image" || f.color || f.look) return null;
+  if (f.trace) return { key: f.key, label: f.label, help: TRACE_HELP, mode: "trace", aspectKey: f.aspectKey, levels: f.trace.levels, name: f.trace.name };
+  return { key: f.key, label: f.label, help: f.help, mode: "grey", aspectKey: f.aspectKey };
+}
+
+const desktopHelp = (help?: string) => help?.replace("Pictures are traced on this device and never uploaded.", "Pictures are shrunk on this computer and traced on the server, which does not keep them.");
 
 function genProduct(id: GeneratorId, def: AnyGenerator): DProduct {
   const info = GENERATOR_INFO[id] as { name: string; blurb: string; icon: DProduct["icon"] };
@@ -157,7 +171,10 @@ function genProduct(id: GeneratorId, def: AnyGenerator): DProduct {
     return key === "job.mirror" ? false : undefined;
   };
   const sections: DSection[] = [
-    ...def.sections.map((s) => ({ id: s.id, title: s.title, help: s.help, fields: s.fields.map(genField).filter((f): f is DField => !!f) })).filter((s) => s.fields.length),
+    ...def.sections.map((s) => {
+      const pictures = s.fields.map(genPicture).filter((f): f is DPicture => !!f);
+      return { id: s.id, title: s.title, help: desktopHelp(s.help), fields: s.fields.map(genField).filter((f): f is DField => !!f), ...(pictures.length ? { pictures } : {}) };
+    }).filter((s) => s.fields.length || s.pictures),
     GEN_SHEET,
   ].map((s) => ({ ...s, fields: s.fields.map((f) => withDefault(f, start(f.key))) }));
   return {
@@ -182,16 +199,19 @@ function genForm(def: AnyGenerator, p: GenBase): DForm {
 
 let catalog: Promise<DCatalog> | null = null;
 
+/** Every product a settings request may name: the catalog's list and the newer ones in `more`. */
+export const allProducts = (c: DCatalog): DProduct[] => [...c.products, ...(c.more ?? [])];
+
 export function desktopCatalog(): Promise<DCatalog> {
   catalog ??= (async () => {
     const gens = await Promise.all(DESKTOP_GENERATORS.map(async (id) => genProduct(id, await loadGenerator[id]())));
-    const { ART_PRODUCT } = await import("./art");
-    return { version: CATALOG_VERSION, products: [hingeProduct(), ...gens], art: ART_PRODUCT };
+    const [{ ART_PRODUCT }, { lettersProduct }, { parametricProduct }] = await Promise.all([import("./art"), import("./letters"), import("./parametric")]);
+    return { version: CATALOG_VERSION, products: [hingeProduct(), ...gens], more: [lettersProduct(), parametricProduct()], art: ART_PRODUCT };
   })();
   return catalog;
 }
 
-function fieldOf(product: DProduct, key: string): DField | null {
+export function fieldOf(product: DProduct, key: string): DField | null {
   for (const s of product.sections) for (const f of s.fields) if (f.key === key) return f;
   return null;
 }
@@ -207,7 +227,7 @@ export function coerce(f: DField, value: unknown): { v: unknown } | { error: str
     }
     case "choice": {
       const s = String(value);
-      return f.options.some((o) => o.v === s) ? { v: s } : { error: `Unknown option for ${f.label}.` };
+      return f.options.some((o) => o.v === s) || f.pictureOptions?.some((o) => o.v === s) ? { v: s } : { error: `Unknown option for ${f.label}.` };
     }
     case "toggle":
       return typeof value === "boolean" ? { v: value } : { error: `${f.label} must be on or off.` };
@@ -216,7 +236,7 @@ export function coerce(f: DField, value: unknown): { v: unknown } | { error: str
   }
 }
 
-function withMaterial<T extends { material: string; T: number; K: number }>(p: T, id: string): T {
+export function withMaterial<T extends { material: string; T: number; K: number }>(p: T, id: string): T {
   const m = MATERIALS[id];
   const next = { ...p, material: id };
   if (m && m.T != null && m.K != null) { next.T = m.T; next.K = m.K; }
@@ -237,7 +257,7 @@ export function applyFix<P>(p: P, issues: Issue<P>[], fix: GenerateRequest["fix"
   return f ? { p: f.apply(p), applied: [f.label] } : { p, applied: [] };
 }
 
-function sheetSize(svg: string): { width?: number; height?: number } {
+export function sheetSize(svg: string): { width?: number; height?: number } {
   const m = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(svg);
   return m ? { width: Number(m[1]), height: Number(m[2]) } : {};
 }
@@ -276,7 +296,9 @@ export async function generateDesign(req: unknown, plan: Plan): Promise<Generate
     delete r.change;
   }
   if (r.product === "art") return (await import("./art")).generateArt(r, plan);
-  const product = (await desktopCatalog()).products.find((p) => p.id === r.product)!;
+  const product = allProducts(await desktopCatalog()).find((p) => p.id === r.product)!;
+  if (r.product === "letters") return (await import("./letters")).generateLetters(r, product, plan);
+  if (r.product === "parametric") return (await import("./parametric")).generateParametric(r, plan);
   return r.product === "hinge" ? generateHinge(r, product, plan) : generateGenerator(r, r.product, product, plan);
 }
 
@@ -316,8 +338,10 @@ function changeGenerator(def: AnyGenerator, product: DProduct, p: GenBase, chang
  * field like an edit from the editor; an edit the catalog does not allow is skipped and reported.
  */
 export async function designFromChanges(id: DesktopProductId, preset: string | null, changes: Change[], from?: Record<string, unknown>): Promise<{ params: Record<string, unknown>; skipped: string[] }> {
-  const product = (await desktopCatalog()).products.find((x) => x.id === id)!;
+  const product = allProducts(await desktopCatalog()).find((x) => x.id === id)!;
   const skipped: string[] = [];
+  if (id === "letters") return (await import("./letters")).lettersFromChanges(product, preset, changes, from);
+  if (id === "parametric") return { params: from ?? {}, skipped: changes.map((c) => c.key) };
   if (id === "hinge") {
     const pr = preset ? HINGE_PRESETS.find((x) => x.id === preset) : undefined;
     let p = from ? mergeParams(from as Partial<Params>) : pr ? hingePresetParams(pr.params) : clone(DEFAULTS);
