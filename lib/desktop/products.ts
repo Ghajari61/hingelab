@@ -15,11 +15,12 @@ import { sanitizeGeneratorParams } from "@/lib/generators/sanitize";
 import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, type AnyGenerator, type FieldSpec, type GenBase } from "@/lib/generators/types";
 import { HINGE_FIELD_HELP } from "@/lib/help/fieldHelp";
 import { clone, DEFAULTS, exportSVG, MATERIALS, mergeParams, type Params } from "@/lib/hinge";
-import { HINGE_PRESETS, hingePresetParams } from "@/lib/hinge/presets";
+import { HINGE_PRESETS, hingePresetParams, randomHingePattern } from "@/lib/hinge/presets";
+import { randomiseParams } from "@/lib/generators/randomise";
 import { autoFixAll, sortIssues, type Issue } from "@/lib/issues";
 import { hingeIssues } from "@/lib/issues/hinge";
 import { BUNDLED_FONTS, FONT_CATEGORIES } from "@/lib/letters/fonts";
-import { addWatermark, FREE_PATTERNS, FREE_SHAPES, hingeLocks, needsWatermark, PATTERN_NAMES, SHAPE_NAMES, type Plan } from "@/lib/plans";
+import { addWatermark, canUsePattern, FREE_PATTERNS, FREE_SHAPES, hingeLocks, needsWatermark, PATTERN_NAMES, SHAPE_NAMES, type Plan } from "@/lib/plans";
 import { generatorScene } from "@/lib/generators/scene3d";
 import { buildHingeScene } from "@/lib/hinge3d/scene";
 import type { Scene3D } from "@/lib/three/flat";
@@ -133,9 +134,9 @@ const GEN_SHEET: DSection = {
 const MAT_KEYS = new Set(["T", "K"]);
 
 function genField(f: FieldSpec<GenBase>): DField | null {
-  const common = { key: f.key, label: f.label, help: f.help };
+  const common = { key: f.key, label: f.label, help: f.help, ...("shuffle" in f && f.shuffle ? { shuffle: true } : {}) };
   switch (f.kind) {
-    case "number": return { kind: "number", ...common, unit: f.unit, min: f.min, max: f.max, step: f.step, ...(f.int ? { int: true } : {}) };
+    case "number": return { kind: "number", ...common, ...(f.random ? { random: true } : {}), unit: f.unit, min: f.min, max: f.max, step: f.step, ...(f.int ? { int: true } : {}) };
     case "choice": return { kind: "choice", ...common, options: f.options.filter((o) => o.input !== "picture").map((o) => ({ v: o.v, text: o.text, ...(o.title ? { title: o.title } : {}), ...(o.pro ? { pro: true } : {}) })) };
     case "toggle": return { kind: "toggle", ...common };
     case "text": return { kind: "text", ...common, placeholder: f.placeholder, multiline: f.multiline, maxLength: f.maxLength ?? 2000 };
@@ -267,6 +268,7 @@ export async function generateDesign(req: unknown, plan: Plan): Promise<Generate
   if (r.change !== undefined && (!plainObject(r.change) || typeof r.change.key !== "string")) return { status: 400, body: { error: "Invalid change." } };
   if (r.fix !== undefined && !plainObject(r.fix)) return { status: 400, body: { error: "Invalid fix." } };
   if (r.scale !== undefined && !(typeof r.scale === "number" && r.scale >= 0.2 && r.scale <= 5)) return { status: 400, body: { error: "Invalid scale." } };
+  if (r.randomise !== undefined && !(plainObject(r.randomise) && (r.randomise.locked === undefined || (Array.isArray(r.randomise.locked) && r.randomise.locked.length <= 200 && r.randomise.locked.every((k) => typeof k === "string" && k.length <= 80))))) return { status: 400, body: { error: "Invalid randomise." } };
   if (r.change?.key === "name") {
     // The design's name is free text (used for the file name, which is sanitized separately).
     if (typeof r.change.value !== "string") return { status: 400, body: { error: "The name must be text." } };
@@ -351,6 +353,7 @@ function generateHinge(r: GenerateRequest, product: DProduct, plan: Plan): Gener
     if ("error" in q) return { status: 400, body: { error: q.error } };
     p = q;
   }
+  if (r.randomise) p = randomHingePattern(p, (x) => canUsePattern(plan, x));
   const base = (q: Params, issues: DIssue[] = [], applied: string[] = []): GenerateResponse => ({
     product: "hinge", params: q as unknown as Record<string, unknown>, form: hingeForm(q), issues, stats: [], summary: hingeSummary(q), applied,
   });
@@ -425,6 +428,7 @@ async function generateGenerator(r: GenerateRequest, id: GeneratorId, product: D
     if (!def.scale) return { status: 400, body: { error: "This design cannot be scaled as a whole." } };
     p = def.scale(p, r.scale);
   }
+  if (r.randomise) p = randomiseParams(def, p as GenBase & Record<string, unknown>, new Set(r.randomise.locked ?? []));
   p = sanitizeGeneratorParams(def, def.merge(p));
   const ctx = await serverBuildContext(def, p);
   const base = (q: GenBase, issues: DIssue[] = [], applied: string[] = []): GenerateResponse => ({

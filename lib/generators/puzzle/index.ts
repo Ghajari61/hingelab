@@ -45,13 +45,13 @@ const sections: SectionSpec<PuzzleParams>[] = [
     help: "The shape of the cuts between the pieces.",
     fields: [
       {
-        kind: "choice", key: "tabs.style", label: "Edge style", rail: true,
+        kind: "choice", key: "tabs.style", shuffle: true, label: "Edge style", rail: true,
         help: "Classic knobs, chunky knobs for small hands, wavy cuts without knobs, or straight cuts.",
         options: [{ v: "classic", text: "Classic" }, { v: "kids", text: "Kids" }, { v: "wavy", text: "Wavy" }, { v: "straight", text: "Straight" }],
       },
       { kind: "number", key: "tabs.size", label: "Tab size", unit: "%", min: 10, max: 30, step: 1, show: (p) => p.tabs.style !== "straight", help: "How far the knobs reach into the next piece, as a share of the piece size." },
-      { kind: "number", key: "tabs.jitter", label: "Variation", unit: "%", min: 0, max: 15, step: 1, show: (p) => p.tabs.style !== "kids", help: "Bends the grid and varies each tab so no two pieces are alike; 0 gives a regular grid." },
-      { kind: "number", key: "tabs.seed", label: "Layout number", unit: "", min: 1, max: 9999, step: 1, int: true, random: true, help: "Each number gives a different arrangement of tabs; Randomise picks a new one." },
+      { kind: "number", key: "tabs.jitter", shuffle: true, label: "Variation", unit: "%", min: 0, max: 15, step: 1, show: (p) => p.tabs.style !== "kids", help: "Bends the grid and varies each tab so no two pieces are alike; 0 gives a regular grid." },
+      { kind: "number", key: "tabs.seed", shuffle: true, label: "Layout number", unit: "", min: 1, max: 9999, step: 1, int: true, random: true, help: "Each number gives a different arrangement of tabs; Randomise picks a new one." },
     ],
   },
   {
@@ -59,7 +59,7 @@ const sections: SectionSpec<PuzzleParams>[] = [
     help: "An optional frame around the puzzle, or a tray with a base to keep the pieces in.",
     fields: [
       {
-        kind: "choice", key: "frame.kind", label: "Frame", rail: true,
+        kind: "choice", key: "frame.kind", shuffle: true, label: "Frame", rail: true,
         help: "No frame, a frame the puzzle drops into, or a tray (the frame glued onto a solid base).",
         options: [{ v: "none", text: "None" }, { v: "frame", text: "Frame" }, { v: "tray", text: "Tray" }],
       },
@@ -80,7 +80,7 @@ const sections: SectionSpec<PuzzleParams>[] = [
       { kind: "image", key: "engrave.image", aspectKey: "engrave.aspect", label: "Picture", show: engraves("image"), help: "A photo or drawing (JPEG or PNG); it is turned grey and covers the puzzle." },
       { kind: "number", key: "engrave.zoom", label: "Picture zoom", unit: "%", min: 100, max: 300, step: 5, show: engraves("image"), help: "Enlarges the picture from the centre; 100 % just covers the puzzle." },
       { kind: "text", key: "engrave.text", label: "Text", multiline: true, maxLength: 120, placeholder: "Name or message", show: engraves("text"), help: "Engraved across the middle of the puzzle; each line is centred." },
-      { kind: "font", key: "engrave.fontId", label: "Font", show: (p) => p.engrave.kind === "text" || p.engrave.kind === "numbers", sample: (p) => (p.engrave.kind === "numbers" ? "123" : p.engrave.text || "Aa"), help: "The typeface of the text or numbers (the same fonts as Letters)." },
+      { kind: "font", key: "engrave.fontId", shuffle: true, label: "Font", show: (p) => p.engrave.kind === "text" || p.engrave.kind === "numbers", sample: (p) => (p.engrave.kind === "numbers" ? "123" : p.engrave.text || "Aa"), help: "The typeface of the text or numbers (the same fonts as Letters)." },
       { kind: "number", key: "engrave.size", label: "Text height", unit: "mm", min: 4, max: 300, step: 1, show: engraves("text"), help: "Cap height of the text." },
       { kind: "number", key: "engrave.numberSize", label: "Number height", unit: "mm", min: 2, max: 30, step: 0.5, show: engraves("numbers"), help: "Height of the piece numbers." },
     ],

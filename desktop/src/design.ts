@@ -163,6 +163,8 @@ export function useDesign(onFatal: (e: AppError) => void) {
   /** The whole design scaled by `s` (the 3D scale gizmo), on the server as one edit. */
   const scaleBy = useCallback((s: number) => request({ scale: s }), [request]);
   const refresh = useCallback(() => request({}, false), [request]);
+  /** A new random design on the server (one undo step); `locked` settings stay. */
+  const randomise = useCallback((locked: string[]) => request({ randomise: { locked } }), [request]);
 
   const setWant3d = useCallback((on: boolean) => {
     want3d.current = on;
@@ -199,5 +201,5 @@ export function useDesign(onFatal: (e: AppError) => void) {
     if (retryTimer.current) window.clearTimeout(retryTimer.current);
   }, []);
 
-  return { state, open, markSaved, current, change, changeMany, scaleBy, flush, fix, autofix, refresh, setWant3d, undo: () => travel(-1), redo: () => travel(1) };
+  return { state, open, markSaved, current, change, changeMany, scaleBy, flush, fix, autofix, refresh, randomise, setWant3d, undo: () => travel(-1), redo: () => travel(1) };
 }

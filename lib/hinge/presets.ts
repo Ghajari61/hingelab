@@ -22,6 +22,25 @@ export function hingeVariantOf(p: Params): string {
   return hit?.id ?? "";
 }
 
+export const HINGE_PATTERNS: Params["pattern"][] = ["straight", "wave", "relief", "serpentine", "honeycomb"];
+
+/** Lattice keys "Randomise pattern" rewrites; everything else (size, material, sheet) stays. */
+export const PATTERN_KEYS = ["pattern", "slit", "bridge", "pitch", "overrun", "stretch", "cutStyle", "slotW"] as const satisfies readonly (keyof Params)[];
+
+/** A random pattern and lattice style from the ready-made ones, different from `p` where it can be. */
+export function randomHingePattern(p: Params, allowed: (pattern: Params["pattern"]) => boolean = () => true, rnd: () => number = Math.random): Params {
+  const pats = HINGE_PATTERNS.filter(allowed);
+  const styles = HINGE_VARIANTS.filter((v) => v.id !== "line");
+  const pick = <T,>(a: T[]) => a[Math.min(a.length - 1, Math.floor(rnd() * a.length))];
+  let next = p;
+  for (let i = 0; i < 12; i++) {
+    next = { ...p, ...Object.fromEntries(PATTERN_KEYS.map((k) => [k, DEFAULTS[k]])) };
+    Object.assign(next, { pattern: pats.length ? pick(pats) : p.pattern }, pick(styles).params, rnd() < 0.25 ? { cutStyle: "line" } : {});
+    if (PATTERN_KEYS.some((k) => next[k] !== p[k])) break;
+  }
+  return next;
+}
+
 export const HINGE_PRESETS: Preset<Params>[] = [
   { id: "gift-box", name: "Gift box", note: "140 × 90 × 70 mm, lift-off lid", params: { name: "Gift box" } },
   { id: "card-box", name: "Card deck box", note: "Fits a deck of playing cards", params: { name: "Card deck box", W: 100, D: 72, H: 45, R: 18 } },

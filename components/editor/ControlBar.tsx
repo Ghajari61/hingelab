@@ -8,6 +8,7 @@ import { HINGE_VARIANTS, hingeVariantOf, type HingeVariant } from "@/lib/hinge/p
 import { GENERATOR_IDS, GENERATOR_INFO, isGeneratorId, type GeneratorId, type GeneratorInfo } from "@/lib/generators/ids";
 import { canUsePattern, canUseShape, type Plan } from "@/lib/plans";
 import type { GalleryGroup } from "@/components/shell/GalleryRail";
+import { RandomMark } from "./ResetMark";
 
 /** `locked`: a Pro feature the current plan can preview but not export or save. */
 export type Opt = { v: string; text: string; title?: string; icon?: ReactNode; onClick: () => void; disabled?: boolean; soon?: string; locked?: boolean };
@@ -106,13 +107,15 @@ export const LID_OPTS = (onLid: (v: string) => void): Opt[] => [
 ];
 
 /** Hinge Box gallery: shape, lid and hinge pattern. */
-export function hingeGroups({ params, plan = "pro", onShape, onLid, onPattern, onVariant }: {
+export function hingeGroups({ params, plan = "pro", onShape, onLid, onPattern, onVariant, onRandom }: {
   params: Params;
   plan?: Plan;
   onShape: (v: string) => void;
   onLid: (v: string) => void;
   onPattern: (v: string) => void;
   onVariant?: (v: HingeVariant) => void;
+  /** A random pattern and lattice style (the box keeps its size). */
+  onRandom?: () => void;
 }): GalleryGroup[] {
   const shape: Opt[] = [
     { v: "rect", text: "Rounded", title: "Rounded rectangle", onClick: () => onShape("rect") },
@@ -130,7 +133,7 @@ export function hingeGroups({ params, plan = "pro", onShape, onLid, onPattern, o
   return [
     { label: "Shape", name: "Box shape", art: "shape", value: params.shape, options: shape, home: DEFAULTS.shape },
     { label: "Lid", name: "Lid type", art: "lid", value: params.lid, options: LID_OPTS(onLid), cols: 3, home: DEFAULTS.lid },
-    { label: "Hinge pattern", name: "Hinge pattern", art: "pattern", value: params.pattern, options: pattern, home: DEFAULTS.pattern },
+    { label: "Hinge pattern", name: "Hinge pattern", art: "pattern", value: params.pattern, options: pattern, home: DEFAULTS.pattern, tools: onRandom && <RandomMark label="Pattern" onRandom={onRandom} /> },
     ...(onVariant ? [{
       label: "Hinge style", name: "Hinge style", art: "variant", value: hingeVariantOf(params), cols: 3 as const,
       options: HINGE_VARIANTS.map((v) => ({ v: v.id, text: v.name, title: v.title, onClick: () => onVariant(v) })),

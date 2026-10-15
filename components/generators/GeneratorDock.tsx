@@ -72,7 +72,7 @@ export function GeneratorDock({
 }) {
   const photo = usePhotoLooks(def.sections.flatMap((s) => s.fields) as FieldSpec<P>[], params, setRaw, onApply);
   const onSet = photo.set;
-  const lockOf = (f: FieldSpec<P>) => ((f.kind === "number" || f.kind === "choice") && f.shuffle && locks
+  const lockOf = (f: FieldSpec<P>) => ((f.kind === "number" || f.kind === "choice" || f.kind === "toggle" || f.kind === "font") && f.shuffle && locks
     ? { on: locks.has(f.key), toggle: () => locks.toggle(f.key) } : undefined);
   const num = (f: BaseField, value: number, def: number, hidden = false, lock?: { on: boolean; toggle: () => void }) => (
     <NumberField
@@ -89,7 +89,8 @@ export function GeneratorDock({
     if (f.kind === "number") return num(numberField(f), value as number, dflt as number, hidden, lockOf(f));
     if (hidden) return null;
     if (f.kind === "toggle") {
-      return <CheckField key={f.key} label={f.label} title={f.help} checked={!!value} def={dflt === undefined ? undefined : !!dflt} onChange={(on) => onSet(f.key, on, true)} />;
+      const lock = lockOf(f);
+      return <CheckField key={f.key} label={f.label} title={f.help} checked={!!value} def={dflt === undefined ? undefined : !!dflt} onChange={(on) => onSet(f.key, on, true)} extra={lock && <LockToggle {...lock} label={f.label} />} />;
     }
     if (f.kind === "choice") {
       const pick = (v: string) => (f.apply ? onApply(f.apply(params, v) as P) : onSet(f.key, v, true));
@@ -155,7 +156,7 @@ export function GeneratorDock({
       return (
         <div className="gen-font" key={f.key}>
           <div className="rowlabel">
-            {f.label}
+            {f.label}{lockOf(f) && <LockToggle {...lockOf(f)!} label={f.label} />}
             <ResetMark label={f.label} show={typeof dflt === "string" && value !== dflt} onReset={() => onSet(f.key, dflt, true)} />
           </div>
           <FontPicker

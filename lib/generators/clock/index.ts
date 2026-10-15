@@ -25,22 +25,22 @@ const sections: SectionSpec<ClockParams>[] = [
     help: "The clock's outline and how many layers it is cut from.",
     fields: [
       {
-        kind: "choice", key: "face.shape", label: "Face shape", rail: true,
+        kind: "choice", key: "face.shape", shuffle: true, label: "Face shape", rail: true,
         help: "The outline of the clock face; Custom takes the path data of any closed outline.",
         options: [
           { v: "round", text: "Round" }, { v: "square", text: "Square" }, { v: "polygon", text: "Polygon" },
           { v: "sunburst", text: "Sunburst" }, { v: "gear", text: "Gear" }, { v: "scallop", text: "Scalloped" },
-          { v: "flower", text: "Flower" }, { v: "heart", text: "Heart" }, { v: "cloud", text: "Cloud" }, { v: "custom", text: "Custom" },
+          { v: "flower", text: "Flower" }, { v: "heart", text: "Heart" }, { v: "cloud", text: "Cloud" }, { v: "custom", text: "Custom", input: "text" },
         ],
       },
       { kind: "number", key: "face.size", label: "Size", unit: "mm", min: 80, max: 1200, step: 5, help: "Width of the face across its widest point (corners or ray tips)." },
       { kind: "number", key: "face.sides", label: "Sides", unit: "", min: 3, max: 24, step: 1, int: true, show: (p) => p.face.shape === "polygon", help: "Number of sides of the polygon face." },
       { kind: "number", key: "face.corner", label: "Corner radius", unit: "mm", min: 0, max: 120, step: 1, show: (p) => ["square", "polygon", "sunburst"].includes(p.face.shape), help: "Rounds the corners of the face; 0 keeps them sharp." },
-      { kind: "number", key: "face.rays", label: "Rays", unit: "", min: 6, max: 72, step: 1, int: true, show: pointed, help: "Number of rays, teeth, scallops or petals around the edge." },
+      { kind: "number", key: "face.rays", shuffle: true, label: "Rays", unit: "", min: 6, max: 72, step: 1, int: true, show: pointed, help: "Number of rays, teeth, scallops or petals around the edge." },
       { kind: "number", key: "face.depth", label: "Ray depth", unit: "mm", min: 2, max: 200, step: 1, show: pointed, help: "How far the rays, teeth or scallops reach in from the outer edge; for a flower, the petal radius." },
       { kind: "text", key: "face.path", label: "Custom outline", multiline: true, placeholder: "M 0 0 C …", show: (p) => p.face.shape === "custom", help: "SVG path data (the d attribute) of a closed outline; it is scaled to the face size." },
       {
-        kind: "choice", key: "face.layers", label: "Layers", rail: true,
+        kind: "choice", key: "face.layers", shuffle: true, label: "Layers", rail: true,
         help: "Single cuts the face from one sheet; Ring adds a raised ring on a back plate; Stack adds a centre disc as well.",
         options: [{ v: "single", text: "Single" }, { v: "ring", text: "Ring on back" }, { v: "stack", text: "Ring and centre" }],
       },
@@ -53,7 +53,7 @@ const sections: SectionSpec<ClockParams>[] = [
     help: "The hour marks: ticks, dots or numerals, engraved or cut through.",
     fields: [
       {
-        kind: "choice", key: "markers.style", label: "Markers", rail: true,
+        kind: "choice", key: "markers.style", shuffle: true, label: "Markers", rail: true,
         help: "What marks the hours: numerals, ticks, dots, or numerals at 12, 3, 6 and 9 with ticks between.",
         options: [
           { v: "numerals", text: "Numerals" }, { v: "mixed", text: "Numerals + ticks" }, { v: "ticks", text: "Ticks" },
@@ -61,20 +61,20 @@ const sections: SectionSpec<ClockParams>[] = [
         ],
       },
       {
-        kind: "choice", key: "markers.numerals", label: "Numerals", show: hasNumerals,
+        kind: "choice", key: "markers.numerals", shuffle: true, label: "Numerals", show: hasNumerals,
         help: "Arabic (1–12) or Roman (I–XII, with the clockmaker's IIII or the modern IV) numerals.",
         options: [{ v: "roman", text: "Roman (IIII)" }, { v: "roman-iv", text: "Roman (IV)" }, { v: "arabic", text: "Arabic" }],
       },
-      { kind: "toggle", key: "markers.quarters", label: "Only 12, 3, 6 and 9", show: (p) => p.markers.style === "numerals", help: "Shows four numerals and ticks for the other hours." },
-      { kind: "font", key: "markers.fontId", label: "Font", show: hasNumerals, sample: (p) => (p.markers.numerals.startsWith("roman") ? "XIIV" : "123456789"), help: "The typeface of the numerals (the same fonts as Letters)." },
+      { kind: "toggle", key: "markers.quarters", shuffle: true, label: "Only 12, 3, 6 and 9", show: (p) => p.markers.style === "numerals", help: "Shows four numerals and ticks for the other hours." },
+      { kind: "font", key: "markers.fontId", shuffle: true, label: "Font", show: hasNumerals, sample: (p) => (p.markers.numerals.startsWith("roman") ? "XIIV" : "123456789"), help: "The typeface of the numerals (the same fonts as Letters)." },
       { kind: "number", key: "markers.size", label: "Numeral height", unit: "mm", min: 4, max: 200, step: 1, show: hasNumerals, help: "Cap height of the numerals." },
       { kind: "number", key: "markers.inset", label: "Edge gap", unit: "mm", min: 0, max: 200, step: 1, show: (p) => p.markers.style !== "none" || p.markers.minutes, help: "Gap between the edge of the face and the outer end of the markers." },
       { kind: "number", key: "markers.tickLength", label: "Tick length", unit: "mm", min: 2, max: 100, step: 1, show: hasTicks, help: "Length of the hour ticks; minute ticks are a little under half as long." },
       { kind: "number", key: "markers.tickWidth", label: "Tick width", unit: "mm", min: 0.5, max: 30, step: 0.5, show: hasTicks, help: "Width of the hour ticks; the ticks at 12, 3, 6 and 9 are wider." },
       { kind: "number", key: "markers.dot", label: "Dot size", unit: "mm", min: 2, max: 60, step: 0.5, show: (p) => p.markers.style === "dots", help: "Diameter of the hour dots; the dots at 12, 3, 6 and 9 are larger." },
-      { kind: "toggle", key: "markers.minutes", label: "Minute ticks", help: "Adds a short tick for every minute between the hours." },
+      { kind: "toggle", key: "markers.minutes", shuffle: true, label: "Minute ticks", help: "Adds a short tick for every minute between the hours." },
       { kind: "toggle", key: "markers.cut", label: "Cut through", show: (p) => p.markers.style !== "none" || p.markers.minutes, help: "Cuts the markers out instead of engraving them, so the layer behind shows through." },
-      { kind: "toggle", key: "markers.follow", label: "Follow the dial", show: hasNumerals, help: "Turns each numeral so its top points outward, as on classic dials, instead of standing upright." },
+      { kind: "toggle", key: "markers.follow", shuffle: true, label: "Follow the dial", show: hasNumerals, help: "Turns each numeral so its top points outward, as on classic dials, instead of standing upright." },
     ],
   },
   {
@@ -87,7 +87,7 @@ const sections: SectionSpec<ClockParams>[] = [
         help: "Along the top the text reads clockwise with the letters standing outward; along the bottom it reads the other way, so both read left to right.",
         options: [{ v: "top", text: "Top" }, { v: "bottom", text: "Bottom" }],
       },
-      { kind: "font", key: "inscription.fontId", label: "Font", show: hasInscription, sample: (p) => p.inscription.text || "Aa", help: "Typeface of the text (the same fonts as Letters)." },
+      { kind: "font", key: "inscription.fontId", shuffle: true, label: "Font", show: hasInscription, sample: (p) => p.inscription.text || "Aa", help: "Typeface of the text (the same fonts as Letters)." },
       { kind: "number", key: "inscription.size", label: "Text height", unit: "mm", min: 3, max: 80, step: 0.5, show: hasInscription, help: "Cap height of the text." },
       { kind: "number", key: "inscription.gap", label: "Gap to markers", unit: "mm", min: 0, max: 100, step: 0.5, show: hasInscription, help: "Space between the markers and the text; a larger gap moves the text toward the centre." },
     ],
@@ -97,7 +97,7 @@ const sections: SectionSpec<ClockParams>[] = [
     help: "The hour and minute hands, cut with holes that press onto the movement.",
     fields: [
       {
-        kind: "choice", key: "hands.style", label: "Hands", rail: true,
+        kind: "choice", key: "hands.style", shuffle: true, label: "Hands", rail: true,
         help: "The hand shape; None leaves them out if you use the hands that came with the movement.",
         options: [
           { v: "spade", text: "Spade" }, { v: "baton", text: "Baton" }, { v: "classic", text: "Pointer" },

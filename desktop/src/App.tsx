@@ -13,7 +13,7 @@ import { isDirty, useDesign, type Params } from "./design";
 import { ipc, type AppError, type DCatalog, type DesktopAccount, type Prefs, type RecentProject, type WebDownloadEvent, type WebPage } from "./ipc";
 import { projectText, readProject } from "./projectFile";
 import { designThumb } from "./thumb";
-import { addRecent, setRecentThumb, cacheAccount, cacheCatalog, cachedAccount, cachedCatalog, lastParams, rememberParams, useFavorites, usePrefs, useRecent, type Favorite, type SavedDesign } from "./local";
+import { addRecent, setRecentThumb, cacheAccount, cacheCatalog, cachedAccount, cachedCatalog, lastParams, rememberParams, useFavorites, useLocks, usePrefs, useRecent, type Favorite, type SavedDesign } from "./local";
 import { useAutoCheck, useUpdater } from "./updater";
 
 type Phase = "boot" | "signedOut" | "ready" | "updateRequired";
@@ -195,6 +195,15 @@ export function App() {
     toast({ text: "All settings reset. Ctrl+Z undoes it.", kind: "ok" });
   };
 
+  const locks = useLocks(product && product.id !== "art" ? product.id : null);
+  const canRandom = !!product && (product.id === "hinge" || product.sections.some((s) => s.fields.some((f) => f.kind !== "text" && f.shuffle)));
+  const randomise = useCallback(() => {
+    if (!canRandom || !design.state.params || design.state.busy) return;
+    const hinge = design.state.product === "hinge";
+    design.randomise(hinge ? [] : locks.list);
+    toast({ text: hinge ? "A random hinge pattern. Ctrl+Z undoes it." : locks.list.length ? "New random design; locked settings kept. Ctrl+Z undoes it." : "New random design. Ctrl+Z undoes it.", kind: "ok" });
+  }, [canRandom, design, locks.list, toast]);
+
   const openNew = useCallback((id: string) => {
     const saved = local.reuseLastSettings ? lastParams(id) : null;
     design.open(id, saved ? { params: saved } : {});
@@ -331,10 +340,11 @@ export function App() {
       else if (k === "1" && inWs) { e.preventDefault(); canvas.current?.reset(); }
       else if (k === "z" && inWs && !typing) { e.preventDefault(); if (e.shiftKey) design.redo(); else design.undo(); }
       else if (k === "y" && inWs && !typing) { e.preventDefault(); design.redo(); }
+      else if (k === "r") { e.preventDefault(); if (inWs && !typing) randomise(); }
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [phase, route, save, saveProject, openFile, design, toggleSidebar]);
+  }, [phase, route, save, saveProject, openFile, design, toggleSidebar, randomise]);
 
   // Block the WebView's own context menu and file drops (dropped project files are opened by the app itself).
   useEffect(() => {
@@ -424,6 +434,9 @@ export function App() {
             onOpenFile={() => void openFile(null)}
             onExportAs={() => void save("save")}
             onResetAll={product.id === "art" ? undefined : resetAll}
+            onRandomise={canRandom ? randomise : undefined}
+            randomLabel={product.id === "hinge" ? "Randomise pattern" : undefined}
+            locks={product.id === "hinge" ? undefined : { has: locks.has, toggle: locks.toggle, count: locks.list.length }}
             onExport={() => void save("export")}
             onUpgrade={() => web("upgrade")}
             onRefreshPlan={refreshPlan}

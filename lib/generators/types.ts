@@ -209,6 +209,8 @@ export interface ChoiceSpec<P> extends FieldCommon<P> {
 
 export interface ToggleSpec<P> extends FieldCommon<P> {
   kind: "toggle";
+  /** Randomise design turns it on or off. */
+  shuffle?: true;
 }
 
 export interface TextSpec<P> extends FieldCommon<P> {
@@ -222,6 +224,8 @@ export interface FontSpec<P> extends FieldCommon<P> {
   kind: "font";
   /** The text the font must cover, for the picker's warning. */
   sample?: (p: P) => string;
+  /** Randomise design picks a bundled font that covers the sample's script. */
+  shuffle?: true;
 }
 
 /** A picture the user picks; stored as a JPEG data URL, its width / height in `aspectKey`. */

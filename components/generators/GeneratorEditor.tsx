@@ -473,6 +473,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       { label: "Redo", kbd: "Ctrl+Shift+Z", run: doRedo, disabled: !canRedo },
       "-",
       { label: "Auto-fix all", kbd: "", run: autoFixEverything },
+      ...(shuffleFields(def).length ? [{ label: "Randomise design", kbd: "", run: () => randomiseDesign() }] : []),
       { label: "Reset all settings", kbd: "", run: resetAll },
     ],
     view: [

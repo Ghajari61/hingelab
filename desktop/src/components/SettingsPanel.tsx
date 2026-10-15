@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
-import { ChevronDown, CircleHelp, Lock, RotateCcw } from "lucide-react";
+import { ChevronDown, CircleHelp, Dices, Lock, LockOpen, RotateCcw } from "lucide-react";
 import type { DField, DForm, DProduct } from "../../../lib/desktop/types";
 import { getPath, type Params } from "../design";
 import type { Units } from "../local";
@@ -15,6 +15,13 @@ interface Props {
   onChange: (key: string, value: unknown, immediate: boolean) => void;
   /** Several settings at once, as one undo step (a section reset). */
   onChangeMany?: (values: Params) => void;
+  /** Settings Randomise keeps; shown as a lock on every field it may change. */
+  locks?: Locks;
+}
+
+export interface Locks {
+  has: (key: string) => boolean;
+  toggle: (key: string) => void;
 }
 
 /** A field's default in the type the design keeps it (some choices, such as the wall split, are numbers). */
@@ -51,10 +58,16 @@ function shownDefault(f: DField, units: Units): string {
 }
 
 /** The field's name, with a ↺ while it differs from its default. */
-function Name({ f, value, units, onChange, children }: { f: DField; value: unknown; units: Units; onChange: Props["onChange"]; children: ReactNode }) {
+function Name({ f, value, units, onChange, locks, children }: { f: DField; value: unknown; units: Units; onChange: Props["onChange"]; locks?: Locks; children: ReactNode }) {
+  const on = !!locks?.has(f.key);
   return (
     <span className="field-name">
       {children}
+      {locks && f.kind !== "text" && f.shuffle && (
+        <button type="button" className={`lock-btn${on ? " on" : ""}`} aria-pressed={on} aria-label={`${on ? "Unlock" : "Lock"} ${f.label}`} title={on ? `${f.label} stays when you randomise. Click to unlock.` : `Lock ${f.label} so Randomise keeps it`} onClick={() => locks.toggle(f.key)}>
+          {on ? <Lock size={12} aria-hidden /> : <LockOpen size={12} aria-hidden />}
+        </button>
+      )}
       {isChanged(f, value) && (
         <button type="button" className="reset-btn" aria-label={`Reset ${f.label}`} title={`Reset to ${shownDefault(f, units)}`} onClick={() => onChange(f.key, defaultFor(f, value), true)}>
           <RotateCcw size={12} aria-hidden />
@@ -65,7 +78,7 @@ function Name({ f, value, units, onChange, children }: { f: DField; value: unkno
 }
 
 /** Settings grouped as the server describes them; hidden fields follow the server's form state. */
-export function SettingsPanel({ product, params, form, units, plan, onChange, onChangeMany }: Props) {
+export function SettingsPanel({ product, params, form, units, plan, onChange, onChangeMany, locks }: Props) {
   const [closed, setClosed] = useState<Record<string, boolean>>({});
   const hidden = new Set(form?.hidden ?? []);
   const hiddenSections = new Set(form?.hiddenSections ?? []);
@@ -92,7 +105,7 @@ export function SettingsPanel({ product, params, form, units, plan, onChange, on
             </h3>
             {open && (
               <div className="fields">
-                {fields.map((f) => <Field key={f.key} f={f} label={form?.labels[f.key] ?? f.label} value={getPath(params, f.key)} units={units} plan={plan} onChange={onChange} />)}
+                {fields.map((f) => <Field key={f.key} f={f} label={form?.labels[f.key] ?? f.label} value={getPath(params, f.key)} units={units} plan={plan} onChange={onChange} locks={locks} />)}
               </div>
             )}
           </section>
@@ -115,13 +128,13 @@ function Help({ text, id }: { text?: string; id: string }) {
   );
 }
 
-function Field({ f, label, value, units, plan, onChange }: { f: DField; label: string; value: unknown; units: Units; plan: "free" | "pro"; onChange: Props["onChange"] }) {
+function Field({ f, label, value, units, plan, onChange, locks }: { f: DField; label: string; value: unknown; units: Units; plan: "free" | "pro"; onChange: Props["onChange"]; locks?: Locks }) {
   const id = useId();
-  if (f.kind === "number") return <NumberField f={f} label={label} value={value} units={units} onChange={onChange} />;
+  if (f.kind === "number") return <NumberField f={f} label={label} value={value} units={units} onChange={onChange} locks={locks} />;
   if (f.kind === "toggle") {
     return (
       <div className="field toggle">
-        <Name f={f} value={value} units={units} onChange={onChange}><label htmlFor={id}>{label}</label></Name>
+        <Name f={f} value={value} units={units} onChange={onChange} locks={locks}><label htmlFor={id}>{label}</label></Name>
         <Help text={f.help} id={`${id}-h`} />
         <button id={id} type="button" role="switch" aria-checked={!!value} className="switch" onClick={() => onChange(f.key, !value, true)}><span /></button>
       </div>
@@ -130,7 +143,7 @@ function Field({ f, label, value, units, plan, onChange }: { f: DField; label: s
   if (f.kind === "text") {
     return (
       <div className="field text">
-        <Name f={f} value={value} units={units} onChange={onChange}><label htmlFor={id}>{label}</label></Name>
+        <Name f={f} value={value} units={units} onChange={onChange} locks={locks}><label htmlFor={id}>{label}</label></Name>
         <Help text={f.help} id={`${id}-h`} />
         {f.multiline
           ? <textarea id={id} value={String(value ?? "")} maxLength={f.maxLength} placeholder={f.placeholder} rows={3} onChange={(e) => onChange(f.key, e.target.value, false)} />
@@ -144,7 +157,7 @@ function Field({ f, label, value, units, plan, onChange }: { f: DField; label: s
   if (short) {
     return (
       <div className="field choice">
-        <Name f={f} value={value} units={units} onChange={onChange}><span className="label" id={`${id}-l`}>{label}</span></Name>
+        <Name f={f} value={value} units={units} onChange={onChange} locks={locks}><span className="label" id={`${id}-l`}>{label}</span></Name>
         <Help text={f.help} id={`${id}-h`} />
         <div className="segmented" role="radiogroup" aria-labelledby={`${id}-l`}>
           {f.options.map((o) => (
@@ -158,7 +171,7 @@ function Field({ f, label, value, units, plan, onChange }: { f: DField; label: s
   }
   return (
     <div className="field select">
-      <Name f={f} value={value} units={units} onChange={onChange}><label htmlFor={id}>{label}</label></Name>
+      <Name f={f} value={value} units={units} onChange={onChange} locks={locks}><label htmlFor={id}>{label}</label></Name>
       <Help text={f.help} id={`${id}-h`} />
       <select id={id} value={current} onChange={(e) => onChange(f.key, e.target.value, true)}>
         {f.options.map((o) => <option key={o.v} value={o.v} title={o.title}>{o.text}{locked(o.v) ? " (Pro)" : ""}</option>)}
@@ -167,7 +180,7 @@ function Field({ f, label, value, units, plan, onChange }: { f: DField; label: s
   );
 }
 
-function NumberField({ f, label, value, units, onChange }: { f: Extract<DField, { kind: "number" }>; label: string; value: unknown; units: Units; onChange: Props["onChange"] }) {
+function NumberField({ f, label, value, units, onChange, locks }: { f: Extract<DField, { kind: "number" }>; label: string; value: unknown; units: Units; onChange: Props["onChange"]; locks?: Locks }) {
   const id = useId();
   const inch = f.unit === "mm" && units === "in";
   const k = inch ? 1 / MM_PER_IN : 1;
@@ -203,7 +216,7 @@ function NumberField({ f, label, value, units, onChange }: { f: Extract<DField, 
 
   return (
     <div className={`field number${error ? " invalid" : ""}`}>
-      <Name f={f} value={value} units={units} onChange={onChange}><label htmlFor={id}>{label}</label></Name>
+      <Name f={f} value={value} units={units} onChange={onChange} locks={locks}><label htmlFor={id}>{label}</label></Name>
       <Help text={f.help} id={`${id}-h`} />
       <div className="num">
         <input
@@ -232,6 +245,11 @@ function NumberField({ f, label, value, units, onChange }: { f: Extract<DField, 
           }}
         />
         {unit && <span className="unit">{unit}</span>}
+        {f.random && (
+          <button type="button" className="icon-btn dice-btn" aria-label={`New ${f.label.toLowerCase()}`} title={`A new random ${f.label.toLowerCase()}`} onClick={() => onChange(f.key, Math.floor(f.min + Math.random() * (f.max - f.min + 1)), true)}>
+            <Dices size={14} aria-hidden />
+          </button>
+        )}
       </div>
       {error && focused && <p className="field-error" id={`${id}-e`} role="alert">{error}</p>}
     </div>

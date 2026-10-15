@@ -8,11 +8,14 @@ export type DesktopProductId = "hinge" | "clock" | "puzzle" | "qr" | "boxes" | "
 export type WorkspaceProductId = DesktopProductId | "art";
 export type DesktopPlan = "free" | "pro";
 
-/** `default`: the value a new design starts with, which the field's reset restores. */
+/**
+ * `default`: the value a new design starts with, which the field's reset restores. `shuffle`: Randomise
+ * design may change it (a lock keeps it). `random`: a number with its own dice (a seed).
+ */
 export type DField =
-  | { kind: "number"; key: string; label: string; help?: string; default?: number; unit: "mm" | "deg" | "" | "%"; min: number; max: number; step: number; int?: boolean }
-  | { kind: "choice"; key: string; label: string; help?: string; default?: string; options: { v: string; text: string; title?: string; pro?: boolean }[] }
-  | { kind: "toggle"; key: string; label: string; help?: string; default?: boolean }
+  | { kind: "number"; key: string; label: string; help?: string; default?: number; shuffle?: boolean; random?: boolean; unit: "mm" | "deg" | "" | "%"; min: number; max: number; step: number; int?: boolean }
+  | { kind: "choice"; key: string; label: string; help?: string; default?: string; shuffle?: boolean; options: { v: string; text: string; title?: string; pro?: boolean }[] }
+  | { kind: "toggle"; key: string; label: string; help?: string; default?: boolean; shuffle?: boolean }
   | { kind: "text"; key: string; label: string; help?: string; default?: string; placeholder?: string; multiline?: boolean; maxLength: number };
 
 export interface DSection {
@@ -76,6 +79,8 @@ export interface GenerateRequest {
   scale?: number;
   /** Also send the assembled 3D model (the 3D view is open). */
   model?: boolean;
+  /** A new random design: every `shuffle` setting not in `locked` (Hinge Box: the pattern and lattice). */
+  randomise?: { locked?: string[] };
 }
 
 /** A material that keeps its own colour in every look (engraving, mirror acrylic). */

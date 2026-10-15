@@ -191,6 +191,40 @@ try {
   check((await page.locator(".toast").allInnerTexts()).some((t) => t.includes("All settings reset")), "a toast says Ctrl+Z undoes Reset all");
   check((await page.locator(".ws-name").innerText()) === "Menu name", "Reset all keeps the design's name");
 
+  // Randomise: the Hinge Box gets a new pattern (its size stays); generators keep locked settings.
+  const summary = () => page.locator(".ws-summary").innerText();
+  const before = await summary();
+  let rolled = false;
+  for (let i = 0; i < 4 && !rolled; i++) {
+    await page.getByRole("button", { name: "Randomise pattern" }).click();
+    rolled = await until(async () => !(await page.locator(".rand-btn").isDisabled()) && (await summary()) !== before);
+  }
+  check(rolled, "Randomise pattern gives the Hinge Box a new pattern");
+  check(await widthIs("140"), "Randomise pattern keeps the box's size");
+  await page.keyboard.press("Control+z");
+  check(await until(async () => (await summary()) === before), "Ctrl+Z takes a randomise back");
+  await page.locator(".sidebar").getByRole("button", { name: "Generators" }).click();
+  await page.getByRole("tab", { name: /Clock/ }).click();
+  await page.getByRole("button", { name: "New Clock" }).click();
+  await page.getByRole("button", { name: "Lock Face shape" }).click();
+  check(await page.getByRole("button", { name: "Unlock Face shape" }).isVisible(), "a setting Randomise may change can be locked");
+  check((await page.locator(".rand-btn").innerText()).includes("1 locked"), "the Randomise button counts the locks");
+  const shape = () => page.getByRole("combobox", { name: "Face shape" }).inputValue();
+  const shapeBefore = await shape();
+  const json = () => page.evaluate(() => [...document.querySelectorAll(".ws-panel input, .ws-panel select, .ws-panel [role=switch], .ws-panel [role=radio]")]
+    .map((e) => (e instanceof HTMLInputElement || e instanceof HTMLSelectElement ? e.value : e.getAttribute("aria-checked"))).join("|"));
+  const panelBefore = await json();
+  let changed = false;
+  for (let i = 0; i < 4 && !changed; i++) {
+    await page.locator(".ws-summary").click();
+    await page.keyboard.press("Control+r");
+    changed = await until(async () => !(await page.locator(".rand-btn").isDisabled()) && (await json()) !== panelBefore);
+  }
+  check(changed, "Ctrl+R gives a generator a new random design");
+  check((await shape()) === shapeBefore, "a locked setting stays when the design is randomised");
+  check((await page.locator(".toast").allInnerTexts()).some((t) => t.includes("locked settings kept")), "a toast says the locked settings were kept");
+  await page.getByRole("button", { name: "Unlock Face shape" }).click();
+
   // The AI designer: Undo and Redo step through the AI edits.
   await page.locator(".sidebar").getByRole("button", { name: /AI/ }).first().click();
   await page.locator("#ai-prompt").fill("a box");

@@ -53,7 +53,7 @@ export interface Favorite {
   at: number;
 }
 
-const KEYS = { prefs: "hl-prefs-v1", recent: "hl-recent-v1", favorites: "hl-favorites-v1", last: "hl-last-v1", catalog: "hl-catalog-v1", account: "hl-account-v1" };
+const KEYS = { prefs: "hl-prefs-v1", recent: "hl-recent-v1", favorites: "hl-favorites-v1", last: "hl-last-v1", catalog: "hl-catalog-v1", account: "hl-account-v1", locks: "hl-locks-v1" };
 export const DEFAULT_PREFS: LocalPrefs = { theme: "system", units: "mm", autoCheckUpdates: true, reuseLastSettings: true, defaultProduct: "hinge", sidebarCollapsed: false, sheetTone: "plywood", sheetGrid: true, view3d: false, view3dQuad: true, view3dShade: "shaded", view3dDims: true };
 const MAX_RECENT = 24;
 const MAX_ITEM = 300_000;
@@ -107,6 +107,21 @@ export const usePrefs = () => {
 };
 export const useRecent = () => useStored<SavedDesign[]>(KEYS.recent, EMPTY);
 export const useFavorites = () => useStored<Favorite[]>(KEYS.favorites, EMPTY);
+
+const NO_LOCKS: Record<string, string[]> = {};
+/** The settings Randomise keeps, per product. */
+export function useLocks(product: string | null) {
+  const [all, set] = useStored<Record<string, string[]>>(KEYS.locks, NO_LOCKS);
+  const list = product && Array.isArray(all[product]) ? all[product] : EMPTY;
+  const toggle = useCallback((key: string) => {
+    if (!product) return;
+    set((old) => {
+      const cur = Array.isArray(old[product]) ? old[product] : [];
+      return { ...old, [product]: cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key].slice(-200) };
+    });
+  }, [product, set]);
+  return { list: list as string[], has: (key: string) => list.includes(key as never), toggle };
+}
 
 /** The newest entries that fit in storage (`write` skips a list that is too large). */
 function fitList<T>(list: T[]): T[] {

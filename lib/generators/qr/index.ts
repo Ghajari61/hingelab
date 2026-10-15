@@ -53,7 +53,7 @@ const sections: SectionSpec<QrParams>[] = [
     help: "Size, error correction and the look of the modules.",
     fields: [
       {
-        kind: "choice", key: "code.style", label: "Module style", rail: true,
+        kind: "choice", key: "code.style", shuffle: true, label: "Module style", rail: true,
         help: "Square modules scan best; rounded, dots and connected look softer and still scan when the modules are large enough.",
         options: [{ v: "square", text: "Square" }, { v: "rounded", text: "Rounded" }, { v: "dots", text: "Dots" }, { v: "connected", text: "Connected" }],
       },
@@ -84,13 +84,13 @@ const sections: SectionSpec<QrParams>[] = [
     id: "plate", title: "Plate", open: false,
     help: "The plate around the code: shape, border, corners and an optional frame.",
     fields: [
-      { kind: "choice", key: "plate.shape", label: "Plate shape", help: "A rectangle around the code and label, or a circle (coasters, badges).", options: [{ v: "rect", text: "Rectangle" }, { v: "circle", text: "Circle" }] },
+      { kind: "choice", key: "plate.shape", shuffle: true, label: "Plate shape", help: "A rectangle around the code and label, or a circle (coasters, badges).", options: [{ v: "rect", text: "Rectangle" }, { v: "circle", text: "Circle" }] },
       { kind: "number", key: "plate.padding", label: "Border", unit: "mm", min: 0, max: 60, step: 0.5, help: "Plate border outside the quiet zone and label." },
       { kind: "number", key: "plate.corner", label: "Corner radius", unit: "mm", min: 0, max: 50, step: 0.5, show: (p) => p.plate.shape === "rect", help: "Rounds the plate's corners." },
-      { kind: "toggle", key: "plate.frame", label: "Frame", show: (p) => p.output.kind !== "stencil", help: "A thin line around the plate, in its border." },
+      { kind: "toggle", key: "plate.frame", shuffle: true, label: "Frame", show: (p) => p.output.kind !== "stencil", help: "A thin line around the plate, in its border." },
       { kind: "number", key: "plate.frameWidth", label: "Frame width", unit: "mm", min: 0.3, max: 5, step: 0.1, show: (p) => p.plate.frame && p.output.kind !== "stencil", help: "Width of the frame line." },
       {
-        kind: "choice", key: "plate.frameStyle", label: "Frame style", show: (p) => p.plate.frame && p.output.kind !== "stencil",
+        kind: "choice", key: "plate.frameStyle", shuffle: true, label: "Frame style", show: (p) => p.plate.frame && p.output.kind !== "stencil",
         help: "A line all the way round, or only the four corners, like a scanner's viewfinder.", options: [{ v: "line", text: "Full line" }, { v: "corners", text: "Corners" }],
       },
     ],
@@ -104,10 +104,10 @@ const sections: SectionSpec<QrParams>[] = [
         kind: "choice", key: "label.position", label: "Position", show: (p) => !!p.label.text.trim(),
         help: "Where the label sits.", options: [{ v: "below", text: "Below" }, { v: "above", text: "Above" }, { v: "right", text: "Beside" }],
       },
-      { kind: "font", key: "label.fontId", label: "Font", show: (p) => !!p.label.text.trim() || p.logo.kind === "text", sample: (p) => `${p.label.text}${p.logo.kind === "text" ? p.logo.text : ""}` || "Aa", help: "Typeface of the label and a text logo (the same fonts as Letters)." },
+      { kind: "font", key: "label.fontId", shuffle: true, label: "Font", show: (p) => !!p.label.text.trim() || p.logo.kind === "text", sample: (p) => `${p.label.text}${p.logo.kind === "text" ? p.logo.text : ""}` || "Aa", help: "Typeface of the label and a text logo (the same fonts as Letters)." },
       { kind: "number", key: "label.size", label: "Text height", unit: "mm", min: 2, max: 40, step: 0.5, show: (p) => !!p.label.text.trim(), help: "Cap height of the label." },
       {
-        kind: "choice", key: "label.style", label: "Label style", show: (p) => !!p.label.text.trim() && p.output.kind === "engrave",
+        kind: "choice", key: "label.style", shuffle: true, label: "Label style", show: (p) => !!p.label.text.trim() && p.output.kind === "engrave",
         help: "Plain engraved text, or a solid engraved bar with the text left bare, like a “Scan me” banner.", options: [{ v: "plain", text: "Plain" }, { v: "bar", text: "Bar" }],
       },
     ],

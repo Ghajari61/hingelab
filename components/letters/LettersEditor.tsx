@@ -33,6 +33,8 @@ import { rulerSvg } from "@/components/editor/Rulers";
 import { StatusBar } from "@/components/editor/StatusBar";
 import { Dialogs, type ModalState } from "@/components/editor/dialogs";
 import { lettersGroups } from "./LettersControlBar";
+import { randomLetterStyle } from "@/lib/letters/randomStyle";
+import { BUNDLED_FONTS } from "@/lib/letters/fonts";
 import { LettersDock } from "./LettersDock";
 import { MARQUEE_KEYS, isMarqueeKey, type LetterNumKey } from "./fields";
 import { deleteStoredFont, FONTS_EVENT, getStoredFont, listStoredFonts, type StoredFontMeta } from "./fontStore";
@@ -377,6 +379,13 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
     toastMsg(`${title} reset. Ctrl+Z undoes it.`);
   }
 
+  function randomStyle() {
+    const next = randomLetterStyle(params, { pro: account.plan === "pro" });
+    patch(next, true);
+    const font = BUNDLED_FONTS.find((f) => f.id === next.fontId)?.name ?? next.fontId;
+    toastMsg(`${font}, ${next.mode === "box" ? "letter box" : next.mode}. Ctrl+Z undoes it.`);
+  }
+
   function resetAll() {
     replace({ ...freshParams(account.plan === "pro"), name: params.name, text: params.text, fontId: params.fontId }, true);
     window.setTimeout(() => viewApi.fit(), 50);
@@ -466,6 +475,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
       { label: "Undo", kbd: "Ctrl+Z", run: doUndo, disabled: !canUndo },
       { label: "Redo", kbd: "Ctrl+Shift+Z", run: doRedo, disabled: !canRedo },
       "-",
+      { label: "Randomise style", kbd: "", run: randomStyle },
       { label: "Reset all settings", kbd: "", run: resetAll },
     ],
     view: [
@@ -521,7 +531,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
           title={PRODUCT_INFO.letters.name} icon={PRODUCT_INFO.letters.icon}
           groups={lettersGroups({
             mode: params.mode, pro: account.plan === "pro", wallStyle: params.wallStyle, lid: params.lid,
-            onMode: (m) => patch({ mode: m }, true), onWallStyle: (w) => patch({ wallStyle: w }, true), onLid: (l) => patch({ lid: l }, true),
+            onMode: (m) => patch({ mode: m }, true), onWallStyle: (w) => patch({ wallStyle: w }, true), onLid: (l) => patch({ lid: l }, true), onRandom: randomStyle,
           })}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
           inert={shared.viewing}

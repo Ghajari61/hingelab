@@ -7,7 +7,7 @@ import type { AppError } from "../ipc";
 import { DEFAULT_PREFS, usePrefs, type LocalPrefs, type Shade3D, type SheetTone, type Units } from "../local";
 import { Canvas, zoomLabel, type CanvasHandle } from "./Canvas";
 import { Menu } from "./Menu";
-import { SettingsPanel } from "./SettingsPanel";
+import { SettingsPanel, type Locks } from "./SettingsPanel";
 import type { PaneId } from "./View3D";
 
 const View3D = lazy(() => import("./View3D"));
@@ -44,6 +44,10 @@ interface Props {
   onResetAll?: () => void;
   /** A new random design (unlocked style settings only), as one undo step. */
   onRandomise?: () => void;
+  /** What Randomise does here ("Randomise design", or "Randomise pattern" for the Hinge Box). */
+  randomLabel?: string;
+  /** Settings Randomise keeps. */
+  locks?: Locks & { count: number };
   onUpgrade: () => void;
   onRefreshPlan: () => void;
   onFavorite: () => void;
@@ -148,7 +152,7 @@ export function Workspace(p: Props) {
               { label: "Redo", shortcut: "Ctrl+Y", icon: <Redo2 size={14} />, disabled: !design.canRedo, onSelect: p.onRedo },
               ...(p.onResetAll || p.onRandomise ? ["-" as const] : []),
               ...(p.onResetAll ? [{ label: "Reset all settings", icon: <RotateCcw size={14} />, disabled: !design.params || design.busy, onSelect: p.onResetAll }] : []),
-              ...(p.onRandomise ? [{ label: "Randomise design", shortcut: "Ctrl+R", icon: <Dices size={14} />, disabled: !design.params || design.busy, onSelect: p.onRandomise }] : []),
+              ...(p.onRandomise ? [{ label: p.randomLabel ?? "Randomise design", shortcut: "Ctrl+R", icon: <Dices size={14} />, disabled: !design.params || design.busy, onSelect: p.onRandomise }] : []),
             ]} />
           </nav>
           <span className="sep" />
@@ -240,8 +244,13 @@ export function Workspace(p: Props) {
         </main>
 
         <aside className="ws-panel">
+          {design.params && p.onRandomise && (
+            <button type="button" className="btn rand-btn" disabled={design.busy} title="A new random design. Lock a setting (its lock icon) to keep it. Ctrl+Z undoes it." onClick={p.onRandomise}>
+              <Dices size={15} aria-hidden />{p.randomLabel ?? "Randomise design"}{p.locks?.count ? ` · ${p.locks.count} locked` : ""}
+            </button>
+          )}
           {design.params ? (
-            <SettingsPanel product={product} params={design.params} form={r?.form ?? null} units={p.units} plan={p.plan} onChange={p.onChange} onChangeMany={p.onChangeMany} />
+            <SettingsPanel product={product} params={design.params} form={r?.form ?? null} units={p.units} plan={p.plan} onChange={p.onChange} onChangeMany={p.onChangeMany} locks={p.locks} />
           ) : (
             <div className="panel-loading" aria-busy="true"><div className="sk" /><div className="sk" /><div className="sk short" /></div>
           )}

@@ -33,7 +33,7 @@ const sections: SectionSpec<TopperParams>[] = [
     help: "The words on the topper: each line is centred; script fonts join up into one piece.",
     fields: [
       { kind: "text", key: "text.text", label: "Text", multiline: true, maxLength: 80, placeholder: "Happy Birthday", help: "The words on the topper; press Enter for a new line." },
-      { kind: "font", key: "text.fontId", label: "Font", sample: (p) => p.text.text || "Aa", help: "Pacifico joins its letters like handwriting." },
+      { kind: "font", key: "text.fontId", shuffle: true, label: "Font", sample: (p) => p.text.text || "Aa", help: "Pacifico joins its letters like handwriting." },
       { kind: "number", key: "text.size", label: "Letter height", unit: "mm", min: 8, max: 200, step: 1, help: "Cap height of the letters; the topper grows with it." },
       { kind: "number", key: "text.spacing", label: "Letter spacing", unit: "mm", min: -5, max: 10, step: 0.1, help: "Extra space between letters; a little negative spacing makes script letters overlap so they hold together." },
       { kind: "number", key: "text.lead", label: "Line spacing", unit: "", min: 0.8, max: 2, step: 0.05, help: "Distance between lines as a multiple of the letter height; lower values make lines touch and join." },
@@ -45,14 +45,14 @@ const sections: SectionSpec<TopperParams>[] = [
     help: "How the topper is cut: welded letters, a silhouette, two layers, or a shaped plate.",
     fields: [
       {
-        kind: "choice", key: "style.kind", label: "Style", rail: true,
+        kind: "choice", key: "style.kind", shuffle: true, label: "Style", rail: true,
         help: "Letters cuts the text itself; Outline cuts a silhouette with the text engraved; Layered glues mirror letters onto a backing; Plate engraves the text on a shape.",
         options: [{ v: "letters", text: "Letters" }, { v: "outline", text: "Outline" }, { v: "layered", text: "Layered", title: "Two materials" }, { v: "plate", text: "Plate" }],
       },
       { kind: "number", key: "style.weld", label: "Weld", unit: "mm", min: 0.2, max: 4, step: 0.1, show: (p) => p.style.kind === "letters" || p.style.kind === "layered", help: "How much the letters grow so neighbours fuse into one piece; thicker welds are stronger." },
       { kind: "number", key: "style.border", label: "Border", unit: "mm", min: 1, max: 20, step: 0.5, show: (p) => p.style.kind === "outline" || p.style.kind === "layered", help: "Width of the silhouette around the letters." },
       {
-        kind: "choice", key: "style.mark", label: "Text on the face", show: (p) => p.style.kind === "outline" || p.style.kind === "plate",
+        kind: "choice", key: "style.mark", shuffle: true, label: "Text on the face", show: (p) => p.style.kind === "outline" || p.style.kind === "plate",
         help: "Engrave fills the letters, Score traces their outlines (quick on a diode laser), None leaves a plain silhouette.",
         options: [{ v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }, { v: "none", text: "None" }],
       },
@@ -62,7 +62,7 @@ const sections: SectionSpec<TopperParams>[] = [
     id: "motif", title: "Motif", open: true, show: main,
     help: "A picture welded to the text: balloons, hearts, rings, a crescent, stars and more.",
     fields: [
-      { kind: "choice", key: "motif.kind", label: "Motif", rail: true, options: MOTIF_OPTIONS, help: "The picture added to the topper, joined to the letters: a built-in motif, your own picture or your own text." },
+      { kind: "choice", key: "motif.kind", shuffle: true, label: "Motif", rail: true, options: MOTIF_OPTIONS, help: "The picture added to the topper, joined to the letters: a built-in motif, your own picture or your own text." },
       ...motifArtFields<TopperParams>("motif.kind", "motif.art"),
       {
         kind: "choice", key: "motif.place", label: "Position", show: (p) => p.motif.kind !== "none",
@@ -77,13 +77,13 @@ const sections: SectionSpec<TopperParams>[] = [
     id: "plate", title: "Plate", open: true, show: (p) => main(p) && p.style.kind === "plate",
     help: "The shape the text is engraved on.",
     fields: [
-      { kind: "choice", key: "plate.shape", label: "Plate shape", rail: true, options: SHAPE_OPTIONS, help: "The outline of the plate." },
+      { kind: "choice", key: "plate.shape", shuffle: true, label: "Plate shape", rail: true, options: SHAPE_OPTIONS, help: "The outline of the plate." },
       { kind: "toggle", key: "plate.auto", label: "Fit to the text", help: "Sizes the plate around the text and motif; turn it off to set the size yourself." },
       { kind: "number", key: "plate.pad", label: "Margin", unit: "mm", min: 2, max: 60, step: 1, show: (p) => p.plate.auto, help: "Space between the text and the plate's edge." },
       { kind: "number", key: "plate.width", label: "Plate width", unit: "mm", min: 30, max: 600, step: 1, show: (p) => !p.plate.auto, help: "Width of the plate." },
       { kind: "number", key: "plate.height", label: "Plate height", unit: "mm", min: 20, max: 600, step: 1, show: (p) => !p.plate.auto, help: "Height of the plate." },
       { kind: "number", key: "plate.corner", label: "Corner radius", unit: "mm", min: 0, max: 40, step: 0.5, help: "Rounds the plate's corners." },
-      { kind: "toggle", key: "plate.frame", label: "Scored frame", help: "Scores a line just inside the edge, like a frame." },
+      { kind: "toggle", key: "plate.frame", shuffle: true, label: "Scored frame", help: "Scores a line just inside the edge, like a frame." },
     ],
   },
   {
@@ -102,12 +102,12 @@ const sections: SectionSpec<TopperParams>[] = [
     help: "Small picks for cupcakes, each with a motif, a name or both.",
     fields: [
       { kind: "number", key: "cupcake.count", label: "Picks", unit: "", min: 1, max: 60, step: 1, int: true, help: "How many picks to cut." },
-      { kind: "choice", key: "cupcake.shape", label: "Pick shape", rail: true, options: [{ v: "motif", text: "Motif silhouette" }, ...SHAPE_OPTIONS], help: "A disc shape, or the motif itself cut as a silhouette." },
+      { kind: "choice", key: "cupcake.shape", shuffle: true, label: "Pick shape", rail: true, options: [{ v: "motif", text: "Motif silhouette" }, ...SHAPE_OPTIONS], help: "A disc shape, or the motif itself cut as a silhouette." },
       { kind: "number", key: "cupcake.size", label: "Pick width", unit: "mm", min: 25, max: 120, step: 1, help: "Width of each pick; 45 to 60 mm suits a cupcake." },
-      { kind: "choice", key: "cupcake.motif", label: "Pick motif", rail: true, options: MOTIF_OPTIONS, help: "The picture on each pick, or the silhouette's shape: a built-in motif, your own picture or your own text." },
+      { kind: "choice", key: "cupcake.motif", shuffle: true, label: "Pick motif", rail: true, options: MOTIF_OPTIONS, help: "The picture on each pick, or the silhouette's shape: a built-in motif, your own picture or your own text." },
       ...motifArtFields<TopperParams>("cupcake.motif", "cupcake.art"),
       { kind: "text", key: "cupcake.text", label: "Names", multiline: true, maxLength: 1200, placeholder: "One name per line", help: "One name or word per line; the picks cycle through the list." },
-      { kind: "font", key: "cupcake.fontId", label: "Name font", sample: (p) => p.cupcake.text || "Aa", help: "The typeface of the names." },
+      { kind: "font", key: "cupcake.fontId", shuffle: true, label: "Name font", sample: (p) => p.cupcake.text || "Aa", help: "The typeface of the names." },
       { kind: "number", key: "cupcake.textSize", label: "Name height", unit: "mm", min: 3, max: 40, step: 0.5, help: "Cap height of the names." },
       { kind: "number", key: "cupcake.stick", label: "Stick length", unit: "mm", min: 20, max: 150, step: 1, help: "Length of each pick's stick below the shape." },
       { kind: "toggle", key: "cupcake.layered", label: "Layered", help: "Cuts the motif and name from the second material to glue on, instead of engraving them." },

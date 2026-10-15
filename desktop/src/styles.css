@@ -421,6 +421,10 @@ kbd { font: 12px var(--font); padding: 1px 6px; border: 1px solid var(--line-2);
 .field-name > label, .field-name > .label { font-size: 12.5px; color: var(--ink-2); }
 .reset-btn { border: 0; background: none; padding: 2px; color: var(--accent-ink); cursor: pointer; display: grid; border-radius: 4px; }
 .reset-btn:hover, .reset-btn:focus-visible { color: var(--ink); background: var(--accent-soft); }
+.lock-btn { border: 0; background: none; padding: 2px; color: var(--ink-3); cursor: pointer; display: grid; border-radius: 4px; opacity: 0.55; }
+.lock-btn:hover, .lock-btn:focus-visible, .lock-btn.on { opacity: 1; color: var(--accent-ink); background: var(--accent-soft); }
+.rand-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: calc(100% - 24px); margin: 12px 12px 0; }
+.num .dice-btn { width: 28px; height: 100%; border-radius: 0; border-left: 1px solid var(--line-2); }
 .settings .group h3 { display: flex; align-items: center; }
 .settings .group h3 > button:first-child { flex: 1; }
 .sec-reset { margin-right: 10px; }

@@ -18,7 +18,7 @@ import { useHistory } from "@/hooks/useHistory";
 import { readStored, readUnits, useAutosave } from "@/hooks/useAutosave";
 import { useCloudAutosave, type CloudDoc } from "@/hooks/useCloudAutosave";
 import { thumbnailSVG } from "@/lib/projects/thumbnail";
-import { hingeLocks } from "@/lib/plans";
+import { canUsePattern, hingeLocks } from "@/lib/plans";
 import { usePlan } from "@/components/billing/usePlan";
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 import { importIntoCloud, openNewCloudProject } from "./cloud";
@@ -33,7 +33,7 @@ import { ViewToggle, type ViewMode } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
 import type { Preset } from "@/lib/presets";
-import { hingePresetParams } from "@/lib/hinge/presets";
+import { HINGE_VARIANTS, hingePresetParams, hingeVariantOf, randomHingePattern } from "@/lib/hinge/presets";
 import { useMyPresets } from "@/components/shell/useMyPresets";
 import { useSharedView } from "@/components/shell/SharedView";
 import { SHARED_ID } from "@/lib/share/id";
@@ -292,6 +292,13 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
     patch({ ...params, pattern: DEFAULTS.pattern, slit: DEFAULTS.slit, bridge: DEFAULTS.bridge, pitch: DEFAULTS.pitch, overrun: DEFAULTS.overrun, stretch: DEFAULTS.stretch, cutStyle: DEFAULTS.cutStyle, slotW: DEFAULTS.slotW }, true);
   }
 
+  function randomPattern() {
+    const next = randomHingePattern(params, (p) => canUsePattern(account.plan, p));
+    patch(next, true);
+    const style = HINGE_VARIANTS.find((v) => v.id === hingeVariantOf(next));
+    toastMsg(`${next.pattern[0].toUpperCase()}${next.pattern.slice(1)} pattern${style ? `, ${style.name.toLowerCase()} style` : ""}${next.cutStyle === "line" ? ", single-line cuts" : ""}. Ctrl+Z undoes it.`);
+  }
+
   function applyIssueFix(fix: Fix<Params>) {
     const next = fix.apply(params);
     patch(next, true);
@@ -414,6 +421,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
       { label: "Undo", kbd: "Ctrl+Z", run: doUndo, disabled: !canUndo },
       { label: "Redo", kbd: "Ctrl+Shift+Z", run: doRedo, disabled: !canRedo },
       "-",
+      { label: "Randomise hinge pattern", kbd: "", run: randomPattern },
       { label: "Reset hinge pattern", kbd: "", run: resetPattern },
       { label: "Reset all settings", kbd: "", run: resetAll },
     ],
@@ -468,7 +476,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
       <div className="main">
         <GalleryRail
           title={PRODUCT_INFO.hinge.name} icon={PRODUCT_INFO.hinge.icon}
-          groups={hingeGroups({ params, plan: account.plan, onShape: (v) => setChoice("shape", v), onLid: (v) => setChoice("lid", v), onPattern: (v) => setChoice("pattern", v), onVariant: (v) => { patch({ ...params, ...v.params }, true); toastMsg(`${v.name} hinge style`); } })}
+          groups={hingeGroups({ params, plan: account.plan, onShape: (v) => setChoice("shape", v), onLid: (v) => setChoice("lid", v), onPattern: (v) => setChoice("pattern", v), onVariant: (v) => { patch({ ...params, ...v.params }, true); toastMsg(`${v.name} hinge style`); }, onRandom: randomPattern })}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
           inert={shared.viewing}
         />

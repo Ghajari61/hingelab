@@ -21,12 +21,12 @@ const sections: SectionSpec<SignParams>[] = [
     help: "How the sign is made: engraved on one sheet, letters layered on a board, the word cut out on its own, or letters inlaid in a second material.",
     fields: [
       {
-        kind: "choice", key: "style.kind", label: "Build", rail: true,
+        kind: "choice", key: "style.kind", shuffle: true, label: "Build", rail: true,
         help: "Engraved marks one board; Layered glues letters from the second material onto it; Word cuts the letters as one piece; Inlay cuts the letters out and fills them with the second material; Neon look engraves glowing outlines on an acrylic piece cut around the letters; Stencil cuts the letters through, with bridges that hold their middles, for painting.",
         options: [{ v: "engraved", text: "Engraved" }, { v: "layered", text: "Layered", title: "Two materials" }, { v: "word", text: "Cut-out word" }, { v: "inlay", text: "Inlay", title: "Two materials" }, { v: "neon", text: "Neon look", title: "Glowing outlines on acrylic" }, { v: "stencil", text: "Stencil", title: "Letters cut through, with bridges" }],
       },
       {
-        kind: "choice", key: "style.mark", label: "Mark", show: (p) => p.style.kind === "engraved",
+        kind: "choice", key: "style.mark", shuffle: true, label: "Mark", show: (p) => p.style.kind === "engraved",
         help: "Engrave fills the letters; Score traces their outlines, which is quick on a diode laser.",
         options: [{ v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }],
       },
@@ -40,7 +40,7 @@ const sections: SectionSpec<SignParams>[] = [
     id: "board", title: "Board", open: true, show: boarded,
     help: "The board's outline and size.",
     fields: [
-      { kind: "choice", key: "board.shape", label: "Shape", rail: true, options: SHAPE_KINDS.map((k) => ({ v: k, text: SHAPE_NAMES[k] })), help: "The outline of the board." },
+      { kind: "choice", key: "board.shape", shuffle: true, label: "Shape", rail: true, options: SHAPE_KINDS.map((k) => ({ v: k, text: SHAPE_NAMES[k] })), help: "The outline of the board." },
       { kind: "toggle", key: "board.auto", label: "Fit to the text", help: "Sizes the board around the text and motif; turn it off to set the size yourself." },
       { kind: "number", key: "board.pad", label: "Margin", unit: "mm", min: 4, max: 120, step: 1, show: (p) => p.board.auto, help: "Space between the text and the board's edge." },
       { kind: "number", key: "board.width", label: "Width", unit: "mm", min: 40, max: 1200, step: 5, show: (p) => !p.board.auto, help: "Width of the board." },
@@ -53,11 +53,11 @@ const sections: SectionSpec<SignParams>[] = [
     help: "The words on the sign.",
     fields: [
       { kind: "text", key: "text.text", label: "Text", multiline: true, maxLength: 160, placeholder: "e.g. Welcome", help: "The words on the sign; press Enter for a new line." },
-      { kind: "font", key: "text.fontId", label: "Font", sample: (p) => p.text.text || "Aa", help: "The typeface." },
+      { kind: "font", key: "text.fontId", shuffle: true, label: "Font", sample: (p) => p.text.text || "Aa", help: "The typeface." },
       { kind: "number", key: "text.size", label: "Letter height", unit: "mm", min: 5, max: 300, step: 1, help: "Cap height of the letters." },
       { kind: "number", key: "text.spacing", label: "Letter spacing", unit: "mm", min: -5, max: 20, step: 0.1, help: "Extra space between letters; negative values join script letters." },
       { kind: "number", key: "text.lead", label: "Line spacing", unit: "", min: 0.8, max: 3, step: 0.05, help: "Distance between lines, as a multiple of the letter height." },
-      { kind: "choice", key: "text.align", label: "Align", options: [{ v: "left", text: "Left" }, { v: "center", text: "Centre" }, { v: "right", text: "Right" }], help: "How lines of different lengths line up." },
+      { kind: "choice", key: "text.align", shuffle: true, label: "Align", options: [{ v: "left", text: "Left" }, { v: "center", text: "Centre" }, { v: "right", text: "Right" }], help: "How lines of different lengths line up." },
       { kind: "number", key: "text.offset", label: "Move up or down", unit: "%", min: -40, max: 40, step: 1, show: boarded, help: "Shifts the text and motif from the middle of the board; negative moves them up." },
     ],
   },
@@ -66,10 +66,10 @@ const sections: SectionSpec<SignParams>[] = [
     id: "motif", title: "Motif", open: true,
     help: "A picture with the text: flowers, hearts, a crescent, a laurel and more.",
     fields: [
-      { kind: "choice", key: "motif.kind", label: "Motif", rail: true, options: MOTIF_OPTIONS, help: "The picture on the sign: a built-in motif, your own picture or your own text." },
+      { kind: "choice", key: "motif.kind", shuffle: true, label: "Motif", rail: true, options: MOTIF_OPTIONS, help: "The picture on the sign: a built-in motif, your own picture or your own text." },
       ...motifArtFields<SignParams>("motif.kind", "motif.art"),
       {
-        kind: "choice", key: "motif.side", label: "Position", show: (p) => p.motif.kind !== "none",
+        kind: "choice", key: "motif.side", shuffle: true, label: "Position", show: (p) => p.motif.kind !== "none",
         help: "Where the motif sits: above, below or beside the text, on both sides (mirrored), or large behind it.",
         options: [{ v: "above", text: "Above" }, { v: "below", text: "Below" }, { v: "left", text: "Left" }, { v: "right", text: "Right" }, { v: "both", text: "Both sides" }, { v: "behind", text: "Behind" }],
       },
@@ -82,7 +82,7 @@ const sections: SectionSpec<SignParams>[] = [
     help: "A frame just inside the board's edge.",
     fields: [
       {
-        kind: "choice", key: "border.kind", label: "Border",
+        kind: "choice", key: "border.kind", shuffle: true, label: "Border",
         help: "Score draws a line, Engrave fills a band, Raised cuts a frame from the second material to glue on.",
         options: [{ v: "none", text: "None" }, { v: "score", text: "Score" }, { v: "engrave", text: "Engrave" }, { v: "raised", text: "Raised", title: "Two materials" }],
       },
