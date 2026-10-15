@@ -29,8 +29,24 @@ export const MOTIF_NAMES: Record<MotifId, string> = {
 
 export const isMotifId = (v: unknown): v is MotifId => typeof v === "string" && (MOTIF_IDS as readonly string[]).includes(v);
 
-/** Choice options for a motif field, with "None" first. */
-export const MOTIF_OPTIONS = [{ v: "none", text: "None" }, ...MOTIF_IDS.map((id) => ({ v: id, text: MOTIF_NAMES[id] }))];
+/** Motifs the user makes: a traced picture of their own, or words in a font. */
+export const CUSTOM_MOTIFS = ["picture", "text"] as const;
+export type CustomMotifKind = (typeof CUSTOM_MOTIFS)[number];
+export const isCustomMotif = (v: unknown): v is CustomMotifKind => v === "picture" || v === "text";
+/** A built-in motif or one of the user's own. */
+export const isMotifKind = (v: unknown): v is MotifId | CustomMotifKind => isMotifId(v) || isCustomMotif(v);
+
+/** A motif's regions in a 100 mm box centred on (0, 0), made from the user's picture or text. */
+export interface CustomMotif { unit: Contour[] }
+export type MotifRef = MotifId | CustomMotif;
+
+/** Choice options for a motif field: "None", the user's own picture and text, then the built-in motifs. */
+export const MOTIF_OPTIONS: { v: string; text: string; title?: string; input?: CustomMotifKind }[] = [
+  { v: "none", text: "None" },
+  { v: "picture", text: "Your picture", title: "A drawing, logo or photo of yours, traced into outlines", input: "picture" },
+  { v: "text", text: "Your text", title: "Words or initials of your own, in any font", input: "text" },
+  ...MOTIF_IDS.map((id) => ({ v: id, text: MOTIF_NAMES[id] })),
+];
 
 interface Piece { add: Contour[]; sub?: Contour[] }
 
@@ -232,21 +248,34 @@ function unitMotif(id: MotifId): Contour[] {
   return cs;
 }
 
+const unitOf = (id: MotifRef) => (typeof id === "string" ? unitMotif(id) : id.unit);
+
 /** The motif scaled so its larger side is `size` mm, centred on (cx, cy); `flip` mirrors it. */
-export function motif(id: MotifId, size: number, cx = 0, cy = 0, flip = false): Contour[] {
+export function motif(id: MotifRef, size: number, cx = 0, cy = 0, flip = false): Contour[] {
   const s = size / 100;
-  const cs = unitMotif(id).map((c) => transform(c, { x: cx, y: cy, sx: flip ? -s : s, sy: s }));
+  const cs = unitOf(id).map((c) => transform(c, { x: cx, y: cy, sx: flip ? -s : s, sy: s }));
   return flip ? cs.map((c) => c.slice().reverse()) : cs;
 }
 
 /** Width and height of the motif at `size`. */
-export function motifSize(id: MotifId, size: number): { w: number; h: number } {
-  const b = bboxOf(unitMotif(id));
+export function motifSize(id: MotifRef, size: number): { w: number; h: number } {
+  const u = unitOf(id);
+  if (!u.length) return { w: 0, h: 0 };
+  const b = bboxOf(u);
   return { w: ((b.x1 - b.x0) * size) / 100, h: ((b.y1 - b.y0) * size) / 100 };
 }
 
+/** A framed landscape (your picture) and a capital A (your text), for the rail. */
+const PICTURE_ICON: Contour[] = [[[4, 30], [16, 14], [24, 24], [30, 18], [40, 30]], circle(31, 9, 4)];
+const TEXT_ICON: Contour[] = [[[2, 34], [14, 2], [22, 2], [34, 34], [27, 34], [24, 26], [12, 26], [9, 34]], [[14, 20], [22, 20], [18, 8]]];
+
 /** Rail picture for a motif. */
 export function motifArt(id: string): { d: string; fill?: boolean }[] {
+  if (id === "picture") {
+    const [frame, ...inside] = fitArt([rect(0, 0, 44, 34), ...PICTURE_ICON], 36);
+    return [{ d: frame }, { d: inside.join(" "), fill: true }];
+  }
+  if (id === "text") return [{ d: fitArt(TEXT_ICON, 30).join(" "), fill: true }];
   if (!isMotifId(id)) return [{ d: "M20,14 L44,30 M44,14 L20,30" }];
   return [{ d: fitArt(motif(id, 38), 34).join(" "), fill: true }];
 }

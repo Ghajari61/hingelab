@@ -1,6 +1,7 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
-import { isMotifId } from "../motifs";
+import { isMotifKind } from "../motifs";
+import { MOTIF_ART, cleanMotifArt, type MotifArt } from "../motifArt";
 import { isShapeKind, type ShapeKind } from "../shapes";
 import { SECOND_MATERIALS } from "../material2";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
@@ -19,7 +20,7 @@ export interface SignParams extends GenBase {
   text: { text: string; fontId: string; size: number; spacing: number; lead: number; align: "left" | "center" | "right"; offset: number };
   textStyle: TextStyle;
   textForm: TextForm;
-  motif: { kind: string; side: MotifSide; size: number; gap: number };
+  motif: { kind: string; side: MotifSide; size: number; gap: number; art: MotifArt };
   border: { kind: BorderKind; width: number; inset: number };
   mount: { kind: SignMount; hole: number; depth: number };
   mat: { mat2: string; T2: number };
@@ -42,7 +43,7 @@ export const SIGN_DEFAULTS: SignParams = {
   text: { text: "Welcome", fontId: "pacifico", size: 40, spacing: 0, lead: 1.3, align: "center", offset: 0 },
   textStyle: { ...TEXT_STYLE },
   textForm: { ...TEXT_FORM },
-  motif: { kind: "flower", side: "above", size: 36, gap: 6 },
+  motif: { kind: "flower", side: "above", size: 36, gap: 6, art: { ...MOTIF_ART } },
   border: { kind: "score", width: 4, inset: 6 },
   mount: { kind: "keyhole", hole: 5, depth: 70 },
   mat: { mat2: "acrylic-gold", T2: 3 },
@@ -64,7 +65,8 @@ export function mergeSign(raw: unknown): SignParams {
   if (!ALIGNS.includes(p.text.align)) p.text.align = d.text.align;
   p.textStyle = cleanTextStyle(p.textStyle);
   p.textForm = cleanTextForm(p.textForm);
-  if (p.motif.kind !== "none" && !isMotifId(p.motif.kind)) p.motif.kind = "none";
+  if (p.motif.kind !== "none" && !isMotifKind(p.motif.kind)) p.motif.kind = "none";
+  p.motif.art = cleanMotifArt(p.motif.art);
   if (!SIDES.includes(p.motif.side)) p.motif.side = d.motif.side;
   if (!BORDERS.includes(p.border.kind)) p.border.kind = d.border.kind;
   if (!MOUNTS.includes(p.mount.kind)) p.mount.kind = d.mount.kind;

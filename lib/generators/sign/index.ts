@@ -1,6 +1,7 @@
 import { circle, rect, roundedRect } from "../geom";
 import { material2Fields } from "../material2";
 import { MOTIF_OPTIONS, motifArt } from "../motifs";
+import { motifArtFields, motifFonts } from "../motifArt";
 import { SHAPE_KINDS, SHAPE_NAMES, shapeArt, type ShapeKind } from "../shapes";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { textStyleSection } from "../textStyle";
@@ -65,7 +66,8 @@ const sections: SectionSpec<SignParams>[] = [
     id: "motif", title: "Motif", open: true,
     help: "A picture with the text: flowers, hearts, a crescent, a laurel and more.",
     fields: [
-      { kind: "choice", key: "motif.kind", label: "Motif", rail: true, options: MOTIF_OPTIONS, help: "The picture on the sign." },
+      { kind: "choice", key: "motif.kind", label: "Motif", rail: true, options: MOTIF_OPTIONS, help: "The picture on the sign: a built-in motif, your own picture or your own text." },
+      ...motifArtFields<SignParams>("motif.kind", "motif.art"),
       {
         kind: "choice", key: "motif.side", label: "Position", show: (p) => p.motif.kind !== "none",
         help: "Where the motif sits: above, below or beside the text, on both sides (mirrored), or large behind it.",
@@ -156,7 +158,7 @@ export const SIGN: GeneratorDef<SignParams> = {
   build: buildSign,
   check: (p, out) => checkSign(p, out as SignOutput),
   pro: (p) => (p.style.kind === "inlay" ? "Inlay signs need Pro." : boarded(p) && p.border.kind === "raised" ? "Raised two-material frames need Pro." : null),
-  fonts: (p) => (p.text.text.trim() ? [p.text.fontId] : []),
+  fonts: (p) => [...(p.text.text.trim() ? [p.text.fontId] : []), ...motifFonts(p.motif.kind, p.motif.art)],
   scale: scaleSign,
   art,
   batch: () => "text.text",
@@ -178,8 +180,9 @@ export const SIGN: GeneratorDef<SignParams> = {
       "Outdoor signs need exterior plywood or acrylic and a coat of clear varnish.",
       "Neon-look signs glow best in 5 mm cast acrylic on an LED base; engrave from the back with Mirror on.",
       "For a stencil, card or thin acrylic works; a bold font keeps the bridges short.",
+      "Pick Your picture as the motif to add your own logo or drawing (a bold black-and-white one traces best), or Your text for initials or a date in another font.",
     ],
-    keywords: ["sign", "wall sign", "door sign", "name sign", "shop sign", "welcome", "acrylic", "wood", "layered", "inlay", "desk sign", "neon", "stencil"],
+    keywords: ["sign", "wall sign", "door sign", "name sign", "shop sign", "welcome", "acrylic", "wood", "layered", "inlay", "desk sign", "neon", "stencil", "logo"],
   },
 };
 

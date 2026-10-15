@@ -1,6 +1,7 @@
 import { rect, roundedRect } from "../geom";
 import { material2Fields } from "../material2";
 import { MOTIF_OPTIONS, motifArt } from "../motifs";
+import { motifArtFields, motifFonts } from "../motifArt";
 import { SHAPE_KINDS, SHAPE_NAMES, shapeArt, type ShapeKind } from "../shapes";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { textStyleSection } from "../textStyle";
@@ -77,7 +78,8 @@ const sections: SectionSpec<TablenumParams>[] = [
     id: "motif", title: "Motif", open: false,
     help: "A small picture with the number.",
     fields: [
-      { kind: "choice", key: "motif.kind", label: "Motif", rail: true, options: MOTIF_OPTIONS, help: "The picture on each plate." },
+      { kind: "choice", key: "motif.kind", label: "Motif", rail: true, options: MOTIF_OPTIONS, help: "The picture on each plate: a built-in motif, your own picture or your own text." },
+      ...motifArtFields<TablenumParams>("motif.kind", "motif.art"),
       { kind: "choice", key: "motif.place", label: "Position", show: (p) => p.motif.kind !== "none", options: [{ v: "above", text: "Above" }, { v: "below", text: "Below" }, { v: "both", text: "Both sides" }], help: "Above or below the text, or on both sides of the number." },
       { kind: "number", key: "motif.size", label: "Motif size", unit: "mm", min: 6, max: 150, step: 1, show: (p) => p.motif.kind !== "none", help: "The motif's larger side." },
       { kind: "number", key: "motif.gap", label: "Gap", unit: "mm", min: -20, max: 30, step: 0.5, show: (p) => p.motif.kind !== "none", help: "Space between the motif and the text." },
@@ -165,7 +167,7 @@ export const TABLENUM: GeneratorDef<TablenumParams> = {
   build: buildTablenum,
   check: (p, out) => checkTablenum(p, out as TablenumOutput),
   pro: (p) => (p.text.mark === "raised" ? "Raised two-material numbers need Pro." : p.build.double ? "Double-sided stands need Pro." : null),
-  fonts: (p) => [p.text.fontId, ...(p.text.label.trim() || p.batch.names.trim() ? [p.text.labelFont] : [])],
+  fonts: (p) => [p.text.fontId, ...(p.text.label.trim() || p.batch.names.trim() ? [p.text.labelFont] : []), ...motifFonts(p.motif.kind, p.motif.art)],
   scale: scaleTablenum,
   art,
   fileName: (p) => {

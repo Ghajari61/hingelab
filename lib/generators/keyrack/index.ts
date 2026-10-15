@@ -1,6 +1,7 @@
 import { rect } from "../geom";
 import { material2Fields } from "../material2";
 import { MOTIF_OPTIONS, motifArt } from "../motifs";
+import { motifArtFields, motifFonts } from "../motifArt";
 import { SHAPE_KINDS, SHAPE_NAMES, shapeArt, type ShapeKind } from "../shapes";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { textStyleSection } from "../textStyle";
@@ -39,7 +40,8 @@ const sections: SectionSpec<KeyrackParams>[] = [
         options: [{ v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }, { v: "raised", text: "Raised", title: "Two materials" }, { v: "none", text: "None" }],
       },
       { kind: "number", key: "text.y", label: "Height on board", unit: "%", min: 5, max: 95, step: 1, help: "Where the text sits, from the top of the board." },
-      { kind: "choice", key: "motif.kind", label: "Motif", rail: true, options: MOTIF_OPTIONS, help: "A picture beside or above the text." },
+      { kind: "choice", key: "motif.kind", label: "Motif", rail: true, options: MOTIF_OPTIONS, help: "A picture beside or above the text: a built-in motif, your own picture or your own text." },
+      ...motifArtFields<KeyrackParams>("motif.kind", "motif.art"),
       { kind: "choice", key: "motif.side", label: "Motif position", show: (p) => p.motif.kind !== "none", options: [{ v: "left", text: "Left" }, { v: "right", text: "Right" }, { v: "both", text: "Both sides" }, { v: "above", text: "Above" }], help: "Where the motif sits next to the text." },
       { kind: "number", key: "motif.size", label: "Motif size", unit: "mm", min: 8, max: 200, step: 1, show: (p) => p.motif.kind !== "none", help: "The motif's larger side." },
       { kind: "number", key: "motif.gap", label: "Motif gap", unit: "mm", min: -20, max: 40, step: 0.5, show: (p) => p.motif.kind !== "none", help: "Space between the motif and the text." },
@@ -131,7 +133,7 @@ export const KEYRACK: GeneratorDef<KeyrackParams> = {
   build: buildKeyrack,
   check: (p, out) => checkKeyrack(p, out as KeyrackOutput),
   pro: (p) => (p.shelf.on ? "Key holders with a shelf need Pro." : p.text.mark === "raised" ? "Raised two-material lettering needs Pro." : null),
-  fonts: (p) => [...(p.text.text.trim() ? [p.text.fontId] : []), ...(p.hooks.labels.trim() ? [p.hooks.labelFont] : [])],
+  fonts: (p) => [...(p.text.text.trim() ? [p.text.fontId] : []), ...(p.hooks.labels.trim() ? [p.hooks.labelFont] : []), ...motifFonts(p.motif.kind, p.motif.art)],
   scale: scaleKeyrack,
   art,
   batch: () => "text.text",

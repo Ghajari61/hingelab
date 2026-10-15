@@ -3,7 +3,8 @@ import { differenceShapes, dropSpecks, makeShape, offsetShapes, shapeContours, s
 import type { Shape } from "@/lib/letters/types";
 import { bboxOf, circle, pointInContour, rect, stadium, transform } from "../geom";
 import { material2 } from "../material2";
-import { isMotifId, motif, motifSize, type MotifId } from "../motifs";
+import { motif, motifSize, type MotifRef } from "../motifs";
+import { motifRef } from "../motifRef";
 import { orient, shapeOutline } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { bottomAt, distTo, mirrorX, textBlock, weld, withSticks } from "../weld";
@@ -53,7 +54,7 @@ function keyhole(x: number, y: number): Contour {
 }
 
 /** The motif around a text block w × h centred on (0, 0). */
-function placeMotif(id: MotifId, m: SignParams["motif"], w: number, h: number, hasText: boolean): Contour[] {
+function placeMotif(id: MotifRef, m: SignParams["motif"], w: number, h: number, hasText: boolean): Contour[] {
   const s = motifSize(id, m.size), g = m.gap;
   if (!hasText || m.side === "behind") return motif(id, m.size);
   switch (m.side) {
@@ -83,9 +84,10 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
 
   // Text and motif, centred on (0, 0).
   const t = textBlock(ctx, p.text.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, lead: p.text.lead, align: p.text.align, missing, style: { ...p.textStyle, ...p.textForm } });
-  if (t.loading) return { parts: [], stats: [], notice: "Loading the font." };
+  const mr = motifRef(p.motif.kind, p.motif.art, ctx, missing);
+  if (t.loading || mr.loading) return { parts: [], stats: [], notice: "Loading the font." };
   const hasText = t.contours.length > 0;
-  const mot = isMotifId(p.motif.kind) ? placeMotif(p.motif.kind, p.motif, t.width, t.height, hasText) : [];
+  const mot = mr.ref ? placeMotif(mr.ref, p.motif, t.width, t.height, hasText) : [];
   const behind = hasText && mot.length > 0 && p.motif.side === "behind";
   const all = [...t.contours, ...mot];
   const cutout = p.style.kind === "word" || p.style.kind === "neon";

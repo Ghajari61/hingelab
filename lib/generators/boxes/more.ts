@@ -8,7 +8,8 @@
  */
 import { differenceShapes, makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { circle, rect, regularPolygon, roundedRect, stadium } from "../geom";
-import { isMotifId, motif, motifSize } from "../motifs";
+import { isMotifKind, motif, motifSize } from "../motifs";
+import { motifRef } from "../motifRef";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { textBlock } from "../weld";
 import { boxPanels, fingerCount, fingerPanel, type EdgeSpec } from "./joints";
@@ -70,22 +71,29 @@ export interface Art { cs: Contour[]; w: number; h: number; loading: boolean; mi
 export function lidArt(p: BoxesParams, ctx: BuildContext): Art {
   const e = p.engrave, missing: string[] = [];
   const tx = e.text.trim() ? textBlock(ctx, e.text, e.fontId, e.size, { missing }) : null;
-  const m = isMotifId(e.motif) ? e.motif : null;
+  const mr = motifRef(e.motif, e.art, ctx, missing);
+  const m = mr.ref;
   const ms = m ? motifSize(m, e.motifSize) : { w: 0, h: 0 };
   const th = tx?.height ?? 0, gap = m && th ? Math.max(3, e.size * 0.4) : 0;
   const H = ms.h + gap + th;
   const cs: Contour[] = [];
   if (m) cs.push(...motif(m, e.motifSize, 0, -H / 2 + ms.h / 2));
   if (tx) cs.push(...tx.contours.map((c) => shiftC(c, 0, H / 2 - th / 2)));
-  return { cs, w: Math.max(ms.w, tx?.width ?? 0), h: H, loading: !!tx?.loading, missing };
+  return { cs, w: Math.max(ms.w, tx?.width ?? 0), h: H, loading: !!tx?.loading || mr.loading, missing };
 }
-export const hasArt = (p: BoxesParams) => !!p.engrave.text.trim() || isMotifId(p.engrave.motif) || p.engrave.border > 0;
+export const hasArt = (p: BoxesParams) => !!p.engrave.text.trim() || isMotifKind(p.engrave.motif) || p.engrave.border > 0;
 
 /** Engraving for a face of w × h whose outline is `outline`, art centred on (cx, cy). */
 const engraveOn = (p: BoxesParams, art: Art, outline: Contour, cx: number, cy: number) => [
   ...(p.engrave.border > 0 ? band(outline, p.engrave.border) : []),
   ...art.cs.map((c) => shiftC(c, cx, cy)),
 ];
+
+/** Puts the lid art on a part: engraved, or its outlines scored. */
+function markLid(part: GenPart, p: BoxesParams, cs: Contour[]) {
+  if (p.engrave.mark !== "score") { part.engrave = cs; return; }
+  if (cs.length) part.score = [...(part.score ?? []), ...shapeContours(unionShapes(cs)).map((c) => [...c, c[0]])];
+}
 
 /** Tabs along an edge of length L (tab-and-slot joints): centres and width. */
 function tabsAlong(L: number, T: number) {
@@ -282,7 +290,7 @@ function engraveLid(p: BoxesParams, kit: LidKit, all: GenPart[], art: Art) {
   if (!kit.face || !hasArt(p)) return {};
   const f = kit.face, part = all.find((q) => q.id === f.id);
   if (!part) return {};
-  part.engrave = engraveOn(p, art, f.outline, f.cx, f.cy);
+  markLid(part, p, engraveOn(p, art, f.outline, f.cx, f.cy));
   return { textWidth: art.w, textRoom: f.w, artHeight: art.h, artRoom: f.h };
 }
 
@@ -425,7 +433,7 @@ export function buildDrawer(p: BoxesParams, ctx: BuildContext): V2Output {
   const art = lidArt(p, ctx);
   let sizes = {};
   if (hasArt(p)) {
-    parts[1].engrave = engraveOn(p, art, rect(0, 0, W, D), W / 2, D / 2);
+    markLid(parts[1], p, engraveOn(p, art, rect(0, 0, W, D), W / 2, D / 2));
     sizes = { textWidth: art.w, textRoom: W - 12, artHeight: art.h, artRoom: D - 12 };
   }
   return {
@@ -479,7 +487,7 @@ export function buildHex(p: BoxesParams, ctx: BuildContext): V2Output {
     );
     total += T;
     if (hasArt(p)) {
-      parts[parts.length - 2].engrave = engraveOn(p, art, lid, cx, cy);
+      markLid(parts[parts.length - 2], p, engraveOn(p, art, lid, cx, cy));
       sizes = { textWidth: art.w, textRoom: a * 1.4, artHeight: art.h, artRoom: F * 0.8 };
     }
   }
@@ -519,7 +527,7 @@ export function buildMoney(p: BoxesParams, ctx: BuildContext): V2Output {
   const art = lidArt(p, ctx);
   let sizes = {};
   if (hasArt(p)) {
-    front.engrave = engraveOn(p, art, front.outer, W / 2, H / 2);
+    markLid(front, p, engraveOn(p, art, front.outer, W / 2, H / 2));
     sizes = { textWidth: art.w, textRoom: W - 4 * T, artHeight: art.h, artRoom: H - 4 * T };
   }
   return {
@@ -568,7 +576,7 @@ export function buildStack(p: BoxesParams, ctx: BuildContext): V2Output {
       { id: "lid-ring", name: "Lid ring", ...ring, place: flat(T + c, T + c, N * H - T) },
     );
     if (hasArt(p)) {
-      parts[parts.length - 2].engrave = engraveOn(p, art, lid, W / 2, D / 2);
+      markLid(parts[parts.length - 2], p, engraveOn(p, art, lid, W / 2, D / 2));
       sizes = { textWidth: art.w, textRoom: W - 2 * T - 8, artHeight: art.h, artRoom: D - 2 * T - 8 };
     }
   }

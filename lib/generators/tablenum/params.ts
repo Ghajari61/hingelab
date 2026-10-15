@@ -1,6 +1,7 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
-import { isMotifId } from "../motifs";
+import { isMotifKind } from "../motifs";
+import { MOTIF_ART, cleanMotifArt, type MotifArt } from "../motifArt";
 import { isShapeKind, type ShapeKind } from "../shapes";
 import { SECOND_MATERIALS } from "../material2";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
@@ -38,7 +39,7 @@ export interface TablenumParams extends GenBase {
   };
   textStyle: TextStyle;
   textForm: TextForm;
-  motif: { kind: string; place: TableMotifPlace; size: number; gap: number };
+  motif: { kind: string; place: TableMotifPlace; size: number; gap: number; art: MotifArt };
   border: { kind: "none" | "score" | "engrave"; inset: number };
   base: { layers: number; depth: number; width: number; step: number; corner: number };
   hinge: { band: number; slit: number; bridge: number; pitch: number };
@@ -64,7 +65,7 @@ export const TABLENUM_DEFAULTS: TablenumParams = {
   text: { label: "Table", labelFont: "pacifico", labelSize: 18, labelBelow: false, fontId: "archivo-black", size: 60, spacing: 0, nameSize: 10, mark: "engrave" },
   textStyle: { ...TEXT_STYLE },
   textForm: { ...TEXT_FORM },
-  motif: { kind: "none", place: "above", size: 22, gap: 4 },
+  motif: { kind: "none", place: "above", size: 22, gap: 4, art: { ...MOTIF_ART } },
   border: { kind: "score", inset: 5 },
   base: { layers: 2, depth: 60, width: 90, step: 4, corner: 4 },
   hinge: { band: 20, slit: 24, bridge: 3, pitch: 2 },
@@ -86,7 +87,8 @@ export function mergeTablenum(raw: unknown): TablenumParams {
   p.textForm = cleanTextForm(p.textForm);
   if (!MARKS.includes(p.text.mark)) p.text.mark = d.text.mark;
   if (!isShapeKind(p.plate.shape)) p.plate.shape = d.plate.shape;
-  if (p.motif.kind !== "none" && !isMotifId(p.motif.kind)) p.motif.kind = "none";
+  if (p.motif.kind !== "none" && !isMotifKind(p.motif.kind)) p.motif.kind = "none";
+  p.motif.art = cleanMotifArt(p.motif.art);
   if (!PLACES.includes(p.motif.place)) p.motif.place = d.motif.place;
   if (!["none", "score", "engrave"].includes(p.border.kind)) p.border.kind = d.border.kind;
   if (!["none", "top", "two"].includes(p.plaque.holes)) p.plaque.holes = d.plaque.holes;

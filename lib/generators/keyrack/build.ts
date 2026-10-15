@@ -2,7 +2,8 @@ import { MATERIALS } from "@/lib/hinge/defaults";
 import { makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { bboxOf, circle, pointInContour, rect, roundedRect, stadium } from "../geom";
 import { material2 } from "../material2";
-import { isMotifId, motif, motifSize } from "../motifs";
+import { motif, motifSize } from "../motifs";
+import { motifRef } from "../motifRef";
 import { orient, shapeOutline } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { textBlock, weld } from "../weld";
@@ -61,12 +62,13 @@ export function buildKeyrack(p: KeyrackParams, ctx: BuildContext): KeyrackOutput
 
   // Text and motif, centred as a group.
   const t = textBlock(ctx, p.text.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, missing, style: { ...p.textStyle, ...p.textForm } });
-  if (t.loading) loading = true;
+  const mr = motifRef(p.motif.kind, p.motif.art, ctx, missing);
+  if (t.loading || mr.loading) loading = true;
   let content: Contour[] = [...t.contours];
-  if (isMotifId(p.motif.kind)) {
-    const s = motifSize(p.motif.kind, p.motif.size), g = p.motif.gap, w = t.width, h = t.height;
+  if (mr.ref) {
+    const id = mr.ref, sz = p.motif.size;
+    const s = motifSize(id, sz), g = p.motif.gap, w = t.width, h = t.height;
     const has = t.contours.length > 0;
-    const id = p.motif.kind, sz = p.motif.size;
     switch (has ? p.motif.side : "above") {
       case "left": content.push(...motif(id, sz, -w / 2 - g - s.w / 2, 0)); break;
       case "right": content.push(...motif(id, sz, w / 2 + g + s.w / 2, 0)); break;

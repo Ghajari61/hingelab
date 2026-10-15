@@ -2,7 +2,8 @@ import { MATERIALS } from "@/lib/hinge/defaults";
 import { differenceShapes, makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { bboxOf, circle, rect, transform } from "../geom";
 import { material2 } from "../material2";
-import { isMotifId, motif, motifSize } from "../motifs";
+import { motif, motifSize } from "../motifs";
+import { motifRef } from "../motifRef";
 import { orient, shapeOutline, type ShapeKind } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { tabsUnder, textBlock, weld, withSticks } from "../weld";
@@ -69,7 +70,9 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
   const shape: ShapeKind = tent && !TENT_SHAPES.includes(p.plate.shape) ? "rounded" : p.plate.shape;
 
   // Each table's content, centred on (0, 0).
-  let loading = false;
+  const mr = motifRef(p.motif.kind, p.motif.art, ctx, missing);
+  let loading = mr.loading;
+  const mid = mr.ref;
   const blocks = tables.map(({ main, sub }) => {
     const lab = p.text.label.trim() ? textBlock(ctx, p.text.label, p.text.labelFont, p.text.labelSize, { missing, style: { ...p.textStyle, ...p.textForm } }) : null;
     const num = textBlock(ctx, main, p.text.fontId, p.text.size, { spacing: p.text.spacing, missing, style: { ...p.textStyle, ...p.textForm } });
@@ -87,14 +90,14 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
     });
     let cs = move(placed, 0, -y / 2);
     numY -= y / 2;
-    if (isMotifId(p.motif.kind) && cs.length) {
-      const bb = bboxOf(cs), s = motifSize(p.motif.kind, p.motif.size), g = p.motif.gap;
-      if (p.motif.place === "above") cs.push(...motif(p.motif.kind, p.motif.size, 0, bb.y0 - g - s.h / 2));
-      if (p.motif.place === "below") cs.push(...motif(p.motif.kind, p.motif.size, 0, bb.y1 + g + s.h / 2));
+    if (mid && cs.length) {
+      const bb = bboxOf(cs), s = motifSize(mid, p.motif.size), g = p.motif.gap;
+      if (p.motif.place === "above") cs.push(...motif(mid, p.motif.size, 0, bb.y0 - g - s.h / 2));
+      if (p.motif.place === "below") cs.push(...motif(mid, p.motif.size, 0, bb.y1 + g + s.h / 2));
       if (p.motif.place === "both") {
         const nb = bboxOf(num.contours.length ? num.contours : cs);
         const half = (nb.x1 - nb.x0) / 2;
-        cs.push(...motif(p.motif.kind, p.motif.size, -half - g - s.w / 2, numY), ...motif(p.motif.kind, p.motif.size, half + g + s.w / 2, numY, true));
+        cs.push(...motif(mid, p.motif.size, -half - g - s.w / 2, numY), ...motif(mid, p.motif.size, half + g + s.w / 2, numY, true));
       }
     }
     if (cs.length) {

@@ -30,12 +30,13 @@ const LAZY_BUDGETS = {
   "Puzzle generator": { key: /registry\.ts -> \.\/puzzle$/, kb: 15 },
   "QR Code generator": { key: /registry\.ts -> \.\/qr$/, kb: 25 },
   // Boxes version 2 (D109) added five designs and three lids: 10 → 25 KB.
-  "Boxes generator": { key: /registry\.ts -> \.\/boxes$/, kb: 30 },
-  "Cake Topper generator": { key: /registry\.ts -> \.\/topper$/, kb: 18 },
-  "Key Holder generator": { key: /registry\.ts -> \.\/keyrack$/, kb: 17 },
-  "Sign generator": { key: /registry\.ts -> \.\/sign$/, kb: 20 },
-  "Table Numbers generator": { key: /registry\.ts -> \.\/tablenum$/, kb: 19 },
-  "Trophy generator": { key: /registry\.ts -> \.\/trophy$/, kb: 18 },
+  // Your own motif (D169): a traced picture or typed words as the motif, with their fields, +2 KB each.
+  "Boxes generator": { key: /registry\.ts -> \.\/boxes$/, kb: 32 },
+  "Cake Topper generator": { key: /registry\.ts -> \.\/topper$/, kb: 20 },
+  "Key Holder generator": { key: /registry\.ts -> \.\/keyrack$/, kb: 19 },
+  "Sign generator": { key: /registry\.ts -> \.\/sign$/, kb: 22 },
+  "Table Numbers generator": { key: /registry\.ts -> \.\/tablenum$/, kb: 21 },
+  "Trophy generator": { key: /registry\.ts -> \.\/trophy$/, kb: 20 },
   // The Your picture pattern (D160): sample shapes, picture layers and bridges for loose pieces, 32 → 37 KB.
   // Photo looks, the slot holder and print checks (D161; the image work itself is in the photo worker), 37 → 40 KB.
   // The enclosure (D162): light box, back, keyholes and feet, and finger-jointed walls from the Boxes

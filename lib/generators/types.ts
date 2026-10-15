@@ -208,7 +208,8 @@ export interface NumberSpec<P> extends FieldCommon<P> {
 
 export interface ChoiceSpec<P> extends FieldCommon<P> {
   kind: "choice";
-  options: { v: string; text: string; title?: string; pro?: boolean }[];
+  /** `input`: the option needs the user's own picture or text (not offered where pictures can't be picked). */
+  options: { v: string; text: string; title?: string; pro?: boolean; input?: "picture" | "text" }[];
   /** Shown as picture cards in the left rail instead of the panel. */
   rail?: boolean;
   /** Picking writes more than the key (for example a movement's sizes). */

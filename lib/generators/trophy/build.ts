@@ -3,7 +3,8 @@ import { differenceShapes, makeShape, offsetShapes, shapeContours, unionShapes }
 import type { Shape } from "@/lib/letters/types";
 import { bboxOf, circle, customOutline, rect, regularPolygon, roundCorners, transform } from "../geom";
 import { material2 } from "../material2";
-import { isMotifId, motif, type MotifId } from "../motifs";
+import { isMotifId, motif, type MotifRef } from "../motifs";
+import { motifRef } from "../motifRef";
 import { fitBox, orient, shapeOutline, starPolygon } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { bottomAt, bridgeIslands, tabsUnder, textBlock, weld, withSticks } from "../weld";
@@ -38,13 +39,14 @@ const closed = (c: Contour): Contour => [...c, c[0]];
 const biggest = (s: Shape[]) => s.reduce((a, b) => (b.area > a.area ? b : a));
 const TAB_W = 16;
 
-interface EmblemShape { shape: Shape; cx: number; cy: number; room: number }
+/** `detail`: the picture's own regions on the emblem, to engrave or score (a traced picture only). */
+interface EmblemShape { shape: Shape; cx: number; cy: number; room: number; detail?: Contour[] }
 
 /** Scale a 100-unit design to w × h. */
 const fit100 = (c: Contour, w: number, h: number) => c.map(([x, y]) => [(x * w) / 100, (y * h) / 100] as Pt);
 
-/** The emblem filling (0, 0)–(w, h), with where its text goes and how wide it may be. */
-export function emblemShape(p: TrophyParams, badPath: { v: boolean }): EmblemShape {
+/** The emblem filling (0, 0)–(w, h), with where its text goes and how wide it may be; `own` is the user's picture or text motif. */
+export function emblemShape(p: TrophyParams, badPath: { v: boolean }, own: MotifRef | null = null): EmblemShape {
   const { width: w, height: h } = p.emblem;
   const one = (cs: Contour[], holes: Contour[] = []) => biggest(holes.length ? differenceShapes(cs.map(orient), holes.map(orient)) : unionShapes(cs.map(orient)));
   switch (p.emblem.kind) {
@@ -84,10 +86,12 @@ export function emblemShape(p: TrophyParams, badPath: { v: boolean }): EmblemSha
       return { shape: s, cx: w / 2, cy: h / 2, room: r * 1.1 };
     }
     case "motif": {
-      const id = (isMotifId(p.emblem.motif) ? p.emblem.motif : "crown") as MotifId;
-      const s = weld(motif(id, Math.max(w, h), w / 2, h / 2), { border: 0.6, solid: true, bridge: Math.max(5, Math.min(w, h) * 0.06) })!;
+      const id: MotifRef = own ?? (isMotifId(p.emblem.motif) ? p.emblem.motif : "crown");
+      const cs = motif(id, Math.max(w, h), w / 2, h / 2);
+      const s = weld(cs, { border: 0.6, solid: true, bridge: Math.max(5, Math.min(w, h) * 0.06) })!;
       const b = bboxOf([s.outer]);
-      return { shape: makeShape(transform(s.outer, { x: -b.x0, y: -b.y0 }), []), cx: (b.x1 - b.x0) / 2, cy: (b.y1 - b.y0) / 2, room: (b.x1 - b.x0) * 0.45 };
+      const detail = own && p.emblem.motif === "picture" ? move(cs, -b.x0, -b.y0) : undefined;
+      return { shape: makeShape(transform(s.outer, { x: -b.x0, y: -b.y0 }), []), cx: (b.x1 - b.x0) / 2, cy: (b.y1 - b.y0) / 2, room: (b.x1 - b.x0) * 0.45, detail };
     }
     case "custom": {
       const c = customOutline(p.emblem.path, w, h);
@@ -121,7 +125,9 @@ export function buildTrophy(p: TrophyParams, ctx: BuildContext): TrophyOutput {
   let loading = false;
 
   // The emblem.
-  const em = emblemShape(p, bad);
+  const own = p.emblem.kind === "motif" ? motifRef(p.emblem.motif, p.emblem.art, ctx, missing) : null;
+  if (own?.loading) return { parts: [], stats: [], notice: "Loading the font." };
+  const em = emblemShape(p, bad, own && typeof own.ref === "object" ? own.ref : null);
   const eb = bboxOf([em.shape.outer]);
   const EW = eb.x1 - eb.x0, EH = eb.y1 - eb.y0;
 
@@ -172,6 +178,7 @@ export function buildTrophy(p: TrophyParams, ctx: BuildContext): TrophyOutput {
 
   // Engraving.
   const marks: Contour[] = [];
+  if (em.detail) marks.push(...move(em.detail, ex - eb.x0, -eb.y0));
   if (et) marks.push(...move(et.contours, ex + em.cx, em.cy));
   if (p.emblem.laurel) {
     const r = em.room * 0.95;

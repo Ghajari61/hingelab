@@ -1,6 +1,7 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
-import { isMotifId } from "../motifs";
+import { isMotifKind } from "../motifs";
+import { MOTIF_ART, cleanMotifArt, type MotifArt } from "../motifArt";
 import { SECOND_MATERIALS } from "../material2";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
 import { mergeInto } from "../util";
@@ -14,8 +15,9 @@ export interface TrophyParams extends GenBase {
   build: { kind: TrophyBuild };
   emblem: {
     kind: Emblem;
-    /** Motif id when `kind` is motif. */
+    /** Motif id when `kind` is motif ("picture" and "text" use `art`). */
     motif: string;
+    art: MotifArt;
     /** SVG path data when `kind` is custom. */
     path: string;
     width: number;
@@ -61,7 +63,7 @@ export const TROPHY_DEFAULTS: TrophyParams = {
   job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   build: { kind: "single" },
-  emblem: { kind: "star", motif: "crown", path: "", width: 110, height: 105, points: 5, text: "1", fontId: "archivo-black", size: 30, laurel: false },
+  emblem: { kind: "star", motif: "crown", art: { ...MOTIF_ART }, path: "", width: 110, height: 105, points: 5, text: "1", fontId: "archivo-black", size: 30, laurel: false },
   plate: { on: true, name: "Alex Morgan", title: "Player of the Year", year: "2026", fontId: "archivo-black", titleFont: "pacifico", nameSize: 9, titleSize: 8, width: 90, pad: 6, corner: 4 },
   stem: { width: 24, height: 12 },
   base: { tiers: 2, shape: "rounded", width: 120, depth: 60, step: 6, corner: 6, fit: 0.1, text: "" },
@@ -78,7 +80,8 @@ export function mergeTrophy(raw: unknown): TrophyParams {
   const p = mergeInto(clone(d), raw);
   if (!BUILDS.includes(p.build.kind)) p.build.kind = d.build.kind;
   if (!(EMBLEMS as readonly string[]).includes(p.emblem.kind)) p.emblem.kind = d.emblem.kind;
-  if (!isMotifId(p.emblem.motif)) p.emblem.motif = d.emblem.motif;
+  if (!isMotifKind(p.emblem.motif)) p.emblem.motif = d.emblem.motif;
+  p.emblem.art = cleanMotifArt(p.emblem.art);
   if (!BASES.includes(p.base.shape)) p.base.shape = d.base.shape;
   if (p.mark.kind !== "engrave" && p.mark.kind !== "score") p.mark.kind = d.mark.kind;
   if (!(p.mat.mat2 in SECOND_MATERIALS)) p.mat.mat2 = d.mat.mat2;

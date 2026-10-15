@@ -1,7 +1,8 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import { clamp } from "../common";
-import { isMotifId } from "../motifs";
+import { isMotifKind } from "../motifs";
+import { MOTIF_ART, cleanMotifArt, type MotifArt } from "../motifArt";
 import { isShapeKind, type ShapeKind } from "../shapes";
 import { SECOND_MATERIALS } from "../material2";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
@@ -19,7 +20,7 @@ export interface KeyrackParams extends GenBase {
   text: { text: string; fontId: string; size: number; spacing: number; mark: Mark; y: number };
   textStyle: TextStyle;
   textForm: TextForm;
-  motif: { kind: string; side: MotifSide; size: number; gap: number };
+  motif: { kind: string; side: MotifSide; size: number; gap: number; art: MotifArt };
   hooks: {
     count: number;
     style: HookStyle;
@@ -59,7 +60,7 @@ export const KEYRACK_DEFAULTS: KeyrackParams = {
   text: { text: "Home Sweet Home", fontId: "pacifico", size: 20, spacing: 0, mark: "engrave", y: 30 },
   textStyle: { ...TEXT_STYLE },
   textForm: { ...TEXT_FORM },
-  motif: { kind: "house", side: "left", size: 30, gap: 6 },
+  motif: { kind: "house", side: "left", size: 30, gap: 6, art: { ...MOTIF_ART } },
   hooks: { count: 4, style: "hook", profile: "round", reach: 32, size: 16, y: 72, margin: 30, hole: 8, labels: "", labelFont: "fredoka", labelSize: 6 },
   shelf: { on: false, depth: 70, at: 14 },
   mount: { kind: "keyhole", y: 12 },
@@ -83,7 +84,8 @@ export function mergeKeyrack(raw: unknown): KeyrackParams {
   if (!PROFILES.includes(p.hooks.profile)) p.hooks.profile = d.hooks.profile;
   if (!SIDES.includes(p.motif.side)) p.motif.side = d.motif.side;
   if (!MOUNTS.includes(p.mount.kind)) p.mount.kind = d.mount.kind;
-  if (p.motif.kind !== "none" && !isMotifId(p.motif.kind)) p.motif.kind = "none";
+  if (p.motif.kind !== "none" && !isMotifKind(p.motif.kind)) p.motif.kind = "none";
+  p.motif.art = cleanMotifArt(p.motif.art);
   if (!(p.mat.mat2 in SECOND_MATERIALS)) p.mat.mat2 = d.mat.mat2;
   p.hooks.count = clamp(Math.round(p.hooks.count), 0, 16);
   return p;

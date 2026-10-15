@@ -1,6 +1,7 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
-import { isMotifId } from "../motifs";
+import { isMotifKind } from "../motifs";
+import { MOTIF_ART, cleanMotifArt, type MotifArt } from "../motifArt";
 import { isShapeKind, type ShapeKind } from "../shapes";
 import { SECOND_MATERIALS } from "../material2";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
@@ -36,7 +37,7 @@ export interface TopperParams extends GenBase {
   };
   textStyle: TextStyle;
   textForm: TextForm;
-  motif: { kind: string; place: MotifPlace; size: number; gap: number };
+  motif: { kind: string; place: MotifPlace; size: number; gap: number; art: MotifArt };
   plate: { shape: ShapeKind; auto: boolean; pad: number; width: number; height: number; corner: number; frame: boolean };
   sticks: { count: number; length: number; width: number; tip: number; spread: number };
   cupcake: {
@@ -45,6 +46,8 @@ export interface TopperParams extends GenBase {
     /** Width of each pick, mm. */
     size: number;
     motif: string;
+    /** The user's own picture or text, for the "picture" and "text" motifs. */
+    art: MotifArt;
     /** One name per line; picks cycle through them. */
     text: string;
     fontId: string;
@@ -73,10 +76,10 @@ export const TOPPER_DEFAULTS: TopperParams = {
   style: { kind: "letters", weld: 1, border: 4, mark: "engrave" },
   textStyle: { ...TEXT_STYLE },
   textForm: { ...TEXT_FORM },
-  motif: { kind: "none", place: "above", size: 40, gap: 0 },
+  motif: { kind: "none", place: "above", size: 40, gap: 0, art: { ...MOTIF_ART } },
   plate: { shape: "arch", auto: true, pad: 10, width: 180, height: 120, corner: 4, frame: true },
   sticks: { count: 2, length: 90, width: 7, tip: 14, spread: 45 },
-  cupcake: { count: 12, shape: "circle", size: 55, motif: "heart", text: "", fontId: "pacifico", textSize: 9, stick: 70, layered: false },
+  cupcake: { count: 12, shape: "circle", size: 55, motif: "heart", art: { ...MOTIF_ART }, text: "", fontId: "pacifico", textSize: 9, stick: 70, layered: false },
   mat: { mat2: "acrylic-gold", T2: 3 },
 };
 
@@ -95,10 +98,12 @@ export function mergeTopper(raw: unknown): TopperParams {
   if (!STYLES.includes(p.style.kind)) p.style.kind = d.style.kind;
   if (!MARKS.includes(p.style.mark)) p.style.mark = d.style.mark;
   if (!PLACES.includes(p.motif.place)) p.motif.place = d.motif.place;
-  if (p.motif.kind !== "none" && !isMotifId(p.motif.kind)) p.motif.kind = "none";
+  if (p.motif.kind !== "none" && !isMotifKind(p.motif.kind)) p.motif.kind = "none";
+  p.motif.art = cleanMotifArt(p.motif.art);
+  p.cupcake.art = cleanMotifArt(p.cupcake.art);
   if (!isShapeKind(p.plate.shape)) p.plate.shape = d.plate.shape;
   if (p.cupcake.shape !== "motif" && !isShapeKind(p.cupcake.shape)) p.cupcake.shape = d.cupcake.shape;
-  if (p.cupcake.motif !== "none" && !isMotifId(p.cupcake.motif)) p.cupcake.motif = "none";
+  if (p.cupcake.motif !== "none" && !isMotifKind(p.cupcake.motif)) p.cupcake.motif = "none";
   if (!(p.mat.mat2 in SECOND_MATERIALS)) p.mat.mat2 = d.mat.mat2;
   p.sticks.count = clamp(Math.round(p.sticks.count), 0, 3);
   p.cupcake.count = clamp(Math.round(p.cupcake.count), 1, 60);

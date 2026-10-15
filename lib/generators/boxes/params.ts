@@ -1,5 +1,7 @@
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
+import { isMotifKind } from "../motifs";
+import { MOTIF_ART, cleanMotifArt, type MotifArt } from "../motifArt";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 
@@ -30,8 +32,8 @@ export interface BoxesParams extends GenBase {
   };
   box: { width: number; depth: number; height: number; lid: LidKind; clearance: number; notch: boolean; pin: number };
   tray: { width: number; depth: number; height: number; cols: number; rows: number; dividers: number; lid: TrayLid };
-  /** Text, a motif and a border engraved on the lid (or the front of a money box). */
-  engrave: { text: string; fontId: string; size: number; motif: string; motifSize: number; border: number };
+  /** Text, a motif and a border engraved or scored on the lid (or the front of a money box). */
+  engrave: { text: string; fontId: string; size: number; motif: string; motifSize: number; border: number; art: MotifArt; mark: "engrave" | "score" };
   drawer: { width: number; depth: number; height: number; drawers: number; pull: "hole" | "notch" | "knob"; clearance: number };
   hex: { width: number; height: number; lid: "open" | "liftoff"; clearance: number };
   insert: { width: number; depth: number; height: number; cols: number; rows: number; clearance: number };
@@ -60,7 +62,7 @@ export const BOXES_DEFAULTS: BoxesParams = {
   joint: { finger: 10, outside: false, style: "fingers" },
   box: { width: 120, depth: 80, height: 60, lid: "closed", clearance: 0.3, notch: false, pin: 3 },
   tray: { width: 240, depth: 160, height: 50, cols: 3, rows: 2, dividers: 85, lid: "none" },
-  engrave: { text: "", fontId: "pacifico", size: 14, motif: "none", motifSize: 30, border: 0 },
+  engrave: { text: "", fontId: "pacifico", size: 14, motif: "none", motifSize: 30, border: 0, art: { ...MOTIF_ART }, mark: "engrave" },
   drawer: { width: 160, depth: 120, height: 100, drawers: 2, pull: "hole", clearance: 0.5 },
   hex: { width: 100, height: 60, lid: "liftoff", clearance: 0.3 },
   insert: { width: 200, depth: 140, height: 40, cols: 3, rows: 2, clearance: 0.5 },
@@ -77,6 +79,9 @@ export function mergeBoxes(raw: unknown): BoxesParams {
   const p = mergeInto(clone(BOXES_DEFAULTS), raw);
   if (!(p.design in DESIGN_NAMES)) p.design = "box";
   if (!(p.box.lid in LID_NAMES)) p.box.lid = "closed";
+  if (p.engrave.motif !== "none" && !isMotifKind(p.engrave.motif)) p.engrave.motif = "none";
+  p.engrave.art = cleanMotifArt(p.engrave.art);
+  if (p.engrave.mark !== "score") p.engrave.mark = "engrave";
   return p;
 }
 

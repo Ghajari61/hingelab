@@ -1,5 +1,6 @@
 import { circle, rect, regularPolygon, roundedRect } from "../geom";
-import { MOTIF_OPTIONS, isMotifId } from "../motifs";
+import { MOTIF_OPTIONS, isMotifKind } from "../motifs";
+import { motifArtFields, motifFonts } from "../motifArt";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { fitArt, namedFile } from "../util";
 import { buildBoxes, type BoxesOutput } from "./build";
@@ -135,14 +136,20 @@ const sections: SectionSpec<BoxesParams>[] = [
   },
   {
     id: "engrave", title: "Engraving", open: false, show: engraved,
-    help: "Text, a motif and a border engraved on the lid (the cabinet top of a drawer box, the front of a money box).",
+    help: "Text, a motif (built in, your own picture or your own text) and a border, engraved or scored on the lid (the cabinet top of a drawer box, the front of a money box).",
     fields: [
       { kind: "text", key: "engrave.text", label: "Text", multiline: true, maxLength: 80, placeholder: "e.g. Tea", help: "Words engraved on the lid; each line is centred." },
       { kind: "font", key: "engrave.fontId", label: "Font", show: (p) => !!p.engrave.text.trim(), sample: (p) => p.engrave.text || "Aa", help: "Typeface of the text (the same fonts as Letters)." },
       { kind: "number", key: "engrave.size", label: "Text height", unit: "mm", min: 4, max: 80, step: 0.5, show: (p) => !!p.engrave.text.trim(), help: "Cap height of the text." },
-      { kind: "choice", key: "engrave.motif", label: "Motif", help: "A picture engraved above the text.", options: MOTIF_OPTIONS },
-      { kind: "number", key: "engrave.motifSize", label: "Motif size", unit: "mm", min: 8, max: 200, step: 1, show: (p) => isMotifId(p.engrave.motif), help: "Larger side of the motif." },
+      { kind: "choice", key: "engrave.motif", label: "Motif", help: "A picture above the text: a built-in motif, your own picture or your own text.", options: MOTIF_OPTIONS },
+      ...motifArtFields<BoxesParams>("engrave.motif", "engrave.art"),
+      { kind: "number", key: "engrave.motifSize", label: "Motif size", unit: "mm", min: 8, max: 200, step: 1, show: (p) => isMotifKind(p.engrave.motif), help: "Larger side of the motif." },
       { kind: "number", key: "engrave.border", label: "Border inset", unit: "mm", min: 0, max: 40, step: 0.5, help: "Engraves a line this far in from the edge; 0 leaves it off." },
+      {
+        kind: "choice", key: "engrave.mark", label: "Mark", show: hasArt,
+        help: "Engrave fills the text, motif and border; Score traces their outlines with a thin line (quick on a diode laser).",
+        options: [{ v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }],
+      },
     ],
   },
   {
@@ -309,7 +316,7 @@ export const BOXES: GeneratorDef<BoxesParams> = {
   presets: BOXES_PRESETS,
   build: buildBoxes,
   check: (p, out) => checkBoxes(p, out as BoxesOutput),
-  fonts: (p) => (p.design === "sign" && p.sign.text.trim() ? [p.sign.fontId] : p.design === "keys" && p.keys.text.trim() ? [p.keys.fontId] : engraved(p) && hasArt(p) && p.engrave.text.trim() ? [p.engrave.fontId] : []),
+  fonts: (p) => (p.design === "sign" && p.sign.text.trim() ? [p.sign.fontId] : p.design === "keys" && p.keys.text.trim() ? [p.keys.fontId] : engraved(p) && hasArt(p) ? [...(p.engrave.text.trim() ? [p.engrave.fontId] : []), ...motifFonts(p.engrave.motif, p.engrave.art)] : []),
   art,
   batch: (p) => (p.design === "sign" ? "sign.text" : p.design === "keys" ? "keys.text" : engraved(p) ? "engrave.text" : null),
   fileName: (p) => namedFile(p.design === "bird" ? "birdhouse" : p.design, p.name, fileTail(p)),
@@ -323,6 +330,7 @@ export const BOXES: GeneratorDef<BoxesParams> = {
     ],
     tips: [
       "Fingers about two to three times the material thickness look right and stay strong.",
+      "The lid's motif can be your own logo or drawing (Your picture) or initials in any font (Your text); Score draws its outlines quickly on a diode laser.",
       "Measure the material with calipers; 3 mm plywood is often 2.7 to 3.2 mm, and the joints depend on it.",
       "Dry-fit everything before gluing, and glue with a thin bead; squeeze-out is hard to clean between fingers.",
       "Open the 3D view to check how the parts go together before cutting.",

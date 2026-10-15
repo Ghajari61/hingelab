@@ -127,7 +127,7 @@ function genField(f: FieldSpec<GenBase>): DField | null {
   const common = { key: f.key, label: f.label, help: f.help };
   switch (f.kind) {
     case "number": return { kind: "number", ...common, unit: f.unit, min: f.min, max: f.max, step: f.step, ...(f.int ? { int: true } : {}) };
-    case "choice": return { kind: "choice", ...common, options: f.options.map((o) => ({ v: o.v, text: o.text, ...(o.title ? { title: o.title } : {}), ...(o.pro ? { pro: true } : {}) })) };
+    case "choice": return { kind: "choice", ...common, options: f.options.filter((o) => o.input !== "picture").map((o) => ({ v: o.v, text: o.text, ...(o.title ? { title: o.title } : {}), ...(o.pro ? { pro: true } : {}) })) };
     case "toggle": return { kind: "toggle", ...common };
     case "text": return { kind: "text", ...common, placeholder: f.placeholder, multiline: f.multiline, maxLength: f.maxLength ?? 2000 };
     case "font": return { kind: "choice", ...common, options: FONTS_BY_STYLE.map((b) => ({ v: b.id, text: b.scripts.includes("arabic") ? `${b.name} (Persian)` : b.name, title: `${FONT_CATEGORIES.find((c) => c.id === b.category)?.name}: ${b.note}` })) };

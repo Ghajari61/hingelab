@@ -25,7 +25,7 @@ export function randomiseParams(def: AnyGenerator, params: P, locked: ReadonlySe
   let q = params;
   for (const f of fields) {
     if (f.kind !== "choice" || !shows(f, q)) continue;
-    const opts = f.options.filter((o) => !o.pro);
+    const opts = f.options.filter((o) => !o.pro && !o.input);
     if (!opts.length) continue;
     const v = opts[Math.min(opts.length - 1, Math.floor(rnd() * opts.length))].v;
     q = f.apply ? (f.apply(q, v) as P) : setPath(q, f.key, v);

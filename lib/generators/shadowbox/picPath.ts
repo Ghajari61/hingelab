@@ -51,6 +51,9 @@ export function decodeContours(s: string): Contour[] {
 
 export const encodeLevels = (levels: Contour[][]) => levels.map(encodeContours).join("|");
 
+/** The level nearest a brightness cut-off (%), of `n` evenly spaced from 5 % to 95 %. */
+export const levelAt = (pct: number, n: number) => (n <= 1 ? 0 : Math.max(0, Math.min(n - 1, Math.round(((pct - 5) / 90) * (n - 1)))));
+
 /** Stored outlines: path data only, within the size limit and the number of levels. */
 export function isPictureText(v: unknown): v is string {
   return typeof v === "string" && v.length <= MAX_PIC_TEXT && /^[Mlz\d\s|-]*$/.test(v) && v.split("|").length <= LEVEL_CUTS.length;

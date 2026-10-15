@@ -19,7 +19,7 @@ import { motif } from "../motifs";
 import { orient } from "../shapes";
 import type { Contour, Pt } from "../types";
 import type { Sample, ShadowBoxParams } from "./params";
-import { PIC_BOX, decodeContours } from "./picPath";
+import { PIC_BOX, decodeContours, levelAt } from "./picPath";
 
 // ---------------------------------------------------------------- Stored outlines
 
@@ -120,8 +120,7 @@ export function wordSource(cs: Contour[]): PicSource {
   return { levels: [unionShapes(out, [], true)], w: (b.x1 - b.x0) * k, h: (b.y1 - b.y0) * k, traced: false };
 }
 
-/** The level nearest a brightness cut-off (%), of `n` evenly spaced from 5 % to 95 %. */
-export const levelAt = (pct: number, n: number) => (n <= 1 ? 0 : Math.max(0, Math.min(n - 1, Math.round(((pct - 5) / 90) * (n - 1)))));
+export { levelAt };
 
 /** How the layers are made: levels need a traced picture; one shape grows instead. */
 export const pictureMode = (pic: Pic, src: PicSource) => (pic.mode === "levels" && !src.traced ? "grow" : pic.mode);

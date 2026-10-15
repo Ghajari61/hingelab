@@ -1,6 +1,7 @@
 import { rect, roundedRect } from "../geom";
 import { material2Fields } from "../material2";
 import { MOTIF_OPTIONS, motifArt } from "../motifs";
+import { motifArtFields, motifFonts } from "../motifArt";
 import type { GeneratorDef, SectionSpec } from "../types";
 import { fitArt, namedFile } from "../util";
 import { buildTrophy, emblemShape, type TrophyOutput } from "./build";
@@ -29,7 +30,8 @@ const sections: SectionSpec<TrophyParams>[] = [
     help: "The shape at the top of the trophy.",
     fields: [
       { kind: "choice", key: "emblem.kind", label: "Emblem", rail: true, options: EMBLEMS.map((k) => ({ v: k, text: EMBLEM_NAMES[k] })), help: "A star, cup, shield, medal, flame or laurel wreath, any motif, or your own outline." },
-      { kind: "choice", key: "emblem.motif", label: "Motif", rail: true, show: (p) => p.emblem.kind === "motif", options: MOTIF_OPTIONS.filter((o) => o.v !== "none"), help: "The motif used as the emblem." },
+      { kind: "choice", key: "emblem.motif", label: "Motif", rail: true, show: (p) => p.emblem.kind === "motif", options: MOTIF_OPTIONS.filter((o) => o.v !== "none"), help: "The motif used as the emblem: a built-in motif, your own picture (its details engraved or scored on it) or your own text." },
+      ...motifArtFields<TrophyParams>("emblem.motif", "emblem.art", (p) => p.emblem.kind === "motif"),
       { kind: "text", key: "emblem.path", label: "SVG path", multiline: true, maxLength: 20000, placeholder: "M 0 0 L 100 0 L 50 90 Z", show: (p) => p.emblem.kind === "custom", help: "The d attribute of a closed SVG path; it is scaled to the emblem's size." },
       { kind: "number", key: "emblem.points", label: "Points", unit: "", min: 4, max: 12, step: 1, int: true, show: (p) => p.emblem.kind === "star", help: "How many points the star has." },
       { kind: "number", key: "emblem.width", label: "Width", unit: "mm", min: 30, max: 400, step: 1, help: "Width of the emblem." },
@@ -123,7 +125,7 @@ export const TROPHY: GeneratorDef<TrophyParams> = {
   build: buildTrophy,
   check: (p, out) => checkTrophy(p, out as TrophyOutput),
   pro: (p) => (p.build.kind === "layered" ? "Layered trophies need Pro." : p.emblem.kind === "custom" ? "Custom emblems need Pro." : null),
-  fonts: (p) => [...(p.emblem.text.trim() ? [p.emblem.fontId] : []), ...(p.plate.on ? [p.plate.fontId, p.plate.titleFont] : []), ...(p.base.text.trim() ? [p.plate.fontId] : [])],
+  fonts: (p) => [...(p.emblem.text.trim() ? [p.emblem.fontId] : []), ...(p.plate.on ? [p.plate.fontId, p.plate.titleFont] : []), ...(p.base.text.trim() ? [p.plate.fontId] : []), ...(p.emblem.kind === "motif" ? motifFonts(p.emblem.motif, p.emblem.art) : [])],
   scale: scaleTrophy,
   art,
   batch: (p) => (p.plate.on ? "plate.name" : "emblem.text"),
@@ -136,6 +138,7 @@ export const TROPHY: GeneratorDef<TrophyParams> = {
     ],
     tips: [
       "For mirror or clear acrylic figures, a clearance of 0.05 mm gives a tight push fit; plywood likes 0.1 to 0.15 mm.",
+      "A club or school logo makes a fine emblem: choose Motif, then Your picture; its outline is cut and its details are engraved or scored.",
       "Three tiers with a 5 to 8 mm step look like a turned plinth.",
       "Engrave the base text in front of the figure so it reads from the same side.",
       "Keep the figure no taller than about three times the base's depth so it does not tip.",

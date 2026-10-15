@@ -1,6 +1,7 @@
 import { circle, rect, roundedRect, stadium } from "../geom";
 import { material2Fields } from "../material2";
 import { MOTIF_OPTIONS, motifArt } from "../motifs";
+import { motifArtFields, motifFonts } from "../motifArt";
 import { SHAPE_KINDS, SHAPE_NAMES, shapeArt, type ShapeKind } from "../shapes";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { textStyleSection } from "../textStyle";
@@ -61,7 +62,8 @@ const sections: SectionSpec<TopperParams>[] = [
     id: "motif", title: "Motif", open: true, show: main,
     help: "A picture welded to the text: balloons, hearts, rings, a crescent, stars and more.",
     fields: [
-      { kind: "choice", key: "motif.kind", label: "Motif", rail: true, options: MOTIF_OPTIONS, help: "The picture added to the topper; it is joined to the letters." },
+      { kind: "choice", key: "motif.kind", label: "Motif", rail: true, options: MOTIF_OPTIONS, help: "The picture added to the topper, joined to the letters: a built-in motif, your own picture or your own text." },
+      ...motifArtFields<TopperParams>("motif.kind", "motif.art"),
       {
         kind: "choice", key: "motif.place", label: "Position", show: (p) => p.motif.kind !== "none",
         help: "Where the motif sits: above, below or beside the text, on both sides (mirrored), or behind it.",
@@ -102,7 +104,8 @@ const sections: SectionSpec<TopperParams>[] = [
       { kind: "number", key: "cupcake.count", label: "Picks", unit: "", min: 1, max: 60, step: 1, int: true, help: "How many picks to cut." },
       { kind: "choice", key: "cupcake.shape", label: "Pick shape", rail: true, options: [{ v: "motif", text: "Motif silhouette" }, ...SHAPE_OPTIONS], help: "A disc shape, or the motif itself cut as a silhouette." },
       { kind: "number", key: "cupcake.size", label: "Pick width", unit: "mm", min: 25, max: 120, step: 1, help: "Width of each pick; 45 to 60 mm suits a cupcake." },
-      { kind: "choice", key: "cupcake.motif", label: "Pick motif", rail: true, options: MOTIF_OPTIONS, help: "The picture on each pick, or the silhouette's shape." },
+      { kind: "choice", key: "cupcake.motif", label: "Pick motif", rail: true, options: MOTIF_OPTIONS, help: "The picture on each pick, or the silhouette's shape: a built-in motif, your own picture or your own text." },
+      ...motifArtFields<TopperParams>("cupcake.motif", "cupcake.art"),
       { kind: "text", key: "cupcake.text", label: "Names", multiline: true, maxLength: 1200, placeholder: "One name per line", help: "One name or word per line; the picks cycle through the list." },
       { kind: "font", key: "cupcake.fontId", label: "Name font", sample: (p) => p.cupcake.text || "Aa", help: "The typeface of the names." },
       { kind: "number", key: "cupcake.textSize", label: "Name height", unit: "mm", min: 3, max: 40, step: 0.5, help: "Cap height of the names." },
@@ -169,7 +172,8 @@ export const TOPPER: GeneratorDef<TopperParams> = {
   build: buildTopper,
   check: (p, out) => checkTopper(p, out as TopperOutput),
   pro: (p) => (p.kit.kind === "set" ? "Party sets (a topper and picks together) need Pro." : p.style.kind === "plate" ? "Plate toppers need Pro." : null),
-  fonts: (p) => [...(p.kit.kind !== "cupcake" && p.text.text.trim() ? [p.text.fontId] : []), ...(p.kit.kind !== "topper" && p.cupcake.text.trim() ? [p.cupcake.fontId] : [])],
+  fonts: (p) => [...(p.kit.kind !== "cupcake" && p.text.text.trim() ? [p.text.fontId] : []), ...(p.kit.kind !== "topper" && p.cupcake.text.trim() ? [p.cupcake.fontId] : []),
+    ...(p.kit.kind !== "cupcake" ? motifFonts(p.motif.kind, p.motif.art) : []), ...(p.kit.kind !== "topper" ? motifFonts(p.cupcake.motif, p.cupcake.art) : [])],
   scale: scaleTopper,
   art,
   batch: (p) => (p.kit.kind === "cupcake" ? null : "text.text"),
@@ -187,6 +191,7 @@ export const TOPPER: GeneratorDef<TopperParams> = {
     ],
     tips: [
       "Mirror acrylic scratches easily: leave its film on while cutting and peel it after.",
+      "Your picture makes a custom motif or pick silhouette from a logo or drawing; bold shapes with few thin lines cut cleanest.",
       "Thin script letters are fragile: raise the weld to 1 to 1.5 mm, or switch to the Outline style.",
       "Cut sticks along the length of the sheet's grain when using wood, so they do not snap.",
       "Wash acrylic toppers before they touch food, or wrap the sticks in food-safe film.",

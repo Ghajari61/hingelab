@@ -3,7 +3,8 @@ import { makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/lette
 import type { Shape } from "@/lib/letters/types";
 import { bboxOf, transform } from "../geom";
 import { material2 } from "../material2";
-import { isMotifId, motif, motifSize, type MotifId } from "../motifs";
+import { motif, motifSize, type MotifRef } from "../motifs";
+import { motifRef } from "../motifRef";
 import { orient, shapeOutline, type ShapeKind } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { textBlock, weld, withSticks, type StickSpec } from "../weld";
@@ -29,7 +30,7 @@ const move = (cs: Contour[], dx: number, dy: number) => cs.map((c) => c.map(([x,
 const closed = (c: Contour): Contour => [...c, c[0]];
 
 /** Where the motif goes around a text block w × h (centred on 0, 0). */
-function placeMotif(id: MotifId, p: TopperParams["motif"], w: number, h: number, hasText: boolean): Contour[] {
+function placeMotif(id: MotifRef, p: TopperParams["motif"], w: number, h: number, hasText: boolean): Contour[] {
   const s = motifSize(id, p.size), g = p.gap;
   if (!hasText || p.place === "behind") return motif(id, p.size);
   switch (p.place) {
@@ -85,9 +86,10 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
 
   if (p.kit.kind !== "cupcake") {
     const t = textBlock(ctx, p.text.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, lead: p.text.lead, missing, style: { ...p.textStyle, ...p.textForm } });
-    if (t.loading) loading = true;
+    const mr = motifRef(p.motif.kind, p.motif.art, ctx, missing);
+    if (t.loading || mr.loading) loading = true;
     else {
-      const mot = isMotifId(p.motif.kind) ? placeMotif(p.motif.kind, p.motif, t.width, t.height, t.contours.length > 0) : [];
+      const mot = mr.ref ? placeMotif(mr.ref, p.motif, t.width, t.height, t.contours.length > 0) : [];
       const all = [...t.contours, ...mot];
       if (!all.length) return { parts: [], stats: [], error: "Type some text or pick a motif." };
       const cb = bboxOf(all);
@@ -140,7 +142,9 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
   if (p.kit.kind !== "topper") {
     const c = p.cupcake;
     const names = c.text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-    const icon = isMotifId(c.motif) ? c.motif : null;
+    const cr = motifRef(c.motif, c.art, ctx, missing);
+    if (cr.loading) loading = true;
+    const icon = cr.ref;
     const silhouette = c.shape === "motif";
     const w = c.size;
     const h = silhouette ? motifSize(icon ?? "heart", w).h : pickHeight(c.shape as ShapeKind, w);
