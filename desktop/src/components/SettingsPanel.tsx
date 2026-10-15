@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type CSSProperties, type ReactNode } from "react";
 import { ChevronDown, CircleHelp, Dices, ImagePlus, Lock, LockOpen, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import type { DField, DForm, DPicture, DProduct } from "../../../lib/desktop/types";
 import { getPath, type Params } from "../design";
@@ -71,12 +71,13 @@ function shownDefault(f: DField, units: Units): string {
   return `${v}${inch ? " in" : f.unit === "deg" ? "°" : f.unit ? ` ${f.unit}` : ""}`;
 }
 
-/** The field's name, with a ↺ while it differs from its default. */
-function Name({ f, value, units, onChange, locks, children }: { f: DField; value: unknown; units: Units; onChange: Props["onChange"]; locks?: Locks; children: ReactNode }) {
+/** The field's name, its help button, and a ↺ while it differs from its default. */
+function Name({ f, value, units, onChange, locks, help, children }: { f: DField; value: unknown; units: Units; onChange: Props["onChange"]; locks?: Locks; help?: ReactNode; children: ReactNode }) {
   const on = !!locks?.has(f.key);
   return (
     <span className="field-name">
       {children}
+      {help}
       {locks && f.kind !== "text" && f.shuffle && (
         <button type="button" className={`lock-btn${on ? " on" : ""}`} aria-pressed={on} aria-label={`${on ? "Unlock" : "Lock"} ${f.label}`} title={on ? `${f.label} stays when you randomise. Click to unlock.` : `Lock ${f.label} so Randomise keeps it`} onClick={() => locks.toggle(f.key)}>
           {on ? <Lock size={12} aria-hidden /> : <LockOpen size={12} aria-hidden />}
@@ -136,6 +137,7 @@ export function SettingsPanel({ product, params, form, units, plan, onChange, on
 /** A picture setting: the picture (or its traced preview), Choose and Remove. */
 function PictureField({ f, params, onSetValues }: { f: DPicture; params: Params; onSetValues: (values: Params) => void }) {
   const id = useId();
+  const [helpBtn, helpText] = useHelp(f.help, `${id}-h`);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const value = getPath(params, f.key);
@@ -157,8 +159,8 @@ function PictureField({ f, params, onSetValues }: { f: DPicture; params: Params;
   };
   return (
     <div className="field picture">
-      <span className="field-name"><span className="label" id={`${id}-l`}>{f.label}</span></span>
-      <Help text={f.help} id={`${id}-h`} />
+      <span className="field-name"><span className="label" id={`${id}-l`}>{f.label}</span>{helpBtn}</span>
+      {helpText}
       <div className="picture-row" aria-labelledby={`${id}-l`}>
         {shown ? <img src={shown} alt={name || f.label} /> : <span className="picture-empty" aria-hidden><ImagePlus size={18} /></span>}
         <span className="picture-name">{busy ? (f.mode === "trace" ? "Tracing…" : "Reading…") : name || (has ? "Picture chosen" : "No picture yet")}</span>
@@ -177,6 +179,7 @@ function PictureField({ f, params, onSetValues }: { f: DPicture; params: Params;
 /** Sheets the user cuts often (kept on this computer): choosing one sets the thickness and kerf. */
 function MyMaterials({ prefix, params, units, onChangeMany }: { prefix: string; params: Params; units: Units; onChangeMany: (values: Params) => void }) {
   const id = useId();
+  const [helpBtn, helpText] = useHelp("Sheets you cut often, kept on this computer. Choosing one sets the thickness and kerf; + saves the ones you have now.", `${id}-h`);
   const [list, setList] = useMyMaterials();
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState("");
@@ -192,8 +195,8 @@ function MyMaterials({ prefix, params, units, onChangeMany }: { prefix: string; 
   };
   return (
     <div className="field select my-materials">
-      <span className="field-name"><label htmlFor={id}>My materials</label></span>
-      <Help text="Sheets you cut often, kept on this computer. Choosing one sets the thickness and kerf; + saves the ones you have now." id={`${id}-h`} />
+      <span className="field-name"><label htmlFor={id}>My materials</label>{helpBtn}</span>
+      {helpText}
       {naming ? (
         <form className="my-mat-row" onSubmit={(e) => { e.preventDefault(); save(); }}>
           <input id={id} type="text" value={name} maxLength={40} placeholder="Name, for example Birch 3 mm" autoFocus onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") setNaming(false); }} />
@@ -220,36 +223,36 @@ function MyMaterials({ prefix, params, units, onChangeMany }: { prefix: string; 
   );
 }
 
-function Help({ text, id }: { text?: string; id: string }) {
+/** The ? button that goes in a field's name, and the help text it opens on a row of its own. */
+function useHelp(text: string | undefined, id: string): [ReactNode, ReactNode] {
   const [open, setOpen] = useState(false);
-  if (!text) return null;
-  return (
-    <>
-      <button type="button" className="help-btn" aria-label="What is this?" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
-        <CircleHelp size={13} aria-hidden />
-      </button>
-      {open && <p className="field-help" id={id}>{text}</p>}
-    </>
-  );
+  if (!text) return [null, null];
+  return [
+    <button key="help" type="button" className="help-btn" aria-label="What is this?" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
+      <CircleHelp size={13} aria-hidden />
+    </button>,
+    open ? <p className="field-help" id={id}>{text}</p> : null,
+  ];
 }
 
 function Field({ f, label, value, units, plan, onChange, locks }: { f: DField; label: string; value: unknown; units: Units; plan: "free" | "pro"; onChange: Props["onChange"]; locks?: Locks }) {
   const id = useId();
+  const [helpBtn, helpText] = useHelp(f.help, `${id}-h`);
   if (f.kind === "number") return <NumberField f={f} label={label} value={value} units={units} onChange={onChange} locks={locks} />;
   if (f.kind === "toggle") {
     return (
       <div className="field toggle">
-        <Name f={f} value={value} units={units} onChange={onChange} locks={locks}><label htmlFor={id}>{label}</label></Name>
-        <Help text={f.help} id={`${id}-h`} />
+        <Name f={f} value={value} units={units} onChange={onChange} locks={locks} help={helpBtn}><label htmlFor={id} title={label}>{label}</label></Name>
         <button id={id} type="button" role="switch" aria-checked={!!value} className="switch" onClick={() => onChange(f.key, !value, true)}><span /></button>
+        {helpText}
       </div>
     );
   }
   if (f.kind === "text") {
     return (
       <div className="field text">
-        <Name f={f} value={value} units={units} onChange={onChange} locks={locks}><label htmlFor={id}>{label}</label></Name>
-        <Help text={f.help} id={`${id}-h`} />
+        <Name f={f} value={value} units={units} onChange={onChange} locks={locks} help={helpBtn}><label htmlFor={id} title={label}>{label}</label></Name>
+        {helpText}
         {f.multiline
           ? <textarea id={id} value={String(value ?? "")} maxLength={f.maxLength} placeholder={f.placeholder} rows={3} onChange={(e) => onChange(f.key, e.target.value, false)} />
           : <input id={id} type="text" value={String(value ?? "")} maxLength={f.maxLength} placeholder={f.placeholder} onChange={(e) => onChange(f.key, e.target.value, false)} />}
@@ -262,8 +265,8 @@ function Field({ f, label, value, units, plan, onChange, locks }: { f: DField; l
   if (short) {
     return (
       <div className="field choice">
-        <Name f={f} value={value} units={units} onChange={onChange} locks={locks}><span className="label" id={`${id}-l`}>{label}</span></Name>
-        <Help text={f.help} id={`${id}-h`} />
+        <Name f={f} value={value} units={units} onChange={onChange} locks={locks} help={helpBtn}><span className="label" id={`${id}-l`} title={label}>{label}</span></Name>
+        {helpText}
         <div className="segmented" role="radiogroup" aria-labelledby={`${id}-l`}>
           {f.options.map((o) => (
             <button key={o.v} type="button" role="radio" aria-checked={current === o.v} title={o.title} onClick={() => onChange(f.key, o.v, true)}>
@@ -276,8 +279,8 @@ function Field({ f, label, value, units, plan, onChange, locks }: { f: DField; l
   }
   return (
     <div className="field select">
-      <Name f={f} value={value} units={units} onChange={onChange} locks={locks}><label htmlFor={id}>{label}</label></Name>
-      <Help text={f.help} id={`${id}-h`} />
+      <Name f={f} value={value} units={units} onChange={onChange} locks={locks} help={helpBtn}><label htmlFor={id} title={label}>{label}</label></Name>
+      {helpText}
       <select id={id} value={current} onChange={(e) => onChange(f.key, e.target.value, true)}>
         {f.options.map((o) => <option key={o.v} value={o.v} title={o.title}>{o.text}{locked(o.v) ? " (Pro)" : ""}</option>)}
       </select>
@@ -287,6 +290,7 @@ function Field({ f, label, value, units, plan, onChange, locks }: { f: DField; l
 
 function NumberField({ f, label, value, units, onChange, locks }: { f: Extract<DField, { kind: "number" }>; label: string; value: unknown; units: Units; onChange: Props["onChange"]; locks?: Locks }) {
   const id = useId();
+  const [helpBtn, helpText] = useHelp(f.help, `${id}-h`);
   const inch = f.unit === "mm" && units === "in";
   const k = inch ? 1 / MM_PER_IN : 1;
   const digits = inch ? 3 : f.int ? 0 : 2;
@@ -324,10 +328,12 @@ function NumberField({ f, label, value, units, onChange, locks }: { f: Extract<D
     onChange(f.key, next, false);
   };
 
+  const slide = typeof value === "number" && Number.isFinite(value) && f.max > f.min ? Math.min(f.max, Math.max(f.min, value)) : null;
+
   return (
     <div className={`field number${error ? " invalid" : ""}`}>
-      <Name f={f} value={value} units={units} onChange={onChange} locks={locks}><label htmlFor={id}>{label}</label></Name>
-      <Help text={f.help} id={`${id}-h`} />
+      <Name f={f} value={value} units={units} onChange={onChange} locks={locks} help={helpBtn}><label htmlFor={id} title={label}>{label}</label></Name>
+      {helpText}
       <div className="num">
         <input
           id={id}
@@ -363,6 +369,16 @@ function NumberField({ f, label, value, units, onChange, locks }: { f: Extract<D
           </button>
         )}
       </div>
+      {slide !== null && (
+        <input
+          type="range" className="num-slider" tabIndex={-1} aria-hidden min={f.min} max={f.max} step={f.step} value={slide}
+          style={{ "--pct": `${((slide - f.min) / (f.max - f.min)) * 100}%` } as CSSProperties}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            onChange(f.key, f.int ? Math.round(v) : +v.toFixed(6), false);
+          }}
+        />
+      )}
       {error && focused && <p className="field-error" id={`${id}-e`} role="alert">{error}</p>}
     </div>
   );

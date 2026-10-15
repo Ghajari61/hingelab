@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, type RefObject } from "react";
-import { AlertTriangle, Box, CircleAlert, Dices, Download, FileDown, FolderOpen, Grid2x2, Grid3x3, Info, Lock, Maximize, Minus, Plus, Redo2, RefreshCw, RotateCcw, Ruler, Save, Scan, Sparkles, Square, Star, Undo2, WifiOff, Wrench } from "lucide-react";
+import { AlertTriangle, Box, CircleAlert, Dices, Download, FileDown, FileText, FolderOpen, Grid2x2, Grid3x3, Info, Lock, Maximize, Minus, PenTool, Plus, Redo2, RefreshCw, RotateCcw, Ruler, Save, Scan, Sparkles, Square, Star, Undo2, WifiOff, Wrench } from "lucide-react";
 import type { DProduct } from "../../../lib/desktop/types";
 import { isDirty, type DesignState } from "../design";
 import { desktopGrips } from "../grips";
@@ -7,6 +7,7 @@ import type { AppError, ExportAs } from "../ipc";
 import { DEFAULT_PREFS, usePrefs, type LocalPrefs, type Shade3D, type SheetTone, type Units } from "../local";
 import { Canvas, zoomLabel, type CanvasHandle } from "./Canvas";
 import { Menu } from "./Menu";
+import { ProductIcon } from "./Pages";
 import { SettingsPanel, type Locks } from "./SettingsPanel";
 import type { PaneId } from "./View3D";
 
@@ -115,7 +116,11 @@ export function Workspace(p: Props) {
     <div className="workspace">
       <header className="ws-head">
         <div className="ws-title">
-          <span className="ws-product">{product.name}</span>
+          <div className="ws-eyebrow">
+            <span className="ws-product"><ProductIcon product={product} size={12} />{product.name}</span>
+            {design.file && <span className="ws-file" title={design.file.path}><FileText size={11} aria-hidden />{design.file.name}{dirty ? " \u2022" : ""}</span>}
+          </div>
+          <div className="ws-line">
           {editingName ? (
             <input
               ref={nameRef}
@@ -137,8 +142,8 @@ export function Workspace(p: Props) {
           ) : (
             <h1><button type="button" className="ws-name" title="Rename" onClick={() => setEditingName(true)}>{name}</button></h1>
           )}
-          {design.file && <span className="ws-file" title={design.file.path}>{design.file.name}{dirty ? " \u2022" : ""}</span>}
-          {r?.summary && <span className="ws-summary">{r.summary}</span>}
+          {r?.summary && <span className="ws-summary" title={r.summary}>{r.summary}</span>}
+          </div>
         </div>
         <div className="ws-actions">
           <nav className="ws-menus" aria-label="Menus">
@@ -164,18 +169,18 @@ export function Workspace(p: Props) {
               ...(p.onRandomise ? [{ label: p.randomLabel ?? "Randomise design", shortcut: "Ctrl+R", icon: <Dices size={14} />, disabled: !design.params || design.busy, onSelect: p.onRandomise }] : []),
             ]} />
           </nav>
-          <span className="sep" />
-          <button type="button" className="icon-btn" aria-pressed={p.favorite} title={p.favorite ? "Remove from favorites" : "Add to favorites"} onClick={p.onFavorite}>
-            <Star size={16} fill={p.favorite ? "currentColor" : "none"} aria-hidden />
+          <span className="ws-tools" role="group" aria-label="History and favorites">
+            <button type="button" className="icon-btn" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!design.canUndo} onClick={p.onUndo}><Undo2 size={16} aria-hidden /></button>
+            <button type="button" className="icon-btn" aria-label="Redo" title="Redo (Ctrl+Y)" disabled={!design.canRedo} onClick={p.onRedo}><Redo2 size={16} aria-hidden /></button>
+            <button type="button" className="icon-btn fav" aria-pressed={p.favorite} aria-label="Favorite" title={p.favorite ? "Remove from favorites" : "Add to favorites"} onClick={p.onFavorite}>
+              <Star size={16} fill={p.favorite ? "currentColor" : "none"} aria-hidden />
+            </button>
+          </span>
+          {p.onFullEditor && <button type="button" className="btn ghost" aria-label="Full editor" title={`Open the online ${product.name} editor in this window: 3D view, DXF, sheets and more`} onClick={p.onFullEditor}><PenTool size={15} aria-hidden /><span>Full editor</span></button>}
+          <button type="button" className="btn" aria-label={design.busy ? "Updating" : "Update"} title="Build the design again (Ctrl+Enter)" onClick={p.onRefresh} disabled={design.busy || !p.online}>
+            <RefreshCw size={15} className={design.busy ? "spin" : undefined} aria-hidden /><span>{design.busy ? "Updating" : "Update"}</span>
           </button>
-          <button type="button" className="icon-btn" title="Undo (Ctrl+Z)" disabled={!design.canUndo} onClick={p.onUndo}><Undo2 size={16} aria-hidden /></button>
-          <button type="button" className="icon-btn" title="Redo (Ctrl+Y)" disabled={!design.canRedo} onClick={p.onRedo}><Redo2 size={16} aria-hidden /></button>
-          <span className="sep" />
-          {p.onFullEditor && <button type="button" className="btn ghost" title={`Open the online ${product.name} editor in this window: 3D view, DXF, sheets and more`} onClick={p.onFullEditor}><Box size={15} aria-hidden />Full editor</button>}
-          <button type="button" className="btn" title="Build the design again (Ctrl+Enter)" onClick={p.onRefresh} disabled={design.busy || !p.online}>
-            <RefreshCw size={15} className={design.busy ? "spin" : undefined} aria-hidden />{design.busy ? "Updating" : "Update"}
-          </button>
-          <button type="button" className="btn" title="Export the SVG cut file to your export folder (Ctrl+E; Ctrl+Shift+E chooses where)" onClick={p.onExport} disabled={!canSave}><FileDown size={15} aria-hidden />Export SVG</button>
+          <button type="button" className="btn" aria-label="Export SVG" title="Export the SVG cut file to your export folder (Ctrl+E; Ctrl+Shift+E chooses where)" onClick={p.onExport} disabled={!canSave}><FileDown size={15} aria-hidden /><span>Export SVG</span></button>
           {isArt
             ? <button type="button" className="btn primary" title="Save the SVG (Ctrl+S)" onClick={p.onSave} disabled={!canSave}><Download size={15} aria-hidden />Save SVG</button>
             : <button type="button" className="btn primary" title={design.file ? `Save to ${design.file.name} (Ctrl+S)` : "Save as a project file, .oclc (Ctrl+S)"} onClick={p.onSave} disabled={!design.params}><Save size={15} aria-hidden />Save</button>}

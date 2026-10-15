@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type WheelEvent } from "react";
-import { ArrowRight, Box, Cake, ChevronLeft, ChevronRight, Clock, Clock3, Crown, ExternalLink, FolderOpen, Globe, Hash, History, KeyRound, Keyboard, LayoutGrid, LifeBuoy, Lock, Plus, Puzzle, QrCode, RotateCcw, Shapes, Signpost, SquareStack, Star, Trash2, Trophy, Type, Wand2 } from "lucide-react";
+import { ArrowDownCircle, ArrowRight, BookOpen, Box, Cake, ChevronLeft, ChevronRight, Clock, Clock3, CreditCard, Crown, ExternalLink, FileDown, FolderOpen, Globe, Hash, History, Info, KeyRound, Keyboard, LayoutGrid, LayoutPanelLeft, LifeBuoy, Lock, LogOut, Palette, Plus, Puzzle, QrCode, RotateCcw, Ruler, Shapes, Signpost, SquareStack, Star, Trash2, Trophy, Type, UserRound, Wand2, Wrench } from "lucide-react";
 import type { DCatalog, DProduct } from "../../../lib/desktop/types";
 import { onlineArt, presetArt, productArt, showcase } from "../art";
 import type { WebRoute } from "./Web";
@@ -413,6 +413,7 @@ export function Subscription({ account, onWeb, onRefresh, refreshing }: { accoun
         <p>Your plan is checked by HingeLab's servers every time a design is built.</p>
       </header>
       <section className="card">
+        <CardTitle icon={CreditCard}>Your plan</CardTitle>
         <div className="row-between">
           <div>
             <p className="plan-name">{planName(account)}</p>
@@ -441,6 +442,11 @@ export function Subscription({ account, onWeb, onRefresh, refreshing }: { accoun
 // ---------------------------------------------------------------- Settings
 
 const SHEET_TONE_NAMES: [SheetTone, string][] = [["plywood", "Plywood"], ["grey", "Soft grey"], ["white", "White"], ["dark", "Dark"]];
+
+/** A card heading with its icon. */
+function CardTitle({ id, icon: I, danger, children }: { id?: string; icon: typeof Box; danger?: boolean; children: React.ReactNode }) {
+  return <h2 id={id}><span className={`h-icon${danger ? " danger" : ""}`} aria-hidden><I size={16} /></span>{children}</h2>;
+}
 
 /** A labelled row of choices (a radio group). */
 function Choice<T extends string | number>({ label, value, options, onChange }: { label: string; value: T; options: readonly (readonly [T, string])[]; onChange: (v: T) => void }) {
@@ -473,11 +479,12 @@ export function Settings(props: {
     : u.phase === "error" ? u.message
     : "Updates are signed by HingeLab and checked before they are installed.";
   return (
-    <div className="page narrow settings-page">
+    <div className="page settings-page">
       <header className="page-head"><h1>Settings</h1></header>
+      <div className="settings-col">
 
       <section className="card" aria-labelledby="s-account">
-        <h2 id="s-account">Account</h2>
+        <CardTitle id="s-account" icon={UserRound}>Account</CardTitle>
         <p>{props.account?.user.email ?? "Signed in"}</p>
         <div className="row">
           <button type="button" className="btn" onClick={() => props.onWeb("account")}><ExternalLink size={14} aria-hidden />Account on the website</button>
@@ -486,7 +493,7 @@ export function Settings(props: {
       </section>
 
       <section className="card" aria-labelledby="s-sub">
-        <h2 id="s-sub">Subscription</h2>
+        <CardTitle id="s-sub" icon={CreditCard}>Subscription</CardTitle>
         <p>{planName(props.account)} plan</p>
         <div className="row">
           <button type="button" className="btn" onClick={() => props.onWeb(props.account?.plan === "pro" ? "manage" : "upgrade")}><ExternalLink size={14} aria-hidden />{props.account?.plan === "pro" ? "Manage subscription" : "Upgrade to Pro"}</button>
@@ -495,14 +502,14 @@ export function Settings(props: {
       </section>
 
       <section className="card" aria-labelledby="s-units">
-        <h2 id="s-units">Measurements</h2>
+        <CardTitle id="s-units" icon={Ruler}>Measurements</CardTitle>
         <Choice label="Units" value={local.units} onChange={(units) => set({ units })} options={[["mm", "Millimetres"], ["in", "Inches"]]} />
         <p className="fine">Files are always saved in millimetres; this only changes how lengths are shown and typed.</p>
         <Choice label="Decimals in 3D dimensions" value={local.decimals} onChange={(decimals) => set({ decimals })} options={[[0, "0"], [1, "0.0"], [2, "0.00"]]} />
       </section>
 
       <section className="card" aria-labelledby="s-ws">
-        <h2 id="s-ws">Workspace</h2>
+        <CardTitle id="s-ws" icon={LayoutPanelLeft}>Workspace</CardTitle>
         <Choice label="Open designs in" value={local.openIn} onChange={(openIn) => set({ openIn })} options={[["last", "As last time"], ["2d", "2D sheet"], ["3d", "3D"]]} />
         <label className="field-row">
           <span>Sheet colour</span>
@@ -527,7 +534,7 @@ export function Settings(props: {
       </section>
 
       <section className="card" aria-labelledby="s-files">
-        <h2 id="s-files">Project files</h2>
+        <CardTitle id="s-files" icon={FolderOpen}>Project files</CardTitle>
         <p className="path">{prefs?.homeDir ? <><FolderOpen size={14} aria-hidden /> {prefs.homeDir}</> : "No project folder: Save and Open start where the last project was."}</p>
         <div className="row">
           <button type="button" className="btn" onClick={props.onChooseProjectFolder}>Choose folder…</button>
@@ -545,8 +552,11 @@ export function Settings(props: {
         </label>
       </section>
 
+      </div>
+      <div className="settings-col">
+
       <section className="card" aria-labelledby="s-gen">
-        <h2 id="s-gen">Generator defaults</h2>
+        <CardTitle id="s-gen" icon={Shapes}>Generator defaults</CardTitle>
         <label className="field-row">
           <span>Open first</span>
           <select value={local.defaultProduct} onChange={(e) => set({ defaultProduct: e.target.value })}>
@@ -560,7 +570,7 @@ export function Settings(props: {
       </section>
 
       <section className="card" aria-labelledby="s-look">
-        <h2 id="s-look">Appearance</h2>
+        <CardTitle id="s-look" icon={Palette}>Appearance</CardTitle>
         <div className="segmented" role="radiogroup" aria-labelledby="s-look">
           {(["system", "light", "dark"] as const).map((v) => <button key={v} type="button" role="radio" aria-checked={local.theme === v} onClick={() => set({ theme: v })}>{v === "system" ? "Use Windows setting" : v === "light" ? "Light" : "Dark"}</button>)}
         </div>
@@ -575,7 +585,7 @@ export function Settings(props: {
       </section>
 
       <section className="card" aria-labelledby="s-export">
-        <h2 id="s-export">Export</h2>
+        <CardTitle id="s-export" icon={FileDown}>Export</CardTitle>
         <p className="path">{prefs?.exportDir ? <><FolderOpen size={14} aria-hidden /> {prefs.exportDir}</> : "No export folder: Export asks where to save each SVG."}</p>
         <div className="row">
           <button type="button" className="btn" onClick={props.onChooseFolder}>Choose folder…</button>
@@ -588,7 +598,7 @@ export function Settings(props: {
       </section>
 
       <section className="card" aria-labelledby="s-upd">
-        <h2 id="s-upd">Application updates</h2>
+        <CardTitle id="s-upd" icon={ArrowDownCircle}>Application updates</CardTitle>
         <p role="status">{updateText}</p>
         <div className="row">
           {u.phase === "available"
@@ -602,7 +612,7 @@ export function Settings(props: {
       </section>
 
       <section className="card" aria-labelledby="s-ver">
-        <h2 id="s-ver">About</h2>
+        <CardTitle id="s-ver" icon={Info}>About</CardTitle>
         <p>HingeLab for Windows {props.version}</p>
         <p className="fine">Connected to {props.server}. Designs are built on HingeLab's servers.</p>
         <div className="row">
@@ -613,10 +623,11 @@ export function Settings(props: {
       </section>
 
       <section className="card" aria-labelledby="s-out">
-        <h2 id="s-out">Sign out</h2>
+        <CardTitle id="s-out" icon={LogOut} danger>Sign out</CardTitle>
         <p>Signs this computer out and ends the session on the server.</p>
         <button type="button" className="btn danger" onClick={props.onSignOut}>Sign out</button>
       </section>
+      </div>
     </div>
   );
 }
@@ -648,22 +659,22 @@ export function Help({ onWeb, version, onHelpCentre }: { onWeb: (p: WebPage) => 
         <p>HingeLab builds every design on its servers and sends back an SVG for your laser cutter. You need an internet connection to change a design; a preview you already have can always be saved.</p>
       </header>
       <section className="card">
-        <h2><Keyboard size={16} aria-hidden /> Keyboard shortcuts</h2>
+        <CardTitle icon={Keyboard}>Keyboard shortcuts</CardTitle>
         <dl className="keys">{SHORTCUTS.map(([k, v]) => <div key={k}><dt><kbd>{k}</kbd></dt><dd>{v}</dd></div>)}</dl>
       </section>
       <section className="card">
-        <h2>Saving and cutting</h2>
+        <CardTitle icon={FileDown}>Saving and cutting</CardTitle>
         <p>Save keeps the design as a HingeLab project file (.oclc): the first Save asks where, later saves update the same file. Project files open in the app (double-click one, drop it on the window or press Ctrl+O) and on the website, in the section that made them.</p>
         <p>Export writes the cut file (SVG) straight into the folder chosen in Settings, or asks where when no folder is set. Files are in millimetres at true size: import them into LightBurn, xTool Creative Space or Inkscape at 100%.</p>
         <p>Free-plan exports include a small "Made with HingeLab" line below the parts on its own engrave layer.</p>
       </section>
       <section className="card">
-        <h2>Troubleshooting</h2>
+        <CardTitle icon={Wrench}>Troubleshooting</CardTitle>
         <p><b>Offline.</b> Check your connection; HingeLab tries again when you change a setting or choose Update.</p>
         <p><b>Signed out.</b> Sessions end after 30 days without use, or when you sign out on another device. Sign in again from the start screen.</p>
         <p><b>Windows SmartScreen.</b> If Windows warns about the installer, check that it came from hingelab.vercel.app, then choose More info and Run anyway.</p>
         <div className="row">
-          <button type="button" className="btn" onClick={onHelpCentre}><LifeBuoy size={14} aria-hidden />Full help centre</button>
+          <button type="button" className="btn primary" onClick={onHelpCentre}><BookOpen size={14} aria-hidden />Full help centre</button>
           <button type="button" className="btn ghost" onClick={() => onWeb("help")}><ExternalLink size={14} aria-hidden />Help centre in the browser</button>
         </div>
       </section>
