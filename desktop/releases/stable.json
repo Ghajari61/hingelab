@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.27",
-    "pub_date": "2026-10-15T05:55:50.609Z",
-    "notes": "3D handles: click a part in the 3D view and drag its handles to size the Hinge Box or a Boxes design (a ring sets the phone stand's lean). Your own picture or text as a motif.",
+    "version": "1.0.28",
+    "pub_date": "2026-10-15T06:34:49.451Z",
+    "notes": "3D scale gizmo like 3ds Max: drag an axis to size along it alone, a strip between two axes for both, the middle for everything; hold Shift to keep the proportions. Dragging is smooth: the design is rebuilt once when you let go.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.27_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnJjZHdLc1Noa3VkTlpKaW5UUTNydmhiZXQrVlZUdlNva1VsMUxaRUJJaXJVaGdyZU12V0FVeWdCVXRUbUVhUUxnaWQxVmp5cWF3NmZCaVJJY0I0S0FvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDQzNTk2CWZpbGU6SGluZ2VMYWJfMS4wLjI3X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjcKRmpCWGp1QS9Sekc3aU9MZWFOREE1SEpzUVgrM0NkWGV6UjVjdkV6dEFwaWVINXBTL3ZRbTZzSzM0c2lvMHdKNXJqd2NSYzArSXh1T3NBNnRidVJBQ0E9PQo=",
-        "size": 3774785
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.28_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnE1MFRtZXNJaDNsTkdRQStHdGRIVU54L1Y0THI0YStrL0hSV1hPdnlGZzBhS0tGcGdIVXBoZWVZMlk2cDVRSGVDTWJhM0YyTXovN2dkZHRrVHRYandRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDQ1OTY2CWZpbGU6SGluZ2VMYWJfMS4wLjI4X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjgKTWVlOW4vT2RXTnVjb3BiWmIrRzg3aElpdGJwc2NZWVIyWGd0NGFHTi90ZzI2cnhzb1U2QlM0aVZOVCtzelNxdHQrWmpKcUxyNkQ1Y1BVZDBOMW91Q2c9PQo=",
+        "size": 3778917
       }
     }
   }
