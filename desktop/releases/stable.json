@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.25",
-    "pub_date": "2026-10-14T05:41:47.568Z",
-    "notes": "New Shadow Box generator: layered 3D paper-cut shadow boxes from geometric patterns for a Cricut or a laser, with 100 ready-made designs.",
+    "version": "1.0.26",
+    "pub_date": "2026-10-15T03:04:02.456Z",
+    "notes": "Polish and robustness: faster previews, nesting by outline in the background with progress and Cancel, shared cut lines cut once, true sizes in every format, keyboard menus and visible focus, tablet layout, share links and project files with fonts, job estimates, batch files, test cards and My materials.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.25_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm9IeXBTVk42blJBTFR0V2RLRXdDaXROVXJWL0xrZy8wN2VTakR5Q01ucUZNQlZjSTlBTnVJQno2K1NwcUZpZ0ZaNHp1eC90NkZST1dqQmd1UmU1SGdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxOTU2NDk4CWZpbGU6SGluZ2VMYWJfMS4wLjI1X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjUKWFJiRXExVTIrTnIvS1l6djBsaENPR1IxSzBGL0hlcFArSFJXc0xLTVNHSkYzSVJqSlIyeW9iWGQyRmR0alMzcVRPZ3VXNWpzd3ZIZzVYcHlpN3dWQnc9PQo=",
-        "size": 3507181
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.26_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnRYUk1kV1FYOFhNRGY1NzVxem5tMXQ0dzVYd1dpM21xMkJVSEhjd0N2WXFhWkFXeUxSQUN2WG11NEZQeW9TSmpnSVh4UGtnWGVZS1h1SkNQaCtia3drPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDMzNDE5CWZpbGU6SGluZ2VMYWJfMS4wLjI2X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjYKK3NoRHI5RXJ4UGdzWEJIeVVmejZxMDQ5N1ZwWm91NGkyTGtUY3E1WU5zaTZBaDY4UGVlQWtNR0ptRjgxUXNEa1RCMi84c0kzL0FtQ3VXdjVXV0hrQUE9PQo=",
+        "size": 3768977
       }
     }
   }
