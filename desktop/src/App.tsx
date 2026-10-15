@@ -447,7 +447,12 @@ export function App() {
             catalog={catalog}
             plan={plan}
             online={online}
-            onOpen={(id, params) => { design.open(id, { params }); startView(); setRoute("workspace"); }}
+            onOpen={(id, params, in3d) => {
+              design.open(id, { params });
+              if (in3d) setLocal((o) => ({ ...o, view3d: true }));
+              else startView();
+              setRoute("workspace");
+            }}
             onOnline={(path) => openOnline("web-editors", path)}
             onUpgrade={() => web("upgrade")}
           />

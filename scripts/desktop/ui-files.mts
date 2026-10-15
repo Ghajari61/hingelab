@@ -270,6 +270,18 @@ try {
   check((await aiName()) === "AI 3", "AI page: Redo edit redoes");
   check(await page.getByRole("button", { name: "Redo edit" }).isDisabled(), "AI page: nothing left to redo");
 
+  // The AI designer: Open in 3D opens the design in the workspace on the 3D view.
+  await page.evaluate(() => {
+    const p = JSON.parse(localStorage.getItem("hl-prefs-v1") ?? "{}");
+    localStorage.setItem("hl-prefs-v1", JSON.stringify({ ...p, view3d: false }));
+    window.dispatchEvent(new CustomEvent("hl-local", { detail: "hl-prefs-v1" }));
+  });
+  await page.getByRole("button", { name: "Open in 3D" }).click();
+  await page.locator(".ws-head").waitFor({ timeout: 15000 });
+  check((await page.locator(".ws-product").innerText()) === "Hinge Box" && (await page.locator(".ws-name").innerText()) === "AI 3", "AI page: Open in 3D opens the design in the workspace");
+  check(await until(async () => (await page.getByRole("group", { name: "Workspace view" }).getByRole("button", { name: "3D" }).getAttribute("aria-pressed")) === "true"), "AI page: Open in 3D shows the 3D view");
+  await page.getByRole("group", { name: "Workspace view" }).getByRole("button", { name: "2D sheet" }).click();
+
   // Settings: the project folder, Recent's length, interface size, how designs open, Reset all without asking.
   await page.locator(".sidebar").getByRole("button", { name: "Settings" }).click();
   await page.getByRole("heading", { name: "Project files" }).waitFor({ timeout: 10000 });

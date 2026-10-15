@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, ArrowUp, Check, Crown, Download, Globe, ImagePlus, Info, Layers, Loader2, PenTool, Redo2, RotateCcw, Save, ScanEye, Sparkles, Undo2, Wand2, X } from "lucide-react";
+import { ArrowRight, ArrowUp, Box, Check, Crown, Download, Globe, ImagePlus, Info, Layers, Loader2, PenTool, Redo2, RotateCcw, Save, ScanEye, Sparkles, Undo2, Wand2, X } from "lucide-react";
 import type { AIDesign, AIMatch } from "../../../lib/ai/types";
 import { MAX_IMAGE_CHARS, MAX_IMAGE_NOTE, MAX_PROMPT, reviseOf } from "../../../lib/ai/types";
 import { previewSvg } from "../../../lib/ai/preview";
@@ -48,7 +48,8 @@ async function photoJpeg(file: Blob): Promise<string> {
  */
 export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
   catalog: DCatalog | null; plan: "free" | "pro"; online: boolean;
-  onOpen: (product: string, params: Record<string, unknown>) => void;
+  /** in3d: open the workspace on the 3D view instead of the user's usual start view. */
+  onOpen: (product: string, params: Record<string, unknown>, in3d?: boolean) => void;
   onOnline: (path: string) => void;
   onUpgrade: () => void;
 }) {
@@ -183,9 +184,9 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
     }
   }
 
-  function open() {
+  function open(in3d = false) {
     if (!design) return;
-    if (native) onOpen(design.product, { ...design.params, name: design.name });
+    if (native) onOpen(design.product, { ...design.params, name: design.name }, in3d);
     else onOnline(design.open ?? `/app/editor/local?p=${design.product}`);
   }
 
@@ -347,14 +348,18 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
             <div className="ai-actions">
               {drawn ? (
                 <>
-                  {native && <button type="button" className="btn primary" title="Resize it, choose the material and see its parts in 3D" onClick={open} disabled={editing}>Open in workspace<ArrowRight size={15} aria-hidden /></button>}
+                  {native && <button type="button" className="btn primary" title="Resize it, choose the material and see its parts in 3D" onClick={() => open()} disabled={editing}>Open in workspace<ArrowRight size={15} aria-hidden /></button>}
+                  {native && <button type="button" className="btn" title="Open it in the workspace on the 3D view" onClick={() => open(true)} disabled={editing}><Box size={15} aria-hidden />Open in 3D</button>}
                   <button type="button" className={native ? "btn" : "btn primary"} onClick={() => void saveDrawn("save")} disabled={editing || saving}><Save size={15} aria-hidden />Save SVG…</button>
                   <button type="button" className="btn" onClick={() => void saveDrawn("export")} disabled={editing || saving}><Download size={15} aria-hidden />Export</button>
                 </>
               ) : (
-                <button type="button" className="btn primary" onClick={open} disabled={editing}>
-                  {native ? <>Open in workspace<ArrowRight size={15} aria-hidden /></> : <><Globe size={15} aria-hidden />Open in the online editor</>}
-                </button>
+                <>
+                  <button type="button" className="btn primary" onClick={() => open()} disabled={editing}>
+                    {native ? <>Open in workspace<ArrowRight size={15} aria-hidden /></> : <><Globe size={15} aria-hidden />Open in the online editor</>}
+                  </button>
+                  {native && <button type="button" className="btn" title="Open it in the workspace on the 3D view" onClick={() => open(true)} disabled={editing}><Box size={15} aria-hidden />Open in 3D</button>}
+                </>
               )}
               <button type="button" className="ai-link-btn" disabled={editing} onClick={startOver}><RotateCcw size={14} aria-hidden />Start over</button>
             </div>
