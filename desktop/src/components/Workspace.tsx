@@ -250,7 +250,7 @@ export function Workspace(p: Props) {
           )}
           <footer className="status">
             {r?.stats.map((s) => <span key={s.label}><b>{s.label}</b> {s.value}</span>)}
-            {r?.watermark && <span className="wm" title="Free plan exports carry a small Made with HingeLab mark below the parts.">Free plan mark included</span>}
+            {r?.watermark && <span className="wm" title="The Free plan is for preview. Saving and exporting need Pro.">Preview only · Free</span>}
             <span className="spacer" />
             {design.unsent
               ? <span className="offline" role="status" title="Your last change is in the settings (and in a saved project) but the preview is older. It is sent when HingeLab is back online."><WifiOff size={13} aria-hidden />Not sent, offline</span>

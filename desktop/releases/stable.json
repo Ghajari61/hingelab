@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.33",
-    "pub_date": "2026-10-15T19:05:19.620Z",
-    "notes": "After the AI designer makes a design, Open in 3D opens it in the workspace on the 3D view.",
+    "version": "1.0.34",
+    "pub_date": "2026-10-15T19:44:15.410Z",
+    "notes": "Free is preview only: saving projects and downloading cut files need Pro. The pricing card and desktop match that.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.33_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnUwc1dTV3g0bkxoZWp4TGRUdjkxaUkvUGtqZnQ5VDU5UCs2Q1E3aWhHaS9PZjdZRkwxaDMvbHBQZXFhYjcvSkhMbm1UZkJ1eTEwQzhRanhiZjVjVWdNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDkwOTg3CWZpbGU6SGluZ2VMYWJfMS4wLjMzX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMzMKaytCT1B6d1Y0aVpNbmhUVFBzTXhrdmszRnpHcS9zMDUwTFM4eURSWnNJd3R5b0I1KzBYYi9wVTlCTnA0aU45Z284b3VqYVBiSmlaU0oxMFAyQlBGQnc9PQo=",
-        "size": 4270464
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.34_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmdyV3Jmd0d2TkN3enl3VDB2Wnp3ei9DcnQ5N0xEV2JETVVlVVZoem54aUgwNTJmMGdFVnlnaGNRbVprRk1vOG9lbjVwQnFTajQvK285cDcva3I1N0FZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDkzMzQzCWZpbGU6SGluZ2VMYWJfMS4wLjM0X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMzQKOStFcE90blhTVGN5Tkk3dG9RSWkwV2l5QXVTSDg4TXEwdlBoWDQyT2xUQ3B1OTIvNEVqVS92SXRUK1dteFd2R2RBOUZTWmJPZWs2OTBYU0FhOERqQ3c9PQo=",
+        "size": 4271236
       }
     }
   }

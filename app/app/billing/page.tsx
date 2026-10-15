@@ -4,7 +4,7 @@ import { getUser } from "@/lib/supabase/server";
 import { stripeConfigured } from "@/lib/stripe";
 import { founderSeatsLeft } from "@/lib/billing/founder";
 import { lockedPriceCopyFor } from "@/lib/billing/grandfather";
-import { BUSINESS_SEATS, COMMERCIAL_LICENSE, FOUNDER_CAP, FREE_PROJECT_LIMIT, PLAN_ROWS, PRICES, hasPro, planLabel, planOf } from "@/lib/plans";
+import { BUSINESS_SEATS, COMMERCIAL_LICENSE, FOUNDER_CAP, PLAN_ROWS, PRICES, hasPro, planLabel, planOf } from "@/lib/plans";
 import { AppHeader } from "@/components/site/AppHeader";
 import { LifetimeButton, ManageBilling, UpgradeButtons } from "@/components/billing/BillingActions";
 
@@ -59,7 +59,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
               {plan === "pro" && status !== "past_due" && (date ? `Renews on ${date}.` : "Thanks for supporting HingeLab.")}
               {plan === "business" && status !== "past_due" && (date ? `Renews on ${date}.` : "Thanks for supporting HingeLab.")}
               {plan === "lifetime" && "Pro features, forever. This was a one-time purchase."}
-              {plan === "free" && (ending ? "Your subscription has ended." : `Free includes up to ${FREE_PROJECT_LIMIT} cloud projects, Rounded boxes with the Straight hinge, and batches of 5 items.`)}
+              {plan === "free" && (ending ? "Your subscription has ended." : "Free lets you preview designs. Saving, exporting and cloud projects need Pro.")}
             </p>
           </div>
           {billing && profile?.stripe_customer_id && <ManageBilling />}

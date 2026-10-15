@@ -3,7 +3,7 @@ import { join } from "node:path";
 import * as hb from "harfbuzzjs";
 import { describe, expect, it } from "vitest";
 import { LETTER_DEFAULTS, computeLetterModel, exportLetterSVG, layoutLetters, loadFont, type LetterParams, type LoadedFont } from "@/lib/letters";
-import { addWatermark, isSingleLetterBox, letterCount, lettersLock } from "@/lib/plans";
+import { isSingleLetterBox, letterCount, lettersLock } from "@/lib/plans";
 import { MAX_EXPORT_TEXT, MAX_UPLOAD_FONT_BYTES, exportLettersForPlan, parseLetterRequest } from "@/lib/billing/exportLetters";
 import { bundledFont, serverHarfBuzz, uploadedFont } from "@/lib/billing/letterFonts";
 
@@ -33,7 +33,7 @@ describe("Letters plan rule", () => {
     expect(letterCount(" ")).toBe(0);
   });
 
-  it("Free can export only a Letter Box of one letter; Pro anything", () => {
+  it("Free can preview only a Letter Box of one letter; Pro anything; export still needs Pro", () => {
     expect(isSingleLetterBox({ mode: "box", text: "S" })).toBe(true);
     expect(isSingleLetterBox({ mode: "box", text: "سا" })).toBe(false);
     expect(isSingleLetterBox({ mode: "solid", text: "S" })).toBe(false);
@@ -45,13 +45,11 @@ describe("Letters plan rule", () => {
 });
 
 describe("Letters export for a plan", () => {
-  it("Free single-letter box: the same file as the editor builds, plus the mark", () => {
+  it("Free is refused every Letters export with 403", () => {
     const p = P({ text: "S", mode: "box" });
     const out = exportLettersForPlan(p, "free", fredoka, hb);
-    expect(out.ok).toBe(true);
-    if (!out.ok) return;
-    expect(out.svg).toBe(addWatermark(localSVG(p, fredoka)));
-    expect(out.svg).toContain('id="watermark"');
+    expect(out).toMatchObject({ ok: false, status: 403 });
+    if (!out.ok) expect(out.error).toMatch(/Saving and exporting need Pro/);
   });
 
   it("Pro: byte-identical to the editor's export, no mark, any mode", () => {
@@ -64,13 +62,13 @@ describe("Letters export for a plan", () => {
     expect(out.ok && out.svg).toBe(localSVG(fa, vazir));
   });
 
-  it("Free is refused anything else with 403; design errors are 422", () => {
+  it("Free is refused with 403; Pro design errors are 422", () => {
     for (const p of [P({ text: "Sam", mode: "box" }), P({ text: "S", mode: "solid" }), P({ text: "O", mode: "stencil" })]) {
       const out = exportLettersForPlan(p, "free", fredoka, hb);
       expect(out.ok).toBe(false);
       if (!out.ok) expect(out.status).toBe(403);
     }
-    const bad = exportLettersForPlan(P({ text: "S", mode: "box", K: 5 }), "free", fredoka, hb);
+    const bad = exportLettersForPlan(P({ text: "S", mode: "box", K: 5 }), "pro", fredoka, hb);
     expect(!bad.ok && bad.status).toBe(422);
   });
 

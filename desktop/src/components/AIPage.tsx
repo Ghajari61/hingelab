@@ -172,6 +172,10 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
 
   async function saveDrawn(how: "save" | "export") {
     if (!design?.svg || saving) return;
+    if (plan === "free") {
+      setSaveNote({ text: "Saving and exporting need Pro. Upgrade to download cut files.", ok: false });
+      return;
+    }
     setSaving(true); setSaveNote(null);
     try {
       const id = await ipc.keepSvg(design.svg, design.fileName ?? design.name);
@@ -350,8 +354,14 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
                 <>
                   {native && <button type="button" className="btn primary" title="Resize it, choose the material and see its parts in 3D" onClick={() => open()} disabled={editing}>Open in workspace<ArrowRight size={15} aria-hidden /></button>}
                   {native && <button type="button" className="btn" title="Open it in the workspace on the 3D view" onClick={() => open(true)} disabled={editing}><Box size={15} aria-hidden />Open in 3D</button>}
-                  <button type="button" className={native ? "btn" : "btn primary"} onClick={() => void saveDrawn("save")} disabled={editing || saving}><Save size={15} aria-hidden />Save SVG…</button>
-                  <button type="button" className="btn" onClick={() => void saveDrawn("export")} disabled={editing || saving}><Download size={15} aria-hidden />Export</button>
+                  {plan === "pro" ? (
+                    <>
+                      <button type="button" className={native ? "btn" : "btn primary"} onClick={() => void saveDrawn("save")} disabled={editing || saving}><Save size={15} aria-hidden />Save SVG…</button>
+                      <button type="button" className="btn" onClick={() => void saveDrawn("export")} disabled={editing || saving}><Download size={15} aria-hidden />Export</button>
+                    </>
+                  ) : (
+                    <button type="button" className="btn" onClick={onUpgrade} disabled={editing}><Crown size={15} aria-hidden />Upgrade to download</button>
+                  )}
                 </>
               ) : (
                 <>

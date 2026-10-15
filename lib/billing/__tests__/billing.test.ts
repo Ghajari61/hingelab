@@ -34,7 +34,7 @@ describe("plans", () => {
     expect(hingeLocks("free", { shape: "rect", pattern: "straight" })).toEqual([]);
     expect(hingeLocks("free", { shape: "cyl", pattern: "wave" })).toEqual(["Cylinder shape", "Wave pattern"]);
     expect(hingeLocks("pro", { shape: "cyl", pattern: "serpentine" })).toEqual([]);
-    expect(projectLimit("free")).toBe(3);
+    expect(projectLimit("free")).toBe(0);
     expect(projectLimit("pro")).toBe(Infinity);
   });
 
@@ -59,24 +59,26 @@ describe("export by plan", () => {
     expect(out.ok && out.svg).toBe(expected);
   });
 
-  it("Free gets the mark on its own engrave layer in an 8 mm strip, parts untouched", () => {
+  it("Free cannot download any cut file; the watermark helper still marks a strip when used", () => {
+    expect(exportHingeForPlan(params, "free")).toEqual({
+      ok: false,
+      status: 403,
+      error: "Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects.",
+    });
     const pro = exportHingeForPlan(params, "pro");
-    const free = exportHingeForPlan(params, "free");
-    if (!pro.ok || !free.ok) throw new Error("export failed");
+    if (!pro.ok) throw new Error("export failed");
+    const marked = addWatermark(pro.svg);
     const h = /height="([\d.]+)mm"/.exec(pro.svg)![1];
-    const h2 = /height="([\d.]+)mm"/.exec(free.svg)![1];
+    const h2 = /height="([\d.]+)mm"/.exec(marked)![1];
     expect(parseFloat(h2) - parseFloat(h)).toBeCloseTo(8, 6);
-    expect(free.svg).toContain('id="watermark"');
-    expect(free.svg).toContain(">Made with HingeLab</text>");
-    expect(free.svg).not.toContain("NaN");
-    const body = (s: string) => s.slice(s.indexOf("-->"), s.indexOf('<g id="watermark"') > 0 ? s.indexOf('<g id="watermark"') : s.lastIndexOf("</svg>"));
-    expect(body(free.svg)).toBe(body(pro.svg));
+    expect(marked).toContain('id="watermark"');
+    expect(marked).toContain(">Made with HingeLab</text>");
     expect(addWatermark("<svg>no size</svg>")).toBe("<svg>no size</svg>");
   });
 
   it("Free cannot export Pro shapes or patterns", () => {
     const out = exportHingeForPlan({ ...params, shape: "pill", R: 45 }, "free");
-    expect(out).toEqual({ ok: false, status: 403, error: "Pill shape is a Pro feature. Upgrade to Pro to export it." });
+    expect(out).toMatchObject({ ok: false, status: 403 });
     expect(exportHingeForPlan({ ...params, shape: "pill", R: 45 }, "pro").ok).toBe(true);
     expect(exportHingeForPlan(null, "pro")).toMatchObject({ ok: false, status: 400 });
   });

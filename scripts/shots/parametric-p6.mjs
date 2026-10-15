@@ -78,14 +78,14 @@ try {
     assert(/^about \d+ (min|h)/.test(cut), `cut-time estimate shown: ${cut}`);
     await shot(page, "parametric-6-free-editor");
 
-    // Free export: built on the server, with the mark on every sheet
-    const zip = unzipSync(new Uint8Array(await download(page, () => page.getByRole("button", { name: "Export all sheets (ZIP)" }).click())));
-    const sheets = Object.keys(zip).filter((n) => /^sheet-\d+\.svg$/.test(n));
-    assert(sheets.length > 0 && sheets.every((n) => strFromU8(zip[n]).includes("Made with HingeLab")), `Free ZIP: ${sheets.length} sheets, each with the HingeLab mark`);
-    assert(/on the laser/.test(strFromU8(zip["assembly-guide.svg"])), "the assembly guide states the cut time");
-    await page.waitForSelector(".toast:has-text('Made with HingeLab')");
+    // Free export: Upgrade to Pro (no cut file)
+    await page.getByRole("button", { name: "Export all sheets (ZIP)" }).click();
+    await page.waitForSelector(".modal.upgrade");
+    assert(/Saving and exporting need Pro/.test(await page.locator(".upgrade-reason").textContent()), "Free ZIP export opens Upgrade to Pro");
+    await shot(page, "parametric-6-upgrade-dialog");
+    await closeUpgrade(page);
 
-    // more than 30 parts: preview works, export opens Upgrade to Pro
+    // more than 30 parts: preview works, export still needs Pro
     await page.locator('.fld[data-id="spacing"] input').first().fill("5");
     await page.keyboard.press("Enter");
     s = await waitSliced(page, s);
@@ -94,8 +94,7 @@ try {
     assert(/More than 30 parts/.test(await page.getByTestId("pro-note").textContent()), "the Pro note names the part limit");
     await page.getByRole("button", { name: "Export all sheets (ZIP)" }).click();
     await page.waitForSelector(".modal.upgrade");
-    assert(/^More than 30 parts \(this design has \d+\) needs Pro/.test(await page.locator(".upgrade-reason").textContent()), "export over 30 parts opens Upgrade to Pro");
-    await shot(page, "parametric-6-upgrade-dialog");
+    assert(/Saving and exporting need Pro|More than 30 parts/.test(await page.locator(".upgrade-reason").textContent()), "export over 30 parts opens Upgrade to Pro");
     await closeUpgrade(page);
 
     // a Pro method: preview works, the guide is refused too

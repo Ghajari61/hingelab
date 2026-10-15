@@ -1,11 +1,10 @@
 /**
- * Letters export with the plan applied: Free can export only a Letter Box of a single letter,
- * with the "Made with HingeLab" mark. Pure: the font and HarfBuzz are passed in, so the route
- * (and the tests) decide where they come from.
+ * Letters export with the plan applied. Free cannot download any file. Pure: the font and HarfBuzz
+ * are passed in, so the route (and the tests) decide where they come from.
  */
 import { exportLetterSVG, mergeLetterParams, type HarfBuzz, type LetterParams, type LoadedFont } from "@/lib/letters";
 import { arrangeLetters } from "@/lib/fit/letters";
-import { addWatermark, lettersLock, needsWatermark, type Plan } from "@/lib/plans";
+import { canExport, EXPORT_DENIED, lettersLock, type Plan } from "@/lib/plans";
 
 export type LettersExport = { ok: true; svg: string } | { ok: false; status: number; error: string };
 
@@ -25,11 +24,11 @@ export function parseLetterRequest(partial: unknown): LetterParams | { error: st
 }
 
 export function exportLettersForPlan(p: LetterParams, plan: Plan, font: LoadedFont, hb: HarfBuzz): LettersExport {
+  if (!canExport(plan)) return { ok: false, status: 403, error: EXPORT_DENIED };
   const lock = lettersLock(plan, p);
   if (lock) return { ok: false, status: 403, error: lock };
   const a = arrangeLetters(p, font, hb);
   if ("error" in a.result) return { ok: false, status: 422, error: a.result.error };
   if (!a.lay) return { ok: false, status: 422, error: "The parts could not be laid out." };
-  const svg = exportLetterSVG(a.lay, a.params, font.name);
-  return { ok: true, svg: needsWatermark(plan) ? addWatermark(svg) : svg };
+  return { ok: true, svg: exportLetterSVG(a.lay, a.params, font.name) };
 }

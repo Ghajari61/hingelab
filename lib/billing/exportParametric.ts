@@ -1,16 +1,14 @@
 /**
- * Parametric export with the plan applied: the server slices the design again and builds the
- * file, so the Free rules (library shapes, parallel fins, ≤ 30 parts, the HingeLab mark) cannot
- * be skipped. Imported 3D files and photos never leave the device, so the server cannot rebuild
- * them; those sources are Pro-only and Pro exports them in the browser. Pure: manifold-3d is
- * passed in, so the route and the tests decide where it comes from.
+ * Parametric export with the plan applied. Free cannot download any file. Imported 3D files and
+ * photos never leave the device, so the server cannot rebuild them; Pro exports those in the
+ * browser. Pure: manifold-3d is passed in, so the route and the tests decide where it comes from.
  */
 import type { ManifoldToplevel } from "manifold-3d";
 import {
   allSheetsSVG, assemblyGuideSVG, computeParametric, exportZip, loadSource, mergeParametricParams, sheetFileName, sheetSVG, slugName,
   type ParametricParams,
 } from "@/lib/parametric";
-import { needsWatermark, parametricLock, type Plan } from "@/lib/plans";
+import { canExport, EXPORT_DENIED, parametricLock, type Plan } from "@/lib/plans";
 import { parametricRequestError } from "./validate";
 
 export type ParametricWhat = { kind: "zip" } | { kind: "all" } | { kind: "sheet"; index: number } | { kind: "guide" };
@@ -41,6 +39,7 @@ export function parseParametricRequest(partial: unknown, what: unknown): { p: Pa
 }
 
 export async function exportParametricForPlan(p: ParametricParams, what: ParametricWhat, plan: Plan, wasm: ManifoldToplevel): Promise<ParametricExport> {
+  if (!canExport(plan)) return { ok: false, status: 403, error: EXPORT_DENIED };
   const early = parametricLock(plan, p);
   if (early) return { ok: false, status: 403, error: early };
   if (p.method !== "curveNormal" && (p.source.kind === "mesh" || p.source.kind === "image")) {
@@ -58,11 +57,10 @@ export async function exportParametricForPlan(p: ParametricParams, what: Paramet
   const late = parametricLock(plan, p, result.stats.partCount);
   if (late) return { ok: false, status: 403, error: late };
   if (!result.sheets.length) return { ok: false, status: 422, error: "There are no parts to export." };
-  const watermark = needsWatermark(plan);
   const base = slugName(p.name);
-  if (what.kind === "zip") return { ok: true, body: exportZip(result, p, { watermark }), type: "application/zip", fileName: `${base}.zip` };
-  if (what.kind === "all") return { ok: true, body: allSheetsSVG(result, p, { watermark }), type: "image/svg+xml; charset=utf-8", fileName: `${base}.svg` };
+  if (what.kind === "zip") return { ok: true, body: exportZip(result, p), type: "application/zip", fileName: `${base}.zip` };
+  if (what.kind === "all") return { ok: true, body: allSheetsSVG(result, p), type: "image/svg+xml; charset=utf-8", fileName: `${base}.svg` };
   if (what.kind === "guide") return { ok: true, body: assemblyGuideSVG(result, p), type: "image/svg+xml; charset=utf-8", fileName: `${base}-assembly-guide.svg` };
   if (what.index >= result.sheets.length) return { ok: false, status: 400, error: "That sheet does not exist." };
-  return { ok: true, body: sheetSVG(result, what.index, p, { watermark }), type: "image/svg+xml; charset=utf-8", fileName: `${base}-${sheetFileName(what.index, result.sheets.length)}` };
+  return { ok: true, body: sheetSVG(result, what.index, p), type: "image/svg+xml; charset=utf-8", fileName: `${base}-${sheetFileName(what.index, result.sheets.length)}` };
 }

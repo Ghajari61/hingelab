@@ -46,14 +46,15 @@ try {
     const solid = await apiExport(page, { product: "letters", params: { text: "S", mode: "solid" } });
     assert(solid.status === 403, "the server refuses a Solid letter for Free");
 
-    // one letter as a box: exports with the mark
+    // one letter as a box: Free can preview, but cannot download
     await page.locator('[aria-label="Letters mode"] button[data-v="box"]').click();
     await setText(page, "S");
-    const [dl] = await Promise.all([page.waitForEvent("download"), page.locator(".btn-export").first().click()]);
-    const svg = await (await dl.createReadStream()).toArray().then((c) => Buffer.concat(c).toString("utf8"));
-    assert(svg.includes('id="watermark"') && svg.includes("Made with HingeLab"), "Free single-letter box exports with the mark");
-    assert(svg.includes("letter box (living-hinge walls)") && /<g id="hinge"[^>]*>\s*<path/.test(svg), "the export is the real letter box with hinge cuts");
-    await page.waitForSelector(".toast:has-text('Made with HingeLab')");
+    await page.locator(".btn-export").first().click();
+    await page.waitForSelector(".upgrade-reason", { timeout: 15000 });
+    assert((await page.locator(".upgrade-reason").textContent()).includes("Saving and exporting need Pro"), "Free single-letter export opens Upgrade to Pro");
+    await page.keyboard.press("Escape");
+    const one = await apiExport(page, { product: "letters", params: { text: "S", mode: "box" } });
+    assert(one.status === 403, "the server refuses a Free single-letter export");
     await shot(page, "letters-5-free-single-letter");
 
     // Pro: the whole word, clean

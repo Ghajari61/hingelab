@@ -6,7 +6,7 @@ import { ArrowRight, ArrowUp, Check, Download, ImagePlus, Info, Layers, Library,
 import { AI_START_KEY, isAIProduct, MAX_IMAGE_NOTE, MAX_PROMPT, reviseOf, type AIDesign, type AIMatch, type AIOpen } from "@/lib/ai/types";
 import { previewSvg } from "@/lib/ai/preview";
 import { photoJpeg } from "@/lib/ai/photo";
-import type { Plan } from "@/lib/plans";
+import { hasPro, type Plan } from "@/lib/plans";
 
 /** The last answer, so a reload or a trip to the editor and back keeps it. */
 const LAST_KEY = "hingelab-ai-last";
@@ -252,6 +252,7 @@ export function AIDesigner({ plan, curator = false }: { plan: Plan; curator?: bo
 
   function download() {
     if (!design?.svg) return;
+    if (!hasPro(plan)) { setError("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return; }
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([design.svg], { type: "image/svg+xml" }));
     a.download = design.fileName ?? fileName(design.name);
@@ -429,7 +430,8 @@ export function AIDesigner({ plan, curator = false }: { plan: Plan; curator?: bo
               <button type="button" className="btn-primary" onClick={openInEditor} disabled={opening}>
                 {design.product === "art" ? "Open in Studio" : "Open in editor"} <ArrowRight size={16} aria-hidden />
               </button>
-              {design.svg && <button type="button" className="btn-ghost" onClick={download}><Download size={15} aria-hidden /> Download SVG</button>}
+              {design.svg && hasPro(plan) && <button type="button" className="btn-ghost" onClick={download}><Download size={15} aria-hidden /> Download SVG</button>}
+              {design.svg && !hasPro(plan) && <Link href="/app/billing" className="btn-ghost">Upgrade to download</Link>}
               {curator && design.product === "art" && design.svg && !kept.ok && (
                 <button type="button" className="ai-link-btn" onClick={() => void keepAsExample()} disabled={kept.busy}>
                   {kept.busy ? <Loader2 size={14} className="spin" aria-hidden /> : <Library size={14} aria-hidden />} Add to example library

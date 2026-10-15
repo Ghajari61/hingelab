@@ -31,7 +31,7 @@ const planName = (a: DesktopAccount | null) => a?.tier === "business" ? "Busines
 
 const HERO_PRODUCTS = ["clock", "hinge", "boxes"];
 
-const PRO_PERKS = ["Pill, polygon and cylinder boxes", "Wave, relief and serpentine hinges", "Large puzzles and every generator design", "Exports without the HingeLab mark"];
+const PRO_PERKS = ["Pill, polygon and cylinder boxes", "Wave, relief and serpentine hinges", "Large puzzles and every generator design", "Save projects and export cut files"];
 
 /** Website sections that open inside the window, signed in. */
 const ONLINE_TILES: { id: string; name: string; blurb: string; art: [string, string]; section: WebRoute; path: string }[] = [
@@ -206,7 +206,7 @@ export function Dashboard({ account, catalog, recent, files, defaultProduct, onN
                 <p className="plan-name">{planName(account)}</p>
               </div>
             </div>
-            <p title={PRO_PERKS.join(" · ")}>{pro ? "Every shape, pattern and generator, with clean exports." : "Unlock every shape and generator, and export without the HingeLab mark."}</p>
+            <p title={PRO_PERKS.join(" · ")}>{pro ? "Every shape, pattern and generator, with clean exports." : "Unlock every shape and generator, and save and export cut files."}</p>
             {!pro && <button type="button" className="btn primary" onClick={onUpgrade}><Crown size={15} aria-hidden />Upgrade to Pro</button>}
           </section>
         </aside>
@@ -426,7 +426,7 @@ export function Subscription({ account, onWeb, onRefresh, refreshing }: { accoun
           <li className={pro ? "on" : ""}>Pill, polygon and cylinder boxes</li>
           <li className={pro ? "on" : ""}>Wave, relief and serpentine hinges</li>
           <li className={pro ? "on" : ""}>Large puzzles and every generator design</li>
-          <li className={pro ? "on" : ""}>Exports without the HingeLab mark</li>
+          <li className={pro ? "on" : ""}>Save projects and export cut files</li>
         </ul>
         <div className="row">
           {pro
@@ -666,7 +666,7 @@ export function Help({ onWeb, version, onHelpCentre }: { onWeb: (p: WebPage) => 
         <CardTitle icon={FileDown}>Saving and cutting</CardTitle>
         <p>Save keeps the design as a HingeLab project file (.oclc): the first Save asks where, later saves update the same file. Project files open in the app (double-click one, drop it on the window or press Ctrl+O) and on the website, in the section that made them.</p>
         <p>Export writes the cut file (SVG) straight into the folder chosen in Settings, or asks where when no folder is set. Files are in millimetres at true size: import them into LightBurn, xTool Creative Space or Inkscape at 100%.</p>
-        <p>Free-plan exports include a small "Made with HingeLab" line below the parts on its own engrave layer.</p>
+        <p>The Free plan is for trying the designers. Saving projects and downloading cut files need Pro.</p>
       </section>
       <section className="card">
         <CardTitle icon={Wrench}>Troubleshooting</CardTitle>

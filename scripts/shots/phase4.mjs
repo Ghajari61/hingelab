@@ -68,21 +68,20 @@ await withBrowser(async (page) => {
   assert(api.status === 403, `the server refuses a Pro export for Free users (${api.body.error})`);
 
   await page.locator('[aria-label="Box shape"] button[data-v="rect"]').click();
-  await page.waitForFunction(() => document.querySelector(".statusbar .push")?.textContent === "Saved to cloud", null, { timeout: 15000 });
-  assert(true, "back to Rounded, the box saves again");
-  const [dl] = await Promise.all([page.waitForEvent("download"), page.locator(".btn-export").first().click()]);
-  const svg = fs.readFileSync(await dl.path(), "utf8");
-  assert(svg.includes('id="watermark"') && svg.includes("Made with HingeLab"), "Free export carries the Made with HingeLab mark");
+  await page.locator(".btn-export").first().click();
+  await page.waitForSelector(".upgrade-reason", { timeout: 15000 });
+  assert((await page.locator(".upgrade-reason").textContent()).includes("Saving and exporting need Pro"), "Free export opens Upgrade to Pro");
+  await page.keyboard.press("Escape");
+  const freeApi = await page.evaluate(async () => {
+    const r = await fetch("/api/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ params: { shape: "rect" } }) });
+    return { status: r.status, body: await r.json().catch(() => ({})) };
+  });
+  assert(freeApi.status === 403 && String(freeApi.body.error ?? "").includes("Saving and exporting need Pro"), "the server refuses Free export");
 
-  // --- Free: 3 cloud projects ---
+  // --- Free: no cloud projects ---
   await page.goto(`${BASE}/app`);
-  for (let i = 0; i < 2; i++) {
-    await page.locator(".box-card").first().getByRole("button", { name: "Duplicate" }).click();
-    await page.waitForFunction((n) => document.querySelectorAll(".box-card").length === n, i + 2);
-  }
-  await page.locator(".box-card").first().getByRole("button", { name: "Duplicate" }).click();
-  await page.waitForSelector(".auth-msg.err");
-  assert((await page.locator(".auth-msg.err").textContent()).includes("up to 3 cloud projects"), "a 4th project is refused by the database");
+  await page.waitForSelector(".limit-note");
+  assert((await page.locator(".limit-note").textContent()).includes("cannot save cloud projects"), "Free is told cloud saving needs Pro");
   await shot(page, "main-4-project-limit");
 
   // --- Billing page (Free) and checkout error handling with a dummy key ---

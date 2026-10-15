@@ -25,7 +25,8 @@ describe("entitlements", () => {
       expect(e.watermark).toBe(false);
       expect(hasPro(plan)).toBe(true);
     }
-    expect(getEntitlements("free")).toMatchObject({ pro: false, watermark: true, batchLimit: BATCH_FREE, projectLimit: 3 });
+    expect(getEntitlements("free")).toMatchObject({ pro: false, canExport: false, watermark: true, batchLimit: BATCH_FREE, projectLimit: 0 });
+    expect(getEntitlements("pro").canExport).toBe(true);
     expect(getEntitlements("pro").batchLimit).toBe(BATCH_PRO);
     expect(getEntitlements("lifetime").batchLimit).toBe(BATCH_PRO);
     expect(getEntitlements("business")).toMatchObject({ batchLimit: null, seats: 3, commercialUse: true, prioritySupport: true });

@@ -278,6 +278,10 @@ export function App() {
   useEffect(() => { if (phase === "ready") loadFiles(); }, [phase, loadFiles]);
 
   const saveProject = useCallback(async (asNew: boolean) => {
+    if ((account?.plan ?? "free") !== "pro") {
+      toast({ text: "Saving and exporting need Pro. Upgrade to download cut files.", kind: "err" });
+      return;
+    }
     design.flush();
     const cur = design.current();
     if (!cur.product || !cur.params || cur.product === "art") return;
@@ -293,7 +297,7 @@ export function App() {
     } catch (e) {
       toast({ text: (e as AppError).message, kind: "err" });
     }
-  }, [design, product, toast, loadFiles]);
+  }, [account?.plan, design, product, toast, loadFiles]);
 
   const nativeIds = useMemo(() => new Set(["hinge", ...(catalog?.products.map((p) => p.id) ?? [])]), [catalog]);
   const openFile = useCallback(async (path: string | null) => {
@@ -349,6 +353,10 @@ export function App() {
   }, [titleName, titleDirty]);
 
   const save = useCallback(async (how: "save" | "export" | ExportAs) => {
+    if ((account?.plan ?? "free") !== "pro") {
+      toast({ text: "Saving and exporting need Pro. Upgrade to download cut files.", kind: "err" });
+      return;
+    }
     const id = design.state.result?.designId;
     if (!id) return;
     try {
@@ -357,7 +365,7 @@ export function App() {
     } catch (e) {
       toast({ text: (e as AppError).message, kind: "err" });
     }
-  }, [design.state.result, toast]);
+  }, [account?.plan, design.state.result, toast]);
 
   // Keyboard shortcuts.
   useEffect(() => {

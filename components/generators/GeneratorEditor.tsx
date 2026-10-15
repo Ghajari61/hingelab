@@ -300,6 +300,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
     if (issues.some((i) => i.code === "MISSING_GLYPHS")) { toastMsg("Pick a font that has every character first"); return null; }
     const over = batchLimitMessage(account.plan, designBatchCount(params), !account.configured);
     if (over) { setUpgrade(over); return null; }
+    if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return null; }
     if (!lock || !account.configured) return genSVG(def, built, lay);
     if (locked) { setUpgrade(lock); return null; }
     // A Pro design: the server checks the plan and builds it again.
@@ -352,8 +353,14 @@ function GenEditor({ def, onProduct, onHome, start }: {
     }
   }
 
-  function saveProject() { void file.save(); }
-  function saveProjectAs() { void file.saveAs(); }
+  function saveProject() {
+    if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return; }
+    void file.save();
+  }
+  function saveProjectAs() {
+    if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return; }
+    void file.saveAs();
+  }
   function openProject() { void file.open(); }
 
   function newProject() {

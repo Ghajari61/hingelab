@@ -344,11 +344,12 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   const locks = parametricLocks(account.plan, params, result?.stats.partCount);
 
   /**
-   * Exports with the plan applied. Pro (and servers without accounts) build the file here, clean.
-   * Free asks the server, which slices again and adds the HingeLab mark, so the limits hold (D56).
+   * Exports with the plan applied. Pro (and servers without accounts) build the file here.
+   * Free cannot download any file.
    */
   async function exportData(what: ExportWhat, build: () => string | Uint8Array): Promise<{ data: string | Uint8Array; marked: boolean } | null> {
     if (!ready()) return null;
+    if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return null; }
     const lock = parametricLock(account.plan, params, result!.stats.partCount) ?? (params.material.nest === "outline" ? gateLock("nesting", account.plan, flags) : null);
     if (lock) { setUpgrade(lock); return null; }
     if (!account.configured || hasPro(account.plan)) return { data: build(), marked: false };
@@ -370,7 +371,6 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     const out = await exportData(what, build);
     if (!out) return;
     offerFile(name, out.data, mime);
-    if (out.marked) window.setTimeout(() => toastMsg("Exported with the small “Made with HingeLab” mark (Free plan)"), 1600);
   }
   function exportAllNow() { void exportWith({ kind: "all" }, `${base()}.svg`, "image/svg+xml", () => allSheetsSVG(result!, params)); }
   async function exportDXFNow() {
@@ -378,7 +378,6 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     if (!out) return;
     const { svgToDXF } = await import("@/lib/export/dxf");
     offerFile(`${base()}.dxf`, svgToDXF(typeof out.data === "string" ? out.data : new TextDecoder().decode(out.data)).dxf, "application/dxf");
-    if (out.marked) window.setTimeout(() => toastMsg("Exported with the small “Made with HingeLab” mark (Free plan)"), 1600);
   }
   /** All sheets as the server or this device exports them, for the export dialog. */
   async function exportedAllSVG(): Promise<string | null> {
@@ -397,8 +396,14 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     void exportWith({ kind: "sheet", index: currentSheet }, `${base()}-${sheetFileName(currentSheet, result!.sheets.length)}`, "image/svg+xml", () => sheetSVG(result!, currentSheet, params));
   }
   function guideNow() { void exportWith({ kind: "guide" }, `${base()}-assembly-guide.svg`, "image/svg+xml", () => assemblyGuideSVG(result!, params)); }
-  function saveProject() { void file.save(); }
-  function saveProjectAs() { void file.saveAs(); }
+  function saveProject() {
+    if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return; }
+    void file.save();
+  }
+  function saveProjectAs() {
+    if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return; }
+    void file.saveAs();
+  }
   function openProject() { void file.open(); }
   function newProject() {
     file.forget();

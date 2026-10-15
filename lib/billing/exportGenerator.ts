@@ -9,7 +9,7 @@ import { sanitizeGeneratorParams } from "@/lib/generators/sanitize";
 import { makeTextFn } from "@/lib/generators/text";
 import type { AnyGenerator, BuildContext, GenBase } from "@/lib/generators/types";
 import type { LoadedFont } from "@/lib/letters/fonts";
-import { batchLimitMessage, designBatchCount, hasPro, type Plan } from "@/lib/plans";
+import { batchLimitMessage, canExport, designBatchCount, EXPORT_DENIED, hasPro, type Plan } from "@/lib/plans";
 import { bundledFont, FontError, serverHarfBuzz, uploadedFont } from "./letterFonts";
 
 export type GeneratorExport =
@@ -56,6 +56,7 @@ export async function serverBuildContext(def: AnyGenerator, p: GenBase, uploads:
 
 export async function exportGeneratorForPlan(id: unknown, raw: unknown, plan: Plan, uploads: FontUpload[] = []): Promise<GeneratorExport> {
   if (!isGeneratorId(id)) return { ok: false, status: 400, error: "Unknown product." };
+  if (!canExport(plan)) return { ok: false, status: 403, error: EXPORT_DENIED };
   const def = await loadGenerator[id]();
   const p = sanitizeGeneratorParams(def, def.merge(raw));
   const over = batchLimitMessage(plan, designBatchCount(p));

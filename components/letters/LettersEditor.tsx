@@ -255,13 +255,14 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   }
 
   /**
-   * The file to export. With accounts the server builds it, so the Letters plan rule and the Free
-   * mark are applied where they can't be bypassed (D27). Without accounts it is built here.
+   * The file to export. With accounts the server builds it so Free cannot bypass the plan.
+   * Without accounts it is built here.
    */
   const localSVG = () => (model && lay ? exportLetterSVG(lay, built, font?.name) : null);
 
   async function exportedSVG(): Promise<string | null> {
     if (!model || !lay) { toastMsg(error ? "Fix the settings before exporting" : "Still loading the font"); return null; }
+    if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return null; }
     const lock = lettersLock(account.plan, deferred);
     if (lock) { setUpgrade(lock); return null; }
     if (!account.configured) return exportLetterSVG(lay, built, font?.name);
@@ -301,7 +302,6 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
     const svg = await cutSVG();
     if (!svg) return;
     offerFile(baseName(built) + ".svg", svg, "image/svg+xml");
-    if (svg.includes('id="watermark"')) toastMsg("Exported with the small “Made with HingeLab” mark (Free plan)");
   }
 
   async function exportDXFNow() {
@@ -324,8 +324,14 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
     }
   }
 
-  function saveProject() { void file.save(); }
-  function saveProjectAs() { void file.saveAs(); }
+  function saveProject() {
+    if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return; }
+    void file.save();
+  }
+  function saveProjectAs() {
+    if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return; }
+    void file.saveAs();
+  }
   function openProject() { void file.open(); }
 
   function newProject() {

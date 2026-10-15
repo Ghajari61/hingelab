@@ -24,11 +24,7 @@ const MAX_GENERATOR_BODY = 1.2 * 1024 * 1024;
 type Body = { product?: unknown; params?: unknown; what?: unknown; font?: { name?: unknown; data?: unknown }; fonts?: unknown };
 
 /**
- * SVG export with the caller's plan applied on the server. Hinge Box: Free gets the
- * "Made with HingeLab" mark and cannot export Pro shapes or patterns. Letters: Free can export
- * only a single-letter Letter Box, with the mark. Parametric: Free can export library shapes as
- * parallel fins with up to 30 parts, with the mark (a ZIP, one sheet, or the assembly guide).
- * Generators: the editor exports free designs itself and sends only Pro ones here to be checked.
+ * SVG export with the caller's plan applied on the server. Free cannot download any cut file.
  * The plan always comes from the session, never from the request.
  */
 export async function POST(request: NextRequest) {

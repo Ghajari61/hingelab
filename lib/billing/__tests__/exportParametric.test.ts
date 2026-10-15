@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { strFromU8, unzipSync } from "fflate";
 import { manifold } from "@/lib/parametric/__tests__/helpers";
 import {
   CONTOUR_OVERHEAD, CUT_SPEEDS, FORMULA_DEFAULTS, PARAMETRIC_DEFAULTS, assemblyGuideSVG, computeParametric, cutSpeedOf, estimateCutMinutes, fmtMinutes,
@@ -23,7 +22,7 @@ describe("Parametric plan rules", () => {
     expect(parametricLocks("free", { source: { kind: "library" }, method: "curveNormal" })).toEqual(["Fins along a curve"]);
     expect(parametricLocks("free", { source: { kind: "mesh" }, method: "stacked" }, 99)).toHaveLength(3);
     expect(parametricLocks("pro", { source: { kind: "image" }, method: "radial" }, 500)).toEqual([]);
-    expect(parametricLock("free", { source: { kind: "image" }, method: "radial" })).toMatch(/^Photo relief and Radial fins need Pro\. On the Free plan you can export library shapes as parallel fins with up to 30 parts/);
+    expect(parametricLock("free", { source: { kind: "image" }, method: "radial" })).toMatch(/^Photo relief and Radial fins need Pro\. On the Free plan you can preview library shapes as parallel fins with up to 30 parts/);
     expect(parametricLock("pro", { source: { kind: "image" }, method: "radial" })).toBeNull();
   });
 });
@@ -52,39 +51,23 @@ describe("cut-time estimate", () => {
 });
 
 describe("server export with the plan applied", () => {
-  it("Free: the library head as parallel fins exports as a ZIP with the mark on every sheet", async () => {
+  it("Free cannot download any Parametric file", async () => {
     const out = await exportParametricForPlan(params(), { kind: "zip" }, "free", await manifold());
-    expect(out.ok).toBe(true);
-    if (!out.ok) return;
-    expect(out.type).toBe("application/zip");
-    const files = unzipSync(out.body as Uint8Array);
-    const sheets = Object.keys(files).filter((n) => /^sheet-\d+\.svg$/.test(n));
-    expect(sheets.length).toBeGreaterThan(0);
-    for (const n of sheets) {
-      const svg = strFromU8(files[n]);
-      expect(svg).toContain('id="watermark"');
-      expect(svg).toContain("Made with HingeLab");
-      expect(svg).not.toMatch(/NaN|undefined/);
-    }
-    expect(Object.keys(files)).toEqual(expect.arrayContaining(["assembly-guide.svg", "project.hingelab.json"]));
+    expect(out).toMatchObject({ ok: false, status: 403 });
+    if (!out.ok) expect(out.error).toMatch(/Saving and exporting need Pro/);
   });
 
-  it("the mark sits on a strip below the sheet, never over a part", async () => {
+  it("Free sheet export is refused", async () => {
     const out = await exportParametricForPlan(params(), { kind: "sheet", index: 0 }, "free", await manifold());
-    if (!out.ok) throw new Error(out.error);
-    const svg = out.body as string;
-    const [, h] = /height="([\d.]+)mm"/.exec(svg)!;
-    expect(parseFloat(h)).toBeCloseTo(PARAMETRIC_DEFAULTS.material.sheetH + 8, 6);
-    const y = parseFloat(/<g id="watermark"[\s\S]*?<text [^>]*y="([\d.]+)"/.exec(svg)![1]);
-    expect(y).toBeGreaterThan(PARAMETRIC_DEFAULTS.material.sheetH);
+    expect(out).toMatchObject({ ok: false, status: 403 });
   });
 
-  it("Free: more than 30 parts, Pro sources and Pro methods are refused; Pro gets clean files", async () => {
+  it("Free is refused; Pro gets clean files", async () => {
     const wasm = await manifold();
     const dense = params({ parallel: { ...PARAMETRIC_DEFAULTS.parallel, spacing: 5 } });
     const many = await exportParametricForPlan(dense, { kind: "zip" }, "free", wasm);
     expect(many).toMatchObject({ ok: false, status: 403 });
-    if (!many.ok) expect(many.error).toMatch(/More than 30 parts \(this design has \d+\)/);
+    if (!many.ok) expect(many.error).toMatch(/Saving and exporting need Pro/);
 
     const formula = params({ source: structuredClone(FORMULA_DEFAULTS.heightfield) });
     expect(await exportParametricForPlan(formula, { kind: "zip" }, "free", wasm)).toMatchObject({ ok: false, status: 403 });

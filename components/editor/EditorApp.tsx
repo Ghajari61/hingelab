@@ -20,7 +20,7 @@ import { useHistory } from "@/hooks/useHistory";
 import { readStored, readUnits, useAutosave } from "@/hooks/useAutosave";
 import { useCloudAutosave, type CloudDoc } from "@/hooks/useCloudAutosave";
 import { thumbnailSVG } from "@/lib/projects/thumbnail";
-import { canUsePattern, hingeLocks } from "@/lib/plans";
+import { canUsePattern, hasPro, hingeLocks } from "@/lib/plans";
 import { usePlan } from "@/components/billing/usePlan";
 import { importIntoCloud, openNewCloudProject } from "./cloud";
 import { PX_PER_MM, useCanvasView } from "@/hooks/useCanvasView";
@@ -215,14 +215,15 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   }
 
   /**
-   * The file to export. With accounts the server builds it, so the plan (and the Free mark) is
-   * applied where it can't be bypassed. Without accounts everything is open and it is built here.
+   * The file to export. With accounts the server builds it so Free cannot bypass the plan.
+   * Without accounts everything is open and it is built here.
    */
   const localSVG = () => (model && lay ? exportSVG(model, lay, built) : null);
 
   async function exportedSVG(): Promise<string | null> {
     if (!model || !lay) { toastMsg("Fix the settings before exporting"); return null; }
     if (locks.length) { setUpgrade(lockedReason()); return null; }
+    if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return null; }
     if (!account.configured) return exportSVG(model, lay, built);
     try {
       const res = await fetch("/api/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ params }) });
@@ -250,7 +251,6 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
     const svg = await cutSVG();
     if (!svg) return;
     offerFile(baseName(built) + ".svg", svg, "image/svg+xml");
-    if (svg.includes('id="watermark"')) toastMsg("Exported with the small “Made with HingeLab” mark (Free plan)");
   }
 
   async function exportDXFNow() {
@@ -273,8 +273,14 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
     }
   }
 
-  function saveProject() { void file.save(); }
-  function saveProjectAs() { void file.saveAs(); }
+  function saveProject() {
+    if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return; }
+    void file.save();
+  }
+  function saveProjectAs() {
+    if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return; }
+    void file.saveAs();
+  }
   function openProject() { void file.open(); }
 
   function newProject() {

@@ -12,7 +12,7 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Pricing, type PriceCard } from "@/components/site/Pricing";
 import { founderSeatsLeft } from "@/lib/billing/founder";
-import { BATCH_FREE, BATCH_PRO, BUSINESS_SEATS, COMMERCIAL_LICENSE, FOUNDER_CAP, FREE_PROJECT_LIMIT, PLAN_ROWS, PRICES, PRO_BENEFITS } from "@/lib/plans";
+import { BATCH_FREE, BATCH_PRO, BUSINESS_SEATS, COMMERCIAL_LICENSE, FOUNDER_CAP, PLAN_ROWS, PRICES, PRO_BENEFITS } from "@/lib/plans";
 import { desktopRelease } from "@/lib/site/release";
 import { siteProducts, totalPresets, type SiteIcon } from "@/lib/site/products";
 import { GALLERY, isProSample, sheetFor } from "@/lib/site/samples";
@@ -75,7 +75,7 @@ const FAQ = [
   },
   {
     q: "Do I need an account?",
-    a: `No. The editors run in your browser and keep your work on this device. A free account adds up to ${FREE_PROJECT_LIMIT} cloud projects you can open on any computer.`,
+    a: "No. The editors run in your browser so you can try designs on this device. Saving projects, cloud sync and downloading cut files need Pro.",
   },
   {
     q: "What does Pro add?",
@@ -321,13 +321,13 @@ function priceCards(seatsLeft: number | null): PriceCard[] {
   const cards: PriceCard[] = [
     {
       id: "free", badge: "To try it", quiet: true, name: "Free", monthly: 0, yearly: 0, alt: "No account needed",
-      features: ["Watermarked SVG", `${FREE_PROJECT_LIMIT} cloud projects`, "Rounded + Straight", "Letters preview, one-letter boxes", "Parametric library fins, 30 parts", `Batches of ${BATCH_FREE}`],
+      features: ["Preview designs in the browser", "Rounded + Straight hinges", "Letters and parametric preview", `Batches of ${BATCH_FREE} (preview)`, "No save or download"],
       cta: "Start free", href: "/app/editor/local",
     },
     {
       id: "pro", badge: "Most popular", popular: true, name: "Pro", monthly: PRICES.monthly, yearly: PRICES.yearly,
       alt: "",
-      features: ["Clean SVG, no mark", "Unlimited cloud projects", "All shapes and patterns", "Letters and every tool", "Full parametric sculptures", `Batches of ${BATCH_PRO}`],
+      features: ["Save and export cut files", "Unlimited cloud projects", "All shapes and patterns", "Letters and every tool", "Full parametric sculptures", `Batches of ${BATCH_PRO}`],
       cta: "Get Pro", href: billingNext("pro"), primary: true,
     },
     {

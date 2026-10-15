@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { exportHingeForPlan } from "@/lib/billing/exportHinge";
 import { exportGeneratorForPlan } from "@/lib/billing/exportGenerator";
 import { DEFAULTS } from "@/lib/hinge";
+import { addWatermark } from "@/lib/plans";
 import { NextURL } from "next/dist/server/web/next-url";
 import { bearer, isLoopbackRedirect, isState, isVerifier, loopbackRedirect, randomToken, sha256, verifyPkce } from "../pkce";
 import { desktopCatalog, fileNameOf, generateDesign } from "../products";
@@ -162,14 +163,16 @@ const gen = async (req: object, plan: "free" | "pro" = "free") => {
 };
 
 describe("desktop generate (server-side SVG)", () => {
-  it("builds the same Hinge Box SVG as the web export, with the Free mark", async () => {
+  it("builds the same Hinge Box SVG as the web export; Free preview still carries the mark", async () => {
+    const proOut = exportHingeForPlan(DEFAULTS, "pro");
+    if (!proOut.ok) throw new Error("pro export failed");
     const free = await gen({ product: "hinge" });
     expect(free.status).toBe(200);
-    expect(free.body.svg).toBe(exportHingeForPlan(DEFAULTS, "free").ok && (exportHingeForPlan(DEFAULTS, "free") as { svg: string }).svg);
+    expect(free.body.svg).toBe(addWatermark(proOut.svg));
     expect(free.body.watermark).toBe(true);
     expect(free.body.svg).toContain("Made with HingeLab");
     const pro = await gen({ product: "hinge" }, "pro");
-    expect(pro.body.svg).toBe((exportHingeForPlan(DEFAULTS, "pro") as { svg: string }).svg);
+    expect(pro.body.svg).toBe(proOut.svg);
     expect(pro.body.svg).not.toContain("Made with HingeLab");
     expect(pro.body.width).toBeGreaterThan(0);
     expect(pro.body.fileName).toBe("Untitled box.svg");

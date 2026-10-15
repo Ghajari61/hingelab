@@ -57,9 +57,9 @@ export function ProjectsHome({ projects, products, localOnly = [], limit = Infin
               type="button"
               className={i === 0 ? "btn-primary" : "btn-ghost"}
               disabled={pending}
-              title={localOnly.includes(pr) ? "Designed in your browser on the Free plan; cloud saving needs Pro" : undefined}
+              title={limit === 0 || localOnly.includes(pr) ? "Designed in your browser on the Free plan; cloud saving needs Pro" : undefined}
               onClick={() => {
-                if (!localOnly.includes(pr)) { act(() => createProjectAction(pr), true); return; }
+                if (limit > 0 && !localOnly.includes(pr)) { act(() => createProjectAction(pr), true); return; }
                 try { localStorage.setItem("hingelab-product", pr === "hinge-box" ? "hinge" : pr); } catch { /* private mode */ }
                 router.push(`/app/editor/local?p=${pr === "hinge-box" ? "hinge" : pr}`);
               }}
@@ -69,7 +69,12 @@ export function ProjectsHome({ projects, products, localOnly = [], limit = Infin
           ))}
         </div>
       </div>
-      {Number.isFinite(limit) && (
+      {limit === 0 ? (
+        <p className="limit-note">
+          <span>The Free plan cannot save cloud projects or download cut files.</span>
+          <Link href="/app/billing">Upgrade to Pro to save and export</Link>
+        </p>
+      ) : Number.isFinite(limit) && (
         <p className="limit-note">
           <span>{projects.length} of {limit} cloud projects on the Free plan{projects.length >= limit ? ". Delete one or upgrade to start another." : "."}</span>
           <Link href="/app/billing">Upgrade to Pro for unlimited projects</Link>
@@ -93,8 +98,8 @@ export function ProjectsHome({ projects, products, localOnly = [], limit = Infin
               </div>
               <div className="box-btns">
                 <Link href={`/app/editor/${p.id}`}>Open</Link>
-                <button type="button" disabled={pending} onClick={() => act(() => duplicateProjectAction(p.id))}>Duplicate</button>
-                <button type="button" disabled={pending} onClick={() => setDialog({ type: "rename", p, name: p.name })}>Rename</button>
+                <button type="button" disabled={pending || limit === 0} title={limit === 0 ? "Cloud saving needs Pro" : undefined} onClick={() => act(() => duplicateProjectAction(p.id))}>Duplicate</button>
+                <button type="button" disabled={pending || limit === 0} title={limit === 0 ? "Cloud saving needs Pro" : undefined} onClick={() => setDialog({ type: "rename", p, name: p.name })}>Rename</button>
                 <button type="button" disabled={pending} onClick={() => setDialog({ type: "delete", p })}>Delete</button>
               </div>
             </li>

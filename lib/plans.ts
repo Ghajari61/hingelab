@@ -39,7 +39,11 @@ export const COMMERCIAL_LICENSE = "Business includes a commercial-use license: y
 /** Shown on the Business card. Not enforced yet — there is no device or seat ledger. */
 export const BUSINESS_SEATS = "Up to 3 devices signed in at once";
 
-export const FREE_PROJECT_LIMIT = 3;
+/** Cloud projects the Free plan may keep. Zero: Free can try the editors, but cannot save. */
+export const FREE_PROJECT_LIMIT = 0;
+
+/** Shown wherever Free tries to save a project or download a cut file. */
+export const EXPORT_DENIED = "Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects.";
 
 /** Parametric on the Free plan: library shapes, parallel fins, at most this many parts. */
 export const FREE_PARAMETRIC_PARTS = 30;
@@ -54,16 +58,16 @@ export const PATTERN_NAMES: Record<Params["pattern"], string> = { straight: "Str
 /** Rows of the pricing table (landing page and upgrade dialog). */
 export const PLAN_ROWS: { feature: string; free: string; pro: string }[] = [
   { feature: "Generator and 3D preview", free: "✓", pro: "✓" },
-  { feature: "SVG export", free: "With a small “Made with HingeLab” mark", pro: "Clean" },
-  { feature: "Cloud projects", free: `Up to ${FREE_PROJECT_LIMIT}`, pro: "Unlimited" },
+  { feature: "Save and export", free: "—", pro: "Clean SVG, DXF, PDF, LightBurn" },
+  { feature: "Cloud projects", free: "—", pro: "Unlimited" },
   { feature: "Shapes and patterns", free: "Rounded + Straight", pro: "All" },
-  { feature: "Letters and future tools", free: "Preview, and one-letter boxes", pro: "✓" },
-  { feature: "Parametric sculptures", free: `Library shapes as parallel fins, up to ${FREE_PARAMETRIC_PARTS} parts`, pro: "Your 3D files, photos and formulas, every method" },
-  { feature: "Batch generation", free: `Up to ${BATCH_FREE} items`, pro: `Up to ${BATCH_PRO} items` },
+  { feature: "Letters and future tools", free: "Preview", pro: "✓" },
+  { feature: "Parametric sculptures", free: `Library shapes as parallel fins, up to ${FREE_PARAMETRIC_PARTS} parts (preview)`, pro: "Your 3D files, photos and formulas, every method" },
+  { feature: "Batch generation", free: `Up to ${BATCH_FREE} items (preview)`, pro: `Up to ${BATCH_PRO} items` },
 ];
 
 export const PRO_BENEFITS = [
-  "Clean SVG export, no mark",
+  "Save projects and export clean cut files",
   "Unlimited cloud projects",
   "Pill, polygon and cylinder boxes",
   "Wave, relief, serpentine and honeycomb hinges",
@@ -98,6 +102,9 @@ export type Entitlements = {
   tier: Plan;
   /** Clean export, every shape, letters, parametric, unlimited cloud projects. */
   pro: boolean;
+  /** Download cut files and save projects. Free never can. */
+  canExport: boolean;
+  /** Kept for preview SVGs on Free; Free never downloads a file. */
   watermark: boolean;
   projectLimit: number;
   /** Null when this plan has no batch cap. The editor's own safety cap still applies. */
@@ -118,7 +125,7 @@ export type Entitlements = {
  */
 export function getEntitlements(user: Plan | { plan?: unknown } | null | undefined, opts?: { open?: boolean }): Entitlements {
   if (opts?.open) {
-    return { tier: "pro", pro: true, watermark: false, projectLimit: Infinity, batchLimit: null, seats: 1, commercialUse: false, prioritySupport: false };
+    return { tier: "pro", pro: true, canExport: true, watermark: false, projectLimit: Infinity, batchLimit: null, seats: 1, commercialUse: false, prioritySupport: false };
   }
   const tier = typeof user === "object" && user !== null ? planOf(user.plan) : planOf(user);
   const pro = hasPro(tier);
@@ -126,6 +133,7 @@ export function getEntitlements(user: Plan | { plan?: unknown } | null | undefin
   return {
     tier,
     pro,
+    canExport: pro,
     watermark: !pro,
     projectLimit: pro ? Infinity : FREE_PROJECT_LIMIT,
     batchLimit: business ? null : tier === "free" ? BATCH_FREE : BATCH_PRO,
@@ -162,10 +170,10 @@ export function isSingleLetterBox(p: { mode: string; text: string }): boolean {
   return p.mode === "box" && letterCount(p.text) === 1;
 }
 
-/** Why a Letters design cannot be exported on this plan (null = allowed). */
+/** Why a Letters design cannot be built on this plan (null = allowed). Export still needs Pro. */
 export function lettersLock(plan: Plan, p: { mode: string; text: string }): string | null {
   if (hasPro(plan) || isSingleLetterBox(p)) return null;
-  return "Letters is a Pro feature. Design anything here; on the Free plan you can export a Letter Box of a single letter, with the small HingeLab mark.";
+  return "Letters is a Pro feature. Design anything here; on the Free plan you can preview a Letter Box of a single letter.";
 }
 
 const SOURCE_NAMES: Record<string, string> = { mesh: "Importing a 3D file", image: "Photo relief", text: "Text sculptures", formula: "Formula shapes" };
@@ -185,12 +193,17 @@ export function parametricLocks(plan: Plan, p: { source: { kind: string }; metho
   return out;
 }
 
-/** One sentence for the upgrade dialog, or null when the design is allowed. */
+/** One sentence for the upgrade dialog, or null when the design is allowed to be built. Export still needs Pro. */
 export function parametricLock(plan: Plan, p: { source: { kind: string }; method: string }, partCount?: number): string | null {
   const locks = parametricLocks(plan, p, partCount);
   if (!locks.length) return null;
   const what = locks.length > 1 ? `${locks.slice(0, -1).join(", ")} and ${locks[locks.length - 1]}` : locks[0];
-  return `${what} ${locks.length > 1 ? "need" : "needs"} Pro. On the Free plan you can export library shapes as parallel fins with up to ${FREE_PARAMETRIC_PARTS} parts, with the small HingeLab mark.`;
+  return `${what} ${locks.length > 1 ? "need" : "needs"} Pro. On the Free plan you can preview library shapes as parallel fins with up to ${FREE_PARAMETRIC_PARTS} parts.`;
+}
+
+/** Whether this plan may save a project or download a cut file. */
+export function canExport(plan: Plan): boolean {
+  return hasPro(plan);
 }
 
 export function needsWatermark(plan: Plan): boolean {
