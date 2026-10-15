@@ -17,7 +17,7 @@ async function goTo(endpoint: string, body?: unknown): Promise<string | null> {
   }
 }
 
-export function startCheckout(plan: "pro" | "business" | "lifetime", interval: "month" | "year" = "month") {
+export function startCheckout(plan: "pro" | "business", interval: "month" | "year" = "month") {
   return goTo("/api/stripe/checkout", { plan, interval });
 }
 

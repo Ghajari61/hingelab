@@ -4,7 +4,7 @@ import { useState } from "react";
 import { PRICES } from "@/lib/plans";
 import { openPortal, startCheckout } from "./billingClient";
 
-type Busy = "month" | "year" | "once" | "portal" | null;
+type Busy = "month" | "year" | "portal" | null;
 
 export function UpgradeButtons({ disabled, plan = "pro" }: { disabled?: boolean; plan?: "pro" | "business" }) {
   const [busy, setBusy] = useState<Busy>(null);
@@ -25,26 +25,6 @@ export function UpgradeButtons({ disabled, plan = "pro" }: { disabled?: boolean;
         </button>
         <button type="button" className="btn-ghost" disabled={disabled || !!busy} onClick={() => buy("year")}>
           {busy === "year" ? "Opening checkout…" : `$${yearly}/year`}
-        </button>
-      </div>
-      {error && <p className="auth-msg err" role="alert">{error}</p>}
-    </>
-  );
-}
-
-export function LifetimeButton({ disabled }: { disabled?: boolean }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  return (
-    <>
-      <div className="plan-buy">
-        <button type="button" className="btn-primary" disabled={disabled || busy} onClick={async () => {
-          setBusy(true);
-          setError(null);
-          const err = await startCheckout("lifetime");
-          if (err) { setError(err); setBusy(false); }
-        }}>
-          {busy ? "Opening checkout…" : `$${PRICES.lifetime} once`}
         </button>
       </div>
       {error && <p className="auth-msg err" role="alert">{error}</p>}

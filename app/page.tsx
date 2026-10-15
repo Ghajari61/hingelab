@@ -11,8 +11,7 @@ import { HeroGenerator } from "@/components/site/HeroGenerator";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Pricing, type PriceCard } from "@/components/site/Pricing";
-import { founderSeatsLeft } from "@/lib/billing/founder";
-import { BATCH_FREE, BATCH_PRO, BUSINESS_SEATS, COMMERCIAL_LICENSE, FOUNDER_CAP, PLAN_ROWS, PRICES, PRO_BENEFITS } from "@/lib/plans";
+import { BATCH_FREE, BATCH_PRO, BUSINESS_SEATS, COMMERCIAL_LICENSE, PLAN_ROWS, PRICES, PRO_BENEFITS } from "@/lib/plans";
 import { desktopRelease } from "@/lib/site/release";
 import { siteProducts, totalPresets, type SiteIcon } from "@/lib/site/products";
 import { GALLERY, isProSample, sheetFor } from "@/lib/site/samples";
@@ -85,14 +84,9 @@ const FAQ = [
     q: "What does Business add?",
     a: `Business is everything in Pro, plus unlimited batches, ${BUSINESS_SEATS.toLowerCase()}, priority support, and a commercial-use license. It is $${PRICES.businessMonthly} a month or $${PRICES.businessYearly} a year.`,
   },
-  {
-    q: "What is Founder Lifetime?",
-    a: `Founder Lifetime is a one-time payment of $${PRICES.lifetime} for the first ${FOUNDER_CAP} buyers. It includes Pro features forever, not Business. When all ${FOUNDER_CAP} are claimed, the offer closes.`,
-  },
 ];
 
 export default async function HomePage() {
-  const seatsLeft = await founderSeatsLeft();
   const products = siteProducts();
   const presets = totalPresets();
   const mosaic = products.slice(0, 9);
@@ -257,7 +251,7 @@ export default async function HomePage() {
 
         <section id="pricing" className="band">
           <div className="band-head"><h2>Pricing</h2><p>Start free. Upgrade when you sell what you make.</p></div>
-          <Pricing cards={priceCards(seatsLeft)} />
+          <Pricing cards={priceCards()} />
           <table className="pricing-sr">
             <caption>Plan comparison</caption>
             <thead>
@@ -266,7 +260,6 @@ export default async function HomePage() {
                 <th scope="col">Free</th>
                 <th scope="col">Pro</th>
                 <th scope="col">Business</th>
-                <th scope="col">Founder Lifetime</th>
               </tr>
             </thead>
             <tbody>
@@ -276,7 +269,6 @@ export default async function HomePage() {
                   <td>{r.free === "✓" ? "Included" : r.free}</td>
                   <td>{r.pro === "✓" ? "Included" : r.pro}</td>
                   <td>{r.pro === "✓" ? "Included" : r.feature === "Batch generation" ? "Unlimited" : r.pro}</td>
-                  <td>{r.pro === "✓" ? "Included" : r.pro}</td>
                 </tr>
               ))}
               <tr>
@@ -284,7 +276,6 @@ export default async function HomePage() {
                 <td>Personal and commercial cutting</td>
                 <td>Personal and commercial cutting</td>
                 <td>{COMMERCIAL_LICENSE}</td>
-                <td>Personal and commercial cutting</td>
               </tr>
             </tbody>
           </table>
@@ -317,8 +308,8 @@ export default async function HomePage() {
 
 const billingNext = (plan: string) => `/signup?next=${encodeURIComponent(`/app/billing?plan=${plan}`)}`;
 
-function priceCards(seatsLeft: number | null): PriceCard[] {
-  const cards: PriceCard[] = [
+function priceCards(): PriceCard[] {
+  return [
     {
       id: "free", badge: "To try it", quiet: true, name: "Free", monthly: 0, yearly: 0, alt: "No account needed",
       features: ["Preview designs in the browser", "Rounded + Straight hinges", "Letters and parametric preview", `Batches of ${BATCH_FREE} (preview)`, "No save or download"],
@@ -338,14 +329,5 @@ function priceCards(seatsLeft: number | null): PriceCard[] {
       cta: "Get Business", href: billingNext("business"), primary: true,
     },
   ];
-  if (seatsLeft !== 0) {
-    cards.push({
-      id: "lifetime", badge: "One time", name: "Founder Lifetime", monthly: null, yearly: null, once: `$${PRICES.lifetime}`,
-      alt: seatsLeft === null ? `Limited to the first ${FOUNDER_CAP}` : `${seatsLeft} of ${FOUNDER_CAP} left`,
-      features: ["Everything in Pro, forever", "One payment, no renewal", "Not a Business plan"],
-      cta: "Get Lifetime", href: billingNext("lifetime"),
-    });
-  }
-  return cards;
 }
 

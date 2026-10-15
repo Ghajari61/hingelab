@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
 import { stripeConfigured } from "@/lib/stripe";
-import { founderSeatsLeft } from "@/lib/billing/founder";
 import { lockedPriceCopyFor } from "@/lib/billing/grandfather";
-import { BUSINESS_SEATS, COMMERCIAL_LICENSE, FOUNDER_CAP, PLAN_ROWS, PRICES, hasPro, planLabel, planOf } from "@/lib/plans";
+import { BUSINESS_SEATS, COMMERCIAL_LICENSE, PLAN_ROWS, PRICES, hasPro, planLabel, planOf } from "@/lib/plans";
 import { AppHeader } from "@/components/site/AppHeader";
-import { LifetimeButton, ManageBilling, UpgradeButtons } from "@/components/billing/BillingActions";
+import { ManageBilling, UpgradeButtons } from "@/components/billing/BillingActions";
 
 export const metadata: Metadata = { title: "Billing · HingeLab" };
 
@@ -31,8 +30,6 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const status = profile?.plan_status ?? null;
   const ending = plan === "free" && status === "canceled";
   const locked = plan === "pro" ? await lockedPriceCopyFor(profile?.stripe_customer_id) : null;
-  const seatsLeft = plan === "lifetime" ? 0 : await founderSeatsLeft();
-  const showLifetime = plan !== "lifetime" && seatsLeft !== 0;
 
   return (
     <div className="page site-page">
@@ -87,19 +84,8 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
               <li><b>License:</b> {COMMERCIAL_LICENSE}</li>
               <li><b>Support:</b> Priority support</li>
             </ul>
-            {plan !== "business" && <UpgradeButtons plan="business" disabled={!billing} />}
+            {plan !== "business" && plan !== "lifetime" && <UpgradeButtons plan="business" disabled={!billing} />}
           </section>
-          {showLifetime && (
-            <section className="plan-card" id="plan-lifetime">
-              <h3>Founder Lifetime</h3>
-              <div className="plan-price">${PRICES.lifetime}<small> once</small></div>
-              <ul>
-                <li><b>Includes:</b> Pro features, forever</li>
-                <li><b>Seats:</b> {seatsLeft === null ? `Limited to the first ${FOUNDER_CAP}` : `${seatsLeft} of ${FOUNDER_CAP} left`}</li>
-              </ul>
-              <LifetimeButton disabled={!billing || seatsLeft === null} />
-            </section>
-          )}
         </div>
       </main>
     </div>

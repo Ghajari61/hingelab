@@ -180,6 +180,7 @@ html:has(.landing), body:has(> .landing) { height: auto; overflow: visible; }
 .bill-toggle button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
 .bill-toggle .save { margin-left: 6px; }
 .plan-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+.plan-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .plan-grid .plan-card { display: flex; flex-direction: column; gap: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 26px 22px; box-shadow: var(--shadow-1); min-width: 0; }
 .plan-grid .plan-card.pro-col { background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 68%), color-mix(in srgb, var(--accent) 7%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
 .plan-grid .plan-card ul { list-style: none; margin: 18px 0 16px; padding: 0; display: grid; gap: 10px; font-size: 14.5px; color: var(--fg); }
