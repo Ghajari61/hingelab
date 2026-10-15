@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.28",
-    "pub_date": "2026-10-15T06:34:49.451Z",
-    "notes": "3D scale gizmo like 3ds Max: drag an axis to size along it alone, a strip between two axes for both, the middle for everything; hold Shift to keep the proportions. Dragging is smooth: the design is rebuilt once when you let go.",
+    "version": "1.0.29",
+    "pub_date": "2026-10-15T07:54:34.716Z",
+    "notes": "The 3D scale gizmo now works in every design and on every item on the product: click a text, number, picture, motif, tick or label and drag to size it alone. Designs without their own sizes can be scaled as a whole from the 3D view.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.28_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnE1MFRtZXNJaDNsTkdRQStHdGRIVU54L1Y0THI0YStrL0hSV1hPdnlGZzBhS0tGcGdIVXBoZWVZMlk2cDVRSGVDTWJhM0YyTXovN2dkZHRrVHRYandRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDQ1OTY2CWZpbGU6SGluZ2VMYWJfMS4wLjI4X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjgKTWVlOW4vT2RXTnVjb3BiWmIrRzg3aElpdGJwc2NZWVIyWGd0NGFHTi90ZzI2cnhzb1U2QlM0aVZOVCtzelNxdHQrWmpKcUxyNkQ1Y1BVZDBOMW91Q2c9PQo=",
-        "size": 3778917
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.29_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmprZEVhRm1VUmpVd2RNMjFxZEhqNnEzY0xlWmRGUG9nNXJqc29CaC82SndhWTR4bWVPZm9xU1NncjFKeXFteFRqTHJLazhMMy9KK2lMV0s3Q3VZUUFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDUwNzY5CWZpbGU6SGluZ2VMYWJfMS4wLjI5X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjkKWDIwZElPWVpKRjJwMGtqS2ZKRnVhVVU0eDVOUTVsT01GSGpNSVcxUitWbDg4Y1dKQWJveSszT2JBenRCYXkzNjVsTVJUU3VFQUJSQkJBemFjSVZ3RGc9PQo=",
+        "size": 3777908
       }
     }
   }
