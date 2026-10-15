@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import { autoFit, clone, MATERIALS } from "@/lib/hinge";
 import {
   baseOffset, exportLetterSVG, hingeParamsOf, LETTER_DEFAULTS,
-  letterLayerContent, mergeLetterParams, wallHeightOf, zoneOverlay,
+  letterLayerContent, mergeLetterParams, retiredLetterSample, wallHeightOf, zoneOverlay,
   type HarfBuzz, type LetterParams, type LoadedFont,
 } from "@/lib/letters";
 import { useHistory } from "@/hooks/useHistory";
@@ -90,7 +90,8 @@ function loadInitial(cloud: CloudDoc | null) {
   }
   const units: Units = stored?.units === "in" ? "in" : "mm";
   // A saved draft keeps its mode, locked or not (previewing is free). Without accounts every mode is open.
-  if (!stored?.params) return { params: freshParams(!getBrowserClient()), units };
+  // The removed Persian sign sample still sits in older drafts; those open as a new design.
+  if (!stored?.params || retiredLetterSample(stored.params)) return { params: freshParams(!getBrowserClient()), units };
   return { params: mergeParams(stored.params), units };
 }
 

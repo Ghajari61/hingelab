@@ -1411,3 +1411,7 @@ The user asked for the Test Cards section to be deleted completely.
 - **Windows app, pages.** Settings is two columns of cards, each headed by an icon; Help's shortcuts are two aligned columns; Subscription, Help and the generator tabs were tightened. The generator tabs wrap, so none is cut off. Cards, tiles and preset cards share one shadow and radius.
 - **Website.** Section headers (`details.sec`) show the chevron on the left, pointing down when open, and the section reset at the right. Menus, dialogs, toasts, the view bar and the canvas tools share the panel's shadow, a larger radius and a small blur. The shared component library (`components/ui/ui.css`) got the same treatment for its buttons, menus, dialogs, toasts, toolbar and flyouts.
 - **Checks.** Both themes, every desktop screen, at 1440 and 1180 px; the website's editors in light and dark. `ui-files.mts` and `ui-3d.mts` pass unchanged.
+
+## D185. Retired Persian sign draft
+
+The removed Persian sign sample (name "Persian sign", text سلام) was still reopening from this device's Letters autosave. `retiredLetterSample` recognises that draft, and Letters opens a new design instead and saves over it. A design the user named themselves keeps its text, Persian included. No geometry changed.

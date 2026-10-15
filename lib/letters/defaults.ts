@@ -63,6 +63,14 @@ export const LETTER_DEFAULTS: LetterParams = {
   },
 };
 
+/**
+ * The removed "Persian sign" sample. A local draft that is still that sample (the name and the
+ * word, whatever else was changed) opens as a new design instead.
+ */
+export function retiredLetterSample(p: { name?: string; text?: string } | null | undefined): boolean {
+  return p?.name === "Persian sign" && (p.text ?? "").trim() === "سلام";
+}
+
 /** Saved or sent settings over the defaults; nested groups merge key by key. */
 export function mergeLetterParams(partial?: Partial<LetterParams> | null): LetterParams {
   const base = clone(LETTER_DEFAULTS);
