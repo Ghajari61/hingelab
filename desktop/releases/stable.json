@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.30",
-    "pub_date": "2026-10-15T12:45:40.847Z",
-    "notes": "Letters and Parametric in the app, pictures in generators, My materials, DXF/PDF/LightBurn export, .oclc projects, undo/reset/randomise everywhere, more settings",
+    "version": "1.0.31",
+    "pub_date": "2026-10-15T16:18:11.276Z",
+    "notes": "Visual refresh: clearer workspace header, grouped settings, sliders, tidier menus and pages",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.30_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm5NRk9SbkZOWjlWQmJGajBneEEvbUJ0SzBTcEpZQW9jUnhSUmRob0xHcS9YQUM1NUl1c0toeVl1S2Zyb2ZVUTBLc05PaU9hUVJmQkJ6WDIyUjZSQ1F3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDY4MTYwCWZpbGU6SGluZ2VMYWJfMS4wLjMwX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMzAKbUw5bGF6TkpBYmovc21zNEUyRnZXb0swSndxUlNaazBqUktrRnBDb1o0NzZIaFFQcFFUQUpkRTMvdW1rZHgraGNtMUQ0dG12MitIcmMrdzZ3eGlQQlE9PQo=",
-        "size": 4269047
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.31_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnY5NUthVm5WWHpmNzRpVVhLNHQwR1J2ZTBnd2NXUFZHanJWUzBYQ3BXZmNUYlpkY0JFMU5FdUhYSi91dWFjNmlCTVlIVytkall1TVkrV2puR3I5ckFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDgwOTUwCWZpbGU6SGluZ2VMYWJfMS4wLjMxX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMzEKMjRGV1gvMzAvYm92U1pVcGd1WllQMDBLQk1wczIvRVdlQnJtNTFTVEdlWUhYY1F6K1g5QzFPbFFrbDVOWkZBeWJHK3BTaDRPN3B4aHpFaS9LOE44QWc9PQo=",
+        "size": 4271917
       }
     }
   }
