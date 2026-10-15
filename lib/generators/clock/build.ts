@@ -8,6 +8,7 @@ import {
   TAU, arc, bboxOf, circle, customOutline, deg, distToContour, pointInContour, rect, regularPolygon, roundCorners,
   roundedRect, signedArea, stadium, transform,
 } from "../geom";
+import { tagItem } from "../items";
 import { shapeOutline } from "../shapes";
 import { arcSpan, bendAround } from "../textPath";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
@@ -119,7 +120,8 @@ interface Markers { engrave: Contour[]; holes: Contour[]; missing: string[]; loa
 function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext): Markers {
   const m = p.markers, res: Markers = { engrave: [], holes: [], missing: [], loading: false };
   if (m.style === "none" && !m.minutes) return res;
-  const put = (c: Contour) => (m.cut ? res.holes : res.engrave).push(c);
+  let item = "Ticks";
+  const put = (c: Contour) => (m.cut ? res.holes : res.engrave).push(tagItem([c], item)[0]);
   const anchor = (a: number) => markerEdge(p, outline, a) - m.inset;
   const numeralHours = m.style === "numerals" ? (m.quarters ? [0, 3, 6, 9] : [...Array(12).keys()]) : m.style === "mixed" ? [0, 3, 6, 9] : [];
   const tickHours = m.style === "ticks" ? [...Array(12).keys()] : m.style === "mixed" ? [1, 2, 4, 5, 7, 8, 10, 11] : m.style === "numerals" && m.quarters ? [1, 2, 4, 5, 7, 8, 10, 11] : [];
@@ -131,10 +133,12 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext): Mark
     put(rot(rect(-w / 2, -r, w, l), a));
   }
   for (const h of dotHours) {
+    item = "Dots";
     const a = h * 30, d = m.dot * (h % 3 === 0 ? 1.4 : 1), r = anchor(a) - d / 2, [dx, dy] = dirOf(a);
     put(circle(dx * r, dy * r, d / 2, 0.02));
   }
   if (m.minutes) {
+    item = "Ticks";
     const w = Math.max(m.tickWidth * 0.4, m.cut ? 1.2 : 0.6), l = m.tickLength * 0.45;
     for (let i = 0; i < 60; i++) {
       if (i % 5 === 0) continue;
@@ -151,7 +155,7 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext): Mark
       const a = h * 30, [dx, dy] = dirOf(a);
       const extent = m.follow ? shape.height : Math.abs(shape.width * dx) + Math.abs(shape.height * dy);
       const r = anchor(a) - extent / 2;
-      for (const c of shape.contours) res.engrave.push((m.follow ? rot(c, a) : c).map(([x, y]) => [x + dx * r, y + dy * r] as Pt));
+      for (const c of shape.contours) res.engrave.push(...tagItem([(m.follow ? rot(c, a) : c).map(([x, y]) => [x + dx * r, y + dy * r] as Pt)], "Numerals"));
     }
   }
   return res;
@@ -172,7 +176,7 @@ export function buildInscription(p: ClockParams, outline: Contour, ringInner: Co
   const shape = ctx.text(ins.text.replace(/\s+/g, " ").trim(), ins.fontId, ins.size);
   if (!shape) return { engrave: [], R, size: ins.size, span: 0, missing: [], loading: true };
   const span = arcSpan(shape.width, R);
-  return { engrave: R > ins.size ? bendAround(shape.contours, R, ins.at) : [], R, size: shape.height, span, missing: shape.missing, loading: false };
+  return { engrave: R > ins.size ? tagItem(bendAround(shape.contours, R, ins.at), "Inscription") : [], R, size: shape.height, span, missing: shape.missing, loading: false };
 }
 
 /** The movement's minute-hand hole: a circle with two flats. */

@@ -2,7 +2,7 @@
 // appears. Its X axis sizes the width alone, the X-Y strip width and height together, Shift keeps
 // the proportions, and Esc cancels; the design is scaled on screen while dragging and its settings
 // change once, on release (one undo step). A ring turns the phone stand's lean. Letters and
-// Parametric scale as a whole.
+// Parametric scale as a whole. A sign's engraved text is selected and sized alone (D173).
 // Usage: a production server on SHOTS_BASE (default :3456), then node scripts/e2e/grips3d.mjs.
 import path from "node:path";
 import { BASE, withBrowser } from "../shots/lib.mjs";
@@ -190,6 +190,33 @@ await withBrowser(async (page) => {
     await shot(page, "6-letters-bigger");
   }
 
+  // ---- Sign: clicking the engraved text selects that item; the gizmo sizes the text alone.
+  await page.goto(`${BASE}/app/editor/local?p=sign`);
+  await page.locator(".canvas svg path").first().waitFor({ timeout: 30000 });
+  await page.waitForTimeout(1500);
+  await page.locator(".dock details").evaluateAll((els) => { for (const d of els) d.open = true; });
+  const t0 = await num(page, "text.size"), m0 = await num(page, "motif.size");
+  await open3D(page, "front");
+  let picked = "";
+  search: for (let fy = 0.3; fy <= 0.7; fy += 0.05) for (let fx = 0.2; fx <= 0.8; fx += 0.03) {
+    await selectPart(page, "front", fx, fy);
+    picked = await page.evaluate(() => document.querySelector("#preview3d .v3-pick")?.textContent ?? "");
+    if (/· Text/.test(picked)) break search;
+  }
+  check(/· Text/.test(picked), `clicking the engraved text selects it alone (${picked.replace(/\s+/g, " ")})`);
+  pts = await gizmoPoints(page, "front");
+  check(!!pts["scale-x"], "and shows the gizmo on it");
+  if (/· Text/.test(picked) && pts["scale-x"]) {
+    await shot(page, "7-sign-text-gizmo");
+    await drag(page, mid(pts["scale-x"]), 30, 0);
+    const t1 = await num(page, "text.size");
+    check(t1 > t0 && await num(page, "motif.size") === m0, `dragging it out makes the text bigger and leaves the motif (${t0} → ${t1} mm)`);
+    await shot(page, "8-sign-text-bigger");
+    await page.keyboard.press("Control+z");
+    await page.waitForTimeout(1000);
+    check(await num(page, "text.size") === t0, "Ctrl+Z puts the text size back");
+  }
+
   // ---- Parametric: with a part selected, the gizmo scales the model and a ring turns it.
   root = '[data-testid="parametric-view"]';
   await page.goto(`${BASE}/app/editor/local?p=parametric`);
@@ -209,7 +236,7 @@ await withBrowser(async (page) => {
     const sc1 = await num(page, "uniformScale");
     check(/^Scale /.test(r.tip) && sc1 > sc0, `dragging the middle up scales the model up (${sc0} → ${sc1}, "${r.tip}")`);
     await page.waitForTimeout(4000);
-    await shot(page, "7-parametric-scaled");
+    await shot(page, "9-parametric-scaled");
     await page.keyboard.press("Control+z");
     await page.waitForTimeout(800);
     check(await num(page, "uniformScale") === sc0, "Ctrl+Z puts the scale back");

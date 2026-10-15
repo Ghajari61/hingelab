@@ -4,11 +4,46 @@
  */
 import * as THREE from "three";
 import { unionShapes } from "@/lib/letters/polygon";
-import { finishScene, slab, type Scene3D } from "@/lib/three/flat";
-import type { GenImage, GenOutput } from "./types";
+import { finishScene, slab, slabs, type Scene3D } from "@/lib/three/flat";
+import { ITEM_SEP, itemOf, itemSkinName } from "./items";
+import type { Contour, GenImage, GenOutput } from "./types";
 
 const ENGRAVE = new THREE.MeshStandardMaterial({ color: "#3a2a1c", roughness: 0.9 });
 ENGRAVE.userData.shared = true;
+const SCORE_FILL = new THREE.MeshStandardMaterial({ color: "#3a2a1c", roughness: 0.9, transparent: true, opacity: 0.22, depthWrite: false });
+
+/** Contours grouped by the item they were tagged as (undefined: not an item, a border). */
+function byItem(cs: Contour[]): Map<string | undefined, Contour[]> {
+  const out = new Map<string | undefined, Contour[]>();
+  for (const c of cs) {
+    const k = itemOf(c), group = out.get(k);
+    if (group) group.push(c);
+    else out.set(k, [c]);
+  }
+  return out;
+}
+
+/** An item's mesh: its own copy of `look` (so selecting it lights only it), kept in every look, left out of the dimensions. */
+function itemMesh(mesh: THREE.Mesh, look: THREE.MeshStandardMaterial): THREE.Mesh {
+  (mesh.material as THREE.Material).dispose();
+  mesh.material = look.clone();
+  mesh.userData.keepMaterial = true;
+  mesh.userData.noMeasure = true;
+  return mesh;
+}
+
+/** Scored outlines as lines at height z (y-down contours). */
+function scoreLines(cs: Contour[], z: number, name: string): THREE.LineSegments {
+  const pos: number[] = [];
+  for (const c of cs) for (let i = 0; i + 1 < c.length; i++) pos.push(c[i][0], -c[i][1], z, c[i + 1][0], -c[i + 1][1], z);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  const lines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: "#2a1d12", transparent: true, opacity: 0.9 }));
+  lines.name = name;
+  lines.userData.keepMaterial = true;
+  lines.raycast = () => {};
+  return lines;
+}
 
 /** A picture on a part's top face at height z: its clip outline (or its box) textured with it, shown once it has loaded. */
 function pictureSkin(im: GenImage, z: number, name: string, loads: Promise<void>[]): THREE.Mesh | null {
@@ -89,7 +124,9 @@ export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D 
         spin.add(mesh);
       });
     }
-    for (const s of p.engrave?.length && !(p.pieces?.length && explode > 0) ? unionShapes(p.engrave, [], true) : []) {
+    const marked = !(p.pieces?.length && explode > 0);
+    const engrave = marked ? byItem(p.engrave ?? []) : new Map<string | undefined, Contour[]>();
+    for (const s of engrave.has(undefined) ? unionShapes(engrave.get(undefined)!, [], true) : []) {
       const e = slab(s.outer, s.holes, t, 0.2, `${p.name} engraving`);
       (e.material as THREE.Material).dispose();
       e.material = ENGRAVE;
@@ -97,8 +134,23 @@ export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D 
       e.userData.noMeasure = true;
       spin.add(e);
     }
-    if (!(p.pieces?.length && explode > 0)) for (const im of p.images ?? []) {
-      const m = pictureSkin(im, t, `${p.name} picture`, loads);
+    // Each text, motif or number is a part of its own, so it can be picked and sized on its own.
+    for (const [item, cs] of engrave) if (item) {
+      const shapes = unionShapes(cs, [], true);
+      if (shapes.length) spin.add(itemMesh(slabs(shapes, t, 0.2, itemSkinName(p.name, item)), ENGRAVE));
+    }
+    // Scored items: their outlines, over a faint fill that picks them.
+    if (marked) for (const [item, cs] of byItem(p.score ?? [])) if (item) {
+      const shapes = unionShapes(cs, [], true);
+      if (!shapes.length) continue;
+      const fill = itemMesh(slabs(shapes, t, 0.05, itemSkinName(p.name, item)), SCORE_FILL);
+      fill.add(scoreLines(cs, t + 0.06, `${fill.name} lines`));
+      spin.add(fill);
+    }
+    if (marked) for (const im of p.images ?? []) {
+      const item = itemOf(im);
+      const m = pictureSkin(im, item ? t + 0.02 : t, item ? `${p.name}${ITEM_SEP}${item}` : `${p.name} picture`, loads);
+      if (m && item) delete m.userData.noPick;
       if (m) spin.add(m);
     }
     stand.add(spin);

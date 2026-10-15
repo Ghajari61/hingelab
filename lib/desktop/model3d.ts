@@ -42,7 +42,7 @@ const flat = (pts: THREE.Vector2[]) => {
 
 const own = (mat: THREE.Material): D3Material => {
   const m = mat as THREE.MeshStandardMaterial;
-  return { color: `#${m.color.getHexString()}`, roughness: r2(m.roughness), metalness: r2(m.metalness) };
+  return { color: `#${m.color.getHexString()}`, roughness: r2(m.roughness), metalness: r2(m.metalness), ...(m.transparent ? { opacity: r2(m.opacity) } : {}) };
 };
 
 function serialize(it: Item, ex: [number, number, number], fade: boolean): D3Object | null {
@@ -56,11 +56,12 @@ function serialize(it: Item, ex: [number, number, number], fade: boolean): D3Obj
     return { ...base, kind: "lines", pos: Array.from(pos.array, r2), color: `#${mat.color.getHexString()}`, opacity: r2(mat.opacity) };
   }
   if (geo instanceof THREE.ExtrudeGeometry) {
-    const shape = ([] as THREE.Shape[]).concat(geo.parameters.shapes)[0];
-    const pts = shape.extractPoints(1);
+    const [pts, ...rest] = ([] as THREE.Shape[]).concat(geo.parameters.shapes).map((s) => s.extractPoints(1));
     geo.computeBoundingBox();
     return {
-      ...base, kind: "slab", outer: flat(pts.shape), holes: pts.holes.map(flat), z: r2(geo.boundingBox!.min.z), depth: r2(geo.parameters.options.depth ?? 1),
+      ...base, kind: "slab", outer: flat(pts.shape), holes: pts.holes.map(flat),
+      ...(rest.length ? { more: rest.map((q) => ({ outer: flat(q.shape), holes: q.holes.map(flat) })) } : {}),
+      z: r2(geo.boundingBox!.min.z), depth: r2(geo.parameters.options.depth ?? 1),
       ...tint, ...(o.userData.keepMaterial ? { mat: own(o.material as THREE.Material) } : {}), ...(fade ? { fade: true } : {}),
       ...(o.userData.noMeasure ? { noMeasure: true } : {}),
     };
@@ -76,7 +77,7 @@ function serialize(it: Item, ex: [number, number, number], fade: boolean): D3Obj
 }
 
 const sizeOf = (o: D3Object) =>
-  o.kind === "slab" ? o.outer.length + o.holes.reduce((s, h) => s + h.length, 0)
+  o.kind === "slab" ? [o, ...(o.more ?? [])].reduce((n, q) => n + q.outer.length + q.holes.reduce((s, h) => s + h.length, 0), 0)
   : o.kind === "mesh" ? o.pos.length + o.index.length + (o.col?.length ?? 0)
   : o.pos.length;
 

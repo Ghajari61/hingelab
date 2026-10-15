@@ -35,6 +35,8 @@ export interface DProduct {
   icon: "box" | "clock" | "puzzle" | "qr" | "cake" | "key" | "sign" | "hash" | "trophy" | "layers" | "wand";
   sections: DSection[];
   presets: DPreset[];
+  /** The whole design can be scaled (GenerateRequest.scale): the 3D gizmo's fallback. */
+  scale?: boolean;
 }
 
 export interface DCatalog {
@@ -67,6 +69,8 @@ export interface GenerateRequest {
   change?: { key: string; value: unknown };
   fix?: { code: string; id: string };
   autofix?: boolean;
+  /** Scales the whole design by this factor (0.2–5), for products marked `scale`. */
+  scale?: number;
   /** Also send the assembled 3D model (the 3D view is open). */
   model?: boolean;
 }
@@ -76,6 +80,8 @@ export interface D3Material {
   color: string;
   roughness: number;
   metalness: number;
+  /** See-through (a scored item's faint fill). */
+  opacity?: number;
 }
 
 /**
@@ -85,9 +91,10 @@ export interface D3Material {
 export type D3Object = { name: string; m: number[]; ex: [number, number, number] } & (
   /**
    * An outline in its own plane extruded along z from `z` up `depth`. Flat [x, y, x, y, …] lists;
-   * `fade` hides it while exploded; `noMeasure` leaves a skin (engraving) out of the dimensions.
+   * `fade` hides it while exploded; `noMeasure` leaves a skin (engraving) out of the dimensions;
+   * `more` holds further outlines of the same object (the other letters of a word).
    */
-  | { kind: "slab"; outer: number[]; holes: number[][]; z: number; depth: number; tint?: number; mat?: D3Material; fade?: boolean; noMeasure?: boolean }
+  | { kind: "slab"; outer: number[]; holes: number[][]; more?: { outer: number[]; holes: number[][] }[]; z: number; depth: number; tint?: number; mat?: D3Material; fade?: boolean; noMeasure?: boolean }
   /** A triangle mesh with optional vertex colours (the bent hinge wall). */
   | { kind: "mesh"; pos: number[]; col?: number[]; index: number[]; tint?: number; vertexBase?: string }
   /** Line segments drawn on the model (hinge slits). */

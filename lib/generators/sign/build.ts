@@ -2,6 +2,7 @@ import { MATERIALS } from "@/lib/hinge/defaults";
 import { differenceShapes, dropSpecks, makeShape, offsetShapes, shapeContours, signedArea, unionShapes } from "@/lib/letters/polygon";
 import type { Shape } from "@/lib/letters/types";
 import { bboxOf, circle, pointInContour, rect, stadium, transform } from "../geom";
+import { tagByPlace, tagMarks, type ItemBlock } from "../items";
 import { material2 } from "../material2";
 import { motif, motifSize, type MotifRef } from "../motifs";
 import { motifRef } from "../motifRef";
@@ -166,6 +167,8 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
     } else markShapes = unionShapes(content);
   }
   const markContours = shapeContours(markShapes);
+  const flip = (cs: Contour[]) => (p.style.mirror ? mirrorX(cs, W / 2) : cs);
+  const blocks = (): ItemBlock[] => [{ item: "Text", cs: flip(content.slice(0, t.contours.length)) }, { item: "Motif", cs: flip(content.slice(t.contours.length)) }];
 
   // Border.
   const bw = Math.max(1, p.border.width), inset = Math.max(1, p.border.inset);
@@ -209,6 +212,7 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
       let mc = markContours;
       if (p.style.mirror) mc = mirrorX(mc, W / 2);
       if (p.style.mark === "engrave") engrave.push(...mc); else score.push(...mc.map(closed));
+      tagMarks({ engrave, score }, blocks());
       parts.push({ id: "board", name: "Sign", outer: outline, holes: [...boardHoles, ...holes], engrave, score, place: place(z0) });
       break;
     }
@@ -246,7 +250,7 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
       const inner = offsetShapes(markShapes, g), outer = offsetShapes(markShapes, g + tw);
       let tube = shapeContours(differenceShapes(shapeContours(outer), shapeContours(inner)));
       if (p.style.mirror) tube = mirrorX(tube, W / 2);
-      engrave.push(...tube);
+      engrave.push(...tagByPlace(tube, blocks()));
       parts.push({ id: "board", name: "Sign", outer: outline, holes: [...boardHoles, ...holes], engrave, place: place(z0) });
       break;
     }

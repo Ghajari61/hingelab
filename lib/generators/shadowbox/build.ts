@@ -9,6 +9,7 @@ import type { Shape } from "@/lib/letters/types";
 import { MATERIALS } from "@/lib/hinge/defaults";
 import { simplifyClosed } from "@/lib/parametric/slice/clean";
 import { bboxOf, circle, ellipse, rect, regularPolygon, TAU, transform } from "../geom";
+import { tagItem } from "../items";
 import { motif } from "../motifs";
 import { heartCurve, orient, shapeOutline, starPolygon } from "../shapes";
 import type { BuildContext, Contour, GenImage, GenOutput, GenPart, Pt } from "../types";
@@ -687,7 +688,7 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
     const name = `Layer ${k + 1}${k === 0 ? " (back)" : k === N - 1 ? " (front)" : ""}`;
     parts.push({
       id: `layer${k + 1}`, name, outer: sh.outer, holes: sh.holes, color, matte: true, place: { x: 0, y: 0, z },
-      ...(k === 0 && photo ? { images: [photo] } : {}), ...(k === wordsOn && engraveCs.length ? { engrave: engraveCs } : {}),
+      ...(k === 0 && photo ? { images: tagItem([photo], "Photo") } : {}), ...(k === wordsOn && engraveCs.length ? { engrave: tagItem(engraveCs, "Words") } : {}),
     });
     if (k === 0 && holder) parts.push({ id: "holder", name: "Photo holder", outer: holder.outer, holes: holder.holes, color, matte: true, place: { x: 0, y: 0, z: base + T } });
     (pieces.get(k) ?? []).forEach((s, j) => parts.push({ id: `piece${k + 1}-${j + 1}`, name: `Layer ${k + 1} piece ${j + 1}`, outer: s.outer, holes: s.holes, color, matte: true, place: { x: 0, y: 0, z } }));

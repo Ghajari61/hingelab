@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  axisDrag, clampStep, dragFactors, lenText, mmSetting, numberGrip, ratioSetting, scaleDrag, sizeAxes, sizeResult, snapDrag, turnDrag, uniformDrag,
+  axisDrag, clampStep, dragFactors, lenText, mmSetting, numberGrip, ratioSetting, scaleDrag, shownAxes, sizeAxes, sizeResult, snapDrag, turnDrag, uniformDrag,
   type Factors, type Grip, type GripSet,
 } from "../grips";
 import { hingeGrips } from "@/lib/hinge3d/grips";
@@ -103,6 +103,18 @@ describe("grip maths", () => {
     expect(drag(30, false)).toBe("60");
     expect(drag(-100, true)).toBe("10");
     expect(seen).toEqual([[56, false], [60, false], [10, true]]);
+  });
+
+  it("shows no handle along an axis the box is too thin along, unless every axis is", () => {
+    const s = ratioSetting("size", ["x", "y", "z"], { v0: 10, min: 1, max: 100 }, String);
+    const g = { settings: [s], write: () => {}, thin: 1.5 };
+    expect(shownAxes(g, F(40, 0.2, 12))).toEqual(["x", "z"]);
+    expect(shownAxes(g, F(0.2, 0.2, 0.2))).toEqual(["x", "y", "z"]);
+    expect(shownAxes({ settings: [s], write: () => {} }, F(40, 0.2, 12))).toEqual(["x", "y", "z"]);
+    // An even gizmo grows the shown axes alike from any handle; the setting follows that growth.
+    const r = sizeResult(g, F(40, 0.2, 12), dragFactors(["x", "z"], 1.5, false));
+    expect(r.values).toEqual({ size: 15 });
+    expect(r.f).toEqual(F(1.5, 1.5, 1.5));
   });
 });
 

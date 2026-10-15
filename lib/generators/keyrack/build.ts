@@ -1,6 +1,7 @@
 import { MATERIALS } from "@/lib/hinge/defaults";
 import { makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { bboxOf, circle, pointInContour, rect, roundedRect, stadium } from "../geom";
+import { tagMarks } from "../items";
 import { material2 } from "../material2";
 import { motif, motifSize } from "../motifs";
 import { motifRef } from "../motifRef";
@@ -148,6 +149,7 @@ export function buildKeyrack(p: KeyrackParams, ctx: BuildContext): KeyrackOutput
     const u = shapeContours(unionShapes(labels));
     if (p.text.mark === "score") score.push(...u.map(closed)); else engrave.push(...u);
   }
+  tagMarks({ engrave, score }, [{ item: "Text", cs: content.slice(0, t.contours.length) }, { item: "Motif", cs: content.slice(t.contours.length) }, { item: "Hook labels", cs: labels }]);
   if (b.frame) score.push(...shapeContours(offsetShapes([makeShape(outline, [])], -Math.max(4, Math.min(W, H) * 0.035))).map(closed));
 
   parts.unshift({ id: "board", name: "Board", outer: outline, holes, engrave, score, place: { x: 0, y: -H, z: 0, upright: true } });

@@ -2,6 +2,7 @@ import { MATERIALS } from "@/lib/hinge/defaults";
 import { makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import type { Shape } from "@/lib/letters/types";
 import { bboxOf, transform } from "../geom";
+import { tagMarks } from "../items";
 import { material2 } from "../material2";
 import { motif, motifSize, type MotifRef } from "../motifs";
 import { motifRef } from "../motifRef";
@@ -100,13 +101,14 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
       let back: Shape | null = null;
       let front: Shape | null = null;
       let faceMarks: Pick<GenPart, "engrave" | "score"> = {};
+      const blocks = [{ item: "Text", cs: t.contours }, { item: "Motif", cs: mot }];
       switch (p.style.kind) {
         case "letters":
           back = weld(all, { border: Math.max(0.2, p.style.weld), minHole: 2, bridge: Math.max(2.5, p.style.weld * 2.5) });
           break;
         case "outline":
           back = weld(all, { border: Math.max(1, p.style.border), solid: true });
-          faceMarks = marks(p, all);
+          faceMarks = tagMarks(marks(p, all), blocks);
           break;
         case "layered":
           back = weld(all, { border: Math.max(1.5, p.style.border), solid: true });
@@ -118,7 +120,7 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
           const oy = p.plate.shape === "arch" && p.plate.auto ? -info.contentW * 0.06 : 0;
           const outline = orient(transform(shapeOutline(p.plate.shape, pw, ph, p.plate.corner), { x: cx - pw / 2, y: (cb.y0 + cb.y1) / 2 - ph / 2 + oy }));
           back = makeShape(outline, []);
-          faceMarks = marks(p, all);
+          faceMarks = tagMarks(marks(p, all), blocks);
           if (p.plate.frame) {
             const inset = offsetShapes([back], -Math.max(3, Math.min(pw, ph) * 0.04));
             const ring = shapeContours(inset).map(closed);
@@ -157,12 +159,14 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
     for (let i = 0; disc && i < c.count; i++) {
       const name = names.length ? names[i % names.length] : "";
       const content: Contour[] = [];
+      let named: Contour[] = [];
       if (name) {
         const t = textBlock(ctx, name, c.fontId, c.textSize, { spacing: 0, lead: 1.2, missing });
         if (t.loading) loading = true;
         info.cupText = Math.max(info.cupText, t.width);
         const ty = icon && !silhouette ? room * 0.26 : 0;
-        content.push(...move(t.contours, 0, ty));
+        named = move(t.contours, 0, ty);
+        content.push(...named);
       }
       if (icon && !silhouette) {
         const size = name ? room * 0.5 : room * 0.78;
@@ -176,7 +180,7 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
         if (f) parts.push(second(partFrom(f, { id: `pick-${i + 1}-front`, name: `Pick ${i + 1} front`, place: { ...at, z: p.T } })));
       } else {
         const u = content.length ? shapeContours(unionShapes(content)) : [];
-        const m = !u.length ? {} : p.style.mark === "score" ? { score: u.map(closed) } : { engrave: u };
+        const m = tagMarks(!u.length ? {} : p.style.mark === "score" ? { score: u.map(closed) } : { engrave: u }, [{ item: "Name", cs: named }]);
         parts.push(partFrom(disc, { id: `pick-${i + 1}`, name: name ? `Pick ${name}` : `Pick ${i + 1}`, ...m, place: at }));
       }
     }

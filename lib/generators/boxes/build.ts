@@ -6,6 +6,7 @@
  */
 import { differenceShapes, makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { circle, deg, rect, roundedRect, stadium } from "../geom";
+import { tagItem } from "../items";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { boxPanels, fingerCount } from "./joints";
 import { buildBoxV2, buildDrawer, buildHex, buildInsert, buildMoney, buildStack, buildTrayV2, hasArt } from "./more";
@@ -204,7 +205,7 @@ function buildSign(p: BoxesParams, ctx: BuildContext): BoxesOutput {
   const border = s.border > 0 ? borderBand(roundedRect(0, 0, W, H, s.corner), s.border, s.borderWidth) : [];
   return {
     parts: [
-      { id: "plate", name: "Sign", outer: plate, holes: [], engrave: [...border, ...tx.cs], place: wall(0, T + H, ys) },
+      { id: "plate", name: "Sign", outer: plate, holes: [], engrave: [...border, ...tagItem(tx.cs, "Text")], place: wall(0, T + H, ys) },
       { id: "base", name: "Base", outer: base, holes: us.map((u) => rect(m + u - tw / 2, ys, tw, T)), place: flat(-m, 0, 0) },
     ],
     stats: [{ label: "Sign", value: `${W} × ${H} mm` }, { label: "Base", value: `${W + 2 * m} × ${Db} mm` }],
@@ -302,7 +303,7 @@ function buildKeys(p: BoxesParams, ctx: BuildContext): BoxesOutput {
     {
       id: "plate", name: "Board", outer: roundedRect(0, 0, W, H, k.corner),
       holes: [circle(14, 14, 2.5), circle(W - 14, 14, 2.5), ...us.map((u) => rect(u - T / 2, vm - tabW / 2, T, tabW))],
-      engrave: tx.cs, place: wall(0, H, 0),
+      engrave: tagItem(tx.cs, "Text"), place: wall(0, H, 0),
     },
     ...us.map((u, i): GenPart => ({ id: `hook${i + 1}`, name: `Hook ${i + 1}`, outer: hook, holes: [], place: { x: u + T / 2, y: -pyC - (H - vm), z: T, upright: true, yaw: 90 } })),
   ];

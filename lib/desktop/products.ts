@@ -142,6 +142,7 @@ function genProduct(id: DesktopGenerator, def: AnyGenerator): DProduct {
   return {
     id, name: info.name, blurb: info.blurb, icon: info.icon, sections: [...sections, GEN_SHEET],
     presets: def.presets.map((pr) => ({ id: pr.id, name: pr.name, note: pr.note, pro: !!pr.pro })),
+    ...(def.scale ? { scale: true } : {}),
   };
 }
 
@@ -245,6 +246,7 @@ export async function generateDesign(req: unknown, plan: Plan): Promise<Generate
   if (r.params !== undefined && !plainObject(r.params)) return { status: 400, body: { error: "Invalid settings." } };
   if (r.change !== undefined && (!plainObject(r.change) || typeof r.change.key !== "string")) return { status: 400, body: { error: "Invalid change." } };
   if (r.fix !== undefined && !plainObject(r.fix)) return { status: 400, body: { error: "Invalid fix." } };
+  if (r.scale !== undefined && !(typeof r.scale === "number" && r.scale >= 0.2 && r.scale <= 5)) return { status: 400, body: { error: "Invalid scale." } };
   if (r.change?.key === "name") {
     // The design's name is free text (used for the file name, which is sanitized separately).
     if (typeof r.change.value !== "string") return { status: 400, body: { error: "The name must be text." } };
@@ -397,6 +399,10 @@ async function generateGenerator(r: GenerateRequest, id: DesktopGenerator, produ
     const q = changeGenerator(def, product, p, r.change);
     if ("error" in q) return { status: 400, body: { error: q.error } };
     p = q;
+  }
+  if (r.scale !== undefined) {
+    if (!def.scale) return { status: 400, body: { error: "This design cannot be scaled as a whole." } };
+    p = def.scale(p, r.scale);
   }
   p = sanitizeGeneratorParams(def, def.merge(p));
   const ctx = await serverBuildContext(def, p);

@@ -140,7 +140,7 @@ try {
   await page.waitForTimeout(1500);
   check(requests.slice(before).every((r) => r.model), "edits in 3D keep asking for the model");
 
-  // The scale gizmo (D170-D172): an axis sizes alone, a strip two axes, Shift keeps the proportions;
+  // The scale gizmo (D170-D173): an axis sizes alone, a strip two axes, Shift keeps the proportions;
   // the design is scaled on screen while dragging and built once, on release.
   const hitOf = (pane: string) => page.locator(`.v3 .v3-pane[data-pane="${pane}"] .v3-hit`);
   type Pt = [number, number];
@@ -225,6 +225,35 @@ try {
     check(W1 > W0 && D1 > D0 && H1 > H0, `Hinge Box: Shift keeps the proportions, every size grows (${W0}×${D0}×${H0} → ${W1}×${D1}×${H1})`);
     check(Math.abs(H1 / H0 - W1 / W0) < 0.08, `Hinge Box: height and width grow alike (${(H1 / H0).toFixed(2)} and ${(W1 / W0).toFixed(2)})`);
     await shot(page, "hinge-box-scale");
+  }
+  {
+    // An item on the product (D173): the sign's text is selected alone and its gizmo sizes the text.
+    await open("Sign");
+    await ready3d();
+    await page.locator(".v3").focus();
+    await page.keyboard.press("f");
+    if (await page.locator(".v3.quad").count()) await page.keyboard.press("Alt+w");
+    await page.waitForTimeout(800);
+    const b = (await hitOf("front").boundingBox())!;
+    const pickText = () => page.evaluate(() => document.querySelector(".v3-pick")?.textContent ?? "");
+    let picked = "";
+    search: for (let fy = 0.3; fy <= 0.75; fy += 0.05) for (let fx = 0.2; fx <= 0.8; fx += 0.03) {
+      await page.mouse.click(b.x + b.width * fx, b.y + b.height * fy);
+      await page.waitForTimeout(250);
+      picked = await pickText();
+      if (/· Text/.test(picked)) break search;
+    }
+    check(/· Text/.test(picked), `Sign: clicking the text selects it alone (${picked.replace(/\s+/g, " ")})`);
+    const pts = await gizmoPoints("front");
+    check(!!pts["scale-x"], "Sign: the text shows the gizmo");
+    if (/· Text/.test(picked) && pts["scale-x"]) {
+      const t0 = val("text.size"), m0 = val("motif.size");
+      const x = mid(pts["scale-x"]);
+      const r = await drag(x, [x[0] + 30, x[1]]);
+      check(r.during === 0 && r.after === 1, `Sign: the text is built once, on release (${r.during} while dragging, ${r.after} after)`);
+      check(val("text.size") > t0 && val("motif.size") === m0, `Sign: the text grows and the motif stays (${t0} → ${val("text.size")} mm)`);
+      await shot(page, "sign-text-scale");
+    }
   }
 
   await page.getByRole("button", { name: "2D sheet", exact: true }).click();

@@ -1,6 +1,7 @@
 import { MATERIALS } from "@/lib/hinge/defaults";
 import { differenceShapes, makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { bboxOf, circle, rect, transform } from "../geom";
+import { tagMarks, type ItemBlock } from "../items";
 import { material2 } from "../material2";
 import { motif, motifSize } from "../motifs";
 import { motifRef } from "../motifRef";
@@ -73,6 +74,8 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
   const mr = motifRef(p.motif.kind, p.motif.art, ctx, missing);
   let loading = mr.loading;
   const mid = mr.ref;
+  // Which run of each table's contours is its label, number, name and motif (for the 3D view's items).
+  const ranges: { item: string; from: number; to: number }[][] = [];
   const blocks = tables.map(({ main, sub }) => {
     const lab = p.text.label.trim() ? textBlock(ctx, p.text.label, p.text.labelFont, p.text.labelSize, { missing, style: { ...p.textStyle, ...p.textForm } }) : null;
     const num = textBlock(ctx, main, p.text.fontId, p.text.size, { spacing: p.text.spacing, missing, style: { ...p.textStyle, ...p.textForm } });
@@ -82,14 +85,17 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
     const gaps = stack.map((b) => Math.max(3, b.height * 0.28));
     let y = 0, numY = 0;
     const placed: Contour[] = [];
+    const run: { item: string; from: number; to: number }[] = [];
     stack.forEach((b, i) => {
       if (i) y += gaps[i];
+      run.push({ item: b === num ? "Number" : b === lab ? "Label" : "Name", from: placed.length, to: placed.length + b.contours.length });
       placed.push(...move(b.contours, 0, y + b.height / 2));
       if (b === num) numY = y + b.height / 2;
       y += b.height;
     });
     let cs = move(placed, 0, -y / 2);
     numY -= y / 2;
+    const texts = cs.length;
     if (mid && cs.length) {
       const bb = bboxOf(cs), s = motifSize(mid, p.motif.size), g = p.motif.gap;
       if (p.motif.place === "above") cs.push(...motif(mid, p.motif.size, 0, bb.y0 - g - s.h / 2));
@@ -104,8 +110,10 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
       const bb = bboxOf(cs);
       cs = move(cs, -(bb.x0 + bb.x1) / 2, -(bb.y0 + bb.y1) / 2);
     }
+    ranges.push([...run, { item: "Motif", from: texts, to: cs.length }]);
     return cs;
   });
+  const items = (cs: Contour[], i: number): ItemBlock[] => ranges[i].map((r) => ({ item: r.item, cs: cs.slice(r.from, r.to) }));
   if (loading) return { parts: [], stats: [], notice: "Loading the font." };
 
   let contentW = 0, contentH = 0;
@@ -174,7 +182,7 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
       const back = rot180(cs, W / 2, H / 2);
       const bA = border.score ? { score: rot180(border.score, W / 2, H / 2) } : border.engrave ? { engrave: rot180(border.engrave, W / 2, H / 2) } : {};
       const bB = border.score ? { score: move(border.score, 0, H + band) } : border.engrave ? { engrave: move(border.engrave, 0, H + band) } : {};
-      const m = join(join(marks(front), marks(back)), join(bA, bB));
+      const m = join(join(tagMarks(marks(front), items(front, i)), tagMarks(marks(back), items(back, i))), join(bA, bB));
       parts.push({ id: id("card"), name: `Tent card${tag}`, outer, holes: [], cuts: hingeSlits(W, H + 1, H + band - 1, p.hinge), ...m, place: { x: X, y: 0, z: 0 } });
       if (p.text.mark === "raised" && cs.length) {
         const s = weld(front, { border: 0.6, minHole: 2 });
@@ -197,7 +205,7 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
     const lift = plaque ? 0 : layers * T;
     const z0 = plaque ? 0 : depth / 2 - (plates * T) / 2;
     const place = (z: number) => ({ x: X, y: -H - lift, z, upright: true });
-    const m = join(marks(cs), border);
+    const m = join(tagMarks(marks(cs), items(cs, i)), border);
     for (let k = 0; k < plates; k++) {
       const z = z0 + (plates === 2 ? (k ? 0 : T) : 0);
       parts.push({ id: id(k ? "back" : "plate"), name: `${k ? "Back" : "Plate"}${tag}`, outer, holes, ...m, place: place(z) });

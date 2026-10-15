@@ -7,6 +7,7 @@
 import { differenceShapes, intersectShapes, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import type { Shape } from "@/lib/letters/types";
 import { arc, bboxOf, circle, customOutline, deg, rect, reverse, roundedRect, stadium, transform } from "../geom";
+import { tagItem } from "../items";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { HEART_PATH } from "../util";
 import { CONTENT_NAMES, qrMatrix, qrPayload, type QrMatrix } from "./encode";
@@ -318,7 +319,7 @@ export function buildQr(p: QrParams, ctx: BuildContext): QrOutput {
   const mv = (cs: Contour[]) => move(cs, dx, dy);
   const parts: GenPart[] = [];
   if (out === "engrave") {
-    parts.push({ id: "plate", name: "Plate", outer: mv([outer])[0], holes: mv(keyHoles), engrave: mv([...modules, ...logo, ...label, ...ring]) });
+    parts.push({ id: "plate", name: "Plate", outer: mv([outer])[0], holes: mv(keyHoles), engrave: [...tagItem(mv(modules), "Code"), ...tagItem(mv(logo), "Logo"), ...tagItem(mv(label), "Label"), ...mv(ring)] });
   } else if (out === "cutout") {
     parts.push({ id: "top", name: "Top plate", outer: mv([outer])[0], holes: mv([...keyHoles, ...modules, ...logo, ...label, ...ring]), place: { x: 0, y: 0, z: T } });
     parts.push({ id: "back", name: "Backplate", outer: mv([outer])[0], holes: mv(keyHoles), tone: 0.25, place: { x: 0, y: 0, z: 0 } });

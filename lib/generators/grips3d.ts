@@ -1,4 +1,5 @@
 import { AXIS_NAMES, lenText, mmSetting, numberGrip, ratioSetting, type Grip, type GripAxis, type GripSet, type SizeSetting } from "../three/grips";
+import { itemInName } from "./items";
 import { getPath, setPath } from "./path";
 import type { AnyGenerator, GenBase, NumberSpec } from "./types";
 
@@ -30,6 +31,62 @@ const SPECS: Record<string, (p: GenBase & Record<string, unknown>) => GripSpec[]
     }
   },
 };
+
+/**
+ * What sizes each item on a product (lib/generators/items.ts), by generator: the setting, or several
+ * grown together. `parts` does the same for parts that are an item cut out (raised letters).
+ */
+interface ItemSizes { items: Record<string, string[]>; parts?: [RegExp, string[]][] }
+const ITEM_SIZES: Record<string, (p: GenBase & Record<string, unknown>) => ItemSizes> = {
+  clock: () => ({ items: { Numerals: ["markers.size"], Ticks: ["markers.tickLength", "markers.tickWidth"], Dots: ["markers.dot"], Inscription: ["inscription.size"] } }),
+  puzzle: () => ({ items: { Text: ["engrave.size"], Numbers: ["engrave.numberSize"], Picture: ["engrave.zoom"] } }),
+  qr: () => ({ items: { Code: ["code.size"], Label: ["label.size"], Logo: ["logo.size"] } }),
+  boxes: (p) => ({ items: { Text: [p.design === "sign" ? "sign.size" : p.design === "keys" ? "keys.size" : "engrave.size"], Motif: ["engrave.motifSize"] } }),
+  topper: () => ({
+    items: { Text: ["text.size"], Motif: ["motif.size"], Name: ["cupcake.textSize"] },
+    parts: [[/^Front letters$/, ["text.size", "motif.size"]]],
+  }),
+  keyrack: () => ({
+    items: { Text: ["text.size"], Motif: ["motif.size"], "Hook labels": ["hooks.labelSize"] },
+    parts: [[/^Raised letters$/, ["text.size", "motif.size"]]],
+  }),
+  sign: () => ({
+    items: { Text: ["text.size"], Motif: ["motif.size"] },
+    parts: [[/^(Letters|Letter \d+|Inlay \d+)$/, ["text.size", "motif.size"]]],
+  }),
+  tablenum: () => ({
+    items: { Number: ["text.size"], Label: ["text.labelSize"], Name: ["text.nameSize"], Motif: ["motif.size"] },
+    parts: [[/^(Number|Front number|Back number)\b/, ["text.size", "text.labelSize", "text.nameSize", "motif.size"]]],
+  }),
+  trophy: () => ({ items: { "Emblem text": ["emblem.size"], Title: ["plate.titleSize"], Name: ["plate.nameSize"], Year: ["plate.nameSize"] } }),
+  shadowbox: () => ({ items: { Words: ["text.size"], Photo: ["photo.zoom"] } }),
+};
+
+/** The settings that size the 3D object named `name` (`Sign · Text`, `Raised letters`), or null. */
+export function itemKeys(id: string, p: GenBase, name: string | null): string[] | null {
+  const of = ITEM_SIZES[id];
+  if (!of || !name) return null;
+  const sizes = of(p as never), item = itemInName(name);
+  if (item) return sizes.items[item] ?? null;
+  return sizes.parts?.find(([re]) => re.test(name))?.[1] ?? null;
+}
+
+/**
+ * The scale gizmo of a text, motif, number or picture on a product: it sits on that item alone and
+ * sizes it evenly; `write` gets the new settings when a drag ends.
+ */
+export function itemGrips(id: string, sections: SectionsLike, p: GenBase, name: string | null, write: (values: Record<string, number>) => void, units: "mm" | "in"): GripSet | null {
+  const keys = itemKeys(id, p, name);
+  if (!keys) return null;
+  const settings: SizeSetting[] = [];
+  for (const key of new Set(keys)) {
+    const f = numberField(sections, key), v0 = getPath(p, key);
+    if (!f || typeof v0 !== "number" || !(v0 > 0)) continue;
+    const show = (v: number) => `${f.label} ${f.unit === "mm" ? lenText(v, units) : f.unit === "%" ? `${v}%` : f.unit === "deg" ? `${v}°` : v}`;
+    settings.push(ratioSetting(key, ["x", "y", "z"], { v0, min: f.min, max: f.max, step: f.step }, show));
+  }
+  return settings.length ? { size: { settings, write, part: true, uniform: true, thin: 1.5 } } : null;
+}
 
 /** Number fields as the editors and the Windows app's catalog both describe them. */
 type NumberFieldLike = Pick<NumberSpec<unknown>, "key" | "label" | "unit" | "min" | "max" | "step">;
@@ -82,10 +139,14 @@ export function withValues<P>(p: P, values: Record<string, number>): P {
 }
 
 /**
- * A generator's 3D handles. `size` is the assembled design's size (x, y, z) in mm: designs scaled as a
- * whole get no handle along an axis thinner than a few sheets (a flat clock is not made thicker).
+ * A generator's 3D handles for the selected object `selected`: a text, motif, number or picture
+ * sizes its own setting; any other part gets the design's handles. `size` is the assembled design's
+ * size (x, y, z) in mm: designs scaled as a whole get no handle along an axis thinner than a few
+ * sheets (a flat clock is not made thicker).
  */
-export function generatorGrips<P extends GenBase>(def: AnyGenerator, p: P, set: (p: P, record: boolean) => void, units: "mm" | "in", size: [number, number, number] | null): GripSet {
+export function generatorGrips<P extends GenBase>(def: AnyGenerator, p: P, set: (p: P, record: boolean) => void, units: "mm" | "in", size: [number, number, number] | null, selected: string | null = null): GripSet {
+  const item = itemGrips(def.id, def.sections, p, selected, (values) => set(withValues(p, values), true), units);
+  if (item) return item;
   const own = specGrips(def.id, def.sections, p, (values, done) => set(withValues(p, values), done), units);
   if (own) return own;
   if (!def.scale || !size) return {};
@@ -96,6 +157,7 @@ export function generatorGrips<P extends GenBase>(def: AnyGenerator, p: P, set: 
     size: {
       settings: [ratioSetting("scale", axes, { v0: 1, min: 0.2, max: 5, step: 0.001 }, (s) => `${AXIS_NAMES[axes[0]]} ${lenText(ext * s, units)} (${Math.round(s * 100)}%)`)],
       write: ({ scale }) => { if (scale && scale !== 1) set(def.scale!(p, scale), true); },
+      uniform: true,
     },
   };
 }

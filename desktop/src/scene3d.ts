@@ -21,13 +21,17 @@ const pairs = (a: number[]) => {
 
 function object(o: D3Object): THREE.Mesh | THREE.LineSegments | null {
   if (o.kind === "slab") {
-    if (o.outer.length < 6) return null;
-    const shape = new THREE.Shape(pairs(o.outer));
-    for (const h of o.holes) if (h.length >= 6) shape.holes.push(new THREE.Path(pairs(h)));
-    const geo = new THREE.ExtrudeGeometry(shape, { depth: o.depth, bevelEnabled: false, curveSegments: 1 });
+    const shapes = [o, ...(o.more ?? [])].filter((q) => q.outer.length >= 6).map((q) => {
+      const shape = new THREE.Shape(pairs(q.outer));
+      for (const h of q.holes) if (h.length >= 6) shape.holes.push(new THREE.Path(pairs(h)));
+      return shape;
+    });
+    if (!shapes.length) return null;
+    const geo = new THREE.ExtrudeGeometry(shapes.length === 1 ? shapes[0] : shapes, { depth: o.depth, bevelEnabled: false, curveSegments: 1 });
     geo.translate(0, 0, o.z);
+    const see = o.mat?.opacity != null ? { transparent: true, opacity: o.mat.opacity, depthWrite: false } : {};
     const mat = o.mat
-      ? new THREE.MeshStandardMaterial({ color: o.mat.color, roughness: o.mat.roughness, metalness: o.mat.metalness, side: THREE.DoubleSide })
+      ? new THREE.MeshStandardMaterial({ color: o.mat.color, roughness: o.mat.roughness, metalness: o.mat.metalness, side: THREE.DoubleSide, ...see })
       : new THREE.MeshStandardMaterial({ color: "#d9b07a", roughness: 0.8 });
     const mesh = new THREE.Mesh(geo, mat);
     if (o.mat) mesh.userData.keepMaterial = true;

@@ -217,6 +217,19 @@ describe("desktop generate (server-side SVG)", () => {
     expect(auto.body.applied.length).toBeGreaterThan(0);
   });
 
+  it("scales a whole design on the server for the 3D gizmo, where the design can be", async () => {
+    const products = (await desktopCatalog()).products;
+    expect(products.find((x) => x.id === "sign")?.scale).toBe(true);
+    expect(products.find((x) => x.id === "boxes")?.scale).toBeUndefined();
+    const sign = await gen({ product: "sign" });
+    const big = await gen({ product: "sign", params: sign.body.params, scale: 2 });
+    expect(big.status).toBe(200);
+    expect((big.body.params.text as { size: number }).size).toBeCloseTo(2 * (sign.body.params.text as { size: number }).size, 0);
+    expect((await gen({ product: "sign", scale: 9 })).status).toBe(400);
+    expect((await gen({ product: "sign", scale: "2" })).status).toBe(400);
+    expect((await gen({ product: "boxes", scale: 2 })).status).toBe(400);
+  });
+
   it("builds generators like the web export and holds their Pro designs back", async () => {
     const clock = await gen({ product: "clock" });
     expect(clock.status).toBe(200);

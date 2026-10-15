@@ -16,7 +16,8 @@ import type { Units } from "@/components/editor/format";
 
 /**
  * A generator's design assembled in 3D, or its parts lying flat as cut. With `edit`, a selected
- * part shows handles that change the design's settings (lib/generators/grips3d.ts).
+ * part, text, motif, number or picture shows handles that change the design's settings
+ * (lib/generators/grips3d.ts).
  */
 export default function GeneratorView3D({ out, lay, T, material, units, frameKey, edit }: {
   out: GenOutput | null;
@@ -44,7 +45,7 @@ export default function GeneratorView3D({ out, lay, T, material, units, frameKey
     const b = modelBox(scene.group);
     return b.isEmpty() ? null : [b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z];
   }, [scene, flat, explode, sel, editable]);
-  const grips = size && edit ? generatorGrips(edit.def, edit.params, edit.set, units, size) : undefined;
+  const grips = size && edit ? generatorGrips(edit.def, edit.params, edit.set, units, size, sel) : undefined;
   return (
     <QuadView
       {...quadProps(v)} id="preview3d" model={scene} look={lookOf(material)} frameKey={key} units={units}

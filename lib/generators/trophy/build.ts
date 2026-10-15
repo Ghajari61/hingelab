@@ -2,6 +2,7 @@ import { MATERIALS } from "@/lib/hinge/defaults";
 import { differenceShapes, makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import type { Shape } from "@/lib/letters/types";
 import { bboxOf, circle, customOutline, rect, regularPolygon, roundCorners, transform } from "../geom";
+import { tagMarks, type ItemBlock } from "../items";
 import { material2 } from "../material2";
 import { isMotifId, motif, type MotifRef } from "../motifs";
 import { motifRef } from "../motifRef";
@@ -178,8 +179,13 @@ export function buildTrophy(p: TrophyParams, ctx: BuildContext): TrophyOutput {
 
   // Engraving.
   const marks: Contour[] = [];
+  const blocks: ItemBlock[] = [];
   if (em.detail) marks.push(...move(em.detail, ex - eb.x0, -eb.y0));
-  if (et) marks.push(...move(et.contours, ex + em.cx, em.cy));
+  if (et) {
+    const cs = move(et.contours, ex + em.cx, em.cy);
+    blocks.push({ item: "Emblem text", cs });
+    marks.push(...cs);
+  }
   if (p.emblem.laurel) {
     const r = em.room * 0.95;
     const wreath = motif("laurel", r * 2, ex + em.cx, em.cy);
@@ -188,17 +194,20 @@ export function buildTrophy(p: TrophyParams, ctx: BuildContext): TrophyOutput {
   const plateMarks: Contour[] = [];
   if (lines.length) {
     let y = plateTop + p.plate.pad;
-    for (const b of lines) {
-      plateMarks.push(...move(b.contours, FW / 2, y + b.height / 2));
+    const kinds = [p.plate.title.trim() && "Title", p.plate.name.trim() && "Name", p.plate.year.trim() && "Year"].filter((k): k is string => !!k);
+    lines.forEach((b, i) => {
+      const cs = move(b.contours, FW / 2, y + b.height / 2);
+      blocks.push({ item: kinds[i], cs });
+      plateMarks.push(...cs);
       y += b.height + gap * 1.4;
-    }
+    });
   }
   const layered = p.build.kind === "layered";
   const faceMarks = layered ? [] : [...marks, ...plateMarks];
-  const markOf = (cs: Contour[]): Pick<GenPart, "engrave" | "score"> => {
+  const markOf = (cs: Contour[], items: ItemBlock[] = []): Pick<GenPart, "engrave" | "score"> => {
     if (!cs.length) return {};
     const u = shapeContours(unionShapes(cs));
-    return p.mark.kind === "engrave" ? { engrave: u } : { score: u.map(closed) };
+    return tagMarks(p.mark.kind === "engrave" ? { engrave: u } : { score: u.map(closed) }, items);
   };
 
   // Base tiers.
@@ -219,18 +228,18 @@ export function buildTrophy(p: TrophyParams, ctx: BuildContext): TrophyOutput {
   // The figure, standing in the slot.
   const lift = tiers * T;
   const fz = depth / 2 - Tf / 2;
-  const fig: GenPart = { id: "figure", name: "Figure", outer: figure.outer, holes: figure.holes, ...markOf(faceMarks), place: { x: bx, y: -(footY + lift), z: fz, upright: true } };
+  const fig: GenPart = { id: "figure", name: "Figure", outer: figure.outer, holes: figure.holes, ...markOf(faceMarks, blocks), place: { x: bx, y: -(footY + lift), z: fz, upright: true } };
   parts.unshift(mixed ? second(fig) : fig);
   if (layered) {
     const inset = Math.max(2, Math.min(EW, EH) * 0.05);
     const front = offsetShapes([makeShape(transform(em.shape.outer, { x: ex - eb.x0, y: -eb.y0 }), [])], -inset);
     if (front.length) {
       const f = biggest(front);
-      parts.splice(1, 0, second({ id: "emblem", name: "Emblem front", outer: f.outer, holes: emHoles, ...markOf(marks), place: { x: bx, y: -(footY + lift), z: fz + T, upright: true } }));
+      parts.splice(1, 0, second({ id: "emblem", name: "Emblem front", outer: f.outer, holes: emHoles, ...markOf(marks, blocks), place: { x: bx, y: -(footY + lift), z: fz + T, upright: true } }));
     }
     if (plateH) {
       const pl = orient(shapeOutline("rounded", plateW - 6, plateH - 6, Math.max(0, p.plate.corner - 2)).map(([x, y]) => [x + FW / 2 - plateW / 2 + 3, y + plateTop + 3] as Pt));
-      parts.splice(2, 0, second({ id: "plate", name: "Name plate", outer: pl, holes: [], ...markOf(plateMarks), place: { x: bx, y: -(footY + lift), z: fz + T, upright: true } }));
+      parts.splice(2, 0, second({ id: "plate", name: "Name plate", outer: pl, holes: [], ...markOf(plateMarks, blocks), place: { x: bx, y: -(footY + lift), z: fz + T, upright: true } }));
     }
   }
 

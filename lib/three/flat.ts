@@ -29,9 +29,17 @@ const toPath = (c: Point[], path: THREE.Path) => {
 
 /** An extruded slab from a y-down outline, z from z0 up t. */
 export function slab(outer: Point[], holes: Point[][], z0: number, t: number, name: string) {
-  const shape = toPath(outer, new THREE.Shape()) as THREE.Shape;
-  for (const h of holes) if (h.length > 2) shape.holes.push(toPath(h, new THREE.Path()));
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: t, bevelEnabled: false, curveSegments: 1 });
+  return slabs([{ outer, holes }], z0, t, name);
+}
+
+/** One mesh of several extruded y-down regions (a word's letters), z from z0 up t. */
+export function slabs(regions: { outer: Point[]; holes: Point[][] }[], z0: number, t: number, name: string) {
+  const shapes = regions.map(({ outer, holes }) => {
+    const shape = toPath(outer, new THREE.Shape()) as THREE.Shape;
+    for (const h of holes) if (h.length > 2) shape.holes.push(toPath(h, new THREE.Path()));
+    return shape;
+  });
+  const geo = new THREE.ExtrudeGeometry(shapes.length === 1 ? shapes[0] : shapes, { depth: t, bevelEnabled: false, curveSegments: 1 });
   geo.translate(0, 0, z0);
   const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: "#d9b07a", roughness: 0.8 }));
   mesh.name = name;

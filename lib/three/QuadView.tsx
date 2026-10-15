@@ -13,7 +13,7 @@ import { Camera, Home } from "lucide-react";
 import ListingPhoto, { type Shoot } from "./ListingPhoto";
 import { applyLook, type LookId } from "./looks";
 import { dimLines, dimSVG, modelBox } from "./dims";
-import { AXES, GRIP_KINDS, axisDrag, dragFactors, scaleDrag, sizeAxes, sizeResult, snapDrag, turnDrag, uniformDrag, type Factors, type Grip, type GripAxis, type GripKind, type GripSet, type SizeGizmo } from "./grips";
+import { AXES, GRIP_KINDS, axisDrag, dragFactors, scaleDrag, shownAxes, sizeResult, snapDrag, turnDrag, uniformDrag, type Factors, type Grip, type GripAxis, type GripKind, type GripSet, type SizeGizmo } from "./grips";
 
 export type PaneId = "top" | "front" | "left" | "persp";
 export type Shade3D = "shaded" | "edges";
@@ -151,8 +151,12 @@ interface Drag {
   scale?: { axes: GripAxis[]; all: boolean; gizmo: SizeGizmo; grab: [number, number]; dir: [number, number]; ext: Factors; last: ReturnType<typeof sizeResult> | null };
 }
 
-/** The design scaled on screen while a scale handle is dragged: its own matrix, and its box, before. */
-interface Preview { base: THREE.Matrix4; anchor: THREE.Vector3; box: THREE.Box3 | null; until: number }
+/**
+ * The design (or, for a part's gizmo, the selected part) scaled on screen while a scale handle is
+ * dragged: what is scaled, its own matrix and matrix mode before, its parent's world matrix, the
+ * point it grows from, and the design's box before.
+ */
+interface Preview { obj: THREE.Object3D; base: THREE.Matrix4; auto: boolean; parent: THREE.Matrix4; anchor: THREE.Vector3; box: THREE.Box3 | null; part: boolean }
 
 interface Stage {
   renderer: THREE.WebGLRenderer;
@@ -250,6 +254,8 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
   const hoverId = useRef<string | null>(null);
   const drag = useRef<Drag | null>(null);
   const preview = useRef<Preview | null>(null);
+  /** The axes the scale gizmo shows (its axes less those the box is too thin along). */
+  const gizmoAxes = useRef<GripAxis[]>([]);
   /** Until then a new frame key does not reframe: the design was resized by a drag. */
   const holdUntil = useRef(0);
   const tip = useRef<HTMLSpanElement>(null);
@@ -533,42 +539,48 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     st.current?.request();
   };
 
-  /** The design drawn grown by `f` about the middle of its base while a scale handle is dragged (null: its own size again). */
+  /**
+   * The design drawn grown by `f` about the middle of its base while a scale handle is dragged, or
+   * for a part's gizmo the selected part alone about its middle (null: its own size again).
+   */
   const previewScale = (f: Factors | null) => {
     const m = shown.current, g = m?.group;
     if (!f) { endPreview(); return; }
     if (!g) return;
     let pv = preview.current;
     if (!pv) {
-      g.updateMatrix();
-      const b = modelBox(g);
+      const part = sizer.current?.part ? selected.current : null;
+      const obj = part ?? g;
+      if (obj.matrixAutoUpdate) obj.updateMatrix();
+      g.updateMatrixWorld(true);
+      const b = part ? new THREE.Box3().setFromObject(part) : modelBox(g);
       if (b.isEmpty()) return;
-      pv = { base: g.matrix.clone(), anchor: new THREE.Vector3((b.min.x + b.max.x) / 2, b.min.y, (b.min.z + b.max.z) / 2), box: bbox.current?.clone() ?? null, until: 0 };
+      const anchor = part ? b.getCenter(new THREE.Vector3()) : new THREE.Vector3((b.min.x + b.max.x) / 2, b.min.y, (b.min.z + b.max.z) / 2);
+      pv = { obj, base: obj.matrix.clone(), auto: obj.matrixAutoUpdate, parent: obj.parent?.matrixWorld.clone() ?? new THREE.Matrix4(), anchor, box: bbox.current?.clone() ?? null, part: !!part };
       preview.current = pv;
-      g.matrixAutoUpdate = false;
+      obj.matrixAutoUpdate = false;
     }
     const a = pv.anchor;
     const about = new THREE.Matrix4().makeTranslation(a.x, a.y, a.z)
       .multiply(new THREE.Matrix4().makeScale(f.x, f.y, f.z))
       .multiply(new THREE.Matrix4().makeTranslation(-a.x, -a.y, -a.z));
-    g.matrix.copy(about).multiply(pv.base);
-    g.matrixWorldNeedsUpdate = true;
+    pv.obj.matrix.copy(pv.parent.clone().invert().multiply(about).multiply(pv.parent)).multiply(pv.base);
+    pv.obj.matrixWorldNeedsUpdate = true;
     g.updateMatrixWorld(true);
-    if (pv.box) bbox.current = pv.box.clone().applyMatrix4(about);
+    if (pv.box && !pv.part) bbox.current = pv.box.clone().applyMatrix4(about);
     st.current?.request();
   };
 
-  /** Back to the design's own size after a scale preview. */
+  /** Back to the design's (or the part's) own size after a scale preview. */
   const endPreview = () => {
-    const pv = preview.current, g = shown.current?.group;
+    const pv = preview.current;
     preview.current = null;
     if (!pv) return;
-    if (g) {
-      g.matrixAutoUpdate = true;
-      g.updateMatrix();
-      g.updateMatrixWorld(true);
-    }
-    bbox.current = pv.box;
+    pv.obj.matrix.copy(pv.base);
+    pv.obj.matrixAutoUpdate = pv.auto;
+    pv.obj.matrixWorldNeedsUpdate = true;
+    pv.obj.updateMatrixWorld(true);
+    if (!pv.part) bbox.current = pv.box;
     st.current?.request();
   };
 
@@ -769,7 +781,8 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
    */
   const scaleHandles = (gizmo: SizeGizmo, box: THREE.Box3): Handle[] => {
     const { shapes, hitMat } = st.current!;
-    const axes = sizeAxes(gizmo);
+    const axes = shownAxes(gizmo, box.getSize(new THREE.Vector3()));
+    gizmoAxes.current = axes;
     const at = box.getCenter(new THREE.Vector3());
     const unit = (a: GripAxis) => new THREE.Vector3(...AXIS_VEC[a]);
     const { L, r1, r2 } = GIZMO;
@@ -852,7 +865,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
       const whole = preview.current?.box?.clone() ?? modelBox(m.group);
       const part = selected.current ? new THREE.Box3().setFromObject(selected.current) : null;
       if (!whole.isEmpty()) {
-        if (gizmo) handles.current.push(...scaleHandles(gizmo, whole));
+        if (gizmo) handles.current.push(...scaleHandles(gizmo, gizmo.part && part && !part.isEmpty() ? part : whole));
         for (const g of list) handles.current.push(gripHandle(g, g.part && part && !part.isEmpty() ? part : whole));
         for (const k of handles.current) s.overlay.add(k.obj);
       }
@@ -928,13 +941,14 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
       const toViewer = p.cam instanceof THREE.OrthographicCamera ? p.cam.getWorldDirection(new THREE.Vector3()).negate() : p.cam.position.clone().sub(k.at);
       const base = { x0: e.clientX, y0: e.clientY, prev: [e.clientX, e.clientY] as [number, number], ang: 0, c: a, facing: k.axis.dot(toViewer) > 0, d: 0, text: "" };
       if (k.scale && gizmo && m) {
-        const size = modelBox(m.group).getSize(new THREE.Vector3());
+        const part = gizmo.part ? selected.current : null;
+        const size = (part ? new THREE.Box3().setFromObject(part) : modelBox(m.group)).getSize(new THREE.Vector3());
         const grab: [number, number] = [e.clientX, e.clientY];
         const away = k.scale.length === 1 ? [b[0] - a[0], b[1] - a[1]] : [grab[0] - a[0], grab[1] - a[1]];
         const n = Math.hypot(away[0], away[1]) || 1;
         drag.current = {
           ...base, id: k.id, kind: "size", fn: () => "", u: [0, 0],
-          scale: { axes: k.scale, all: k.id === "scale-all", gizmo, grab, dir: [away[0] / n, away[1] / n], ext: { x: size.x, y: size.y, z: size.z }, last: null },
+          scale: { axes: gizmo.uniform ? gizmoAxes.current : k.scale, all: k.id === "scale-all", gizmo, grab, dir: [away[0] / n, away[1] / n], ext: { x: size.x, y: size.y, z: size.z }, last: null },
         };
       } else if (k.grip) {
         drag.current = { ...base, id: k.id, kind: k.grip.kind, fn: k.grip.start(k.ext), u: [(b[0] - a[0]) / L, (b[1] - a[1]) / L] };

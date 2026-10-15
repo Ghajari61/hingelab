@@ -8,6 +8,7 @@
  */
 import { differenceShapes, makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { circle, rect, regularPolygon, roundedRect, stadium } from "../geom";
+import { blocksOf, tagByPlace, tagItem } from "../items";
 import { isMotifKind, motif, motifSize } from "../motifs";
 import { motifRef } from "../motifRef";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
@@ -65,7 +66,11 @@ function band(outline: Contour, inset: number, width = 1.2): Contour[] {
   return shapeContours(differenceShapes(shapeContours(outer), shapeContours(inner)));
 }
 
-export interface Art { cs: Contour[]; w: number; h: number; loading: boolean; missing: string[] }
+export interface Art {
+  cs: Contour[]; w: number; h: number; loading: boolean; missing: string[];
+  /** How many of `cs` (from the start) are the motif; the rest are the text. */
+  motifs?: number;
+}
 
 /** The engraving (motif above text), centred on (0, 0). */
 export function lidArt(p: BoxesParams, ctx: BuildContext): Art {
@@ -78,21 +83,22 @@ export function lidArt(p: BoxesParams, ctx: BuildContext): Art {
   const H = ms.h + gap + th;
   const cs: Contour[] = [];
   if (m) cs.push(...motif(m, e.motifSize, 0, -H / 2 + ms.h / 2));
+  const motifs = cs.length;
   if (tx) cs.push(...tx.contours.map((c) => shiftC(c, 0, H / 2 - th / 2)));
-  return { cs, w: Math.max(ms.w, tx?.width ?? 0), h: H, loading: !!tx?.loading || mr.loading, missing };
+  return { cs, w: Math.max(ms.w, tx?.width ?? 0), h: H, loading: !!tx?.loading || mr.loading, missing, motifs };
 }
 export const hasArt = (p: BoxesParams) => !!p.engrave.text.trim() || isMotifKind(p.engrave.motif) || p.engrave.border > 0;
 
 /** Engraving for a face of w × h whose outline is `outline`, art centred on (cx, cy). */
 const engraveOn = (p: BoxesParams, art: Art, outline: Contour, cx: number, cy: number) => [
   ...(p.engrave.border > 0 ? band(outline, p.engrave.border) : []),
-  ...art.cs.map((c) => shiftC(c, cx, cy)),
+  ...art.cs.map((c, i) => tagItem([shiftC(c, cx, cy)], i < (art.motifs ?? 0) ? "Motif" : "Text")[0]),
 ];
 
 /** Puts the lid art on a part: engraved, or its outlines scored. */
 function markLid(part: GenPart, p: BoxesParams, cs: Contour[]) {
   if (p.engrave.mark !== "score") { part.engrave = cs; return; }
-  if (cs.length) part.score = [...(part.score ?? []), ...shapeContours(unionShapes(cs)).map((c) => [...c, c[0]])];
+  if (cs.length) part.score = [...(part.score ?? []), ...tagByPlace(shapeContours(unionShapes(cs)).map((c) => [...c, c[0]]), blocksOf(cs))];
 }
 
 /** Tabs along an edge of length L (tab-and-slot joints): centres and width. */

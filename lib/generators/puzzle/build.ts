@@ -6,6 +6,7 @@
  */
 import { intersectShapes, offsetShapes, unionShapes } from "@/lib/letters/polygon";
 import { bboxOf, circle, customOutline, distToContour, pointInContour, rect, roundedRect, signedArea } from "../geom";
+import { tagItem } from "../items";
 import type { BuildContext, Contour, GenImage, GenOutput, GenPart, Pt } from "../types";
 import { shapeOutline, type ShapeKind } from "../shapes";
 import { HEART_PATH } from "../util";
@@ -423,7 +424,7 @@ export function buildPuzzle(p: PuzzleParams, ctx: BuildContext): PuzzleOutput {
     const z = Math.max(0.2, E2.zoom / 100), a = E2.aspect > 0 ? E2.aspect : 1;
     let w: number, h: number;
     if (a > BW / BH) { h = BH * z; w = h * a; } else { w = BW * z; h = w / a; }
-    images.push({ href: E2.image, x: BW / 2 - w / 2, y: BH / 2 - h / 2, w, h, clip: outline });
+    images.push(...tagItem([{ href: E2.image, x: BW / 2 - w / 2, y: BH / 2 - h / 2, w, h, clip: outline }], "Picture"));
   }
   if (E2.kind === "text" && E2.text.trim()) {
     if (!ctx.text) loading = true;
@@ -436,7 +437,7 @@ export function buildPuzzle(p: PuzzleParams, ctx: BuildContext): PuzzleOutput {
         for (const c of s.missing) if (!missing.includes(c)) missing.push(c);
         textWidth = Math.max(textWidth, s.width);
         const cy = BH / 2 + (k - (lines.length - 1) / 2) * gap;
-        for (const c of s.contours) engrave.push(c.map(([x, y]) => [x + BW / 2, y + cy] as Pt));
+        for (const c of s.contours) engrave.push(...tagItem([c.map(([x, y]) => [x + BW / 2, y + cy] as Pt)], "Text"));
       });
     }
   }
@@ -451,7 +452,7 @@ export function buildPuzzle(p: PuzzleParams, ctx: BuildContext): PuzzleOutput {
         const s = ctx.text!(String(n + 1), E2.fontId, E2.numberSize);
         if (!s) { loading = true; return; }
         for (const c of s.missing) if (!missing.includes(c)) missing.push(c);
-        for (const c of s.contours) engrave.push(c.map(([x, y]) => [x + o.at[0], y + o.at[1]] as Pt));
+        for (const c of s.contours) engrave.push(...tagItem([c.map(([x, y]) => [x + o.at[0], y + o.at[1]] as Pt)], "Numbers"));
       });
     }
   }

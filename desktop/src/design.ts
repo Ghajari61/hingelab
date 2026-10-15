@@ -135,6 +135,8 @@ export function useDesign(onFatal: (e: AppError) => void) {
 
   const fix = useCallback((code: string, id: string) => request({ fix: { code, id } }), [request]);
   const autofix = useCallback(() => request({ autofix: true }), [request]);
+  /** The whole design scaled by `s` (the 3D scale gizmo), on the server as one edit. */
+  const scaleBy = useCallback((s: number) => request({ scale: s }), [request]);
   const refresh = useCallback(() => request({}, false), [request]);
 
   const setWant3d = useCallback((on: boolean) => {
@@ -161,5 +163,5 @@ export function useDesign(onFatal: (e: AppError) => void) {
     if (retryTimer.current) window.clearTimeout(retryTimer.current);
   }, []);
 
-  return { state, open, change, changeMany, flush, fix, autofix, refresh, setWant3d, undo: () => travel(-1), redo: () => travel(1) };
+  return { state, open, change, changeMany, scaleBy, flush, fix, autofix, refresh, setWant3d, undo: () => travel(-1), redo: () => travel(1) };
 }

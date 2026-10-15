@@ -335,6 +335,7 @@ export function App() {
             favorite={!!currentFavorite}
             onChange={design.change}
             onChangeMany={design.changeMany}
+            onScale={design.scaleBy}
             onRename={(name) => design.change("name", name, true)}
             onFix={design.fix}
             onAutofix={design.autofix}

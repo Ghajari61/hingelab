@@ -45,6 +45,12 @@ export interface SizeSetting {
 export interface SizeGizmo {
   settings: SizeSetting[];
   write(values: Record<string, number>): void;
+  /** Sizes the selected part alone (a text, a picture): the gizmo sits on it and only it grows while dragged. */
+  part?: boolean;
+  /** Every handle grows all the gizmo's axes alike (a text's height sizes the whole text). */
+  uniform?: boolean;
+  /** No handle along an axis where the box is thinner than this (mm): a flat engraving is not made thicker. */
+  thin?: number;
 }
 
 /** Everything a design can be dragged by in 3D. */
@@ -62,6 +68,13 @@ export const GRIP_KINDS: { kind: GripKind; label: string; key: string }[] = [
 /** The axes the gizmo has handles on. */
 export function sizeAxes(g: SizeGizmo): GripAxis[] {
   return AXES.filter((a) => g.settings.some((s) => s.axes.includes(a)));
+}
+
+/** The axes the gizmo shows on a box of `size` (mm): its axes less those the box is too thin along. */
+export function shownAxes(g: SizeGizmo, size: Factors): GripAxis[] {
+  const all = sizeAxes(g);
+  const kept = g.thin ? all.filter((a) => size[a] >= g.thin!) : all;
+  return kept.length ? kept : all;
 }
 
 /** Millimetres along an axis for a pointer moved by (dx, dy) px, the axis drawn as `u` px per mm. */
