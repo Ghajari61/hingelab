@@ -116,7 +116,6 @@ html:has(.landing), body:has(> .landing) { height: auto; overflow: visible; }
 .d-copy { display: grid; justify-items: start; gap: 6px; }
 .d-copy .btn-primary { margin-top: 20px; background: #fff; color: #1b1b3a; box-shadow: 0 10px 24px -10px rgba(0,0,0,.6); }
 .d-fine { font-size: 13px; color: #9a9dc0 !important; margin-top: 12px !important; line-height: 1.6; }
-.d-fine code { font-family: var(--font-num); font-size: 11px; word-break: break-all; color: #c9cbe6; }
 .d-shot { display: grid; grid-template-rows: 30px 1fr; border-radius: 14px; overflow: hidden; background: #f4f5fa; box-shadow: 0 30px 60px -20px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.1); transform: perspective(1200px) rotateY(-8deg) rotateX(3deg); }
 .d-bar { display: flex; align-items: center; gap: 6px; padding: 0 12px; background: #e7e8f2; }
 .d-bar i { width: 10px; height: 10px; border-radius: 50%; background: #c9cbe0; }

@@ -223,7 +223,7 @@ export default function HomePage() {
               {release ? (
                 <>
                   <a href={release.url} className="btn-primary btn-lg" download><Download size={18} aria-hidden="true" />Download for Windows</a>
-                  <p className="d-fine">Version {release.version} · {release.size} · Windows 10 and 11 (64-bit){release.sha256 && <><br />SHA-256 <code>{release.sha256}</code></>}</p>
+                  <p className="d-fine">Version {release.version} · {release.size} · Windows 10 and 11 (64-bit)</p>
                 </>
               ) : (
                 <p className="d-fine">The Windows installer will be available here soon.</p>
