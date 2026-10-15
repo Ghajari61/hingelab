@@ -251,24 +251,34 @@ export default function HomePage() {
               <thead>
                 <tr>
                   <th scope="col"><span className="sr-only">Feature</span></th>
-                  <th scope="col">Free<span className="price">$0</span></th>
-                  <th scope="col" className="pro-col">Pro<span className="price">${PRICES.monthly}<small> / month</small></span><span className="price-alt">or ${PRICES.yearly} / year</span></th>
+                  <th scope="col" className="plan-col">
+                    <span className="plan-badge quiet">To try it</span>
+                    <span className="plan-kicker">Free</span>
+                    <span className="price">$0</span>
+                    <span className="price-alt">No account needed</span>
+                  </th>
+                  <th scope="col" className="plan-col pro-col">
+                    <span className="plan-badge">Best for selling</span>
+                    <span className="plan-kicker">Pro</span>
+                    <span className="price">${PRICES.monthly}<small> / month</small></span>
+                    <span className="price-alt">or ${PRICES.yearly} / year{PRICES.monthly * 12 > PRICES.yearly && <span className="save">Save ${PRICES.monthly * 12 - PRICES.yearly}</span>}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {PLAN_ROWS.map((r) => (
                   <tr key={r.feature}>
                     <th scope="row">{r.feature}</th>
-                    <td>{r.free === "✓" ? <Check /> : r.free}</td>
-                    <td className="pro-col">{r.pro === "✓" ? <Check /> : r.pro}</td>
+                    <td className="plan-col"><span className="feat-name">{r.feature}</span>{r.free === "✓" ? <Check /> : r.free}</td>
+                    <td className="plan-col pro-col"><span className="feat-name">{r.feature}</span>{r.pro === "✓" ? <Check /> : r.pro}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
                   <td />
-                  <td><Link href="/app/editor/local" className="btn-ghost">Start free</Link></td>
-                  <td className="pro-col"><Link href="/signup?next=%2Fapp%2Fbilling" className="btn-primary">Get Pro</Link></td>
+                  <td className="plan-col"><Link href="/app/editor/local" className="btn-ghost plan-cta">Start free</Link></td>
+                  <td className="plan-col pro-col"><Link href="/signup?next=%2Fapp%2Fbilling" className="btn-primary plan-cta">Get Pro</Link></td>
                 </tr>
               </tfoot>
             </table>
