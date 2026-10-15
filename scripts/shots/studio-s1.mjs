@@ -57,9 +57,9 @@ await withBrowser(async (page) => {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: /Save to Computer/ }).click()]);
   const file = path.join(os.tmpdir(), dl.suggestedFilename());
   await dl.saveAs(file);
-  check(dl.suggestedFilename() === "Coaster set v2.hingelab", "download is named after the project");
+  check(dl.suggestedFilename() === "Coaster set v2.oclc", "download is named after the project");
   const bytes = fs.readFileSync(file);
-  check(bytes[0] === 0x50 && bytes[1] === 0x4b, ".hingelab is a ZIP");
+  check(bytes[0] === 0x50 && bytes[1] === 0x4b, "a Studio .oclc is a ZIP");
 
   await page.reload();
   await page.getByTestId("studio-editor").waitFor();

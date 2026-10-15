@@ -37,6 +37,7 @@ import { hingePresetParams } from "@/lib/hinge/presets";
 import { useMyPresets } from "@/components/shell/useMyPresets";
 import { useSharedView } from "@/components/shell/SharedView";
 import { SHARED_ID } from "@/lib/share/id";
+import { useProjectFile } from "@/components/shell/useProjectFile";
 import { Canvas } from "./Canvas";
 import { rulerSvg } from "./Rulers";
 import { PanelDock } from "./PanelDock";
@@ -93,9 +94,18 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   const account = usePlan();
   const myPresets = useMyPresets();
   const locks = hingeLocks(account.plan, params);
-  const fileRef = useRef<HTMLInputElement>(null);
   const toastT = useRef<number>(0);
   const onStatus = useCallback((s: string) => setSaved(s), []);
+  const file = useProjectFile({
+    section: "hinge", params, fileBase: () => (params.name?.trim() && params.name !== DEFAULTS.name ? params.name : baseName(params)), toast: (m) => toastMsg(m), opened: start?.file,
+    cloudImport: cloud ? importIntoCloud : undefined,
+    write: async () => (await import("@/components/shell/projectFile")).projectText({ app: "HingeLab", product: "hinge-box", version: 1 }, params),
+    load: (f) => {
+      const next = mergeParams(f.params as Partial<Params>);
+      patch(next, true);
+      applyFit(next);
+    },
+  });
 
   const arranged = useMemo(() => arrangeHinge(params), [params]);
   const result = arranged.result;
@@ -261,15 +271,12 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
     }
   }
 
-  function saveProject() {
-    offerFile(baseName(params) + ".hingelab.json", JSON.stringify({ app: "HingeLab", version: 1, params }, null, 2), "application/json");
-  }
-
-  function openProject() {
-    if (fileRef.current) { fileRef.current.value = ""; fileRef.current.click(); }
-  }
+  function saveProject() { void file.save(); }
+  function saveProjectAs() { void file.saveAs(); }
+  function openProject() { void file.open(); }
 
   function newProject() {
+    file.forget();
     if (cloud) {
       toastMsg("Creating a new box…");
       void openNewCloudProject("hinge-box").then((err) => { if (err) toastMsg(err); });
@@ -334,10 +341,11 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   useEffect(() => {
     if (!start || started.current) return;
     started.current = true;
-    const next = hingePresetParams(start.params as Partial<Params>);
+    const next = start.file ? mergeParams(start.params as Partial<Params>) : hingePresetParams(start.params as Partial<Params>);
     patch(next, true);
     applyFit(next);
-    if (start.id !== SHARED_ID) toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
+    if (start.file) { file.markClean(); toastMsg(`Opened ${start.file.name}`); }
+    else if (start.id !== SHARED_ID) toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -345,8 +353,8 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   function doRedo() { if (redo()) toastMsg("Redo"); }
 
   const openExport = () => setExporting(true);
-  const api = useRef({ exportNow, openExport, saveProject, openProject, newProject, doUndo, doRedo, copySVG, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef });
-  api.current = { exportNow, openExport, saveProject, openProject, newProject, doUndo, doRedo, copySVG, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef };
+  const api = useRef({ exportNow, openExport, saveProject, saveProjectAs, openProject, importPick: file.importPick, newProject, doUndo, doRedo, copySVG, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef });
+  api.current = { exportNow, openExport, saveProject, saveProjectAs, openProject, importPick: file.importPick, newProject, doUndo, doRedo, copySVG, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef };
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -357,8 +365,9 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
         const k = e.key.toLowerCase();
         const va = api.current;
         if (k === "z" && !inField) { e.preventDefault(); e.shiftKey ? va.doRedo() : va.doUndo(); }
-        else if (k === "s") { e.preventDefault(); va.saveProject(); }
+        else if (k === "s") { e.preventDefault(); if (e.shiftKey) va.saveProjectAs(); else va.saveProject(); }
         else if (k === "o") { e.preventDefault(); va.openProject(); }
+        else if (k === "i" && !e.shiftKey) { e.preventDefault(); va.importPick(); }
         else if (k === "e") { e.preventDefault(); if (e.shiftKey) va.openExport(); else void va.exportNow(); }
         else if (k === "n") { e.preventDefault(); va.newProject(); }
         else if (k === "0") { e.preventDefault(); va.fit(); }
@@ -387,7 +396,9 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
       { label: "New box", kbd: "Ctrl+N", run: newProject },
       { label: "Start page", kbd: "", run: onHome },
       { label: "Open project…", kbd: "Ctrl+O", run: openProject },
+      { label: "Import settings from a project…", kbd: "Ctrl+I", run: file.importPick },
       { label: "Save project", kbd: "Ctrl+S", run: saveProject },
+      { label: "Save project as…", kbd: "Ctrl+Shift+S", run: saveProjectAs },
       { label: "Save as my preset…", kbd: "", run: () => setModal({ type: "preset", name: params.name }) },
       { label: "Share link…", kbd: "", run: () => setSharing(true) },
       "-",
@@ -537,7 +548,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
         zoom={zoom}
         parts={model && lay ? { count: model.parts.length, used: usedText(usedArea(lay, arranged.sheets), (mm) => fmtLen(mm, units, true)) } : null}
         fit={fit}
-        saved={shared.viewing ? "Shared design, not saved" : saved}
+        saved={shared.viewing ? "Shared design, not saved" : file.status ?? saved}
       />
       <Dialogs
         modal={modal}
@@ -564,36 +575,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
       {shared.banner}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".json,.hingelab.json,application/json"
-        hidden
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          const rd = new FileReader();
-          rd.onload = () => {
-            if (cloud) {
-              toastMsg(`Opening ${f.name}…`);
-              void importIntoCloud(String(rd.result)).then((err) => { if (err) toastMsg(err); });
-              return;
-            }
-            try {
-              const j = JSON.parse(String(rd.result)) as { product?: string; params?: Partial<Params> };
-              if (j.product === "letters") { toastMsg("That is a Letters project. Switch to Letters to open it."); return; }
-              if (!j.params) throw new Error("missing params");
-              const next = mergeParams(j.params);
-              patch(next, true);
-              applyFit(next);
-              toastMsg(`Opened ${f.name}`);
-            } catch {
-              toastMsg("That file is not a HingeLab project");
-            }
-          };
-          rd.readAsText(f);
-        }}
-      />
+      {file.input}
     </div>
     </HelpContext.Provider>
   );

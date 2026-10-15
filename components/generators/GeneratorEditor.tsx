@@ -38,7 +38,7 @@ import { NestChip, useNestWorker } from "./useNestWorker";
 import { getPath, setPath } from "@/lib/generators/path";
 import { loadGenerator } from "@/lib/generators/registry";
 import { makeTextFn } from "@/lib/generators/text";
-import type { AnyGenerator, BuildContext, ChoiceSpec, GenBase, GenPreset } from "@/lib/generators/types";
+import type { AnyGenerator, BuildContext, ChoiceSpec, FieldSpec, GenBase, GenPreset, ImageSpec } from "@/lib/generators/types";
 import { GEN_RAIL_GROUPS } from "@/lib/generators/railArt.generated";
 import { addRailGroups } from "@/lib/railArt";
 import { presetMatches, randomiseParams, shuffleFields } from "@/lib/generators/randomise";
@@ -47,6 +47,7 @@ import { GeneratorDock } from "./GeneratorDock";
 import { useGenPrefs } from "./useGenPrefs";
 import { LockToggle } from "./LockToggle";
 import { useSharedView } from "@/components/shell/SharedView";
+import { useProjectFile } from "@/components/shell/useProjectFile";
 import { useFlags } from "@/components/shell/useFlags";
 import { usePhoneFlow } from "@/components/shell/usePhone";
 import { designGates, gateLock } from "@/lib/gates";
@@ -133,10 +134,36 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const [upgrade, setUpgrade] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastT = useRef<number>(0);
-  const fileRef = useRef<HTMLInputElement>(null);
   const onStatus = useCallback((s: string) => setSaved(s), []);
   const shared = useSharedView(start, start?.name ?? def.name, toastMsg);
   useAutosave(params, units, onStatus, KEY, !shared.viewing, def.version);
+  const file = useProjectFile({
+    section: def.id, params, fileBase: () => def.fileName(params), toast: toastMsg, opened: start?.file,
+    write: async () => (await import("@/components/shell/projectFile")).projectText({ app: "HingeLab", product: def.id, version: def.version }, params),
+    load: (f) => {
+      replace(def.merge(def.migrate ? def.migrate(f.params, f.version) : f.params) as P, true);
+      window.setTimeout(() => viewApi.fit(), 50);
+    },
+    importAccept: ".svg,.dxf,image/svg+xml,image/png,image/jpeg,image/webp",
+    importOther: importPicture,
+  });
+
+  /** A picture or drawing goes into the design's picture field when it shows one; otherwise it opens in Studio. */
+  async function importPicture(f: File) {
+    const { DRAWING, PICTURE, dxfAsSvg, feedFileInput, importToStudio } = await import("@/components/shell/importFiles");
+    const drawing = DRAWING.test(f.name);
+    if (!drawing && !PICTURE.test(f.type)) { toastMsg("Import takes SVG, DXF, PNG, JPEG or WebP pictures, or .oclc projects."); return; }
+    const fields = def.sections.filter((s) => !s.show || s.show(params)).flatMap((s) => s.fields as FieldSpec<P>[])
+      .filter((x): x is ImageSpec<P> => x.kind === "image" && (!x.show || x.show(params)) && (!drawing || !!x.trace));
+    for (const fd of fields) {
+      const input = document.querySelector<HTMLInputElement>(`.gen-app .dock input[type=file][aria-label="${CSS.escape(fd.label)}"]`);
+      if (!input) continue;
+      input.closest("details")?.setAttribute("open", "");
+      input.closest(".gen-image, .ipick")?.scrollIntoView({ block: "center" });
+      if (feedFileInput(input, /\.dxf$/i.test(f.name) ? await dxfAsSvg(f) : f)) return;
+    }
+    await importToStudio(f, toastMsg);
+  }
   const flags = useFlags();
   const phoneFlow = usePhoneFlow();
   const [lastPreset, setLastPreset] = useState<string | null>(null);
@@ -319,16 +346,12 @@ function GenEditor({ def, onProduct, onHome, start }: {
     }
   }
 
-  async function saveProject() {
-    const { projectText } = await import("@/components/shell/projectFile");
-    offerFile(def.fileName(params) + ".hingelab.json", await projectText({ app: "HingeLab", product: def.id, version: def.version }, params), "application/json");
-  }
-
-  function openProject() {
-    if (fileRef.current) { fileRef.current.value = ""; fileRef.current.click(); }
-  }
+  function saveProject() { void file.save(); }
+  function saveProjectAs() { void file.saveAs(); }
+  function openProject() { void file.open(); }
 
   function newProject() {
+    file.forget();
     replace(def.defaults() as P, true);
     window.setTimeout(() => viewApi.fit(), 50);
     toastMsg(`New ${def.name.toLowerCase()}`);
@@ -362,9 +385,11 @@ function GenEditor({ def, onProduct, onHome, start }: {
     // Start presets with no settings (featured cards, links) take the built-in preset with that id.
     const from = !start.params || Object.keys(start.params).length === 0 ? def.presets.find((x) => x.id === start.id) : start;
     if (!from) return;
-    replace(def.merge(from.params) as P, true);
+    const f = start.file;
+    replace(def.merge(f && def.migrate ? def.migrate(from.params, f.version) : from.params) as P, true);
     window.setTimeout(() => viewApi.fit(), 50);
-    if (start.id !== SHARED_ID) toastMsg(`Started from “${from.name}”. Ctrl+Z returns to your last design.`);
+    if (f) { file.markClean(); toastMsg(`Opened ${f.name}`); }
+    else if (start.id !== SHARED_ID) toastMsg(`Started from “${from.name}”. Ctrl+Z returns to your last design.`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -372,8 +397,8 @@ function GenEditor({ def, onProduct, onHome, start }: {
   function doRedo() { if (redo()) toastMsg("Redo"); }
 
   const openExport = () => setExporting(true);
-  const api = useRef({ exportNow, openExport, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef });
-  api.current = { exportNow, openExport, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef };
+  const api = useRef({ exportNow, openExport, saveProject, saveProjectAs, openProject, importPick: file.importPick, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef });
+  api.current = { exportNow, openExport, saveProject, saveProjectAs, openProject, importPick: file.importPick, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef };
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -384,8 +409,9 @@ function GenEditor({ def, onProduct, onHome, start }: {
         const k = e.key.toLowerCase();
         const va = api.current;
         if (k === "z" && !inField) { e.preventDefault(); e.shiftKey ? va.doRedo() : va.doUndo(); }
-        else if (k === "s") { e.preventDefault(); va.saveProject(); }
+        else if (k === "s") { e.preventDefault(); if (e.shiftKey) va.saveProjectAs(); else va.saveProject(); }
         else if (k === "o") { e.preventDefault(); va.openProject(); }
+        else if (k === "i" && !e.shiftKey) { e.preventDefault(); va.importPick(); }
         else if (k === "e") { e.preventDefault(); if (e.shiftKey) va.openExport(); else void va.exportNow(); }
         else if (k === "n") { e.preventDefault(); va.newProject(); }
         else if (k === "0") { e.preventDefault(); va.fit(); }
@@ -421,7 +447,9 @@ function GenEditor({ def, onProduct, onHome, start }: {
       { label: `New ${noun}`, kbd: "Ctrl+N", run: newProject },
       { label: "Start page", kbd: "", run: onHome },
       { label: "Open project…", kbd: "Ctrl+O", run: openProject },
+      { label: "Import picture or project…", kbd: "Ctrl+I", run: file.importPick },
       { label: "Save project", kbd: "Ctrl+S", run: saveProject },
+      { label: "Save project as…", kbd: "Ctrl+Shift+S", run: saveProjectAs },
       { label: "Save as my preset…", kbd: "", run: () => setModal({ type: "preset", name: params.name }) },
       { label: "Share link…", kbd: "", run: () => setSharing(true) },
       "-",
@@ -642,7 +670,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
         zoom={zoom}
         parts={out && lay ? { count: lay.items.filter((it) => it.i >= 0).length, used: usedText(usedArea(lay, arranged.sheets), (mm) => fmtLen(mm, units, true)) } : null}
         fit={fit}
-        saved={shared.viewing ? "Shared design, not saved" : saved}
+        saved={shared.viewing ? "Shared design, not saved" : file.status ?? saved}
       />
       <Dialogs
         modal={modal}
@@ -675,33 +703,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       {shared.banner}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".json,.hingelab.json,application/json"
-        hidden
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          const rd = new FileReader();
-          rd.onload = async () => {
-            try {
-              const j = JSON.parse(String(rd.result)) as { product?: string; version?: number; params?: unknown };
-              if (j.product !== def.id || !j.params) {
-                toastMsg(j.params ? `That is not a ${noun} project. Switch to its product to open it.` : "That file is not a HingeLab project");
-                return;
-              }
-              const fontsAdded = await (await import("@/components/shell/projectFile")).restoreProjectAssets(j);
-              replace(def.merge(def.migrate ? def.migrate(j.params, typeof j.version === "number" ? j.version : 1) : j.params) as P, true);
-              window.setTimeout(() => viewApi.fit(), 50);
-              toastMsg(`Opened ${f.name}${fontsAdded ? ` and added ${fontsAdded} font${fontsAdded > 1 ? "s" : ""} on this device` : ""}`);
-            } catch {
-              toastMsg("That file is not a HingeLab project");
-            }
-          };
-          rd.readAsText(f);
-        }}
-      />
+      {file.input}
       {help.drawer}
     </div>
     </HelpContext.Provider>

@@ -1,7 +1,8 @@
 "use client";
 
 import { createDocument, newId, type NewDocumentOptions } from "@/lib/studio/doc";
-import { openHingelab, packHingelab, projectFileName, type OpenedFile } from "@/lib/studio/file";
+import { openHingelab, packHingelab, type OpenedFile } from "@/lib/studio/file";
+import { oclcName } from "@/lib/projects/file";
 import { getLocalAsset, listLocalProjects, newLocalId, putLocalAsset, saveLocalProject } from "@/lib/studio/localStore";
 import { uniqueName } from "@/lib/studio/naming";
 import { documentThumbnail } from "@/lib/studio/thumbnail";
@@ -67,12 +68,18 @@ export async function saveNewProject(doc: Document): Promise<string> {
 
 export const MAX_SVG_BYTES = 40 * 1024 * 1024;
 
-/** "Import SVG…": a new project sized to the drawing, its colours sorted onto cut layers. */
+/** "Import SVG or DXF…": a new project sized to the drawing, its colours sorted onto cut layers. */
 export async function createProjectFromSvg(file: File, materialId: string, machineId: string): Promise<{ id: string; warnings: string[] }> {
-  if (file.size > MAX_SVG_BYTES) throw new Error("That SVG is larger than 40 MB.");
+  const dxf = /\.dxf$/i.test(file.name);
+  if (file.size > MAX_SVG_BYTES) throw new Error(`That ${dxf ? "DXF" : "SVG"} is larger than 40 MB.`);
   const { svgDocument } = await import("@/lib/studio/svgProject");
-  const name = file.name.replace(/\.svgz?$/i, "") || "Imported SVG";
-  const { doc, warnings } = svgDocument([{ src: await file.text(), name }], { id: newLocalId(), name, materialId, machineId });
+  const name = file.name.replace(/\.(svgz?|dxf)$/i, "") || "Imported drawing";
+  let src = await file.text();
+  if (dxf) {
+    const { dxfToSvg, readDxf } = await import("@/lib/ai/dxfRead");
+    src = dxfToSvg(readDxf(src));
+  }
+  const { doc, warnings } = svgDocument([{ src, name }], { id: newLocalId(), name, materialId, machineId });
   return { id: await saveNewProject(doc), warnings };
 }
 
@@ -119,16 +126,45 @@ export async function svgToPng(svg: string, size = 256): Promise<Uint8Array | un
   }
 }
 
-/** File → Save to Computer: downloads the project as a .hingelab file. */
-export async function downloadProject(doc: Document, thumbnailSvg?: string): Promise<void> {
+async function projectZip(doc: Document, thumbnailSvg?: string): Promise<Uint8Array> {
   const assets: Record<string, Uint8Array> = {};
   for (const a of doc.assets) {
     const bytes = await getLocalAsset(doc.id, a.id);
     if (bytes) assets[a.id] = bytes;
   }
   const thumbnail = await svgToPng(thumbnailSvg ?? documentThumbnail(doc));
-  const zip = packHingelab({ doc, assets, thumbnail });
-  downloadBytes(zip, projectFileName(doc.name), "application/zip");
+  return packHingelab({ doc, assets, thumbnail });
+}
+
+/** Downloads the project as an .oclc file (a .hingelab ZIP under the shared extension). */
+export async function downloadProject(doc: Document, thumbnailSvg?: string): Promise<void> {
+  downloadBytes(await projectZip(doc, thumbnailSvg), oclcName(doc.name), "application/zip");
+}
+
+/** Files on the computer the open projects were saved to this session, by project id. */
+const kept = new Map<string, FileSystemFileHandle>();
+export const computerFile = (id: string) => kept.get(id)?.name ?? null;
+
+/**
+ * File → Save to Computer: where the browser can keep a file, the first save asks where and later
+ * saves (`asNew` false) write over it; elsewhere each save downloads a copy. Returns the file name,
+ * or null when the dialog was cancelled.
+ */
+export async function saveProjectToComputer(doc: Document, asNew: boolean): Promise<string | null> {
+  const { canKeepFiles, isAbort, pickSaveHandle, writeHandle } = await import("@/components/shell/projectFiles");
+  const zip = await projectZip(doc);
+  let h = asNew ? undefined : kept.get(doc.id);
+  if (!h && canKeepFiles()) {
+    try { h = await pickSaveHandle(oclcName(doc.name)); } catch (e) { if (isAbort(e)) return null; }
+  }
+  if (h) {
+    await writeHandle(h, zip);
+    kept.set(doc.id, h);
+    return h.name;
+  }
+  const name = oclcName(doc.name);
+  downloadBytes(zip, name, "application/zip");
+  return name;
 }
 
 export function downloadBytes(bytes: Uint8Array | string, name: string, mime: string) {

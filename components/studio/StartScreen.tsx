@@ -15,6 +15,7 @@ import { templateThumb, TEMPLATES } from "@/lib/templates/catalog";
 import { searchTemplates } from "@/lib/templates/search";
 import { GeneratorArt } from "./GeneratorArt";
 import { NewDocumentDialog, NewProjectDialog, OnboardingDialog, type NewProjectResult } from "./NewDialogs";
+import { detectProject, OPEN_ACCEPT } from "@/lib/projects/file";
 import { createLocalProject, createProjectFromImage, createProjectFromSvg, downloadProject, editorPath, importProjectFile } from "./projectActions";
 import { StudioHeader } from "./StudioHeader";
 import { usePrefs } from "./usePrefs";
@@ -114,6 +115,13 @@ export default function StartScreen() {
 
   async function openFile(f: File) {
     try {
+      const d = detectProject(new Uint8Array(await f.arrayBuffer()));
+      if ("error" in d) { toast({ message: d.error, kind: "danger" }); return; }
+      if (d.section !== "studio") {
+        const { openProjectFile } = await import("@/components/shell/projectFiles");
+        await openProjectFile(f, null, null, (m) => toast({ message: m }));
+        return;
+      }
       const r = await importProjectFile(f);
       if ("id" in r) { router.push(editorPath(r.id)); return; }
       toast({
@@ -164,7 +172,7 @@ export default function StartScreen() {
     { id: "open", label: "Open", run: () => projectAction("open", p) },
     { id: "rename", label: "Rename…", shortcut: "F2", run: () => projectAction("rename", p) },
     { id: "duplicate", label: "Duplicate", run: () => projectAction("duplicate", p) },
-    { id: "download", label: "Download (.hingelab)", run: () => projectAction("download", p) },
+    { id: "download", label: "Download (.oclc)", run: () => projectAction("download", p) },
     { id: "move", label: "Move to folder…", disabled: true, reason: "Folders are for cloud projects; sign in to use them" },
     "-",
     { id: "delete", label: "Delete", run: () => projectAction("delete", p) },
@@ -249,11 +257,11 @@ export default function StartScreen() {
           <h2 id="open">Open</h2>
           <div className="open-actions">
             <button type="button" className="ui-btn" onClick={() => fileRef.current?.click()}><FolderOpen size={15} /> Open from computer…</button>
-            <button type="button" className="ui-btn" onClick={() => svgRef.current?.click()} data-testid="import-svg"><FileUp size={15} /> Import SVG…</button>
+            <button type="button" className="ui-btn" onClick={() => svgRef.current?.click()} data-testid="import-svg"><FileUp size={15} /> Import SVG or DXF…</button>
             <button type="button" className="ui-btn" onClick={() => imageRef.current?.click()}><ImagePlus size={15} /> Import image to trace…</button>
           </div>
-          <input ref={svgRef} type="file" accept=".svg,image/svg+xml" hidden aria-label="Import an SVG drawing" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void importSvgFile(f); }} />
-          <input ref={fileRef} type="file" accept=".hingelab,application/zip,application/json" hidden aria-label="Open a project file" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void openFile(f); }} />
+          <input ref={svgRef} type="file" accept=".svg,.dxf,image/svg+xml,application/dxf" hidden aria-label="Import an SVG drawing" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void importSvgFile(f); }} />
+          <input ref={fileRef} type="file" accept={OPEN_ACCEPT} hidden aria-label="Open a project file" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void openFile(f); }} />
           <input ref={imageRef} type="file" accept="image/png,image/jpeg,image/webp" hidden aria-label="Import an image" onChange={(e) => {
             const f = e.target.files?.[0]; e.target.value = "";
             if (f) void createProjectFromImage(f, prefs.materialId, prefs.machineId).then((id) => router.push(editorPath(id))).catch((err) => toast({ message: err.message, kind: "danger" }));

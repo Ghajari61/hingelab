@@ -155,7 +155,7 @@ await withBrowser(async (page) => {
     r.onsuccess = () => { const t = r.result.transaction("fonts", "readwrite"); t.objectStore("fonts").delete(id); t.oncomplete = () => { r.result.close(); res(); }; };
   }), fontId);
   check(!(await fonts()).includes(fontId), "the font is removed from this device");
-  await page.locator('input[type=file][accept^=".json"]').setInputFiles({ name: proj.name, mimeType: "application/json", buffer: proj.data });
+  await page.locator('input[aria-label="Open a project file"]').setInputFiles({ name: proj.name, mimeType: "application/json", buffer: proj.data });
   await toast(/Opened .* and added 1 font on this device/, "opening the project adds the font back");
   check((await fonts()).includes(fontId), "under the same id");
   await page.waitForTimeout(1500);

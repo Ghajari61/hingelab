@@ -385,11 +385,14 @@ export const ARTICLES: HelpArticle[] = [
     related: ["project-files", "gallery", "batch-personalisation"],
   },
   {
-    slug: "project-files", product: "general", title: "Project files (.hingelab.json)",
+    slug: "project-files", product: "general", title: "Project files (.oclc)",
     summary: "Back up a design, or move it to another computer, with its pictures and uploaded fonts inside.",
-    keywords: ["save", "open", "project", "file", "backup", "move", "device", "computer", "json", "hingelab", "fonts"],
+    keywords: ["save", "save as", "open", "import", "project", "file", "backup", "move", "device", "computer", "oclc", "json", "hingelab", "fonts"],
     blocks: [
-      { p: "File › Save project (Ctrl+S) downloads a .hingelab.json file; File › Open project… (Ctrl+O) opens one. Opening a project is one step: Ctrl+Z returns to the design you had." },
+      { p: "Every section saves the same kind of file, with the .oclc extension. File › Save project (Ctrl+S) asks where to save the first time; after that it saves over the same file without asking. File › Save project as… (Ctrl+Shift+S) saves a new file. The title shows the file's name, with a dot while there are unsaved changes." },
+      { p: "File › Open project… (Ctrl+O), or dropping a file on the editor, opens any .oclc file in the section that made it: a Clock file opens in Clock, a Studio file in Studio. Older .hingelab.json and .hingelab files open too. Opening a project is one step: Ctrl+Z returns to the design you had." },
+      { p: "File › Import… (Ctrl+I) brings things into the design you have open: a project's settings, a font in Letters, a 3D model or photo in Parametric, a picture or drawing (SVG, DXF, PNG, JPEG) in a generator's picture field, and drawings and pictures in Studio." },
+      { p: "Browsers that cannot save over a file (Firefox and Safari) download a new copy at each save." },
       { list: [
         "The file holds every setting, the pictures in the design and the fonts you uploaded that it uses (up to eight).",
         "Opening the file on another device adds those fonts to that device, so the text looks the same.",

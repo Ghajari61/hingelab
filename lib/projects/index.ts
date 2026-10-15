@@ -3,6 +3,7 @@
  */
 import { clone, DEFAULTS } from "@/lib/hinge/defaults";
 import { LETTER_DEFAULTS } from "@/lib/letters/defaults";
+import { GENERATOR_INFO, isGeneratorId } from "@/lib/generators/ids";
 import type { ProductId } from "@/lib/supabase/types";
 
 export type { ProductId };
@@ -57,6 +58,7 @@ export function parseProjectFile(text: string): ParsedProjectFile | { error: str
   const o = j as { product?: unknown; params?: unknown };
   if (!o.params || typeof o.params !== "object" || Array.isArray(o.params)) return { error: "That file is not a HingeLab project" };
   const product: ProductId = o.product === undefined ? "hinge-box" : isProduct(o.product) ? o.product : "hinge-box";
+  if (isGeneratorId(o.product)) return { error: `That is a ${GENERATOR_INFO[o.product].name} design. Generators save on your device: open it in the editor with File › Open project.` };
   if (o.product !== undefined && !isProduct(o.product)) return { error: "That project was made with a newer version of HingeLab" };
   return { product, params: o.params as Record<string, unknown> };
 }

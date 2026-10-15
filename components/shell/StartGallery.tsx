@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { OPEN_ACCEPT } from "@/lib/projects/ext";
 import { ArrowRight, Bookmark, Shapes, Trash2 } from "lucide-react";
 import type { PresetProduct } from "@/lib/userPresets";
 import { useMyPresets } from "./useMyPresets";
@@ -68,6 +69,25 @@ export function StartGallery({ onPick }: { onPick: (choice: StartChoice) => void
   ];
   const cover = (k: GeneratorId) => START_LAZY[k]?.cover ?? START_PRESETS[k][0]?.id;
   const mine = useMyPresets();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const noteT = useRef(0);
+  const say = (m: string) => { setNote(m); window.clearTimeout(noteT.current); noteT.current = window.setTimeout(() => setNote(null), 3200); };
+  async function openFrom(f: File, h: FileSystemFileHandle | null) {
+    const { openProjectFile } = await import("./projectFiles");
+    await openProjectFile(f, h, null, say).catch(() => say("That file is not a HingeLab project."));
+  }
+  async function openFile() {
+    const pf = await import("./projectFiles");
+    if (pf.canKeepFiles()) {
+      try {
+        const h = await pf.pickOpenHandle();
+        if (h) await openFrom(await h.getFile(), h);
+        return;
+      } catch { /* fall back to the file input */ }
+    }
+    if (fileRef.current) { fileRef.current.value = ""; fileRef.current.click(); }
+  }
   const go = (k: Product) => (saved[k] ? <>Continue “{saved[k]}”</> : "Start designing");
 
   return (
@@ -78,7 +98,12 @@ export function StartGallery({ onPick }: { onPick: (choice: StartChoice) => void
       </header>
       <main className="start-main">
         <h1>What would you like to make?</h1>
-        <p className="start-sub">Pick a product to continue where you left off, start from a preset below, or <a href="/app/ai">describe it to the AI designer</a>.</p>
+        <p className="start-sub">
+          Pick a product to continue where you left off, start from a preset below, <a href="/app/ai">describe it to the AI designer</a>, or{" "}
+          <button type="button" className="linklike" onClick={() => void openFile()}>open a project file</button>.
+        </p>
+        <input ref={fileRef} type="file" accept={OPEN_ACCEPT} hidden aria-label="Open a project file" onChange={(e) => { const f = e.target.files?.[0]; if (f) void openFrom(f, null); }} />
+        {note && <div className="toast" role="status">{note}</div>}
         <div className="start-products">
           {CORE_PRODUCTS.map((k) => (
             <button key={k} type="button" className="start-tile" aria-label={PRODUCT_INFO[k].name} onClick={() => onPick({ product: k })}>

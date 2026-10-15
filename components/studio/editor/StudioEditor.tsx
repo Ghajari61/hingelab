@@ -23,7 +23,8 @@ import { documentArt } from "@/lib/studio/thumbnailArt";
 import { fmtLength, UNIT_LIST } from "@/lib/studio/units";
 import { builtIn, loadWorkspaces, PANEL_LABELS, saveWorkspaces, showPanel, WORKSPACES, type PanelId, type Workspace, type WorkspaceState } from "@/lib/studio/workspace";
 import type { Document, Units } from "@/lib/studio/types";
-import { downloadProject, editorPath, importProjectFile, MAX_SVG_BYTES } from "../projectActions";
+import { computerFile, editorPath, importProjectFile, MAX_SVG_BYTES, saveProjectToComputer } from "../projectActions";
+import { detectProject, OPEN_ACCEPT } from "@/lib/projects/file";
 import { usePrefs } from "../usePrefs";
 import { Canvas, PX_PER_MM, pointerStore, type CanvasApi } from "./Canvas";
 import { buildHandlers, type CommandContext, type EditorDialog, type Handler } from "./commandHandlers";
@@ -185,15 +186,26 @@ function EditorShell({ opened }: { opened: Document }) {
 
   const saveNow = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
-    void persist(api.getState().doc).then(() => toast("Saved on this device"));
+    const doc = api.getState().doc;
+    void persist(doc).then(async () => {
+      if (!computerFile(doc.id)) { toast("Saved on this device"); return; }
+      const name = await saveProjectToComputer(doc, false).catch((e: Error) => { toast(`Saved on this device, but not to the file: ${e.message}`); return undefined; });
+      if (name) toast(`Saved to ${name} and on this device`);
+    });
   }, [api, persist, toast]);
 
-  // File ▸ Import SVG: the drawing keeps its page position on the first sheet when it fits, else lands in the view centre.
+  // File ▸ Import SVG or DXF: the drawing keeps its page position on the first sheet when it fits, else lands in the view centre.
   const placeSvg = useCallback(async (f: File) => {
-    if (f.size > MAX_SVG_BYTES) { toast("That SVG is larger than 40 MB."); return; }
+    const dxf = /\.dxf$/i.test(f.name);
+    if (f.size > MAX_SVG_BYTES) { toast(`That ${dxf ? "DXF" : "SVG"} is larger than 40 MB.`); return; }
     try {
       const { importSvg } = await import("@/lib/studio/svgImport");
-      const r = importSvg(await f.text(), { name: f.name.replace(/\.svgz?$/i, "") });
+      let text = await f.text();
+      if (dxf) {
+        const { dxfToSvg, readDxf } = await import("@/lib/ai/dxfRead");
+        text = dxfToSvg(readDxf(text));
+      }
+      const r = importSvg(text, { name: f.name.replace(/\.(svgz?|dxf)$/i, "") });
       if (!r.group) { toast("The SVG has no paths to cut. Convert text to paths and try again."); return; }
       const sheet = api.getState().doc.sheets[0];
       const b = r.box;
@@ -210,6 +222,62 @@ function EditorShell({ opened }: { opened: Document }) {
       toast(e instanceof Error ? e.message : "That SVG could not be imported.");
     }
   }, [api, toast]);
+
+  // A picture goes in the middle of the view at its 96 dpi size (at most 200 mm wide), ready to trace.
+  const placeImage = useCallback(async (f: File) => {
+    if (f.size > MAX_SVG_BYTES) { toast("That picture is larger than 40 MB."); return; }
+    try {
+      const bmp = await createImageBitmap(f);
+      const pxW = bmp.width, pxH = bmp.height;
+      bmp.close();
+      const { addImage } = await import("./ai/assets");
+      const center = canvasRef.current?.center() ?? { x: 0, y: 0 };
+      const id = await addImage(api, { blob: f, name: f.name.replace(/\.\w+$/, "") || "Picture", label: "Import image", pxW, pxH, place: { kind: "at", center, widthMm: Math.min(200, (pxW * 25.4) / 96) } });
+      if (id) toast(`Imported ${f.name}. Path › Trace Bitmap turns it into cut lines.`, true);
+    } catch {
+      toast("That picture could not be read. Use a PNG, JPEG or WebP file.");
+    }
+  }, [api, toast]);
+
+  const importAny = useCallback(async (f: File) => {
+    if (/^image\/(png|jpeg|webp)$/.test(f.type)) await placeImage(f);
+    else await placeSvg(f);
+  }, [placeImage, placeSvg]);
+
+  const openAny = useCallback(async (f: File) => {
+    try {
+      const d = detectProject(new Uint8Array(await f.arrayBuffer()));
+      if ("error" in d) { toast(d.error); return; }
+      if (d.section !== "studio") {
+        const { openProjectFile } = await import("@/components/shell/projectFiles");
+        await openProjectFile(f, null, null, toast);
+        return;
+      }
+      const r = await importProjectFile(f);
+      if ("id" in r) router.push(editorPath(r.id)); else toast("That file belongs to the classic editor.");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "That file could not be opened.");
+    }
+  }, [router, toast]);
+
+  // Files dropped on the editor: drawings and pictures are imported, project files opened.
+  const dropRef = useRef({ importAny, openAny });
+  dropRef.current = { importAny, openAny };
+  useEffect(() => {
+    const over = (e: DragEvent) => { if (e.dataTransfer?.types.includes("Files")) e.preventDefault(); };
+    const drop = (e: DragEvent) => {
+      if (e.defaultPrevented) return;
+      const f = e.dataTransfer?.files?.[0];
+      if (!f) return;
+      e.preventDefault();
+      if (/\.(oclc|hingelab|json)$/i.test(f.name)) void dropRef.current.openAny(f);
+      else if (/\.(svgz?|dxf)$/i.test(f.name) || /^image\/(png|jpeg|webp|svg\+xml)$/.test(f.type)) void dropRef.current.importAny(f);
+      else toast("Drop an SVG, DXF, PNG, JPEG or WebP file to import it, or an .oclc project to open it.");
+    };
+    document.addEventListener("dragover", over);
+    document.addEventListener("drop", drop);
+    return () => { document.removeEventListener("dragover", over); document.removeEventListener("drop", drop); };
+  }, [toast]);
 
   const resetWorkspace = useCallback(() => {
     const prev = layout;
@@ -231,7 +299,7 @@ function EditorShell({ opened }: { opened: Document }) {
       const copy: Document = { ...structuredClone(d), id: newLocalId(), name: `${d.name} copy`, updatedAt: new Date().toISOString() };
       void saveLocalProject(copy, documentThumbnail(copy)).then(() => toastAction(`Saved “${copy.name}” on this device`, { label: "Open", run: () => router.push(editorPath(copy.id)) }));
     },
-    download: () => void downloadProject(api.getState().doc),
+    download: () => void saveProjectToComputer(api.getState().doc, true).then((name) => { if (name) toast(`Saved ${name}`); }, (e: Error) => toast(`Could not save the file: ${e.message}`)),
     rename: () => setRenaming(true),
     revert: () => setDialog("revert"),
     dialog: (d) => setDialog(d),
@@ -435,13 +503,13 @@ function EditorShell({ opened }: { opened: Document }) {
         }}>Revert</button></>}>
         <p className="dlg-note">Every change since you opened this project is undone. You can still redo them from Edit → Undo.</p>
       </Dialog>
-      <input ref={svgRef} type="file" accept=".svg,image/svg+xml" hidden aria-label="Import an SVG drawing" onChange={(e) => {
+      <input ref={svgRef} type="file" accept=".svg,.dxf,image/svg+xml,application/dxf,image/png,image/jpeg,image/webp" hidden aria-label="Import an SVG drawing" onChange={(e) => {
         const f = e.target.files?.[0]; e.target.value = "";
-        if (f) void placeSvg(f);
+        if (f) void importAny(f);
       }} />
-      <input ref={fileRef} type="file" accept=".hingelab,application/zip" hidden aria-label="Open a project file" onChange={(e) => {
+      <input ref={fileRef} type="file" accept={OPEN_ACCEPT} hidden aria-label="Open a project file" onChange={(e) => {
         const f = e.target.files?.[0]; e.target.value = "";
-        if (f) void importProjectFile(f).then((r) => { if ("id" in r) router.push(editorPath(r.id)); else toast("That file belongs to the classic editor."); }).catch((err) => toast(err.message));
+        if (f) void openAny(f);
       }} />
     </div>
   );

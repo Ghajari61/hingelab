@@ -13,6 +13,7 @@ import { readStored, readUnits, useAutosave } from "@/hooks/useAutosave";
 import { useCloudAutosave, type CloudDoc } from "@/hooks/useCloudAutosave";
 import { thumbnailSVG } from "@/lib/projects/thumbnail";
 import { importIntoCloud, openNewCloudProject } from "@/components/editor/cloud";
+import { useProjectFile } from "@/components/shell/useProjectFile";
 import { PX_PER_MM, useCanvasView } from "@/hooks/useCanvasView";
 import { fmtLen, type Units } from "@/components/editor/format";
 import { MenuBar, type MenuEntry } from "@/components/editor/MenuBar";
@@ -126,10 +127,23 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   const [hb, setHb] = useState<HarfBuzz | null>(null);
   const [font, setFont] = useState<LoadedFont | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const toastT = useRef<number>(0);
   const onStatus = useCallback((s: string) => setSaved(s), []);
   const shared = useSharedView(start, start?.name ?? "Letters", (m) => toastMsg(m));
+  const file = useProjectFile({
+    section: "letters", params, fileBase: () => baseName(params), toast: (m) => toastMsg(m), opened: start?.file,
+    cloudImport: cloud ? importIntoCloud : undefined,
+    write: async () => (await import("@/components/shell/projectFile")).projectText({ app: "HingeLab", product: "letters", version: 1 }, params),
+    load: (f) => {
+      patch(mergeParams(f.params as Partial<LetterParams>), true);
+      window.setTimeout(() => viewApi.fit(), 50);
+    },
+    importAccept: ".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2",
+    importOther: (f) => {
+      if (/\.(ttf|otf|woff2?)$/i.test(f.name)) return uploadFont(f);
+      toastMsg("Import takes fonts (TTF, OTF, WOFF) or .oclc projects here.");
+    },
+  });
   const flags = useFlags();
   useAutosave(params, units, onStatus, KEY, !cloud && !shared.viewing);
   const thumbSrc = useRef<{ content: ReturnType<typeof letterLayerContent> | null; w: number; h: number }>({ content: null, w: 0, h: 0 });
@@ -305,16 +319,12 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
     }
   }
 
-  async function saveProject() {
-    const { projectText } = await import("@/components/shell/projectFile");
-    offerFile(baseName(params) + ".hingelab.json", await projectText({ app: "HingeLab", product: "letters", version: 1 }, params), "application/json");
-  }
-
-  function openProject() {
-    if (fileRef.current) { fileRef.current.value = ""; fileRef.current.click(); }
-  }
+  function saveProject() { void file.save(); }
+  function saveProjectAs() { void file.saveAs(); }
+  function openProject() { void file.open(); }
 
   function newProject() {
+    file.forget();
     if (cloud) {
       toastMsg("Creating new letters…");
       void openNewCloudProject("letters").then((err) => { if (err) toastMsg(err); });
@@ -379,7 +389,8 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
     started.current = true;
     replace(mergeParams(start.params as Partial<LetterParams>), true);
     window.setTimeout(() => viewApi.fit(), 50);
-    if (start.id !== SHARED_ID) toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
+    if (start.file) { file.markClean(); toastMsg(`Opened ${start.file.name}`); }
+    else if (start.id !== SHARED_ID) toastMsg(`Started from “${start.name}”. Ctrl+Z returns to your last design.`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -387,8 +398,8 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   function doRedo() { if (redo()) toastMsg("Redo"); }
 
   const openExport = () => setExporting(true);
-  const api = useRef({ exportNow, openExport, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef });
-  api.current = { exportNow, openExport, saveProject, openProject, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef };
+  const api = useRef({ exportNow, openExport, saveProject, saveProjectAs, openProject, importPick: file.importPick, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef });
+  api.current = { exportNow, openExport, saveProject, saveProjectAs, openProject, importPick: file.importPick, newProject, doUndo, doRedo, fit: viewApi.fit, zoomCenter: viewApi.zoomCenter, viewRef: viewApi.viewRef };
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -399,8 +410,9 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
         const k = e.key.toLowerCase();
         const va = api.current;
         if (k === "z" && !inField) { e.preventDefault(); e.shiftKey ? va.doRedo() : va.doUndo(); }
-        else if (k === "s") { e.preventDefault(); va.saveProject(); }
+        else if (k === "s") { e.preventDefault(); if (e.shiftKey) va.saveProjectAs(); else va.saveProject(); }
         else if (k === "o") { e.preventDefault(); va.openProject(); }
+        else if (k === "i" && !e.shiftKey) { e.preventDefault(); va.importPick(); }
         else if (k === "e") { e.preventDefault(); if (e.shiftKey) va.openExport(); else void va.exportNow(); }
         else if (k === "n") { e.preventDefault(); va.newProject(); }
         else if (k === "0") { e.preventDefault(); va.fit(); }
@@ -436,7 +448,9 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
       { label: "New letters", kbd: "Ctrl+N", run: newProject },
       { label: "Start page", kbd: "", run: onHome },
       { label: "Open project…", kbd: "Ctrl+O", run: openProject },
+      { label: "Import font or project…", kbd: "Ctrl+I", run: file.importPick },
       { label: "Save project", kbd: "Ctrl+S", run: saveProject },
+      { label: "Save project as…", kbd: "Ctrl+Shift+S", run: saveProjectAs },
       { label: "Save as my preset…", kbd: "", run: () => setModal({ type: "preset", name: params.name }) },
       { label: "Share link…", kbd: "", run: () => setSharing(true) },
       "-",
@@ -584,7 +598,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
         zoom={zoom}
         parts={model && lay ? { count: model.parts.length, used: usedText(usedArea(lay, arranged?.sheets ?? null), (mm) => fmtLen(mm, units, true)) } : null}
         fit={fit}
-        saved={shared.viewing ? "Shared design, not saved" : saved}
+        saved={shared.viewing ? "Shared design, not saved" : file.status ?? saved}
       />
       <Dialogs
         modal={modal}
@@ -611,40 +625,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
       {shared.banner}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".json,.hingelab.json,application/json"
-        hidden
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          const rd = new FileReader();
-          rd.onload = async () => {
-            let j: { product?: string; params?: Partial<LetterParams> };
-            try {
-              j = JSON.parse(String(rd.result));
-            } catch {
-              toastMsg("That file is not a HingeLab project");
-              return;
-            }
-            const fontsAdded = j?.product === "letters" ? await (await import("@/components/shell/projectFile")).restoreProjectAssets(j).catch(() => 0) : 0;
-            if (cloud) {
-              toastMsg(`Opening ${f.name}…`);
-              void importIntoCloud(String(rd.result)).then((err) => { if (err) toastMsg(err); });
-              return;
-            }
-            if (j?.product !== "letters" || !j.params) {
-              toastMsg(j?.params ? "That is a Hinge Box project. Switch to Hinge Box to open it." : "That file is not a HingeLab project");
-              return;
-            }
-            patch(mergeParams(j.params), true);
-            window.setTimeout(() => viewApi.fit(), 50);
-            toastMsg(`Opened ${f.name}${fontsAdded ? ` and added ${fontsAdded} font${fontsAdded > 1 ? "s" : ""} on this device` : ""}`);
-          };
-          rd.readAsText(f);
-        }}
-      />
+      {file.input}
       {help.drawer}
     </div>
     </HelpContext.Provider>

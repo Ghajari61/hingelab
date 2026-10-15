@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { NEW_LABEL, PRODUCT_LABEL, thumbnailURL, type ProductId } from "@/lib/projects";
 import type { ProjectSummary } from "@/lib/projects/repo";
+import { detectProject, OPEN_ACCEPT } from "@/lib/projects/file";
 import { createProjectAction, deleteProjectAction, duplicateProjectAction, importProjectAction, renameProjectAction } from "@/app/app/actions";
 
 function ago(iso: string | null) {
@@ -77,7 +78,7 @@ export function ProjectsHome({ projects, products, localOnly = [], limit = Infin
       {error && <p className="auth-msg err" role="alert">{error}</p>}
       {projects.length === 0 ? (
         <div className="boxes-empty">
-          <p>No projects yet. Start a box, or open a <code>.hingelab.json</code> file you saved earlier.</p>
+          <p>No projects yet. Start a box, or open a project file (<code>.oclc</code>) you saved earlier.</p>
         </div>
       ) : (
         <ul className="boxes-grid">
@@ -156,13 +157,25 @@ export function ProjectsHome({ projects, products, localOnly = [], limit = Infin
       <input
         ref={fileRef}
         type="file"
-        accept=".json,.hingelab.json,application/json"
+        accept={OPEN_ACCEPT}
         hidden
+        aria-label="Open a project file"
         onChange={(e) => {
           const f = e.target.files?.[0];
           e.target.value = "";
           if (!f) return;
-          f.text().then((text) => act(() => importProjectAction(text), true));
+          void f.arrayBuffer().then(async (buf) => {
+            const d = detectProject(new Uint8Array(buf));
+            if ("error" in d) { setError(d.error); return; }
+            if (d.section === "hinge" || d.section === "letters" || d.section === "parametric") {
+              const text = new TextDecoder().decode(buf);
+              act(() => importProjectAction(text), true);
+              return;
+            }
+            // Generators and Studio design on this device: the file opens in its own editor.
+            const { openProjectFile } = await import("@/components/shell/projectFiles");
+            await openProjectFile(f, null, null, (m) => { if (!m.startsWith("Opening")) setError(m); });
+          });
         }}
       />
     </main>

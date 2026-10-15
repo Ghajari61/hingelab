@@ -104,6 +104,22 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
   const [start, setStart] = useState<StartChoice | null>(() => (doc ? null : urlPreset(product)));
   // A share link (`#share=…`) opens its design read-only; the decoder loads only for such links.
   const [opening, setOpening] = useState(() => !doc && !!product && /(?:^#|&)share=/.test(window.location.hash));
+  // `?open=1`: a project file opened in another section waits in IndexedDB.
+  const [handoff, setHandoff] = useState(() => !doc && !!product && new URLSearchParams(window.location.search).get("open") === "1");
+  useEffect(() => {
+    if (!handoff) return;
+    const u = new URL(window.location.href);
+    u.searchParams.delete("open");
+    window.history.replaceState(window.history.state, "", u.pathname + u.search + u.hash);
+    void import("@/components/shell/projectFiles").then(async ({ takeHandoff, handoffPreset }) => {
+      const h = await takeHandoff();
+      if (!h) return;
+      setProduct(h.section);
+      storeProduct(h.section);
+      setUrlProduct(h.section);
+      setStart({ product: h.section, preset: handoffPreset(h) as StartChoice["preset"] });
+    }, () => {}).finally(() => setHandoff(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!start || doc) return;
     setUrlProduct(start.product);
@@ -150,6 +166,7 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
   };
 
   if (opening) return <div className="boot">Opening the shared design…</div>;
+  if (handoff) return <div className="boot">Opening the project file…</div>;
   if (!product) return <StartGallery onPick={pick} />;
   const preset = start?.product === product ? start.preset : undefined;
   const key = `${product}|${preset?.id ?? "autosave"}`;

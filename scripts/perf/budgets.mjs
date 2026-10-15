@@ -19,7 +19,8 @@ const PAGE_BUDGET = 250;
 const LAZY_BUDGETS = {
   // Every editor's sheet grid, typed sums and units, and the rail's search and favourites (D159): 150 → 154 KB.
   // The honeycomb pattern, lid options, kerf Y and the material picker (D164): 154 → 160 KB.
-  "Editor shell + Hinge Box": { key: /EditorRoot\.tsx -> \.\/Workspace$/, kb: 160 },
+  // .oclc Save, Save as, Open, Import and drop-to-open in every editor (D175): 160 → 162 KB.
+  "Editor shell + Hinge Box": { key: /EditorRoot\.tsx -> \.\/Workspace$/, kb: 162 },
   "Letters editor": { key: /Workspace\.tsx -> @\/components\/letters\/LettersEditor$/, kb: 145 },
   "Parametric editor": { key: /Workspace\.tsx -> @\/components\/parametric\/ParametricEditor$/, kb: 330 },
   "3D view (three.js)": { key: /EditorApp\.tsx -> \.\/HingeView3D$/, kb: 195 },
