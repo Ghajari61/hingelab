@@ -1,5 +1,5 @@
 import type { Params } from "../hinge";
-import { lenText, numberGrip, type Grip, type GripAxis } from "../three/grips";
+import { lenText, mmSetting, type GripAxis, type GripSet } from "../three/grips";
 
 export type HingeSizeKey = "W" | "D" | "H" | "dia";
 
@@ -7,24 +7,20 @@ export type HingeSizeKey = "W" | "D" | "H" | "dia";
 const MIN: Record<HingeSizeKey, number> = { W: 10, D: 10, H: 10, dia: 20 };
 
 /**
- * The Hinge Box's 3D handles: a side face sets the width (or the diameter, or the size across a
- * polygon), the front or back the depth, the top the height. Whichever part is selected, they sit
- * on the whole box. `setKey` writes the one setting a drag changes.
+ * The Hinge Box's scale gizmo: X sets the width (or the diameter, or the size across a polygon), Z
+ * the depth, Y the height; a diameter or a polygon's size grows on X and Z together. Whichever part
+ * is selected, it sizes the whole box. `write` gets the changed settings when a drag ends.
  */
-export function hingeGrips(p: Params, setKey: (key: HingeSizeKey, v: number, done: boolean) => void, units: "mm" | "in"): Grip[] {
+export function hingeGrips(p: Params, write: (patch: Partial<Record<HingeSizeKey, number>>) => void, units: "mm" | "in"): GripSet {
   const key = (axis: GripAxis): HingeSizeKey =>
     axis === "y" ? "H" : p.shape === "cyl" ? "dia" : axis === "z" && (p.shape === "rect" || p.shape === "pill") ? "D" : "W";
   const label = (k: HingeSizeKey) => (k === "dia" ? "Diameter" : k === "H" ? "Height" : k === "D" ? "Depth" : p.shape === "poly" ? "Across" : "Width");
-  const out: Grip[] = [];
-  for (const axis of ["x", "z", "y"] as GripAxis[]) {
-    const k = key(axis);
-    for (const side of axis === "y" ? [1 as const] : [1 as const, -1 as const]) {
-      out.push(numberGrip(`size-${axis}${side > 0 ? "+" : "-"}`, "size", axis, {
-        v0: p[k], min: MIN[k], max: 5000, step: 0.1, side,
-        set: (v, done) => setKey(k, v, done),
-        show: (v) => `${label(k)} ${lenText(v, units)}`,
-      }));
-    }
-  }
-  return out;
+  const axes = new Map<HingeSizeKey, GripAxis[]>();
+  for (const a of ["x", "z", "y"] as GripAxis[]) axes.set(key(a), [...(axes.get(key(a)) ?? []), a]);
+  return {
+    size: {
+      settings: [...axes].map(([k, on]) => mmSetting(k, on, { v0: p[k], min: MIN[k], max: 5000, step: 0.1 }, (v) => `${label(k)} ${lenText(v, units)}`)),
+      write: (values) => write(values as Partial<Record<HingeSizeKey, number>>),
+    },
+  };
 }

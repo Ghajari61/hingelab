@@ -1,6 +1,8 @@
-// End-to-end check of the 3D handles (D170): click a part in a 3D view, drag a face handle and the
-// design's setting follows (Boxes width, Hinge Box height, Letters size); a ring turns the phone
-// stand's lean; each drag is one undo step.
+// End-to-end check of the 3D handles (D170, D172): click a part in a 3D view and the scale gizmo
+// appears. Its X axis sizes the width alone, the X-Y strip width and height together, Shift keeps
+// the proportions, and Esc cancels; the design is scaled on screen while dragging and its settings
+// change once, on release (one undo step). A ring turns the phone stand's lean. Letters and
+// Parametric scale as a whole.
 // Usage: a production server on SHOTS_BASE (default :3456), then node scripts/e2e/grips3d.mjs.
 import path from "node:path";
 import { BASE, withBrowser } from "../shots/lib.mjs";
@@ -26,36 +28,44 @@ async function open3D(page, pane) {
 
 const hit = (page, pane) => page.locator(`${root} .v3-pane[data-pane="${pane}"] .v3-hit`);
 
-/** Points over a handle (the pointer turns into a hand there), found by moving over the view. */
-function handlePoints(page, pane) {
+/** Points over each handle, by id, found by moving over the view. */
+function gizmoPoints(page, pane) {
   return hit(page, pane).evaluate((el) => {
-    const r = el.getBoundingClientRect(), pts = [];
-    for (let y = r.top + 3; y < r.bottom - 3; y += 5) for (let x = r.left + 3; x < r.right - 3; x += 5) {
+    const r = el.getBoundingClientRect(), out = {};
+    for (let y = r.top + 3; y < r.bottom - 3; y += 4) for (let x = r.left + 3; x < r.right - 3; x += 4) {
       el.dispatchEvent(new PointerEvent("pointermove", { clientX: x, clientY: y, bubbles: true, buttons: 0, pointerId: 1 }));
-      if (el.style.cursor === "grab") pts.push([x, y]);
+      const id = el.dataset.grip;
+      if (id) (out[id] ??= []).push([x, y]);
     }
     el.dispatchEvent(new PointerEvent("pointermove", { clientX: r.left + 1, clientY: r.top + 1, bubbles: true, buttons: 0, pointerId: 1 }));
-    return pts;
+    return out;
   });
 }
+const mid = (pts) => [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length];
 
-/** The middle of the handle whose points are furthest along `pick` (e.g. rightmost). */
-function handleAt(pts, pick) {
-  if (!pts.length) return null;
-  const best = pts.reduce((a, b) => (pick(b) > pick(a) ? b : a));
-  const near = pts.filter((p) => Math.hypot(p[0] - best[0], p[1] - best[1]) < 22);
-  return [near.reduce((s, p) => s + p[0], 0) / near.length, near.reduce((s, p) => s + p[1], 0) / near.length];
+/** Drags from `a` by (dx, dy); the readout halfway, and a field read while still dragging. */
+async function drag(page, a, dx, dy, o = {}) {
+  await page.mouse.move(a[0], a[1]);
+  if (o.shift) await page.keyboard.down("Shift");
+  await page.mouse.down();
+  await page.mouse.move(a[0] + dx / 2, a[1] + dy / 2, { steps: 5 });
+  const tip = await page.getByTestId("v3-tip").innerText().catch(() => "");
+  await page.mouse.move(a[0] + dx, a[1] + dy, { steps: 5 });
+  await page.waitForTimeout(300);
+  const during = o.watch ? await num(page, o.watch) : null;
+  if (o.shotName) await shot(page, o.shotName);
+  if (o.cancel) await page.keyboard.press("Escape");
+  await page.mouse.up();
+  if (o.shift) await page.keyboard.up("Shift");
+  await page.waitForTimeout(1500);
+  return { tip, during };
 }
 
-async function drag(page, from, dx, dy) {
-  await page.mouse.move(from[0], from[1]);
-  await page.mouse.down();
-  await page.mouse.move(from[0] + dx / 2, from[1] + dy / 2, { steps: 4 });
-  const tip = await page.getByTestId("v3-tip").innerText().catch(() => "");
-  await page.mouse.move(from[0] + dx, from[1] + dy, { steps: 4 });
-  await page.mouse.up();
-  await page.waitForTimeout(1500);
-  return tip;
+/** Clicks the middle of a view (or the given fractions of it) and waits for the gizmo. */
+async function selectPart(page, pane, fx = 0.5, fy = 0.5) {
+  const b = await hit(page, pane).boundingBox();
+  await page.mouse.click(b.x + b.width * fx, b.y + b.height * fy);
+  await page.waitForTimeout(600);
 }
 
 await withBrowser(async (page) => {
@@ -63,35 +73,47 @@ await withBrowser(async (page) => {
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
 
-  // ---- Boxes: a side face sets the width.
+  // ---- Boxes: X sizes the width alone, the X-Y strip width and height, Esc cancels.
   await page.goto(`${BASE}/app/editor/local?p=boxes`);
   await page.locator(".canvas svg path").first().waitFor({ timeout: 30000 });
   await page.waitForTimeout(1500);
-  const w0 = await num(page, "box.width");
+  await page.locator(".dock details").evaluateAll((els) => { for (const d of els) d.open = true; });
+  const w0 = await num(page, "box.width"), d0 = await num(page, "box.depth"), h0 = await num(page, "box.height");
   await open3D(page, "front");
-  check(await page.getByTestId("v3-grips").count() === 0, "no handles until a part is selected");
-  const box = await hit(page, "front").boundingBox();
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-  await page.waitForTimeout(600);
+  check(await page.getByTestId("v3-grips").count() === 0, "no gizmo until a part is selected");
+  await selectPart(page, "front");
   check(/Selected:/.test(await page.locator("#preview3d .v3-pick").innerText().catch(() => "")), "clicking the box selects a part");
-  check(await page.getByTestId("v3-grips").getByRole("button", { name: "Size" }).getAttribute("aria-pressed") === "true", "and shows its Size handles");
-  let pts = await handlePoints(page, "front");
-  const right = handleAt(pts, (p) => p[0]);
-  check(!!right, `the Front view shows handles (${pts.length} points)`);
-  await shot(page, "1-boxes-handles");
-  if (right) {
-    const tip = await drag(page, right, 90, 0);
-    check(/^Width \d/.test(tip), `the pointer shows the width while dragging (${tip})`);
+  check(await page.getByTestId("v3-grips").getByRole("button", { name: "Scale" }).getAttribute("aria-pressed") === "true", "and shows the scale gizmo");
+  let pts = await gizmoPoints(page, "front");
+  check(["scale-x", "scale-y", "scale-xy", "scale-all"].every((id) => pts[id]?.length) && !pts["scale-z"], `the Front view shows X, Y, their strip and the middle, not Z end-on (${Object.keys(pts).join(", ")})`);
+  await shot(page, "1-boxes-gizmo");
+  if (pts["scale-x"]) {
+    const r = await drag(page, mid(pts["scale-x"]), 60, 0, { watch: "box.width", shotName: "2-boxes-dragging" });
+    check(/^Width \d/.test(r.tip), `the pointer shows the width while dragging (${r.tip})`);
+    check(r.during === w0, `the setting waits for the release: nothing is rebuilt while dragging (${r.during})`);
     const w1 = await num(page, "box.width");
-    check(w1 > w0 + 10, `dragging the right face out widens the box (${w0} → ${w1} mm)`);
-    check(await num(page, "box.depth") === 80, "and leaves the depth");
-    await shot(page, "2-boxes-wider");
-    pts = await handlePoints(page, "front");
-    const right2 = handleAt(pts, (p) => p[0]);
-    check(!!right2 && right2[0] > right[0] + 10, "the view keeps its framing, so the face moved out on screen");
+    check(w1 > w0 + 20 && await num(page, "box.depth") === d0 && await num(page, "box.height") === h0, `X sizes the width alone (${w0} → ${w1} mm)`);
+    await shot(page, "3-boxes-wider");
     await page.keyboard.press("Control+z");
     await page.waitForTimeout(1000);
     check(await num(page, "box.width") === w0, "one Ctrl+Z puts the width back");
+  }
+  await selectPart(page, "front");
+  pts = await gizmoPoints(page, "front");
+  if (pts["scale-xy"]) {
+    const xy = pts["scale-xy"], c = [Math.min(...xy.map((p) => p[0])), Math.max(...xy.map((p) => p[1]))], g = mid(xy);
+    const r = await drag(page, g, (g[0] - c[0]) * 0.4, (g[1] - c[1]) * 0.4);
+    const w2 = await num(page, "box.width"), h2 = await num(page, "box.height");
+    check(/Width .* · Height /.test(r.tip) && w2 > w0 && h2 > h0 && await num(page, "box.depth") === d0, `the X-Y strip sizes width and height together (${w0}×${h0} → ${w2}×${h2} mm, "${r.tip}")`);
+    await page.keyboard.press("Control+z");
+    await page.waitForTimeout(1000);
+    check(await num(page, "box.width") === w0 && await num(page, "box.height") === h0, "and one Ctrl+Z puts both back");
+  }
+  await selectPart(page, "front");
+  pts = await gizmoPoints(page, "front");
+  if (pts["scale-y"]) {
+    await drag(page, mid(pts["scale-y"]), 0, -50, { cancel: true });
+    check(await num(page, "box.height") === h0, "Esc while dragging puts the size back");
   }
 
   // ---- Boxes phone stand: the ring sets the lean.
@@ -101,17 +123,15 @@ await withBrowser(async (page) => {
   await page.locator(".dock details").evaluateAll((els) => { for (const d of els) d.open = true; });
   const a0 = await num(page, "stand.angle");
   await open3D(page, "left");
-  const lb = await hit(page, "left").boundingBox();
-  await page.mouse.click(lb.x + lb.width / 2, lb.y + lb.height * 0.62);
-  await page.waitForTimeout(600);
+  await selectPart(page, "left", 0.5, 0.62);
   const grips = page.getByTestId("v3-grips");
   check(await grips.getByRole("button", { name: "Turn" }).count() === 1, "the phone stand offers Turn handles");
   await page.keyboard.press("e");
   check(await grips.getByRole("button", { name: "Turn" }).getAttribute("aria-pressed") === "true", "E switches to them");
-  pts = await handlePoints(page, "left");
-  check(pts.length > 20, `the Left view shows the lean ring (${pts.length} points)`);
-  if (pts.length) {
-    const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  const ring = (await gizmoPoints(page, "left"))["turn-x-stand.angle"] ?? [];
+  check(ring.length > 20, `the Left view shows the lean ring (${ring.length} points)`);
+  if (ring.length) {
+    const xs = ring.map((p) => p[0]), ys = ring.map((p) => p[1]);
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2, R = (Math.max(...xs) - Math.min(...xs)) / 2 - 3;
     await page.mouse.move(cx, cy - R);
     await page.mouse.down();
@@ -125,60 +145,52 @@ await withBrowser(async (page) => {
     await page.waitForTimeout(1500);
     const a1 = await num(page, "stand.angle");
     check(tip === `Lean ${a0 + 10}°` && a1 === a0 + 10, `dragging 10° round the ring turns the lean 10° (${a0}° → ${a1}°, "${tip}")`);
-    await shot(page, "3-stand-turn");
+    await shot(page, "4-stand-turn");
     await page.keyboard.press("Control+z");
     await page.waitForTimeout(1000);
     check(await num(page, "stand.angle") === a0, "Ctrl+Z puts the lean back");
   }
 
-  // ---- Hinge Box: the top face sets the height.
+  // ---- Hinge Box: Shift keeps the proportions.
   await page.goto(`${BASE}/app/editor/local?p=hinge`);
   await page.waitForTimeout(2500);
-  const h0 = await num(page, "H");
+  const W0 = await num(page, "W"), D0 = await num(page, "D"), H0 = await num(page, "H");
   await open3D(page, "front");
-  const hb = await hit(page, "front").boundingBox();
-  await page.mouse.click(hb.x + hb.width / 2, hb.y + hb.height * 0.6);
-  await page.waitForTimeout(600);
-  pts = await handlePoints(page, "front");
-  const top = handleAt(pts, (p) => -p[1]);
-  check(!!top, "the Hinge Box shows handles once a part is selected");
-  if (top) {
-    const tip = await drag(page, top, 0, -70);
-    const h1 = await num(page, "H");
-    check(/^Height \d/.test(tip) && h1 > h0 + 5, `dragging the top up makes the box taller (${h0} → ${h1} mm)`);
-    await shot(page, "4-hinge-taller");
+  await selectPart(page, "front", 0.5, 0.6);
+  pts = await gizmoPoints(page, "front");
+  check(!!pts["scale-y"], "the Hinge Box shows the gizmo once a part is selected");
+  if (pts["scale-y"]) {
+    const r = await drag(page, mid(pts["scale-y"]), 0, -40, { shift: true });
+    const W1 = await num(page, "W"), D1 = await num(page, "D"), H1 = await num(page, "H");
+    check(W1 > W0 && D1 > D0 && H1 > H0 && Math.abs(H1 / H0 - W1 / W0) < 0.08, `with Shift every size grows alike (${W0}×${D0}×${H0} → ${W1}×${D1}×${H1}, "${r.tip}")`);
+    await shot(page, "5-hinge-proportional");
     await page.keyboard.press("Escape");
     await page.waitForTimeout(300);
-    check(await page.getByTestId("v3-grips").count() === 0, "Esc clears the selection and its handles");
+    check(await page.getByTestId("v3-grips").count() === 0, "Esc clears the selection and its gizmo");
     await page.keyboard.press("Control+z");
     await page.waitForTimeout(1500);
-    check(await num(page, "H") === h0, "Ctrl+Z puts the height back");
+    check(await num(page, "W") === W0 && await num(page, "H") === H0, "one Ctrl+Z puts every size back");
   }
 
-  // ---- Letters: a side face scales the text.
+  // ---- Letters: X scales the text.
   await page.goto(`${BASE}/app/editor/local?p=letters`);
   await page.waitForTimeout(3000);
   const s0 = await num(page, "size");
   await open3D(page, "top");
-  const tb = await hit(page, "top").boundingBox();
-  const centre = [tb.x + tb.width / 2, tb.y + tb.height / 2];
-  // Somewhere on the letters: try a few points until something is selected.
-  for (const [fx, fy] of [[0, 0], [-0.15, 0], [0.15, 0], [0, 0.08], [-0.3, 0], [0.3, 0]]) {
-    await page.mouse.click(centre[0] + fx * tb.width, centre[1] + fy * tb.height);
-    await page.waitForTimeout(400);
+  for (const [fx, fy] of [[0.5, 0.5], [0.35, 0.5], [0.65, 0.5], [0.5, 0.58], [0.2, 0.5], [0.8, 0.5]]) {
+    await selectPart(page, "top", fx, fy);
     if (await page.getByTestId("v3-grips").count()) break;
   }
-  pts = await handlePoints(page, "top");
-  const lr = handleAt(pts, (p) => p[0]);
-  check(!!lr, "Letters show handles once a letter is selected");
-  if (lr) {
-    await drag(page, lr, 60, 0);
+  pts = await gizmoPoints(page, "top");
+  check(!!pts["scale-x"], "Letters show the gizmo once a letter is selected");
+  if (pts["scale-x"]) {
+    await drag(page, mid(pts["scale-x"]), 40, 0);
     const s1 = await num(page, "size");
-    check(s1 > s0, `dragging the side out makes the letters bigger (${s0} → ${s1} mm)`);
-    await shot(page, "5-letters-bigger");
+    check(s1 > s0, `dragging X out makes the letters bigger (${s0} → ${s1} mm)`);
+    await shot(page, "6-letters-bigger");
   }
 
-  // ---- Parametric: with a part selected, a face scales the model and a ring turns it.
+  // ---- Parametric: with a part selected, the gizmo scales the model and a ring turns it.
   root = '[data-testid="parametric-view"]';
   await page.goto(`${BASE}/app/editor/local?p=parametric`);
   await page.locator(".dock details").first().waitFor({ timeout: 30000 });
@@ -186,21 +198,18 @@ await withBrowser(async (page) => {
   await page.locator(".dock details").evaluateAll((els) => { for (const d of els) d.open = true; });
   const sc0 = await num(page, "uniformScale");
   await open3D(page, "front");
-  const pb = await hit(page, "front").boundingBox();
-  await page.mouse.click(pb.x + pb.width / 2, pb.y + pb.height / 2);
-  await page.waitForTimeout(600);
+  await selectPart(page, "front");
   const pg = page.getByTestId("v3-grips");
-  check(await pg.getByRole("button", { name: "Size" }).count() === 1 && await pg.getByRole("button", { name: "Turn" }).count() === 1, "a selected Parametric part offers Size and Turn handles");
+  check(await pg.getByRole("button", { name: "Scale" }).count() === 1 && await pg.getByRole("button", { name: "Turn" }).count() === 1, "a selected Parametric part offers Scale and Turn handles");
   await page.keyboard.press("r");
-  pts = await handlePoints(page, "front");
-  const pr = handleAt(pts, (p) => p[0]);
-  check(!!pr, "and shows the model's size handles");
-  if (pr) {
-    const tip = await drag(page, pr, 60, 0);
+  pts = await gizmoPoints(page, "front");
+  check(!!pts["scale-all"], "and shows the model's scale gizmo");
+  if (pts["scale-all"]) {
+    const r = await drag(page, mid(pts["scale-all"]), 0, -40);
     const sc1 = await num(page, "uniformScale");
-    check(/^Width \d/.test(tip) && sc1 > sc0, `dragging a side out scales the model up (${sc0} → ${sc1})`);
+    check(/^Scale /.test(r.tip) && sc1 > sc0, `dragging the middle up scales the model up (${sc0} → ${sc1}, "${r.tip}")`);
     await page.waitForTimeout(4000);
-    await shot(page, "6-parametric-scaled");
+    await shot(page, "7-parametric-scaled");
     await page.keyboard.press("Control+z");
     await page.waitForTimeout(800);
     check(await num(page, "uniformScale") === sc0, "Ctrl+Z puts the scale back");

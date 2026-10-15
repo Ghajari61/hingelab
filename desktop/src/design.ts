@@ -115,6 +115,18 @@ export function useDesign(onFatal: (e: AppError) => void) {
     else timer.current = window.setTimeout(flush, TYPE_DELAY);
   }, [flush]);
 
+  /** Several settings at once (the 3D scale gizmo), sent at once as one edit. */
+  const changeMany = useCallback((values: Params) => {
+    const keys = Object.keys(values);
+    if (!product.current || !params.current || !keys.length) return;
+    if (pending.current && !keys.includes(pending.current.key)) flush();
+    for (const k of keys) params.current = setPath(params.current, k, values[k]);
+    setState((s) => ({ ...s, params: params.current }));
+    const last = keys[keys.length - 1];
+    pending.current = { key: last, value: values[last] };
+    flush();
+  }, [flush]);
+
   const request = useCallback((extra: Partial<GenerateRequest>, record = true) => {
     if (!product.current) return;
     flush();
@@ -149,5 +161,5 @@ export function useDesign(onFatal: (e: AppError) => void) {
     if (retryTimer.current) window.clearTimeout(retryTimer.current);
   }, []);
 
-  return { state, open, change, flush, fix, autofix, refresh, setWant3d, undo: () => travel(-1), redo: () => travel(1) };
+  return { state, open, change, changeMany, flush, fix, autofix, refresh, setWant3d, undo: () => travel(-1), redo: () => travel(1) };
 }

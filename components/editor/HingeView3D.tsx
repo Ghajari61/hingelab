@@ -26,7 +26,7 @@ export default function HingeView3D({ model, params, lay, content, units, edit }
     return flat && lay ? hingeFlatScene(lay, content, params) : buildHingeScene(model, params, explode);
   }, [model, params, explode, flat, lay, content]);
   const size = flat && lay ? `${Math.round(lay.width)}x${Math.round(lay.height)}` : `${params.shape}|${Math.round(params.W)}|${Math.round(params.D)}|${Math.round(params.H)}|${Math.round(params.dia)}`;
-  const grips = sel && edit && !flat && !explode ? hingeGrips(edit.params, (k, val, done) => edit.set({ ...edit.params, [k]: val }, done), units) : undefined;
+  const grips = sel && edit && !flat && !explode ? hingeGrips(edit.params, (patch) => edit.set({ ...edit.params, ...patch }, true), units) : undefined;
   return (
     <QuadView
       {...quadProps(v)} id="preview3d" model={scene} look={lookOf(params.material)} frameKey={`${flat ? "flat" : "box"}|${size}`} units={units}

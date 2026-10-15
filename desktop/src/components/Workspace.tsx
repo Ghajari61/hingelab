@@ -23,6 +23,8 @@ interface Props {
   canvas: RefObject<CanvasHandle | null>;
   favorite: boolean;
   onChange: (key: string, value: unknown, immediate: boolean) => void;
+  /** Several settings as one edit (the 3D scale gizmo). */
+  onChangeMany: (values: Record<string, unknown>) => void;
   onRename: (name: string) => void;
   onFix: (code: string, id: string) => void;
   onAutofix: () => void;
@@ -178,7 +180,7 @@ export function Workspace(p: Props) {
                 ref={p.canvas} model={r?.model ?? null} material={String(r?.params.material ?? "")} explode={explode}
                 shade={prefs.view3dShade} quad={prefs.view3dQuad} active={active} dims={prefs.view3dDims} units={p.units} dim={dim}
                 onActive={(a) => setActive(a)} onQuad={(q) => set({ view3dQuad: q })} onShade={(s) => set({ view3dShade: s })}
-                onSelect={setSel} grips={sel && !explode && design.params && !r?.locked ? desktopGrips(product, design.params, p.onChange, p.units) : undefined}
+                onSelect={setSel} grips={sel && !explode && design.params && !r?.locked ? desktopGrips(product, design.params, p.onChange, p.onChangeMany, p.units) : undefined}
               >
                 {overlays}
                 {r?.svg && !r.model && !design.busy && !err && (

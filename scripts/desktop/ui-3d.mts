@@ -140,54 +140,92 @@ try {
   await page.waitForTimeout(1500);
   check(requests.slice(before).every((r) => r.model), "edits in 3D keep asking for the model");
 
-  // The 3D handles (D170/D171): click a part, drag a face, the setting follows.
+  // The scale gizmo (D170-D172): an axis sizes alone, a strip two axes, Shift keeps the proportions;
+  // the design is scaled on screen while dragging and built once, on release.
   const hitOf = (pane: string) => page.locator(`.v3 .v3-pane[data-pane="${pane}"] .v3-hit`);
-  const handlePoints = (pane: string) => hitOf(pane).evaluate((el: HTMLElement) => {
-    const r = el.getBoundingClientRect(), pts: [number, number][] = [];
-    for (let y = r.top + 3; y < r.bottom - 3; y += 5) for (let x = r.left + 3; x < r.right - 3; x += 5) {
+  type Pt = [number, number];
+  const gizmoPoints = (pane: string) => hitOf(pane).evaluate((el: HTMLElement) => {
+    const r = el.getBoundingClientRect(), out: Record<string, [number, number][]> = {};
+    for (let y = r.top + 3; y < r.bottom - 3; y += 4) for (let x = r.left + 3; x < r.right - 3; x += 4) {
       el.dispatchEvent(new PointerEvent("pointermove", { clientX: x, clientY: y, bubbles: true, buttons: 0, pointerId: 1 }));
-      if (el.style.cursor === "grab") pts.push([x, y]);
+      const id = el.dataset.grip;
+      if (id) (out[id] ??= []).push([x, y]);
     }
     el.dispatchEvent(new PointerEvent("pointermove", { clientX: r.left + 1, clientY: r.top + 1, bubbles: true, buttons: 0, pointerId: 1 }));
-    return pts;
+    return out;
   });
-  const handleAt = (pts: [number, number][], pick: (p: [number, number]) => number) => {
-    if (!pts.length) return null;
-    const best = pts.reduce((a, b) => (pick(b) > pick(a) ? b : a));
-    const near = pts.filter((p) => Math.hypot(p[0] - best[0], p[1] - best[1]) < 22);
-    return [near.reduce((s, p) => s + p[0], 0) / near.length, near.reduce((s, p) => s + p[1], 0) / near.length] as const;
-  };
-  const sizeDrag = async (name: string, key: string, pick: (p: [number, number]) => number, dx: number, dy: number) => {
+  const mid = (pts: Pt[]): Pt => [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length];
+  const openFront = async (name: string) => {
     await open(name);
     await ready3d();
     await page.locator(".v3").focus();
     await page.keyboard.press("f");
     if (await page.locator(".v3.quad").count()) await page.keyboard.press("Alt+w");
     await page.waitForTimeout(800);
-    check(await page.getByTestId("v3-grips").count() === 0, `${name}: no handles until a part is selected`);
+    check(await page.getByTestId("v3-grips").count() === 0, `${name}: no gizmo until a part is selected`);
     const b = (await hitOf("front").boundingBox())!;
     await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
     await page.waitForTimeout(600);
-    check(await page.getByTestId("v3-grips").getByRole("button", { name: "Size" }).getAttribute("aria-pressed") === "true", `${name}: selecting a part shows its Size handles`);
-    const h = handleAt(await handlePoints("front"), pick);
-    check(!!h, `${name}: the Front view shows a handle`);
-    if (!h) return;
-    const v0 = getPath(last().params, key) as number;
-    await page.mouse.move(h[0], h[1]);
-    await page.mouse.down();
-    await page.mouse.move(h[0] + dx / 2, h[1] + dy / 2, { steps: 4 });
-    const tip = await page.getByTestId("v3-tip").innerText().catch(() => "");
-    await page.mouse.move(h[0] + dx, h[1] + dy, { steps: 4 });
-    await page.mouse.up();
-    await page.waitForTimeout(2000);
-    const v1 = getPath(last().params, key) as number;
-    check(tip.length > 0, `${name}: the pointer shows the size while dragging (${tip})`);
-    check(v1 > v0 + 10, `${name}: dragging the face out sets ${key} (${v0} → ${v1} mm) and the server rebuilds it`);
-    check(last().model, `${name}: the rebuilt design comes with its 3D model`);
-    await shot(page, `${name.toLowerCase().replace(/\s+/g, "-")}-handles`);
+    check(await page.getByTestId("v3-grips").getByRole("button", { name: "Scale" }).getAttribute("aria-pressed") === "true", `${name}: selecting a part shows the scale gizmo`);
+    const pts = await gizmoPoints("front");
+    check(["scale-x", "scale-y", "scale-xy", "scale-all"].every((id) => pts[id]?.length), `${name}: the Front view shows the X and Y axes, their strip and the middle (${Object.keys(pts).join(", ")})`);
+    return pts;
   };
-  await sizeDrag("Boxes", "box.width", (p) => p[0], 90, 0);
-  await sizeDrag("Hinge Box", "H", (p) => -p[1], 0, -70);
+  /** Drags from `a` to `b`; the requests sent while dragging and after, and the readout halfway. */
+  const drag = async (a: Pt, b: Pt, o: { shift?: boolean; cancel?: boolean; shotName?: string } = {}) => {
+    const n0 = requests.length;
+    await page.mouse.move(a[0], a[1]);
+    if (o.shift) await page.keyboard.down("Shift");
+    await page.mouse.down();
+    await page.mouse.move((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, { steps: 5 });
+    const tip = await page.getByTestId("v3-tip").innerText().catch(() => "");
+    await page.mouse.move(b[0], b[1], { steps: 5 });
+    await page.waitForTimeout(300);
+    if (o.shotName) await shot(page, o.shotName);
+    const during = requests.length - n0;
+    if (o.cancel) await page.keyboard.press("Escape");
+    await page.mouse.up();
+    if (o.shift) await page.keyboard.up("Shift");
+    await page.waitForTimeout(2000);
+    return { tip, during, after: requests.length - n0 - during };
+  };
+  const val = (key: string) => getPath(last().params, key) as number;
+
+  {
+    const pts = await openFront("Boxes");
+    const w0 = val("box.width"), d0 = val("box.depth"), h0 = val("box.height");
+    const x = mid(pts["scale-x"]);
+    const r = await drag(x, [x[0] + 60, x[1]], { shotName: "boxes-scale-drag" });
+    check(/^Width \d/.test(r.tip), `Boxes: dragging X shows the width (${r.tip})`);
+    check(r.during === 0, `Boxes: nothing is built while dragging (${r.during} requests)`);
+    check(r.after === 1, `Boxes: one build when let go (${r.after})`);
+    check(val("box.width") > w0 + 20 && val("box.depth") === d0 && val("box.height") === h0, `Boxes: X sizes the width alone (${w0} → ${val("box.width")} mm; depth ${val("box.depth")}, height ${val("box.height")})`);
+    check(last().model, "Boxes: the rebuilt design comes with its 3D model");
+    await shot(page, "boxes-scale");
+
+    const p2 = await gizmoPoints("front");
+    const w1 = val("box.width"), h1 = val("box.height");
+    const xy = p2["scale-xy"], c: Pt = [Math.min(...xy.map((p) => p[0])), Math.max(...xy.map((p) => p[1]))], g = mid(xy);
+    const plane = await drag(g, [g[0] + (g[0] - c[0]) * 0.4, g[1] + (g[1] - c[1]) * 0.4]);
+    check(/Width .* · Height /.test(plane.tip), `Boxes: the strip shows width and height (${plane.tip})`);
+    check(val("box.width") > w1 && val("box.height") > h1 && val("box.depth") === d0, `Boxes: the X-Y strip sizes width and height together (${w1}×${h1} → ${val("box.width")}×${val("box.height")}; depth ${val("box.depth")})`);
+
+    const p3 = await gizmoPoints("front");
+    const w2 = val("box.width"), y = mid(p3["scale-y"]);
+    const esc = await drag(y, [y[0], y[1] - 50], { cancel: true });
+    check(esc.after === 0 && val("box.width") === w2, `Boxes: Esc while dragging puts it back and builds nothing (${esc.after})`);
+  }
+  {
+    const pts = await openFront("Hinge Box");
+    const W0 = val("W"), D0 = val("D"), H0 = val("H");
+    const y = mid(pts["scale-y"]);
+    const r = await drag(y, [y[0], y[1] - 45], { shift: true });
+    const W1 = val("W"), D1 = val("D"), H1 = val("H");
+    check(r.during === 0 && r.after === 1, `Hinge Box: built once, on release (${r.during} while dragging, ${r.after} after)`);
+    check(W1 > W0 && D1 > D0 && H1 > H0, `Hinge Box: Shift keeps the proportions, every size grows (${W0}×${D0}×${H0} → ${W1}×${D1}×${H1})`);
+    check(Math.abs(H1 / H0 - W1 / W0) < 0.08, `Hinge Box: height and width grow alike (${(H1 / H0).toFixed(2)} and ${(W1 / W0).toFixed(2)})`);
+    await shot(page, "hinge-box-scale");
+  }
 
   await page.getByRole("button", { name: "2D sheet", exact: true }).click();
   await page.locator('img[alt="Preview of the cut file"]').waitFor();

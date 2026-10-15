@@ -334,6 +334,7 @@ export function App() {
             canvas={canvas}
             favorite={!!currentFavorite}
             onChange={design.change}
+            onChangeMany={design.changeMany}
             onRename={(name) => design.change("name", name, true)}
             onFix={design.fix}
             onAutofix={design.autofix}

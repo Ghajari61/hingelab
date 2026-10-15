@@ -1,18 +1,12 @@
-import { AXIS_NAMES, clampStep, lenText, numberGrip, sizeGrips, type Grip } from "@/lib/three/grips";
+import { lenText, mmSetting, ratioSetting, type GripSet, type SizeSetting } from "@/lib/three/grips";
 import type { LetterParams } from "./types";
 
 /**
- * The letters' 3D handles: a side or front face scales the text (its size follows the drag), the top
- * sets a box's depth.
+ * The letters' scale gizmo: X and Z scale the text (its size grows with them), Y sets a letter box's
+ * depth.
  */
-export function letterGrips(p: LetterParams, set: (p: LetterParams, record: boolean) => void, units: "mm" | "in"): Grip[] {
-  const out = sizeGrips(["x", "z"], (axis, ext, d, done) => {
-    const size = clampStep((p.size * (ext + d)) / Math.max(1, ext), 5, 2000, 0.1);
-    set({ ...p, size }, done);
-    return `${AXIS_NAMES[axis]} ${lenText((ext * size) / p.size, units)} · size ${lenText(size, units)}`;
-  });
-  if (p.mode === "box") {
-    out.push(numberGrip("size-y+", "size", "y", { v0: p.depth, min: 10, max: 600, step: 0.1, set: (depth, done) => set({ ...p, depth }, done), show: (v) => `Depth ${lenText(v, units)}` }));
-  }
-  return out;
+export function letterGrips(p: LetterParams, set: (p: LetterParams, record: boolean) => void, units: "mm" | "in"): GripSet {
+  const settings: SizeSetting[] = [ratioSetting("size", ["x", "z"], { v0: p.size, min: 5, max: 2000, step: 0.1 }, (v) => `Size ${lenText(v, units)}`)];
+  if (p.mode === "box") settings.push(mmSetting("depth", ["y"], { v0: p.depth, min: 10, max: 600, step: 0.1 }, (v) => `Depth ${lenText(v, units)}`));
+  return { size: { settings, write: (values) => set({ ...p, ...values }, true) } };
 }

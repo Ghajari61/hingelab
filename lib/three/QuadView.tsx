@@ -13,7 +13,7 @@ import { Camera, Home } from "lucide-react";
 import ListingPhoto, { type Shoot } from "./ListingPhoto";
 import { applyLook, type LookId } from "./looks";
 import { dimLines, dimSVG, modelBox } from "./dims";
-import { GRIP_KINDS, axisDrag, snapDrag, turnDrag, type Grip, type GripAxis, type GripKind } from "./grips";
+import { AXES, GRIP_KINDS, axisDrag, dragFactors, scaleDrag, sizeAxes, sizeResult, snapDrag, turnDrag, uniformDrag, type Factors, type Grip, type GripAxis, type GripKind, type GripSet, type SizeGizmo } from "./grips";
 
 export type PaneId = "top" | "front" | "left" | "persp";
 export type Shade3D = "shaded" | "edges";
@@ -87,31 +87,72 @@ function fitHalf(mx: number, my: number, pw: number, ph: number) {
 
 const AXIS_VEC: Record<GripAxis, [number, number, number]> = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] };
 const AXIS_COLOR: Record<GripAxis, number> = { x: 0xe5484d, y: 0x30a46c, z: 0x3e7bfa };
-const HOVER_COLOR = 0xffb224;
+const HOVER_COLOR = 0xffd21f;
+/** The scale gizmo, in screen pixels: axis length, and the inner and outer edges of its triangles (fractions of it). */
+const GIZMO = { L: 86, r1: 0.36, r2: 0.62 };
+
+/** A letter facing the viewer, for the gizmo's axis ends. */
+function letterTexture(text: string, color: string) {
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const g = c.getContext("2d");
+  if (g) {
+    g.font = "600 46px Segoe UI, Arial, sans-serif";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.lineWidth = 8;
+    g.strokeStyle = "rgba(20, 22, 28, 0.75)";
+    g.strokeText(text, 32, 34);
+    g.fillStyle = color;
+    g.fillText(text, 32, 34);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
 
 /** Handle shapes in screen pixels; each view scales them to its own millimetres per pixel. */
 function gripShapes() {
+  const L = GIZMO.L;
   return {
-    cube: new THREE.BoxGeometry(11, 11, 11),
-    cubeHit: new THREE.BoxGeometry(24, 24, 24),
     shaft: new THREE.CylinderGeometry(1.4, 1.4, 58, 8).translate(0, 29, 0),
     cone: new THREE.ConeGeometry(6, 16, 16).translate(0, 66, 0),
     arrowHit: new THREE.CylinderGeometry(10, 10, 76, 8).translate(0, 38, 0),
     ring: new THREE.TorusGeometry(64, 1.6, 8, 72),
     ringHit: new THREE.TorusGeometry(64, 8, 6, 48),
+    axisLine: new THREE.CylinderGeometry(1.3, 1.3, L, 6).translate(0, L / 2, 0),
+    axisEnd: new THREE.BoxGeometry(7, 7, 7).translate(0, L, 0),
+    axisHit: new THREE.CylinderGeometry(9, 9, L * (1 - GIZMO.r2) + 16, 8).translate(0, (L * (1 + GIZMO.r2) + 16) / 2, 0),
+    letterX: letterTexture("X", "#ff7275"),
+    letterY: letterTexture("Y", "#4fd18b"),
+    letterZ: letterTexture("Z", "#6f9dff"),
   };
 }
 type GripShapes = ReturnType<typeof gripShapes>;
 
-/** A handle placed in the overlay: `at` is where it acts (face centre or box centre), `ext` the box's size along its axis. */
-interface Handle { grip: Grip; obj: THREE.Group; hit: THREE.Mesh; mat: THREE.MeshBasicMaterial; axis: THREE.Vector3; at: THREE.Vector3; ext: number }
+/**
+ * A handle placed in the overlay: `at` is where it acts (the box centre for arrows, rings and the
+ * scale gizmo), `ext` the box's size along its axis. `scale`: the axes a scale handle sizes.
+ */
+interface Handle {
+  id: string; grip?: Grip; scale?: GripAxis[]; obj: THREE.Group; hits: THREE.Mesh[]; axis: THREE.Vector3; at: THREE.Vector3; ext: number;
+  /** Whether it shows in a view looking along `look`. */
+  shows: (look: THREE.Vector3) => boolean;
+  paint: (lit: boolean) => void;
+  dispose: () => void;
+}
 
 interface Drag {
-  id: string; kind: GripKind; side: number; fn: (d: number, done: boolean) => string;
+  id: string; kind: GripKind; fn: (d: number, done: boolean) => string;
   x0: number; y0: number; prev: [number, number]; ang: number;
   /** Screen pixels per mm along the axis, and the handle's centre on screen. */
   u: [number, number]; c: [number, number]; facing: boolean; d: number; text: string;
+  /** Scale: the axes the handle sizes, where it was grabbed, the direction it grows towards on screen, and the last result. */
+  scale?: { axes: GripAxis[]; all: boolean; gizmo: SizeGizmo; grab: [number, number]; dir: [number, number]; ext: Factors; last: ReturnType<typeof sizeResult> | null };
 }
+
+/** The design scaled on screen while a scale handle is dragged: its own matrix, and its box, before. */
+interface Preview { base: THREE.Matrix4; anchor: THREE.Vector3; box: THREE.Box3 | null; until: number }
 
 interface Stage {
   renderer: THREE.WebGLRenderer;
@@ -157,7 +198,7 @@ interface Props {
   /** Highlights the part with this name from outside (undefined leaves the selection to clicks). */
   selectName?: string | null;
   /** Handles for the selected part: dragging one changes the design (lib/three/grips.ts). */
-  grips?: Grip[];
+  grips?: GripSet;
   id?: string;
   testId?: string;
   className?: string;
@@ -199,13 +240,16 @@ function glow(mesh: THREE.Mesh, on: boolean) {
 const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref) {
   const { model, look, frameKey, explode = 0, measure, shade, quad, active, onActive, onQuad, onShade, dims, units, dim, onPick, pickable, onSelect, selectName, grips, id, testId, className = "", label = "3D views of the design", photoName, children } = props;
   const [gripKind, setGripKind] = useState<GripKind>("size");
-  const kinds = GRIP_KINDS.filter((k) => grips?.some((g) => g.kind === k.kind));
+  const kinds = GRIP_KINDS.filter((k) => (k.kind === "size" ? !!grips?.size?.settings.length : grips?.grips?.some((g) => g.kind === k.kind)));
   const kind = kinds.some((k) => k.kind === gripKind) ? gripKind : kinds[0]?.kind;
   const gripList = useRef<Grip[]>([]);
-  gripList.current = grips?.filter((g) => g.kind === kind) ?? [];
+  gripList.current = kind === "size" ? [] : grips?.grips?.filter((g) => g.kind === kind) ?? [];
+  const sizer = useRef<SizeGizmo | null>(null);
+  sizer.current = kind === "size" ? grips?.size ?? null : null;
   const handles = useRef<Handle[]>([]);
   const hoverId = useRef<string | null>(null);
   const drag = useRef<Drag | null>(null);
+  const preview = useRef<Preview | null>(null);
   /** Until then a new frame key does not reframe: the design was resized by a drag. */
   const holdUntil = useRef(0);
   const tip = useRef<HTMLSpanElement>(null);
@@ -341,7 +385,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     for (const p of panes) ro.observe(p.el);
     const overlay = new THREE.Scene();
     const shapes = gripShapes();
-    const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+    const hitMat = new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide });
     // Capture on the pane: a press on a handle never reaches the mouse controls.
     const offs: (() => void)[] = [];
     for (const p of panes) {
@@ -359,7 +403,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     return () => {
       ro.disconnect();
       for (const off of offs) off();
-      for (const k of handles.current) k.mat.dispose();
+      for (const k of handles.current) k.dispose();
       handles.current = [];
       for (const g of Object.values(shapes)) g.dispose();
       hitMat.dispose();
@@ -489,6 +533,45 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     st.current?.request();
   };
 
+  /** The design drawn grown by `f` about the middle of its base while a scale handle is dragged (null: its own size again). */
+  const previewScale = (f: Factors | null) => {
+    const m = shown.current, g = m?.group;
+    if (!f) { endPreview(); return; }
+    if (!g) return;
+    let pv = preview.current;
+    if (!pv) {
+      g.updateMatrix();
+      const b = modelBox(g);
+      if (b.isEmpty()) return;
+      pv = { base: g.matrix.clone(), anchor: new THREE.Vector3((b.min.x + b.max.x) / 2, b.min.y, (b.min.z + b.max.z) / 2), box: bbox.current?.clone() ?? null, until: 0 };
+      preview.current = pv;
+      g.matrixAutoUpdate = false;
+    }
+    const a = pv.anchor;
+    const about = new THREE.Matrix4().makeTranslation(a.x, a.y, a.z)
+      .multiply(new THREE.Matrix4().makeScale(f.x, f.y, f.z))
+      .multiply(new THREE.Matrix4().makeTranslation(-a.x, -a.y, -a.z));
+    g.matrix.copy(about).multiply(pv.base);
+    g.matrixWorldNeedsUpdate = true;
+    g.updateMatrixWorld(true);
+    if (pv.box) bbox.current = pv.box.clone().applyMatrix4(about);
+    st.current?.request();
+  };
+
+  /** Back to the design's own size after a scale preview. */
+  const endPreview = () => {
+    const pv = preview.current, g = shown.current?.group;
+    preview.current = null;
+    if (!pv) return;
+    if (g) {
+      g.matrixAutoUpdate = true;
+      g.updateMatrix();
+      g.updateMatrixWorld(true);
+    }
+    bbox.current = pv.box;
+    st.current?.request();
+  };
+
   /** After the model or its contents changed: look, display mode, box, grids and framing. */
   const settle = (reframe: boolean) => {
     const s = st.current, m = shown.current;
@@ -504,6 +587,8 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
   useEffect(() => {
     const s = st.current;
     if (!s) return;
+    const scaled = !!preview.current;
+    if (shown.current !== model) endPreview();
     if (shown.current && shown.current !== model) {
       s.scene.remove(shown.current.group);
       shown.current.dispose();
@@ -518,7 +603,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
         shown.current = model;
         model.ready?.then(() => { if (shown.current === model) st.current?.request(); });
       }
-      const held = !!drag.current || performance.now() < holdUntil.current;
+      const held = !!drag.current || scaled || performance.now() < holdUntil.current;
       const reframe = !!frameKey && frameKey !== framed.current && !held;
       if (reframe || held) framed.current = frameKey;
       settle(reframe);
@@ -585,7 +670,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     st.current?.request();
   };
 
-  useImperativeHandle(ref, () => ({ zoomIn: () => dolly(1.25), zoomOut: () => dolly(0.8), fit: fitAll, refresh: (reframe = false) => settle(reframe) }));
+  useImperativeHandle(ref, () => ({ zoomIn: () => dolly(1.25), zoomOut: () => dolly(0.8), fit: fitAll, refresh: (reframe = false) => { endPreview(); settle(reframe); } }));
 
   /** The model alone (no grids, dimensions or selection glow), framed along `dir`, into a w × h canvas. */
   const shoot = useCallback<Shoot>((dir, w, h) => {
@@ -641,8 +726,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
         ? (p.cam.top - p.cam.bottom) / p.cam.zoom / Math.max(1, h)
         : (2 * Math.max(1, look.dot(k.at.clone().sub(p.cam.position))) * tan) / Math.max(1, h);
       k.obj.scale.setScalar(mmPx);
-      const along = Math.abs(k.axis.dot(look));
-      k.obj.visible = k.grip.kind === "turn" ? along > 0.25 : along < 0.95;
+      k.obj.visible = k.shows(look);
     }
     st.current.overlay.updateMatrixWorld(true);
     return true;
@@ -650,50 +734,127 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
 
   const paintHandles = () => {
     const lit = drag.current?.id ?? hoverId.current;
-    for (const k of handles.current) k.mat.color.setHex(k.grip.id === lit ? HOVER_COLOR : AXIS_COLOR[k.grip.axis]);
+    for (const k of handles.current) k.paint(k.id === lit);
   };
 
-  /** The handles for the current grips, on the selected part's box or the whole design's. */
+  /** An arrow or a ring for a move or turn grip, on the selected part's box or the whole design's. */
+  const gripHandle = (g: Grip, box: THREE.Box3): Handle => {
+    const { shapes, hitMat } = st.current!;
+    const axis = new THREE.Vector3(...AXIS_VEC[g.axis]);
+    const mat = new THREE.MeshBasicMaterial({ color: AXIS_COLOR[g.axis], transparent: true, opacity: 0.95 });
+    const obj = new THREE.Group();
+    let hit: THREE.Mesh;
+    if (g.kind === "move") {
+      obj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
+      hit = new THREE.Mesh(shapes.arrowHit, hitMat);
+      obj.add(new THREE.Mesh(shapes.shaft, mat), new THREE.Mesh(shapes.cone, mat), hit);
+    } else {
+      obj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), axis);
+      hit = new THREE.Mesh(shapes.ringHit, hitMat);
+      obj.add(new THREE.Mesh(shapes.ring, mat), hit);
+    }
+    const at = box.getCenter(new THREE.Vector3());
+    obj.position.copy(at);
+    return {
+      id: g.id, grip: g, obj, hits: [hit], axis, at, ext: box.getSize(new THREE.Vector3())[g.axis],
+      shows: (look) => { const along = Math.abs(axis.dot(look)); return g.kind === "turn" ? along > 0.25 : along < 0.95; },
+      paint: (lit) => mat.color.setHex(lit ? HOVER_COLOR : AXIS_COLOR[g.axis]),
+      dispose: () => mat.dispose(),
+    };
+  };
+
+  /**
+   * The scale gizmo at the design's centre, as in 3D programs: an axis handle per axis, a strip
+   * between each two axes for that plane, and the middle triangle for all of them.
+   */
+  const scaleHandles = (gizmo: SizeGizmo, box: THREE.Box3): Handle[] => {
+    const { shapes, hitMat } = st.current!;
+    const axes = sizeAxes(gizmo);
+    const at = box.getCenter(new THREE.Vector3());
+    const unit = (a: GripAxis) => new THREE.Vector3(...AXIS_VEC[a]);
+    const { L, r1, r2 } = GIZMO;
+    const out: Handle[] = [];
+    const geos: THREE.BufferGeometry[] = [], mats: THREE.Material[] = [];
+    const own = <T extends THREE.Material>(x: T): T => { mats.push(x); return x; };
+    const ownGeo = <T extends THREE.BufferGeometry>(x: T): T => { geos.push(x); return x; };
+    const fill = () => own(new THREE.MeshBasicMaterial({ color: HOVER_COLOR, transparent: true, opacity: 0.32, side: THREE.DoubleSide, depthWrite: false }));
+    const tri = (pts: THREE.Vector3[]) => ownGeo(new THREE.BufferGeometry().setFromPoints(pts));
+    const place = (h: Omit<Handle, "at" | "ext" | "axis"> & { axis?: THREE.Vector3 }) => {
+      h.obj.position.copy(at);
+      out.push({ axis: new THREE.Vector3(), ...h, at, ext: 0 });
+    };
+    for (const a of axes) {
+      const axis = unit(a), mat = own(new THREE.MeshBasicMaterial({ color: AXIS_COLOR[a], transparent: true, opacity: 0.95 }));
+      const obj = new THREE.Group(), stick = new THREE.Group();
+      stick.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
+      const hit = new THREE.Mesh(shapes.axisHit, hitMat);
+      stick.add(new THREE.Mesh(shapes.axisLine, mat), new THREE.Mesh(shapes.axisEnd, mat), hit);
+      const label = new THREE.Sprite(own(new THREE.SpriteMaterial({ map: a === "x" ? shapes.letterX : a === "y" ? shapes.letterY : shapes.letterZ, depthTest: false, transparent: true })));
+      label.scale.set(15, 15, 1);
+      label.position.copy(axis).multiplyScalar(L + 14);
+      obj.add(stick, label);
+      place({
+        id: `scale-${a}`, scale: [a], obj, hits: [hit], axis,
+        shows: (look) => Math.abs(axis.dot(look)) < 0.95,
+        paint: (lit) => mat.color.setHex(lit ? HOVER_COLOR : AXIS_COLOR[a]),
+        dispose: () => {},
+      });
+    }
+    for (let i = 0; i < axes.length; i++) for (let j = i + 1; j < axes.length; j++) {
+      const a = axes[i], b = axes[j], ea = unit(a), eb = unit(b), n = ea.clone().cross(eb);
+      const quad = [ea.clone().multiplyScalar(L * r1), ea.clone().multiplyScalar(L * r2), eb.clone().multiplyScalar(L * r2), eb.clone().multiplyScalar(L * r1)];
+      const area = tri([quad[0], quad[1], quad[2], quad[0], quad[2], quad[3]]);
+      const shade = fill();
+      const mid = (p: THREE.Vector3, q: THREE.Vector3) => p.clone().add(q).multiplyScalar(0.5);
+      const edges = ownGeo(new THREE.BufferGeometry().setFromPoints([quad[1], mid(quad[1], quad[2]), mid(quad[1], quad[2]), quad[2], quad[0], mid(quad[0], quad[3]), mid(quad[0], quad[3]), quad[3]]));
+      const ca = new THREE.Color(AXIS_COLOR[a]), cb = new THREE.Color(AXIS_COLOR[b]);
+      const cols = [ca, ca, cb, cb, ca, ca, cb, cb].flatMap((c) => [c.r, c.g, c.b]);
+      edges.setAttribute("color", new THREE.Float32BufferAttribute(cols, 3));
+      const lineMat = own(new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.95 }));
+      const lines = new THREE.LineSegments(edges, lineMat);
+      const face = new THREE.Mesh(area, shade), hit = new THREE.Mesh(area, hitMat);
+      const obj = new THREE.Group();
+      obj.add(face, lines, hit);
+      place({
+        id: `scale-${a}${b}`, scale: [a, b], obj, hits: [hit],
+        shows: (look) => Math.abs(n.dot(look)) > 0.2,
+        paint: (lit) => { face.visible = lit; lineMat.vertexColors = !lit; lineMat.color.setHex(lit ? HOVER_COLOR : 0xffffff); lineMat.needsUpdate = true; },
+        dispose: () => {},
+      });
+    }
+    if (axes.length >= 2) {
+      const corners = axes.length === 3 ? axes.map((a) => unit(a).multiplyScalar(L * r1)) : [new THREE.Vector3(), ...axes.map((a) => unit(a).multiplyScalar(L * r1))];
+      const area = tri(corners), shade = fill();
+      const face = new THREE.Mesh(area, shade), hit = new THREE.Mesh(area, hitMat);
+      const obj = new THREE.Group();
+      obj.add(face, hit);
+      const n = new THREE.Vector3().subVectors(corners[1], corners[0]).cross(new THREE.Vector3().subVectors(corners[2], corners[0])).normalize();
+      place({
+        id: "scale-all", scale: axes, obj, hits: [hit],
+        shows: (look) => Math.abs(n.dot(look)) > 0.08,
+        paint: (lit) => { face.visible = lit; },
+        dispose: () => {},
+      });
+    }
+    if (out.length) out[0].dispose = () => { for (const g of geos) g.dispose(); for (const m of mats) m.dispose(); };
+    return out;
+  };
+
+  /** The handles for the current grips or scale gizmo, on the selected part's box or the whole design's. */
   const placeHandles = () => {
     const s = st.current;
     if (!s) return;
-    for (const k of handles.current) { s.overlay.remove(k.obj); k.mat.dispose(); }
+    for (const k of handles.current) { s.overlay.remove(k.obj); k.dispose(); }
     handles.current = [];
-    const m = shown.current, list = gripList.current;
-    if (m && list.length) {
-      m.group.updateMatrixWorld(true);
-      const whole = modelBox(m.group);
+    const m = shown.current, list = gripList.current, gizmo = sizer.current;
+    if (m && (list.length || gizmo)) {
+      if (!preview.current) m.group.updateMatrixWorld(true);
+      const whole = preview.current?.box?.clone() ?? modelBox(m.group);
       const part = selected.current ? new THREE.Box3().setFromObject(selected.current) : null;
-      const { shapes, hitMat } = s;
-      for (const g of list) {
-        const box = g.part && part && !part.isEmpty() ? part : whole;
-        if (box.isEmpty()) continue;
-        const axis = new THREE.Vector3(...AXIS_VEC[g.axis]);
-        const at = box.getCenter(new THREE.Vector3());
-        const ext = box.getSize(new THREE.Vector3())[g.axis];
-        const mat = new THREE.MeshBasicMaterial({ color: AXIS_COLOR[g.axis], transparent: true, opacity: 0.95 });
-        const obj = new THREE.Group();
-        let hit: THREE.Mesh;
-        if (g.kind === "size") {
-          const side = g.side ?? 1;
-          at[g.axis] = side > 0 ? box.max[g.axis] : box.min[g.axis];
-          const cube = new THREE.Mesh(shapes.cube, mat);
-          hit = new THREE.Mesh(shapes.cubeHit, hitMat);
-          cube.position.copy(axis).multiplyScalar(14 * side);
-          hit.position.copy(cube.position);
-          obj.add(cube, hit);
-        } else if (g.kind === "move") {
-          obj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
-          hit = new THREE.Mesh(shapes.arrowHit, hitMat);
-          obj.add(new THREE.Mesh(shapes.shaft, mat), new THREE.Mesh(shapes.cone, mat), hit);
-        } else {
-          obj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), axis);
-          hit = new THREE.Mesh(shapes.ringHit, hitMat);
-          obj.add(new THREE.Mesh(shapes.ring, mat), hit);
-        }
-        obj.position.copy(at);
-        s.overlay.add(obj);
-        handles.current.push({ grip: g, obj, hit, mat, axis, at, ext });
+      if (!whole.isEmpty()) {
+        if (gizmo) handles.current.push(...scaleHandles(gizmo, whole));
+        for (const g of list) handles.current.push(gripHandle(g, g.part && part && !part.isEmpty() ? part : whole));
+        for (const k of handles.current) s.overlay.add(k.obj);
       }
     }
     paintHandles();
@@ -707,8 +868,12 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     const ray = new THREE.Raycaster();
     ray.setFromCamera(new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1), p.cam);
     const vis = handles.current.filter((k) => k.obj.visible);
-    const hit = ray.intersectObjects(vis.map((k) => k.hit), false)[0];
-    return hit ? vis.find((k) => k.hit === hit.object) ?? null : null;
+    const hits = ray.intersectObjects(vis.flatMap((k) => k.hits), false);
+    if (!hits.length) return null;
+    // Axis handles win over the strips and the middle they cross.
+    const of = (o: THREE.Object3D) => vis.find((k) => k.hits.includes(o as THREE.Mesh)) ?? null;
+    const near = hits.map((h) => of(h.object)).filter((k): k is Handle => !!k);
+    return near.find((k) => k.scale?.length === 1) ?? near[0] ?? null;
   };
 
   const showTip = (x: number, y: number, text: string | null) => {
@@ -727,7 +892,16 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     if (!g) return;
     drag.current = null;
     holdUntil.current = performance.now() + 1500;
-    g.fn(cancel ? 0 : g.d, true);
+    if (g.scale) {
+      const values = g.scale.last?.values ?? {};
+      if (cancel || !Object.keys(values).length) endPreview();
+      else {
+        // The design stays drawn at its new size until the rebuilt one arrives.
+        const pv = preview.current;
+        g.scale.gizmo.write(values);
+        window.setTimeout(() => { if (pv && preview.current === pv) endPreview(); }, 8000);
+      }
+    } else g.fn(cancel ? 0 : g.d, true);
     showTip(0, 0, null);
     paintHandles();
     st.current?.request();
@@ -739,6 +913,9 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
       if (e.button !== 0 || drag.current) return;
       const k = handleAt(p, e.clientX, e.clientY);
       if (!k) return;
+      const gizmo = sizer.current, m = shown.current;
+      // A resize still being rebuilt: the next one waits for it.
+      if (k.scale && (!gizmo || !m || preview.current)) return;
       e.stopImmediatePropagation();
       e.preventDefault();
       const r = p.el.getBoundingClientRect();
@@ -749,11 +926,19 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
       const L = Math.max(1e-3, k.obj.scale.x * 100);
       const a = toScreen(k.at), b = toScreen(k.at.clone().addScaledVector(k.axis, L));
       const toViewer = p.cam instanceof THREE.OrthographicCamera ? p.cam.getWorldDirection(new THREE.Vector3()).negate() : p.cam.position.clone().sub(k.at);
-      drag.current = {
-        id: k.grip.id, kind: k.grip.kind, side: k.grip.side ?? 1, fn: k.grip.start(k.ext),
-        x0: e.clientX, y0: e.clientY, prev: [e.clientX, e.clientY], ang: 0,
-        u: [(b[0] - a[0]) / L, (b[1] - a[1]) / L], c: a, facing: k.axis.dot(toViewer) > 0, d: 0, text: "",
-      };
+      const base = { x0: e.clientX, y0: e.clientY, prev: [e.clientX, e.clientY] as [number, number], ang: 0, c: a, facing: k.axis.dot(toViewer) > 0, d: 0, text: "" };
+      if (k.scale && gizmo && m) {
+        const size = modelBox(m.group).getSize(new THREE.Vector3());
+        const grab: [number, number] = [e.clientX, e.clientY];
+        const away = k.scale.length === 1 ? [b[0] - a[0], b[1] - a[1]] : [grab[0] - a[0], grab[1] - a[1]];
+        const n = Math.hypot(away[0], away[1]) || 1;
+        drag.current = {
+          ...base, id: k.id, kind: "size", fn: () => "", u: [0, 0],
+          scale: { axes: k.scale, all: k.id === "scale-all", gizmo, grab, dir: [away[0] / n, away[1] / n], ext: { x: size.x, y: size.y, z: size.z }, last: null },
+        };
+      } else if (k.grip) {
+        drag.current = { ...base, id: k.id, kind: k.grip.kind, fn: k.grip.start(k.ext), u: [(b[0] - a[0]) / L, (b[1] - a[1]) / L] };
+      } else return;
       try { p.el.setPointerCapture(e.pointerId); } catch { /* synthetic pointer */ }
       p.el.style.cursor = "grabbing";
       host.current?.focus({ preventScroll: true });
@@ -766,9 +951,19 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
       if (!g) {
         if (e.buttons || !handles.current.length) return;
         const k = handleAt(p, e.clientX, e.clientY);
-        const id = k?.grip.id ?? null;
+        const id = k?.id ?? null;
         p.el.style.cursor = k ? "grab" : "";
+        p.el.dataset.grip = id ?? "";
         if (id !== hoverId.current) { hoverId.current = id; paintHandles(); st.current?.request(); }
+        return;
+      }
+      if (g.scale) {
+        const s = g.scale;
+        const f = s.all ? uniformDrag(e.clientY - g.y0) : scaleDrag(g.c, s.dir, s.grab, [e.clientX, e.clientY]);
+        const res = sizeResult(s.gizmo, s.ext, dragFactors(s.axes, f, e.shiftKey));
+        s.last = res;
+        previewScale(res.f);
+        showTip(e.clientX, e.clientY, res.text);
         return;
       }
       let raw: number;
@@ -776,7 +971,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
         g.ang += turnDrag(g.c, g.prev, [e.clientX, e.clientY], g.facing);
         g.prev = [e.clientX, e.clientY];
         raw = g.ang;
-      } else raw = axisDrag(e.clientX - g.x0, e.clientY - g.y0, g.u) * (g.kind === "size" ? g.side : 1);
+      } else raw = axisDrag(e.clientX - g.x0, e.clientY - g.y0, g.u);
       const d = snapDrag(g.kind, raw, e.shiftKey);
       if (d !== g.d || !g.text) { g.d = d; g.text = g.fn(d, false); }
       showTip(e.clientX, e.clientY, g.text);
@@ -878,12 +1073,14 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
       {kinds.length > 0 && (
         <span className="v3-seg v3-grips" role="group" aria-label="Handles" data-testid="v3-grips">
           {kinds.map((k) => (
-            <button key={k.kind} type="button" aria-pressed={k.kind === kind} title={`${k.label} handles (${k.key.toUpperCase()}): drag them in any view · Shift snaps · Esc cancels`} onClick={() => setGripKind(k.kind)}>{k.label}</button>
+            <button key={k.kind} type="button" aria-pressed={k.kind === kind} title={k.kind === "size"
+              ? `Scale (${k.key.toUpperCase()}): drag an axis to size along it, a strip between two axes for both, the middle for all · Shift keeps the proportions · Esc cancels`
+              : `${k.label} handles (${k.key.toUpperCase()}): drag them in any view · Shift snaps · Esc cancels`} onClick={() => setGripKind(k.kind)}>{k.label}</button>
           ))}
         </span>
       )}
       <span ref={tip} className="v3-tip" hidden data-testid="v3-tip" />
-      <span className="v3-hint">Drag to orbit · middle or right-drag to pan · wheel to zoom · click a part to select, then drag its handles · Alt+W one or four views · Z zoom extents · F4 edges</span>
+      <span className="v3-hint">Drag to orbit · middle or right-drag to pan · wheel to zoom · click a part to select, then drag its handles (Shift keeps proportions) · Alt+W one or four views · Z zoom extents · F4 edges</span>
       {children}
     </div>
   );

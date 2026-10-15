@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { MeshData, SliceResult } from "@/lib/parametric";
-import type { Grip } from "@/lib/three/grips";
+import type { GripSet } from "@/lib/three/grips";
 import QuadView, { type QuadModel } from "@/lib/three/QuadView";
 import { quadProps, useView3D, type View3DState } from "@/components/shell/view3d";
 import type { Units } from "@/components/editor/format";
@@ -35,7 +35,7 @@ export default function Viewport3D({ mesh, result, T, show, explode = 0, finish 
   v?: View3DState;
   units?: Units;
   /** Handles on the model while a part is selected. */
-  grips?: Grip[];
+  grips?: GripSet;
 }) {
   const own = useView3D();
   const view = v ?? own;

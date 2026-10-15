@@ -4,7 +4,7 @@
  */
 import { forwardRef, useImperativeHandle, useMemo, useRef } from "react";
 import type { D3Model } from "../../../lib/desktop/types";
-import type { Grip } from "../../../lib/three/grips";
+import type { GripSet } from "../../../lib/three/grips";
 import { lookOf } from "../../../lib/three/looks";
 import QuadView, { type PaneId, type QuadViewHandle } from "../../../lib/three/QuadView";
 import type { Shade3D as Shade, Units } from "../local";
@@ -30,7 +30,7 @@ interface Props {
   /** Told the selected part's name (null: none). */
   onSelect?: (name: string | null) => void;
   /** Handles on the selected part (desktop/src/grips.ts). */
-  grips?: Grip[];
+  grips?: GripSet;
   children?: React.ReactNode;
 }
 
