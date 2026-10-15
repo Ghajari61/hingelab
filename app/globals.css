@@ -78,6 +78,10 @@ details.sec > summary .sec-rst { order: 2; }
 .fld .u { color: var(--fg-faint); font-family: var(--font-num); font-size: 10.5px; padding-inline: 3px 8px; }
 .fld .rst { border: 0; background: none; color: var(--accent); line-height: 1; padding: 0 6px 0 0; margin-left: -4px; cursor: pointer; display: grid; place-items: center; }
 .fld .rst:hover { color: var(--fg); }
+.rst-mark { border: 0; background: none; color: var(--accent); line-height: 1; padding: 0 0 0 6px; cursor: pointer; display: inline-grid; place-items: center; vertical-align: -1px; }
+.rst-mark:hover, .rst-mark:focus-visible { color: var(--fg); }
+.chk-row { display: flex; align-items: center; gap: 4px; }
+.chk-row > .chk { flex: 1; min-width: 0; }
 .lck { border: 0; background: none; color: var(--fg-faint); line-height: 1; padding: 0 6px 0 0; cursor: pointer; display: grid; place-items: center; opacity: .45; }
 .lck:hover, .lck:focus-visible { opacity: 1; color: var(--fg); }
 .lck[aria-pressed="true"] { opacity: 1; color: var(--accent); }
@@ -253,7 +257,7 @@ select.sel:focus { border-color: var(--accent); outline: none; }
 .style-looks button svg path, .style-looks button svg rect, .style-looks button svg line { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
 .style-looks button:hover { color: var(--fg); background: var(--surface-hover); }
 .style-looks button[aria-pressed="true"] { color: var(--fg); background: var(--panel); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-.style-slider { display: grid; grid-template-columns: 86px minmax(0, 1fr) 62px; align-items: center; gap: 8px; font-size: 12px; color: var(--fg-dim); }
+.style-slider { display: grid; grid-template-columns: 86px minmax(0, 1fr) 58px 18px; align-items: center; gap: 8px; font-size: 12px; color: var(--fg-dim); }
 .style-slider input { width: 100%; accent-color: var(--accent); }
 .style-slider output { text-align: end; color: var(--fg); font-variant-numeric: tabular-nums; }
 .pe-pro button { margin-inline-start: 6px; background: none; border: 0; padding: 0; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }

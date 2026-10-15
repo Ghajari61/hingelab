@@ -15,6 +15,7 @@ import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
 import type { FitInfo } from "@/lib/fit/arrange";
 import { SheetSection } from "@/components/shell/SheetSection";
 import { HelpMark } from "@/components/help/HelpContext";
+import { CheckField, ResetMark } from "./ResetMark";
 import type { Units } from "./format";
 
 /** What the Sheet section needs from the editor: the fit result and the two setters. */
@@ -119,20 +120,19 @@ export function PanelDock({
           current={{ T: params.T, kx: params.K, ky: params.Ky ?? params.K, minFeature: params.minFeature ?? 0 }}
         />
         <div className="grid2">{fields("secMat")}</div>
-        <label className="chk" title="For a machine that cuts wider along one axis: cut a 20 mm square and measure it across both ways">
-          <input
-            type="checkbox" checked={params.Ky != null}
-            onChange={(e) => {
-              const next: Params = { ...params };
-              if (e.target.checked) next.Ky = params.K;
-              else delete next.Ky;
-              onPatch(next);
-            }}
-          /> Separate X and Y kerf
-        </label>
+        <CheckField
+          label="Separate X and Y kerf" title="For a machine that cuts wider along one axis: cut a 20 mm square and measure it across both ways"
+          checked={params.Ky != null} def={DEFAULTS.Ky != null}
+          onChange={(on) => {
+            const next: Params = { ...params };
+            if (on) next.Ky = params.K;
+            else delete next.Ky;
+            onPatch(next);
+          }}
+        />
       </Sec>
       <Sec title="Hinge Pattern" meta={patMeta} startOpen onReset={() => onResetSection("Hinge pattern", ["pattern", "cutStyle", "slotW", "slit", "bridge", "pitch", "overrun", "stretch"])}>
-        <div className="rowlabel">Cut style</div>
+        <div className="rowlabel">Cut style<ResetMark label="Cut style" show={params.cutStyle !== DEFAULTS.cutStyle} to={DEFAULTS.cutStyle === "slot" ? "Slots" : "Single line"} onReset={() => onCutStyle(DEFAULTS.cutStyle)} /></div>
         <div className="iconseg" id="cutSeg" role="group" aria-label="Cut style">
           <button type="button" data-v="slot" aria-pressed={params.cutStyle === "slot"} onClick={() => onCutStyle("slot")} title="Each cut is a round-ended slot of set width; edge cuts become notches in the outline">
             <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.2"><rect x="4" y="1" width="3" height="12" rx="1.5" /><rect x="11" y="1" width="3" height="12" rx="1.5" /></svg>Slots
@@ -154,7 +154,7 @@ export function PanelDock({
       </Sec>
       <Sec title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["tabW", "slotClr", "lidGap", "split"])}>
         <div className="grid2">{fields("secJoints")}</div>
-        <div className="rowlabel">Wall pieces</div>
+        <div className="rowlabel">Wall pieces<ResetMark label="Wall pieces" show={params.split !== DEFAULTS.split} to={DEFAULTS.split === 2 ? "Two halves" : "One strip"} onReset={() => onSplit(DEFAULTS.split)} /></div>
         <div className="iconseg" role="group" aria-label="Wall pieces">
           <button type="button" aria-pressed={params.split === 1} onClick={() => onSplit(1)}>One strip</button>
           <button type="button" aria-pressed={params.split === 2} onClick={() => onSplit(2)}>Two halves</button>
@@ -163,7 +163,7 @@ export function PanelDock({
       </Sec>
       <Sec title="Lid" onReset={() => onResetSection("Lid", ["lidOver", "lidHole", "lidHoleD", "lidLip"])}>
         <div className="grid2">{fields("secLid")}</div>
-        <div className="rowlabel">Hole</div>
+        <div className="rowlabel">Hole<ResetMark label="Lid hole" show={(params.lidHole ?? "none") !== "none"} to="None" onReset={() => { const next: Params = { ...params }; delete next.lidHole; delete next.lidHoleD; onPatch(next); }} /></div>
         <div className="iconseg" role="group" aria-label="Lid hole">
           {([["none", "None"], ["finger", "Finger"], ["knob", "Knob"]] as const).map(([v, text]) => (
             <button
@@ -173,9 +173,10 @@ export function PanelDock({
           ))}
         </div>
         {params.lid === "removable" && (
-          <label className="chk" title="A second plate under the lid that sits inside the walls and keeps it in place">
-            <input type="checkbox" checked={params.lidLip !== false} onChange={(e) => onPatch({ ...params, lidLip: e.target.checked })} /> Lip under the lid
-          </label>
+          <CheckField
+            label="Lip under the lid" title="A second plate under the lid that sits inside the walls and keeps it in place"
+            checked={params.lidLip !== false} def={DEFAULTS.lidLip !== false} onChange={(on) => onPatch({ ...params, lidLip: on })}
+          />
         )}
         <p className="note">Overhang makes a flat top wider than the box. A finger hole lifts a removable lid; a knob hole takes a knob&apos;s screw.</p>
       </Sec>
@@ -189,7 +190,7 @@ export function PanelDock({
         >
           <div className="grid2">{fields("secSheet")}</div>
         </SheetSection>
-        <label className="chk"><input type="checkbox" checked={!!params.testStrip} onChange={(e) => onTestStrip(e.target.checked)} /> Add a bend test strip</label>
+        <CheckField label="Add a bend test strip" checked={!!params.testStrip} def={!!DEFAULTS.testStrip} onChange={onTestStrip} />
         <p className="note">The test strip carries one corner&apos;s hinge with 15 mm of flat on each side. Cut it first to check the bend in your material.</p>
       </Sec>
     </aside>

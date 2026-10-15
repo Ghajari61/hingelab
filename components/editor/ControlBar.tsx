@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Box, Cake, ChevronDown, Clock, Hash, KeyRound, Layers, Package, Puzzle, QrCode, Shapes, Signpost, SquareStack, Trophy, Type } from "lucide-react";
 import type { Params } from "@/lib/hinge";
+import { DEFAULTS } from "@/lib/hinge/defaults";
 import { HINGE_VARIANTS, hingeVariantOf, type HingeVariant } from "@/lib/hinge/presets";
 import { GENERATOR_IDS, GENERATOR_INFO, isGeneratorId, type GeneratorId, type GeneratorInfo } from "@/lib/generators/ids";
 import { canUsePattern, canUseShape, type Plan } from "@/lib/plans";
@@ -127,9 +128,9 @@ export function hingeGroups({ params, plan = "pro", onShape, onLid, onPattern, o
     { v: "honeycomb", text: "Honeycomb", title: "Honeycomb: nested hexagon cells, a stiff, even bend for large radii", onClick: () => onPattern("honeycomb") },
   ].map((o) => ({ ...o, locked: !canUsePattern(plan, o.v as Params["pattern"]) }));
   return [
-    { label: "Shape", name: "Box shape", art: "shape", value: params.shape, options: shape },
-    { label: "Lid", name: "Lid type", art: "lid", value: params.lid, options: LID_OPTS(onLid), cols: 3 },
-    { label: "Hinge pattern", name: "Hinge pattern", art: "pattern", value: params.pattern, options: pattern },
+    { label: "Shape", name: "Box shape", art: "shape", value: params.shape, options: shape, home: DEFAULTS.shape },
+    { label: "Lid", name: "Lid type", art: "lid", value: params.lid, options: LID_OPTS(onLid), cols: 3, home: DEFAULTS.lid },
+    { label: "Hinge pattern", name: "Hinge pattern", art: "pattern", value: params.pattern, options: pattern, home: DEFAULTS.pattern },
     ...(onVariant ? [{
       label: "Hinge style", name: "Hinge style", art: "variant", value: hingeVariantOf(params), cols: 3 as const,
       options: HINGE_VARIANTS.map((v) => ({ v: v.id, text: v.name, title: v.title, onClick: () => onVariant(v) })),

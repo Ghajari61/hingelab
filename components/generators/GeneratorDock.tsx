@@ -16,6 +16,7 @@ import type { Units } from "@/components/editor/format";
 import { cleanFit } from "@/lib/fit/fitToSheets";
 import { assemblySteps, cleanExtras, cleanJob, GEN_LAYER_NAMES } from "@/lib/generators/output";
 import { getPath, setPath } from "@/lib/generators/path";
+import { CheckField, ResetMark } from "@/components/editor/ResetMark";
 import { Dices } from "lucide-react";
 import { ImagePicker } from "./ImagePicker";
 import type { TracedPicture } from "./levelsClient";
@@ -84,22 +85,23 @@ export function GeneratorDock({
   const field = (f: FieldSpec<P>): ReactNode => {
     const hidden = f.show ? !f.show(params) : false;
     const value = getPath(params, f.key);
-    if (f.kind === "number") return num(numberField(f), value as number, getPath(defaults, f.key) as number, hidden, lockOf(f));
+    const dflt = getPath(defaults, f.key);
+    if (f.kind === "number") return num(numberField(f), value as number, dflt as number, hidden, lockOf(f));
     if (hidden) return null;
     if (f.kind === "toggle") {
-      return (
-        <label className="chk" key={f.key} title={f.help}>
-          <input type="checkbox" checked={!!value} onChange={(e) => onSet(f.key, e.target.checked, true)} /> {f.label}
-        </label>
-      );
+      return <CheckField key={f.key} label={f.label} title={f.help} checked={!!value} def={dflt === undefined ? undefined : !!dflt} onChange={(on) => onSet(f.key, on, true)} />;
     }
     if (f.kind === "choice") {
       const pick = (v: string) => (f.apply ? onApply(f.apply(params, v) as P) : onSet(f.key, v, true));
       const seg = f.options.length <= 4 && f.options.every((o) => o.text.length <= 16);
       const lock = lockOf(f);
+      const home = f.options.find((o) => o.v === dflt);
       return (
         <div className="gen-choice" key={f.key}>
-          <div className="rowlabel" title={f.help}>{f.label}{lock && <LockToggle {...lock} label={f.label} />}</div>
+          <div className="rowlabel" title={f.help}>
+            {f.label}{lock && <LockToggle {...lock} label={f.label} />}
+            <ResetMark label={f.label} show={!!home && value !== dflt} to={home?.text} onReset={() => pick(String(dflt))} />
+          </div>
           {seg ? (
             <div className="iconseg full" role="group" aria-label={f.label}>
               {f.options.map((o) => (
@@ -152,7 +154,10 @@ export function GeneratorDock({
     if (f.kind === "font") {
       return (
         <div className="gen-font" key={f.key}>
-          <div className="rowlabel">{f.label}</div>
+          <div className="rowlabel">
+            {f.label}
+            <ResetMark label={f.label} show={typeof dflt === "string" && value !== dflt} onReset={() => onSet(f.key, dflt, true)} />
+          </div>
           <FontPicker
             compact fontId={String(value)} text={f.sample?.(params) ?? "Aa"} uploads={fonts?.uploads ?? []} onPick={(id) => onSet(f.key, id, true)}
             onUpload={fonts && ((file) => fonts.onUpload(f.key, file))} onDelete={(id) => fonts?.onDelete(id)}
@@ -162,7 +167,13 @@ export function GeneratorDock({
     }
     return (
       <div className="gen-text" key={f.key}>
-        <div className="rowlabel">{f.label}</div>
+        <div className="rowlabel">
+          {f.label}
+          <ResetMark
+            label={f.label} show={typeof dflt === "string" && value !== dflt} to={dflt ? `“${String(dflt).slice(0, 24)}”` : "empty"}
+            onReset={() => onSet(f.key, dflt, true)}
+          />
+        </div>
         {f.multiline ? (
           <textarea
             className="textin" rows={3} aria-label={f.label} placeholder={f.placeholder} spellCheck={false} maxLength={f.maxLength}
@@ -217,6 +228,7 @@ export function GeneratorDock({
   }
 
   const extras = cleanExtras(params.sheet);
+  const homeExtras = cleanExtras(defaults.sheet);
   const job = cleanJob(params.job);
   const batchKey = def.batch?.(params as never) ?? null;
   const layerVis = (key: LayerKey) => onSet(`layers.${key}.vis`, !params.layers[key].vis, true);
@@ -239,12 +251,11 @@ export function GeneratorDock({
           {extras.kerfXY && num(KERF_Y_FIELD, extras.kerfY ?? params.K, params.K)}
           {num(FEATURE_FIELD, extras.minFeature ?? 0, 0)}
         </div>
-        <label className="chk" title="For a machine that cuts wider along one axis: cut a 20 mm square and measure it across both ways">
-          <input
-            type="checkbox" checked={!!extras.kerfXY}
-            onChange={(e) => onApply(setPath(setPath(params, "sheet.kerfXY", e.target.checked), "sheet.kerfY", extras.kerfY ?? params.K) as P)}
-          /> Separate X and Y kerf
-        </label>
+        <CheckField
+          label="Separate X and Y kerf" title="For a machine that cuts wider along one axis: cut a 20 mm square and measure it across both ways"
+          checked={!!extras.kerfXY} def={!!homeExtras.kerfXY}
+          onChange={(on) => onApply(setPath(setPath(params, "sheet.kerfXY", on), "sheet.kerfY", extras.kerfY ?? params.K) as P)}
+        />
       </Sec>
       <Sec title="Checks" startOpen meta={out?.stats.length ? `${out.parts.length} parts` : undefined}>
         {out && out.stats.length > 0 && (
@@ -272,21 +283,27 @@ export function GeneratorDock({
         </SheetSection>
         <div className="grid2">{num(COPIES_FIELD, extras.copies, SHEET_EXTRAS.copies)}</div>
         <div className="gen-choice">
-          <div className="rowlabel">Nesting</div>
+          <div className="rowlabel">
+            Nesting
+            <ResetMark label="Nesting" show={extras.nest !== homeExtras.nest} to={homeExtras.nest === "box" ? "By box" : "By outline"} onReset={() => onSet("sheet.nest", homeExtras.nest, true)} />
+          </div>
           <div className="iconseg full" role="group" aria-label="Nesting">
             <button type="button" title="Pack the parts' bounding boxes, parts upright" aria-pressed={extras.nest === "box"} onClick={() => onSet("sheet.nest", "box", true)}>By box</button>
             <button type="button" title="Pack the true shapes, turning parts by quarter turns, so they fill each other's notches and holes" aria-pressed={extras.nest === "outline"} onClick={() => onSet("sheet.nest", "outline", true)}>By outline</button>
           </div>
         </div>
-        <label className="chk" title="A scored 100 mm scale and a 10 mm test square along the bottom of every sheet, to check the cut size and the kerf">
-          <input type="checkbox" checked={extras.calibration} onChange={(e) => onSet("sheet.calibration", e.target.checked, true)} /> Calibration bar on every sheet
-        </label>
-        <label className="chk" title="Score each part's name on it, where it fits clear of cuts and engraving">
-          <input type="checkbox" checked={extras.labels} onChange={(e) => onSet("sheet.labels", e.target.checked, true)} /> Part labels
-        </label>
-        <label className="chk" title="Flip every part left to right, so engraving on the back of clear acrylic reads the right way from the front">
-          <input type="checkbox" checked={job.mirror} onChange={(e) => onSet("job.mirror", e.target.checked, true)} /> Mirror (engrave the back of clear acrylic)
-        </label>
+        <CheckField
+          label="Calibration bar on every sheet" title="A scored 100 mm scale and a 10 mm test square along the bottom of every sheet, to check the cut size and the kerf"
+          checked={extras.calibration} def={homeExtras.calibration} onChange={(on) => onSet("sheet.calibration", on, true)}
+        />
+        <CheckField
+          label="Part labels" title="Score each part's name on it, where it fits clear of cuts and engraving"
+          checked={extras.labels} def={homeExtras.labels} onChange={(on) => onSet("sheet.labels", on, true)}
+        />
+        <CheckField
+          label="Mirror (engrave the back of clear acrylic)" title="Flip every part left to right, so engraving on the back of clear acrylic reads the right way from the front"
+          checked={job.mirror} def={cleanJob(defaults.job).mirror} onChange={(on) => onSet("job.mirror", on, true)}
+        />
         {batchKey && (
           <div className="gen-text">
             <div className="rowlabel">Names, one per line</div>

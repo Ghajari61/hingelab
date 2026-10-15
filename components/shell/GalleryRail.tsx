@@ -7,6 +7,7 @@ import { LockIcon } from "@/components/billing/Lock";
 import { HelpContext, HelpMark } from "@/components/help/HelpContext";
 import type { Opt } from "@/components/editor/ControlBar";
 import { railPic } from "@/lib/railArt";
+import { ResetMark } from "@/components/editor/ResetMark";
 import { ART } from "./cardArt";
 
 export type GalleryGroup = {
@@ -29,6 +30,8 @@ export type GalleryGroup = {
   fav?: { has: (v: string) => boolean; toggle: (v: string, text: string) => void };
   /** A small control after the heading (a Randomise lock). */
   tools?: ReactNode;
+  /** The default option: a ↺ after the heading picks it while another one is chosen. */
+  home?: string;
 };
 
 function TipsButton() {
@@ -67,14 +70,19 @@ export function GalleryRail({ title, icon, groups, history, children, inert }: {
         <span className="hist">
           <TipsButton />
           <button type="button" className="hdr-btn" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!history.canUndo} onClick={history.undo}><Undo2 size={16} /></button>
-          <button type="button" className="hdr-btn" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!history.canRedo} onClick={history.redo}><Redo2 size={16} /></button>
+          <button type="button" className="hdr-btn" aria-label="Redo" title="Redo (Ctrl+Y)" disabled={!history.canRedo} onClick={history.redo}><Redo2 size={16} /></button>
         </span>
       </div>
       <div className="gallery-scroll">
         {children}
-        {groups.map((g) => (
+        {groups.map((g) => {
+          const home = g.home === undefined ? undefined : g.options.find((o) => o.v === g.home);
+          return (
           <section key={g.name} className="gallery-group">
-            <h3>{g.label}<HelpMark title={g.label} kind="rail" />{g.tools}</h3>
+            <h3>
+              {g.label}<HelpMark title={g.label} kind="rail" />{g.tools}
+              <ResetMark label={g.label} show={!!home && g.value !== home.v} to={home?.text} onReset={() => home?.onClick()} />
+            </h3>
             {g.head}
             {!g.options.length && g.empty && <p className="gempty">{g.empty}</p>}
             <div className={`gcards c${g.cols ?? 2}`} role="group" aria-label={g.name}>
@@ -106,7 +114,8 @@ export function GalleryRail({ title, icon, groups, history, children, inert }: {
               })}
             </div>
           </section>
-        ))}
+          );
+        })}
       </div>
     </aside>
   );

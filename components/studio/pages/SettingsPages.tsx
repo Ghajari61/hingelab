@@ -81,7 +81,6 @@ export function AccountPage() {
             <Select label="Shortcut set" value={prefs.shortcutSet} options={(Object.keys(SHORTCUT_SET_NAMES) as ShortcutSet[]).map((s) => ({ value: s, label: SHORTCUT_SET_NAMES[s] }))} onChange={(shortcutSet) => setPrefs({ shortcutSet })} />
             <Select label="Default machine" value={prefs.machineId} options={MACHINE_PROFILES.map((m) => ({ value: m.id, label: m.name }))} onChange={(machineId) => setPrefs({ machineId })} />
             <Select label="Favourite material" value={prefs.materialId} options={MATERIAL_PRESETS.map((m) => ({ value: m.id, label: m.name }))} onChange={(materialId) => setPrefs({ materialId })} />
-            <SegmentedControl label="Reset ↺ goes to" value={prefs.resetTo} onChange={(resetTo) => setPrefs({ resetTo })} options={[{ value: "default", label: "Default value" }, { value: "preset", label: "Preset value" }]} />
             <label style={{ display: "flex", gap: 8, alignItems: "center", alignSelf: "end" }}>
               <input type="checkbox" checked={prefs.showStartScreen} onChange={(e) => setPrefs({ showStartScreen: e.target.checked })} /> Show start screen on launch
             </label>

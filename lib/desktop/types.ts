@@ -8,11 +8,12 @@ export type DesktopProductId = "hinge" | "clock" | "puzzle" | "qr" | "boxes" | "
 export type WorkspaceProductId = DesktopProductId | "art";
 export type DesktopPlan = "free" | "pro";
 
+/** `default`: the value a new design starts with, which the field's reset restores. */
 export type DField =
-  | { kind: "number"; key: string; label: string; help?: string; unit: "mm" | "deg" | "" | "%"; min: number; max: number; step: number; int?: boolean }
-  | { kind: "choice"; key: string; label: string; help?: string; options: { v: string; text: string; title?: string; pro?: boolean }[] }
-  | { kind: "toggle"; key: string; label: string; help?: string }
-  | { kind: "text"; key: string; label: string; help?: string; placeholder?: string; multiline?: boolean; maxLength: number };
+  | { kind: "number"; key: string; label: string; help?: string; default?: number; unit: "mm" | "deg" | "" | "%"; min: number; max: number; step: number; int?: boolean }
+  | { kind: "choice"; key: string; label: string; help?: string; default?: string; options: { v: string; text: string; title?: string; pro?: boolean }[] }
+  | { kind: "toggle"; key: string; label: string; help?: string; default?: boolean }
+  | { kind: "text"; key: string; label: string; help?: string; default?: string; placeholder?: string; multiline?: boolean; maxLength: number };
 
 export interface DSection {
   id: string;

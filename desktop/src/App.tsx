@@ -5,6 +5,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Sidebar, SignIn, Toasts, UpdateDialog, UpdateRequired, useModalOpen, type Route, type Toast } from "./components/Chrome";
 import { Dashboard, Favorites, Generators, Help, Recent, Settings, Subscription } from "./components/Pages";
 import { Workspace } from "./components/Workspace";
+import { resetValues } from "./components/SettingsPanel";
 import { AIPage } from "./components/AIPage";
 import { isWebRoute, WEB_HOME, WebHost, type WebRequest, type WebRoute } from "./components/Web";
 import type { CanvasHandle } from "./components/Canvas";
@@ -186,6 +187,14 @@ export function App() {
 
   const product = useMemo(() => (catalog?.art?.id === design.state.product ? catalog.art : catalog?.products.find((p) => p.id === design.state.product)) ?? null, [catalog, design.state.product]);
 
+  const resetAll = () => {
+    if (!product || !design.state.params) return;
+    const values = resetValues(product.sections.flatMap((s) => s.fields), design.state.params);
+    if (!Object.keys(values).length) return toast({ text: "Every setting is already at its default.", kind: "ok" });
+    design.changeMany(values);
+    toast({ text: "All settings reset. Ctrl+Z undoes it.", kind: "ok" });
+  };
+
   const openNew = useCallback((id: string) => {
     const saved = local.reuseLastSettings ? lastParams(id) : null;
     design.open(id, saved ? { params: saved } : {});
@@ -227,7 +236,7 @@ export function App() {
 
   // Project files (.oclc).
   const [files, setFiles] = useState<RecentProject[]>([]);
-  const loadFiles = useCallback(() => void ipc.recentProjects().then(setFiles).catch(() => {}), []);
+  const loadFiles = useCallback(() => void ipc.recentProjects().then((l) => setFiles(Array.isArray(l) ? l : [])).catch(() => {}), []);
   useEffect(() => { if (phase === "ready") loadFiles(); }, [phase, loadFiles]);
 
   const saveProject = useCallback(async (asNew: boolean) => {
@@ -414,6 +423,7 @@ export function App() {
             onSaveAs={() => void saveProject(true)}
             onOpenFile={() => void openFile(null)}
             onExportAs={() => void save("save")}
+            onResetAll={product.id === "art" ? undefined : resetAll}
             onExport={() => void save("export")}
             onUpgrade={() => web("upgrade")}
             onRefreshPlan={refreshPlan}

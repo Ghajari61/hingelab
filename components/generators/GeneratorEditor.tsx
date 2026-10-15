@@ -359,6 +359,13 @@ function GenEditor({ def, onProduct, onHome, start }: {
 
   function resetSection(title: string, keys: string[]) {
     let next = params;
+    // A choice's apply() also sets what it implies outside the section; the section's own keys then go to their defaults.
+    const all = def.sections.flatMap((s) => s.fields as FieldSpec<P>[]);
+    for (const k of keys) {
+      const f = all.find((x) => x.key === k);
+      const d = getPath(defaults, k);
+      if (f?.kind === "choice" && f.apply && getPath(next, k) !== d) next = f.apply(next, String(d)) as P;
+    }
     for (const k of keys) next = setPath(next, k, structuredClone(getPath(defaults, k)));
     replace(next, true);
     toastMsg(`${title} reset. Ctrl+Z undoes it.`);
@@ -499,6 +506,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       groups.push({
         label: c.label, name: c.label, art: `gen-${def.id}`, pics: `gen-${def.id}-${c.key}`, value: String(getPath(params, c.key)), options, cols: options.length === 3 || options.length >= 5 ? 3 : 2,
         tools: c.shuffle ? <LockToggle on={lockSet.has(c.key)} toggle={() => prefs.toggleLock(c.key)} label={c.label} /> : undefined,
+        home: String(getPath(defaults, c.key)),
       });
     }
   }

@@ -8,7 +8,7 @@ import { HINGE_RANGES, hingeRequestError } from "@/lib/billing/validate";
 import { serverBuildContext } from "@/lib/billing/exportGenerator";
 import { arrangeHinge } from "@/lib/fit/hinge";
 import { GENERATOR_IDS, GENERATOR_INFO, isGeneratorId, type GeneratorId } from "@/lib/generators/ids";
-import { arrangeGenerator, genSVG, sheetIssues } from "@/lib/generators/output";
+import { arrangeGenerator, cleanExtras, genSVG, sheetIssues } from "@/lib/generators/output";
 import { getPath, setPath } from "@/lib/generators/path";
 import { loadGenerator } from "@/lib/generators/registry";
 import { sanitizeGeneratorParams } from "@/lib/generators/sanitize";
@@ -35,6 +35,16 @@ export const CATALOG_VERSION = 1;
 export const isDesktopProduct = (v: unknown): v is DesktopProductId => v === "hinge" || isGeneratorId(v);
 
 const MATERIAL_OPTIONS = Object.entries(MATERIALS).map(([v, m]) => ({ v, text: m.name }));
+
+/** The field with its starting value, when that value is one the field accepts. */
+function withDefault(f: DField, v: unknown): DField {
+  switch (f.kind) {
+    case "number": return typeof v === "number" && Number.isFinite(v) && v >= f.min && v <= f.max ? { ...f, default: v } : f;
+    case "choice": return v != null && f.options.some((o) => o.v === String(v)) ? { ...f, default: String(v) } : f;
+    case "toggle": return { ...f, default: v === true };
+    case "text": return typeof v === "string" || v === undefined ? { ...f, default: v ?? "" } : f;
+  }
+}
 
 // ---------------------------------------------------------------- Hinge Box
 
@@ -78,7 +88,8 @@ function hingeProduct(): DProduct {
   };
   const sections: DSection[] = HINGE_SECTIONS.map((s) => ({
     id: s.id, title: s.title, help: s.help,
-    fields: [...(extra[s.id] ?? []), ...FIELDS.filter((f) => f.sec === s.id && !f.unset).map(hingeNumber), ...(tail[s.id] ?? [])],
+    fields: [...(extra[s.id] ?? []), ...FIELDS.filter((f) => f.sec === s.id && !f.unset).map(hingeNumber), ...(tail[s.id] ?? [])]
+      .map((f) => withDefault(f, (DEFAULTS as unknown as Record<string, unknown>)[f.key])),
   }));
   const presets = HINGE_PRESETS.map((pr) => ({ id: pr.id, name: pr.name, note: pr.note, pro: hingeLocks("free", hingePresetParams(pr.params)).length > 0 }));
   return { id: "hinge", name: "Hinge Box", blurb: "Living-hinge boxes in rounded, pill, polygon and cylinder shapes, with tabs and a lid.", icon: "box", sections, presets };
@@ -136,9 +147,20 @@ function genField(f: FieldSpec<GenBase>): DField | null {
 
 function genProduct(id: GeneratorId, def: AnyGenerator): DProduct {
   const info = GENERATOR_INFO[id] as { name: string; blurb: string; icon: DProduct["icon"] };
-  const sections: DSection[] = def.sections.map((s) => ({ id: s.id, title: s.title, help: s.help, fields: s.fields.map(genField).filter((f): f is DField => !!f) })).filter((s) => s.fields.length);
+  const d = def.defaults() as GenBase;
+  const extras = cleanExtras(d.sheet) as unknown as Record<string, unknown>;
+  const start = (key: string) => {
+    const v = getPath(d, key);
+    if (v !== undefined) return v;
+    if (key.startsWith("sheet.")) return extras[key.slice("sheet.".length)];
+    return key === "job.mirror" ? false : undefined;
+  };
+  const sections: DSection[] = [
+    ...def.sections.map((s) => ({ id: s.id, title: s.title, help: s.help, fields: s.fields.map(genField).filter((f): f is DField => !!f) })).filter((s) => s.fields.length),
+    GEN_SHEET,
+  ].map((s) => ({ ...s, fields: s.fields.map((f) => withDefault(f, start(f.key))) }));
   return {
-    id, name: info.name, blurb: info.blurb, icon: info.icon, sections: [...sections, GEN_SHEET],
+    id, name: info.name, blurb: info.blurb, icon: info.icon, sections,
     presets: def.presets.map((pr) => ({ id: pr.id, name: pr.name, note: pr.note, pro: !!pr.pro })),
     ...(def.scale ? { scale: true } : {}),
   };

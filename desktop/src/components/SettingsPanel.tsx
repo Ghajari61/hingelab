@@ -1,5 +1,5 @@
-import { useEffect, useId, useState } from "react";
-import { ChevronDown, CircleHelp, Lock } from "lucide-react";
+import { useEffect, useId, useState, type ReactNode } from "react";
+import { ChevronDown, CircleHelp, Lock, RotateCcw } from "lucide-react";
 import type { DField, DForm, DProduct } from "../../../lib/desktop/types";
 import { getPath, type Params } from "../design";
 import type { Units } from "../local";
@@ -13,10 +13,59 @@ interface Props {
   units: Units;
   plan: "free" | "pro";
   onChange: (key: string, value: unknown, immediate: boolean) => void;
+  /** Several settings at once, as one undo step (a section reset). */
+  onChangeMany?: (values: Params) => void;
+}
+
+/** A field's default in the type the design keeps it (some choices, such as the wall split, are numbers). */
+export function defaultFor(f: DField, current: unknown): unknown {
+  if (f.default === undefined) return undefined;
+  return f.kind === "choice" && typeof current === "number" ? Number(f.default) : f.default;
+}
+
+/** The field differs from its default. */
+export function isChanged(f: DField, current: unknown): boolean {
+  if (f.default === undefined) return false;
+  if (f.kind === "toggle") return (current === true) !== f.default;
+  if (f.kind === "number") return typeof current === "number" && Math.abs(current - f.default) > 1e-9;
+  return String(current ?? "") !== f.default;
+}
+
+/** The defaults of the fields that differ from them. */
+export function resetValues(fields: DField[], params: Params): Params {
+  const out: Params = {};
+  for (const f of fields) {
+    const v = getPath(params, f.key);
+    if (isChanged(f, v)) out[f.key] = defaultFor(f, v);
+  }
+  return out;
+}
+
+function shownDefault(f: DField, units: Units): string {
+  if (f.kind === "toggle") return f.default ? "on" : "off";
+  if (f.kind === "choice") return f.options.find((o) => o.v === f.default)?.text ?? String(f.default);
+  if (f.kind === "text") return f.default ? `“${String(f.default).slice(0, 24)}”` : "empty";
+  const inch = f.unit === "mm" && units === "in";
+  const v = inch ? +(Number(f.default) / MM_PER_IN).toFixed(3) : f.default;
+  return `${v}${inch ? " in" : f.unit === "deg" ? "°" : f.unit ? ` ${f.unit}` : ""}`;
+}
+
+/** The field's name, with a ↺ while it differs from its default. */
+function Name({ f, value, units, onChange, children }: { f: DField; value: unknown; units: Units; onChange: Props["onChange"]; children: ReactNode }) {
+  return (
+    <span className="field-name">
+      {children}
+      {isChanged(f, value) && (
+        <button type="button" className="reset-btn" aria-label={`Reset ${f.label}`} title={`Reset to ${shownDefault(f, units)}`} onClick={() => onChange(f.key, defaultFor(f, value), true)}>
+          <RotateCcw size={12} aria-hidden />
+        </button>
+      )}
+    </span>
+  );
 }
 
 /** Settings grouped as the server describes them; hidden fields follow the server's form state. */
-export function SettingsPanel({ product, params, form, units, plan, onChange }: Props) {
+export function SettingsPanel({ product, params, form, units, plan, onChange, onChangeMany }: Props) {
   const [closed, setClosed] = useState<Record<string, boolean>>({});
   const hidden = new Set(form?.hidden ?? []);
   const hiddenSections = new Set(form?.hiddenSections ?? []);
@@ -26,6 +75,8 @@ export function SettingsPanel({ product, params, form, units, plan, onChange }: 
         const fields = s.fields.filter((f) => !hidden.has(f.key));
         if (!fields.length) return null;
         const open = !closed[s.id];
+        const back = onChangeMany ? resetValues(fields, params) : {};
+        const changed = Object.keys(back).length > 0;
         return (
           <section key={s.id} className="group">
             <h3>
@@ -33,6 +84,11 @@ export function SettingsPanel({ product, params, form, units, plan, onChange }: 
                 <ChevronDown size={14} className="chev" aria-hidden />
                 {s.title}
               </button>
+              {changed && (
+                <button type="button" className="reset-btn sec-reset" aria-label={`Reset ${s.title}`} title={`Reset ${s.title} to the defaults`} onClick={() => onChangeMany?.(back)}>
+                  <RotateCcw size={13} aria-hidden />
+                </button>
+              )}
             </h3>
             {open && (
               <div className="fields">
@@ -65,7 +121,7 @@ function Field({ f, label, value, units, plan, onChange }: { f: DField; label: s
   if (f.kind === "toggle") {
     return (
       <div className="field toggle">
-        <label htmlFor={id}>{label}</label>
+        <Name f={f} value={value} units={units} onChange={onChange}><label htmlFor={id}>{label}</label></Name>
         <Help text={f.help} id={`${id}-h`} />
         <button id={id} type="button" role="switch" aria-checked={!!value} className="switch" onClick={() => onChange(f.key, !value, true)}><span /></button>
       </div>
@@ -74,7 +130,7 @@ function Field({ f, label, value, units, plan, onChange }: { f: DField; label: s
   if (f.kind === "text") {
     return (
       <div className="field text">
-        <label htmlFor={id}>{label}</label>
+        <Name f={f} value={value} units={units} onChange={onChange}><label htmlFor={id}>{label}</label></Name>
         <Help text={f.help} id={`${id}-h`} />
         {f.multiline
           ? <textarea id={id} value={String(value ?? "")} maxLength={f.maxLength} placeholder={f.placeholder} rows={3} onChange={(e) => onChange(f.key, e.target.value, false)} />
@@ -88,7 +144,7 @@ function Field({ f, label, value, units, plan, onChange }: { f: DField; label: s
   if (short) {
     return (
       <div className="field choice">
-        <span className="label" id={`${id}-l`}>{label}</span>
+        <Name f={f} value={value} units={units} onChange={onChange}><span className="label" id={`${id}-l`}>{label}</span></Name>
         <Help text={f.help} id={`${id}-h`} />
         <div className="segmented" role="radiogroup" aria-labelledby={`${id}-l`}>
           {f.options.map((o) => (
@@ -102,7 +158,7 @@ function Field({ f, label, value, units, plan, onChange }: { f: DField; label: s
   }
   return (
     <div className="field select">
-      <label htmlFor={id}>{label}</label>
+      <Name f={f} value={value} units={units} onChange={onChange}><label htmlFor={id}>{label}</label></Name>
       <Help text={f.help} id={`${id}-h`} />
       <select id={id} value={current} onChange={(e) => onChange(f.key, e.target.value, true)}>
         {f.options.map((o) => <option key={o.v} value={o.v} title={o.title}>{o.text}{locked(o.v) ? " (Pro)" : ""}</option>)}
@@ -147,7 +203,7 @@ function NumberField({ f, label, value, units, onChange }: { f: Extract<DField, 
 
   return (
     <div className={`field number${error ? " invalid" : ""}`}>
-      <label htmlFor={id}>{label}</label>
+      <Name f={f} value={value} units={units} onChange={onChange}><label htmlFor={id}>{label}</label></Name>
       <Help text={f.help} id={`${id}-h`} />
       <div className="num">
         <input

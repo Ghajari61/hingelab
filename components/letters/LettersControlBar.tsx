@@ -2,6 +2,7 @@
 
 import type { Lid } from "@/lib/hinge";
 import type { LetterMode, WallStyle } from "@/lib/letters";
+import { LETTER_DEFAULTS } from "@/lib/letters/defaults";
 import { LID_OPTS, type Opt } from "@/components/editor/ControlBar";
 import type { GalleryGroup } from "@/components/shell/GalleryRail";
 
@@ -25,11 +26,11 @@ export function lettersGroups({ mode, wallStyle, lid, pro = true, onMode, onWall
     { v: "hinge", text: "Living hinge", title: "One bendable strip per outline, with hinge cuts where the letter curves", onClick: () => onWallStyle("hinge") },
     { v: "faceted", text: "Flat panels", title: "Straight panels joined at the corners; curves become short flat sides", onClick: () => onWallStyle("faceted") },
   ];
-  const groups: GalleryGroup[] = [{ label: "Mode", name: "Letters mode", art: "mode", value: mode, options: modes, cols: 3 }];
+  const groups: GalleryGroup[] = [{ label: "Mode", name: "Letters mode", art: "mode", value: mode, options: modes, cols: 3, home: LETTER_DEFAULTS.mode }];
   if (mode === "box") {
     groups.push(
-      { label: "Walls", name: "Wall style", art: "wall", pics: "letters-wall", value: wallStyle, options: walls },
-      { label: "Lid", name: "Lid type", art: "lid", pics: "letters-lid", value: lid, options: LID_OPTS((v) => onLid(v as Lid)), cols: 3 },
+      { label: "Walls", name: "Wall style", art: "wall", pics: "letters-wall", value: wallStyle, options: walls, home: LETTER_DEFAULTS.wallStyle },
+      { label: "Lid", name: "Lid type", art: "lid", pics: "letters-lid", value: lid, options: LID_OPTS((v) => onLid(v as Lid)), cols: 3, home: LETTER_DEFAULTS.lid },
     );
   }
   return groups;

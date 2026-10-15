@@ -201,7 +201,7 @@ export function ShortcutsDialog({ open, onClose, set, onSet, keymap, onKeymap, t
 
 type PrefTab = "general" | "shortcuts" | "laser";
 const TAB_DEFAULTS: Record<PrefTab, (keyof Preferences)[]> = {
-  general: ["editorTheme", "theme", "accent", "units", "showStartScreen", "resetTo", "offsetStep", "snapAngle"],
+  general: ["editorTheme", "theme", "accent", "units", "showStartScreen", "offsetStep", "snapAngle"],
   shortcuts: ["shortcutSet"],
   laser: ["laser", "machineId", "materialId"],
 };
@@ -234,7 +234,6 @@ export function PreferencesDialog({ open, onClose, prefs, setPrefs, openShortcut
             <Select label="Start screen theme" value={prefs.theme} options={(["dark", "darker", "light", "system"] as Theme[]).map((t) => ({ value: t, label: t[0].toUpperCase() + t.slice(1) }))} onChange={(theme) => setPrefs({ theme })} />
             <Select label="Accent" value={prefs.accent} options={(["blue", "violet", "teal", "orange"] as Accent[]).map((a) => ({ value: a, label: a[0].toUpperCase() + a.slice(1) }))} onChange={(accent) => setPrefs({ accent })} />
             <Select label="Units for new projects" value={prefs.units} options={UNIT_LIST.map((u) => ({ value: u, label: u }))} onChange={(units) => setPrefs({ units: units as Units })} />
-            <Select label="Reset ↺ goes to" value={prefs.resetTo} options={[{ value: "default", label: "The default value" }, { value: "preset", label: "The active preset's value" }]} onChange={(resetTo) => setPrefs({ resetTo })} />
             <NumberInput label="Inset / Outset step" value={prefs.offsetStep} length units={prefs.units} min={0.01} max={100} step={0.1} defaultValue={DEFAULT_PREFS.offsetStep} onChange={(offsetStep) => setPrefs({ offsetStep })} testId="pref-offset-step" />
             <NumberInput label="Snap angle" value={prefs.snapAngle} suffix="°" min={1} max={90} step={1} defaultValue={DEFAULT_PREFS.snapAngle} onChange={(snapAngle) => setPrefs({ snapAngle })} testId="pref-snap-angle" />
             <p className="dlg-note full">Snap angle: Shift while rotating or shearing, Ctrl+Shift while drawing lines and with the Pen, Knife and Measure, the [ and ] node keys, and view rotation.</p>

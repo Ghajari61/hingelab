@@ -23,8 +23,6 @@ export interface Preferences {
   machineId: string;
   materialId: string;
   showStartScreen: boolean;
-  /** Reset ↺ goes back to the default value, or to the active preset's value. */
-  resetTo: "default" | "preset";
   onboarded: boolean;
   tourDone: boolean;
   dismissed: string[];
@@ -37,7 +35,7 @@ export interface Preferences {
 
 export const DEFAULT_PREFS: Preferences = {
   theme: "light", themeChosen: false, editorTheme: "dark", accent: "blue", units: "mm", shortcutSet: "hingelab", laser: "co2",
-  machineId: DEFAULT_MACHINE, materialId: DEFAULT_MATERIAL, showStartScreen: true, resetTo: "default",
+  machineId: DEFAULT_MACHINE, materialId: DEFAULT_MATERIAL, showStartScreen: true,
   onboarded: false, tourDone: false, dismissed: [], recentGenerators: [], offsetStep: 1, snapAngle: 15,
 };
 
@@ -58,7 +56,6 @@ export function normalizePrefs(raw: unknown): Preferences {
     machineId: MACHINE_PROFILES.some((m) => m.id === r.machineId) || (typeof r.machineId === "string" && r.machineId.startsWith("my-")) ? (r.machineId as string) : d.machineId,
     materialId: MATERIAL_PRESETS.some((m) => m.id === r.materialId) || (typeof r.materialId === "string" && r.materialId.startsWith("my-")) ? (r.materialId as string) : d.materialId,
     showStartScreen: typeof r.showStartScreen === "boolean" ? r.showStartScreen : d.showStartScreen,
-    resetTo: pick(r.resetTo, ["default", "preset"] as const, d.resetTo),
     onboarded: r.onboarded === true,
     tourDone: r.tourDone === true,
     dismissed: Array.isArray(r.dismissed) ? r.dismissed.filter((x): x is string => typeof x === "string").slice(0, 50) : [],

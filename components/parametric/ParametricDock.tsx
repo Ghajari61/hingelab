@@ -16,6 +16,7 @@ import { RELIEF_LIBRARY } from "@/lib/parametric/source/reliefs";
 import { NumberField } from "@/components/editor/NumberField";
 import { LayersPanel } from "@/components/editor/LayersPanel";
 import { Sec } from "@/components/editor/PanelDock";
+import { CheckField, ResetMark } from "@/components/editor/ResetMark";
 import { fmtLen, type Units } from "@/components/editor/format";
 import { PARAM_FIELDS, hasTabs, type ParamField, type ParamSection } from "./fields";
 import type { StoredModel } from "./modelStore";
@@ -27,16 +28,19 @@ import { FREE_PARAMETRIC_PARTS, parametricLocks, type Plan } from "@/lib/plans";
 
 type Edit = (f: (q: ParametricParams) => void, record: boolean) => void;
 
-function Choice<T extends string>({ label, value, options, onPick }: {
+function Choice<T extends string>({ label, value, def, options, onPick }: {
   label: string;
   value: T;
+  /** The default; a ↺ picks it while another option is chosen. */
+  def?: T;
   /** `locked`: a Pro feature this plan can preview but not export. */
   options: { v: T; text: string; title?: string; disabled?: boolean; locked?: boolean }[];
   onPick: (v: T) => void;
 }) {
+  const home = def === undefined ? undefined : options.find((o) => o.v === def);
   return (
     <>
-      <div className="rowlabel">{label}</div>
+      <div className="rowlabel">{label}<ResetMark label={label} show={!!home && value !== def} to={home?.text} onReset={() => onPick(def!)} /></div>
       <div className="iconseg full" role="group" aria-label={label}>
         {options.map((o) => (
           <button key={o.v} type="button" data-v={o.v} title={o.locked ? `${o.title ?? o.text} (Pro)` : o.title} disabled={o.disabled} aria-pressed={value === o.v} className={o.locked ? "locked" : undefined} onClick={() => onPick(o.v)}>{o.text}{o.locked && <LockIcon />}</button>
@@ -199,7 +203,7 @@ export function ParametricDock({
 
   return (
     <aside className="dock" aria-label="Panels">
-      <StyleSection params={params} units={units} onEdit={onEdit} onBrowse={onBrowse} />
+      <StyleSection params={params} units={units} onEdit={onEdit} onBrowse={onBrowse} onReset={() => onResetSection("Style", [params.method])} />
       <Sec title="Source" meta={params.method === "curveNormal" ? "Formulas only" : sourceMeta} startOpen onReset={() => onResetSection("Size and rotation", ["sourceSettings"])}>
         {params.method === "curveNormal" && <p className="note">Along a curve builds the fins from the formulas in Method; the model below is not used.</p>}
         <Choice label="Model from" value={kind} onPick={(v) => {
@@ -229,7 +233,7 @@ export function ParametricDock({
             {textMissing.length > 0 && (
               <p className="note warn" role="status">{fontInfo(src.font)?.name ?? "This font"} has no {textMissing.map((c) => `“${c}”`).join(" ")}. Pick a font that covers these letters.</p>
             )}
-            <Choice label="Profile" value={src.profile} onPick={(v) => onEdit((q) => { if (q.source.kind === "text") q.source.profile = v; }, true)} options={[
+            <Choice label="Profile" value={src.profile} def={TEXT_DEFAULTS.profile} onPick={(v) => onEdit((q) => { if (q.source.kind === "text") q.source.profile = v; }, true)} options={[
               { v: "rounded", text: "Rounded", title: "Pillow letters: the fins rise from the edge to the full depth" },
               { v: "flat", text: "Flat", title: "Straight-sided letters: every fin has the full depth" },
             ]} />
@@ -250,13 +254,11 @@ export function ParametricDock({
               </div>
             )}
             <div className="grid2">{fields("photo")}</div>
-            <Choice label="Background" value={src.subjectMask} onPick={(m) => onEdit((q) => { if (q.source.kind === "image") q.source.subjectMask = m; }, true)} options={[
+            <Choice label="Background" value={src.subjectMask} def={IMAGE_DEFAULTS.subjectMask} onPick={(m) => onEdit((q) => { if (q.source.kind === "image") q.source.subjectMask = m; }, true)} options={[
               { v: "auto", text: "Cut away", title: "Keep only the nearest subject; the background is left out" },
               { v: "none", text: "Keep", title: "Use the whole photo as a rectangular relief" },
             ]} />
-            <label className="chk">
-              <input type="checkbox" checked={src.invert} onChange={(e) => onEdit((q) => { if (q.source.kind === "image") q.source.invert = e.target.checked; }, true)} /> Invert depth
-            </label>
+            <CheckField label="Invert depth" checked={src.invert} def={IMAGE_DEFAULTS.invert} onChange={(on) => onEdit((q) => { if (q.source.kind === "image") q.source.invert = on; }, true)} />
             <p className="note">Depth from a single photo is an estimate: shapes read well, but faces come out softer than a 3D scan or model.</p>
           </>
         )}
@@ -323,13 +325,11 @@ export function ParametricDock({
             <div className="grid2">{fields("formula")}</div>
           </>
         )}
-        <label className="chk">
-          <input type="checkbox" checked={!!params.sourceSettings.targetSize} onChange={(e) => onEdit((q) => {
-            const b = result?.bounds;
-            const h = b ? b.max[1] - b.min[1] : 200;
-            q.sourceSettings.targetSize = e.target.checked ? { axis: "height", value: Math.round(h) || 200 } : null;
-          }, true)} /> Set the size
-        </label>
+        <CheckField label="Set the size" checked={!!params.sourceSettings.targetSize} def={!!defaults.sourceSettings.targetSize} onChange={(on) => onEdit((q) => {
+          const b = result?.bounds;
+          const h = b ? b.max[1] - b.min[1] : 200;
+          q.sourceSettings.targetSize = on ? { axis: "height", value: Math.round(h) || 200 } : null;
+        }, true)} />
         {params.sourceSettings.targetSize && (
           <Choice label="Size measures" value={params.sourceSettings.targetSize.axis} onPick={(a) => onEdit((q) => { if (q.sourceSettings.targetSize) q.sourceSettings.targetSize.axis = a; }, true)} options={[
             { v: "width", text: "Width" }, { v: "height", text: "Height" }, { v: "depth", text: "Depth" },
@@ -346,23 +346,23 @@ export function ParametricDock({
       <Sec title="Method" meta={methodMeta(params, units, result)} startOpen onReset={() => onResetSection("Method settings", [params.method])}>
         {params.method === "stacked" ? (
           <>
-            <Choice label="Layers stacked along" value={params.stacked.axis} onPick={(a) => onEdit((q) => { q.stacked.axis = a; }, true)} options={[
+            <Choice label="Layers stacked along" value={params.stacked.axis} def={defaults.stacked.axis} onPick={(a) => onEdit((q) => { q.stacked.axis = a; }, true)} options={[
               { v: "Y", text: "Bottom to top (Y)", title: "Horizontal layers, like a topographic model" },
               { v: "Z", text: "Out of the wall (Z)", title: "Layers parallel to the wall, a relief built up from the back" },
             ]} />
-            <label className="chk"><input type="checkbox" checked={params.stacked.dowels} onChange={(e) => onEdit((q) => { q.stacked.dowels = e.target.checked; }, true)} /> Dowel holes to line up the layers</label>
-            <label className="chk"><input type="checkbox" checked={params.stacked.registrationMarks} onChange={(e) => onEdit((q) => { q.stacked.registrationMarks = e.target.checked; }, true)} /> Engrave the outline of the next layer</label>
-            <label className="chk"><input type="checkbox" checked={params.stacked.hollow} onChange={(e) => onEdit((q) => { q.stacked.hollow = e.target.checked; }, true)} /> Hollow the inside to save material</label>
+            <CheckField label="Dowel holes to line up the layers" checked={params.stacked.dowels} def={defaults.stacked.dowels} onChange={(on) => onEdit((q) => { q.stacked.dowels = on; }, true)} />
+            <CheckField label="Engrave the outline of the next layer" checked={params.stacked.registrationMarks} def={defaults.stacked.registrationMarks} onChange={(on) => onEdit((q) => { q.stacked.registrationMarks = on; }, true)} />
+            <CheckField label="Hollow the inside to save material" checked={params.stacked.hollow} def={defaults.stacked.hollow} onChange={(on) => onEdit((q) => { q.stacked.hollow = on; }, true)} />
             <div className="grid2">{fields("method")}</div>
             <p className="note">Each layer is one sheet thick. Glue them in order; the dowels and engraved outlines keep them aligned.</p>
           </>
         ) : params.method === "waffle" ? (
           <>
-            <Choice label="Rib families" value={params.waffle.familyAxes.join("")} onPick={(v) => onEdit((q) => { q.waffle.familyAxes = v === "XY" ? ["X", "Y"] : ["X", "Z"]; }, true)} options={[
+            <Choice label="Rib families" value={params.waffle.familyAxes.join("")} def={defaults.waffle.familyAxes.join("")} onPick={(v) => onEdit((q) => { q.waffle.familyAxes = v === "XY" ? ["X", "Y"] : ["X", "Z"]; }, true)} options={[
               { v: "XZ", text: "Standing grid (X × Z)", title: "Vertical ribs: an egg-crate that stands on a table" },
               { v: "XY", text: "Wall grid (X × Y)", title: "Ribs square to the wall, crossing in a grid" },
             ]} />
-            <Choice label="A ribs slotted from" value={params.waffle.lapDirection} onPick={(d) => onEdit((q) => { q.waffle.lapDirection = d; }, true)} options={[
+            <Choice label="A ribs slotted from" value={params.waffle.lapDirection} def={defaults.waffle.lapDirection} onPick={(d) => onEdit((q) => { q.waffle.lapDirection = d; }, true)} options={[
               { v: "A-from-bottom", text: "Below" }, { v: "A-from-top", text: "Above" },
             ]} />
             <div className="grid2">{fields("method")}</div>
@@ -370,17 +370,17 @@ export function ParametricDock({
           </>
         ) : params.method === "radial" ? (
           <>
-            <Choice label="Fins turn round" value={params.radial.axis} onPick={(a) => onEdit((q) => { q.radial.axis = a; }, true)} options={[
+            <Choice label="Fins turn round" value={params.radial.axis} def={defaults.radial.axis} onPick={(a) => onEdit((q) => { q.radial.axis = a; }, true)} options={[
               { v: "Z", text: "Out of the wall (Z)", title: "A sunburst on the wall" },
               { v: "Y", text: "Upright (Y)", title: "A lamp shade or vase standing up" },
               { v: "X", text: "Sideways (X)" },
             ]} />
-            <Choice label="Hub rings" value={String(params.radial.hubPlates) as "0" | "1" | "2"} onPick={(h) => onEdit((q) => { q.radial.hubPlates = Number(h) as 0 | 1 | 2; }, true)} options={[
+            <Choice label="Hub rings" value={String(params.radial.hubPlates) as "0" | "1" | "2"} def={String(defaults.radial.hubPlates) as "0" | "1" | "2"} onPick={(h) => onEdit((q) => { q.radial.hubPlates = Number(h) as 0 | 1 | 2; }, true)} options={[
               { v: "0", text: "None", title: "Glue the fins yourself" },
               { v: "1", text: "One", title: "A slotted ring at the low end of the axis" },
               { v: "2", text: "Both ends", title: "Slotted rings at both ends of the axis" },
             ]} />
-            <Choice label="Fin shape from" value={params.radial.profileSource} onPick={(s) => onEdit((q) => {
+            <Choice label="Fin shape from" value={params.radial.profileSource} def={defaults.radial.profileSource} onPick={(s) => onEdit((q) => {
               q.radial.profileSource = s;
               if (s === "formula" && !(q.source.kind === "formula" && q.source.type === "radial-profile")) {
                 q.source = structuredClone(FORMULA_DEFAULTS["radial-profile"]);
@@ -407,14 +407,14 @@ export function ParametricDock({
         ) : params.method === "curveNormal" ? (
           <>
             <button type="button" className="btn-auto" onClick={() => onEdit((q) => { q.curveNormal = structuredClone(LEAF_CLOCK); }, true)}>Load the leaf clock</button>
-            <Choice label="Guide curve" value={cn.guide.kind} onPick={(k) => editCurve((c) => {
+            <Choice label="Guide curve" value={cn.guide.kind} def={defaults.curveNormal.guide.kind} onPick={(k) => editCurve((c) => {
               const g = c.guide;
               const size = g.kind === "ellipse" ? Math.max(g.w, g.h) : g.d;
               c.guide = k === "circle" ? { kind: "circle", d: size } : { kind: "ellipse", w: size, h: Math.round(size * 0.6) };
             }, true)} options={[
               { v: "ellipse", text: "Oval" }, { v: "circle", text: "Circle" },
             ]} />
-            <label className="chk"><input type="checkbox" checked={cn.count === null} onChange={(e) => editCurve((c) => { c.count = e.target.checked ? null : 48; }, true)} /> Fit as many fins as the spacing allows</label>
+            <CheckField label="Fit as many fins as the spacing allows" checked={cn.count === null} def={defaults.curveNormal.count === null} onChange={(on) => editCurve((c) => { c.count = on ? null : 48; }, true)} />
             <div className="grid2">{fields("method")}</div>
             <ShapePicker target="finLength" label="Fin length round the curve" expression={cn.finLength} stored={params.shapes?.finLength} units={units}
               formulaLabel="Fin length L(t)" note="Use t, which runs 0 to 1 round the guide. The result is in mm."
@@ -425,7 +425,7 @@ export function ParametricDock({
             <ShapePicker target="twist" label="Twist round the curve" expression={cn.twist} stored={params.shapes?.twist} units={units}
               formulaLabel="Twist ° (t)" note="Use t, which runs 0 to 1 round the guide. The result is in degrees, at most ±45."
               onShape={(s, r) => onEdit((q) => applyShape(q, "twist", s), r)} onFormula={(v, r) => editCurve((c) => { c.twist = v; }, r)} />
-            <Choice label="Outer outline" value={cn.outerBoundary.kind} onPick={(k) => onEdit((q) => {
+            <Choice label="Outer outline" value={cn.outerBoundary.kind} def={defaults.curveNormal.outerBoundary.kind} onPick={(k) => onEdit((q) => {
               if (k === "formula") applyShape(q, "outline", q.shapes?.outline ?? SHAPE_TARGETS.outline.defaults);
               else q.curveNormal.outerBoundary = k === "none" ? { kind: "none" } : { kind: "ellipse", w: 300, h: 220 };
             }, true)} options={[
@@ -439,9 +439,9 @@ export function ParametricDock({
                 onShape={(s, r) => onEdit((q) => applyShape(q, "outline", s), r)}
                 onFormula={(v, r) => editCurve((c) => { if (c.outerBoundary.kind === "formula") c.outerBoundary.expression = v; }, r)} />
             )}
-            <label className="chk"><input type="checkbox" checked={cn.backPlate} onChange={(e) => editCurve((c) => { c.backPlate = e.target.checked; }, true)} /> Back plate with a slot for every tab</label>
+            <CheckField label="Back plate with a slot for every tab" checked={cn.backPlate} def={defaults.curveNormal.backPlate} onChange={(on) => editCurve((c) => { c.backPlate = on; }, true)} />
             {cn.backPlate && (
-              <Choice label="Centre" value={cn.centerFeature} onPick={(f) => editCurve((c) => { c.centerFeature = f; }, true)} options={[
+              <Choice label="Centre" value={cn.centerFeature} def={defaults.curveNormal.centerFeature} onPick={(f) => editCurve((c) => { c.centerFeature = f; }, true)} options={[
                 { v: "clock-insert", text: "Clock", title: "A round hole for a press-fit clock insert" },
                 { v: "opening", text: "Opening", title: "Cut out the inside of the guide" },
                 { v: "mirror", text: "Mirror", title: "An opening 3 mm smaller than the guide, for a mirror glued behind" },
@@ -460,8 +460,8 @@ export function ParametricDock({
         ) : params.method === "folded" ? (
           <>
             <div className="grid2">{fields("method")}</div>
-            <label className="chk"><input type="checkbox" checked={params.folded.tabs} onChange={(e) => onEdit((q) => { q.folded.tabs = e.target.checked; }, true)} /> Glue tabs on one side of every cut edge</label>
-            <label className="chk"><input type="checkbox" checked={params.folded.numbers} onChange={(e) => onEdit((q) => { q.folded.numbers = e.target.checked; }, true)} /> Number both sides of every cut edge</label>
+            <CheckField label="Glue tabs on one side of every cut edge" checked={params.folded.tabs} def={defaults.folded.tabs} onChange={(on) => onEdit((q) => { q.folded.tabs = on; }, true)} />
+            <CheckField label="Number both sides of every cut edge" checked={params.folded.numbers} def={defaults.folded.numbers} onChange={(on) => onEdit((q) => { q.folded.numbers = on; }, true)} />
             {params.material.T > 1 && (
               <div className="verdict warn pe-units">
                 <span className="dot" />
@@ -475,19 +475,17 @@ export function ParametricDock({
           </>
         ) : (
           <>
-            <Choice label="Fins stacked along" value={params.parallel.axis} onPick={(a) => onEdit((q) => { q.parallel.axis = a; }, true)} options={[
+            <Choice label="Fins stacked along" value={params.parallel.axis} def={defaults.parallel.axis} onPick={(a) => onEdit((q) => { q.parallel.axis = a; }, true)} options={[
               { v: "X", text: "Left to right (X)" }, { v: "Y", text: "Bottom to top (Y)" },
             ]} />
-            <Choice label="Backboard" value={params.parallel.backboard} onPick={(b) => onEdit((q) => { q.parallel.backboard = b; }, true)} options={[
+            <Choice label="Backboard" value={params.parallel.backboard} def={defaults.parallel.backboard} onPick={(b) => onEdit((q) => { q.parallel.backboard = b; }, true)} options={[
               { v: "plate", text: "Plate", title: "One board behind the fins, shaped like the model, with a slot for every tab" },
               { v: "slats", text: "Slats", title: "A rectangular board; every fin row continues as a plain slat across it" },
               { v: "none", text: "None", title: "Fins only, to glue to a wall or your own board" },
             ]} />
             <div className="grid2">{fields("method")}</div>
             {params.parallel.backboard === "slats" && (
-              <label className="chk">
-                <input type="checkbox" checked={params.parallel.fillEmptySlots} onChange={(e) => onEdit((q) => { q.parallel.fillEmptySlots = e.target.checked; }, true)} /> Fill the whole board with slats
-              </label>
+              <CheckField label="Fill the whole board with slats" checked={params.parallel.fillEmptySlots} def={defaults.parallel.fillEmptySlots} onChange={(on) => onEdit((q) => { q.parallel.fillEmptySlots = on; }, true)} />
             )}
             <p className="note">Each fin is a slice of the model standing out of the wall. Tabs on the wall edge fit slots in the backboard.</p>
           </>
@@ -503,25 +501,26 @@ export function ParametricDock({
         </select>
         <div className="grid2">{fields("material")}</div>
         <div className="grid2">{fields("sheet")}</div>
-        <Choice label="Grain" value={params.material.grain} onPick={(g) => onEdit((q) => { q.material.grain = g; }, true)} options={[
+        <Choice label="Grain" value={params.material.grain} def={defaults.material.grain} onPick={(g) => onEdit((q) => { q.material.grain = g; }, true)} options={[
           { v: "any", text: "Any", title: "Parts may turn to fit better" },
           { v: "along-x", text: "Along sheet width" },
           { v: "along-y", text: "Along sheet height" },
         ]} />
         {params.method !== "folded" && (
-          <Choice label="Nesting" value={params.material.nest ?? "box"} onPick={(n) => onEdit((q) => { q.material.nest = n; }, true)} options={[
+          <Choice label="Nesting" value={params.material.nest ?? "box"} def={defaults.material.nest ?? "box"} onPick={(n) => onEdit((q) => { q.material.nest = n; }, true)} options={[
             { v: "box", text: "By box", title: "Pack the parts' bounding boxes: fast, keeps parts in order" },
             { v: "outline", text: "By outline", title: "Pack the true shapes, so parts fill each other's notches and holes" },
           ]} />
         )}
-        <label className="chk" title="A scored 100 mm scale and a 10 mm test square along the bottom of every sheet, to check the cut size and the kerf">
-          <input type="checkbox" checked={!!params.material.calibration} onChange={(e) => onEdit((q) => { q.material.calibration = e.target.checked; }, true)} /> Calibration bar on every sheet
-        </label>
+        <CheckField
+          label="Calibration bar on every sheet" title="A scored 100 mm scale and a 10 mm test square along the bottom of every sheet, to check the cut size and the kerf"
+          checked={!!params.material.calibration} def={!!defaults.material.calibration} onChange={(on) => onEdit((q) => { q.material.calibration = on; }, true)}
+        />
       </Sec>
 
       <Sec title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["joints"])}>
         {hasTabs(params) && (
-          <Choice label={params.method === "radial" ? "Tabs per hub joint" : "Tabs per fin"} value={params.joints.tabCount === null ? "auto" : "count"} onPick={(v) => onEdit((q) => {
+          <Choice label={params.method === "radial" ? "Tabs per hub joint" : "Tabs per fin"} value={params.joints.tabCount === null ? "auto" : "count"} def={defaults.joints.tabCount === null ? "auto" : "count"} onPick={(v) => onEdit((q) => {
             q.joints.tabCount = v === "auto" ? null : Math.max(...parts.filter((x) => x.tabs?.length).map((x) => x.tabs!.length), 3);
           }, true)} options={[
             { v: "auto", text: "Auto", title: "Spread tabs along each fin, one about every “Tab every” mm" },

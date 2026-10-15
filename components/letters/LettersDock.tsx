@@ -8,6 +8,7 @@ import { NumberField } from "@/components/editor/NumberField";
 import { LayersPanel } from "@/components/editor/LayersPanel";
 import { Sec, type SheetProps } from "@/components/editor/PanelDock";
 import { SheetSection } from "@/components/shell/SheetSection";
+import { CheckField, ResetMark } from "@/components/editor/ResetMark";
 import { cleanFit } from "@/lib/fit/fitToSheets";
 import type { Units } from "@/components/editor/format";
 import { LETTER_FIELDS, MARQUEE_KEYS, isMarqueeKey, type LetterField, type LetterNumKey } from "./fields";
@@ -18,15 +19,17 @@ import type { StoredFontMeta } from "./fontStore";
 
 type Patch = (partial: Partial<LetterParams>, record: boolean) => void;
 
-function Choice<T extends string>({ label, value, options, onPick }: {
+function Choice<T extends string>({ label, value, def, options, onPick }: {
   label: string;
   value: T;
+  def: T;
   options: { v: T; text: string; title?: string }[];
   onPick: (v: T) => void;
 }) {
+  const home = options.find((o) => o.v === def);
   return (
     <>
-      <div className="rowlabel">{label}</div>
+      <div className="rowlabel">{label}<ResetMark label={label} show={!!home && value !== def} to={home?.text} onReset={() => onPick(def)} /></div>
       <div className="iconseg full" role="group" aria-label={label}>
         {options.map((o) => (
           <button key={o.v} type="button" title={o.title} aria-pressed={value === o.v} onClick={() => onPick(o.v)}>{o.text}</button>
@@ -101,16 +104,16 @@ export function LettersDock({
         />
         <FontPicker fontId={params.fontId} text={params.text} uploads={uploads} onPick={onPick} onUpload={onUpload} onDelete={onDeleteFont} />
         {missing.length > 0 && <p className="fp-warn">This font has no {missing.map((c) => `“${c}”`).join(" ")}. Pick a font that covers your text.</p>}
-        <Choice label="Size measures" value={params.sizeMode} onPick={(v) => onPatch({ sizeMode: v }, true)} options={[
+        <Choice label="Size measures" value={params.sizeMode} def={LETTER_DEFAULTS.sizeMode} onPick={(v) => onPatch({ sizeMode: v }, true)} options={[
           { v: "capHeight", text: "Cap height", title: "Size is the height of a capital letter such as H" },
           { v: "totalHeight", text: "Total height", title: "Size is the full height of the text, ascenders and descenders included" },
         ]} />
         <div className="grid2">{fields("text")}</div>
-        <Choice label="Weld" value={params.weld} onPick={(v) => onPatch({ weld: v }, true)} options={[
+        <Choice label="Weld" value={params.weld} def={LETTER_DEFAULTS.weld} onPick={(v) => onPatch({ weld: v }, true)} options={[
           { v: "word", text: "Whole word", title: "Letters that touch become one piece" },
           { v: "letters", text: "Each letter", title: "One piece per letter, even where letters touch" },
         ]} />
-        <Choice label="Direction" value={params.direction} onPick={(v) => onPatch({ direction: v }, true)} options={[
+        <Choice label="Direction" value={params.direction} def={LETTER_DEFAULTS.direction} onPick={(v) => onPatch({ direction: v }, true)} options={[
           { v: "auto", text: "Auto" },
           { v: "ltr", text: "Left to right" },
           { v: "rtl", text: "Right to left" },
@@ -121,30 +124,26 @@ export function LettersDock({
         <Sec title="Box" meta={params.wallStyle === "hinge" ? "Living hinge" : "Flat panels"} startOpen onReset={() => onResetSection("Box", ["depth", "minCornerRadius", "facetTol", "panelMin", "wallMaxLength", "islandArea", "smallIslands", "stackIslands", "marquee"])}>
           <div className="grid2">{fields("box")}</div>
           {hinge && (
-            <label className="chk">
-              <input
-                type="checkbox"
-                checked={params.minCornerRadius === "auto"}
-                onChange={(e) => onPatch({ minCornerRadius: e.target.checked ? "auto" : cornerRadiusOf(params) }, true)}
-              /> Corner radius follows the hinge
-            </label>
+            <CheckField
+              label="Corner radius follows the hinge" checked={params.minCornerRadius === "auto"} def={LETTER_DEFAULTS.minCornerRadius === "auto"}
+              onChange={(on) => onPatch({ minCornerRadius: on ? "auto" : cornerRadiusOf(params) }, true)}
+            />
           )}
-          <Choice label="Small pieces (dots, accents)" value={params.smallIslands} onPick={(v) => onPatch({ smallIslands: v }, true)} options={[
+          <Choice label="Small pieces (dots, accents)" value={params.smallIslands} def={LETTER_DEFAULTS.smallIslands} onPick={(v) => onPatch({ smallIslands: v }, true)} options={[
             { v: "flat", text: "Cut flat", title: "Cut them as flat pieces to glue on top of the lid" },
             { v: "drop", text: "Leave out" },
           ]} />
           {params.smallIslands === "flat" && (
-            <label className="chk">
-              <input type="checkbox" checked={params.stackIslands} onChange={(e) => onPatch({ stackIslands: e.target.checked }, true)} /> Stack to full height ({Math.max(1, Math.round(params.depth / params.T))} layers each)
-            </label>
+            <CheckField label="Stack to full height" checked={params.stackIslands} def={LETTER_DEFAULTS.stackIslands} onChange={(on) => onPatch({ stackIslands: on }, true)}>
+              Stack to full height ({Math.max(1, Math.round(params.depth / params.T))} layers each)
+            </CheckField>
           )}
-          <label className="chk">
-            <input
-              type="checkbox"
-              checked={params.marquee.enabled}
-              onChange={(e) => onPatch({ marquee: { ...params.marquee, enabled: e.target.checked } }, true)}
-            /> Marquee light holes in the {params.lid === "open" ? "base" : "lid"}
-          </label>
+          <CheckField
+            label="Marquee light holes" checked={params.marquee.enabled} def={LETTER_DEFAULTS.marquee.enabled}
+            onChange={(on) => onPatch({ marquee: { ...params.marquee, enabled: on } }, true)}
+          >
+            Marquee light holes in the {params.lid === "open" ? "base" : "lid"}
+          </CheckField>
           {params.marquee.enabled && <div className="grid2">{fields("marquee")}</div>}
           <p className="note">
             {hinge
@@ -156,7 +155,7 @@ export function LettersDock({
       ) : params.mode === "stencil" ? (
         <Sec title="Stencil" meta={`${params.bridgesPerIsland} bridge${params.bridgesPerIsland > 1 ? "s" : ""} per centre`} startOpen onReset={() => onResetSection("Stencil", ["bridgesPerIsland", "stencilBridge", "sheetMargin"])}>
           <p className="note">The letters are cut out of one sheet. Bridges hold the centres of letters such as A, O and 8 so they don&apos;t fall out.</p>
-          <Choice label="Bridges per centre" value={String(params.bridgesPerIsland) as "1" | "2"} onPick={(v) => onPatch({ bridgesPerIsland: v === "2" ? 2 : 1 }, true)} options={[
+          <Choice label="Bridges per centre" value={String(params.bridgesPerIsland) as "1" | "2"} def={String(LETTER_DEFAULTS.bridgesPerIsland) as "1" | "2"} onPick={(v) => onPatch({ bridgesPerIsland: v === "2" ? 2 : 1 }, true)} options={[
             { v: "1", text: "One", title: "One bridge across the thinnest stroke" },
             { v: "2", text: "Two", title: "A second bridge at least 120° from the first, for large or flexible stencils" },
           ]} />
@@ -164,11 +163,9 @@ export function LettersDock({
           <p className="note">Margin is the border of sheet around the text.</p>
         </Sec>
       ) : (
-        <Sec title="Mode" meta="Solid" startOpen onReset={() => onResetSection("Solid", ["weldDots", "stencilBridge"])}>
+        <Sec title="Mode" meta="Solid" startOpen onReset={() => onResetSection("Mode", ["weldDots", "stencilBridge"])}>
           <p className="note">Solid cuts each letter shape out as a flat piece, with counters as inner cuts.</p>
-          <label className="chk">
-            <input type="checkbox" checked={params.weldDots} onChange={(e) => onPatch({ weldDots: e.target.checked }, true)} /> Weld dots
-          </label>
+          <CheckField label="Weld dots" checked={params.weldDots} def={LETTER_DEFAULTS.weldDots} onChange={(on) => onPatch({ weldDots: on }, true)} />
           <div className="grid2">{fields("solid")}</div>
           <p className="note">Weld dots joins every separate piece of a word, dots and accents included, with small bridges so each word cuts as one part.</p>
         </Sec>
@@ -179,11 +176,11 @@ export function LettersDock({
       </Sec>
       {hinge && (
         <Sec title="Hinge Pattern" meta={params.pattern[0].toUpperCase() + params.pattern.slice(1)} startOpen onReset={() => onResetSection("Hinge pattern", ["cutStyle", "pattern", "slotW", "slit", "bridge", "pitch", "overrun", "stretch"])}>
-          <Choice<CutStyle> label="Cut style" value={params.cutStyle} onPick={(v) => onPatch({ cutStyle: v }, true)} options={[
+          <Choice<CutStyle> label="Cut style" value={params.cutStyle} def={LETTER_DEFAULTS.cutStyle} onPick={(v) => onPatch({ cutStyle: v }, true)} options={[
             { v: "slot", text: "Slots", title: "Each cut is a round-ended slot of set width; edge cuts become notches in the outline" },
             { v: "line", text: "Single line", title: "Each cut is a single laser line (kerf width only)" },
           ]} />
-          <Choice<Pattern> label="Pattern" value={params.pattern} onPick={(v) => onPatch({ pattern: v }, true)} options={[
+          <Choice<Pattern> label="Pattern" value={params.pattern} def={LETTER_DEFAULTS.pattern} onPick={(v) => onPatch({ pattern: v }, true)} options={[
             { v: "straight", text: "Straight", title: "Straight lattice" },
             { v: "wave", text: "Wave", title: "Wave lattice: parallel waves, constant bar width" },
             { v: "relief", text: "Relief", title: "Lattice with round relief holes at every cut end" },

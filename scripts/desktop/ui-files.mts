@@ -171,6 +171,26 @@ try {
   check(await page.getByRole("menuitem", { name: /Save project as/ }).isVisible(), "the File menu has Save project as");
   await page.keyboard.press("Escape");
 
+  // Reset: a field's ↺, a section's ↺ and Edit > Reset all settings, each one undo step.
+  const until = async (fn: () => Promise<boolean>) => { for (let i = 0; i < 75; i++) { if (await fn()) return true; await after(200); } return false; };
+  const width = page.getByLabel("Width", { exact: true });
+  const widthIs = (v: string) => until(async () => (await width.inputValue()) === v);
+  check(await widthIs("91"), "the opened file's width is shown");
+  await page.getByRole("button", { name: "Reset Width" }).click();
+  check(await widthIs("140"), "a field's reset button restores its default");
+  check(!(await page.getByRole("button", { name: "Reset Width" }).isVisible()), "the reset button goes once the value is the default");
+  await page.keyboard.press("Control+z");
+  check(await widthIs("91"), "Ctrl+Z takes a field reset back");
+  await page.getByRole("button", { name: "Reset Dimensions" }).click();
+  check(await widthIs("140"), "a section's reset button restores its fields");
+  await page.keyboard.press("Control+z");
+  check(await widthIs("91"), "Ctrl+Z takes a section reset back");
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Reset all settings" }).click();
+  check(await widthIs("140"), "Edit > Reset all settings restores the defaults");
+  check((await page.locator(".toast").allInnerTexts()).some((t) => t.includes("All settings reset")), "a toast says Ctrl+Z undoes Reset all");
+  check((await page.locator(".ws-name").innerText()) === "Menu name", "Reset all keeps the design's name");
+
   // The AI designer: Undo and Redo step through the AI edits.
   await page.locator(".sidebar").getByRole("button", { name: /AI/ }).first().click();
   await page.locator("#ai-prompt").fill("a box");

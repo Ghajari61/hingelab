@@ -241,7 +241,7 @@ export function Workspace(p: Props) {
 
         <aside className="ws-panel">
           {design.params ? (
-            <SettingsPanel product={product} params={design.params} form={r?.form ?? null} units={p.units} plan={p.plan} onChange={p.onChange} />
+            <SettingsPanel product={product} params={design.params} form={r?.form ?? null} units={p.units} plan={p.plan} onChange={p.onChange} onChangeMany={p.onChangeMany} />
           ) : (
             <div className="panel-loading" aria-busy="true"><div className="sk" /><div className="sk" /><div className="sk short" /></div>
           )}

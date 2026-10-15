@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { finSpacingOf } from "@/lib/parametric/defaults";
+import { finSpacingOf, PARAMETRIC_DEFAULTS as D } from "@/lib/parametric/defaults";
 import type { ParametricParams } from "@/lib/parametric/types";
 import { Sec } from "@/components/editor/PanelDock";
+import { CheckField, ResetMark } from "@/components/editor/ResetMark";
 import { fmtLen, type Units } from "@/components/editor/format";
 import { PARAM_FIELDS } from "./fields";
 
@@ -12,14 +13,17 @@ type Edit = (f: (q: ParametricParams) => void, record: boolean) => void;
 const fieldSet = (id: string) => PARAM_FIELDS.find((f) => f.id === id)!.set;
 
 /** A range slider that edits live and records one undo step when it is let go. */
-function Slider({ label, value, min, max, step, show, onSet }: {
+function Slider({ label, value, def, min, max, step, show, onSet }: {
   label: string; value: number; min: number; max: number; step: number;
+  /** The default; a ↺ restores it while the value differs. */
+  def?: number;
   show: (v: number) => string;
   onSet: (v: number, record: boolean) => void;
 }) {
   const [drag, setDrag] = useState<number | null>(null);
   const v = drag ?? value;
   const commit = () => { if (drag !== null) { onSet(drag, true); setDrag(null); } };
+  const canReset = def !== undefined && def >= min && def <= max;
   return (
     <label className="style-slider">
       <span>{label}</span>
@@ -29,6 +33,7 @@ function Slider({ label, value, min, max, step, show, onSet }: {
         onPointerUp={commit} onKeyUp={commit} onBlur={commit}
       />
       <output>{show(v)}</output>
+      <ResetMark label={label} show={canReset && Math.abs(def - v) > 1e-9} to={canReset ? show(def) : undefined} onReset={() => onSet(def!, true)} />
     </label>
   );
 }
@@ -68,15 +73,15 @@ const RADIAL_LOOKS: Look[] = [
 ];
 
 /** The few settings that change a design's look the most, for the current method. */
-export function StyleSection({ params, units, onEdit, onBrowse }: { params: ParametricParams; units: Units; onEdit: Edit; onBrowse?: () => void }) {
+export function StyleSection({ params, units, onEdit, onBrowse, onReset }: { params: ParametricParams; units: Units; onEdit: Edit; onBrowse?: () => void; onReset?: () => void }) {
   const p = params, T = p.material.T;
   const len = (v: number) => fmtLen(v, units, true);
   const scaled = !p.sourceSettings.targetSize;
   const sizeSlider = p.method === "curveNormal" || p.method === "folded" ? null : scaled ? (
-    <Slider label="Size" value={p.sourceSettings.transform.uniformScale} min={0.4} max={2.5} step={0.05} show={(v) => `${Math.round(v * 100)}%`}
+    <Slider label="Size" value={p.sourceSettings.transform.uniformScale} def={D.sourceSettings.transform.uniformScale} min={0.4} max={2.5} step={0.05} show={(v) => `${Math.round(v * 100)}%`}
       onSet={(v, r) => onEdit((q) => fieldSet("uniformScale")(q, v), r)} />
   ) : (
-    <Slider label="Size" value={p.sourceSettings.targetSize!.value} min={50} max={1500} step={5} show={len}
+    <Slider label="Size" value={p.sourceSettings.targetSize!.value} def={D.sourceSettings.targetSize?.value} min={50} max={1500} step={5} show={len}
       onSet={(v, r) => onEdit((q) => fieldSet("targetSize")(q, v), r)} />
   );
   const looks = p.method === "parallel" ? PARALLEL_LOOKS : p.method === "stacked" ? STACK_LOOKS
@@ -86,22 +91,22 @@ export function StyleSection({ params, units, onEdit, onBrowse }: { params: Para
   if (p.method === "parallel") {
     sliders = (
       <>
-        <Slider label="Fin spacing" value={finSpacingOf(p)} min={Math.max(1, Math.ceil(T * 1.5 * 2) / 2)} max={Math.max(30, T * 10)} step={0.5} show={len}
+        <Slider label="Fin spacing" value={finSpacingOf(p)} def={finSpacingOf(D)} min={Math.max(1, Math.ceil(T * 1.5 * 2) / 2)} max={Math.max(30, T * 10)} step={0.5} show={len}
           onSet={(v, r) => onEdit((q) => fieldSet("spacing")(q, v), r)} />
         {sizeSlider}
         {p.parallel.backboard === "slats" && (
-          <Slider label="Slat depth" value={p.parallel.slatDepth} min={2} max={40} step={1} show={len} onSet={(v, r) => onEdit((q) => fieldSet("slatDepth")(q, v), r)} />
+          <Slider label="Slat depth" value={p.parallel.slatDepth} def={D.parallel.slatDepth} min={2} max={40} step={1} show={len} onSet={(v, r) => onEdit((q) => fieldSet("slatDepth")(q, v), r)} />
         )}
         {p.parallel.backboard !== "none" && (
-          <Slider label="Board margin" value={p.parallel.backboardMargin} min={0} max={80} step={1} show={len} onSet={(v, r) => onEdit((q) => fieldSet("backboardMargin")(q, v), r)} />
+          <Slider label="Board margin" value={p.parallel.backboardMargin} def={D.parallel.backboardMargin} min={0} max={80} step={1} show={len} onSet={(v, r) => onEdit((q) => fieldSet("backboardMargin")(q, v), r)} />
         )}
       </>
     );
   } else if (p.method === "radial") {
     sliders = (
       <>
-        <Slider label="Fins" value={p.radial.count} min={4} max={96} step={1} show={(v) => String(Math.round(v))} onSet={(v, r) => onEdit((q) => fieldSet("radialCount")(q, v), r)} />
-        <Slider label="Hub radius" value={p.radial.innerRadius} min={4} max={120} step={1} show={len} onSet={(v, r) => onEdit((q) => fieldSet("innerRadius")(q, v), r)} />
+        <Slider label="Fins" value={p.radial.count} def={D.radial.count} min={4} max={96} step={1} show={(v) => String(Math.round(v))} onSet={(v, r) => onEdit((q) => fieldSet("radialCount")(q, v), r)} />
+        <Slider label="Hub radius" value={p.radial.innerRadius} def={D.radial.innerRadius} min={4} max={120} step={1} show={len} onSet={(v, r) => onEdit((q) => fieldSet("innerRadius")(q, v), r)} />
         {p.radial.profileSource === "mesh" && sizeSlider}
       </>
     );
@@ -109,14 +114,14 @@ export function StyleSection({ params, units, onEdit, onBrowse }: { params: Para
     sliders = (
       <>
         {sizeSlider}
-        <label className="chk"><input type="checkbox" checked={p.stacked.hollow} onChange={(e) => onEdit((q) => { q.stacked.hollow = e.target.checked; }, true)} /> Hollow layers</label>
-        {p.stacked.hollow && <Slider label="Wall" value={p.stacked.shell} min={2} max={40} step={1} show={len} onSet={(v, r) => onEdit((q) => fieldSet("shell")(q, v), r)} />}
+        <CheckField label="Hollow layers" checked={p.stacked.hollow} def={D.stacked.hollow} onChange={(on) => onEdit((q) => { q.stacked.hollow = on; }, true)} />
+        {p.stacked.hollow && <Slider label="Wall" value={p.stacked.shell} def={D.stacked.shell} min={2} max={40} step={1} show={len} onSet={(v, r) => onEdit((q) => fieldSet("shell")(q, v), r)} />}
       </>
     );
   } else if (p.method === "waffle") {
     sliders = (
       <>
-        <Slider label="Rib spacing" value={p.waffle.spacingA} min={8} max={100} step={1} show={len}
+        <Slider label="Rib spacing" value={p.waffle.spacingA} def={D.waffle.spacingA} min={8} max={100} step={1} show={len}
           onSet={(v, r) => onEdit((q) => { fieldSet("spacingA")(q, v); fieldSet("spacingB")(q, v); }, r)} />
         {sizeSlider}
       </>
@@ -126,21 +131,21 @@ export function StyleSection({ params, units, onEdit, onBrowse }: { params: Para
     sliders = (
       <>
         {p.curveNormal.count !== null && (
-          <Slider label="Fins" value={p.curveNormal.count} min={12} max={150} step={1} show={(v) => String(Math.round(v))} onSet={(v, r) => onEdit((q) => fieldSet("curveCount")(q, v), r)} />
+          <Slider label="Fins" value={p.curveNormal.count} def={D.curveNormal.count ?? undefined} min={12} max={150} step={1} show={(v) => String(Math.round(v))} onSet={(v, r) => onEdit((q) => fieldSet("curveCount")(q, v), r)} />
         )}
-        <Slider label="Ring width" value={gw} min={60} max={320} step={5} show={len} onSet={(v, r) => onEdit((q) => {
+        <Slider label="Ring width" value={gw} def={D.curveNormal.guide.kind === "ellipse" ? D.curveNormal.guide.w : D.curveNormal.guide.d} min={60} max={320} step={5} show={len} onSet={(v, r) => onEdit((q) => {
           const c = q.curveNormal.guide;
           if (c.kind === "ellipse") { const k = c.h / c.w; c.w = v; c.h = Math.max(10, Math.round(v * k)); } else c.d = v;
         }, r)} />
       </>
     );
   } else if (p.method === "folded") {
-    sliders = <Slider label="Faces" value={p.folded.faces} min={20} max={400} step={10} show={(v) => String(Math.round(v))} onSet={(v, r) => onEdit((q) => fieldSet("foldFaces")(q, v), r)} />;
+    sliders = <Slider label="Faces" value={p.folded.faces} def={D.folded.faces} min={20} max={400} step={10} show={(v) => String(Math.round(v))} onSet={(v, r) => onEdit((q) => fieldSet("foldFaces")(q, v), r)} />;
   }
 
   const current = looks.find((l) => l.on(p));
   return (
-    <Sec title="Style" meta={current?.text} startOpen>
+    <Sec title="Style" meta={current?.text} startOpen onReset={onReset}>
       {looks.length > 0 && (
         <div className="style-looks" role="group" aria-label="Quick looks">
           {looks.map((l) => (
