@@ -409,6 +409,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
         const k = e.key.toLowerCase();
         const va = api.current;
         if (k === "z" && !inField) { e.preventDefault(); e.shiftKey ? va.doRedo() : va.doUndo(); }
+        else if (k === "y" && !inField) { e.preventDefault(); va.doRedo(); }
         else if (k === "s") { e.preventDefault(); if (e.shiftKey) va.saveProjectAs(); else va.saveProject(); }
         else if (k === "o") { e.preventDefault(); va.openProject(); }
         else if (k === "i" && !e.shiftKey) { e.preventDefault(); va.importPick(); }
@@ -576,6 +577,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
           }
           svg={phoneSVG} status={error ? `Fix this in the full editor: ${error}` : notice} nesting={nesting} assembly={assemblySteps(out?.assembly, params.gap)}
           onSVG={() => void exportNow()} onDXF={() => void exportDXFNow()} onFull={phoneFlow.full} onHome={onHome}
+          history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
         />
         {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
         {toast && <div className="toast" role="status">{toast}</div>}

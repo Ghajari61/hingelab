@@ -219,6 +219,8 @@
 .ai-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .ai-link-btn { display: inline-flex; align-items: center; gap: 6px; justify-self: start; background: none; border: 0; padding: 6px 4px; color: var(--fg-dim); font: inherit; font-size: 13px; cursor: pointer; border-radius: 6px; }
 .ai-link-btn:hover { color: var(--accent-hi); }
+.ai-link-btn:disabled { opacity: 0.45; cursor: default; color: var(--fg-dim); }
+.ai-undo { display: flex; gap: 8px; }
 .ai-lib-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; padding: 18px; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow-2); }
 .ai-lib-files { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .ai-lib-drop { position: relative; display: grid; place-items: center; align-content: center; gap: 6px; min-height: 200px; padding: 16px; border-radius: 14px; border: 1.5px dashed var(--line-strong, var(--line)); background: var(--panel-2); color: var(--fg-dim); font: inherit; font-size: 12.5px; text-align: center; cursor: pointer; transition: border-color var(--dur-fast), background var(--dur-fast); }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Redo2, Undo2 } from "lucide-react";
 import type { GenPreset } from "@/lib/generators/types";
 
 const STEPS = ["Choose a design", "Make it yours", "Export"] as const;
@@ -10,8 +11,10 @@ const STEPS = ["Choose a design", "Make it yours", "Export"] as const;
  * files. Everything else stays in the full editor, one tap away.
  */
 export default function PhoneFlow({
-  name, summary, presets, thumb, current, onPreset, fields, svg, status, nesting, assembly, onSVG, onDXF, onFull, onHome,
+  name, summary, presets, thumb, current, onPreset, fields, svg, status, nesting, assembly, onSVG, onDXF, onFull, onHome, history,
 }: {
+  /** The editor's undo and redo (the same history as the full editor). */
+  history: { canUndo: boolean; canRedo: boolean; undo: () => void; redo: () => void };
   /** Assembly steps for the design. */
   assembly: string[];
   name: string;
@@ -66,6 +69,10 @@ export default function PhoneFlow({
           ))}
         </ol>
       </nav>
+      <div className="pf-history" role="toolbar" aria-label="History">
+        <button type="button" className="pf-link" disabled={!history.canUndo} onClick={history.undo} title="Undo (Ctrl+Z)"><Undo2 size={15} aria-hidden /> Undo</button>
+        <button type="button" className="pf-link" disabled={!history.canRedo} onClick={history.redo} title="Redo (Ctrl+Y)"><Redo2 size={15} aria-hidden /> Redo</button>
+      </div>
       <main className="pf-body">
         {step === 0 && (
           <section aria-labelledby="pf-h0">

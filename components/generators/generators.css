@@ -22,10 +22,13 @@
 .gen-photo-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .gen-random { align-self: end; margin-bottom: 2px; }
 .gen-shuffle { width: 100%; }/* ---------- phone flow ---------- */
-.phone-flow { min-height: 100dvh; display: grid; grid-template-rows: auto auto 1fr; background: var(--chrome); color: var(--fg); }
+.phone-flow { min-height: 100dvh; display: grid; grid-template-rows: auto auto auto 1fr; background: var(--chrome); color: var(--fg); }
 .pf-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
 .pf-head h1 { flex: 1; margin: 0; font-size: 16px; text-align: center; }
 .pf-link { border: 0; background: none; color: var(--accent); font: inherit; font-size: 13px; padding: 8px 4px; cursor: pointer; min-height: 40px; }
+.pf-link:disabled { color: var(--fg-dim); opacity: 0.6; cursor: default; }
+.pf-history { display: flex; justify-content: flex-end; gap: 12px; padding: 0 12px; }
+.pf-history .pf-link { display: inline-flex; align-items: center; gap: 5px; }
 .pf-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 0; padding: 8px 10px; list-style: none; border-bottom: 1px solid var(--line); }
 .pf-steps button { width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--fg-dim); font: inherit; font-size: 12.5px; cursor: pointer; }
 .pf-steps button[aria-current="step"] { background: var(--select); color: var(--select-ink); border-color: var(--select); }

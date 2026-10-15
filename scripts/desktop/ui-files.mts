@@ -10,6 +10,7 @@ const PORT = 5198;
 let failed = 0;
 const check = (ok: boolean, msg: string) => { console.log(`${ok ? "ok" : "FAIL"} ${msg}`); if (!ok) failed++; };
 let designId = 0;
+let aiRuns = 0;
 const calls: { cmd: string; args: Record<string, unknown> }[] = [];
 const titles: string[] = [];
 const HINGE_FILE = JSON.stringify({ app: "HingeLab", product: "hinge-box", version: 1, params: { name: "Opened box", W: 91 } });
@@ -47,6 +48,11 @@ async function command(cmd: string, args: Record<string, unknown>) {
       return f;
     }
     case "web_open_file": return "/app/editor/local?desktop-open=1";
+    case "ai_design": {
+      const req = args.request as { prompt: string };
+      aiRuns++;
+      return { product: "hinge", productName: "Hinge Box", match: "exact", name: `AI ${aiRuns}`, summary: req.prompt, notes: [], params: { W: 60 + aiRuns } };
+    }
     case "generate": {
       const req = args.request as { product: string };
       const r = await generateDesign(req, "pro");
@@ -145,6 +151,47 @@ try {
   await page.keyboard.press("Control+o");
   await after(500);
   check((await page.locator(".toast").allInnerTexts()).some((t) => t.includes("not a HingeLab project")), "a file that is not a project is refused with a message");
+
+  // The Edit menu: Undo and Redo.
+  await page.locator(".sidebar").getByRole("button", { name: "Generators" }).click();
+  await page.locator(".ws-name").click();
+  await page.locator('input[aria-label="Design name"]').fill("Menu name");
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(() => document.querySelector(".ws-name")?.textContent === "Menu name", null, { timeout: 15000 });
+  await after(400);
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  check(await page.getByRole("menu", { name: "Edit" }).isVisible(), "the workspace has an Edit menu");
+  await page.getByRole("menuitem", { name: /^Undo/ }).click();
+  await page.waitForFunction(() => document.querySelector(".ws-name")?.textContent !== "Menu name", null, { timeout: 15000 }).then(() => check(true, "Edit > Undo takes the rename back"), () => check(false, "Edit > Undo takes the rename back"));
+  await after(400);
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("menuitem", { name: /^Redo/ }).click();
+  await page.waitForFunction(() => document.querySelector(".ws-name")?.textContent === "Menu name", null, { timeout: 15000 }).then(() => check(true, "Edit > Redo puts it back"), () => check(false, "Edit > Redo puts it back"));
+  await page.getByRole("button", { name: "File", exact: true }).click();
+  check(await page.getByRole("menuitem", { name: /Save project as/ }).isVisible(), "the File menu has Save project as");
+  await page.keyboard.press("Escape");
+
+  // The AI designer: Undo and Redo step through the AI edits.
+  await page.locator(".sidebar").getByRole("button", { name: /AI/ }).first().click();
+  await page.locator("#ai-prompt").fill("a box");
+  await page.getByRole("button", { name: "Design it" }).click();
+  await page.locator(".ai-result h2").waitFor({ timeout: 15000 });
+  for (const ask of ["wider", "taller"]) {
+    await page.locator("#ai-edit").fill(ask);
+    await page.getByRole("button", { name: "Apply" }).click();
+    await page.waitForFunction((n) => document.querySelector(".ai-result h2")?.textContent === n, ask === "wider" ? "AI 2" : "AI 3", { timeout: 15000 });
+  }
+  const aiName = () => page.locator(".ai-result h2").innerText();
+  await page.getByRole("button", { name: "Undo edit" }).click();
+  check((await aiName()) === "AI 2", "AI page: Undo edit steps back");
+  await page.locator(".ai-result h2").click();
+  await page.keyboard.press("Control+z");
+  check((await aiName()) === "AI 1", "AI page: Ctrl+Z steps back again");
+  await page.keyboard.press("Control+y");
+  check((await aiName()) === "AI 2", "AI page: Ctrl+Y redoes");
+  await page.getByRole("button", { name: "Redo edit" }).click();
+  check((await aiName()) === "AI 3", "AI page: Redo edit redoes");
+  check(await page.getByRole("button", { name: "Redo edit" }).isDisabled(), "AI page: nothing left to redo");
 
   check(!errors.length, `no page errors${errors.length ? ": " + errors.join(" | ") : ""}`);
 } finally {

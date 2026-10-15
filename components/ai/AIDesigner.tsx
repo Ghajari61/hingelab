@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ArrowUp, Check, Download, ImagePlus, Info, Layers, Library, Loader2, PenTool, RotateCcw, ScanEye, Sparkles, Undo2, Wand2, X } from "lucide-react";
+import { ArrowRight, ArrowUp, Check, Download, ImagePlus, Info, Layers, Library, Loader2, PenTool, Redo2, RotateCcw, ScanEye, Sparkles, Undo2, Wand2, X } from "lucide-react";
 import { AI_START_KEY, isAIProduct, MAX_IMAGE_NOTE, MAX_PROMPT, reviseOf, type AIDesign, type AIMatch, type AIOpen } from "@/lib/ai/types";
 import { previewSvg } from "@/lib/ai/preview";
 import { photoJpeg } from "@/lib/ai/photo";
@@ -57,6 +57,9 @@ async function handOff(o: AIOpen, note: string, replace = false, photo?: string 
 const fileName = (name: string) => (name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "design") + ".svg";
 
 /** Describe a product or show a photo of it; get a ready design of the nearest HingeLab product. */
+/** AI edits kept for Undo. */
+const MAX_EDITS = 20;
+
 export function AIDesigner({ plan, curator = false }: { plan: Plan; curator?: boolean }) {
   const [prompt, setPrompt] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
@@ -72,8 +75,9 @@ export function AIDesigner({ plan, curator = false }: { plan: Plan; curator?: bo
   const [editText, setEditText] = useState("");
   const [editing, setEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
-  /** Designs before each AI edit, newest last. */
+  /** Designs before each AI edit, newest last; and those undone, next first. */
   const [history, setHistory] = useState<AIDesign[]>([]);
+  const [future, setFuture] = useState<AIDesign[]>([]);
   /** Curators: adding the shown design to the example library. */
   const [kept, setKept] = useState<{ busy?: boolean; ok?: boolean; text?: string }>({});
   const fileRef = useRef<HTMLInputElement>(null);
@@ -146,7 +150,7 @@ export function AIDesigner({ plan, curator = false }: { plan: Plan; curator?: bo
       }
       setDesign(body);
       setDesignPhoto(photo);
-      setHistory([]); setEditText(""); setEditError(null);
+      setHistory([]); setFuture([]); setEditText(""); setEditError(null);
       try { sessionStorage.setItem(LAST_KEY, JSON.stringify({ prompt: prompt.trim(), design: body })); } catch { /* too large to keep */ }
     } catch (err) {
       if ((err as Error).name !== "AbortError") setError("Could not reach HingeLab. Check your connection and try again.");
@@ -174,7 +178,8 @@ export function AIDesigner({ plan, curator = false }: { plan: Plan; curator?: bo
         setEditError(body?.error ?? "The change could not be made. Try again.");
         return;
       }
-      setHistory((h) => [...h, design].slice(-10));
+      setHistory((h) => [...h, design].slice(-MAX_EDITS));
+      setFuture([]);
       setDesign(body);
       setEditText("");
       try { sessionStorage.setItem(LAST_KEY, JSON.stringify({ prompt, design: body })); } catch { /* too large to keep */ }
@@ -186,14 +191,42 @@ export function AIDesigner({ plan, curator = false }: { plan: Plan; curator?: bo
     }
   }
 
+  function show(d: AIDesign) {
+    setDesign(d);
+    setEditError(null);
+    try { sessionStorage.setItem(LAST_KEY, JSON.stringify({ prompt, design: d })); } catch { /* too large to keep */ }
+  }
+
   function undoEdit() {
     const prev = history[history.length - 1];
-    if (!prev) return;
+    if (!prev || !design || editing) return;
     setHistory((h) => h.slice(0, -1));
-    setDesign(prev);
-    setEditError(null);
-    try { sessionStorage.setItem(LAST_KEY, JSON.stringify({ prompt, design: prev })); } catch { /* too large to keep */ }
+    setFuture((f) => [design, ...f]);
+    show(prev);
   }
+
+  function redoEdit() {
+    const next = future[0];
+    if (!next || !design || editing) return;
+    setFuture((f) => f.slice(1));
+    setHistory((h) => [...h, design].slice(-MAX_EDITS));
+    show(next);
+  }
+
+  // Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) step through the AI edits, outside text fields.
+  const keys = useRef({ undoEdit, redoEdit });
+  keys.current = { undoEdit, redoEdit };
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      if (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey) { e.preventDefault(); keys.current.undoEdit(); }
+      else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); keys.current.redoEdit(); }
+    };
+    window.addEventListener("keydown", down);
+    return () => window.removeEventListener("keydown", down);
+  }, []);
 
   async function openInStudio() {
     if (!design?.svg) return;
@@ -228,7 +261,7 @@ export function AIDesigner({ plan, curator = false }: { plan: Plan; curator?: bo
 
   function startOver() {
     setDesign(null); setPrompt(""); setPhoto(null); setPhotoNote(""); setDesignPhoto(null); setError(null);
-    setHistory([]); setEditText(""); setEditError(null);
+    setHistory([]); setFuture([]); setEditText(""); setEditError(null);
     sessionStorage.removeItem(LAST_KEY);
   }
 
@@ -385,8 +418,11 @@ export function AIDesigner({ plan, curator = false }: { plan: Plan; curator?: bo
               </div>
               <span className="ai-status" role="status" aria-live="polite">{editing ? `Working for ${elapsed} s.${design.product === "art" ? " Redrawing can take a minute or two." : ""}` : ""}</span>
               {editError && <p className="auth-msg err" role="alert">{editError}</p>}
-              {history.length > 0 && !editing && (
-                <button type="button" className="ai-link-btn" onClick={undoEdit}><Undo2 size={14} aria-hidden /> Undo last edit</button>
+              {(history.length > 0 || future.length > 0) && !editing && (
+                <span className="ai-undo">
+                  <button type="button" className="ai-link-btn" onClick={undoEdit} disabled={!history.length} title="Undo the last AI edit (Ctrl+Z)"><Undo2 size={14} aria-hidden /> Undo edit</button>
+                  <button type="button" className="ai-link-btn" onClick={redoEdit} disabled={!future.length} title="Redo the AI edit (Ctrl+Y)"><Redo2 size={14} aria-hidden /> Redo edit</button>
+                </span>
               )}
             </form>
             <div className="ai-actions">

@@ -365,6 +365,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
         const k = e.key.toLowerCase();
         const va = api.current;
         if (k === "z" && !inField) { e.preventDefault(); e.shiftKey ? va.doRedo() : va.doUndo(); }
+        else if (k === "y" && !inField) { e.preventDefault(); va.doRedo(); }
         else if (k === "s") { e.preventDefault(); if (e.shiftKey) va.saveProjectAs(); else va.saveProject(); }
         else if (k === "o") { e.preventDefault(); va.openProject(); }
         else if (k === "i" && !e.shiftKey) { e.preventDefault(); va.importPick(); }

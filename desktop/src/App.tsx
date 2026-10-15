@@ -411,6 +411,9 @@ export function App() {
             onUndo={design.undo}
             onRedo={design.redo}
             onSave={() => void (product.id === "art" ? save("save") : saveProject(false))}
+            onSaveAs={() => void saveProject(true)}
+            onOpenFile={() => void openFile(null)}
+            onExportAs={() => void save("save")}
             onExport={() => void save("export")}
             onUpgrade={() => web("upgrade")}
             onRefreshPlan={refreshPlan}

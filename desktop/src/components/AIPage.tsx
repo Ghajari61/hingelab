@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, ArrowUp, Check, Crown, Download, Globe, ImagePlus, Info, Layers, Loader2, PenTool, RotateCcw, Save, ScanEye, Sparkles, Undo2, Wand2, X } from "lucide-react";
+import { ArrowRight, ArrowUp, Check, Crown, Download, Globe, ImagePlus, Info, Layers, Loader2, PenTool, Redo2, RotateCcw, Save, ScanEye, Sparkles, Undo2, Wand2, X } from "lucide-react";
 import type { AIDesign, AIMatch } from "../../../lib/ai/types";
 import { MAX_IMAGE_CHARS, MAX_IMAGE_NOTE, MAX_PROMPT, reviseOf } from "../../../lib/ai/types";
 import { previewSvg } from "../../../lib/ai/preview";
@@ -19,7 +19,10 @@ const EXAMPLES = [
 const MATCH: Record<AIMatch, string> = { exact: "Exact match", close: "Close match", loose: "Nearest product" };
 
 /** The page's last answer, kept while the app runs so a trip to the workspace and back finds it. */
-let kept: { prompt: string; design: AIDesign; fromPhoto: boolean; history: AIDesign[] } | null = null;
+let kept: { prompt: string; design: AIDesign; fromPhoto: boolean; history: AIDesign[]; future: AIDesign[] } | null = null;
+
+/** AI edits kept for Undo. */
+const MAX_EDITS = 20;
 
 async function photoJpeg(file: Blob): Promise<string> {
   const bmp = await createImageBitmap(file);
@@ -60,8 +63,9 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
   const [editText, setEditText] = useState("");
   const [editing, setEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
-  /** Designs before each AI edit, newest last. */
+  /** Designs before each AI edit, newest last; and those undone, next first. */
   const [history, setHistory] = useState<AIDesign[]>(kept?.history ?? []);
+  const [future, setFuture] = useState<AIDesign[]>(kept?.future ?? []);
   const [saving, setSaving] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [saveNote, setSaveNote] = useState<{ text: string; ok: boolean } | null>(null);
@@ -91,8 +95,8 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
       if (n !== run.current) return;
       setDesign(d);
       setFromPhoto(!!photo);
-      setHistory([]); setEditText(""); setEditError(null);
-      kept = { prompt: prompt.trim(), design: d, fromPhoto: !!photo, history: [] };
+      setHistory([]); setFuture([]); setEditText(""); setEditError(null);
+      kept = { prompt: prompt.trim(), design: d, fromPhoto: !!photo, history: [], future: [] };
     } catch (e) {
       if (n !== run.current) return;
       const err = e as AppError;
@@ -109,11 +113,12 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
     try {
       const d = await ipc.aiDesign({ prompt: editText.trim(), revise: reviseOf(design) });
       if (n !== run.current) return;
-      const h = [...history, design].slice(-10);
+      const h = [...history, design].slice(-MAX_EDITS);
       setHistory(h);
+      setFuture([]);
       setDesign(d);
       setEditText("");
-      kept = { prompt: prompt.trim(), design: d, fromPhoto, history: h };
+      kept = { prompt: prompt.trim(), design: d, fromPhoto, history: h, future: [] };
     } catch (e) {
       if (n !== run.current) return;
       const err = e as AppError;
@@ -123,15 +128,40 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
     }
   }
 
+  function show(d: AIDesign, h: AIDesign[], f: AIDesign[]) {
+    setHistory(h);
+    setFuture(f);
+    setDesign(d);
+    setEditError(null);
+    kept = { prompt: prompt.trim(), design: d, fromPhoto, history: h, future: f };
+  }
+
   function undoEdit() {
     const prev = history[history.length - 1];
-    if (!prev) return;
-    const h = history.slice(0, -1);
-    setHistory(h);
-    setDesign(prev);
-    setEditError(null);
-    kept = { prompt: prompt.trim(), design: prev, fromPhoto, history: h };
+    if (!prev || !design || editing) return;
+    show(prev, history.slice(0, -1), [design, ...future]);
   }
+
+  function redoEdit() {
+    const next = future[0];
+    if (!next || !design || editing) return;
+    show(next, [...history, design].slice(-MAX_EDITS), future.slice(1));
+  }
+
+  // Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) step through the AI edits, outside text fields.
+  const keys = useRef({ undoEdit, redoEdit });
+  keys.current = { undoEdit, redoEdit };
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || e.altKey) return;
+      if (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey) { e.preventDefault(); keys.current.undoEdit(); }
+      else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); keys.current.redoEdit(); }
+    };
+    window.addEventListener("keydown", down);
+    return () => window.removeEventListener("keydown", down);
+  }, []);
 
   const native = !!design && (design.product === "art" ? !!catalog?.art : !!catalog?.products.some((p) => p.id === design.product));
   const drawn = design?.product === "art" && !!design.svg;
@@ -160,7 +190,7 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
   }
 
   const step = elapsed < 6 ? 0 : elapsed < 35 ? 1 : elapsed < 60 ? 2 : 3;
-  const startOver = () => { setDesign(null); setPrompt(""); setPhoto(null); setPhotoNote(""); setError(null); setHistory([]); setEditText(""); setEditError(null); kept = null; };
+  const startOver = () => { setDesign(null); setPrompt(""); setPhoto(null); setPhotoNote(""); setError(null); setHistory([]); setFuture([]); setEditText(""); setEditError(null); kept = null; };
 
   return (
     <div className="page ai-page">
@@ -307,8 +337,11 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
               </div>
               {editing && <span className="fine" role="status" aria-live="polite">Working for {elapsed} s.{design.product === "art" ? " Redrawing can take a minute or two." : ""}</span>}
               {editError && <p className="ai-error" role="alert">{editError}</p>}
-              {history.length > 0 && !editing && (
-                <button type="button" className="ai-link-btn" onClick={undoEdit}><Undo2 size={14} aria-hidden />Undo last edit</button>
+              {(history.length > 0 || future.length > 0) && !editing && (
+                <span className="ai-undo">
+                  <button type="button" className="ai-link-btn" onClick={undoEdit} disabled={!history.length} title="Undo the last AI edit (Ctrl+Z)"><Undo2 size={14} aria-hidden />Undo edit</button>
+                  <button type="button" className="ai-link-btn" onClick={redoEdit} disabled={!future.length} title="Redo the AI edit (Ctrl+Y)"><Redo2 size={14} aria-hidden />Redo edit</button>
+                </span>
               )}
             </form>
             <div className="ai-actions">

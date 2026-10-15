@@ -1,11 +1,12 @@
 import { lazy, Suspense, useEffect, useRef, useState, type RefObject } from "react";
-import { AlertTriangle, Box, CircleAlert, Download, FileDown, Grid2x2, Grid3x3, Info, Lock, Maximize, Minus, Plus, Redo2, RefreshCw, Ruler, Save, Scan, Sparkles, Square, Star, Undo2, WifiOff, Wrench } from "lucide-react";
+import { AlertTriangle, Box, CircleAlert, Dices, Download, FileDown, FolderOpen, Grid2x2, Grid3x3, Info, Lock, Maximize, Minus, Plus, Redo2, RefreshCw, RotateCcw, Ruler, Save, Scan, Sparkles, Square, Star, Undo2, WifiOff, Wrench } from "lucide-react";
 import type { DProduct } from "../../../lib/desktop/types";
 import { isDirty, type DesignState } from "../design";
 import { desktopGrips } from "../grips";
 import type { AppError } from "../ipc";
 import { DEFAULT_PREFS, usePrefs, type LocalPrefs, type Shade3D, type SheetTone, type Units } from "../local";
 import { Canvas, zoomLabel, type CanvasHandle } from "./Canvas";
+import { Menu } from "./Menu";
 import { SettingsPanel } from "./SettingsPanel";
 import type { PaneId } from "./View3D";
 
@@ -34,7 +35,15 @@ interface Props {
   onUndo: () => void;
   onRedo: () => void;
   onSave: () => void;
+  onSaveAs: () => void;
+  onOpenFile: () => void;
   onExport: () => void;
+  /** Export, always asking where. */
+  onExportAs: () => void;
+  /** Every setting back to its default, as one undo step. */
+  onResetAll?: () => void;
+  /** A new random design (unlocked style settings only), as one undo step. */
+  onRandomise?: () => void;
   onUpgrade: () => void;
   onRefreshPlan: () => void;
   onFavorite: () => void;
@@ -123,6 +132,26 @@ export function Workspace(p: Props) {
           {r?.summary && <span className="ws-summary">{r.summary}</span>}
         </div>
         <div className="ws-actions">
+          <nav className="ws-menus" aria-label="Menus">
+            <Menu label="File" items={[
+              { label: "Open project…", shortcut: "Ctrl+O", icon: <FolderOpen size={14} />, onSelect: p.onOpenFile },
+              ...(isArt ? [] : [
+                { label: design.file ? `Save to ${design.file.name}` : "Save project…", shortcut: "Ctrl+S", icon: <Save size={14} />, disabled: !design.params, onSelect: p.onSave },
+                { label: "Save project as…", shortcut: "Ctrl+Shift+S", disabled: !design.params, onSelect: p.onSaveAs },
+              ]),
+              "-",
+              { label: "Export SVG", shortcut: "Ctrl+E", icon: <FileDown size={14} />, disabled: !canSave, onSelect: p.onExport },
+              { label: isArt ? "Save SVG…" : "Export SVG as…", shortcut: "Ctrl+Shift+E", disabled: !canSave, onSelect: p.onExportAs },
+            ]} />
+            <Menu label="Edit" items={[
+              { label: "Undo", shortcut: "Ctrl+Z", icon: <Undo2 size={14} />, disabled: !design.canUndo, onSelect: p.onUndo },
+              { label: "Redo", shortcut: "Ctrl+Y", icon: <Redo2 size={14} />, disabled: !design.canRedo, onSelect: p.onRedo },
+              ...(p.onResetAll || p.onRandomise ? ["-" as const] : []),
+              ...(p.onResetAll ? [{ label: "Reset all settings", icon: <RotateCcw size={14} />, disabled: !design.params || design.busy, onSelect: p.onResetAll }] : []),
+              ...(p.onRandomise ? [{ label: "Randomise design", shortcut: "Ctrl+R", icon: <Dices size={14} />, disabled: !design.params || design.busy, onSelect: p.onRandomise }] : []),
+            ]} />
+          </nav>
+          <span className="sep" />
           <button type="button" className="icon-btn" aria-pressed={p.favorite} title={p.favorite ? "Remove from favorites" : "Add to favorites"} onClick={p.onFavorite}>
             <Star size={16} fill={p.favorite ? "currentColor" : "none"} aria-hidden />
           </button>
