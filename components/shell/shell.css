@@ -84,6 +84,10 @@
 .stage-chip { position: absolute; top: 12px; right: 14px; z-index: 6; background: var(--hud-bg); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; box-shadow: var(--shadow-1); overflow: hidden; }
 .stage-chip:empty { display: none; }
 .stage-chip .pe-stage { margin: 0; }
+.nest-chip { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.nest-chip progress { width: 96px; height: 6px; accent-color: var(--primary); }
+.nest-chip button { border: 1px solid var(--line); background: var(--surface-panel); color: var(--fg); border-radius: 6px; padding: 2px 8px; cursor: pointer; font: inherit; }
+.nest-chip button:hover { background: var(--surface-hover); }
 /* ---------- canvas HUD tools ---------- */
 .canvas-hud { left: 14px; right: auto; align-items: center; }
 .canvas-hud .hud-tool { display: grid; place-items: center; }
@@ -125,6 +129,14 @@
   .gen-menu { position: static; }
   .gen-dropdown { max-width: calc(100vw - 16px); }
   .dock-col { border-left: 0; }
+}
+/* Portrait tablets: the drawing and the settings side by side, the options rail a short strip above. */
+@media (min-width: 601px) and (max-width: 860px) {
+  .main { grid-template-columns: minmax(0, 1fr) 300px; }
+  .main > .gallery { grid-column: 1 / -1; max-height: 30vh; }
+  .main > .stage, .main > .stage .viewport, .main > .dock-col { height: calc(100vh - 30vh - 140px); min-height: 420px; }
+  .main > .dock-col { border-left: 1px solid var(--line); grid-template-columns: minmax(0, 1fr); min-width: 0; }
+  .main > .dock-col .dock { overflow-y: auto; }
 }
 @media (max-width: 480px) {
   .product-tabs > button > svg, .gen-menu > button > svg:first-child { display: none; }

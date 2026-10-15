@@ -8,6 +8,7 @@
  */
 import { cleanContour, differenceShapes, dropSpecks, intersectShapes, makeShape, MIN_PIECE_AREA, offsetShapes, totalArea, shapeContours, unionShapes } from "./polygon";
 import { turnAt } from "./path";
+import { Lru, memoShapes } from "./memo";
 import type { Contour, Shape } from "./types";
 
 /**
@@ -133,6 +134,12 @@ function result(shapes: Shape[], rounded: Shape[], r: number): FilletResult {
  */
 export function filletByContour(shapes: Shape[], rMin: number, minWeb = 0, rConcave = rMin): FilletResult {
   if (rMin <= 0) return { shapes, changed: false, delta: 0 };
+  return memoShapes(filletCache, shapes, [rMin, minWeb, rConcave], () => filletEachContour(shapes, rMin, minWeb, rConcave));
+}
+
+const filletCache = new Lru<{ input: Float64Array; value: FilletResult }>(48);
+
+function filletEachContour(shapes: Shape[], rMin: number, minWeb: number, rConcave: number): FilletResult {
   const r = rMin * FILLET_MARGIN;
   const rc = Math.min(r, Math.max(0, rConcave) * FILLET_MARGIN);
   const rounded: Shape[] = [];

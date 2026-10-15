@@ -240,6 +240,12 @@ export const ARTICLES: HelpArticle[] = [
         "Auto: keeps the design size and uses as many sheets as it needs.",
       ] },
       { p: "Scaling keeps the material thickness, kerf and joint sizes, so the parts still fit together. Turning the sheet (swapping width and height) sometimes fits a long wall without scaling." },
+      { h: "Nest by outline", list: [
+        "In the generators, Nest parts in the Sheet section packs parts by their boxes (fast) or by their outlines, so round and odd-shaped parts tuck into each other's gaps and holes and use less material.",
+        "Nesting by outline can take a moment on large designs. It runs in the background: the parts show packed by their boxes, a Nesting parts by shape bar shows the progress over the sheet, and the layout updates when it is done. You can keep editing meanwhile.",
+        "Cancel on the bar stops it and keeps the box layout for this design; change the design and it nests again. Export waits until nesting has finished or been cancelled, so the file always matches what you see.",
+        "Spacing sets the gap between parts. At 0, touching parts share their cut lines; the export cuts each shared line once, and How to put it together starts with separating them.",
+      ] },
     ],
     related: ["checks-and-fixes", "layers-and-export"],
   },
@@ -302,6 +308,12 @@ export const ARTICLES: HelpArticle[] = [
         "Export SVG saves every sheet in one file, sized in millimetres.",
         "More… (Ctrl+Shift+E) opens the export window: pick your machine and it checks every sheet fits its bed, then save SVG, DXF, a PDF with a page per sheet, or a LightBurn project. Sheets can go in one file or one file each (a ZIP), mirrored for the back of clear acrylic, with hairline lines for Epilog, Trotec and Universal drivers, and DXF in inches. Laser power and speed are never set: use your own tested settings.",
         "Parametric exports every sheet as a ZIP or the current sheet as one SVG, and prints an assembly guide.",
+      ] },
+      { h: "Clean files for your laser", list: [
+        "Every part outline is a closed path, so your laser software can fill, offset and order it.",
+        "Where two parts share an edge (parts packed with no spacing, a slot along an edge), the line is cut once, not twice: a second pass would scorch the edge and widen the cut. The export says how much line it saved. In the export window, Cut shared lines once turns this off if you want every part whole.",
+        "Sizes are true: the SVG is in millimetres (width, height and view box), a DXF says millimetres ($INSUNITS 4) or inches when you choose, a PDF is drawn at actual size (100 mm is 283.46 pt) and a LightBurn project is in millimetres. A 100 mm square opens as exactly 100 mm in LightBurn, Inkscape and Illustrator.",
+        "In Illustrator, open the SVG rather than placing it; in Inkscape, keep Scale at the default (the file's own units). If a program asks for the DXF's units, pick millimetres.",
       ] },
     ],
     related: ["sheet-and-fit", "getting-started", "job-estimate"],
@@ -433,7 +445,40 @@ export const ARTICLES: HelpArticle[] = [
         "In the Studio editor, every menu item shows its shortcut and the command palette (Ctrl+/) finds every command.",
       ] },
     ],
-    related: ["undo-and-reset"],
+    related: ["undo-and-reset", "keyboard-and-screen-readers"],
+  },
+  {
+    slug: "keyboard-and-screen-readers", product: "general", title: "Keyboard and screen readers",
+    summary: "Every control can be reached and used from the keyboard, shows where the focus is, and has a name a screen reader reads out.",
+    keywords: ["accessibility", "a11y", "keyboard", "tab", "focus", "screen reader", "nvda", "voiceover", "jaws", "contrast"],
+    blocks: [
+      { list: [
+        "Tab and Shift+Tab move through the menus, the picture cards, the settings and the export buttons; the focused control has a coloured ring.",
+        "Enter or Space presses a button or picks a card. In the menu bar, the arrow keys move through a menu and Escape closes it. Escape also closes dialogs, and the focus goes back to where it was.",
+        "Number fields take Up and Down (with Shift for ten steps) and accept typed values with units, such as 3 mm, 1/8 in or 40*2.",
+        "Sections fold and unfold with Enter on their title. Each ? button opens that section's help.",
+        "Every button, field and card has a name for screen readers, and status messages (saved, exported, nesting) are announced.",
+        "The 3D view takes T, F, L and P for its views once it has the focus; the same model is on the sheet view for screen-reader users.",
+      ] },
+    ],
+    related: ["shortcuts", "phones-and-tablets"],
+  },
+  {
+    slug: "phones-and-tablets", product: "general", title: "Phones and tablets",
+    summary: "On a tablet the full editor works by touch; on a phone the generators open in a simple three-step flow.",
+    keywords: ["phone", "mobile", "tablet", "ipad", "android", "iphone", "touch", "small screen", "simple"],
+    blocks: [
+      { p: "On a tablet (portrait or landscape) the editor is the full one: the settings sit beside or under the sheet. Drag the sheet to move round it and use the zoom buttons at its corner." },
+      { h: "The phone flow", list: [
+        "On a phone, a generator (signs, toppers, boxes, clocks and the rest) opens in three steps: Choose a design, Make it yours, Export.",
+        "Choose a design shows the presets; Keep my current design carries on with the one you had.",
+        "Make it yours shows a preview and only the text, font and photo of the design.",
+        "Export downloads the SVG or DXF, made on the phone, with the assembly steps underneath.",
+        "Full editor at the top (or the link under the export buttons) opens every setting: sizes, material, kerf and sheets. View › Simple phone view goes back.",
+        "Your design is the same in both and autosaves as you go.",
+      ] },
+    ],
+    related: ["getting-started", "keyboard-and-screen-readers"],
   },
 
   // ── Hinge Box ────────────────────────────────────────────────────────────

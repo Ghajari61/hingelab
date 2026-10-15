@@ -4,15 +4,20 @@
  */
 import { bboxOfContours } from "@/lib/letters/polygon";
 import type { Contour } from "@/lib/letters/types";
-import { nestOutlines, rotatePoint } from "@/lib/nest/outline";
+import { nestOrDefer } from "@/lib/nest/deferred";
+import { rotatePoint } from "@/lib/nest/outline";
 import type { Packed, SheetSpec } from "./fitToSheets";
 
 const pid = (i: number) => String(i).padStart(4, "0");
 
-/** Packs parts by their outlines (true shape), turning them by the angles allowed for each. */
-export function outlinePacker<P extends { outline: Contour[] }>(angles: (pt: P) => number[]) {
+/**
+ * Packs parts by their outlines (true shape), turning them by the angles allowed for each. While
+ * an editor has the nest running in a worker, `meanwhile` packs them (by their boxes).
+ */
+export function outlinePacker<P extends { outline: Contour[] }>(angles: (pt: P) => number[], meanwhile?: (parts: P[], s: SheetSpec) => Packed) {
   return (parts: P[], s: SheetSpec): Packed => {
-    const res = nestOutlines(parts.map((pt, i) => ({ id: pid(i), outline: pt.outline, angles: angles(pt) })), { w: s.w, h: s.h, margin: s.margin, gap: s.gap });
+    const res = nestOrDefer(parts.map((pt, i) => ({ id: pid(i), outline: pt.outline, angles: angles(pt) })), { w: s.w, h: s.h, margin: s.margin, gap: s.gap });
+    if (!res) return meanwhile ? meanwhile(parts, s) : { sheets: [], tooBig: [] };
     // The nester places part-local points; the layout wants the top-left of the turned part's box.
     const box = (i: number, a: number) => bboxOfContours(parts[i].outline.map((c) => c.map((q) => rotatePoint(q, a))));
     return {

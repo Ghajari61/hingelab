@@ -17,6 +17,7 @@
     "fetch:depth-model": "node scripts/fetch-depth-model.mjs",
     "build:shape-icons": "vite-node -c vitest.config.ts scripts/shape-icons.ts",
     "perf:budgets": "node scripts/perf/budgets.mjs",
+    "perf:preview": "node scripts/perf/preview.mjs",
     "test": "vitest run",
     "desktop:ui:dev": "vite --config desktop/vite.config.ts",
     "desktop:ui:build": "vite build --config desktop/vite.config.ts",

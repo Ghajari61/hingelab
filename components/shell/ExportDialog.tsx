@@ -141,6 +141,7 @@ export default function ExportDialog({ getSVG, localSVG, sheets, size, base, uni
           )}
 
           <div className="exp-opts">
+            <label className="chk"><input type="checkbox" checked={s.merge !== false} onChange={(e) => upd({ merge: e.target.checked })} />Cut shared lines once (where touching parts share an edge)</label>
             <label className="chk"><input type="checkbox" checked={s.mirror} onChange={(e) => upd({ mirror: e.target.checked })} />Mirror left to right (to engrave the back of clear acrylic)</label>
             {(s.format === "svg" || s.format === "pdf") && (
               <label className="chk"><input type="checkbox" checked={s.hairline} onChange={(e) => upd({ hairline: e.target.checked })} />Hairline lines, 0.001 in (Epilog, Trotec and Universal print drivers cut these)</label>

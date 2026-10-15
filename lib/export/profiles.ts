@@ -31,13 +31,15 @@ export interface ExportSettings {
   hairline: boolean;
   /** DXF numbers in inches. */
   inches: boolean;
+  /** Cut once where parts share a cut line (on unless turned off). */
+  merge?: boolean;
 }
 
 export const HAIRLINE_MM = 0.0254;
 
 export function defaultExport(machine?: string): ExportSettings {
   const m = machine && machineById(machine) ? machineById(machine)! : MACHINE_PROFILES[0];
-  return { machine: m.id, bedW: m.bedW, bedH: m.bedH, format: m.exportFormat, split: false, mirror: false, hairline: false, inches: false };
+  return { machine: m.id, bedW: m.bedW, bedH: m.bedH, format: m.exportFormat, split: false, mirror: false, hairline: false, inches: false, merge: true };
 }
 
 const len = (v: unknown, d: number) => (typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.min(3000, Math.max(20, v)) : d);
@@ -56,6 +58,7 @@ export function cleanExport(x: unknown, machine?: string): ExportSettings {
     mirror: r.mirror === true,
     hairline: r.hairline === true,
     inches: r.inches === true,
+    merge: r.merge !== false,
   };
 }
 

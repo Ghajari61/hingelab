@@ -224,15 +224,25 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
     return null;
   }
 
-  async function exportNow() {
+  /** The export SVG with lines that touching parts share cut once. */
+  async function cutSVG(): Promise<string | null> {
     const svg = await exportedSVG();
+    if (!svg) return null;
+    const { mergedNote, watertightSVG } = await import("@/lib/export/watertight");
+    const w = watertightSVG(svg);
+    if (w.removed) window.setTimeout(() => toastMsg(mergedNote(w.removed)), 1600);
+    return w.svg;
+  }
+
+  async function exportNow() {
+    const svg = await cutSVG();
     if (!svg) return;
     offerFile(baseName(built) + ".svg", svg, "image/svg+xml");
     if (svg.includes('id="watermark"')) toastMsg("Exported with the small “Made with HingeLab” mark (Free plan)");
   }
 
   async function exportDXFNow() {
-    const svg = await exportedSVG();
+    const svg = await cutSVG();
     if (!svg) return;
     const { svgToDXF } = await import("@/lib/export/dxf");
     const out = svgToDXF(svg);

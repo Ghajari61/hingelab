@@ -21,4 +21,28 @@
 .gen-image-local { margin: 0; font-size: 12px; }
 .gen-photo-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .gen-random { align-self: end; margin-bottom: 2px; }
-.gen-shuffle { width: 100%; }
+.gen-shuffle { width: 100%; }/* ---------- phone flow ---------- */
+.phone-flow { min-height: 100dvh; display: grid; grid-template-rows: auto auto 1fr; background: var(--chrome); color: var(--fg); }
+.pf-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.pf-head h1 { flex: 1; margin: 0; font-size: 16px; text-align: center; }
+.pf-link { border: 0; background: none; color: var(--accent); font: inherit; font-size: 13px; padding: 8px 4px; cursor: pointer; min-height: 40px; }
+.pf-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 0; padding: 8px 10px; list-style: none; border-bottom: 1px solid var(--line); }
+.pf-steps button { width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--fg-dim); font: inherit; font-size: 12.5px; cursor: pointer; }
+.pf-steps button[aria-current="step"] { background: var(--select); color: var(--select-ink); border-color: var(--select); }
+.pf-steps span { font-weight: 700; }
+.pf-body { padding: 12px; display: grid; gap: 14px; align-content: start; }
+.pf-body h2 { margin: 0 0 8px; font-size: 15px; }
+.pf-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.pf-card { display: grid; gap: 6px; justify-items: center; padding: 8px; min-height: 44px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--fg); font: inherit; font-size: 13px; cursor: pointer; text-align: center; }
+.pf-card img { width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: contain; }
+.pf-card[aria-pressed="true"] { border-color: var(--select); box-shadow: 0 0 0 1px var(--select); }
+.pf-card.keep { align-content: center; }
+.pf-keep { font-size: 28px; line-height: 1; color: var(--fg-dim); }
+.pf-preview { margin: 0; display: grid; gap: 6px; }
+.pf-preview img, .pf-wait { width: 100%; max-height: 42vh; object-fit: contain; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
+.pf-wait { display: grid; place-items: center; min-height: 160px; color: #555; font-size: 13px; padding: 12px; text-align: center; }
+.pf-preview figcaption { font-size: 12.5px; color: var(--fg-dim); text-align: center; }
+.phone-fields { display: grid; gap: 10px; }
+.phone-fields .textin { font-size: 16px; }
+.pf-actions { display: grid; gap: 8px; }
+.pf-actions button, .pf-next { min-height: 48px; width: 100%; }

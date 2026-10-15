@@ -11,6 +11,7 @@ import { scenePDF } from "./pdfVector";
 import { FORMAT_INFO, HAIRLINE_MM, type ExportSettings, type Rect } from "./profiles";
 import { readScene } from "./scene";
 import { sceneSVG, sheetName, sheetRects, tailOf, type Place } from "./sheets";
+import { mergedNote, mergeSharedCuts } from "./watertight";
 
 export interface ExportFile { name: string; data: string | Uint8Array; mime: string }
 export interface ExportResult {
@@ -28,8 +29,10 @@ export interface LaserFromMaterial { name: string; laser: Partial<Record<LaserOp
 export function makeExport(svg: string, sheets: Rect[] | null | undefined, s: ExportSettings, base: string, mat?: LaserFromMaterial): ExportResult {
   const fmt = FORMAT_INFO[s.format];
   const notes: string[] = [];
-  const plain = !s.mirror && !s.hairline;
-  const scene = readScene(svg);
+  const merged = s.merge === false ? { scene: readScene(svg), removed: 0 } : mergeSharedCuts(readScene(svg));
+  const scene = merged.scene;
+  const plain = !s.mirror && !s.hairline && !merged.removed;
+  if (merged.removed) notes.push(mergedNote(merged.removed));
   const rects = sheetRects(scene, sheets);
   const split = s.split && rects.length > 1;
   const whole: Place = { rect: { x: 0, y: 0, w: scene.W, h: scene.H }, sheet: null, mirror: s.mirror };

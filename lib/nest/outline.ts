@@ -138,14 +138,15 @@ class Grid {
   }
 }
 
-/** Nest parts by their outlines onto as many sheets as needed. */
-export function nestOutlines(parts: OutlinePart[], s: OutlineSheetSpec): OutlineNest {
+/** Nest parts by their outlines onto as many sheets as needed; `onProgress` hears each part placed. */
+export function nestOutlines(parts: OutlinePart[], s: OutlineSheetSpec, onProgress?: (done: number, total: number) => void): OutlineNest {
   const cell = s.cell ?? Math.max(1, Math.sqrt((s.w * s.h) / 400000));
   // The usable area reaches gap/2 into the margin: grown outlines then stop exactly at the margin.
   const ux = s.margin - s.gap / 2, uy = s.margin - s.gap / 2;
   const gw = Math.floor((s.w - 2 * s.margin + s.gap) / cell), gh = Math.floor((s.h - 2 * s.margin + s.gap) / cell);
   const grow = s.gap / 2 + cell * 0.75;
-  const prepared = parts.map((p) => {
+  const prepared = parts.map((p, i) => {
+    onProgress?.(i, 2 * parts.length);
     const rasters = [...new Set(p.angles.length ? p.angles : [0])].map((a) => rasterOf(p.outline, a, grow, cell)).filter((r): r is Raster => !!r);
     return { p, rasters, size: rasters.length ? Math.min(...rasters.map((r) => r.cells)) : 0 };
   });
@@ -154,7 +155,9 @@ export function nestOutlines(parts: OutlinePart[], s: OutlineSheetSpec): Outline
   const out: OutlineSheet[] = [];
   const tooBig: string[] = [];
   const item = (p: OutlinePart, r: Raster, X: number, Y: number): OutlineItem => ({ id: p.id, angle: r.angle, x: ux + X * cell - r.gx, y: uy + Y * cell - r.gy });
+  let done = parts.length;
   for (const { p, rasters } of prepared) {
+    onProgress?.(done++, 2 * parts.length);
     if (!rasters.length) continue;
     if (!rasters.some((r) => r.cw <= gw && r.ch <= gh)) { tooBig.push(p.id); continue; }
     let placed = false;

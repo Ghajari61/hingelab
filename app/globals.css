@@ -238,6 +238,7 @@ select.sel:focus { border-color: var(--accent); outline: none; }
 @keyframes pe-slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 .pe-3d { position: relative; min-height: 0; min-width: 0; }
 .pe-view { position: absolute; inset: 0; overflow: hidden; }
+.pe-view:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .pe-finish { display: flex; align-items: center; gap: 6px; color: var(--fg-dim); }
 .pe-finish select { height: 24px; padding: 0 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--field); color: var(--fg); font: 500 12px/1 var(--font-ui); }
 .ds-entry { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }

@@ -15,7 +15,7 @@ import type { StoredFontMeta } from "@/components/letters/fontStore";
 import type { BaseField } from "@/components/editor/fields";
 import type { Units } from "@/components/editor/format";
 import { cleanFit } from "@/lib/fit/fitToSheets";
-import { cleanExtras, cleanJob, GEN_LAYER_NAMES } from "@/lib/generators/output";
+import { assemblySteps, cleanExtras, cleanJob, GEN_LAYER_NAMES } from "@/lib/generators/output";
 import { getPath, setPath } from "@/lib/generators/path";
 import { Dices } from "lucide-react";
 import { ImagePicker } from "./ImagePicker";
@@ -45,8 +45,10 @@ const SHEET_FIELDS: BaseField[] = [
 ];
 
 export function GeneratorDock({
-  def, params, defaults, out, units, layerKeys, onSet: setRaw, onApply, onMaterial, onResetSection, sheet, checks, locks, fonts, onBatch,
+  def, params, defaults, out, units, layerKeys, onSet: setRaw, onApply, onMaterial, onResetSection, sheet, checks, locks, fonts, onBatch, simple,
 }: {
+  /** Only the text, font and picture fields (the phone flow). */
+  simple?: boolean;
   /** Opens batch personalisation (a ZIP with files per name). */
   onBatch?: () => void;
   /** Fonts uploaded on this device. */
@@ -218,6 +220,15 @@ export function GeneratorDock({
     return out;
   };
 
+  if (simple) {
+    const personal = def.sections.filter((s) => !s.show || s.show(params)).flatMap((s) => s.fields as FieldSpec<P>[]).filter((f) => f.kind === "text" || f.kind === "font" || f.kind === "image");
+    return (
+      <div className="phone-fields">
+        {personal.length ? personal.map(field) : <p className="note">This design has no text or picture to change. Sizes and the rest are in the full editor.</p>}
+      </div>
+    );
+  }
+
   const extras = cleanExtras(params.sheet);
   const job = cleanJob(params.job);
   const batchKey = def.batch?.(params as never) ?? null;
@@ -264,10 +275,10 @@ export function GeneratorDock({
           </dl>
         )}
         {checks}
-        {out?.assembly?.length ? (
+        {out && assemblySteps(out.assembly, params.gap).length ? (
           <details className="gen-assembly">
             <summary>How to put it together</summary>
-            <ol>{out.assembly.map((a, i) => <li key={i}>{a}</li>)}</ol>
+            <ol>{assemblySteps(out.assembly, params.gap).map((a, i) => <li key={i}>{a}</li>)}</ol>
           </details>
         ) : null}
       </Sec>

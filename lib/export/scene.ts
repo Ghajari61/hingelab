@@ -26,6 +26,8 @@ export interface SceneLayer {
   /** Filled (engraved areas) rather than stroked. */
   fill: boolean;
   items: SceneItem[];
+  /** Layer coordinates to document mm. */
+  m?: M;
 }
 export interface Scene {
   W: number;
@@ -184,11 +186,12 @@ export function readScene(svg: string): Scene {
   }
   const clips = clipPaths(scene.defs);
   for (const { layer: l, m, items } of layers) {
+    l.m = m;
     l.items = items.map((raw) => ({ raw, ...geometry(raw, m, clips) }));
     scene.layers.push(l);
   }
   if (pending.length) {
-    scene.layers.push({ open: `<g inkscape:groupmode="layer" inkscape:label="Other">`, label: "Other", color: "#000000", fill: false, items: pending.map(({ raw, m }) => ({ raw, ...geometry(raw, m, clips) })) });
+    scene.layers.push({ open: `<g inkscape:groupmode="layer" inkscape:label="Other">`, label: "Other", color: "#000000", fill: false, m: base, items: pending.map(({ raw, m }) => ({ raw, ...geometry(raw, m, clips) })) });
   }
   return scene;
 }

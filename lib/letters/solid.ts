@@ -193,19 +193,44 @@ export function thinFeatures(shapes: Shape[], m: number): Shape[] {
 }
 
 /** A point well inside the material, for the engraved label. */
+const labelPoints = new WeakMap<Shape, Point>();
+
 export function labelPoint(s: Shape): Point {
   const { x0, y0, x1, y1 } = s.bbox;
+  const hit = labelPoints.get(s);
+  if (hit) return [hit[0], hit[1]];
+  // The vertices in a grid: the nearest one is searched ring by ring around the candidate, and the
+  // search stops once a ring is surely farther than the nearest found, which gives the same
+  // minimum as comparing every vertex.
   const pts = [s.outer, ...s.holes].flat();
+  const G = 48, cw = Math.max(x1 - x0, y1 - y0, 1e-9) / G;
+  const cell = (v: number, o: number) => Math.min(G - 1, Math.max(0, Math.floor((v - o) / cw)));
+  const grid: Point[][] = Array.from({ length: G * G }, () => []);
+  for (const q of pts) grid[cell(q[1], y0) * G + cell(q[0], x0)].push(q);
   let best: Point = [(x0 + x1) / 2, (y0 + y1) / 2], bestD = -1;
   const N = 16;
   for (let i = 0; i <= N; i++) for (let j = 0; j <= N; j++) {
     const p: Point = [x0 + ((x1 - x0) * (i + 0.5)) / (N + 1), y0 + ((y1 - y0) * (j + 0.5)) / (N + 1)];
     if (!pointInShape(p, s)) continue;
+    const cx = cell(p[0], x0), cy = cell(p[1], y0);
     let d = Infinity;
-    for (const q of pts) d = Math.min(d, (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2);
+    for (let k = 0; k < G && d > bestD; k++) {
+      // Every vertex in ring k is at least (k - 1) cells away; the margin covers rounding.
+      const lb = Math.max(0, k - 1) * cw;
+      if (lb * lb > d * (1 + 1e-9) + 1e-12) break;
+      for (let gy = cy - k; gy <= cy + k; gy++) {
+        if (gy < 0 || gy >= G) continue;
+        const edge = gy === cy - k || gy === cy + k;
+        for (let gx = cx - k; gx <= cx + k; gx += edge || k === 0 ? 1 : 2 * k) {
+          if (gx < 0 || gx >= G) continue;
+          for (const q of grid[gy * G + gx]) d = Math.min(d, (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2);
+        }
+      }
+    }
     if (d > bestD) { bestD = d; best = p; }
   }
-  return best;
+  labelPoints.set(s, best);
+  return [best[0], best[1]];
 }
 
 /** Kerf-compensated solid parts: outers grow by K/2, holes shrink by K/2. */

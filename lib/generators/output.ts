@@ -139,6 +139,14 @@ export function partLabel(pt: CutPart): Contour[] {
   return finLabel(s, pt.name, { arrow: false, nearWall: false }) ?? [];
 }
 
+/** The first assembly step when parts are packed touching (Spacing 0). */
+export const SHARED_LINES_STEP = "The parts touch on the sheet (Spacing 0), so their shared lines are cut once: lift each group out whole, then press the parts apart along those lines.";
+
+/** A design's assembly steps as shown, with the shared-line step first when the parts touch. */
+export function assemblySteps(steps: string[] | undefined, gap: number): string[] {
+  return gap === 0 ? [SHARED_LINES_STEP, ...(steps ?? [])] : steps ?? [];
+}
+
 /** `n` sets of the parts, set by set (ids stay unique; names stay the same, so labels match the assembly). */
 export function copiesOf(parts: CutPart[], n: number): CutPart[] {
   const out: CutPart[] = [];
@@ -220,7 +228,7 @@ export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, 
     if (job.mirror) parts = parts.map(mirrorCutPart);
     return { params: q, result: { parts: x.copies > 1 ? copiesOf(parts, x.copies) : parts, out } };
   }, {
-    pack: byMaterial(x.nest === "outline" ? outlinePacker<CutPart>((pt) => (pt.images.length || pt.src.upright ? [0] : [0, 90, 180, 270])) : boxPacker),
+    pack: byMaterial(x.nest === "outline" ? outlinePacker<CutPart>((pt) => (pt.images.length || pt.src.upright ? [0] : [0, 90, 180, 270]), boxPacker) : boxPacker),
     turn: turnCutPart,
     reserve: x.calibration ? CAL_STRIP : 0,
   });

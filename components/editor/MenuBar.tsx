@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent as KeyEvent } from "react";
 import { FolderOpen, Save } from "lucide-react";
 import { LogoMark } from "@/components/site/LogoMark";
 import { UserMenu } from "@/components/auth/UserMenu";
@@ -8,6 +8,8 @@ import { ProductTabs, type Product } from "./ControlBar";
 
 export type MenuAction = { label: string; kbd: string; run: () => void; disabled?: boolean };
 export type MenuEntry = MenuAction | "-";
+
+const MENU_IDS = ["file", "edit", "view", "help"] as const;
 
 /** Header: logo, menus, product switcher, document title, file buttons, account. */
 export function MenuBar({
@@ -24,6 +26,36 @@ export function MenuBar({
   const [open, setOpen] = useState<string | null>(null);
   const [shift, setShift] = useState(0);
   const ddRef = useRef<HTMLDivElement>(null);
+  const tops = useRef<Record<string, HTMLButtonElement | null>>({});
+  /** The menu was opened from the keyboard: its first item takes the focus. */
+  const byKey = useRef(false);
+
+  useEffect(() => {
+    if (!open || !byKey.current) return;
+    byKey.current = false;
+    ddRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus();
+  }, [open]);
+
+  function menuKeys(e: KeyEvent, id: (typeof MENU_IDS)[number]) {
+    const list = [...(ddRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [])];
+    const i = list.indexOf(document.activeElement as HTMLButtonElement);
+    const go = (k: number) => { e.preventDefault(); list[(k + list.length) % list.length]?.focus(); };
+    if (e.key === "ArrowDown") go(i + 1);
+    else if (e.key === "ArrowUp") go(i - 1);
+    else if (e.key === "Home") go(0);
+    else if (e.key === "End") go(list.length - 1);
+    else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const k = MENU_IDS.indexOf(id) + (e.key === "ArrowRight" ? 1 : MENU_IDS.length - 1);
+      byKey.current = true;
+      setOpen(MENU_IDS[k % MENU_IDS.length]);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      setOpen(null);
+      tops.current[id]?.focus();
+    } else if (e.key === "Tab") setOpen(null);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -50,7 +82,7 @@ export function MenuBar({
         HingeLab
       </a>
       <nav className="menus" aria-label="Main menu">
-        {(["file", "edit", "view", "help"] as const).map((id) => (
+        {MENU_IDS.map((id) => (
           <div
             className={`menu${open === id ? " open" : ""}`}
             key={id}
@@ -58,7 +90,13 @@ export function MenuBar({
           >
             <button
               type="button"
-              aria-haspopup="true"
+              aria-haspopup="menu"
+              aria-expanded={open === id}
+              ref={(el) => { tops.current[id] = el; }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") byKey.current = true;
+                else if (e.key === "ArrowDown") { e.preventDefault(); byKey.current = true; setOpen(id); }
+              }}
               onClick={(e) => {
                 e.stopPropagation();
                 setOpen(open === id ? null : id);
@@ -67,7 +105,7 @@ export function MenuBar({
               {id[0].toUpperCase() + id.slice(1)}
             </button>
             {open === id && (
-              <div className="dropdown" role="menu" ref={ddRef} style={shift ? { left: shift } : undefined}>
+              <div className="dropdown" role="menu" aria-label={id[0].toUpperCase() + id.slice(1)} ref={ddRef} style={shift ? { left: shift } : undefined} onKeyDown={(e) => menuKeys(e, id)}>
                 {menus[id].map((item, i) => item === "-" ? <hr key={i} /> : (
                   <button
                     key={item.label}

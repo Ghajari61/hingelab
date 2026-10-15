@@ -33,7 +33,8 @@ import { autoFixAll, type Fix, type Issue } from "@/lib/issues";
 import type { Preset } from "@/lib/presets";
 import { generatorHelpMap } from "@/lib/generators/helpMap";
 import { GENERATOR_INFO, type GeneratorId } from "@/lib/generators/ids";
-import { arrangeGenerator, genContent, genSVG, sheetIssues } from "@/lib/generators/output";
+import { arrangeGenerator, assemblySteps, genContent, genSVG, sheetIssues } from "@/lib/generators/output";
+import { NestChip, useNestWorker } from "./useNestWorker";
 import { getPath, setPath } from "@/lib/generators/path";
 import { loadGenerator } from "@/lib/generators/registry";
 import { makeTextFn } from "@/lib/generators/text";
@@ -47,6 +48,7 @@ import { useGenPrefs } from "./useGenPrefs";
 import { LockToggle } from "./LockToggle";
 import { useSharedView } from "@/components/shell/SharedView";
 import { useFlags } from "@/components/shell/useFlags";
+import { usePhoneFlow } from "@/components/shell/usePhone";
 import { designGates, gateLock } from "@/lib/gates";
 import { SHARED_ID } from "@/lib/share/id";
 import "./generators.css";
@@ -57,6 +59,7 @@ const ExportDialog = dynamic(() => import("@/components/shell/ExportDialog"), { 
 const JobEstimate = dynamic(() => import("@/components/shell/JobEstimate"), { ssr: false });
 const BatchDialog = dynamic(() => import("./BatchDialog"), { ssr: false });
 const ShareDialog = dynamic(() => import("@/components/shell/ShareDialog"), { ssr: false });
+const PhoneFlow = dynamic(() => import("./PhoneFlow"), { ssr: false, loading: () => <div className="boot">Loading…</div> });
 const GeneratorView3D = dynamic(() => import("./GeneratorView3D"), {
   ssr: false,
   loading: () => <div id="preview3d" className="v3" aria-busy="true" />,
@@ -135,6 +138,8 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const shared = useSharedView(start, start?.name ?? def.name, toastMsg);
   useAutosave(params, units, onStatus, KEY, !shared.viewing, def.version);
   const flags = useFlags();
+  const phoneFlow = usePhoneFlow();
+  const [lastPreset, setLastPreset] = useState<string | null>(null);
 
   function toastMsg(msg: string) {
     setToast(msg);
@@ -169,7 +174,15 @@ function GenEditor({ def, onProduct, onHome, start }: {
   }, [hb, fontKey, fonts]);
   const ctx = useMemo<BuildContext>(() => (hb ? { text: makeTextFn(hb, (fid) => fonts[fid] ?? null) } : {}), [hb, fonts]);
 
-  const arranged = useMemo(() => arrangeGenerator(def, deferred, ctx), [def, deferred, ctx]);
+  const nest = useNestWorker();
+  const arranged = useMemo(
+    () => nest.arrange(() => arrangeGenerator(def, deferred, ctx)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nest.tick: the worker stored a nest
+    [def, deferred, ctx, nest.arrange, nest.tick],
+  );
+  const flushNest = nest.flush;
+  useEffect(() => { flushNest(); }, [arranged, flushNest]);
+  const nesting = nest.progress != null;
   const model = "error" in arranged.result ? null : arranged.result;
   const out = model?.out ?? null;
   const built = arranged.params as P;
@@ -252,6 +265,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
   async function exportedSVG(): Promise<string | null> {
     if (!lay || !out) { toastMsg(error ? "Fix the settings before exporting" : "Still loading"); return null; }
     if (out.notice) { toastMsg(out.notice); return null; }
+    if (nesting) { toastMsg("Still nesting the parts by shape. Wait a moment, or press Cancel to keep the box layout."); return null; }
     if (issues.some((i) => i.code === "MISSING_GLYPHS")) { toastMsg("Pick a font that has every character first"); return null; }
     if (!lock || !account.configured) return genSVG(def, built, lay);
     if (locked) { setUpgrade(lock); return null; }
@@ -270,13 +284,23 @@ function GenEditor({ def, onProduct, onHome, start }: {
     return null;
   }
 
-  async function exportNow() {
+  /** The export SVG with lines that touching parts share cut once. */
+  async function cutSVG(): Promise<string | null> {
     const svg = await exportedSVG();
+    if (!svg) return null;
+    const { mergedNote, watertightSVG } = await import("@/lib/export/watertight");
+    const w = watertightSVG(svg);
+    if (w.removed) window.setTimeout(() => toastMsg(mergedNote(w.removed)), 1600);
+    return w.svg;
+  }
+
+  async function exportNow() {
+    const svg = await cutSVG();
     if (svg) offerFile(def.fileName(built) + ".svg", svg, "image/svg+xml");
   }
 
   async function exportDXFNow() {
-    const svg = await exportedSVG();
+    const svg = await cutSVG();
     if (!svg) return;
     const { svgToDXF } = await import("@/lib/export/dxf");
     const out = svgToDXF(svg);
@@ -325,6 +349,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
 
   function applyPreset(pr: GenPreset<unknown>) {
     prefs.used(pr.id);
+    setLastPreset(pr.id);
     replace(def.merge(pr.params) as P, true);
     window.setTimeout(() => viewApi.fit(), 50);
     toastMsg(`Preset “${pr.name}”. Ctrl+Z returns to your last design.`);
@@ -423,6 +448,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       { label: "Toggle grid", kbd: "'", run: () => setShowGrid((g) => !g) },
       { label: "Units: millimeters", kbd: "", run: () => setUnits("mm") },
       { label: "Units: inches", kbd: "", run: () => setUnits("in") },
+      ...(phoneFlow.narrow ? ["-" as const, { label: "Simple phone view", kbd: "", run: phoneFlow.simple }] : []),
     ],
     help: [...help.menu, "-", { label: "Keyboard shortcuts", kbd: "", run: () => setModal({ type: "keys" }) }],
   };
@@ -500,6 +526,35 @@ function GenEditor({ def, onProduct, onHome, start }: {
   };
   const zoom = Math.round(viewApi.view.z / PX_PER_MM * 100) + "%";
   const notice = !error && out?.notice ? out.notice : !error && !lay ? "Loading…" : null;
+  const phoneSVG = useMemo(() => (phoneFlow.phone && lay && out && !out.notice ? genSVG(def, built, lay) : null), [phoneFlow.phone, def, built, lay, out]);
+
+  if (phoneFlow.phone) {
+    return (
+      <HelpContext.Provider value={help.ctx}>
+        <PhoneFlow
+          name={def.name} summary={def.summary(out ? built : params)} presets={def.presets} thumb={(pr) => `/presets/${def.id}/${pr.id}.svg`}
+          current={lastPreset} onPreset={applyPreset}
+          fields={
+            <GeneratorDock
+              simple def={def} params={params} defaults={defaults} out={out} units={units} layerKeys={layerKeys} onSet={setField}
+              onApply={(next) => replace(next, true)} onMaterial={(mid, info) => replace(genWithMaterial(params, mid, info), true)}
+              fonts={{
+                uploads: fontFiles.uploads,
+                onUpload: async (key, file) => { const id = await fontFiles.add(file); if (id) setField(key, id, true); },
+                onDelete: async (id) => { if (await fontFiles.remove(id)) replace(withoutFont(params, id), true); },
+              }}
+              onResetSection={resetSection} sheet={sheetProps} checks={null}
+            />
+          }
+          svg={phoneSVG} status={error ? `Fix this in the full editor: ${error}` : notice} nesting={nesting} assembly={assemblySteps(out?.assembly, params.gap)}
+          onSVG={() => void exportNow()} onDXF={() => void exportDXFNow()} onFull={phoneFlow.full} onHome={onHome}
+        />
+        {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
+        {toast && <div className="toast" role="status">{toast}</div>}
+        {help.drawer}
+      </HelpContext.Provider>
+    );
+  }
 
   return (
     <HelpContext.Provider value={help.ctx}>
@@ -518,6 +573,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
         </GalleryRail>
         <div className={`stage${viewMode === "3d" ? " no-rulers" : ""}`}>
           <ViewToggle value={viewMode} onChange={setViewMode} />
+          <NestChip progress={nest.progress} onCancel={nest.cancel} />
           <div className="stage-3d" hidden={viewMode !== "3d"}>
             {seen3d && <GeneratorView3D out={out} lay={lay} T={built.T} material={params.material} units={units} frameKey={`${def.id}|${Math.round(lay?.width ?? 0)}x${Math.round(lay?.height ?? 0)}`} />}
           </div>

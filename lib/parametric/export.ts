@@ -182,7 +182,11 @@ export function assemblyGuideSVG(result: SliceResult, p: ParametricParams): stri
   const W = Math.max(420, boardW + 40, 300);
   const thumbW = Math.min(260, W - 40), thumbH = 180;
   const time = result.stats.estimatedCutTime ? ` (${fmtMinutes(result.stats.estimatedCutTime)} on the laser)` : "";
-  const steps = [`Cut all ${result.sheets.length} sheet${result.sheets.length === 1 ? "" : "s"}${time}. Every part is engraved with its id.`, ...result.guide];
+  const steps = [
+    `Cut all ${result.sheets.length} sheet${result.sheets.length === 1 ? "" : "s"}${time}. Every part is engraved with its id.`,
+    ...(p.material.partGap === 0 ? ["The parts touch on the sheet (Part gap 0), so their shared lines are cut once: press them apart along those lines."] : []),
+    ...result.guide,
+  ];
 
   const lineH = 7;
   const top = 34;
