@@ -209,16 +209,14 @@ export const ARTICLES: HelpArticle[] = [
     fields: [{ product: "hinge", secs: ["secMat"], alsoFor: ["letters"] }],
     blocks: [
       { p: "Material presets fill in a typical thickness and kerf, and pick how the 3D view looks (plywood, MDF, card or acrylic). Changing either number switches the preset to Custom." },
-      { h: "Measure your thickness", p: "Measure the sheet with calipers in a few places, or cut a thickness card with the Test Cards generator. Sheet sold as 3 mm is often 2.7 to 3.2 mm, and slots cut for the wrong thickness are loose or will not close." },
+      { h: "Measure your thickness", p: "Measure the sheet with calipers in a few places. Sheet sold as 3 mm is often 2.7 to 3.2 mm, and slots cut for the wrong thickness are loose or will not close." },
       { h: "Measure your kerf", list: [
-        "Cut a kerf test card with the Test Cards generator: the comb tooth that fits its gauge slot snugly gives your kerf.",
-        "Or cut a 20 mm square and measure it with calipers: kerf is 20 minus the measured size, so a 19.84 mm square means a 0.16 mm kerf.",
+        "Cut a 20 mm square and measure it with calipers: kerf is 20 minus the measured size, so a 19.84 mm square means a 0.16 mm kerf.",
         "HingeLab offsets every outline by half the kerf, so parts come out at their true size and joints fit.",
       ] },
-      { h: "Separate X and Y kerf", p: "Some machines cut wider along one axis. Tick Separate X and Y kerf and enter both: Kerf X is across cuts that run up and down the sheet, Kerf Y across cuts that run left to right. A kerf card with both combs measures them." },
+      { h: "Separate X and Y kerf", p: "Some machines cut wider along one axis. Tick Separate X and Y kerf and enter both: Kerf X is across cuts that run up and down the sheet, Kerf Y across cuts that run left to right. Measure the 20 mm square across both ways to find them." },
       { h: "My materials", list: [
         "Manage materials… at the bottom of the material list keeps your own sheets: thickness, kerf X and Y, the narrowest feature it holds and what it bends like.",
-        "Save to my material on a test card writes what you measured straight into one.",
         "Add your own tested speed, power and passes for cut, score and engrave: a LightBurn export then carries them. HingeLab never suggests laser settings.",
         "Your materials stay on this device. Export them as a file to use them on another computer.",
       ] },

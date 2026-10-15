@@ -42,9 +42,7 @@ const LAZY_BUDGETS = {
   // The enclosure (D162): light box, back, keyholes and feet, and finger-jointed walls from the Boxes
   // joint code, which now sits in a chunk shared with Boxes, 40 → 45 KB.
   // Item tags for the 3D gizmo (D173), in that shared chunk too, 45 → 46 KB.
-  "Shadow Box generator": { key: /registry\.ts -> \.\/shadowbox$/, kb: 46 },
-  "Test Cards generator": { key: /registry\.ts -> \.\/testcard$/, kb: 10 },
-};
+  "Shadow Box generator": { key: /registry\.ts -> \.\/shadowbox$/, kb: 46 },};
 
 const gz = new Map();
 const size = (file) => {

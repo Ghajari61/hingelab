@@ -200,7 +200,7 @@ export default function MaterialsDialog({ selected, current, units, onUse, onClo
                 </div>
               </div>
             ) : (
-              <div className="mats-edit mats-empty">Pick a material to edit, or start a new one. Measure thickness and kerf with the Test Cards generator, then save them here.</div>
+              <div className="mats-edit mats-empty">Pick a material to edit, or start a new one. Measure thickness with calipers and kerf from a cut 20 mm square, then save them here.</div>
             )}
           </div>
           {msg && <p className={`note${msg.bad ? " err" : ""}`} role={msg.bad ? "alert" : "status"}>{msg.text}</p>}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { makeShape } from "@/lib/letters/polygon";
 import { DEFAULTS, clone } from "@/lib/hinge/defaults";
-import { TESTCARD_DEFAULTS } from "@/lib/generators/testcard/params";
+import { CLOCK_DEFAULTS } from "@/lib/generators/clock/params";
 import { ellipse, kerfAcross, kerfPoint, offsetShapesXY } from "../kerf";
 import {
   cleanLibrary, cleanMaterial, fromBuiltIn, importMaterials, materialInfo, materialsFile, MAX_MATERIALS, saveMeasured, type UserMaterial,
@@ -127,7 +127,7 @@ describe("picking a material", () => {
   });
 
   it("sets a generator's sheet kerfs and narrowest feature", () => {
-    const p = genWithMaterial(clone(TESTCARD_DEFAULTS), "my-abc123", materialInfo("my-abc123", [mine()]));
+    const p = genWithMaterial(clone(CLOCK_DEFAULTS), "my-abc123", materialInfo("my-abc123", [mine()]));
     expect(p).toMatchObject({ material: "my-abc123", T: 2.9, K: 0.14, sheet: { kerfXY: true, kerfY: 0.18, minFeature: 1.2, nest: "box" } });
     const back = genWithMaterial(p, "birch3", materialInfo("birch3", []));
     expect(back).toMatchObject({ T: 3, K: 0.15, sheet: { kerfXY: false, minFeature: 0 } });

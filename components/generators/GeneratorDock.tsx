@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { LayerKey } from "@/lib/hinge";
-import { materialInfo, saveMaterials, saveMeasured, type MaterialInfo } from "@/lib/materials/library";
+import type { MaterialInfo } from "@/lib/materials/library";
 import { MaterialPicker } from "@/components/shell/MaterialPicker";
-import { useMaterials } from "@/components/shell/useMaterials";
 import { NumberField } from "@/components/editor/NumberField";
 import { LockToggle } from "./LockToggle";
 import { LayersPanel } from "@/components/editor/LayersPanel";
@@ -72,18 +71,6 @@ export function GeneratorDock({
 }) {
   const photo = usePhotoLooks(def.sections.flatMap((s) => s.fields) as FieldSpec<P>[], params, setRaw, onApply);
   const onSet = photo.set;
-  const mats = useMaterials();
-  const [savedNote, setSavedNote] = useState<string | null>(null);
-  const measured = def.measured?.(params as never) ?? null;
-  const own = mats.find((m) => m.id === params.material);
-  function saveMeasuredValues() {
-    if (!measured) return;
-    const r = saveMeasured(mats, params.material, params.T, params.K, measured);
-    saveMaterials(r.list);
-    const name = materialInfo(r.id, r.list)?.name ?? "your material";
-    if (r.id !== params.material) onApply({ ...params, material: r.id });
-    setSavedNote(`${r.created ? "Saved as" : "Updated"} “${name}”. Pick it from the material list in any design.`);
-  }
   const lockOf = (f: FieldSpec<P>) => ((f.kind === "number" || f.kind === "choice") && f.shuffle && locks
     ? { on: locks.has(f.key), toggle: () => locks.toggle(f.key) } : undefined);
   const num = (f: BaseField, value: number, def: number, hidden = false, lock?: { on: boolean; toggle: () => void }) => (
@@ -242,15 +229,6 @@ export function GeneratorDock({
           {body(s.fields as FieldSpec<P>[])}
         </Sec>
       )))}
-      {def.measured && (
-        <Sec title="Save to my material" startOpen>
-          <p className="note" role="status">{measured ? measured.note : "Pick your result above to save it."}</p>
-          <button type="button" className="btn-auto" disabled={!measured} onClick={saveMeasuredValues}>
-            {own ? `Update “${own.name}”` : "Save as my material"}
-          </button>
-          {savedNote && <p className="note">{savedNote}</p>}
-        </Sec>
-      )}
       <Sec title="Material" startOpen onReset={() => onResetSection("Material", ["material", "T", "K", "sheet.kerfXY", "sheet.kerfY", "sheet.minFeature"])}>
         <MaterialPicker
           value={params.material} units={units} onPick={onMaterial}
@@ -261,7 +239,7 @@ export function GeneratorDock({
           {extras.kerfXY && num(KERF_Y_FIELD, extras.kerfY ?? params.K, params.K)}
           {num(FEATURE_FIELD, extras.minFeature ?? 0, 0)}
         </div>
-        <label className="chk" title="For a machine that cuts wider along one axis: measure both with the Test Cards generator">
+        <label className="chk" title="For a machine that cuts wider along one axis: cut a 20 mm square and measure it across both ways">
           <input
             type="checkbox" checked={!!extras.kerfXY}
             onChange={(e) => onApply(setPath(setPath(params, "sheet.kerfXY", e.target.checked), "sheet.kerfY", extras.kerfY ?? params.K) as P)}

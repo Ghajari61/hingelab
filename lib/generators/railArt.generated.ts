@@ -30,7 +30,6 @@ export const GEN_RAIL_GROUPS: Record<string, string> = {
   "gen-tablenum-build.kind": "plaque stand tent",
   "gen-tablenum-motif.kind": "balloon balloons bell butterfly cake cap cloud crown cup cupcake feet flame flower gem gift heart hearts house infinity key lantern laurel leaf moon moonstar mosque none note paw rings snowflake sparkle star stars stroller sun tree",
   "gen-tablenum-plate.shape": "arch banner bubble circle cloud diamond heart hexagon house octagon pill rect rounded scalloped shield star tag ticket",
-  "gen-testcard-card.kind": "kerf thickness",
   "gen-topper-cupcake.motif": "balloon balloons bell butterfly cake cap cloud crown cup cupcake feet flame flower gem gift heart hearts house infinity key lantern laurel leaf moon moonstar mosque none note paw rings snowflake sparkle star stars stroller sun tree",
   "gen-topper-cupcake.shape": "arch banner bubble circle cloud diamond heart hexagon house motif octagon pill rect rounded scalloped shield star tag ticket",
   "gen-topper-kit.kind": "cupcake set topper",

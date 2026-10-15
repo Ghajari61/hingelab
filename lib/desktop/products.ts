@@ -28,13 +28,11 @@ import type { DCatalog, D3Model, DesktopProductId, DField, DForm, DIssue, DProdu
 
 const FONTS_BY_STYLE = FONT_CATEGORIES.flatMap((c) => BUNDLED_FONTS.filter((f) => f.category === c.id));
 
-/** The desktop app's generators: all but the test cards, which save to the web app's material library. */
-type DesktopGenerator = Exclude<GeneratorId, "testcard">;
-const DESKTOP_GENERATORS = GENERATOR_IDS.filter((id): id is DesktopGenerator => id !== "testcard");
+const DESKTOP_GENERATORS: readonly GeneratorId[] = GENERATOR_IDS;
 export const DESKTOP_PRODUCTS: DesktopProductId[] = ["hinge", ...DESKTOP_GENERATORS];
 export const CATALOG_VERSION = 1;
 
-export const isDesktopProduct = (v: unknown): v is DesktopProductId => v === "hinge" || (isGeneratorId(v) && v !== "testcard");
+export const isDesktopProduct = (v: unknown): v is DesktopProductId => v === "hinge" || isGeneratorId(v);
 
 const MATERIAL_OPTIONS = Object.entries(MATERIALS).map(([v, m]) => ({ v, text: m.name }));
 
@@ -136,7 +134,7 @@ function genField(f: FieldSpec<GenBase>): DField | null {
   }
 }
 
-function genProduct(id: DesktopGenerator, def: AnyGenerator): DProduct {
+function genProduct(id: GeneratorId, def: AnyGenerator): DProduct {
   const info = GENERATOR_INFO[id] as { name: string; blurb: string; icon: DProduct["icon"] };
   const sections: DSection[] = def.sections.map((s) => ({ id: s.id, title: s.title, help: s.help, fields: s.fields.map(genField).filter((f): f is DField => !!f) })).filter((s) => s.fields.length);
   return {
@@ -385,7 +383,7 @@ export function fileNameOf(name: string, fallback: string): string {
   return `${base || fallback}.svg`;
 }
 
-async function generateGenerator(r: GenerateRequest, id: DesktopGenerator, product: DProduct, plan: Plan): Promise<GenerateResult> {
+async function generateGenerator(r: GenerateRequest, id: GeneratorId, product: DProduct, plan: Plan): Promise<GenerateResult> {
   const def = await loadGenerator[id]();
   let p: GenBase;
   if (typeof r.preset === "string") {

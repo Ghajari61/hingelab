@@ -119,7 +119,7 @@ export function PanelDock({
           current={{ T: params.T, kx: params.K, ky: params.Ky ?? params.K, minFeature: params.minFeature ?? 0 }}
         />
         <div className="grid2">{fields("secMat")}</div>
-        <label className="chk" title="For a machine that cuts wider along one axis: measure both with the Test Cards generator">
+        <label className="chk" title="For a machine that cuts wider along one axis: cut a 20 mm square and measure it across both ways">
           <input
             type="checkbox" checked={params.Ky != null}
             onChange={(e) => {

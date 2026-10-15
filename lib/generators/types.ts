@@ -114,8 +114,6 @@ export interface GenPart {
   images?: GenImage[];
   /** The pieces the cuts make (puzzles): drawn separately in 3D. */
   pieces?: Contour[];
-  /** The geometry is already kerf-compensated (test cards cut each tooth with its own kerf): the shell leaves it. */
-  ownKerf?: boolean;
   /** Keep the part upright when nesting by outline (its X and Y are what it measures). */
   upright?: boolean;
   /**
@@ -158,15 +156,6 @@ export interface GenOutput {
   materials?: { main: string; second: string; secondK?: number };
   /** The parts are flat layers stacked face to face (thumbnails draw only what shows from the front). */
   stacked?: boolean;
-}
-
-/** Values a test card measured, to save into the design's material. */
-export interface GenMeasured {
-  T?: number;
-  kx?: number;
-  ky?: number;
-  /** What was measured, one sentence. */
-  note: string;
 }
 
 /** Glyph outlines for a string, centred on (0, 0), y down; `height` is the cap height in mm. */
@@ -311,8 +300,6 @@ export interface GeneratorDef<P extends GenBase> {
   art?(key: string, value: string): { d: string; fill?: boolean }[];
   /** The params a rail card renders for a choice key (simpler than the defaults, so the cards differ clearly). */
   railPreview?(key: string, p: P, value: string): P;
-  /** What the design measured (test cards), offered as "Save to my material"; null until the user picks a result. */
-  measured?(p: P): GenMeasured | null;
   /** File name without extension. */
   fileName(p: P): string;
   /** One line under the title, e.g. "Clock · 300 mm · Roman". */

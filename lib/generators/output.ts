@@ -61,12 +61,12 @@ function compensate(outer: Contour, holes: Contour[], kx: number, ky: number) {
  * growth is K/2 across vertical edges and Ky/2 across horizontal ones.
  */
 export function cutPart(p: GenPart, K: number, Ky = K): CutPart {
-  const { outline, inner } = p.ownKerf ? { outline: [p.outer], inner: p.holes } : compensate(p.outer, p.holes, K, Ky);
+  const { outline, inner } = compensate(p.outer, p.holes, K, Ky);
   return {
     src: p, id: p.id, name: p.name, outline, inner,
     cuts: p.cuts ?? [], score: p.score ?? [], engrave: p.engrave ?? [], images: p.images ?? [],
     bbox: bboxOf(outline),
-    ...(!p.ownKerf && K !== Ky ? { kerf: [K, Ky] as [number, number] } : {}),
+    ...(K !== Ky ? { kerf: [K, Ky] as [number, number] } : {}),
   };
 }
 

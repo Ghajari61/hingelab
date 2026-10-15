@@ -1,5 +1,4 @@
-// End-to-end check of precision (D164): a kerf test card whose result is saved as the user's own
-// material, that material picked in Hinge Box (thickness, Kerf X and Kerf Y), the lid options and the
+// End-to-end check of precision (D164, D174): the user's own material with two kerfs picked in Hinge Box (thickness, Kerf X and Kerf Y), the lid options and the
 // honeycomb pattern, the materials dialog (laser settings, export, import) with the settings landing
 // in a LightBurn file, and the separate Y kerf in a generator.
 // Usage: a production server on SHOTS_BASE (default :3456), then node scripts/e2e/phase6.mjs.
@@ -33,30 +32,15 @@ await withBrowser(async (page) => {
   const uploads = [];
   page.on("request", (r) => { if (r.method() === "POST" && !r.url().startsWith(BASE)) uploads.push(r.url()); });
 
-  // ---- Test card: measure, then save the result as my material.
-  await page.goto(`${BASE}/app/editor/local?p=testcard&preset=kerf-xy`);
-  await page.locator(".toast, [role=status]").filter({ hasText: "Started from" }).first().waitFor();
-  await page.waitForTimeout(1200);
+  // ---- My material with two kerfs, as measured from a cut square.
   const body = () => page.locator("body").innerText();
-  check(/\b4 parts\b/.test(await body()), "the X and Y card builds its two combs and two gauges");
-  check(/Kerf values\s*0\.\d+ to 0\.\d+ mm/.test(await body()), "the card lists its kerf range");
-  const save = page.getByRole("button", { name: /Save as my material|Update “/ });
-  check(await save.isDisabled(), "nothing to save before a pair is picked");
-  await type(page, "pick.x", 3);
-  await type(page, "pick.y", 5);
-  await page.waitForTimeout(400);
-  const note = await page.locator(".sec").filter({ has: page.getByRole("button", { name: /Save as my material/ }) }).locator("[role=status]").innerText();
-  const m = /kerf X ([\d.]+) mm \(pair 3\), kerf Y ([\d.]+) mm \(pair 5\)/.exec(note);
-  check(!!m, `the picked pairs read as kerfs: “${note}”`);
-  const [kx, ky] = m ? [+m[1], +m[2]] : [0, 0];
-  await save.click();
-  await page.getByText(/Saved as “My Baltic birch plywood 3 mm”/).waitFor();
+  const kx = 0.15, ky = 0.25, myId = "my-e2ephase6";
+  await page.goto(`${BASE}/app/editor/local?p=hinge`);
+  await page.evaluate((m) => localStorage.setItem("hingelab-materials", JSON.stringify([m])), {
+    id: myId, name: "My Baltic birch plywood 3 mm", T: 3, kx, ky, minFeature: 0, like: "birch3", laser: {},
+  });
   let mats = await stored(page);
-  check(mats.length === 1 && mats[0].kx === kx && mats[0].ky === ky && mats[0].T === 3, `saved as my material with kerf X ${kx} and Y ${ky}`);
-  const myId = mats[0]?.id ?? "";
-  check(await page.getByLabel("Material preset").inputValue() === myId, "the card now uses that material");
-  check(await page.getByRole("button", { name: /Update “My Baltic birch plywood 3 mm”/ }).count() === 1, "saving again updates it instead of making another");
-  if (process.env.E2E_SHOTS) await page.screenshot({ path: path.join(process.env.E2E_SHOTS, "phase6-card.png") });
+  check(mats.length === 1 && mats[0].kx === kx && mats[0].ky === ky, `my material has kerf X ${kx} and Y ${ky}`);
 
   // ---- Hinge Box picks it up.
   const SERVER_SVG = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="120mm" height="80mm" viewBox="0 0 120 80">\n`

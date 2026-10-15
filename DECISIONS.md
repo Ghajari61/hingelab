@@ -1304,3 +1304,13 @@ The user asked for the gizmo in every generator and section, for every text, pic
 - **Gizmo.** `SizeGizmo` gains `part` (the gizmo sits on the selected mesh's box and only that mesh is scaled on screen, about its centre), `uniform` (every handle sizes all shown axes) and `thin` (axes thinner than that are hidden). `lib/generators/grips3d.ts` maps each generator's items (and raised letter parts) to their size settings (`itemKeys`, `itemGrips`); `generatorGrips` tries the selected item first, then the design's own handles, then the whole-design scale, now uniform.
 - **Windows app.** `GenerateRequest.scale` (0.2 to 5) applies the generator's `scale` on the server; designs that cannot be scaled return 400. `desktopGrips` uses the Hinge Box handles, item handles, Boxes specs, then the whole-design scale (`design.scaleBy`).
 - **Tests.** `items.test.ts` (every generator's items found and mapped; tags never change the output; the desktop model gets each item as one object); a `shownAxes` test; a desktop scale test; `scripts/e2e/grips3d.mjs` and `scripts/desktop/ui-3d.mts` select a sign's text, drag the gizmo and see Letter height grow 40 to 55 mm with the motif unchanged, built once on release. The Shadow Box budget goes from 45 to 46 KB for the item tags in its chunk shared with Boxes.
+
+## D174. Test Cards removed
+
+The user asked for the Test Cards section to be deleted completely.
+
+- **Removed:** `lib/generators/testcard/`, its presets and rail pictures, its id in `GENERATOR_IDS` and `GENERATOR_INFO` (and the `ruler` icon only it used), the registry, `ALL_GENERATORS`, start presets, the featured preset, the budget entry, the CSP check list and its unit test file.
+- **Code only it used:** the parts' `ownKerf` flag (the shell now always compensates), `GenMeasured` and `def.measured`, and the generator dock's "Save to my material" section. `saveMeasured` stays in `lib/materials/library.ts` with its own tests.
+- **Tests:** only the Test Cards cases changed: the grips test's "no handles on test cards" line, and the materials test that borrowed the Test Cards defaults now uses the Clock's (the same sheet settings). `scripts/e2e/phase6.mjs` stores a two-kerf material directly instead of saving one from a card.
+- **Text:** help, field help, tooltips, the materials dialog's empty state and the desktop Studio tile no longer mention test cards; kerf is measured from a cut 20 mm square.
+- **Old files and links:** share links and presets already filter by `GENERATOR_IDS`; opening an old Test Cards project says the generator was removed (D175).

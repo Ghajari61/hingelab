@@ -7,9 +7,8 @@ import { QR } from "./qr";
 import { SHADOWBOX } from "./shadowbox";
 import { SIGN } from "./sign";
 import { TABLENUM } from "./tablenum";
-import { TESTCARD } from "./testcard";
 import { TOPPER } from "./topper";
 import { TROPHY } from "./trophy";
 import type { AnyGenerator } from "./types";
 
-export const ALL_GENERATORS: AnyGenerator[] = [CLOCK, PUZZLE, QR, BOXES, TOPPER, KEYRACK, SIGN, TABLENUM, TROPHY, SHADOWBOX, TESTCARD];
+export const ALL_GENERATORS: AnyGenerator[] = [CLOCK, PUZZLE, QR, BOXES, TOPPER, KEYRACK, SIGN, TABLENUM, TROPHY, SHADOWBOX];

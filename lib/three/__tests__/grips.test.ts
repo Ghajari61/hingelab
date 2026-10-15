@@ -11,8 +11,6 @@ import { BOXES } from "@/lib/generators/boxes";
 import { BOXES_DEFAULTS, type BoxesParams } from "@/lib/generators/boxes/params";
 import { CLOCK } from "@/lib/generators/clock";
 import { CLOCK_DEFAULTS } from "@/lib/generators/clock/params";
-import { TESTCARD } from "@/lib/generators/testcard";
-import { TESTCARD_DEFAULTS } from "@/lib/generators/testcard/params";
 import { letterGrips } from "@/lib/letters/grips";
 import { LETTER_DEFAULTS } from "@/lib/letters/defaults";
 import type { LetterParams } from "@/lib/letters";
@@ -204,7 +202,6 @@ describe("generator handles", () => {
     expect(r.f).toEqual(F(1.1, 1, 1.1));
     expect(r.text).toBe("Width 330 mm (110%)");
     expect(out).toEqual(CLOCK.scale!(p, 1.1));
-    expect(generatorGrips(TESTCARD, structuredClone(TESTCARD_DEFAULTS), () => {}, "mm", [100, 3, 60])).toEqual({});
   });
 });
 
