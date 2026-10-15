@@ -1,0 +1,10 @@
+.modal.batch { width: min(560px, 100%); }
+.modal.batch .mb { display: grid; gap: 10px; }
+.modal.batch textarea { width: 100%; font-family: var(--font-mono, ui-monospace, monospace); }
+.batch-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.batch-rows { width: 100%; border-collapse: collapse; font-size: 12px; }
+.batch-rows th, .batch-rows td { text-align: start; padding: 3px 6px; border-bottom: 1px solid var(--line); }
+.batch-rows th { color: var(--fg-dim); font-weight: 500; }
+.batch-rows td.miss { color: var(--err); }
+.batch-prog { display: grid; grid-template-columns: 1fr max-content; align-items: center; gap: 8px; font-size: 12px; }
+.batch-prog progress { width: 100%; }

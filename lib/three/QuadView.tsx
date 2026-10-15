@@ -5,11 +5,12 @@
  * editors and the desktop app; the model is owned here once passed in (the previous one is
  * disposed when a new one arrives).
  */
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { Home } from "lucide-react";
+import { Camera, Home } from "lucide-react";
+import ListingPhoto, { type Shoot } from "./ListingPhoto";
 import { applyLook, type LookId } from "./looks";
 import { dimLines, dimSVG, modelBox } from "./dims";
 
@@ -126,6 +127,8 @@ interface Props {
   testId?: string;
   className?: string;
   label?: string;
+  /** Start of the listing photo's file name. */
+  photoName?: string;
   children?: React.ReactNode;
 }
 
@@ -159,7 +162,7 @@ function glow(mesh: THREE.Mesh, on: boolean) {
 }
 
 const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref) {
-  const { model, look, frameKey, explode = 0, measure, shade, quad, active, onActive, onQuad, onShade, dims, units, dim, onPick, pickable, onSelect, selectName, id, testId, className = "", label = "3D views of the design", children } = props;
+  const { model, look, frameKey, explode = 0, measure, shade, quad, active, onActive, onQuad, onShade, dims, units, dim, onPick, pickable, onSelect, selectName, id, testId, className = "", label = "3D views of the design", photoName, children } = props;
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
   const told = useRef<string | null>(null);
@@ -511,6 +514,50 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
 
   useImperativeHandle(ref, () => ({ zoomIn: () => dolly(1.25), zoomOut: () => dolly(0.8), fit: fitAll, refresh: (reframe = false) => settle(reframe) }));
 
+  /** The model alone (no grids, dimensions or selection glow), framed along `dir`, into a w × h canvas. */
+  const shoot = useCallback<Shoot>((dir, w, h) => {
+    const s = st.current, m = shown.current, p = persp();
+    if (!s || !m || !p) return null;
+    const { renderer, scene } = s;
+    let box = modelBox(m.group);
+    if (box.isEmpty()) box = bounds().box;
+    const c = box.getCenter(new THREE.Vector3()), r = Math.max(10, box.getSize(new THREE.Vector3()).length() / 2);
+    const cam = new THREE.PerspectiveCamera(30, w / h, 1, 20000);
+    const d = (dir ? new THREE.Vector3(...dir) : p.cam.position.clone().sub(p.controls.target)).normalize();
+    const fov = THREE.MathUtils.degToRad(15), fovH = Math.atan(Math.tan(fov) * cam.aspect);
+    const dist = (r / Math.sin(Math.min(fov, fovH))) * 1.08;
+    cam.position.copy(c).addScaledVector(d, dist);
+    cam.near = dist / 200;
+    cam.far = dist * 20;
+    cam.lookAt(c);
+    cam.updateProjectionMatrix();
+    const was = renderer.getSize(new THREE.Vector2()), ratio = renderer.getPixelRatio();
+    const sel = selected.current;
+    if (sel) glow(sel, false);
+    const out = document.createElement("canvas");
+    out.width = w;
+    out.height = h;
+    try {
+      renderer.setPixelRatio(1);
+      renderer.setSize(w, h, false);
+      renderer.setScissorTest(false);
+      renderer.setViewport(0, 0, w, h);
+      renderer.clear();
+      renderer.shadowMap.needsUpdate = true;
+      renderer.render(scene, cam);
+      out.getContext("2d")?.drawImage(renderer.domElement, 0, 0, w, h);
+    } finally {
+      if (sel) glow(sel, true);
+      renderer.setPixelRatio(ratio);
+      renderer.setSize(was.x, was.y, false);
+      s.request();
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const [photo, setPhoto] = useState(false);
+  const closePhoto = useCallback(() => { setPhoto(false); host.current?.focus({ preventScroll: true }); }, []);
+
   const pickAt = (id: PaneId, e: React.PointerEvent) => {
     const p = paneOf(id), m = shown.current;
     if (!p || !m) return;
@@ -579,11 +626,13 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
                   </div>
                 </div>
                 <button type="button" className="v3-home" title="Home view" aria-label="Home view" onClick={() => { const p = paneOf("persp"); if (p) fitPane(p); }}><Home size={13} aria-hidden /></button>
+                <button type="button" className="v3-home" title="Listing photo: a PNG of the model for Etsy or Instagram" aria-label="Listing photo" aria-expanded={photo} disabled={!model || noGL} onClick={() => setPhoto((o) => !o)}><Camera size={13} aria-hidden /></button>
               </div>
             )}
           </div>
         ))}
       </div>
+      {photo && model && <ListingPhoto shoot={shoot} name={photoName} onClose={closePhoto} />}
       {picked && <span className="v3-pick" role="status">Selected: <b>{picked}</b> · Esc to clear</span>}
       <span className="v3-hint">Drag to orbit · middle or right-drag to pan · wheel to zoom · click a part to select · Alt+W one or four views · Z zoom extents · F4 edges</span>
       {children}

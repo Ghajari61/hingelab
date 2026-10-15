@@ -43,6 +43,7 @@ import { StatusBar } from "./StatusBar";
 import { Dialogs, type ModalState } from "./dialogs";
 
 const ExportDialog = dynamic(() => import("@/components/shell/ExportDialog"), { ssr: false });
+const JobEstimate = dynamic(() => import("@/components/shell/JobEstimate"), { ssr: false });
 const HingeView3D = dynamic(() => import("./HingeView3D"), {
   ssr: false,
   loading: () => <div id="preview3d" className="v3" aria-busy="true" />,
@@ -200,6 +201,8 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
    * The file to export. With accounts the server builds it, so the plan (and the Free mark) is
    * applied where it can't be bypassed. Without accounts everything is open and it is built here.
    */
+  const localSVG = () => (model && lay ? exportSVG(model, lay, built) : null);
+
   async function exportedSVG(): Promise<string | null> {
     if (!model || !lay) { toastMsg("Fix the settings before exporting"); return null; }
     if (locks.length) { setUpgrade(lockedReason()); return null; }
@@ -504,7 +507,10 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
           onLabels={(on) => patch({ ...params, labels: on }, true)}
           onResetSection={resetSection}
           sheet={sheetProps}
-          checks={<IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} />}
+          checks={<>
+            <IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} />
+            {lay && model && <JobEstimate svg={localSVG} version={lay} sheets={arranged.sheets} material={params.material} units={units === "in" ? "in" : "mm"} />}
+          </>}
         />
         </DockColumn>
       </div>
@@ -528,7 +534,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
       {help.drawer}
       {exporting && (
         <ExportDialog
-          getSVG={exportedSVG} sheets={arranged.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
+          getSVG={exportedSVG} localSVG={localSVG} sheets={arranged.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
           base={baseName(built)} units={units} material={params.material} onClose={() => setExporting(false)} toast={toastMsg}
         />
       )}

@@ -751,7 +751,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
       {exporting && (
         <Suspense fallback={null}>
           <ExportDialog
-            getSVG={exportedAllSVG} sheets={stacked}
+            getSVG={exportedAllSVG} localSVG={() => (result ? allSheetsSVG(result, params) : null)} sheets={stacked}
             size={{ w: Math.max(0, ...stacked.map((r) => r.w)), h: stacked.length ? stacked[stacked.length - 1].y + stacked[stacked.length - 1].h : 0 }}
             base={base()} units={units} material={params.material.id} onClose={() => setExporting(false)} toast={toastMsg}
           />

@@ -8,6 +8,7 @@ import { loadMaterials } from "@/lib/materials/library";
 import { bedOf, CUSTOM_MACHINE, defaultExport, EXPORT_FORMATS, FORMAT_INFO, loadExport, overBed, saveExport, type ExportSettings, type Rect } from "@/lib/export/profiles";
 import { MACHINE_PROFILES } from "@/lib/studio/library";
 import { loadPrefs } from "@/lib/studio/prefs";
+import JobEstimate from "./JobEstimate";
 import "./export-dialog.css";
 
 function download(f: ExportFile) {
@@ -26,9 +27,11 @@ function download(f: ExportFile) {
  * sheets), SVG, DXF, PDF or a LightBurn project, every sheet in one file or one file per sheet, a
  * mirrored copy and hairline strokes. The files are made from the same SVG the editor exports.
  */
-export default function ExportDialog({ getSVG, sheets, size, base, units, material, onClose, toast }: {
+export default function ExportDialog({ getSVG, localSVG, sheets, size, base, units, material, onClose, toast }: {
   /** The design's material id: the user's own laser settings for it go into a LightBurn file. */
   material?: string;
+  /** The design's SVG built on this device, for the job summary (none: no summary). */
+  localSVG?: () => string | null;
   /** The design's SVG, or null when it cannot be exported (the editor has said why). */
   getSVG: () => Promise<string | null>;
   sheets: Rect[] | null | undefined;
@@ -139,6 +142,8 @@ export default function ExportDialog({ getSVG, sheets, size, base, units, materi
               <label className="chk"><input type="checkbox" checked={s.inches} onChange={(e) => upd({ inches: e.target.checked })} />Numbers in inches (for software that reads a DXF as inches)</label>
             )}
           </div>
+
+          {localSVG && <JobEstimate svg={localSVG} version={0} sheets={sheets} material={material} units={units === "in" ? "in" : "mm"} machine={s.machine} title="Job summary" />}
 
           <p className="exp-note">
             {s.format === "lbrn2" && mat

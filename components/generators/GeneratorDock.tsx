@@ -45,8 +45,10 @@ const SHEET_FIELDS: BaseField[] = [
 ];
 
 export function GeneratorDock({
-  def, params, defaults, out, units, layerKeys, onSet: setRaw, onApply, onMaterial, onResetSection, sheet, checks, locks, fonts,
+  def, params, defaults, out, units, layerKeys, onSet: setRaw, onApply, onMaterial, onResetSection, sheet, checks, locks, fonts, onBatch,
 }: {
+  /** Opens batch personalisation (a ZIP with files per name). */
+  onBatch?: () => void;
   /** Fonts uploaded on this device. */
   fonts?: { uploads: StoredFontMeta[]; onUpload: (key: string, file: File) => void; onDelete: (id: string) => void };
   /** Settings Randomise design keeps (by key). */
@@ -307,6 +309,11 @@ export function GeneratorDock({
               onBlur={(e) => onSet("job.names", e.target.value, true)}
             />
             {job.names.length > 0 && <p className="note">{job.names.length} set{job.names.length > 1 ? "s" : ""}, one per line (up to {MAX_BATCH}).</p>}
+            {onBatch && (
+              <button type="button" className="btn-auto" onClick={onBatch} title="One set of files per name (with optional dates and photos), downloaded as a ZIP">
+                Batch files (ZIP)…
+              </button>
+            )}
           </div>
         )}
         <p className="note">{def.scale ? "Fit to sheets scales the design; holes for hardware keep their size." : "Parts are packed at their real size."}</p>

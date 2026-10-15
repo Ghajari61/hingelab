@@ -50,6 +50,8 @@ import "./generators.css";
 addRailGroups(GEN_RAIL_GROUPS);
 
 const ExportDialog = dynamic(() => import("@/components/shell/ExportDialog"), { ssr: false });
+const JobEstimate = dynamic(() => import("@/components/shell/JobEstimate"), { ssr: false });
+const BatchDialog = dynamic(() => import("./BatchDialog"), { ssr: false });
 const GeneratorView3D = dynamic(() => import("./GeneratorView3D"), {
   ssr: false,
   loading: () => <div id="preview3d" className="v3" aria-busy="true" />,
@@ -112,6 +114,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const [saved, setSaved] = useState("Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
   const [exporting, setExporting] = useState(false);
+  const [batching, setBatching] = useState(false);
   const helpMap = useMemo(() => generatorHelpMap(def), [def]);
   const help = useHelpPanel(helpMap);
   const myPresets = useMyPresets();
@@ -233,6 +236,8 @@ function GenEditor({ def, onProduct, onHome, start }: {
       setModal({ type: "code", name: filename, data });
     }
   }
+
+  const localSVG = () => (lay && out && !out.notice ? genSVG(def, built, lay) : null);
 
   async function exportedSVG(): Promise<string | null> {
     if (!lay || !out) { toastMsg(error ? "Fix the settings before exporting" : "Still loading"); return null; }
@@ -555,7 +560,11 @@ function GenEditor({ def, onProduct, onHome, start }: {
             }}
             onResetSection={resetSection}
             sheet={sheetProps}
-            checks={<IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} />}
+            onBatch={() => setBatching(true)}
+            checks={<>
+              <IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} />
+              {lay && <JobEstimate svg={localSVG} version={lay} sheets={arranged.sheets} material={params.material} units={units === "in" ? "in" : "mm"} />}
+            </>}
           />
         </DockColumn>
       </div>
@@ -579,8 +588,14 @@ function GenEditor({ def, onProduct, onHome, start }: {
       />
       {exporting && (
         <ExportDialog
-          getSVG={exportedSVG} sheets={arranged.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
+          getSVG={exportedSVG} localSVG={localSVG} sheets={arranged.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
           base={def.fileName(built)} units={units} material={params.material} onClose={() => setExporting(false)} toast={toastMsg}
+        />
+      )}
+      {batching && (
+        <BatchDialog
+          def={def} params={params} ctx={ctx} start={String(getPath(params, "job.names") ?? "")} pro={account.plan === "pro"}
+          base={def.fileName(built)} onClose={() => setBatching(false)} toast={toastMsg}
         />
       )}
       {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}

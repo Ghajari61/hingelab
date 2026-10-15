@@ -258,9 +258,10 @@ export const ARTICLES: HelpArticle[] = [
         "Explode (Lift lid for a letter box) pulls the parts apart so you can see how they go together.",
         "Assembled shows the finished piece; Lay flat shows every part as a slab where it sits on the sheet, with the hinge cuts drawn on top.",
         "The material look follows your material preset: plywood, MDF, card or clear acrylic.",
+        "The camera button under the view cube saves a listing photo: a PNG of the model at a chosen angle, background and size.",
       ] },
     ],
-    related: ["getting-started", "parametric-inspector"],
+    related: ["getting-started", "parametric-inspector", "listing-photos"],
   },
   {
     slug: "checks-and-fixes", product: "general", title: "Checks and Auto-fix",
@@ -303,7 +304,57 @@ export const ARTICLES: HelpArticle[] = [
         "Parametric exports every sheet as a ZIP or the current sheet as one SVG, and prints an assembly guide.",
       ] },
     ],
-    related: ["sheet-and-fit", "getting-started"],
+    related: ["sheet-and-fit", "getting-started", "job-estimate"],
+  },
+  {
+    slug: "job-estimate", product: "general", title: "Job estimate: length, time and cost",
+    summary: "How long the cuts are, how much is engraved, how long the job takes on your machine and what the material costs.",
+    keywords: ["estimate", "time", "cost", "price", "quote", "cut length", "engrave area", "sell", "etsy", "speed", "sheet price"],
+    blocks: [
+      { p: "The Job estimate card sits under the checks in every editor, and the export window repeats it as the Job summary. It is measured from the file you export, so it matches what your laser will do." },
+      { list: [
+        "Cut and Score: the total length of the cut and score lines, and how many separate paths they make.",
+        "Engrave: the engraved area (filled shapes and pictures).",
+        "Material: the area of the parts (holes left out) and how much of the sheets that is.",
+      ] },
+      { h: "Job time", list: [
+        "HingeLab does not guess laser speeds. The time uses the speeds saved with your material (Materials…), or the speeds you enter under “Your speeds” for the machine, which are kept on this device for each machine.",
+        "Engraving time is the engraved area divided by your line interval, at your engrave speed. Travel between paths uses the machine's top speed.",
+        "Acceleration, corners and air assist are not modelled, so a real job usually takes a little longer: time a test and adjust your speeds.",
+      ] },
+      { h: "Material cost", p: "Enter what one sheet costs (and your currency). The card shows the cost of the sheets the design uses and the share for the parts alone, which helps when you price a product." },
+    ],
+    related: ["layers-and-export", "material-and-kerf", "batch-personalisation"],
+  },
+  {
+    slug: "batch-personalisation", product: "general", title: "Batch personalisation (ZIP)",
+    summary: "Make one set of files per name, with optional dates and photos, downloaded together as a ZIP.",
+    keywords: ["batch", "csv", "names", "list", "personalise", "personalize", "zip", "orders", "etsy", "spreadsheet", "wedding"],
+    blocks: [
+      { p: "Designs with text (signs, cake toppers, key racks, table numbers, name boxes and more) can be made for many people at once. In the Sheet section, Batch files (ZIP)… under the names box opens the batch window." },
+      { list: [
+        "Paste names, one per line; paste rows from a spreadsheet (name, date and photo columns); or load a CSV with a header row such as name,date,photo.",
+        "The date goes under the name (or after it where the text is one line).",
+        "Designs with a picture take a photo per row: choose the photos, and give each row the photo's file name in the photo column.",
+        "Choose the files for each row: SVG, DXF, PDF or LightBurn. Each row gets its own folder; summary.csv lists every row and any that could not be made (for example a name with letters the font does not have).",
+        "Everything is built on this device; names and photos are never uploaded. Cancel stops the batch at any time.",
+        "To cut several names on one sheet instead, type them in the Names box: each line becomes its own set of parts on the same sheets.",
+      ] },
+    ],
+    related: ["job-estimate", "listing-photos", "layers-and-export"],
+  },
+  {
+    slug: "listing-photos", product: "general", title: "Listing photos",
+    summary: "Save a PNG of the 3D model at a chosen angle and background, sized for Etsy or Instagram.",
+    keywords: ["mockup", "photo", "png", "render", "etsy", "instagram", "listing", "picture", "image", "screenshot", "shop"],
+    blocks: [
+      { list: [
+        "In the 3D view, the camera button under the view cube opens Listing photo.",
+        "Pick an angle (three-quarter, front, low angle, side, top down, or the angle you have orbited to), a background (white, soft grey, linen, wooden desk, dark slate or transparent) and a size: 2000 × 2000 or 2000 × 1500 for Etsy, 1080 × 1080 or 1080 × 1350 for Instagram.",
+        "Download PNG renders the model alone, without grids, dimensions or the selection highlight, with the material look and display mode you chose in the 3D view. Explode or Lay flat first if you want those shots.",
+      ] },
+    ],
+    related: ["view-3d", "batch-personalisation"],
   },
   {
     slug: "shortcuts", product: "general", title: "Keyboard shortcuts",

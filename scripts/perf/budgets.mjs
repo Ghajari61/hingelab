@@ -23,7 +23,8 @@ const LAZY_BUDGETS = {
   "Letters editor": { key: /Workspace\.tsx -> @\/components\/letters\/LettersEditor$/, kb: 145 },
   "Parametric editor": { key: /Workspace\.tsx -> @\/components\/parametric\/ParametricEditor$/, kb: 330 },
   "3D view (three.js)": { key: /EditorApp\.tsx -> \.\/HingeView3D$/, kb: 195 },
-  "Generator editor": { key: /Workspace\.tsx -> @\/components\/generators\/GeneratorEditor$/, kb: 125 },
+  // The batch button and the lazy job estimate and batch window loaders (D166): 125 → 127 KB.
+  "Generator editor": { key: /Workspace\.tsx -> @\/components\/generators\/GeneratorEditor$/, kb: 127 },
   "Clock generator": { key: /registry\.ts -> \.\/clock$/, kb: 15 },
   "Puzzle generator": { key: /registry\.ts -> \.\/puzzle$/, kb: 15 },
   "QR Code generator": { key: /registry\.ts -> \.\/qr$/, kb: 25 },

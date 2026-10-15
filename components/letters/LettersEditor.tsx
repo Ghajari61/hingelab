@@ -47,6 +47,7 @@ import { getBrowserClient } from "@/lib/supabase/client";
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 
 const ExportDialog = dynamic(() => import("@/components/shell/ExportDialog"), { ssr: false });
+const JobEstimate = dynamic(() => import("@/components/shell/JobEstimate"), { ssr: false });
 const LetterPreview3D = dynamic(() => import("./LetterPreview3D"), {
   ssr: false,
   loading: () => <div id="preview3d" className="v3" aria-busy="true" />,
@@ -227,6 +228,8 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
    * The file to export. With accounts the server builds it, so the Letters plan rule and the Free
    * mark are applied where they can't be bypassed (D27). Without accounts it is built here.
    */
+  const localSVG = () => (model && lay ? exportLetterSVG(lay, built, font?.name) : null);
+
   async function exportedSVG(): Promise<string | null> {
     if (!model || !lay) { toastMsg(error ? "Fix the settings before exporting" : "Still loading the font"); return null; }
     const lock = lettersLock(account.plan, deferred);
@@ -542,7 +545,10 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
           onDeleteFont={removeFont}
           onResetSection={resetSection}
           sheet={sheetProps}
-          checks={<IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} />}
+          checks={<>
+            <IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} />
+            {lay && model && <JobEstimate svg={localSVG} version={lay} sheets={arranged?.sheets} material={params.material} units={units === "in" ? "in" : "mm"} />}
+          </>}
         />
         </DockColumn>
       </div>
@@ -566,7 +572,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
       />
       {exporting && (
         <ExportDialog
-          getSVG={exportedSVG} sheets={arranged?.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
+          getSVG={exportedSVG} localSVG={localSVG} sheets={arranged?.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
           base={baseName(built)} units={units} material={params.material} onClose={() => setExporting(false)} toast={toastMsg}
         />
       )}
