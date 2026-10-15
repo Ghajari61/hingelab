@@ -342,7 +342,44 @@ fn file_name_of(p: &Path) -> String {
 
 fn project_dir(state: &AppState) -> Option<String> {
     let p = state.prefs.lock().unwrap();
-    p.project_dir.clone().or_else(|| p.last_dir.clone()).filter(|d| PathBuf::from(d).is_dir())
+    let is_dir = |d: &String| PathBuf::from(d).is_dir();
+    p.home_dir.clone().filter(is_dir).or_else(|| p.project_dir.clone().filter(is_dir)).or_else(|| p.last_dir.clone().filter(is_dir))
+}
+
+#[tauri::command]
+async fn choose_project_folder(app: AppHandle, state: State<'_, AppState>) -> CmdResult<Prefs> {
+    let (tx, rx) = oneshot::channel();
+    let mut b = app.dialog().file().set_title("Choose the folder for project files");
+    if let Some(w) = app.get_webview_window("main") {
+        b = b.set_parent(&w);
+    }
+    if let Some(d) = project_dir(&state) {
+        b = b.set_directory(d);
+    }
+    b.pick_folder(move |p| {
+        let _ = tx.send(p.and_then(|p| p.into_path().ok()));
+    });
+    let picked = rx.await.ok().flatten();
+    let mut prefs = state.prefs.lock().unwrap();
+    if let Some(dir) = picked.filter(|d| d.is_dir()) {
+        prefs.home_dir = Some(dir.to_string_lossy().into_owned());
+        files::save_prefs(&state.prefs_dir, &prefs)?;
+    }
+    Ok(prefs.clone())
+}
+
+/// Settings › Project files: forget the chosen folder, and how many files Recent keeps.
+#[tauri::command]
+fn set_project_prefs(clear_folder: bool, recent_max: usize, state: State<'_, AppState>) -> CmdResult<Prefs> {
+    let mut prefs = state.prefs.lock().unwrap();
+    if clear_folder {
+        prefs.home_dir = None;
+    }
+    prefs.recent_max = projects::recent_limit(recent_max);
+    let keep = prefs.recent_max;
+    prefs.recent_files.truncate(keep);
+    files::save_prefs(&state.prefs_dir, &prefs)?;
+    Ok(prefs.clone())
 }
 
 async fn project_save_dialog(app: &AppHandle, file_name: &str, dir: Option<String>) -> Option<PathBuf> {
@@ -380,7 +417,8 @@ fn remember_project(state: &AppState, path: &Path) {
     state.files.lock().unwrap().projects.insert(path.to_path_buf());
     let mut prefs = state.prefs.lock().unwrap();
     prefs.project_dir = path.parent().map(|p| p.to_string_lossy().into_owned());
-    projects::push_recent(&mut prefs.recent_files, path);
+    let max = prefs.recent_max;
+    projects::push_recent(&mut prefs.recent_files, path, max);
     let _ = files::save_prefs(&state.prefs_dir, &prefs);
 }
 
@@ -583,6 +621,8 @@ pub fn run() {
             get_prefs,
             choose_export_folder,
             set_export_prefs,
+            choose_project_folder,
+            set_project_prefs,
             save_project,
             save_project_as,
             open_project,

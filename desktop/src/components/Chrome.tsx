@@ -220,6 +220,19 @@ export function UpdateDialog({ status, onInstall, onLater, onRetry }: { status: 
   return null;
 }
 
+/** A question before something that changes the design (it can still be undone). */
+export function ConfirmDialog({ title, text, action, onConfirm, onCancel }: { title: string; text: string; action: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <Modal title={title} labelledBy="confirm-title" onClose={onCancel}>
+      <p>{text}</p>
+      <div className="row end">
+        <button type="button" className="btn" onClick={onCancel}>Cancel</button>
+        <button type="button" className="btn primary" onClick={onConfirm}>{action}</button>
+      </div>
+    </Modal>
+  );
+}
+
 /** The server no longer accepts this version: update, or get the installer from the website. */
 export function UpdateRequired({ minimum, status, onUpdate, onWebsite }: { minimum: string | null; status: UpdateStatus; onUpdate: () => void; onWebsite: () => void }) {
   const busy = status.phase === "checking" || status.phase === "downloading" || status.phase === "installing" || status.phase === "restarting";

@@ -1,5 +1,7 @@
 "use client";
 
+import { keepSetup } from "@/lib/prefs/editor";
+import { editorPrefs } from "@/lib/prefs/editorStore";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { LayerKey } from "@/lib/hinge";
@@ -352,7 +354,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
 
   function newProject() {
     file.forget();
-    replace(def.defaults() as P, true);
+    replace(editorPrefs().keepSetup ? keepSetup(params, def.defaults() as P) : (def.defaults() as P), true);
     window.setTimeout(() => viewApi.fit(), 50);
     toastMsg(`New ${def.name.toLowerCase()}`);
   }

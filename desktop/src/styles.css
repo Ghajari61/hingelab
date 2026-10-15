@@ -753,3 +753,7 @@ kbd { font: 12px var(--font); padding: 1px 6px; border: 1px solid var(--line-2);
   .btn.primary { border: 1px solid ButtonText; }
   .sidebar li button[aria-current="page"] { outline: 1px solid Highlight; }
 }
+/* Settings > Reduce motion (the same as the Windows setting). */
+:root[data-reduce-motion] *, :root[data-reduce-motion] *::before, :root[data-reduce-motion] *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+:root[data-reduce-motion] .tile:hover, :root[data-reduce-motion] .preset:hover, :root[data-reduce-motion] .tile:hover .tile-media img, :root[data-reduce-motion] .idea:hover .idea-media img { transform: none; }
+.field-row.choice { flex-wrap: wrap; }

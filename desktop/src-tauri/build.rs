@@ -16,6 +16,8 @@ const COMMANDS: &[&str] = &[
     "get_prefs",
     "choose_export_folder",
     "set_export_prefs",
+    "choose_project_folder",
+    "set_project_prefs",
     "save_project",
     "save_project_as",
     "open_project",

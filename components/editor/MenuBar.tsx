@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent as KeyEvent } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type KeyboardEvent as KeyEvent } from "react";
 import { FolderOpen, Save } from "lucide-react";
 import { LogoMark } from "@/components/site/LogoMark";
 import { UserMenu } from "@/components/auth/UserMenu";
@@ -10,6 +10,7 @@ export type MenuAction = { label: string; kbd: string; run: () => void; disabled
 export type MenuEntry = MenuAction | "-";
 
 const MENU_IDS = ["file", "edit", "view", "help"] as const;
+const SettingsDialog = lazy(() => import("@/components/shell/SettingsDialog"));
 
 /** Header: logo, menus, product switcher, document title, file buttons, account. */
 export function MenuBar({
@@ -24,7 +25,17 @@ export function MenuBar({
   onOpen: () => void;
 }) {
   const [open, setOpen] = useState<string | null>(null);
+  const [settings, setSettings] = useState(false);
   const [shift, setShift] = useState(0);
+  const all = { ...menus, edit: [...menus.edit, "-" as const, { label: "Settings…", kbd: "Ctrl+,", run: () => setSettings(true) }] };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key === ",") { e.preventDefault(); setSettings(true); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
   const ddRef = useRef<HTMLDivElement>(null);
   const tops = useRef<Record<string, HTMLButtonElement | null>>({});
   /** The menu was opened from the keyboard: its first item takes the focus. */
@@ -106,7 +117,7 @@ export function MenuBar({
             </button>
             {open === id && (
               <div className="dropdown" role="menu" aria-label={id[0].toUpperCase() + id.slice(1)} ref={ddRef} style={shift ? { left: shift } : undefined} onKeyDown={(e) => menuKeys(e, id)}>
-                {menus[id].map((item, i) => item === "-" ? <hr key={i} /> : (
+                {all[id].map((item, i) => item === "-" ? <hr key={i} /> : (
                   <button
                     key={item.label}
                     type="button"
@@ -129,6 +140,7 @@ export function MenuBar({
         <button type="button" className="hdr-btn" aria-label="Save project" title="Save project (Ctrl+S)" onClick={onSave}><Save size={17} /></button>
       </div>
       <UserMenu />
+      {settings && <Suspense fallback={null}><SettingsDialog onClose={() => setSettings(false)} /></Suspense>}
     </header>
   );
 }

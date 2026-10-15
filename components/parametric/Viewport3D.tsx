@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { MeshData, SliceResult } from "@/lib/parametric";
 import type { GripSet } from "@/lib/three/grips";
+import { useEditorPrefs } from "@/lib/prefs/editorStore";
 import QuadView, { type QuadModel } from "@/lib/three/QuadView";
 import { quadProps, useView3D, type View3DState } from "@/components/shell/view3d";
 import type { Units } from "@/components/editor/format";
@@ -38,6 +39,7 @@ export default function Viewport3D({ mesh, result, T, show, explode = 0, finish 
   grips?: GripSet;
 }) {
   const own = useView3D();
+  const editorPrefs = useEditorPrefs();
   const view = v ?? own;
   const layers = useRef<{ model?: THREE.Object3D; planes?: THREE.Object3D; parts?: THREE.Object3D; heat?: THREE.Object3D }>({});
   const framed = useRef("");
@@ -143,6 +145,7 @@ export default function Viewport3D({ mesh, result, T, show, explode = 0, finish 
 
   return (
     <QuadView
+      decimals={editorPrefs.decimals}
       {...quadProps(view)} model={root} look={null} frameKey="" units={units} measure={explode === 0}
       className={className} testId="parametric-view" label="The model, planes and parts in 3D: Top, Front, Left and Perspective views"
       pickable={(m) => m.userData.partId != null && !!layers.current.parts?.visible}

@@ -45,12 +45,17 @@ pub fn project_file_name(name: &str) -> String {
     format!("{}.oclc", svg.trim_end_matches(".svg"))
 }
 
-/// Moves `path` to the top of the list, without duplicates, keeping at most `MAX_RECENT`.
-pub fn push_recent(list: &mut Vec<String>, path: &Path) {
+/// How many files Recent keeps: the user's choice in Settings (3 to 30), `MAX_RECENT` when unset.
+pub fn recent_limit(n: usize) -> usize {
+    if n == 0 { MAX_RECENT } else { n.clamp(3, 30) }
+}
+
+/// Moves `path` to the top of the list, without duplicates, keeping at most `max` (see `recent_limit`).
+pub fn push_recent(list: &mut Vec<String>, path: &Path, max: usize) {
     let p = path.to_string_lossy().into_owned();
     list.retain(|x| !x.eq_ignore_ascii_case(&p));
     list.insert(0, p);
-    list.truncate(MAX_RECENT);
+    list.truncate(recent_limit(max));
 }
 
 pub fn read_project(path: &Path) -> CmdResult<Vec<u8>> {
@@ -126,13 +131,17 @@ mod tests {
     fn recent_list() {
         let mut l = vec![];
         for i in 0..20 {
-            push_recent(&mut l, Path::new(&format!("C:/p/{i}.oclc")));
+            push_recent(&mut l, Path::new(&format!("C:/p/{i}.oclc")), 0);
         }
         assert_eq!(l.len(), MAX_RECENT);
         assert_eq!(l[0], "C:/p/19.oclc");
-        push_recent(&mut l, Path::new("C:/p/15.oclc"));
+        push_recent(&mut l, Path::new("C:/p/15.oclc"), 0);
         assert_eq!(l[0], "C:/p/15.oclc");
         assert_eq!(l.iter().filter(|x| x.as_str() == "C:/p/15.oclc").count(), 1);
+        push_recent(&mut l, Path::new("C:/p/3.oclc"), 5);
+        assert_eq!(l.len(), 5);
+        assert_eq!(recent_limit(1), 3);
+        assert_eq!(recent_limit(99), 30);
     }
 
     #[test]

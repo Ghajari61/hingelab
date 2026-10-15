@@ -218,7 +218,7 @@ export function Workspace(p: Props) {
             <Suspense fallback={<div className="v3" aria-busy="true" />}>
               <View3D
                 ref={p.canvas} model={r?.model ?? null} material={String(r?.params.material ?? "")} explode={explode}
-                shade={prefs.view3dShade} quad={prefs.view3dQuad} active={active} dims={prefs.view3dDims} units={p.units} dim={dim}
+                shade={prefs.view3dShade} quad={prefs.view3dQuad} active={active} dims={prefs.view3dDims} units={p.units} decimals={prefs.decimals} dim={dim}
                 onActive={(a) => setActive(a)} onQuad={(q) => set({ view3dQuad: q })} onShade={(s) => set({ view3dShade: s })}
                 onSelect={setSel} grips={sel && !explode && design.params && !r?.locked ? desktopGrips(product, design.params, p.onChange, p.onChangeMany, p.units, sel, p.onScale) : undefined}
               >

@@ -37,6 +37,10 @@ pub struct Prefs {
     pub project_dir: Option<String>,
     /// Most recent first.
     pub recent_files: Vec<String>,
+    /// Settings › Project folder: Save and Open start here (otherwise where the last project was).
+    pub home_dir: Option<String>,
+    /// Settings › Recent files to keep (0: the default, see `projects::recent_limit`).
+    pub recent_max: usize,
 }
 
 pub fn load_prefs(dir: &Path) -> Prefs {

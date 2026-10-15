@@ -3,10 +3,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Grid2x2, Maximize, Ruler, Square } from "lucide-react";
+import type { EditorPrefs } from "@/lib/prefs/editor";
+import { EDITOR_PREFS_EVENT, editorPrefs, saveEditorPrefs } from "@/lib/prefs/editorStore";
 import type { View3DState } from "./view3d";
-
-const PREFS_KEY = "hl.view3d";
-const DIMS_KEY = "hl.dims3d";
 
 interface ToolsProps {
   v: View3DState;
@@ -27,23 +26,29 @@ export function View3DTools({ v, flat = false, explodeLabel = "Explode", childre
   const el = useRef<HTMLDivElement>(null);
   const restored = useRef(false);
 
+  const view = useRef(v);
+  view.current = v;
   useEffect(() => {
-    try {
-      const p = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "{}") as { quad?: unknown; shade?: unknown };
-      if (p.quad === false) v.setQuad(false);
-      if (p.shade === "edges") v.setShade("edges");
-      if (localStorage.getItem(DIMS_KEY) === "0") v.setDims(false);
-    } catch { /* storage blocked or bad JSON */ }
+    const p = editorPrefs();
+    if (!p.quad) v.setQuad(false);
+    if (p.shade === "edges") v.setShade("edges");
+    if (!p.dims3d) v.setDims(false);
+    const on = (e: Event) => {
+      const n = (e as CustomEvent<EditorPrefs>).detail, c = view.current;
+      if (n.quad !== c.quad) c.setQuad(n.quad);
+      if (n.shade !== c.shade) c.setShade(n.shade);
+      if (n.dims3d !== c.dims) c.setDims(n.dims3d);
+    };
+    window.addEventListener(EDITOR_PREFS_EVENT, on);
+    return () => window.removeEventListener(EDITOR_PREFS_EVENT, on);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     // The first run still has the defaults: the restored values arrive on the next render.
     if (!restored.current) { restored.current = true; return; }
-    try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify({ quad: v.quad, shade: v.shade }));
-      localStorage.setItem(DIMS_KEY, v.dims ? "1" : "0");
-    } catch { /* storage blocked */ }
+    const p = editorPrefs();
+    if (p.quad !== v.quad || p.shade !== v.shade || p.dims3d !== v.dims) saveEditorPrefs({ quad: v.quad, shade: v.shade, dims3d: v.dims });
   }, [v.quad, v.shade, v.dims]);
 
   useLayoutEffect(() => {

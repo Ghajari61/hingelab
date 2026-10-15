@@ -26,6 +26,7 @@ interface Props {
   /** Overall dimensions on every view (hidden while exploded). */
   dims: boolean;
   units: Units;
+  decimals?: 0 | 1 | 2;
   dim?: boolean;
   /** Told the selected part's name (null: none). */
   onSelect?: (name: string | null) => void;

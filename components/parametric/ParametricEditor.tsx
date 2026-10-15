@@ -1,5 +1,7 @@
 "use client";
 
+import { keepSetup } from "@/lib/prefs/editor";
+import { editorPrefs } from "@/lib/prefs/editorStore";
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LayoutGrid, Sparkles } from "lucide-react";
 import { r3, type LayerContent } from "@/lib/hinge";
@@ -405,7 +407,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
       void openNewCloudProject("parametric").then((err) => { if (err) toastMsg(err); });
       return;
     }
-    replace(clone(PARAMETRIC_DEFAULTS), true);
+    replace(editorPrefs().keepSetup ? keepSetup(params, clone(PARAMETRIC_DEFAULTS)) : clone(PARAMETRIC_DEFAULTS), true);
     setSelected([]);
     toastMsg("New sculpture");
   }

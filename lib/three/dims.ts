@@ -231,16 +231,17 @@ export function modelBox(root: THREE.Object3D): THREE.Box3 {
  */
 const SNAP_MM = 0.2;
 
-export function fmtDim(mm: number, units: "mm" | "in" = "mm"): string {
+/** `decimals` for millimetres; inches get one more. */
+export function fmtDim(mm: number, units: "mm" | "in" = "mm", decimals = 1): string {
   const whole = Math.round(mm);
   const v = Math.abs(mm - whole) <= SNAP_MM ? whole : mm;
-  return units === "in" ? `${(v / 25.4).toFixed(2)} in` : `${v.toFixed(1)} mm`;
+  return units === "in" ? `${(v / 25.4).toFixed(decimals + 1)} in` : `${v.toFixed(decimals)} mm`;
 }
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
 /** SVG markup for the lines (no user text, safe as innerHTML). Styled through `.dim-*` classes. */
-export function dimSVG(lines: DimLine[], units: "mm" | "in" = "mm"): string {
+export function dimSVG(lines: DimLine[], units: "mm" | "in" = "mm", decimals = 1): string {
   let s = "";
   for (const d of lines) {
     const [[ax, ay], [bx, by]] = d.to;
@@ -263,7 +264,7 @@ export function dimSVG(lines: DimLine[], units: "mm" | "in" = "mm"): string {
     if (deg > 90) deg -= 180;
     else if (deg <= -90) deg += 180;
     const mx = (ax + bx) / 2 + nx * 9, my = (ay + by) / 2 + ny * 9;
-    s += `<text class="dim-text" x="${r1(mx)}" y="${r1(my)}" transform="rotate(${r1(deg)} ${r1(mx)} ${r1(my)})" text-anchor="middle" dominant-baseline="middle">${fmtDim(d.mm, units)}</text>`;
+    s += `<text class="dim-text" x="${r1(mx)}" y="${r1(my)}" transform="rotate(${r1(deg)} ${r1(mx)} ${r1(my)})" text-anchor="middle" dominant-baseline="middle">${fmtDim(d.mm, units, decimals)}</text>`;
   }
   return s;
 }

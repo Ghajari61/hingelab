@@ -29,7 +29,23 @@ export interface LocalPrefs {
   view3dShade: Shade3D;
   /** Overall dimensions drawn on the 3D views. */
   view3dDims: boolean;
+  /** Decimals in the 3D dimension labels (inches get one more). */
+  decimals: 0 | 1 | 2;
+  /** How designs open: as last time, on the sheet or in 3D. */
+  openIn: OpenIn;
+  /** Reset all settings asks first. */
+  confirmReset: boolean;
+  /** Interface zoom, percent. */
+  uiZoom: UiZoom;
+  /** Menus and panels appear without animation. */
+  reduceMotion: boolean;
+  /** At start, open the project file used last. */
+  openLast: boolean;
 }
+
+export type OpenIn = "last" | "2d" | "3d";
+export const UI_ZOOMS = [90, 100, 110, 125] as const;
+export type UiZoom = (typeof UI_ZOOMS)[number];
 
 export interface SavedDesign {
   id: string;
@@ -54,7 +70,7 @@ export interface Favorite {
 }
 
 const KEYS = { prefs: "hl-prefs-v1", recent: "hl-recent-v1", favorites: "hl-favorites-v1", last: "hl-last-v1", catalog: "hl-catalog-v1", account: "hl-account-v1", locks: "hl-locks-v1" };
-export const DEFAULT_PREFS: LocalPrefs = { theme: "system", units: "mm", autoCheckUpdates: true, reuseLastSettings: true, defaultProduct: "hinge", sidebarCollapsed: false, sheetTone: "plywood", sheetGrid: true, view3d: false, view3dQuad: true, view3dShade: "shaded", view3dDims: true };
+export const DEFAULT_PREFS: LocalPrefs = { theme: "system", units: "mm", autoCheckUpdates: true, reuseLastSettings: true, defaultProduct: "hinge", sidebarCollapsed: false, sheetTone: "plywood", sheetGrid: true, view3d: false, view3dQuad: true, view3dShade: "shaded", view3dDims: true, decimals: 1, openIn: "last", confirmReset: true, uiZoom: 100, reduceMotion: false, openLast: false };
 const MAX_RECENT = 24;
 const MAX_ITEM = 300_000;
 const MAX_LIST = 3_500_000;
@@ -103,6 +119,9 @@ export const usePrefs = () => {
   const prefs = { ...DEFAULT_PREFS, ...p };
   // Older versions also saved "wire".
   if (prefs.view3dShade !== "edges") prefs.view3dShade = "shaded";
+  if (prefs.decimals !== 0 && prefs.decimals !== 2) prefs.decimals = 1;
+  if (prefs.openIn !== "2d" && prefs.openIn !== "3d") prefs.openIn = "last";
+  if (!UI_ZOOMS.includes(prefs.uiZoom)) prefs.uiZoom = 100;
   return [prefs, set] as const;
 };
 export const useRecent = () => useStored<SavedDesign[]>(KEYS.recent, EMPTY);

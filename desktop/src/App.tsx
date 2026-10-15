@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Sidebar, SignIn, Toasts, UpdateDialog, UpdateRequired, useModalOpen, type Route, type Toast } from "./components/Chrome";
+import { ConfirmDialog, Sidebar, SignIn, Toasts, UpdateDialog, UpdateRequired, useModalOpen, type Route, type Toast } from "./components/Chrome";
 import { Dashboard, Favorites, Generators, Help, Recent, Settings, Subscription } from "./components/Pages";
 import { Workspace } from "./components/Workspace";
 import { resetValues } from "./components/SettingsPanel";
@@ -126,6 +126,14 @@ export function App() {
     return () => mq.removeEventListener("change", apply);
   }, [local.theme]);
 
+  // Settings > Interface zoom and Reduce motion.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.zoom = local.uiZoom === 100 ? "" : String(local.uiZoom / 100);
+    if (local.reduceMotion) root.dataset.reduceMotion = "";
+    else delete root.dataset.reduceMotion;
+  }, [local.uiZoom, local.reduceMotion]);
+
   // Updates: a quiet check after start; a found update opens the dialog once.
   useAutoCheck(phase !== "boot" && local.autoCheckUpdates, async () => {
     if (await updater.checkNow()) setShowUpdate(true);
@@ -187,7 +195,14 @@ export function App() {
 
   const product = useMemo(() => (catalog?.art?.id === design.state.product ? catalog.art : catalog?.products.find((p) => p.id === design.state.product)) ?? null, [catalog, design.state.product]);
 
+  const [askReset, setAskReset] = useState(false);
   const resetAll = () => {
+    if (!product || !design.state.params) return;
+    if (local.confirmReset) setAskReset(true);
+    else doReset();
+  };
+  const doReset = () => {
+    setAskReset(false);
     if (!product || !design.state.params) return;
     const values = resetValues(product.sections.flatMap((s) => s.fields), design.state.params);
     if (!Object.keys(values).length) return toast({ text: "Every setting is already at its default.", kind: "ok" });
@@ -204,19 +219,26 @@ export function App() {
     toast({ text: hinge ? "A random hinge pattern. Ctrl+Z undoes it." : locks.list.length ? "New random design; locked settings kept. Ctrl+Z undoes it." : "New random design. Ctrl+Z undoes it.", kind: "ok" });
   }, [canRandom, design, locks.list, toast]);
 
+  // Settings > Open designs in: the sheet or 3D, whatever was showing last.
+  const startView = useCallback(() => {
+    if (local.openIn !== "last") setLocal((o) => ({ ...o, view3d: local.openIn === "3d" }));
+  }, [local.openIn, setLocal]);
   const openNew = useCallback((id: string) => {
     const saved = local.reuseLastSettings ? lastParams(id) : null;
     design.open(id, saved ? { params: saved } : {});
+    startView();
     setRoute("workspace");
-  }, [design, local.reuseLastSettings]);
+  }, [design, local.reuseLastSettings, startView]);
   const openPreset = useCallback((id: string, preset: string) => {
     design.open(id, { preset });
+    startView();
     setRoute("workspace");
-  }, [design]);
+  }, [design, startView]);
   const openSaved = useCallback((d: { product: string; params?: Params; preset?: string }) => {
     design.open(d.product, d.preset ? { preset: d.preset } : { params: d.params });
+    startView();
     setRoute("workspace");
-  }, [design]);
+  }, [design, startView]);
 
   // Remember designs as they change (settings only, on this computer).
   const r = design.state.result;
@@ -276,6 +298,7 @@ export function App() {
       if (r.kind === "error") { toast({ text: r.message, kind: "err" }); return; }
       if (r.kind === "native") {
         design.open(r.product, { params: r.params, version: r.version, file: { path: f.path, name: f.name } });
+        startView();
         setRoute("workspace");
         toast({ text: `Opened ${f.name}` });
         return;
@@ -286,16 +309,27 @@ export function App() {
       toast({ text: (e as AppError).message, kind: "err" });
       loadFiles();
     }
-  }, [design, nativeIds, openOnline, toast, loadFiles]);
+  }, [design, nativeIds, openOnline, toast, loadFiles, startView]);
 
   // A file double-clicked in Explorer, dropped on the window or passed to a second launch.
   const canOpen = phase === "ready" && !!catalog;
   const openRef = useRef(openFile);
   openRef.current = openFile;
+  const started = useRef(false);
+  const openLast = useRef(local.openLast);
+  openLast.current = local.openLast;
   useEffect(() => {
     if (!canOpen) return;
     const take = () => void ipc.takeOpenRequest().then((p) => { if (p) void openRef.current(p); }).catch(() => {});
-    take();
+    // Settings > Open the last project at start (unless Windows asked for a file).
+    if (!started.current && openLast.current) {
+      void ipc.takeOpenRequest().then(async (p) => {
+        if (p) return void openRef.current(p);
+        const last = (await ipc.recentProjects()).find((f) => f.exists);
+        if (last) void openRef.current(last.path);
+      }).catch(() => {});
+    } else take();
+    started.current = true;
     const off = listen("open-file-request", take);
     return () => void off.then((f) => f());
   }, [canOpen]);
@@ -406,7 +440,7 @@ export function App() {
             catalog={catalog}
             plan={plan}
             online={online}
-            onOpen={(id, params) => { design.open(id, { params }); setRoute("workspace"); }}
+            onOpen={(id, params) => { design.open(id, { params }); startView(); setRoute("workspace"); }}
             onOnline={(path) => openOnline("web-editors", path)}
             onUpgrade={() => web("upgrade")}
           />
@@ -456,6 +490,8 @@ export function App() {
             onInstall={installUpdate}
             onChooseFolder={() => void ipc.chooseExportFolder().then(setPrefs).catch((e: AppError) => toast({ text: e.message, kind: "err" }))}
             onExportPrefs={(clear, openAfter) => void ipc.setExportPrefs(clear, openAfter).then(setPrefs).catch((e: AppError) => toast({ text: e.message, kind: "err" }))}
+            onChooseProjectFolder={() => void ipc.chooseProjectFolder().then(setPrefs).catch((e: AppError) => toast({ text: e.message, kind: "err" }))}
+            onProjectPrefs={(clear, max) => void ipc.setProjectPrefs(clear, max).then((p) => { setPrefs(p); loadFiles(); }).catch((e: AppError) => toast({ text: e.message, kind: "err" }))}
             onWeb={web}
             onSignOut={() => signedOut(null)}
             onRefreshPlan={refreshPlan}
@@ -465,6 +501,7 @@ export function App() {
         {onWebRoute && <WebHost request={webRequest} covered={modalOpen} onError={(e) => toast({ text: e.message, kind: "err" })} />}
       </div>
       {updateDialog}
+      {askReset && <ConfirmDialog title="Reset all settings?" text="Every setting of this design goes back to its default. Ctrl+Z undoes it." action="Reset all" onConfirm={doReset} onCancel={() => setAskReset(false)} />}
       <Toasts items={toasts} onReveal={(p) => void ipc.revealFile(p).catch((e: AppError) => toast({ text: e.message, kind: "err" }))} onClose={(id) => setToasts((l) => l.filter((x) => x.id !== id))} />
     </div>
   );

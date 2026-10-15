@@ -177,6 +177,19 @@ select.sel:focus { border-color: var(--accent); outline: none; }
   .dock { overflow: visible; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+/* Settings › Interface size: the menus and the side panels smaller or larger; the drawing keeps its scale. */
+:root[data-ui-size="compact"] { --ui-k: .9; }
+:root[data-ui-size="large"] { --ui-k: 1.12; }
+:root[data-ui-size] .menubar, :root[data-ui-size] .main > .gallery, :root[data-ui-size] .main > .dock-col { zoom: var(--ui-k); }
+:root[data-ui-size] .main { grid-template-columns: calc(244px * var(--ui-k)) minmax(0,1fr) calc(344px * var(--ui-k)); }
+@media (max-width: 1180px) { :root[data-ui-size] .main { grid-template-columns: calc(208px * var(--ui-k)) minmax(0,1fr) calc(320px * var(--ui-k)); } }
+@media (max-width: 860px) { :root[data-ui-size] .main { grid-template-columns: minmax(0,1fr); } }
+@media (min-width: 601px) and (max-width: 860px) {
+  :root[data-ui-size] .main { grid-template-columns: minmax(0,1fr) calc(300px * var(--ui-k)); }
+  :root[data-ui-size] .main > .dock-col { height: calc((100vh - 30vh - 140px) / var(--ui-k)); }
+}
+/* Settings › Reduce motion, for when the system setting is not available. */
+:root[data-reduce-motion] *, :root[data-reduce-motion] *::before, :root[data-reduce-motion] *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 
 .boot { height: 100%; display: grid; place-items: center; color: var(--fg-dim); }
 .modal .rename-row { display: flex; justify-content: flex-end; gap: 8px; }

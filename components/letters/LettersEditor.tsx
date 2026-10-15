@@ -1,5 +1,7 @@
 "use client";
 
+import { keepSetup } from "@/lib/prefs/editor";
+import { editorPrefs } from "@/lib/prefs/editorStore";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { autoFit, clone, MATERIALS } from "@/lib/hinge";
@@ -332,7 +334,8 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
       void openNewCloudProject("letters").then((err) => { if (err) toastMsg(err); });
       return;
     }
-    patch(freshParams(account.plan === "pro"), true);
+    const fresh = freshParams(account.plan === "pro");
+    patch(editorPrefs().keepSetup ? keepSetup(params, fresh) : fresh, true);
     window.setTimeout(() => viewApi.fit(), 50);
     toastMsg("New letters");
   }

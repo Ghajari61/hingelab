@@ -17,6 +17,7 @@ const HINGE_FILE = JSON.stringify({ app: "HingeLab", product: "hinge-box", versi
 const LETTERS_FILE = JSON.stringify({ app: "HingeLab", product: "letters", version: 1, params: { text: "HI" } });
 let nextOpen: { path: string; name: string; text: string | null } | null = null;
 let pendingLaunch: string | null = "C:\\Projects\\Launch box.oclc";
+const prefs: Record<string, unknown> = { exportDir: null, lastDir: null, openAfterExport: false, projectDir: null, recentFiles: [], homeDir: null, recentMax: 0 };
 const files: Record<string, string> = { "C:\\Projects\\Launch box.oclc": HINGE_FILE };
 
 async function command(cmd: string, args: Record<string, unknown>) {
@@ -28,7 +29,9 @@ async function command(cmd: string, args: Record<string, unknown>) {
     case "app_info": return { version: "1.0.30", server: "local", signedIn: true };
     case "me": return { user: { id: "qa", email: "qa@hingelab.test", name: "QA" }, plan: "pro", status: "active", periodEnd: null, entitlements: { cleanExport: true, proShapes: true, proGenerators: true }, minimumVersion: "1.0.0" };
     case "catalog": return desktopCatalog();
-    case "get_prefs": return { exportDir: null, lastDir: null, openAfterExport: false, projectDir: null, recentFiles: [] };
+    case "get_prefs": return { ...prefs };
+    case "choose_project_folder": prefs.homeDir = "C:\\Projects"; return { ...prefs };
+    case "set_project_prefs": if (args.clearFolder) prefs.homeDir = null; prefs.recentMax = Number(args.recentMax); return { ...prefs };
     case "recent_projects": return Object.keys(files).map((p) => ({ path: p, name: p.split("\\").pop(), exists: true }));
     case "take_open_request": { const p = pendingLaunch; pendingLaunch = null; return p; }
     case "save_project_as": {
@@ -187,6 +190,9 @@ try {
   check(await widthIs("91"), "Ctrl+Z takes a section reset back");
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await page.getByRole("menuitem", { name: "Reset all settings" }).click();
+  const ask = page.getByRole("dialog", { name: "Reset all settings?" });
+  check(await ask.isVisible(), "Reset all settings asks first (Settings > Ask before Reset all)");
+  await ask.getByRole("button", { name: "Reset all" }).click();
   check(await widthIs("140"), "Edit > Reset all settings restores the defaults");
   check((await page.locator(".toast").allInnerTexts()).some((t) => t.includes("All settings reset")), "a toast says Ctrl+Z undoes Reset all");
   check((await page.locator(".ws-name").innerText()) === "Menu name", "Reset all keeps the design's name");
@@ -246,6 +252,29 @@ try {
   await page.getByRole("button", { name: "Redo edit" }).click();
   check((await aiName()) === "AI 3", "AI page: Redo edit redoes");
   check(await page.getByRole("button", { name: "Redo edit" }).isDisabled(), "AI page: nothing left to redo");
+
+  // Settings: the project folder, Recent's length, interface size, how designs open, Reset all without asking.
+  await page.locator(".sidebar").getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("heading", { name: "Project files" }).waitFor({ timeout: 10000 });
+  await page.getByRole("region", { name: "Project files" }).getByRole("button", { name: "Choose folder…" }).click();
+  check(await until(async () => (await page.getByRole("region", { name: "Project files" }).locator(".path").innerText()).includes("C:\\Projects")), "Settings: a chosen project folder is shown");
+  await page.getByRole("combobox", { name: "Recent files to list" }).selectOption("5");
+  check(await until(async () => last("set_project_prefs")?.args.recentMax === 5), "Settings: Recent files to list goes to the app");
+  await page.getByRole("radiogroup", { name: "Interface size" }).getByRole("radio", { name: "110%" }).click();
+  check(await page.evaluate(() => document.documentElement.style.zoom) === "1.1", "Settings: Interface size zooms the window's contents");
+  if (process.env.E2E_SHOTS) await page.screenshot({ path: `${process.env.E2E_SHOTS}/desk-settings.png` });
+  await page.getByRole("radiogroup", { name: "Open designs in" }).getByRole("radio", { name: "3D" }).click();
+  await page.getByRole("checkbox", { name: "Ask before Reset all settings" }).uncheck();
+  await page.locator(".sidebar").getByRole("button", { name: "Dashboard" }).click();
+  await page.locator(".dash-new .tile").first().click();
+  check(await until(async () => (await page.getByRole("group", { name: "Workspace view" }).getByRole("button", { name: "3D" }).getAttribute("aria-pressed")) === "true"), "Settings: Open designs in 3D opens a new design in 3D");
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Reset all settings" }).click();
+  check(!(await page.getByRole("dialog", { name: "Reset all settings?" }).isVisible().catch(() => false)), "Settings: with Ask before Reset all off, Reset all does not ask");
+  await page.locator(".sidebar").getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Reset these settings" }).click();
+  check(await page.evaluate(() => document.documentElement.style.zoom) === "", "Settings: Reset these settings restores the interface size");
+  check(await page.getByRole("checkbox", { name: "Ask before Reset all settings" }).isChecked(), "Settings: Reset these settings turns Ask before Reset all back on");
 
   check(!errors.length, `no page errors${errors.length ? ": " + errors.join(" | ") : ""}`);
 } finally {

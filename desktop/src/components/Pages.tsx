@@ -1,10 +1,10 @@
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type WheelEvent } from "react";
-import { ArrowRight, Box, Cake, ChevronLeft, ChevronRight, Clock, Clock3, Crown, ExternalLink, FolderOpen, Globe, Hash, History, KeyRound, Keyboard, LayoutGrid, LifeBuoy, Lock, Plus, Puzzle, QrCode, Signpost, SquareStack, Star, Trash2, Trophy, Wand2 } from "lucide-react";
+import { ArrowRight, Box, Cake, ChevronLeft, ChevronRight, Clock, Clock3, Crown, ExternalLink, FolderOpen, Globe, Hash, History, KeyRound, Keyboard, LayoutGrid, LifeBuoy, Lock, Plus, Puzzle, QrCode, RotateCcw, Signpost, SquareStack, Star, Trash2, Trophy, Wand2 } from "lucide-react";
 import type { DCatalog, DProduct } from "../../../lib/desktop/types";
 import { onlineArt, presetArt, productArt, showcase } from "../art";
 import type { WebRoute } from "./Web";
 import type { DesktopAccount, Prefs, RecentProject, WebPage } from "../ipc";
-import type { Favorite, LocalPrefs, SavedDesign } from "../local";
+import { DEFAULT_PREFS, UI_ZOOMS, type Favorite, type LocalPrefs, type SavedDesign, type SheetTone } from "../local";
 import type { UpdateStatus } from "../updater";
 import { formatBytes } from "../updater";
 
@@ -441,10 +441,25 @@ export function Subscription({ account, onWeb, onRefresh, refreshing }: { accoun
 
 // ---------------------------------------------------------------- Settings
 
+const SHEET_TONE_NAMES: [SheetTone, string][] = [["plywood", "Plywood"], ["grey", "Soft grey"], ["white", "White"], ["dark", "Dark"]];
+
+/** A labelled row of choices (a radio group). */
+function Choice<T extends string | number>({ label, value, options, onChange }: { label: string; value: T; options: readonly (readonly [T, string])[]; onChange: (v: T) => void }) {
+  return (
+    <div className="field-row choice">
+      <span>{label}</span>
+      <div className="segmented" role="radiogroup" aria-label={label}>
+        {options.map(([v, n]) => <button key={String(v)} type="button" role="radio" aria-checked={value === v} onClick={() => onChange(v)}>{n}</button>)}
+      </div>
+    </div>
+  );
+}
+
 export function Settings(props: {
   account: DesktopAccount | null; local: LocalPrefs; setLocal: (p: LocalPrefs) => void; prefs: Prefs | null; catalog: DCatalog | null;
   version: string; server: string; update: UpdateStatus;
   onCheck: () => void; onInstall: () => void; onChooseFolder: () => void; onExportPrefs: (clear: boolean, openAfter: boolean) => void;
+  onChooseProjectFolder: () => void; onProjectPrefs: (clear: boolean, recentMax: number) => void;
   onWeb: (p: WebPage) => void; onSignOut: () => void; onRefreshPlan: () => void;
 }) {
   const { local, setLocal, prefs, update: u } = props;
@@ -481,11 +496,54 @@ export function Settings(props: {
       </section>
 
       <section className="card" aria-labelledby="s-units">
-        <h2 id="s-units">Default units</h2>
-        <div className="segmented" role="radiogroup" aria-labelledby="s-units">
-          {(["mm", "in"] as const).map((v) => <button key={v} type="button" role="radio" aria-checked={local.units === v} onClick={() => set({ units: v })}>{v === "mm" ? "Millimetres" : "Inches"}</button>)}
-        </div>
+        <h2 id="s-units">Measurements</h2>
+        <Choice label="Units" value={local.units} onChange={(units) => set({ units })} options={[["mm", "Millimetres"], ["in", "Inches"]]} />
         <p className="fine">Files are always saved in millimetres; this only changes how lengths are shown and typed.</p>
+        <Choice label="Decimals in 3D dimensions" value={local.decimals} onChange={(decimals) => set({ decimals })} options={[[0, "0"], [1, "0.0"], [2, "0.00"]]} />
+      </section>
+
+      <section className="card" aria-labelledby="s-ws">
+        <h2 id="s-ws">Workspace</h2>
+        <Choice label="Open designs in" value={local.openIn} onChange={(openIn) => set({ openIn })} options={[["last", "As last time"], ["2d", "2D sheet"], ["3d", "3D"]]} />
+        <label className="field-row">
+          <span>Sheet colour</span>
+          <select value={local.sheetTone} onChange={(e) => set({ sheetTone: e.target.value as SheetTone })}>
+            {SHEET_TONE_NAMES.map(([v, n]) => <option key={v} value={v}>{n}</option>)}
+          </select>
+        </label>
+        <label className="field-row">
+          <span>10 mm grid on the sheet</span>
+          <input type="checkbox" checked={local.sheetGrid} onChange={(e) => set({ sheetGrid: e.target.checked })} />
+        </label>
+        <Choice label="3D layout" value={local.view3dQuad ? "quad" : "one"} onChange={(v) => set({ view3dQuad: v === "quad" })} options={[["one", "One view"], ["quad", "Four views"]]} />
+        <Choice label="3D display" value={local.view3dShade} onChange={(view3dShade) => set({ view3dShade })} options={[["shaded", "Shaded"], ["edges", "Shaded with edges"]]} />
+        <label className="field-row">
+          <span>Overall dimensions in 3D</span>
+          <input type="checkbox" checked={local.view3dDims} onChange={(e) => set({ view3dDims: e.target.checked })} />
+        </label>
+        <label className="field-row">
+          <span>Ask before Reset all settings</span>
+          <input type="checkbox" checked={local.confirmReset} onChange={(e) => set({ confirmReset: e.target.checked })} />
+        </label>
+      </section>
+
+      <section className="card" aria-labelledby="s-files">
+        <h2 id="s-files">Project files</h2>
+        <p className="path">{prefs?.homeDir ? <><FolderOpen size={14} aria-hidden /> {prefs.homeDir}</> : "No project folder: Save and Open start where the last project was."}</p>
+        <div className="row">
+          <button type="button" className="btn" onClick={props.onChooseProjectFolder}>Choose folder…</button>
+          {prefs?.homeDir && <button type="button" className="btn" onClick={() => props.onProjectPrefs(true, prefs.recentMax)}>Clear</button>}
+        </div>
+        <label className="field-row">
+          <span>Recent files to list</span>
+          <select value={prefs?.recentMax || 12} onChange={(e) => props.onProjectPrefs(false, Number(e.target.value))} disabled={!prefs}>
+            {[5, 8, 12, 20, 30].map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </label>
+        <label className="field-row">
+          <span>Open the last project when HingeLab starts</span>
+          <input type="checkbox" checked={local.openLast} onChange={(e) => set({ openLast: e.target.checked })} />
+        </label>
       </section>
 
       <section className="card" aria-labelledby="s-gen">
@@ -506,6 +564,14 @@ export function Settings(props: {
         <h2 id="s-look">Appearance</h2>
         <div className="segmented" role="radiogroup" aria-labelledby="s-look">
           {(["system", "light", "dark"] as const).map((v) => <button key={v} type="button" role="radio" aria-checked={local.theme === v} onClick={() => set({ theme: v })}>{v === "system" ? "Use Windows setting" : v === "light" ? "Light" : "Dark"}</button>)}
+        </div>
+        <Choice label="Interface size" value={local.uiZoom} onChange={(uiZoom) => set({ uiZoom })} options={UI_ZOOMS.map((z) => [z, `${z}%`] as const)} />
+        <label className="field-row">
+          <span>Reduce motion</span>
+          <input type="checkbox" checked={local.reduceMotion} onChange={(e) => set({ reduceMotion: e.target.checked })} />
+        </label>
+        <div className="row">
+          <button type="button" className="btn" onClick={() => setLocal({ ...DEFAULT_PREFS, sidebarCollapsed: local.sidebarCollapsed, defaultProduct: local.defaultProduct })}><RotateCcw size={14} aria-hidden />Reset these settings</button>
         </div>
       </section>
 

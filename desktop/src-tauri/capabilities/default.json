@@ -25,6 +25,8 @@
     "allow-get-prefs",
     "allow-choose-export-folder",
     "allow-set-export-prefs",
+    "allow-choose-project-folder",
+    "allow-set-project-prefs",
     "allow-save-project",
     "allow-save-project-as",
     "allow-open-project",

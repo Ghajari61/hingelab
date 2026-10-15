@@ -191,6 +191,8 @@ interface Props {
   /** Overall dimensions on every view. */
   dims: boolean;
   units: "mm" | "in";
+  /** Decimals in the dimension labels (inches get one more). */
+  decimals?: 0 | 1 | 2;
   /** Greyed out while the model is out of date. */
   dim?: boolean;
   /** Clicks report the part here instead of highlighting it. */
@@ -269,6 +271,8 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
   const bbox = useRef<THREE.Box3 | null>(null);
   const showDims = useRef<"mm" | "in" | null>(null);
   showDims.current = dims && measure ? units : null;
+  const decimals = useRef(1);
+  decimals.current = props.decimals ?? 1;
   const live = useRef({ explode, measure, look, shade });
   live.current = { explode, measure, look, shade };
   const cube = useRef<HTMLDivElement>(null);
@@ -354,7 +358,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
           renderer.render(overlay, p.cam);
           renderer.autoClear = true;
         }
-        if (p.svg) p.svg.innerHTML = showDims.current && bbox.current ? dimSVG(dimLines(bbox.current, p.cam, r.width, r.height), showDims.current) : "";
+        if (p.svg) p.svg.innerHTML = showDims.current && bbox.current ? dimSVG(dimLines(bbox.current, p.cam, r.width, r.height), showDims.current, decimals.current) : "";
       }
       syncCube();
     };

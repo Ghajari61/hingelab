@@ -9,6 +9,7 @@ import type { AnyGenerator, GenBase, GenOutput } from "@/lib/generators/types";
 import { modelBox } from "@/lib/three/dims";
 import { flatScene } from "@/lib/three/flat";
 import { lookOf } from "@/lib/three/looks";
+import { useEditorPrefs } from "@/lib/prefs/editorStore";
 import QuadView from "@/lib/three/QuadView";
 import { quadProps, useView3D } from "@/components/shell/view3d";
 import { View3DBarTools } from "@/components/shell/View3DTools";
@@ -29,6 +30,7 @@ export default function GeneratorView3D({ out, lay, T, material, units, frameKey
   edit?: { def: AnyGenerator; params: GenBase; set: (p: GenBase, record: boolean) => void };
 }) {
   const v = useView3D();
+  const editorPrefs = useEditorPrefs();
   const { flat, explode } = v;
   const [sel, setSel] = useState<string | null>(null);
   const editable = !!edit;
@@ -48,6 +50,7 @@ export default function GeneratorView3D({ out, lay, T, material, units, frameKey
   const grips = size && edit ? generatorGrips(edit.def, edit.params, edit.set, units, size, sel) : undefined;
   return (
     <QuadView
+      decimals={editorPrefs.decimals}
       {...quadProps(v)} id="preview3d" model={scene} look={lookOf(material)} frameKey={key} units={units}
       measure={flat || explode === 0} label="The design in 3D: Top, Front, Left and Perspective views" onSelect={setSel} grips={grips}
     >

@@ -1,5 +1,6 @@
 "use client";
 
+import { lazy, Suspense, useState } from "react";
 import { Layers } from "lucide-react";
 import { EmptyState, SegmentedControl, Select } from "@/components/ui";
 import { useAccount } from "@/components/auth/useAccount";
@@ -9,6 +10,8 @@ import { UNIT_LIST } from "@/lib/studio/units";
 import type { Units } from "@/lib/studio/types";
 import { StudioHeader } from "../StudioHeader";
 import { usePrefs } from "../usePrefs";
+
+const SettingsDialog = lazy(() => import("@/components/shell/SettingsDialog"));
 
 const laserName = { co2: "CO₂", diode: "Diode", fiber: "Fiber" } as const;
 
@@ -63,6 +66,7 @@ export function PresetsPage() {
 export function AccountPage() {
   const { user, profile } = useAccount();
   const [prefs, setPrefs] = usePrefs();
+  const [editorSettings, setEditorSettings] = useState(false);
   return (
     <div className="studio-page">
       <StudioHeader />
@@ -86,7 +90,13 @@ export function AccountPage() {
             </label>
           </div>
         </section>
+        <section className="info-card" aria-labelledby="editor-prefs">
+          <h3 id="editor-prefs">Editor settings</h3>
+          <p>Units, the 3D view, autosave, interface size and the default export for Hinge Box, Letters, Parametric and the generators. Also in any editor under Edit › Settings… (Ctrl+,).</p>
+          <button type="button" className="btn-export" onClick={() => setEditorSettings(true)}>Open editor settings</button>
+        </section>
       </main>
+      {editorSettings && <Suspense fallback={null}><SettingsDialog onClose={() => setEditorSettings(false)} /></Suspense>}
     </div>
   );
 }

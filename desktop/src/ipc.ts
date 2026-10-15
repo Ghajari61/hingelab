@@ -28,6 +28,10 @@ export interface Prefs {
   openAfterExport: boolean;
   projectDir: string | null;
   recentFiles: string[];
+  /** Settings: Save and Open start in this folder. */
+  homeDir: string | null;
+  /** Settings: how many files Recent keeps (0: the default). */
+  recentMax: number;
 }
 
 export interface ProjectSaved { path: string | null; name: string | null }
@@ -69,6 +73,8 @@ export const ipc = {
   getPrefs: () => call<Prefs>("get_prefs"),
   chooseExportFolder: () => call<Prefs>("choose_export_folder"),
   setExportPrefs: (clearFolder: boolean, openAfterExport: boolean) => call<Prefs>("set_export_prefs", { clearFolder, openAfterExport }),
+  chooseProjectFolder: () => call<Prefs>("choose_project_folder"),
+  setProjectPrefs: (clearFolder: boolean, recentMax: number) => call<Prefs>("set_project_prefs", { clearFolder, recentMax }),
   saveProject: (content: string, name: string, path: string | null) => call<ProjectSaved>("save_project", { content, name, path }),
   saveProjectAs: (content: string, name: string) => call<ProjectSaved>("save_project_as", { content, name }),
   openProject: (path: string | null) => call<OpenedProject | null>("open_project", { path }),

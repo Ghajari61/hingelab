@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Download, RotateCcw } from "lucide-react";
 import type { Units } from "@/components/editor/format";
+import { useEditorPrefs } from "@/lib/prefs/editorStore";
+
+/** Settings › Units: the open editor switches (detail: "mm" | "in"). */
+export const UNITS_EVENT = "hingelab:units";
 
 /** Right column: units and Reset all on top, the scrolling panel dock, the export button pinned underneath. */
 export function DockColumn({ children, onExport, exportLabel, alt = [], units, onUnits, onResetAll, extra, inert }: {
@@ -21,6 +25,14 @@ export function DockColumn({ children, onExport, exportLabel, alt = [], units, o
 }) {
   const [confirm, setConfirm] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  const prefs = useEditorPrefs();
+  const setUnits = useRef(onUnits);
+  setUnits.current = onUnits;
+  useEffect(() => {
+    const on = (e: Event) => setUnits.current((e as CustomEvent<Units>).detail);
+    window.addEventListener(UNITS_EVENT, on);
+    return () => window.removeEventListener(UNITS_EVENT, on);
+  }, []);
   useEffect(() => {
     if (!confirm) return;
     const onDown = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node)) setConfirm(false); };
@@ -38,7 +50,10 @@ export function DockColumn({ children, onExport, exportLabel, alt = [], units, o
           <button type="button" data-u="in" aria-pressed={units === "in"} onClick={() => onUnits("in")}>inch</button>
         </span>
         <div className="reset-all" ref={box}>
-          <button type="button" className="btn-ghost-sm" aria-haspopup="dialog" aria-expanded={confirm} onClick={() => setConfirm((c) => !c)}>
+          <button
+            type="button" className="btn-ghost-sm" aria-haspopup={prefs.confirmReset ? "dialog" : undefined} aria-expanded={prefs.confirmReset ? confirm : undefined}
+            onClick={() => (prefs.confirmReset ? setConfirm((c) => !c) : onResetAll())}
+          >
             <RotateCcw size={14} aria-hidden />Reset all
           </button>
           {confirm && (

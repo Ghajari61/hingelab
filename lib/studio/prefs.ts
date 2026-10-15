@@ -5,6 +5,7 @@
 import { DEFAULT_MACHINE, DEFAULT_MATERIAL, MACHINE_PROFILES, MATERIAL_PRESETS, type LaserType } from "./library";
 import { isUnits } from "./units";
 import type { Units } from "./types";
+import { DEFAULT_EDITOR_PREFS, normalizeEditorPrefs, type EditorPrefs } from "@/lib/prefs/editor";
 
 export type Theme = "dark" | "darker" | "light" | "system";
 export type Accent = "blue" | "violet" | "teal" | "orange";
@@ -31,12 +32,14 @@ export interface Preferences {
   offsetStep: number;
   /** Angle step (degrees) for every constrained rotation and direction: rotate, shear, line, pen, knife, measure, view rotation. */
   snapAngle: number;
+  /** The classic editors' preferences (Settings in their Edit menu). */
+  editor: EditorPrefs;
 }
 
 export const DEFAULT_PREFS: Preferences = {
   theme: "light", themeChosen: false, editorTheme: "dark", accent: "blue", units: "mm", shortcutSet: "hingelab", laser: "co2",
   machineId: DEFAULT_MACHINE, materialId: DEFAULT_MATERIAL, showStartScreen: true,
-  onboarded: false, tourDone: false, dismissed: [], recentGenerators: [], offsetStep: 1, snapAngle: 15,
+  onboarded: false, tourDone: false, dismissed: [], recentGenerators: [], offsetStep: 1, snapAngle: 15, editor: DEFAULT_EDITOR_PREFS,
 };
 
 const pick = <T extends string>(v: unknown, list: readonly T[], d: T): T => (list as readonly unknown[]).includes(v) ? (v as T) : d;
@@ -64,6 +67,7 @@ export function normalizePrefs(raw: unknown): Preferences {
       : [],
     offsetStep: typeof r.offsetStep === "number" && Number.isFinite(r.offsetStep) && r.offsetStep > 0 ? Math.min(100, r.offsetStep) : d.offsetStep,
     snapAngle: typeof r.snapAngle === "number" && Number.isFinite(r.snapAngle) ? Math.min(90, Math.max(1, r.snapAngle)) : d.snapAngle,
+    editor: normalizeEditorPrefs(r.editor),
   };
 }
 
@@ -78,8 +82,12 @@ export function loadPrefs(): Preferences {
   try { return normalizePrefs(JSON.parse(localStorage.getItem(KEY) ?? "{}")); } catch { return { ...DEFAULT_PREFS }; }
 }
 
+/** The editor part is written by the Settings dialog (lib/prefs/editorStore), so a stale copy here does not overwrite it. */
 export function savePrefs(p: Preferences): void {
-  try { localStorage.setItem(KEY, JSON.stringify(p)); } catch { /* private mode */ }
+  try {
+    const stored = (JSON.parse(localStorage.getItem(KEY) ?? "{}") as { editor?: unknown })?.editor;
+    localStorage.setItem(KEY, JSON.stringify(stored && typeof stored === "object" ? { ...p, editor: stored } : p));
+  } catch { /* private mode */ }
   if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("hingelab-prefs", { detail: p }));
 }
 

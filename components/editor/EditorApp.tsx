@@ -1,5 +1,7 @@
 "use client";
 
+import { keepSetup } from "@/lib/prefs/editor";
+import { editorPrefs } from "@/lib/prefs/editorStore";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   autoFit, clone, cutWidth, DEFAULTS, exportSVG, layerContent, mergeParams, withFittedLattice,
@@ -20,7 +22,6 @@ import { useCloudAutosave, type CloudDoc } from "@/hooks/useCloudAutosave";
 import { thumbnailSVG } from "@/lib/projects/thumbnail";
 import { canUsePattern, hingeLocks } from "@/lib/plans";
 import { usePlan } from "@/components/billing/usePlan";
-import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 import { importIntoCloud, openNewCloudProject } from "./cloud";
 import { PX_PER_MM, useCanvasView } from "@/hooks/useCanvasView";
 import { fmtLen, type Units } from "./format";
@@ -48,6 +49,7 @@ import { Dialogs, type ModalState } from "./dialogs";
 const ExportDialog = dynamic(() => import("@/components/shell/ExportDialog"), { ssr: false });
 const JobEstimate = dynamic(() => import("@/components/shell/JobEstimate"), { ssr: false });
 const ShareDialog = dynamic(() => import("@/components/shell/ShareDialog"), { ssr: false });
+const UpgradeDialog = dynamic(() => import("@/components/billing/UpgradeDialog").then((m) => m.UpgradeDialog), { ssr: false });
 const HingeView3D = dynamic(() => import("./HingeView3D"), {
   ssr: false,
   loading: () => <div id="preview3d" className="v3" aria-busy="true" />,
@@ -282,7 +284,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
       void openNewCloudProject("hinge-box").then((err) => { if (err) toastMsg(err); });
       return;
     }
-    const next = clone(DEFAULTS);
+    const next = editorPrefs().keepSetup ? keepSetup(params, clone(DEFAULTS)) : clone(DEFAULTS);
     patch(next, true);
     applyFit(next);
     toastMsg("New box");
