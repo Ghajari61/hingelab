@@ -68,7 +68,8 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas({ svg, wid
     if (!svg) return;
     const u = URL.createObjectURL(new Blob([displaySVG(svg, tone)], { type: "image/svg+xml" }));
     setUrl(u);
-    return () => URL.revokeObjectURL(u);
+    // The picture may still be loading when the next one replaces it.
+    return () => void window.setTimeout(() => URL.revokeObjectURL(u), 5000);
   }, [svg, tone]);
 
   useLayoutEffect(() => {

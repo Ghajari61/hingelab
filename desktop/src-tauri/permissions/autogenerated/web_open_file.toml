@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-web-open-file"
+description = "Enables the web_open_file command without any pre-configured scope."
+commands.allow = ["web_open_file"]
+
+[[permission]]
+identifier = "deny-web-open-file"
+description = "Denies the web_open_file command without any pre-configured scope."
+commands.deny = ["web_open_file"]

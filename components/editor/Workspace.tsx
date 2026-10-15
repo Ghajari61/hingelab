@@ -120,6 +120,27 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
       setStart({ product: h.section, preset: handoffPreset(h) as StartChoice["preset"] });
     }, () => {}).finally(() => setHandoff(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // `?desktop-open=1`: the Windows app hands over a project file it opened (Letters, Parametric, Studio).
+  const [desktopOpen, setDesktopOpen] = useState<string | null>(() => (!doc && new URLSearchParams(window.location.search).get("desktop-open") === "1" ? "Opening the project file…" : null));
+  useEffect(() => {
+    if (!desktopOpen) return;
+    const u = new URL(window.location.href);
+    u.searchParams.delete("desktop-open");
+    window.history.replaceState(window.history.state, "", u.pathname + u.search + u.hash);
+    const w = window as Window & { hingelabDesktopOpen?: (b64: string, name: string) => void };
+    const idle = window.setTimeout(() => setDesktopOpen(null), 15000);
+    w.hingelabDesktopOpen = (b64, name) => {
+      window.clearTimeout(idle);
+      delete w.hingelabDesktopOpen;
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      void import("@/components/shell/projectFiles")
+        .then(({ openProjectFile }) => openProjectFile(new File([bytes], name), null, null, setDesktopOpen))
+        .catch(() => setDesktopOpen("That file is not a HingeLab project."));
+    };
+    return () => { window.clearTimeout(idle); delete w.hingelabDesktopOpen; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!start || doc) return;
     setUrlProduct(start.product);
@@ -167,6 +188,14 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
 
   if (opening) return <div className="boot">Opening the shared design…</div>;
   if (handoff) return <div className="boot">Opening the project file…</div>;
+  if (desktopOpen) {
+    return (
+      <div className="boot" role="status">
+        {desktopOpen}
+        {!desktopOpen.startsWith("Opening") && <button type="button" className="linklike" onClick={() => setDesktopOpen(null)}>Continue</button>}
+      </div>
+    );
+  }
   if (!product) return <StartGallery onPick={pick} />;
   const preset = start?.product === product ? start.preset : undefined;
   const key = `${product}|${preset?.id ?? "autosave"}`;

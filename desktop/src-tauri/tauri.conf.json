@@ -33,6 +33,17 @@
     "shortDescription": "Laser-cut design generators",
     "longDescription": "HingeLab for Windows: living-hinge boxes, clocks, puzzles, QR codes and boxes, built on the HingeLab servers and saved as SVG for your laser cutter.",
     "homepage": "https://hingelab.vercel.app",
+    "fileAssociations": [
+      {
+        "ext": [
+          "oclc"
+        ],
+        "name": "HingeLab project",
+        "description": "HingeLab project",
+        "role": "Editor",
+        "mimeType": "application/x-hingelab-project"
+      }
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

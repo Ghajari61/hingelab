@@ -51,6 +51,23 @@ pub struct WebState {
     last_sign_in: Mutex<Option<Instant>>,
     /// Downloads in progress by URL: where each goes, or None for one that was refused.
     downloads: Mutex<HashMap<String, Option<PathBuf>>>,
+    /// A project file for a section the app has no editor for: (base64 content, file name), handed
+    /// to the website page `OPEN_FILE_PAGE` when it has loaded.
+    pending_file: Mutex<Option<(String, String)>>,
+}
+
+/// The page that receives a project file from the app.
+pub const OPEN_FILE_PAGE: &str = "/app/editor/local?desktop-open=1";
+
+/// The script that hands a project file to the page once its editor is ready (it waits up to 10 s).
+fn hand_over_script(b64: &str, name: &str) -> String {
+    let d = serde_json::to_string(b64).unwrap_or_else(|_| "\"\"".into());
+    let n = serde_json::to_string(name).unwrap_or_else(|_| "\"project.oclc\"".into());
+    format!("(function(){{var d={d},n={n},t=0;(function go(){{if(typeof window.hingelabDesktopOpen==='function'){{window.hingelabDesktopOpen(d,n)}}else if(t++<100){{setTimeout(go,100)}}}})()}})()")
+}
+
+fn is_open_file_page(url: &Url) -> bool {
+    url.path() == "/app/editor/local" && url.query_pairs().any(|(k, v)| k == "desktop-open" && v == "1")
 }
 
 /// The website's origin as the view uses it. Next.js names the host "localhost" in redirects when a
@@ -208,6 +225,7 @@ fn builder(app: &AppHandle, start: Url, base: Url) -> WebviewBuilder<tauri::Wry>
     let popup_app = app.clone();
     let popup_base = base.clone();
     let load_app = app.clone();
+    let load_base = base.clone();
     let title_app = app.clone();
     let title_base = base.clone();
     let dl_app = app.clone();
@@ -236,7 +254,13 @@ fn builder(app: &AppHandle, start: Url, base: Url) -> WebviewBuilder<tauri::Wry>
             }
             NewWindowResponse::Deny
         })
-        .on_page_load(move |_w, p| {
+        .on_page_load(move |w, p| {
+            if p.event() == PageLoadEvent::Finished && same_site(&load_base, p.url()) && is_open_file_page(p.url()) {
+                let file = load_app.try_state::<AppState>().and_then(|s| s.web.pending_file.lock().unwrap().take());
+                if let Some((b64, name)) = file {
+                    let _ = w.eval(hand_over_script(&b64, &name));
+                }
+            }
             tell_main(&load_app, "web-page", PageEvent { path: local_part(p.url()), title: None, loading: p.event() == PageLoadEvent::Started });
         })
         .on_document_title_changed(move |w, title| {
@@ -357,6 +381,11 @@ pub fn web_action(action: String, app: AppHandle, state: State<'_, AppState>) ->
     done.map_err(|_| CmdError::new("io", "The website view did not respond."))
 }
 
+/// Keeps a project file for the website page that opens next at `OPEN_FILE_PAGE`.
+pub fn hold_file(state: &AppState, b64: String, name: String) {
+    *state.web.pending_file.lock().unwrap() = Some((b64, name));
+}
+
 /// App sign-out: ends the website session in the view too, then closes it.
 pub fn sign_out<R: Runtime>(app: &AppHandle<R>, state: &AppState) {
     *state.web.last_sign_in.lock().unwrap() = None;
@@ -407,5 +436,15 @@ mod tests {
         assert_eq!(local_part(&u("https://hingelab.vercel.app/app?x=1")), "/app?x=1");
         assert_eq!(next_of(&u("https://hingelab.vercel.app/app/ai#open=eyJw")), "/app/ai#open=eyJw");
         assert_eq!(next_of(&u("https://hingelab.vercel.app/app?x=1")), "/app?x=1");
+    }
+
+    #[test]
+    fn file_hand_over() {
+        let b = base(&u("https://hingelab.vercel.app"));
+        assert!(is_open_file_page(&page_url(&b, OPEN_FILE_PAGE).unwrap()));
+        assert!(!is_open_file_page(&u("https://hingelab.vercel.app/app/editor/local?p=letters")));
+        assert!(!is_open_file_page(&u("https://hingelab.vercel.app/home?desktop-open=1")));
+        let s = hand_over_script("eyJhIjoxfQ==", "a\"</script>.oclc");
+        assert!(s.contains("var d=\"eyJhIjoxfQ==\",n=\"a\\\"</script>.oclc\""));
     }
 }

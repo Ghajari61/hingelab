@@ -391,7 +391,8 @@ async function generateGenerator(r: GenerateRequest, id: GeneratorId, product: D
     if (!pr) return { status: 400, body: { error: "Unknown preset." } };
     p = def.merge(pr.params);
   } else {
-    p = def.merge(r.params ?? {});
+    const v = typeof r.version === "number" && Number.isInteger(r.version) && r.version >= 1 ? r.version : null;
+    p = def.merge(v && def.migrate && r.params ? def.migrate(r.params, v) : r.params ?? {});
   }
   if (r.change) {
     const q = changeGenerator(def, product, p, r.change);
@@ -405,7 +406,7 @@ async function generateGenerator(r: GenerateRequest, id: GeneratorId, product: D
   p = sanitizeGeneratorParams(def, def.merge(p));
   const ctx = await serverBuildContext(def, p);
   const base = (q: GenBase, issues: DIssue[] = [], applied: string[] = []): GenerateResponse => ({
-    product: id, params: q as unknown as Record<string, unknown>, form: genForm(def, q), issues, stats: [], summary: def.summary(q), applied,
+    product: id, params: q as unknown as Record<string, unknown>, form: genForm(def, q), issues, stats: [], summary: def.summary(q), applied, version: def.version,
   });
   if (!ctx || "error" in ctx) return { status: 422, body: { ...base(p), error: "This design uses a font that is not available. Pick another font." } };
 

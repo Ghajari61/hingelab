@@ -26,7 +26,14 @@ export interface Prefs {
   exportDir: string | null;
   lastDir: string | null;
   openAfterExport: boolean;
+  projectDir: string | null;
+  recentFiles: string[];
 }
+
+export interface ProjectSaved { path: string | null; name: string | null }
+/** `text` is the JSON project; null for a Studio project (a ZIP). */
+export interface OpenedProject { path: string; name: string; text: string | null }
+export interface RecentProject { path: string; name: string; exists: boolean }
 
 export type Generated = { status: number; body: GenerateResponse & { designId?: number } };
 
@@ -62,6 +69,14 @@ export const ipc = {
   getPrefs: () => call<Prefs>("get_prefs"),
   chooseExportFolder: () => call<Prefs>("choose_export_folder"),
   setExportPrefs: (clearFolder: boolean, openAfterExport: boolean) => call<Prefs>("set_export_prefs", { clearFolder, openAfterExport }),
+  saveProject: (content: string, name: string, path: string | null) => call<ProjectSaved>("save_project", { content, name, path }),
+  saveProjectAs: (content: string, name: string) => call<ProjectSaved>("save_project_as", { content, name }),
+  openProject: (path: string | null) => call<OpenedProject | null>("open_project", { path }),
+  /** Hands a project to the website view; returns the page to open there. */
+  webOpenFile: (path: string) => call<string>("web_open_file", { path }),
+  recentProjects: () => call<RecentProject[]>("recent_projects"),
+  forgetRecent: (path: string | null) => call<void>("forget_recent", { path }),
+  takeOpenRequest: () => call<string | null>("take_open_request"),
   webOpen: (path: string | null, bounds: WebBounds) => call<void>("web_open", { path, bounds }),
   webBounds: (bounds: WebBounds) => call<void>("web_bounds", { bounds }),
   webHide: () => call<void>("web_hide"),

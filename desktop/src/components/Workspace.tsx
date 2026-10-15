@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState, type RefObject } from "react";
-import { AlertTriangle, Box, CircleAlert, Download, FileDown, Grid2x2, Grid3x3, Info, Lock, Maximize, Minus, Plus, Redo2, RefreshCw, Ruler, Scan, Sparkles, Square, Star, Undo2, WifiOff, Wrench } from "lucide-react";
+import { AlertTriangle, Box, CircleAlert, Download, FileDown, Grid2x2, Grid3x3, Info, Lock, Maximize, Minus, Plus, Redo2, RefreshCw, Ruler, Save, Scan, Sparkles, Square, Star, Undo2, WifiOff, Wrench } from "lucide-react";
 import type { DProduct } from "../../../lib/desktop/types";
-import type { DesignState } from "../design";
+import { isDirty, type DesignState } from "../design";
 import { desktopGrips } from "../grips";
 import type { AppError } from "../ipc";
 import { DEFAULT_PREFS, usePrefs, type LocalPrefs, type Shade3D, type SheetTone, type Units } from "../local";
@@ -53,6 +53,8 @@ export function Workspace(p: Props) {
   const nameRef = useRef<HTMLInputElement>(null);
   const name = String(design.params?.name ?? r?.params.name ?? product.name);
   const canSave = !!r?.designId && !design.busy;
+  const isArt = product.id === "art";
+  const dirty = isDirty(design);
   const issues = r?.issues ?? [];
   const safeFixes = issues.some((i) => i.fixes.some((f) => f.safe));
   const err = design.error;
@@ -117,6 +119,7 @@ export function Workspace(p: Props) {
           ) : (
             <h1><button type="button" className="ws-name" title="Rename" onClick={() => setEditingName(true)}>{name}</button></h1>
           )}
+          {design.file && <span className="ws-file" title={design.file.path}>{design.file.name}{dirty ? " \u2022" : ""}</span>}
           {r?.summary && <span className="ws-summary">{r.summary}</span>}
         </div>
         <div className="ws-actions">
@@ -130,8 +133,10 @@ export function Workspace(p: Props) {
           <button type="button" className="btn" title="Build the design again (Ctrl+Enter)" onClick={p.onRefresh} disabled={design.busy || !p.online}>
             <RefreshCw size={15} className={design.busy ? "spin" : undefined} aria-hidden />{design.busy ? "Updating" : "Update"}
           </button>
-          <button type="button" className="btn" title="Export to your export folder (Ctrl+E)" onClick={p.onExport} disabled={!canSave}><FileDown size={15} aria-hidden />Export</button>
-          <button type="button" className="btn primary" title="Save SVG (Ctrl+S)" onClick={p.onSave} disabled={!canSave}><Download size={15} aria-hidden />Save SVG</button>
+          <button type="button" className="btn" title="Export the SVG cut file to your export folder (Ctrl+E; Ctrl+Shift+E chooses where)" onClick={p.onExport} disabled={!canSave}><FileDown size={15} aria-hidden />Export SVG</button>
+          {isArt
+            ? <button type="button" className="btn primary" title="Save the SVG (Ctrl+S)" onClick={p.onSave} disabled={!canSave}><Download size={15} aria-hidden />Save SVG</button>
+            : <button type="button" className="btn primary" title={design.file ? `Save to ${design.file.name} (Ctrl+S)` : "Save as a project file, .oclc (Ctrl+S)"} onClick={p.onSave} disabled={!design.params}><Save size={15} aria-hidden />Save</button>}
         </div>
       </header>
 

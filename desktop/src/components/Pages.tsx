@@ -3,7 +3,7 @@ import { ArrowRight, Box, Cake, ChevronLeft, ChevronRight, Clock, Clock3, Crown,
 import type { DCatalog, DProduct } from "../../../lib/desktop/types";
 import { onlineArt, presetArt, productArt, showcase } from "../art";
 import type { WebRoute } from "./Web";
-import type { DesktopAccount, Prefs, WebPage } from "../ipc";
+import type { DesktopAccount, Prefs, RecentProject, WebPage } from "../ipc";
 import type { Favorite, LocalPrefs, SavedDesign } from "../local";
 import type { UpdateStatus } from "../updater";
 import { formatBytes } from "../updater";
@@ -23,6 +23,8 @@ const ago = (t: number) => {
   return new Date(t).toLocaleDateString();
 };
 
+const folderOf = (path: string) => path.replace(/[\\/][^\\/]*$/, "");
+
 const planName = (a: DesktopAccount | null) => (a?.plan === "pro" ? "Pro" : "Free");
 
 // ---------------------------------------------------------------- Dashboard
@@ -39,8 +41,10 @@ const ONLINE_TILES: { id: string; name: string; blurb: string; art: [string, str
   { id: "ai-studio", name: "AI Studio", blurb: "Pictures from words, photo clean-up, engraving, vectorizing with cut checks and an assistant, in a new Studio project.", art: ["sign", "layered-name"], section: "web-studio", path: "/home?new=ai" },
 ];
 
-export function Dashboard({ account, catalog, recent, defaultProduct, onNew, onPreset, onBrowse, onOpenRecent, onUpgrade, onOnline }: {
-  account: DesktopAccount | null; catalog: DCatalog | null; recent: SavedDesign[]; defaultProduct: string;
+export function Dashboard({ account, catalog, recent, files, defaultProduct, onNew, onPreset, onBrowse, onOpenRecent, onOpenFile, onUpgrade, onOnline }: {
+  account: DesktopAccount | null; catalog: DCatalog | null; recent: SavedDesign[]; files: RecentProject[]; defaultProduct: string;
+  /** Opens a project file: one from the list, or (null) one picked in the Open dialog. */
+  onOpenFile: (path: string | null) => void;
   onNew: (product: string) => void; onPreset: (product: string, preset: string) => void; onBrowse: () => void;
   onOpenRecent: (d: SavedDesign) => void; onUpgrade: () => void; onOnline: (section: WebRoute, path: string) => void;
 }) {
@@ -67,6 +71,7 @@ export function Dashboard({ account, catalog, recent, defaultProduct, onNew, onP
             ? <button type="button" className="btn primary big" onClick={() => onOpenRecent(last)}><History size={16} aria-hidden /><span className="clip">Continue “{last.name}”</span></button>
             : start && <button type="button" className="btn primary big" onClick={() => onNew(start.id)}><Plus size={16} aria-hidden />New {start.name}</button>}
           <button type="button" className="btn big ghost" onClick={onBrowse}><LayoutGrid size={16} aria-hidden />Browse presets</button>
+          <button type="button" className="btn big ghost" title="Open a HingeLab project file (.oclc) (Ctrl+O)" onClick={() => onOpenFile(null)}><FolderOpen size={16} aria-hidden />Open project</button>
         </div>
         <div className="hero-art" aria-hidden>
           {heroArt.map((src, i) => <span key={src} className={`hero-card c${i}`}><img src={src} alt="" /></span>)}
@@ -173,6 +178,26 @@ export function Dashboard({ account, catalog, recent, defaultProduct, onNew, onP
                   <p>Designs you work on appear here, so you can pick up where you left off.</p>
                 </div>
               )}
+          </section>
+          <section className="dash-card dash-files" aria-labelledby="dash-files">
+            <div className="sec-head">
+              <h2 id="dash-files" className="sub">Project files</h2>
+              <button type="button" className="link-btn" onClick={() => onOpenFile(null)}>Open<FolderOpen size={13} aria-hidden /></button>
+            </div>
+            {files.length ? (
+              <ul className="flist">
+                {files.slice(0, 6).map((f) => (
+                  <li key={f.path}>
+                    <button type="button" className="frow" disabled={!f.exists} title={f.exists ? f.path : `${f.path} (moved or deleted)`} onClick={() => onOpenFile(f.path)}>
+                      <FolderOpen size={14} aria-hidden />
+                      <span className="frow-text"><b>{f.name}</b><small>{f.exists ? folderOf(f.path) : "Moved or deleted"}</small></span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted small">Ctrl+S saves the open design as a project file (.oclc) you can open again here or on the website.</p>
+            )}
           </section>
           <section className={`dash-card plan-card${pro ? " is-pro" : " upsell"}`} aria-labelledby="dash-plan">
             <div className="plan-top">
@@ -486,7 +511,7 @@ export function Settings(props: {
 
       <section className="card" aria-labelledby="s-export">
         <h2 id="s-export">Export</h2>
-        <p className="path">{prefs?.exportDir ? <><FolderOpen size={14} aria-hidden /> {prefs.exportDir}</> : "No export folder: Export asks where to save, like Save SVG."}</p>
+        <p className="path">{prefs?.exportDir ? <><FolderOpen size={14} aria-hidden /> {prefs.exportDir}</> : "No export folder: Export asks where to save each SVG."}</p>
         <div className="row">
           <button type="button" className="btn" onClick={props.onChooseFolder}>Choose folder…</button>
           {prefs?.exportDir && <button type="button" className="btn" onClick={() => props.onExportPrefs(true, prefs.openAfterExport)}>Clear</button>}
@@ -534,8 +559,11 @@ export function Settings(props: {
 // ---------------------------------------------------------------- Help
 
 const SHORTCUTS: [string, string][] = [
-  ["Ctrl + S", "Save SVG"],
-  ["Ctrl + E", "Export to the export folder"],
+  ["Ctrl + S", "Save the project (.oclc)"],
+  ["Ctrl + Shift + S", "Save the project as a new file"],
+  ["Ctrl + O", "Open a project file"],
+  ["Ctrl + E", "Export the SVG (to the export folder, if one is set)"],
+  ["Ctrl + Shift + E", "Export the SVG and choose where"],
   ["Ctrl + Enter", "Update the design"],
   ["Ctrl + Z / Ctrl + Y", "Undo / redo"],
   ["Ctrl + = / Ctrl + -", "Zoom in / out"],
@@ -560,7 +588,8 @@ export function Help({ onWeb, version, onHelpCentre }: { onWeb: (p: WebPage) => 
       </section>
       <section className="card">
         <h2>Saving and cutting</h2>
-        <p>Save SVG asks where to save. Export saves straight into the folder chosen in Settings. Files are in millimetres at true size: import them into LightBurn, xTool Creative Space or Inkscape at 100%.</p>
+        <p>Save keeps the design as a HingeLab project file (.oclc): the first Save asks where, later saves update the same file. Project files open in the app (double-click one, drop it on the window or press Ctrl+O) and on the website, in the section that made them.</p>
+        <p>Export writes the cut file (SVG) straight into the folder chosen in Settings, or asks where when no folder is set. Files are in millimetres at true size: import them into LightBurn, xTool Creative Space or Inkscape at 100%.</p>
         <p>Free-plan exports include a small "Made with HingeLab" line below the parts on its own engrave layer.</p>
       </section>
       <section className="card">

@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Sidebar, SignIn, Toasts, UpdateDialog, UpdateRequired, useModalOpen, type Route, type Toast } from "./components/Chrome";
 import { Dashboard, Favorites, Generators, Help, Recent, Settings, Subscription } from "./components/Pages";
 import { Workspace } from "./components/Workspace";
 import { AIPage } from "./components/AIPage";
 import { isWebRoute, WEB_HOME, WebHost, type WebRequest, type WebRoute } from "./components/Web";
 import type { CanvasHandle } from "./components/Canvas";
-import { useDesign, type Params } from "./design";
-import { ipc, type AppError, type DCatalog, type DesktopAccount, type Prefs, type WebDownloadEvent, type WebPage } from "./ipc";
+import { isDirty, useDesign, type Params } from "./design";
+import { ipc, type AppError, type DCatalog, type DesktopAccount, type Prefs, type RecentProject, type WebDownloadEvent, type WebPage } from "./ipc";
+import { projectText, readProject } from "./projectFile";
 import { designThumb } from "./thumb";
 import { addRecent, setRecentThumb, cacheAccount, cacheCatalog, cachedAccount, cachedCatalog, lastParams, rememberParams, useFavorites, usePrefs, useRecent, type Favorite, type SavedDesign } from "./local";
 import { useAutoCheck, useUpdater } from "./updater";
@@ -165,7 +167,7 @@ export function App() {
 
   useEffect(() => {
     const off = listen<WebDownloadEvent>("web-download", ({ payload: d }) => {
-      if (d.blocked) toast({ text: "HingeLab saves drawings and project files only (SVG, DXF, ZIP, JSON, PNG, PDF).", kind: "err" });
+      if (d.blocked) toast({ text: "HingeLab saves drawings and project files only (SVG, DXF, OCLC, ZIP, JSON, PNG, PDF).", kind: "err" });
       else if (d.ok && d.path) toast({ text: `Saved ${d.name ?? d.path.split(/[\\/]/).pop()}`, kind: "ok", path: d.path });
       else toast({ text: "The download did not finish.", kind: "err" });
     });
@@ -223,6 +225,70 @@ export function App() {
     else setFavorites((l) => [{ id: crypto.randomUUID(), product: r.product, params: r.params, name: String(r.params.name ?? "Untitled"), note: r.summary, at: Date.now() }, ...l]);
   }, [r, currentFavorite, setFavorites]);
 
+  // Project files (.oclc).
+  const [files, setFiles] = useState<RecentProject[]>([]);
+  const loadFiles = useCallback(() => void ipc.recentProjects().then(setFiles).catch(() => {}), []);
+  useEffect(() => { if (phase === "ready") loadFiles(); }, [phase, loadFiles]);
+
+  const saveProject = useCallback(async (asNew: boolean) => {
+    design.flush();
+    const cur = design.current();
+    if (!cur.product || !cur.params || cur.product === "art") return;
+    const text = projectText(cur.product, cur.params, design.state.result?.version ?? 1);
+    const name = String(cur.params.name ?? "") || (product?.name ?? "design");
+    const file = design.state.file;
+    try {
+      const out = asNew || !file ? await ipc.saveProjectAs(text, name) : await ipc.saveProject(text, name, file.path);
+      if (!out.path || !out.name) return;
+      design.markSaved({ path: out.path, name: out.name });
+      toast({ text: `Saved ${out.name}`, kind: "ok", path: out.path });
+      loadFiles();
+    } catch (e) {
+      toast({ text: (e as AppError).message, kind: "err" });
+    }
+  }, [design, product, toast, loadFiles]);
+
+  const nativeIds = useMemo(() => new Set(["hinge", ...(catalog?.products.map((p) => p.id) ?? [])]), [catalog]);
+  const openFile = useCallback(async (path: string | null) => {
+    try {
+      const f = await ipc.openProject(path);
+      if (!f) return;
+      loadFiles();
+      const r = readProject(f.text, nativeIds);
+      if (r.kind === "error") { toast({ text: r.message, kind: "err" }); return; }
+      if (r.kind === "native") {
+        design.open(r.product, { params: r.params, version: r.version, file: { path: f.path, name: f.name } });
+        setRoute("workspace");
+        toast({ text: `Opened ${f.name}` });
+        return;
+      }
+      openOnline(r.section === "studio" ? "web-studio" : "web-editors", await ipc.webOpenFile(f.path));
+      toast({ text: `Opening ${f.name} in the online ${r.section === "studio" ? "Studio" : "editor"}…` });
+    } catch (e) {
+      toast({ text: (e as AppError).message, kind: "err" });
+      loadFiles();
+    }
+  }, [design, nativeIds, openOnline, toast, loadFiles]);
+
+  // A file double-clicked in Explorer, dropped on the window or passed to a second launch.
+  const canOpen = phase === "ready" && !!catalog;
+  const openRef = useRef(openFile);
+  openRef.current = openFile;
+  useEffect(() => {
+    if (!canOpen) return;
+    const take = () => void ipc.takeOpenRequest().then((p) => { if (p) void openRef.current(p); }).catch(() => {});
+    take();
+    const off = listen("open-file-request", take);
+    return () => void off.then((f) => f());
+  }, [canOpen]);
+
+  // The window title names the open file, with a dot while it has unsaved changes.
+  const titleName = route === "workspace" && design.state.product ? (design.state.file?.name ?? String(design.state.params?.name ?? product?.name ?? "")) : "";
+  const titleDirty = route === "workspace" && !!design.state.file && isDirty(design.state);
+  useEffect(() => {
+    void getCurrentWindow().setTitle(titleName ? `${titleDirty ? "\u2022 " : ""}${titleName} \u2014 HingeLab` : "HingeLab").catch(() => {});
+  }, [titleName, titleDirty]);
+
   const save = useCallback(async (how: "save" | "export") => {
     const id = design.state.result?.designId;
     if (!id) return;
@@ -243,10 +309,12 @@ export function App() {
       if (!e.ctrlKey || e.altKey) return;
       const k = e.key.toLowerCase();
       const inWs = route === "workspace";
+      const art = design.state.product === "art";
       if (k === ",") { e.preventDefault(); setRoute("settings"); }
       else if (k === "b") { e.preventDefault(); toggleSidebar(); }
-      else if (k === "s" && inWs) { e.preventDefault(); void save("save"); }
-      else if (k === "e" && inWs) { e.preventDefault(); void save("export"); }
+      else if (k === "o") { e.preventDefault(); void openFile(null); }
+      else if (k === "s" && inWs) { e.preventDefault(); if (art) void save("save"); else void saveProject(e.shiftKey); }
+      else if (k === "e" && inWs) { e.preventDefault(); void save(e.shiftKey ? "save" : "export"); }
       else if (k === "enter" && inWs) { e.preventDefault(); design.refresh(); }
       else if ((k === "=" || k === "+") && inWs) { e.preventDefault(); canvas.current?.zoomIn(); }
       else if (k === "-" && inWs) { e.preventDefault(); canvas.current?.zoomOut(); }
@@ -257,9 +325,9 @@ export function App() {
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [phase, route, save, design, toggleSidebar]);
+  }, [phase, route, save, saveProject, openFile, design, toggleSidebar]);
 
-  // Block the WebView's own context menu and file drops (nothing here opens files).
+  // Block the WebView's own context menu and file drops (dropped project files are opened by the app itself).
   useEffect(() => {
     const menu = (e: MouseEvent) => {
       if (!(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) e.preventDefault();
@@ -309,7 +377,7 @@ export function App() {
       <Sidebar route={route} onRoute={go} account={account} hasDesign={!!design.state.product} update={updater.status} onUpdate={() => setShowUpdate(true)} collapsed={local.sidebarCollapsed} onToggle={toggleSidebar} />
       <div className="main">
         {!online && route !== "workspace" && <div className="offline-bar" role="status">You're offline. Designs are built on HingeLab's servers, so new changes wait until you're back online.</div>}
-        {route === "dashboard" && <Dashboard account={account} catalog={catalog} recent={recent} defaultProduct={local.defaultProduct} onNew={openNew} onPreset={openPreset} onBrowse={() => setRoute("generators")} onOpenRecent={openSaved} onUpgrade={() => web("upgrade")} onOnline={openOnline} />}
+        {route === "dashboard" && <Dashboard account={account} catalog={catalog} recent={recent} files={files} defaultProduct={local.defaultProduct} onNew={openNew} onPreset={openPreset} onBrowse={() => setRoute("generators")} onOpenRecent={openSaved} onOpenFile={(p) => void openFile(p)} onUpgrade={() => web("upgrade")} onOnline={openOnline} />}
         {route === "generators" && <Generators catalog={catalog} plan={plan} initial={design.state.product ?? local.defaultProduct} favorites={favorites} onPreset={openPreset} onNew={openNew} onFavorite={(p, pr) => {
           const hit = favorites.find((f) => f.product === p.id && f.preset === pr.id);
           setFavorites((l) => (hit ? l.filter((f) => f.id !== hit.id) : [{ id: crypto.randomUUID(), product: p.id, preset: pr.id, name: pr.name, note: pr.note, at: Date.now() }, ...l]));
@@ -342,7 +410,7 @@ export function App() {
             onRefresh={design.refresh}
             onUndo={design.undo}
             onRedo={design.redo}
-            onSave={() => void save("save")}
+            onSave={() => void (product.id === "art" ? save("save") : saveProject(false))}
             onExport={() => void save("export")}
             onUpgrade={() => web("upgrade")}
             onRefreshPlan={refreshPlan}

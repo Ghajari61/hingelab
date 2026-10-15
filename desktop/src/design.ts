@@ -18,6 +18,12 @@ export function getPath(o: unknown, key: string): unknown {
   return key.split(".").reduce<unknown>((x, k) => (x && typeof x === "object" ? (x as Params)[k] : undefined), o);
 }
 
+/** The project file a design was opened from or saved to. */
+export interface DesignFile {
+  path: string;
+  name: string;
+}
+
 export interface DesignState {
   product: string | null;
   params: Params | null;
@@ -27,13 +33,21 @@ export interface DesignState {
   error: AppError | null;
   canUndo: boolean;
   canRedo: boolean;
+  file: DesignFile | null;
+  /** The settings as last saved to (or opened from) `file`, as JSON. */
+  savedJson: string | null;
 }
+
+/** Changes since the design was opened or last saved. */
+export const isDirty = (s: DesignState): boolean => (s.file ? s.savedJson !== null && JSON.stringify(s.params) !== s.savedJson : s.canUndo);
 
 const TYPE_DELAY = 450;
 const MAX_HISTORY = 100;
 
 export function useDesign(onFatal: (e: AppError) => void) {
-  const [state, setState] = useState<DesignState>({ product: null, params: null, result: null, status: 0, busy: false, error: null, canUndo: false, canRedo: false });
+  const [state, setState] = useState<DesignState>({ product: null, params: null, result: null, status: 0, busy: false, error: null, canUndo: false, canRedo: false, file: null, savedJson: null });
+  /** The first answer after opening a file sets what "saved" means (the server fills in defaults). */
+  const cleanNext = useRef(false);
   const seq = useRef(0);
   const params = useRef<Params | null>(null);
   const product = useRef<string | null>(null);
@@ -68,7 +82,9 @@ export function useDesign(onFatal: (e: AppError) => void) {
           future.current = [];
         }
       }
-      setState((s) => ({ ...s, product: out.body.product, params: next, result: out.body, status: out.status, busy: false, error: null, ...flags() }));
+      const clean = cleanNext.current ? JSON.stringify(next) : null;
+      cleanNext.current = false;
+      setState((s) => ({ ...s, product: out.body.product, params: next, result: out.body, status: out.status, busy: false, error: null, ...flags(), ...(clean ? { savedJson: clean } : {}) }));
       // The 3D view opened while this build was on its way: build again with the model.
       if (want3d.current && !req.model && out.status === 200) void send({ product: out.body.product, params: next }, false);
     } catch (e) {
@@ -92,16 +108,25 @@ export function useDesign(onFatal: (e: AppError) => void) {
     if (ch && product.current) void send({ product: product.current as GenerateRequest["product"], params: params.current ?? undefined, change: ch });
   }, [send]);
 
-  const open = useCallback((p: string, from: { preset?: string; params?: Params }) => {
+  const open = useCallback((p: string, from: { preset?: string; params?: Params; version?: number; file?: DesignFile }) => {
     if (timer.current) window.clearTimeout(timer.current);
     pending.current = null;
     product.current = p;
     params.current = from.params ?? null;
     past.current = [];
     future.current = [];
-    setState({ product: p, params: from.params ?? null, result: null, status: 0, busy: true, error: null, canUndo: false, canRedo: false });
-    void send({ product: p as GenerateRequest["product"], preset: from.preset, params: from.params });
+    cleanNext.current = !!from.file;
+    setState({ product: p, params: from.params ?? null, result: null, status: 0, busy: true, error: null, canUndo: false, canRedo: false, file: from.file ?? null, savedJson: null });
+    void send({ product: p as GenerateRequest["product"], preset: from.preset, params: from.params, ...(from.version ? { version: from.version } : {}) });
   }, [send]);
+
+  /** The design was saved to `file`: what it is now is what "saved" means. */
+  const markSaved = useCallback((file: DesignFile) => {
+    setState((s) => ({ ...s, file, savedJson: JSON.stringify(params.current) }));
+  }, []);
+
+  /** The settings as they are now, including typing not yet sent. */
+  const current = useCallback(() => ({ product: product.current, params: params.current }), []);
 
   /** An edit: shown at once, sent after a pause in typing (or at once for clicks). */
   const change = useCallback((key: string, value: unknown, immediate: boolean) => {
@@ -146,6 +171,17 @@ export function useDesign(onFatal: (e: AppError) => void) {
 
   const travel = useCallback((dir: -1 | 1) => {
     if (!product.current) return;
+    // Typing not sent yet: Undo takes it back (it never reached the history); Redo sends it first.
+    if (pending.current) {
+      if (timer.current) window.clearTimeout(timer.current);
+      timer.current = null;
+      if (dir > 0) { flush(); return; }
+      pending.current = null;
+      params.current = past.current[past.current.length - 1] ?? params.current;
+      setState((s) => ({ ...s, params: params.current, ...flags() }));
+      void send({ product: product.current as GenerateRequest["product"], params: params.current ?? undefined }, false);
+      return;
+    }
     if (dir < 0 && past.current.length > 1) {
       future.current = [past.current[past.current.length - 1], ...future.current];
       past.current = past.current.slice(0, -1);
@@ -156,12 +192,12 @@ export function useDesign(onFatal: (e: AppError) => void) {
     params.current = past.current[past.current.length - 1];
     setState((s) => ({ ...s, params: params.current, ...flags() }));
     void send({ product: product.current as GenerateRequest["product"], params: params.current }, false);
-  }, [send]);
+  }, [send, flush]);
 
   useEffect(() => () => {
     if (timer.current) window.clearTimeout(timer.current);
     if (retryTimer.current) window.clearTimeout(retryTimer.current);
   }, []);
 
-  return { state, open, change, changeMany, scaleBy, flush, fix, autofix, refresh, setWant3d, undo: () => travel(-1), redo: () => travel(1) };
+  return { state, open, markSaved, current, change, changeMany, scaleBy, flush, fix, autofix, refresh, setWant3d, undo: () => travel(-1), redo: () => travel(1) };
 }

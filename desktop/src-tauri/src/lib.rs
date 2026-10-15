@@ -6,18 +6,20 @@ mod auth;
 mod config;
 mod error;
 mod files;
+mod projects;
 mod store;
 mod web;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 
 use reqwest::Method;
 use serde::Serialize;
 use serde_json::{json, Value};
+use base64::Engine;
 use tauri::webview::PageLoadEvent;
-use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, DragDropEvent, Emitter, Manager, State, WebviewEvent, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 use tokio::sync::oneshot;
@@ -310,6 +312,196 @@ fn set_export_prefs(clear_folder: bool, open_after_export: bool, state: State<'_
     Ok(prefs.clone())
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ProjectSaved {
+    path: Option<String>,
+    name: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OpenedProject {
+    path: String,
+    name: String,
+    /// The file as text when it is a JSON project; None for a Studio (ZIP) project.
+    text: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RecentProject {
+    path: String,
+    name: String,
+    exists: bool,
+}
+
+fn file_name_of(p: &Path) -> String {
+    p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()
+}
+
+fn project_dir(state: &AppState) -> Option<String> {
+    let p = state.prefs.lock().unwrap();
+    p.project_dir.clone().or_else(|| p.last_dir.clone()).filter(|d| PathBuf::from(d).is_dir())
+}
+
+async fn project_save_dialog(app: &AppHandle, file_name: &str, dir: Option<String>) -> Option<PathBuf> {
+    let (tx, rx) = oneshot::channel();
+    let mut b = app.dialog().file().set_title("Save project").set_file_name(file_name).add_filter("HingeLab project", &["oclc"]);
+    if let Some(w) = app.get_webview_window("main") {
+        b = b.set_parent(&w);
+    }
+    if let Some(d) = dir {
+        b = b.set_directory(d);
+    }
+    b.save_file(move |p| {
+        let _ = tx.send(p.and_then(|p| p.into_path().ok()));
+    });
+    rx.await.ok().flatten().map(projects::with_oclc_extension)
+}
+
+async fn project_open_dialog(app: &AppHandle, dir: Option<String>) -> Option<PathBuf> {
+    let (tx, rx) = oneshot::channel();
+    let mut b = app.dialog().file().set_title("Open project").add_filter("HingeLab project", projects::OPEN_EXTS);
+    if let Some(w) = app.get_webview_window("main") {
+        b = b.set_parent(&w);
+    }
+    if let Some(d) = dir {
+        b = b.set_directory(d);
+    }
+    b.pick_file(move |p| {
+        let _ = tx.send(p.and_then(|p| p.into_path().ok()));
+    });
+    rx.await.ok().flatten()
+}
+
+/// A project file the user saved or opened: Save writes over it, Recent lists it.
+fn remember_project(state: &AppState, path: &Path) {
+    state.files.lock().unwrap().projects.insert(path.to_path_buf());
+    let mut prefs = state.prefs.lock().unwrap();
+    prefs.project_dir = path.parent().map(|p| p.to_string_lossy().into_owned());
+    projects::push_recent(&mut prefs.recent_files, path);
+    let _ = files::save_prefs(&state.prefs_dir, &prefs);
+}
+
+async fn write_project_to(target: Option<PathBuf>, content: &str, name: &str, app: &AppHandle, state: &AppState) -> CmdResult<ProjectSaved> {
+    let target = match target {
+        Some(p) => p,
+        None => match project_save_dialog(app, &projects::project_file_name(name), project_dir(state)).await {
+            Some(p) => p,
+            None => return Ok(ProjectSaved { path: None, name: None }),
+        },
+    };
+    projects::write_project(&target, content)?;
+    remember_project(state, &target);
+    Ok(ProjectSaved { name: Some(file_name_of(&target)), path: Some(target.to_string_lossy().into_owned()) })
+}
+
+/// Save: writes over the design's project file when it was opened or saved in this session,
+/// otherwise asks where (like Save As).
+#[tauri::command]
+async fn save_project(content: String, name: String, path: Option<String>, app: AppHandle, state: State<'_, AppState>) -> CmdResult<ProjectSaved> {
+    let known = path.map(PathBuf::from).filter(|p| state.files.lock().unwrap().projects.contains(p));
+    write_project_to(known, &content, &name, &app, &state).await
+}
+
+/// Save As: always asks where.
+#[tauri::command]
+async fn save_project_as(content: String, name: String, app: AppHandle, state: State<'_, AppState>) -> CmdResult<ProjectSaved> {
+    write_project_to(None, &content, &name, &app, &state).await
+}
+
+/// Opens a project file: one from the Recent list or this session, or one picked in the dialog.
+#[tauri::command]
+async fn open_project(path: Option<String>, app: AppHandle, state: State<'_, AppState>) -> CmdResult<Option<OpenedProject>> {
+    let path = match path {
+        Some(p) => {
+            let p = PathBuf::from(p);
+            let known = state.files.lock().unwrap().projects.contains(&p) || state.prefs.lock().unwrap().recent_files.iter().any(|r| Path::new(r) == p);
+            if !known {
+                return Err(CmdError::new("not_found", "Open that file with File > Open."));
+            }
+            p
+        }
+        None => match project_open_dialog(&app, project_dir(&state)).await {
+            Some(p) => p,
+            None => return Ok(None),
+        },
+    };
+    let bytes = projects::read_project(&path)?;
+    remember_project(&state, &path);
+    let text = (!bytes.starts_with(b"PK")).then(|| String::from_utf8_lossy(bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes)).into_owned());
+    Ok(Some(OpenedProject { name: file_name_of(&path), path: path.to_string_lossy().into_owned(), text }))
+}
+
+/// Hands a project the app has no editor for (Letters, Parametric, Studio) to the website view,
+/// which opens it at `web::OPEN_FILE_PAGE` (the UI opens that page next).
+#[tauri::command]
+fn web_open_file(path: String, state: State<'_, AppState>) -> CmdResult<String> {
+    let p = PathBuf::from(&path);
+    if !state.files.lock().unwrap().projects.contains(&p) {
+        return Err(CmdError::new("not_found", "Open that file with File > Open."));
+    }
+    let bytes = projects::read_project(&p)?;
+    web::hold_file(&state, base64::engine::general_purpose::STANDARD.encode(&bytes), file_name_of(&p));
+    Ok(web::OPEN_FILE_PAGE.to_string())
+}
+
+#[tauri::command]
+fn recent_projects(state: State<'_, AppState>) -> Vec<RecentProject> {
+    let list = state.prefs.lock().unwrap().recent_files.clone();
+    list.into_iter()
+        .map(|p| {
+            let path = PathBuf::from(&p);
+            RecentProject { name: file_name_of(&path), exists: path.is_file(), path: p }
+        })
+        .collect()
+}
+
+/// Removes one file from Recent, or all of them when no path is given.
+#[tauri::command]
+fn forget_recent(path: Option<String>, state: State<'_, AppState>) -> CmdResult<()> {
+    let mut prefs = state.prefs.lock().unwrap();
+    match path {
+        Some(p) => prefs.recent_files.retain(|r| r != &p),
+        None => prefs.recent_files.clear(),
+    }
+    files::save_prefs(&state.prefs_dir, &prefs)
+}
+
+/// The project file Windows asked the app to open (a double-click, a drop or a second launch), once.
+#[tauri::command]
+fn take_open_request(state: State<'_, AppState>) -> Option<String> {
+    let mut files = state.files.lock().unwrap();
+    let p = files.pending_open.take()?;
+    files.projects.insert(p.clone());
+    Some(p.to_string_lossy().into_owned())
+}
+
+/// Queues a project file for the UI and tells it (the UI asks with `take_open_request`).
+fn request_open(app: &AppHandle, path: PathBuf) {
+    let Some(state) = app.try_state::<AppState>() else { return };
+    {
+        let mut files = state.files.lock().unwrap();
+        if files.pending_open.as_ref() == Some(&path) {
+            return;
+        }
+        files.pending_open = Some(path);
+    }
+    let _ = app.emit_to("main", "open-file-request", ());
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+    }
+}
+
+fn dropped_project(event: &DragDropEvent) -> Option<PathBuf> {
+    match event {
+        DragDropEvent::Drop { paths, .. } => paths.iter().find(|p| projects::is_project_path(p) && p.is_file()).cloned(),
+        _ => None,
+    }
+}
+
 /// The app's own pages only: anything else (a link, a redirect) is blocked inside the window.
 fn navigation_allowed(url: &Url) -> bool {
     match url.scheme() {
@@ -322,7 +514,10 @@ fn navigation_allowed(url: &Url) -> bool {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            if let Some(p) = projects::project_arg(args, Path::new(&cwd)) {
+                request_open(app, p);
+            }
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.unminimize();
                 let _ = w.set_focus();
@@ -340,7 +535,9 @@ pub fn run() {
         .setup(|app| {
             let prefs_dir = app.path().app_config_dir()?;
             let version = app.package_info().version.to_string();
-            app.manage(AppState { api: Api::new(&version), version, files: Mutex::new(Files::default()), prefs: Mutex::new(files::load_prefs(&prefs_dir)), prefs_dir, web: web::WebState::default() });
+            let cwd = std::env::current_dir().unwrap_or_default();
+            let launch = Files { pending_open: projects::project_arg(std::env::args(), &cwd), ..Files::default() };
+            app.manage(AppState { api: Api::new(&version), version, files: Mutex::new(launch), prefs: Mutex::new(files::load_prefs(&prefs_dir)), prefs_dir, web: web::WebState::default() });
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("HingeLab")
                 .inner_size(1360.0, 860.0)
@@ -355,6 +552,19 @@ pub fn run() {
                 })
                 .build()?;
             Ok(())
+        })
+        .on_window_event(|w, e| {
+            if let WindowEvent::DragDrop(d) = e {
+                if let Some(p) = dropped_project(d) {
+                    request_open(w.app_handle(), p);
+                }
+            }
+        })
+        .on_webview_event(|w, e| {
+            let WebviewEvent::DragDrop(d) = e else { return };
+            if let Some(p) = dropped_project(d) {
+                request_open(w.app_handle(), p);
+            }
         })
         .invoke_handler(tauri::generate_handler![
             app_info,
@@ -373,6 +583,13 @@ pub fn run() {
             get_prefs,
             choose_export_folder,
             set_export_prefs,
+            save_project,
+            save_project_as,
+            open_project,
+            web_open_file,
+            recent_projects,
+            forget_recent,
+            take_open_request,
             web::web_open,
             web::web_bounds,
             web::web_hide,

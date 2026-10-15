@@ -93,6 +93,20 @@ await withBrowser(async (page) => {
   check(/[?&]p=letters/.test(page.url()), "a Letters file opened on the start page opens in Letters");
   await toast(/Opened word\.oclc/, "and says so", 20000);
 
+  // ---- The Windows app hands a file to the website view (D176): `?desktop-open=1` takes it.
+  await page.goto(`${BASE}/app/editor/local?desktop-open=1`);
+  await page.waitForFunction(() => typeof window.hingelabDesktopOpen === "function", null, { timeout: 15000 }).then(() => check(true, "the hand-off page waits for the app's file"), () => check(false, "the hand-off page waits for the app's file"));
+  const b64 = Buffer.from(JSON.stringify({ app: "HingeLab", product: "parametric", version: 1, params: {} })).toString("base64");
+  await page.evaluate(([d, n]) => window.hingelabDesktopOpen?.(d, n), [b64, "from app.oclc"]);
+  await page.waitForURL(/[?&]p=parametric/, { timeout: 20000 }).catch(() => {});
+  check(/[?&]p=parametric/.test(page.url()) && !/desktop-open/.test(page.url()), `a Parametric file from the app opens in Parametric (${page.url()})`);
+  await toast(/Opened from app\.oclc/, "and says so", 20000);
+  await page.goto(`${BASE}/app/editor/local?desktop-open=1`);
+  await page.waitForFunction(() => typeof window.hingelabDesktopOpen === "function", null, { timeout: 15000 }).catch(() => {});
+  await page.evaluate(([d, n]) => window.hingelabDesktopOpen?.(d, n), [Buffer.from("nope").toString("base64"), "junk.oclc"]);
+  await page.getByText("not a HingeLab project").first().waitFor({ timeout: 10000 }).then(() => check(true, "a broken file from the app is refused clearly"), () => check(false, "a broken file from the app is refused clearly"));
+  await page.getByRole("button", { name: "Continue" }).click().catch(() => {});
+
   // ---- Studio: Save to Computer writes .oclc; a classic editor opens it in Studio; Import reads DXF.
   await page.goto(`${BASE}/home`);
   await page.evaluate(() => localStorage.setItem("hingelab-prefs", JSON.stringify({ onboarded: true, laser: "diode" })));

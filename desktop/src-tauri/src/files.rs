@@ -21,14 +21,22 @@ pub struct Files {
     pub next_id: u64,
     /// Files saved in this session; only these can be shown in Explorer.
     pub saved: HashSet<PathBuf>,
+    /// Project files opened or saved in this session; Save writes over these without asking.
+    pub projects: HashSet<PathBuf>,
+    /// A project file waiting to be opened (double-clicked, dropped or passed to a second launch).
+    pub pending_open: Option<PathBuf>,
 }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", default)]
 pub struct Prefs {
     pub export_dir: Option<String>,
     pub last_dir: Option<String>,
     pub open_after_export: bool,
+    /// Where project files were last saved or opened.
+    pub project_dir: Option<String>,
+    /// Most recent first.
+    pub recent_files: Vec<String>,
 }
 
 pub fn load_prefs(dir: &Path) -> Prefs {
@@ -76,7 +84,7 @@ pub fn safe_file_name(name: &str) -> String {
 }
 
 /// Kinds of files the website offers for download: drawings, projects, archives and images.
-const DOWNLOAD_TYPES: &[&str] = &["svg", "dxf", "zip", "json", "hingelab", "png", "jpg", "jpeg", "pdf", "lbrn2", "csv", "txt"];
+const DOWNLOAD_TYPES: &[&str] = &["svg", "dxf", "zip", "json", "hingelab", "oclc", "png", "jpg", "jpeg", "pdf", "lbrn2", "csv", "txt"];
 
 /// A Windows-safe name for a file the website view downloads, or None for a kind HingeLab does not
 /// save (programs, scripts, shortcuts, anything without a known extension).
@@ -156,6 +164,14 @@ mod tests {
     }
 
     #[test]
+    fn old_prefs_keep_their_values() {
+        let p: Prefs = serde_json::from_str("{\"exportDir\":\"C:/out\",\"lastDir\":null,\"openAfterExport\":true}").unwrap();
+        assert_eq!(p.export_dir.as_deref(), Some("C:/out"));
+        assert!(p.open_after_export);
+        assert!(p.recent_files.is_empty());
+    }
+
+    #[test]
     fn svg_check() {
         assert!(looks_like_svg("<?xml version=\"1.0\"?>\n<svg></svg>\n"));
         assert!(!looks_like_svg("MZ\u{90}binary"));
@@ -179,6 +195,7 @@ mod tests {
         assert_eq!(safe_download_name("Gift box.dxf").as_deref(), Some("Gift box.dxf"));
         assert_eq!(safe_download_name("Box.hingelab.json").as_deref(), Some("Box.hingelab.json"));
         assert_eq!(safe_download_name("sheets.ZIP").as_deref(), Some("sheets.zip"));
+        assert_eq!(safe_download_name("Gift box.oclc").as_deref(), Some("Gift box.oclc"));
         assert_eq!(safe_download_name("..\\..\\x.svg").as_deref(), Some("x.svg"));
         assert_eq!(safe_download_name("con.svg").as_deref(), Some("con-download.svg"));
         assert_eq!(safe_download_name(".svg"), None);

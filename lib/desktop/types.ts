@@ -64,6 +64,8 @@ export interface GenerateRequest {
   product: WorkspaceProductId;
   /** Current settings (omit to start from the defaults or a preset). */
   params?: unknown;
+  /** The project file's version when `params` come from a file: older settings are migrated first. */
+  version?: number;
   preset?: string;
   /** One edited setting; choices may change other settings too (applied on the server). */
   change?: { key: string; value: unknown };
@@ -114,6 +116,8 @@ export interface GenerateResponse {
   summary: string;
   /** Labels of fixes applied by this request. */
   applied: string[];
+  /** The settings' format version, written into project files with them (generators). */
+  version?: number;
   /** Present when the design can be exported on the caller's plan. */
   svg?: string;
   fileName?: string;
