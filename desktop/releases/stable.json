@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.29",
-    "pub_date": "2026-10-15T07:54:34.716Z",
-    "notes": "The 3D scale gizmo now works in every design and on every item on the product: click a text, number, picture, motif, tick or label and drag to size it alone. Designs without their own sizes can be scaled as a whole from the 3D view.",
+    "version": "1.0.30",
+    "pub_date": "2026-10-15T12:45:40.847Z",
+    "notes": "Letters and Parametric in the app, pictures in generators, My materials, DXF/PDF/LightBurn export, .oclc projects, undo/reset/randomise everywhere, more settings",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.29_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmprZEVhRm1VUmpVd2RNMjFxZEhqNnEzY0xlWmRGUG9nNXJqc29CaC82SndhWTR4bWVPZm9xU1NncjFKeXFteFRqTHJLazhMMy9KK2lMV0s3Q3VZUUFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDUwNzY5CWZpbGU6SGluZ2VMYWJfMS4wLjI5X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMjkKWDIwZElPWVpKRjJwMGtqS2ZKRnVhVVU0eDVOUTVsT01GSGpNSVcxUitWbDg4Y1dKQWJveSszT2JBenRCYXkzNjVsTVJUU3VFQUJSQkJBemFjSVZ3RGc9PQo=",
-        "size": 3777908
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.30_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm5NRk9SbkZOWjlWQmJGajBneEEvbUJ0SzBTcEpZQW9jUnhSUmRob0xHcS9YQUM1NUl1c0toeVl1S2Zyb2ZVUTBLc05PaU9hUVJmQkJ6WDIyUjZSQ1F3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDY4MTYwCWZpbGU6SGluZ2VMYWJfMS4wLjMwX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMzAKbUw5bGF6TkpBYmovc21zNEUyRnZXb0swSndxUlNaazBqUktrRnBDb1o0NzZIaFFQcFFUQUpkRTMvdW1rZHgraGNtMUQ0dG12MitIcmMrdzZ3eGlQQlE9PQo=",
+        "size": 4269047
       }
     }
   }
