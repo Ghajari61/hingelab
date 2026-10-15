@@ -18,7 +18,7 @@ import { exportLetterSVG, fontInfo, LETTER_DEFAULTS, mergeLetterParams, type Let
 import { LETTER_PRESETS } from "@/lib/letters/presets";
 import { randomLetterStyle } from "@/lib/letters/randomStyle";
 import { buildLetterScene } from "@/lib/letters/scene3d";
-import { addWatermark, lettersLock, needsWatermark, type Plan } from "@/lib/plans";
+import { addWatermark, hasPro, lettersLock, needsWatermark, type Plan } from "@/lib/plans";
 import type { Scene3D } from "@/lib/three/flat";
 import { applyFix, coerce, fieldOf, fileNameOf, FONTS_BY_STYLE, MATERIAL_OPTIONS, modelPart, sheetSize, toIssues, withDefault, withMaterial, type GenerateResult } from "./products";
 import type { DField, DForm, DProduct, DSection, GenerateRequest, GenerateResponse } from "./types";
@@ -202,7 +202,7 @@ export async function generateLetters(r: GenerateRequest, product: DProduct, pla
   if (r.scale !== undefined) return { status: 400, body: { error: "This design cannot be scaled as a whole." } };
   if (r.randomise) {
     const locked = new Set(r.randomise.locked ?? []);
-    const style = randomLetterStyle(p, { pro: plan === "pro" });
+    const style = randomLetterStyle(p, { pro: hasPro(plan) });
     for (const [k, v] of Object.entries(style)) if (!locked.has(k)) p = { ...p, [k]: v };
   }
   const base = (q: LetterParams, issues: GenerateResponse["issues"] = [], applied: string[] = []): GenerateResponse => ({

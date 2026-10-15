@@ -4,13 +4,17 @@
  */
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type Plan = "free" | "pro";
+export type Plan = "free" | "pro" | "business" | "lifetime";
 export type ProductId = "hinge-box" | "letters" | "parametric";
 
 export type ProfileRow = {
   id: string;
   email: string | null;
   stripe_customer_id: string | null;
+  /** Set by the webhook from the subscription item. Absent until the pricing migration is applied. */
+  stripe_price_id: string | null;
+  /** Founder Lifetime, kept even if a later Business subscription ends. */
+  founder: boolean;
   plan: Plan;
   plan_status: string | null;
   current_period_end: string | null;
@@ -129,6 +133,10 @@ export type Database = {
         Args: { p_user: string; p_id: string };
         Returns: { render_path: string; svg_path: string; photo_path: string | null }[];
       };
+      /** How many Founder Lifetime seats are still unsold (200 cap). */
+      founder_seats_left: { Args: Record<string, never>; Returns: number };
+      /** Claims one Founder seat for this user. False when all 200 are taken. Service role only. */
+      grant_founder: { Args: { p_user: string }; Returns: boolean };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };

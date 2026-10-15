@@ -10,7 +10,7 @@ import {
 import { PARAMETRIC_CATEGORIES, PARAMETRIC_PRESETS, type Finish, type ParametricCategory, type ParametricPreset } from "@/lib/parametric/presets";
 import { PRESET_PARTS } from "@/lib/parametric/presetParts";
 import type { ParametricParams } from "@/lib/parametric/types";
-import { parametricLocks, type Plan } from "@/lib/plans";
+import { hasPro, parametricLocks, type Plan } from "@/lib/plans";
 import type { MyPreset } from "@/lib/userPresets";
 import { drawPreview } from "./designDraw";
 import "./designs.css";
@@ -78,7 +78,7 @@ export default function DesignStudio({ initialTab, plan, mine, onRemoveMine, onA
   const [design, setDesign] = useState<Design>(() => randomDesign(newSeed()));
   const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const showPro = plan !== "pro";
+  const showPro = !hasPro(plan);
 
   useEffect(() => {
     const before = document.activeElement as HTMLElement | null;

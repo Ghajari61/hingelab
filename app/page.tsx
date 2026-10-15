@@ -10,7 +10,9 @@ import { CutSheet } from "@/components/site/CutSheet";
 import { HeroGenerator } from "@/components/site/HeroGenerator";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
-import { FREE_PROJECT_LIMIT, PLAN_ROWS, PRICES, PRO_BENEFITS } from "@/lib/plans";
+import { Pricing, type PriceCard } from "@/components/site/Pricing";
+import { founderSeatsLeft } from "@/lib/billing/founder";
+import { BATCH_FREE, BATCH_PRO, BUSINESS_SEATS, COMMERCIAL_LICENSE, FOUNDER_CAP, FREE_PROJECT_LIMIT, PLAN_ROWS, PRICES, PRO_BENEFITS } from "@/lib/plans";
 import { desktopRelease } from "@/lib/site/release";
 import { siteProducts, totalPresets, type SiteIcon } from "@/lib/site/products";
 import { GALLERY, isProSample, sheetFor } from "@/lib/site/samples";
@@ -77,11 +79,20 @@ const FAQ = [
   },
   {
     q: "What does Pro add?",
-    a: `${PRO_BENEFITS.join(". ")}. Pro is $${PRICES.monthly} a month or $${PRICES.yearly} a year, and you can cancel at any time from Billing.`,
+    a: `${PRO_BENEFITS.join(". ")}. Batches of up to ${BATCH_PRO} items. Pro is $${PRICES.monthly} a month or $${PRICES.yearly} a year, and you can cancel at any time from Billing.`,
+  },
+  {
+    q: "What does Business add?",
+    a: `Business is everything in Pro, plus unlimited batches, ${BUSINESS_SEATS.toLowerCase()}, priority support, and a commercial-use license. It is $${PRICES.businessMonthly} a month or $${PRICES.businessYearly} a year.`,
+  },
+  {
+    q: "What is Founder Lifetime?",
+    a: `Founder Lifetime is a one-time payment of $${PRICES.lifetime} for the first ${FOUNDER_CAP} buyers. It includes Pro features forever, not Business. When all ${FOUNDER_CAP} are claimed, the offer closes.`,
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const seatsLeft = await founderSeatsLeft();
   const products = siteProducts();
   const presets = totalPresets();
   const mosaic = products.slice(0, 9);
@@ -246,43 +257,37 @@ export default function HomePage() {
 
         <section id="pricing" className="band">
           <div className="band-head"><h2>Pricing</h2><p>Start free. Upgrade when you sell what you make.</p></div>
-          <div className="pricing">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col"><span className="sr-only">Feature</span></th>
-                  <th scope="col" className="plan-col">
-                    <span className="plan-badge quiet">To try it</span>
-                    <span className="plan-kicker">Free</span>
-                    <span className="price">$0</span>
-                    <span className="price-alt">No account needed</span>
-                  </th>
-                  <th scope="col" className="plan-col pro-col">
-                    <span className="plan-badge">Best for selling</span>
-                    <span className="plan-kicker">Pro</span>
-                    <span className="price">${PRICES.monthly}<small> / month</small></span>
-                    <span className="price-alt">or ${PRICES.yearly} / year{PRICES.monthly * 12 > PRICES.yearly && <span className="save">Save ${PRICES.monthly * 12 - PRICES.yearly}</span>}</span>
-                  </th>
+          <Pricing cards={priceCards(seatsLeft)} />
+          <table className="pricing-sr">
+            <caption>Plan comparison</caption>
+            <thead>
+              <tr>
+                <th scope="col">Feature</th>
+                <th scope="col">Free</th>
+                <th scope="col">Pro</th>
+                <th scope="col">Business</th>
+                <th scope="col">Founder Lifetime</th>
+              </tr>
+            </thead>
+            <tbody>
+              {PLAN_ROWS.map((r) => (
+                <tr key={r.feature}>
+                  <th scope="row">{r.feature}</th>
+                  <td>{r.free === "✓" ? "Included" : r.free}</td>
+                  <td>{r.pro === "✓" ? "Included" : r.pro}</td>
+                  <td>{r.pro === "✓" ? "Included" : r.feature === "Batch generation" ? "Unlimited" : r.pro}</td>
+                  <td>{r.pro === "✓" ? "Included" : r.pro}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {PLAN_ROWS.map((r) => (
-                  <tr key={r.feature}>
-                    <th scope="row">{r.feature}</th>
-                    <td className="plan-col"><span className="feat-name">{r.feature}</span>{r.free === "✓" ? <Check /> : r.free}</td>
-                    <td className="plan-col pro-col"><span className="feat-name">{r.feature}</span>{r.pro === "✓" ? <Check /> : r.pro}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td />
-                  <td className="plan-col"><Link href="/app/editor/local" className="btn-ghost plan-cta">Start free</Link></td>
-                  <td className="plan-col pro-col"><Link href="/signup?next=%2Fapp%2Fbilling" className="btn-primary plan-cta">Get Pro</Link></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+              ))}
+              <tr>
+                <th scope="row">Commercial-use license</th>
+                <td>Personal and commercial cutting</td>
+                <td>Personal and commercial cutting</td>
+                <td>{COMMERCIAL_LICENSE}</td>
+                <td>Personal and commercial cutting</td>
+              </tr>
+            </tbody>
+          </table>
         </section>
 
         <section id="faq" className="band faq">
@@ -310,6 +315,37 @@ export default function HomePage() {
   );
 }
 
-function Check() {
-  return <svg className="check" width="16" height="16" viewBox="0 0 16 16" role="img" aria-label="Included"><path d="M3 8.5l3.2 3L13 4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const billingNext = (plan: string) => `/signup?next=${encodeURIComponent(`/app/billing?plan=${plan}`)}`;
+
+function priceCards(seatsLeft: number | null): PriceCard[] {
+  const cards: PriceCard[] = [
+    {
+      id: "free", badge: "To try it", quiet: true, name: "Free", monthly: 0, yearly: 0, alt: "No account needed",
+      features: ["Watermarked SVG", `${FREE_PROJECT_LIMIT} cloud projects`, "Rounded + Straight", "Letters preview, one-letter boxes", "Parametric library fins, 30 parts", `Batches of ${BATCH_FREE}`],
+      cta: "Start free", href: "/app/editor/local",
+    },
+    {
+      id: "pro", badge: "Most popular", popular: true, name: "Pro", monthly: PRICES.monthly, yearly: PRICES.yearly,
+      alt: "",
+      features: ["Clean SVG, no mark", "Unlimited cloud projects", "All shapes and patterns", "Letters and every tool", "Full parametric sculptures", `Batches of ${BATCH_PRO}`],
+      cta: "Get Pro", href: billingNext("pro"), primary: true,
+    },
+    {
+      id: "business", badge: "For a shop", name: "Business", monthly: PRICES.businessMonthly, yearly: PRICES.businessYearly,
+      alt: "",
+      features: ["Everything in Pro", "Unlimited batches", BUSINESS_SEATS, "Commercial-use license", "Priority support"],
+      note: COMMERCIAL_LICENSE,
+      cta: "Get Business", href: billingNext("business"), primary: true,
+    },
+  ];
+  if (seatsLeft !== 0) {
+    cards.push({
+      id: "lifetime", badge: "One time", name: "Founder Lifetime", monthly: null, yearly: null, once: `$${PRICES.lifetime}`,
+      alt: seatsLeft === null ? `Limited to the first ${FOUNDER_CAP}` : `${seatsLeft} of ${FOUNDER_CAP} left`,
+      features: ["Everything in Pro, forever", "One payment, no renewal", "Not a Business plan"],
+      cta: "Get Lifetime", href: billingNext("lifetime"),
+    });
+  }
+  return cards;
 }
+

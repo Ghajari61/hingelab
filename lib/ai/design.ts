@@ -29,9 +29,9 @@ import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_OPEN_PATH, type AIDesign, type AIDesig
  * Gateway model ids (provider/model), tried in order; the deployment can override the first with
  * AI_DESIGN_MODEL. The last one is open to AI Gateway's free tier, which refuses the others.
  */
-const MODEL = "google/gemini-3.8-flash";
+const MODEL = "openai/gpt-6-astra";
 const FALLBACK_MODELS = ["openai/gpt-5.6-luna", "openai/gpt-5-mini"];
-const OPENAI_MODEL = "gpt-5.6-terra";
+const OPENAI_MODEL = "gpt-6-astra";
 const TIMEOUT_MS = 50_000;
 /** An original design: drawing, rendering and one look at the result (the routes allow 180 s). */
 const ART_TIMEOUT_MS = 150_000;

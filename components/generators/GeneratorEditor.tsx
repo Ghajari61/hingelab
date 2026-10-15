@@ -26,6 +26,7 @@ import { StatusBar } from "@/components/editor/StatusBar";
 import { Dialogs, type ModalState } from "@/components/editor/dialogs";
 import { HelpContext, useHelpPanel } from "@/components/help/HelpContext";
 import { usePlan } from "@/components/billing/usePlan";
+import { batchLimitMessage, designBatchCount, hasPro } from "@/lib/plans";
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 import { getLoadedFont, loadHarfBuzz } from "@/components/letters/runtime";
 import { fontsForExport, useFontUploads } from "@/components/letters/useFontUploads";
@@ -221,7 +222,8 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const photos = out ? out.parts.reduce((n, pt) => n + (pt.images?.length ?? 0), 0) : 0;
   const gated = out ? designGates(built as { sheet?: { nest?: unknown } }, photos, account.plan, flags) : [];
   const lock = [out && def.pro ? def.pro(built, out) : null, ...gated].filter(Boolean).join(" ") || null;
-  const locked = !!lock && account.plan !== "pro";
+  const locked = !!lock && !hasPro(account.plan);
+  const batchNote = batchLimitMessage(account.plan, designBatchCount(params), !account.configured);
   const issues = useMemo<Issue<P>[]>(
     () => (out ? [
       ...def.check(deferred, out),
@@ -296,6 +298,8 @@ function GenEditor({ def, onProduct, onHome, start }: {
     if (out.notice) { toastMsg(out.notice); return null; }
     if (nesting) { toastMsg("Still nesting the parts by shape. Wait a moment, or press Cancel to keep the box layout."); return null; }
     if (issues.some((i) => i.code === "MISSING_GLYPHS")) { toastMsg("Pick a font that has every character first"); return null; }
+    const over = batchLimitMessage(account.plan, designBatchCount(params), !account.configured);
+    if (over) { setUpgrade(over); return null; }
     if (!lock || !account.configured) return genSVG(def, built, lay);
     if (locked) { setUpgrade(lock); return null; }
     // A Pro design: the server checks the plan and builds it again.
@@ -671,6 +675,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
             sheet={sheetProps}
             onBatch={() => { const l = gateLock("batch", account.plan, flags); if (l) setUpgrade(l); else setBatching(true); }}
             checks={<>
+              {batchNote && <p className="note err" role="status">{batchNote} <button type="button" className="btn-ghost-sm" onClick={() => setUpgrade(batchNote)}>Upgrade</button></p>}
               <IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} />
               {lay && <JobEstimate svg={localSVG} version={lay} sheets={arranged.sheets} material={params.material} units={units === "in" ? "in" : "mm"} />}
             </>}
@@ -703,7 +708,9 @@ function GenEditor({ def, onProduct, onHome, start }: {
       )}
       {batching && (
         <BatchDialog
-          def={def} params={params} ctx={ctx} start={String(getPath(params, "job.names") ?? "")} pro={account.plan === "pro"}
+          def={def} params={params} ctx={ctx} start={String(getPath(params, "job.names") ?? "")} pro={hasPro(account.plan)}
+          capOf={(n) => batchLimitMessage(account.plan, n, !account.configured)}
+          onUpgrade={(msg) => { setBatching(false); setUpgrade(msg); }}
           base={def.fileName(built)} onClose={() => setBatching(false)} toast={toastMsg}
         />
       )}

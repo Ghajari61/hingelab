@@ -18,7 +18,7 @@ import { allSheetsSVG, computeParametric, LIBRARY, loadSource, packOutline, type
 import { CLOCK_INSERTS, FORMULA_DEFAULTS, LEAF_CLOCK, mergeParametricParams, PARAMETRIC_DEFAULTS, TEXT_DEFAULTS } from "@/lib/parametric/defaults";
 import { designParams, randomDesign } from "@/lib/parametric/generator";
 import { PARAMETRIC_PRESETS } from "@/lib/parametric/presets";
-import { addWatermark, needsWatermark, parametricLocks, type Plan } from "@/lib/plans";
+import { addWatermark, hasPro, needsWatermark, parametricLocks, type Plan } from "@/lib/plans";
 import { finishScene, type Scene3D } from "@/lib/three/flat";
 import { coerce, fileNameOf, FONTS_BY_STYLE, MATERIAL_OPTIONS, modelPart, sheetSize, withDefault, type GenerateResult } from "./products";
 import type { DField, DForm, DIssue, DProduct, DSection, GenerateRequest, GenerateResponse } from "./types";
@@ -267,7 +267,7 @@ function change(p: P, key: string, value: unknown): P | { error: string } {
 /** A random design for the same material and sheet; on the Free plan, one the plan includes. */
 function randomParametric(p: P, plan: Plan, rnd: () => number = Math.random): P {
   const pick = <T,>(a: readonly T[]) => a[Math.min(a.length - 1, Math.floor(rnd() * a.length))];
-  if (plan === "pro") {
+  if (hasPro(plan)) {
     const seed = 1 + Math.floor(rnd() * 999_998);
     return mergeParametricParams({ ...designParams(randomDesign(seed)), material: p.material, joints: p.joints, labels: p.labels, quality: p.quality, layers: p.layers });
   }

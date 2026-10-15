@@ -7,7 +7,37 @@ import type { Plan } from "@/lib/supabase/types";
 
 export type { Plan };
 
-export const PRICES = { monthly: 9, yearly: 79, currency: "USD" } as const;
+/**
+ * Prices for new checkouts. `legacyMonthly` / `legacyYearly` are the Pro prices already on
+ * existing subscriptions ($9 / $79). Those Stripe prices are never edited; new checkouts use
+ * `monthly` / `yearly` and the Business and Lifetime prices below.
+ */
+export const PRICES = {
+  monthly: 12,
+  yearly: 99,
+  businessMonthly: 29,
+  businessYearly: 290,
+  lifetime: 179,
+  legacyMonthly: 9,
+  legacyYearly: 79,
+  currency: "USD",
+} as const;
+
+/** First Founder Lifetime buyers. The live count comes from the database. */
+export const FOUNDER_CAP = 200;
+
+/** Items in one batch (names, table numbers, or copies). Business has no plan cap. */
+export const BATCH_FREE = 5;
+export const BATCH_PRO = 30;
+
+/**
+ * Stated on the Business card and in the Terms. Free and Pro may already sell what they cut;
+ * Business is the plan that says so as a license.
+ */
+export const COMMERCIAL_LICENSE = "Business includes a commercial-use license: you may sell the physical objects you cut and the files you export, including work for clients, without a per-item royalty to HingeLab.";
+
+/** Shown on the Business card. Not enforced yet — there is no device or seat ledger. */
+export const BUSINESS_SEATS = "Up to 3 devices signed in at once";
 
 export const FREE_PROJECT_LIMIT = 3;
 
@@ -29,6 +59,7 @@ export const PLAN_ROWS: { feature: string; free: string; pro: string }[] = [
   { feature: "Shapes and patterns", free: "Rounded + Straight", pro: "All" },
   { feature: "Letters and future tools", free: "Preview, and one-letter boxes", pro: "✓" },
   { feature: "Parametric sculptures", free: `Library shapes as parallel fins, up to ${FREE_PARAMETRIC_PARTS} parts`, pro: "Your 3D files, photos and formulas, every method" },
+  { feature: "Batch generation", free: `Up to ${BATCH_FREE} items`, pro: `Up to ${BATCH_PRO} items` },
 ];
 
 export const PRO_BENEFITS = [
@@ -41,15 +72,75 @@ export const PRO_BENEFITS = [
 ];
 
 export function planOf(value: unknown): Plan {
-  return value === "pro" ? "pro" : "free";
+  return value === "pro" || value === "business" || value === "lifetime" ? value : "free";
+}
+
+/** Pro, Founder Lifetime and Business all include today's Pro features. */
+export function hasPro(plan: Plan): boolean {
+  return plan === "pro" || plan === "lifetime" || plan === "business";
+}
+
+export function planLabel(plan: Plan): string {
+  if (plan === "business") return "Business";
+  if (plan === "lifetime") return "Founder Lifetime";
+  if (plan === "pro") return "Pro";
+  return "Free";
+}
+
+/** free < pro = lifetime < business. */
+export function planRank(plan: Plan): number {
+  if (plan === "business") return 2;
+  if (plan === "pro" || plan === "lifetime") return 1;
+  return 0;
+}
+
+export type Entitlements = {
+  tier: Plan;
+  /** Clean export, every shape, letters, parametric, unlimited cloud projects. */
+  pro: boolean;
+  watermark: boolean;
+  projectLimit: number;
+  /** Null when this plan has no batch cap. The editor's own safety cap still applies. */
+  batchLimit: number | null;
+  /**
+   * Devices signed in at once. TODO: not enforced. There is no seat ledger yet; this is only
+   * the number the pricing page and Business card state.
+   */
+  seats: number;
+  commercialUse: boolean;
+  prioritySupport: boolean;
+};
+
+/**
+ * What `user` is allowed to do. Pass `{ open: true }` for the no-account editor (Supabase is not
+ * configured): every feature stays open and batches are not plan-capped, which is how that editor
+ * works today.
+ */
+export function getEntitlements(user: Plan | { plan?: unknown } | null | undefined, opts?: { open?: boolean }): Entitlements {
+  if (opts?.open) {
+    return { tier: "pro", pro: true, watermark: false, projectLimit: Infinity, batchLimit: null, seats: 1, commercialUse: false, prioritySupport: false };
+  }
+  const tier = typeof user === "object" && user !== null ? planOf(user.plan) : planOf(user);
+  const pro = hasPro(tier);
+  const business = tier === "business";
+  return {
+    tier,
+    pro,
+    watermark: !pro,
+    projectLimit: pro ? Infinity : FREE_PROJECT_LIMIT,
+    batchLimit: business ? null : tier === "free" ? BATCH_FREE : BATCH_PRO,
+    seats: business ? 3 : 1,
+    commercialUse: business,
+    prioritySupport: business,
+  };
 }
 
 export function canUseShape(plan: Plan, shape: Params["shape"]): boolean {
-  return plan === "pro" || FREE_SHAPES.includes(shape);
+  return hasPro(plan) || FREE_SHAPES.includes(shape);
 }
 
 export function canUsePattern(plan: Plan, pattern: Params["pattern"]): boolean {
-  return plan === "pro" || FREE_PATTERNS.includes(pattern);
+  return hasPro(plan) || FREE_PATTERNS.includes(pattern);
 }
 
 /** Pro features a Hinge Box design uses that the plan does not include (empty = allowed). */
@@ -73,7 +164,7 @@ export function isSingleLetterBox(p: { mode: string; text: string }): boolean {
 
 /** Why a Letters design cannot be exported on this plan (null = allowed). */
 export function lettersLock(plan: Plan, p: { mode: string; text: string }): string | null {
-  if (plan === "pro" || isSingleLetterBox(p)) return null;
+  if (hasPro(plan) || isSingleLetterBox(p)) return null;
   return "Letters is a Pro feature. Design anything here; on the Free plan you can export a Letter Box of a single letter, with the small HingeLab mark.";
 }
 
@@ -86,7 +177,7 @@ const METHOD_NAMES: Record<string, string> = { stacked: "Stacked layers", waffle
  * so it is locked by its method alone.
  */
 export function parametricLocks(plan: Plan, p: { source: { kind: string }; method: string }, partCount?: number): string[] {
-  if (plan === "pro") return [];
+  if (hasPro(plan)) return [];
   const out: string[] = [];
   if (p.method !== "curveNormal" && p.source.kind !== "library") out.push(SOURCE_NAMES[p.source.kind] ?? "This source");
   if (p.method !== "parallel") out.push(METHOD_NAMES[p.method] ?? "This method");
@@ -103,16 +194,71 @@ export function parametricLock(plan: Plan, p: { source: { kind: string }; method
 }
 
 export function needsWatermark(plan: Plan): boolean {
-  return plan !== "pro";
+  return !hasPro(plan);
 }
 
 export function projectLimit(plan: Plan): number {
-  return plan === "pro" ? Infinity : FREE_PROJECT_LIMIT;
+  return getEntitlements(plan).projectLimit;
 }
 
 /** Subscription statuses that keep Pro. `past_due` keeps it while Stripe retries the card. */
 export function planForStatus(status: string | null | undefined): Plan {
   return status === "active" || status === "trialing" || status === "past_due" ? "pro" : "free";
+}
+
+/**
+ * Paid status plus the Stripe price. Unknown prices stay Pro, so existing $9/$79 subscriptions
+ * and any price this server does not recognise keep Pro features. Business prices are the new
+ * PRICE_BUSINESS_* env ids only.
+ */
+export function planForPrice(status: string | null | undefined, priceId: string | null | undefined): Plan {
+  if (planForStatus(status) !== "pro") return "free";
+  const business = [process.env.PRICE_BUSINESS_MONTHLY, process.env.PRICE_BUSINESS_YEARLY].filter(Boolean);
+  if (priceId && business.includes(priceId)) return "business";
+  return "pro";
+}
+
+/** Copy for a subscriber still on the original Pro price. Null for every other price. */
+export function lockedPriceCopy(priceId: string | null | undefined): string | null {
+  if (priceId && priceId === process.env.STRIPE_PRICE_PRO_MONTHLY) return `Your price is locked at $${PRICES.legacyMonthly}/month`;
+  if (priceId && priceId === process.env.STRIPE_PRICE_PRO_YEARLY) return `Your price is locked at $${PRICES.legacyYearly}/year`;
+  return null;
+}
+
+function textLines(value: unknown): number {
+  if (typeof value !== "string") return 0;
+  return value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean).length;
+}
+
+/**
+ * How many items one export or batch would make: names, table numbers, or copies, multiplied when
+ * a name list is also copied. Does not change how a generator builds those items.
+ */
+export function designBatchCount(params: unknown): number {
+  if (!params || typeof params !== "object") return 1;
+  const p = params as Record<string, unknown>;
+  const job = p.job as { names?: unknown } | undefined;
+  const sheet = p.sheet as { copies?: unknown } | undefined;
+  const names = textLines(job?.names);
+  const batch = p.batch as { mode?: unknown; from?: unknown; to?: unknown; list?: unknown } | undefined;
+  let tables = 0;
+  if (batch && typeof batch === "object") {
+    if (batch.mode === "list") tables = textLines(batch.list);
+    else if (typeof batch.from === "number" && typeof batch.to === "number") tables = Math.max(0, Math.floor(batch.to) - Math.floor(batch.from) + 1);
+  }
+  const items = Math.max(names, tables, 1);
+  const copies = typeof sheet?.copies === "number" && sheet.copies > 1 ? Math.floor(sheet.copies) : 1;
+  return items * copies;
+}
+
+/** Why this batch is over the plan, or null when it is allowed. */
+export function batchLimitMessage(plan: Plan, count: number, open = false): string | null {
+  const limit = getEntitlements(plan, { open }).batchLimit;
+  if (limit == null || count <= limit) return null;
+  if (plan === "free" && count <= BATCH_PRO) {
+    return `This batch has ${count} items. The Free plan allows ${limit} per batch. Pro allows ${BATCH_PRO}.`;
+  }
+  return `This batch has ${count} items. Your plan allows ${limit} per batch. Business allows unlimited batches.`;
 }
 
 const MARK_STRIP = 8;

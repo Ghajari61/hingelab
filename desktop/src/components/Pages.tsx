@@ -25,7 +25,7 @@ const ago = (t: number) => {
 
 const folderOf = (path: string) => path.replace(/[\\/][^\\/]*$/, "");
 
-const planName = (a: DesktopAccount | null) => (a?.plan === "pro" ? "Pro" : "Free");
+const planName = (a: DesktopAccount | null) => a?.tier === "business" ? "Business" : a?.tier === "lifetime" ? "Founder" : a?.plan === "pro" ? "Pro" : "Free";
 
 // ---------------------------------------------------------------- Dashboard
 

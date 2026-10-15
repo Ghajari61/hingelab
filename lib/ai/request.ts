@@ -1,6 +1,6 @@
 import "server-only";
 /** Request checks shared by the website's and the desktop app's AI designer routes. */
-import type { Plan } from "@/lib/plans";
+import { hasPro, type Plan } from "@/lib/plans";
 import { LIMITS, rateLimit, type LimitResult } from "@/lib/security/rateLimit";
 import { isImageDataURL } from "@/lib/security/svg";
 import { isAIProduct, MAX_IMAGE_CHARS, MAX_IMAGE_NOTE, MAX_PROMPT, MAX_REVISE_CHARS, type AIDesignRequest, type AIRevise } from "./types";
@@ -59,13 +59,13 @@ function parseRevise(v: unknown): AIRevise | null {
 export async function aiAllowance(plan: Plan, userId: string): Promise<LimitResult & { daily?: boolean }> {
   const burst = await rateLimit(LIMITS.aiDesign, `user:${userId}`);
   if (!burst.ok) return burst;
-  const day = await rateLimit(plan === "pro" ? LIMITS.aiDesignDayPro : LIMITS.aiDesignDayFree, `user:${userId}`);
+  const day = await rateLimit(hasPro(plan) ? LIMITS.aiDesignDayPro : LIMITS.aiDesignDayFree, `user:${userId}`);
   return day.ok ? day : { ...day, daily: true };
 }
 
 export function aiLimitMessage(plan: Plan, daily?: boolean): string {
   if (!daily) return "Too many AI designs in a short time. Wait a few minutes and try again.";
-  return plan === "pro"
+  return hasPro(plan)
     ? `You have used today's ${LIMITS.aiDesignDayPro.limit} AI designs. Try again tomorrow.`
     : `You have used today's ${LIMITS.aiDesignDayFree.limit} free AI designs. Upgrade to Pro for ${LIMITS.aiDesignDayPro.limit} a day, or try again tomorrow.`;
 }

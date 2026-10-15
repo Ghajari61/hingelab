@@ -174,7 +174,10 @@ export interface GenerateResponse {
 
 export interface DesktopAccount {
   user: { id: string; email: string | null; name: string | null };
+  /** "pro" for every paid tier, so apps that only understand Free and Pro stay unlocked. */
   plan: DesktopPlan;
+  /** The real plan. Absent on older responses. */
+  tier?: "free" | "pro" | "business" | "lifetime";
   status: string | null;
   periodEnd: string | null;
   entitlements: { cleanExport: boolean; proShapes: boolean; proGenerators: boolean };

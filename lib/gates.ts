@@ -4,7 +4,7 @@
  * No payment logic lives here; `plan` comes from the account as everywhere else.
  */
 import type { FlagId } from "./flags";
-import type { Plan } from "./plans";
+import { hasPro, type Plan } from "./plans";
 
 export type ProFeature = "batch" | "lbrn2" | "nesting" | "photoEngrave" | "customFonts";
 
@@ -21,7 +21,7 @@ export const PRO_FEATURES: Record<ProFeature, { flag: FlagId; name: string; why:
 
 /** Why `feature` is locked for `plan` with these flags, or null when it is open. */
 export function gateLock(feature: ProFeature, plan: Plan, flags: ReadonlySet<FlagId>): string | null {
-  if (plan === "pro") return null;
+  if (hasPro(plan)) return null;
   const f = PRO_FEATURES[feature];
   return flags.has(f.flag) ? f.why : null;
 }

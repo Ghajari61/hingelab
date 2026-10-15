@@ -86,10 +86,12 @@ export async function revokeAllDesktopSessions(userId: string): Promise<number> 
  * so and the paid period has not ended more than the grace period ago.
  */
 export function effectivePlan(plan: unknown, periodEnd: string | null | undefined, now = Date.now()): Plan {
-  if (planOf(plan) !== "pro") return "free";
-  if (!periodEnd) return "pro";
+  const p = planOf(plan);
+  if (p === "lifetime") return "lifetime";
+  if (p !== "pro" && p !== "business") return "free";
+  if (!periodEnd) return p;
   const end = Date.parse(periodEnd);
-  return Number.isNaN(end) || end + PERIOD_GRACE_MS >= now ? "pro" : "free";
+  return Number.isNaN(end) || end + PERIOD_GRACE_MS >= now ? p : "free";
 }
 
 export async function desktopPlan(userId: string): Promise<Plan> {

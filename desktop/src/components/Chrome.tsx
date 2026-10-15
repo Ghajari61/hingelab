@@ -89,9 +89,9 @@ export function Sidebar({ route, onRoute, account, hasDesign, update, onUpdate, 
           </button>
         )}
         {account && (
-          <button type="button" className="me" onClick={() => onRoute("settings")} aria-label={collapsed ? `${who}, ${account.plan === "pro" ? "Pro" : "Free"} plan` : undefined} title={account.user.email ?? ""}>
+          <button type="button" className="me" onClick={() => onRoute("settings")} aria-label={collapsed ? `${who}, ${account.tier === "business" ? "Business" : account.tier === "lifetime" ? "Founder" : account.plan === "pro" ? "Pro" : "Free"} plan` : undefined} title={account.user.email ?? ""}>
             <span className={`avatar${account.plan === "pro" ? " is-pro" : ""}`} style={{ background: avatarBackground(account.user.email || who) }} aria-hidden>{avatarInitials(account.user.email, account.user.name)}</span>
-            <span className="me-text"><b>{who}</b><small>{account.plan === "pro" ? "Pro plan" : "Free plan"}</small></span>
+            <span className="me-text"><b>{who}</b><small>{account.tier === "business" ? "Business plan" : account.tier === "lifetime" ? "Founder plan" : account.plan === "pro" ? "Pro plan" : "Free plan"}</small></span>
           </button>
         )}
       </div>

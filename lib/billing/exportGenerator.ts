@@ -9,7 +9,7 @@ import { sanitizeGeneratorParams } from "@/lib/generators/sanitize";
 import { makeTextFn } from "@/lib/generators/text";
 import type { AnyGenerator, BuildContext, GenBase } from "@/lib/generators/types";
 import type { LoadedFont } from "@/lib/letters/fonts";
-import type { Plan } from "@/lib/plans";
+import { batchLimitMessage, designBatchCount, hasPro, type Plan } from "@/lib/plans";
 import { bundledFont, FontError, serverHarfBuzz, uploadedFont } from "./letterFonts";
 
 export type GeneratorExport =
@@ -58,6 +58,8 @@ export async function exportGeneratorForPlan(id: unknown, raw: unknown, plan: Pl
   if (!isGeneratorId(id)) return { ok: false, status: 400, error: "Unknown product." };
   const def = await loadGenerator[id]();
   const p = sanitizeGeneratorParams(def, def.merge(raw));
+  const over = batchLimitMessage(plan, designBatchCount(p));
+  if (over) return { ok: false, status: 403, error: over };
   const ctx = await serverBuildContext(def, p, uploads);
   if (!ctx) return { ok: false, status: 400, error: "This design uses a font that is not available. Pick another font, then export." };
   if ("error" in ctx) return { ok: false, status: 422, error: ctx.error as string };
@@ -67,6 +69,6 @@ export async function exportGeneratorForPlan(id: unknown, raw: unknown, plan: Pl
   const out = a.result.out;
   if (out.missing?.length) return { ok: false, status: 422, error: "The font is missing some characters. Pick another font, then export." };
   const lock = def.pro?.(a.params, out) ?? null;
-  if (lock && plan !== "pro") return { ok: false, status: 403, error: lock };
+  if (lock && !hasPro(plan)) return { ok: false, status: 403, error: lock };
   return { ok: true, svg: genSVG(def, a.params, a.lay), fileName: def.fileName(a.params) + ".svg" };
 }

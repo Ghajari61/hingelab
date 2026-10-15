@@ -6,7 +6,7 @@ import "server-only";
  */
 import { generateText, stepCountIs, tool, type ModelMessage } from "ai";
 import { z } from "zod";
-import type { Plan } from "@/lib/plans";
+import { hasPro, type Plan } from "@/lib/plans";
 import { LIMITS, rateLimit, type LimitResult } from "@/lib/security/rateLimit";
 import { machineById, MATERIAL_PRESETS, STARTING_POINT_NOTE, type LaserType, type MaterialPreset } from "@/lib/studio/library";
 import { aiAllowance, aiLimitMessage } from "@/lib/ai/request";
@@ -25,7 +25,7 @@ export class StudioError extends Error {
 export async function spendCredits(plan: Plan, userId: string, cost: number): Promise<LimitResult & { daily?: boolean }> {
   const burst = await rateLimit(LIMITS.aiStudio, `user:${userId}`);
   if (!burst.ok) return burst;
-  const rule = plan === "pro" ? LIMITS.aiStudioDayPro : LIMITS.aiStudioDayFree;
+  const rule = hasPro(plan) ? LIMITS.aiStudioDayPro : LIMITS.aiStudioDayFree;
   let last: LimitResult = { ok: true, retryAfter: 0 };
   for (let i = 0; i < cost; i++) {
     last = await rateLimit(rule, `user:${userId}`);
@@ -36,7 +36,7 @@ export async function spendCredits(plan: Plan, userId: string, cost: number): Pr
 
 export function creditsMessage(plan: Plan, daily?: boolean): string {
   if (!daily) return "Too many AI Studio jobs in a short time. Wait a few minutes and try again.";
-  return plan === "pro"
+  return hasPro(plan)
     ? `You have used today's ${STUDIO_DAILY.pro} AI Studio credits. They renew tomorrow.`
     : `You have used today's ${STUDIO_DAILY.free} free AI Studio credits. Pro has ${STUDIO_DAILY.pro} a day, or try again tomorrow.`;
 }

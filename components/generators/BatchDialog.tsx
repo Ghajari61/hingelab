@@ -17,7 +17,7 @@ type P = GenBase & Record<string, unknown>;
  * Batch personalisation: names pasted or read from a CSV (with optional dates and photos), built one
  * by one on this device into a ZIP with a folder of files per row. Nothing is uploaded.
  */
-export default function BatchDialog({ def, params, ctx, start, pro, base, onClose, toast }: {
+export default function BatchDialog({ def, params, ctx, start, pro, base, onClose, toast, capOf, onUpgrade }: {
   def: AnyGenerator;
   params: P;
   ctx: BuildContext;
@@ -27,6 +27,9 @@ export default function BatchDialog({ def, params, ctx, start, pro, base, onClos
   base: string;
   onClose: () => void;
   toast: (msg: string) => void;
+  /** Why this many rows is over the plan, or null when it is allowed. */
+  capOf?: (count: number) => string | null;
+  onUpgrade?: (message: string) => void;
 }) {
   const [text, setText] = useState(start);
   const [photos, setPhotos] = useState<File[]>([]);
@@ -38,6 +41,7 @@ export default function BatchDialog({ def, params, ctx, start, pro, base, onClos
   const csvRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
   const parsed = useMemo(() => parseRows(text), [text]);
+  const cap = capOf?.(parsed.rows.length) ?? null;
   const hasPhoto = !!photoField(def, params);
   const photoNames = useMemo(() => new Set(photos.map((f) => f.name.toLowerCase())), [photos]);
 
@@ -58,6 +62,7 @@ export default function BatchDialog({ def, params, ctx, start, pro, base, onClos
 
   async function run() {
     if (!parsed.rows.length || progress) return;
+    if (cap) { setErr(cap); return; }
     cancel.current = false;
     setErr(null);
     setProgress({ done: 0, total: parsed.rows.length });
@@ -142,11 +147,13 @@ export default function BatchDialog({ def, params, ctx, start, pro, base, onClos
               <span>Building row {Math.min(progress.done + 1, progress.total)} of {progress.total}…</span>
             </div>
           )}
-          {err && <p className="note err" role="alert">{err}</p>}
+          {(cap || err) && <p className="note err" role="alert">{cap ?? err}</p>}
           <p className="exp-note">The files are made on your device; names and photos are not uploaded.</p>
           <div className="rename-row">
             <button type="button" className="btn-ghost-sm" onClick={() => { if (progress) cancel.current = true; else onClose(); }}>{progress ? "Cancel batch" : "Close"}</button>
-            <button type="button" className="btn-export" disabled={!parsed.rows.length || !!progress} onClick={() => void run()}><Download size={16} aria-hidden />Download ZIP</button>
+            {cap && onUpgrade
+              ? <button type="button" className="btn-export" onClick={() => onUpgrade(cap)}>Upgrade</button>
+              : <button type="button" className="btn-export" disabled={!parsed.rows.length || !!progress} onClick={() => void run()}><Download size={16} aria-hidden />Download ZIP</button>}
           </div>
         </div>
       </div>

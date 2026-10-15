@@ -2,6 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PRICES, PRO_BENEFITS } from "@/lib/plans";
+
+const BUSINESS_BENEFITS = [
+  "Everything in Pro",
+  "Unlimited batch generation",
+  "Up to 3 devices signed in at once",
+  "Commercial-use license",
+  "Priority support",
+];
 import { startCheckout } from "./billingClient";
 
 /**
@@ -11,7 +19,12 @@ import { startCheckout } from "./billingClient";
 export function UpgradeDialog({ reason, signedIn, onClose }: { reason: string; signedIn: boolean; onClose: () => void }) {
   const [busy, setBusy] = useState<"month" | "year" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const yearlySaving = Math.round((1 - PRICES.yearly / (PRICES.monthly * 12)) * 100);
+  const business = reason.includes("unlimited batches");
+  const plan = business ? "business" : "pro";
+  const monthly = business ? PRICES.businessMonthly : PRICES.monthly;
+  const yearly = business ? PRICES.businessYearly : PRICES.yearly;
+  const yearlySaving = Math.round((1 - yearly / (monthly * 12)) * 100);
+  const benefits = business ? BUSINESS_BENEFITS : PRO_BENEFITS;
   const ref = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
@@ -26,26 +39,26 @@ export function UpgradeDialog({ reason, signedIn, onClose }: { reason: string; s
   async function buy(interval: "month" | "year") {
     setBusy(interval);
     setError(null);
-    const err = await startCheckout(interval);
+    const err = await startCheckout(plan, interval);
     if (err) { setError(err); setBusy(null); }
   }
 
   return (
     <div className="modal-back" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal upgrade" role="dialog" aria-modal="true" aria-label="Upgrade to Pro" ref={ref}>
-        <header>Upgrade to Pro<button type="button" aria-label="Close" onClick={onClose}>×</button></header>
+      <div className="modal upgrade" role="dialog" aria-modal="true" aria-label={business ? "Upgrade to Business" : "Upgrade to Pro"} ref={ref}>
+        <header>{business ? "Upgrade to Business" : "Upgrade to Pro"}<button type="button" aria-label="Close" onClick={onClose}>×</button></header>
         <div className="mb">
           <p className="upgrade-reason">{reason}</p>
           <ul className="upgrade-list">
-            {PRO_BENEFITS.map((b) => <li key={b}>{b}</li>)}
+            {benefits.map((b) => <li key={b}>{b}</li>)}
           </ul>
           {signedIn ? (
             <div className="upgrade-buy">
               <button type="button" className="btn-export" disabled={!!busy} onClick={() => buy("month")}>
-                {busy === "month" ? "Opening checkout…" : `$${PRICES.monthly} / month`}
+                {busy === "month" ? "Opening checkout…" : `$${monthly} / month`}
               </button>
               <button type="button" className="btn-export" disabled={!!busy} onClick={() => buy("year")}>
-                {busy === "year" ? "Opening checkout…" : `$${PRICES.yearly} / year`}
+                {busy === "year" ? "Opening checkout…" : `$${yearly} / year`}
               </button>
               <span className="upgrade-save">Yearly saves {yearlySaving}%</span>
             </div>

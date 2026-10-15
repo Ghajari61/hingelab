@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.31",
-    "pub_date": "2026-10-15T16:18:11.276Z",
-    "notes": "Visual refresh: clearer workspace header, grouped settings, sliders, tidier menus and pages",
+    "version": "1.0.32",
+    "pub_date": "2026-10-15T18:42:26.581Z",
+    "notes": "Pro is 12 dollars a month or 99 dollars a year, with Business and Founder Lifetime plans. The app shows Business and Founder on the account. The AI designer uses GPT-6 Astra.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.31_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnY5NUthVm5WWHpmNzRpVVhLNHQwR1J2ZTBnd2NXUFZHanJWUzBYQ3BXZmNUYlpkY0JFMU5FdUhYSi91dWFjNmlCTVlIVytkall1TVkrV2puR3I5ckFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDgwOTUwCWZpbGU6SGluZ2VMYWJfMS4wLjMxX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMzEKMjRGV1gvMzAvYm92U1pVcGd1WllQMDBLQk1wczIvRVdlQnJtNTFTVEdlWUhYY1F6K1g5QzFPbFFrbDVOWkZBeWJHK3BTaDRPN3B4aHpFaS9LOE44QWc9PQo=",
-        "size": 4271917
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.32_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWms5NFN4L2VJMi9QK20zQk9uWlF5VWw0ZFF3dk9UdzRYZ1RuR2tWVCtwN01TMkdpZENzWXF2NXZ4ZTdqN3NWUmpxSk9IMnZnSzFSNFF4bDR5VGZEZFF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDg5NTYxCWZpbGU6SGluZ2VMYWJfMS4wLjMyX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMzIKNFBHN2FtSW9PZWZZc0IwZkpsVjdpS0V3bEkzTndPWmx5bHRvU0RmY1hCd0RJQVpyeExJTTlRTDljM3RZVGJmUzRQc2F1SDh6R1IwREZ1cERRWlJWQ0E9PQo=",
+        "size": 4271600
       }
     }
   }

@@ -3,13 +3,15 @@
  * tested without Stripe or Supabase.
  */
 import type Stripe from "stripe";
-import { planForStatus, type Plan } from "@/lib/plans";
+import { planForPrice, type Plan } from "@/lib/plans";
 
 export type ProfilePatch = {
   plan?: Plan;
   plan_status?: string | null;
   current_period_end?: string | null;
   stripe_customer_id?: string;
+  /** Set only by a Founder Lifetime payment. Omitted on subscription events. */
+  founder?: boolean;
 };
 
 export type BillingStore = {
@@ -18,8 +20,15 @@ export type BillingStore = {
   /** Links a customer to a user (checkout started before the customer id was saved). */
   updateByUser: (userId: string, patch: ProfilePatch) => Promise<boolean>;
   retrieveSubscription: (id: string) => Promise<Stripe.Subscription>;
-  /** Another subscription of the customer that still grants Pro, if any. */
+  /** Another subscription of the customer that still grants a paid plan, if any. */
   otherProSubscription?: (customerId: string, exceptId: string) => Promise<Stripe.Subscription | null>;
+  /** True when this customer bought Founder Lifetime. Missing until the pricing migration. */
+  isFounder?: (customerId: string) => Promise<boolean>;
+  /**
+   * Claims one of the 200 Founder seats. False when sold out. The SQL keeps an active Business
+   * plan and only sets `founder` in that case.
+   */
+  grantFounder?: (userId: string) => Promise<boolean>;
 };
 
 const idOf = (v: string | { id: string } | null | undefined) => (typeof v === "string" ? v : v?.id ?? null);
@@ -32,8 +41,13 @@ export function periodEnd(sub: Stripe.Subscription): string | null {
   return t ? new Date(t * 1000).toISOString() : null;
 }
 
+export function priceIdOf(sub: Stripe.Subscription): string | null {
+  const id = sub.items?.data?.[0]?.price?.id;
+  return typeof id === "string" ? id : null;
+}
+
 export function patchFromSubscription(sub: Stripe.Subscription): ProfilePatch {
-  return { plan: planForStatus(sub.status), plan_status: sub.status, current_period_end: periodEnd(sub) };
+  return { plan: planForPrice(sub.status, priceIdOf(sub)), plan_status: sub.status, current_period_end: periodEnd(sub) };
 }
 
 export const HANDLED_EVENTS = [
@@ -49,6 +63,18 @@ export async function handleStripeEvent(event: Stripe.Event, store: BillingStore
   switch (event.type) {
     case "checkout.session.completed": {
       const s = event.data.object as Stripe.Checkout.Session;
+      if (s.mode === "payment") {
+        if (s.metadata?.plan !== "lifetime") return "ignored: not a subscription checkout";
+        if (s.payment_status !== "paid") return "ignored: lifetime payment not paid";
+        const userId = s.client_reference_id || s.metadata?.user_id;
+        if (!userId) return "ignored: no user";
+        if (!store.grantFounder) return "ignored: founder seats are not set up";
+        const granted = await store.grantFounder(userId);
+        if (!granted) return "founder sold out; plan not changed";
+        const customer = idOf(s.customer);
+        if (customer) await store.updateByUser(userId, { stripe_customer_id: customer });
+        return `lifetime purchase for ${userId}`;
+      }
       if (s.mode !== "subscription") return "ignored: not a subscription checkout";
       const customer = idOf(s.customer);
       const subId = idOf(s.subscription);
@@ -72,6 +98,10 @@ export async function handleStripeEvent(event: Stripe.Event, store: BillingStore
       if (patch.plan === "free" && store.otherProSubscription) {
         const other = await store.otherProSubscription(customer, sub.id);
         if (other) patch = patchFromSubscription(other);
+      }
+      // A Founder who cancels Business (or Pro) keeps Pro features. The flag is not cleared.
+      if (patch.plan === "free" && store.isFounder && await store.isFounder(customer)) {
+        patch = { plan: "lifetime", plan_status: "active", current_period_end: null };
       }
       const found = await store.updateByCustomer(customer, patch);
       return found ? `${event.type} for ${customer}: ${patch.plan}` : `no profile for ${customer}`;

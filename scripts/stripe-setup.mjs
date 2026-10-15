@@ -32,32 +32,46 @@ if (!key.startsWith("sk_test_") && !key.startsWith("rk_test_")) {
 }
 
 // Keep in sync with PRICES in lib/plans.ts.
+// The first two are the grandfathered $9/$79 prices. This script finds them by lookup key and
+// does not change their amounts. The rest are new prices for new checkouts.
 const PLANS = [
-  { lookup: "hingelab_pro_monthly", amount: 900, interval: "month", env: "STRIPE_PRICE_PRO_MONTHLY" },
-  { lookup: "hingelab_pro_yearly", amount: 7900, interval: "year", env: "STRIPE_PRICE_PRO_YEARLY" },
+  { plan: "pro", lookup: "hingelab_pro_monthly", amount: 900, interval: "month", env: "STRIPE_PRICE_PRO_MONTHLY" },
+  { plan: "pro", lookup: "hingelab_pro_yearly", amount: 7900, interval: "year", env: "STRIPE_PRICE_PRO_YEARLY" },
+  { plan: "pro", lookup: "hingelab_pro_monthly_v2", amount: 1200, interval: "month", env: "PRICE_PRO_MONTHLY" },
+  { plan: "pro", lookup: "hingelab_pro_yearly_v2", amount: 9900, interval: "year", env: "PRICE_PRO_YEARLY" },
+  { plan: "business", lookup: "hingelab_business_monthly", amount: 2900, interval: "month", env: "PRICE_BUSINESS_MONTHLY", name: "HingeLab Business" },
+  { plan: "business", lookup: "hingelab_business_yearly", amount: 29000, interval: "year", env: "PRICE_BUSINESS_YEARLY", name: "HingeLab Business" },
+  { plan: "lifetime", lookup: "hingelab_founder_lifetime", amount: 17900, interval: null, env: "PRICE_LIFETIME", name: "HingeLab Founder Lifetime" },
 ];
 
 const stripe = new Stripe(key);
 
-const found = await stripe.products.search({ query: "metadata['app']:'hingelab' AND metadata['plan']:'pro'" });
-const product = found.data[0] ?? await stripe.products.create({
-  name: "HingeLab Pro",
-  description: "Clean SVG export, unlimited cloud projects, every shape, pattern and tool.",
-  metadata: { app: "hingelab", plan: "pro" },
-});
+async function productFor(plan, name) {
+  const found = await stripe.products.search({ query: `metadata['app']:'hingelab' AND metadata['plan']:'${plan}'` });
+  return found.data[0] ?? await stripe.products.create({
+    name,
+    metadata: { app: "hingelab", plan },
+  });
+}
+
+const products = {
+  pro: await productFor("pro", "HingeLab Pro"),
+  business: await productFor("business", "HingeLab Business"),
+  lifetime: await productFor("lifetime", "HingeLab Founder Lifetime"),
+};
 
 const lines = [];
 for (const p of PLANS) {
   const existing = await stripe.prices.list({ lookup_keys: [p.lookup], active: true, limit: 1 });
   const price = existing.data[0] ?? await stripe.prices.create({
-    product: product.id,
+    product: products[p.plan].id,
     currency: "usd",
     unit_amount: p.amount,
-    recurring: { interval: p.interval },
+    ...(p.interval ? { recurring: { interval: p.interval } } : {}),
     lookup_key: p.lookup,
   });
   lines.push(`${p.env}=${price.id}`);
 }
 
-console.log(`Product: ${product.id} (test mode)\n\nAdd these lines to .env.local:\n`);
+console.log(`Products (test mode): Pro ${products.pro.id}, Business ${products.business.id}, Lifetime ${products.lifetime.id}\n\nAdd these lines to .env.local:\n`);
 console.log(lines.join("\n"));

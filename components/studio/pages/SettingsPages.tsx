@@ -4,6 +4,7 @@ import { lazy, Suspense, useState } from "react";
 import { Layers } from "lucide-react";
 import { EmptyState, SegmentedControl, Select } from "@/components/ui";
 import { useAccount } from "@/components/auth/useAccount";
+import { planLabel, planOf } from "@/lib/plans";
 import { MACHINE_PROFILES, MATERIAL_PRESETS, STARTING_POINT_NOTE } from "@/lib/studio/library";
 import { SHORTCUT_SET_NAMES, type Accent, type ShortcutSet, type Theme } from "@/lib/studio/prefs";
 import { UNIT_LIST } from "@/lib/studio/units";
@@ -74,7 +75,7 @@ export function AccountPage() {
         <h1>Account</h1>
         <section className="info-card" aria-labelledby="profile">
           <h3 id="profile">Profile</h3>
-          {user ? <p>{(user.user_metadata as { full_name?: string })?.full_name || user.email} · {profile?.plan === "pro" ? "Pro plan" : "Free plan"}</p> : <p>You are using HingeLab without an account. Projects stay on this device.</p>}
+          {user ? <p>{(user.user_metadata as { full_name?: string })?.full_name || user.email} · {planLabel(planOf(profile?.plan))} plan</p> : <p>You are using HingeLab without an account. Projects stay on this device.</p>}
         </section>
         <section className="info-card" aria-labelledby="prefs">
           <h3 id="prefs">Preferences</h3>

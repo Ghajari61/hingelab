@@ -23,5 +23,15 @@ export function supabaseBillingStore(admin: SupabaseClient<Database>, stripe: Pi
       const list = await stripe.subscriptions.list({ customer: customerId, status: "all", limit: 20 });
       return list.data.find(s => s.id !== exceptId && planForStatus(s.status) === "pro") ?? null;
     },
+    async isFounder(customerId: string) {
+      const { data, error } = await admin.from("profiles").select("founder").eq("stripe_customer_id", customerId).maybeSingle();
+      if (error) return false;
+      return data?.founder === true;
+    },
+    async grantFounder(userId: string) {
+      const { data, error } = await admin.rpc("grant_founder", { p_user: userId });
+      if (error) throw error;
+      return data === true;
+    },
   };
 }

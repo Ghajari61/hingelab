@@ -14,7 +14,7 @@ import { packDepth, unpackDepth } from "@/lib/parametric/source/relief";
 import type { MeshData, ParametricParams, Sheet, SliceResult } from "@/lib/parametric/types";
 import { syncShapes } from "@/lib/parametric/shapes";
 import { clone } from "@/lib/hinge";
-import { parametricLock, parametricLocks } from "@/lib/plans";
+import { hasPro, parametricLock, parametricLocks } from "@/lib/plans";
 import { thumbnailSVG } from "@/lib/projects";
 import { downloadModelFile, uploadModelFile } from "@/lib/projects/files";
 import { getBrowserClient } from "@/lib/supabase/client";
@@ -351,7 +351,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     if (!ready()) return null;
     const lock = parametricLock(account.plan, params, result!.stats.partCount) ?? (params.material.nest === "outline" ? gateLock("nesting", account.plan, flags) : null);
     if (lock) { setUpgrade(lock); return null; }
-    if (!account.configured || account.plan === "pro") return { data: build(), marked: false };
+    if (!account.configured || hasPro(account.plan)) return { data: build(), marked: false };
     try {
       toastMsg("Preparing the export…");
       const res = await fetch("/api/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ product: "parametric", params, what }) });

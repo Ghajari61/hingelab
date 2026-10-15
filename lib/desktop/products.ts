@@ -20,7 +20,7 @@ import { randomiseParams } from "@/lib/generators/randomise";
 import { autoFixAll, sortIssues, type Issue } from "@/lib/issues";
 import { hingeIssues } from "@/lib/issues/hinge";
 import { BUNDLED_FONTS, FONT_CATEGORIES } from "@/lib/letters/fonts";
-import { addWatermark, canUsePattern, FREE_PATTERNS, FREE_SHAPES, hingeLocks, needsWatermark, PATTERN_NAMES, SHAPE_NAMES, type Plan } from "@/lib/plans";
+import { addWatermark, batchLimitMessage, canUsePattern, designBatchCount, FREE_PATTERNS, FREE_SHAPES, hasPro, hingeLocks, needsWatermark, PATTERN_NAMES, SHAPE_NAMES, type Plan } from "@/lib/plans";
 import { generatorScene } from "@/lib/generators/scene3d";
 import { buildHingeScene } from "@/lib/hinge3d/scene";
 import type { Scene3D } from "@/lib/three/flat";
@@ -483,7 +483,9 @@ async function generateGenerator(r: GenerateRequest, id: GeneratorId, product: D
   if (out.missing?.length) return { status: 422, body: { ...base(p, issues, applied), stats, error: "The font is missing some characters. Pick another font." } };
   if (!a.lay) return { status: 422, body: { ...base(p, issues, applied), stats, error: "The design does not fit on the sheet." } };
   const lock = def.pro?.(a.params, out) ?? null;
-  if (lock && plan !== "pro") return { status: 403, body: { ...base(p, issues, applied), stats, locked: `${lock} Upgrade to Pro to preview and export it in the desktop app.` } };
+  const over = batchLimitMessage(plan, designBatchCount(a.params));
+  if (over) return { status: 403, body: { ...base(p, issues, applied), stats, locked: over } };
+  if (lock && !hasPro(plan)) return { status: 403, body: { ...base(p, issues, applied), stats, locked: `${lock} Upgrade to Pro to preview and export it in the desktop app.` } };
   const svg = genSVG(def, a.params, a.lay);
   return {
     status: 200,

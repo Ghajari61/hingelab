@@ -1,13 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getStripe, priceId, siteURL, stripeConfigured } from "@/lib/stripe";
+import { founderSeatsLeft } from "@/lib/billing/founder";
+import { planOf, planRank, type Plan } from "@/lib/plans";
+import { checkoutPriceId, getStripe, siteURL, stripeConfigured, type CheckoutPlan } from "@/lib/stripe";
 import { LIMITS, rateLimit, tooManyRequests } from "@/lib/security/rateLimit";
 import { isCrossSite, isJSONRequest, siteOrigins } from "@/lib/security/request";
 
 /**
- * Starts a Stripe Checkout for Pro (monthly or yearly) for the signed-in user. Only the interval
- * comes from the request; the price, customer and user id are decided here.
+ * Starts Stripe Checkout for a new Pro or Business subscription, or a one-time Founder Lifetime
+ * payment. The price id comes from the new PRICE_* env vars. Existing $9/$79 subscriptions are
+ * not changed here.
  */
 export async function POST(request: NextRequest) {
   if (isCrossSite(request, siteOrigins())) return NextResponse.json({ error: "Cross-site requests are not allowed." }, { status: 403 });
@@ -18,14 +21,25 @@ export async function POST(request: NextRequest) {
   const limited = await rateLimit(LIMITS.checkout, `user:${session.user.id}`);
   if (!limited.ok) return tooManyRequests(limited);
 
-  const body = (await request.json().catch(() => ({}))) as { interval?: string };
+  const body = (await request.json().catch(() => ({}))) as { interval?: string; plan?: string };
   const interval = body.interval === "year" ? "year" : "month";
+  const target: CheckoutPlan = body.plan === "business" || body.plan === "lifetime" ? body.plan : "pro";
+  const price = checkoutPriceId(target, interval);
+  if (!price) return NextResponse.json({ error: "This plan is not available yet." }, { status: 503 });
+
   const { user } = session;
   const admin = createAdminClient();
   const stripe = getStripe();
-
   const { data: profile } = await admin.from("profiles").select("stripe_customer_id, plan").eq("id", user.id).single();
-  if (profile?.plan === "pro") return NextResponse.json({ error: "You are already on Pro. Use Manage billing to change your plan." }, { status: 409 });
+  const current = planOf(profile?.plan);
+  const blocked = checkoutBlocked(current, target);
+  if (blocked) return NextResponse.json({ error: blocked }, { status: 409 });
+
+  if (target === "lifetime") {
+    const left = await founderSeatsLeft();
+    if (left === null) return NextResponse.json({ error: "Founder Lifetime is not available yet." }, { status: 503 });
+    if (left <= 0) return NextResponse.json({ error: "Founder Lifetime is sold out." }, { status: 409 });
+  }
 
   try {
     let customer = profile?.stripe_customer_id ?? null;
@@ -37,19 +51,41 @@ export async function POST(request: NextRequest) {
     }
 
     const base = siteURL(request.nextUrl.origin);
-    const checkout = await stripe.checkout.sessions.create({
-      mode: "subscription",
+    const checkout = await stripe.checkout.sessions.create(target === "lifetime" ? {
+      mode: "payment",
       customer,
       client_reference_id: user.id,
-      line_items: [{ price: priceId(interval), quantity: 1 }],
+      line_items: [{ price, quantity: 1 }],
       allow_promotion_codes: true,
       success_url: `${base}/app/billing?checkout=success`,
       cancel_url: `${base}/app/billing?checkout=cancel`,
-      subscription_data: { metadata: { user_id: user.id } },
+      metadata: { user_id: user.id, plan: "lifetime" },
+    } : {
+      mode: "subscription",
+      customer,
+      client_reference_id: user.id,
+      line_items: [{ price, quantity: 1 }],
+      allow_promotion_codes: true,
+      success_url: `${base}/app/billing?checkout=success`,
+      cancel_url: `${base}/app/billing?checkout=cancel`,
+      subscription_data: { metadata: { user_id: user.id, plan: target } },
     });
     return NextResponse.json({ url: checkout.url });
   } catch (e) {
     console.error("stripe checkout failed", e);
     return NextResponse.json({ error: "Could not start checkout. Try again in a minute." }, { status: 502 });
   }
+}
+
+function checkoutBlocked(current: Plan, target: CheckoutPlan): string | null {
+  if (target === "lifetime") {
+    if (current === "lifetime") return "You already have Founder Lifetime.";
+    return null;
+  }
+  if (current === "business") return "You are already on Business. Use Manage billing to change your plan.";
+  if (current === target) return "You are already on this plan. Use Manage billing to change it.";
+  if (target === "pro" && (current === "lifetime" || planRank(current) > planRank("pro"))) {
+    return "You already have Pro features. Business is the upgrade from here.";
+  }
+  return null;
 }

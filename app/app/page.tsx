@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
 import { listProjects } from "@/lib/projects/repo";
-import { planOf, projectLimit } from "@/lib/plans";
+import { hasPro, planOf, projectLimit } from "@/lib/plans";
 import { AppHeader } from "@/components/site/AppHeader";
 import { ProjectsHome } from "@/components/projects/ProjectsHome";
 
@@ -19,7 +19,7 @@ export default async function MyBoxesPage() {
   return (
     <div className="page site-page">
       <AppHeader current="boxes" />
-      <ProjectsHome projects={projects} products={["hinge-box", "letters", "parametric"]} localOnly={plan === "pro" ? [] : ["parametric"]} limit={projectLimit(plan)} />
+      <ProjectsHome projects={projects} products={["hinge-box", "letters", "parametric"]} localOnly={hasPro(plan) ? [] : ["parametric"]} limit={projectLimit(plan)} />
     </div>
   );
 }

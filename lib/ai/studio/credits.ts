@@ -2,9 +2,9 @@
  * AI Studio credits. Model calls cost credits from a daily allowance per plan; everything that runs
  * on the user's own computer (adjust, dither, vectorize, depth, line art, quick cutout) is free.
  */
-import type { Plan } from "@/lib/plans";
+import { hasPro, type Plan } from "@/lib/plans";
 
-export const STUDIO_DAILY: Record<Plan, number> = { free: 12, pro: 150 };
+export const STUDIO_DAILY: Record<Plan, number> = { free: 12, pro: 150, lifetime: 150, business: 150 };
 
 export type CloudOp = "generate" | "restyle" | "redraw" | "expand" | "cutout" | "assistant";
 
@@ -26,6 +26,6 @@ export const OP_NAMES: Record<CloudOp, string> = {
   assistant: "Assistant message",
 };
 
-export const dailyNote = (plan: Plan) => plan === "pro"
+export const dailyNote = (plan: Plan) => hasPro(plan)
   ? `${STUDIO_DAILY.pro} credits a day on Pro.`
   : `${STUDIO_DAILY.free} free credits a day. Pro has ${STUDIO_DAILY.pro}.`;

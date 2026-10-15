@@ -10,9 +10,11 @@ export const IMAGE_MODEL = "openai/gpt-image-2";
 /** OpenAI image model when OPENAI_API_KEY is set; OPENAI_IMAGE_MODEL overrides it. */
 export const OPENAI_IMAGE_MODEL = "gpt-image-2";
 /** Gateway text model for the assistant; AI_ASSISTANT_MODEL overrides it, then AI_DESIGN_MODEL. */
-export const ASSISTANT_MODEL = "google/gemini-3.8-flash";
+export const ASSISTANT_MODEL = "openai/gpt-6-astra";
+/** Older models if Astra is refused. The last one is the AI Gateway free-tier model. */
 export const ASSISTANT_FALLBACKS = ["openai/gpt-5.6-luna", "openai/gpt-5-mini"];
-export const OPENAI_TEXT_MODEL = "gpt-5.6-terra";
+/** Direct OpenAI model. GPT-6 Astra is the newest ChatGPT model; OPENAI_MODEL overrides it. */
+export const OPENAI_TEXT_MODEL = "gpt-6-astra";
 
 export const gatewayAvailable = (env: Env) => !!(env.VERCEL || env.VERCEL_OIDC_TOKEN || env.AI_GATEWAY_API_KEY);
 export const openaiAvailable = (env: Env) => !!env.OPENAI_API_KEY;

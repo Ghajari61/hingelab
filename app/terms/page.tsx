@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/site/LegalPage";
-import { FREE_PROJECT_LIMIT, PRICES } from "@/lib/plans";
+import { BATCH_FREE, COMMERCIAL_LICENSE, FOUNDER_CAP, FREE_PROJECT_LIMIT, PRICES } from "@/lib/plans";
 import "../landing.css";
 
 export const metadata: Metadata = { title: "Terms of service", alternates: { canonical: "/terms" } };
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms of service" updated="October 10, 2026">
+    <LegalPage title="Terms of service" updated="October 15, 2026">
       <p>These terms cover your use of HingeLab, a web app that generates cutting files for laser-cut boxes. By using HingeLab you agree to them.</p>
 
       <h2>Your designs</h2>
@@ -17,7 +17,10 @@ export default function TermsPage() {
       <p>You can use the editor without an account. If you create one, keep your password private; you are responsible for activity on your account. You may delete your projects at any time.</p>
 
       <h2>Plans and payment</h2>
-      <p>The Free plan includes up to {FREE_PROJECT_LIMIT} cloud projects and Rounded boxes with the Straight hinge. Pro costs ${PRICES.monthly} per month or ${PRICES.yearly} per year, billed in advance by our payment processor, Stripe. Pro renews automatically until you cancel. You can cancel at any time from Billing; Pro then stays active until the end of the period you paid for. Prices may change with at least 30 days’ notice before your next renewal.</p>
+      <p>The Free plan includes up to {FREE_PROJECT_LIMIT} cloud projects, Rounded boxes with the Straight hinge, and batches of up to {BATCH_FREE} items. New Pro subscriptions cost ${PRICES.monthly} per month or ${PRICES.yearly} per year. New Business subscriptions cost ${PRICES.businessMonthly} per month or ${PRICES.businessYearly} per year. Founder Lifetime is a one-time payment of ${PRICES.lifetime} for Pro features, limited to the first {FOUNDER_CAP} buyers. Subscriptions are billed in advance by Stripe and renew until you cancel. You can cancel at any time from Billing; a subscription then stays active until the end of the period you paid for. If you subscribed to Pro at an earlier price, that price stays for as long as you keep that subscription. Prices for new subscriptions may change with at least 30 days’ notice before your next renewal.</p>
+
+      <h2>Commercial use</h2>
+      <p>On every plan you may cut and sell the physical objects you design. {COMMERCIAL_LICENSE} Free and Pro already let you sell what you make; Business states that license explicitly and adds priority support.</p>
 
       <h2>Safety and results</h2>
       <p>Laser cutters are dangerous machines. Never leave a running laser unattended and follow your machine’s safety instructions. Bend analysis is an estimate, not a guarantee: wood varies, so cut the bend test strip before cutting a full box. HingeLab is provided “as is”, and we are not liable for wasted material, damage to machines or injuries resulting from its use, to the extent the law allows.</p>

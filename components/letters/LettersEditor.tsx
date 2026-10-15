@@ -49,7 +49,7 @@ import { autoFixAll, type Fix } from "@/lib/issues";
 import { lettersIssues } from "@/lib/issues/letters";
 import { IssueList } from "@/components/shell/IssueList";
 import { HelpContext, useHelpPanel } from "@/components/help/HelpContext";
-import { lettersLock } from "@/lib/plans";
+import { hasPro, lettersLock } from "@/lib/plans";
 import { MAX_UPLOAD_FONT_BYTES } from "@/lib/billing/exportLetters";
 import { usePlan } from "@/components/billing/usePlan";
 import { getBrowserClient } from "@/lib/supabase/client";
@@ -268,7 +268,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
     try {
       const upload = await uploadForExport();
       if (upload && "error" in upload) {
-        if (account.plan === "pro") return exportLetterSVG(lay, built, font?.name);
+        if (hasPro(account.plan)) return exportLetterSVG(lay, built, font?.name);
         toastMsg(upload.error);
         return null;
       }
@@ -335,7 +335,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
       void openNewCloudProject("letters").then((err) => { if (err) toastMsg(err); });
       return;
     }
-    const fresh = freshParams(account.plan === "pro");
+    const fresh = freshParams(hasPro(account.plan));
     patch(editorPrefs().keepSetup ? keepSetup(params, fresh) : fresh, true);
     window.setTimeout(() => viewApi.fit(), 50);
     toastMsg("New letters");
@@ -384,14 +384,14 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   }
 
   function randomStyle() {
-    const next = randomLetterStyle(params, { pro: account.plan === "pro" });
+    const next = randomLetterStyle(params, { pro: hasPro(account.plan) });
     patch(next, true);
     const font = BUNDLED_FONTS.find((f) => f.id === next.fontId)?.name ?? next.fontId;
     toastMsg(`${font}, ${next.mode === "box" ? "letter box" : next.mode}. Ctrl+Z undoes it.`);
   }
 
   function resetAll() {
-    replace({ ...freshParams(account.plan === "pro"), name: params.name, text: params.text, fontId: params.fontId }, true);
+    replace({ ...freshParams(hasPro(account.plan)), name: params.name, text: params.text, fontId: params.fontId }, true);
     window.setTimeout(() => viewApi.fit(), 50);
     toastMsg("All settings reset. Ctrl+Z undoes it.");
   }
@@ -534,7 +534,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
         <GalleryRail
           title={PRODUCT_INFO.letters.name} icon={PRODUCT_INFO.letters.icon}
           groups={lettersGroups({
-            mode: params.mode, pro: account.plan === "pro", wallStyle: params.wallStyle, lid: params.lid,
+            mode: params.mode, pro: hasPro(account.plan), wallStyle: params.wallStyle, lid: params.lid,
             onMode: (m) => patch({ mode: m }, true), onWallStyle: (w) => patch({ wallStyle: w }, true), onLid: (l) => patch({ lid: l }, true), onRandom: randomStyle,
           })}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}

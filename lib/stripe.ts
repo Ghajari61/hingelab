@@ -1,9 +1,27 @@
 import "server-only";
 import Stripe from "stripe";
 
-/** Billing works only when the secret key and both Pro prices are set. */
+/**
+ * Billing works when the secret key is set and either the original Pro prices (grandfathered
+ * $9/$79) or the new Pro prices are set. A missing price for one plan fails that checkout only.
+ */
 export function stripeConfigured(): boolean {
-  return !!(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_PRO_MONTHLY && process.env.STRIPE_PRICE_PRO_YEARLY);
+  const secret = !!process.env.STRIPE_SECRET_KEY;
+  const legacy = !!(process.env.STRIPE_PRICE_PRO_MONTHLY && process.env.STRIPE_PRICE_PRO_YEARLY);
+  const next = !!(process.env.PRICE_PRO_MONTHLY && process.env.PRICE_PRO_YEARLY);
+  return secret && (legacy || next);
+}
+
+export type CheckoutPlan = "pro" | "business" | "lifetime";
+
+/** Price id for a new checkout. Never the grandfathered $9/$79 prices. Null when that env var is unset. */
+export function checkoutPriceId(plan: CheckoutPlan, interval: "month" | "year"): string | null {
+  const id = plan === "lifetime"
+    ? process.env.PRICE_LIFETIME
+    : plan === "business"
+      ? (interval === "year" ? process.env.PRICE_BUSINESS_YEARLY : process.env.PRICE_BUSINESS_MONTHLY)
+      : (interval === "year" ? process.env.PRICE_PRO_YEARLY : process.env.PRICE_PRO_MONTHLY);
+  return id || null;
 }
 
 /**
@@ -17,12 +35,6 @@ export function getStripe(): Stripe {
     throw new Error("A live Stripe key is set but STRIPE_ALLOW_LIVE is not true. Use test keys until launch.");
   }
   return new Stripe(key, { appInfo: { name: "HingeLab" } });
-}
-
-export function priceId(interval: "month" | "year"): string {
-  const id = interval === "year" ? process.env.STRIPE_PRICE_PRO_YEARLY : process.env.STRIPE_PRICE_PRO_MONTHLY;
-  if (!id) throw new Error("Stripe price ids are not set");
-  return id;
 }
 
 export function siteURL(fallback: string): string {

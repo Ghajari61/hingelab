@@ -20,6 +20,7 @@ import { depthImage, LAYER_DEFAULTS } from "@/lib/imaging/relief";
 import type { ImagingRequest } from "@/lib/imaging/ops";
 import type { Img } from "@/lib/imaging/image";
 import { COSTS, dailyNote, type CloudOp } from "@/lib/ai/studio/credits";
+import { planLabel } from "@/lib/plans";
 import { DESIGN_KITS, kitPrompt, type DesignKit } from "@/lib/ai/studio/kits";
 import { MAX_STUDIO_PROMPT } from "@/lib/ai/studio/request";
 import { STYLE_PRESETS, styleById } from "@/lib/ai/studio/styles";
@@ -274,7 +275,7 @@ export function AIStudioPanel(props: AIStudioProps) {
       <div className="ai-credits" data-testid="ai-credits">
         <Cloud size={14} aria-hidden />
         {status?.signedIn && status.cloud
-          ? <span>{status.plan === "pro" ? "Pro" : "Free"}: {status.daily} credits a day · {used} used here today</span>
+          ? <span>{planLabel(status.plan)}: {status.daily} credits a day · {used} used here today</span>
           : <span>{cloudBlock ?? dailyNote("free")}</span>}
       </div>
       <Tabs label="AI Studio" value={tab} onChange={setTab} tabs={[

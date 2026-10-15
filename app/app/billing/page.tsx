@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
 import { stripeConfigured } from "@/lib/stripe";
-import { FREE_PROJECT_LIMIT, PLAN_ROWS, PRICES, planOf } from "@/lib/plans";
+import { founderSeatsLeft } from "@/lib/billing/founder";
+import { lockedPriceCopyFor } from "@/lib/billing/grandfather";
+import { BUSINESS_SEATS, COMMERCIAL_LICENSE, FOUNDER_CAP, FREE_PROJECT_LIMIT, PLAN_ROWS, PRICES, hasPro, planLabel, planOf } from "@/lib/plans";
 import { AppHeader } from "@/components/site/AppHeader";
-import { ManageBilling, UpgradeButtons } from "@/components/billing/BillingActions";
+import { LifetimeButton, ManageBilling, UpgradeButtons } from "@/components/billing/BillingActions";
 
 export const metadata: Metadata = { title: "Billing · HingeLab" };
 
@@ -12,7 +14,7 @@ function fmtDate(iso: string | null) {
   return iso ? new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : null;
 }
 
-export default async function BillingPage({ searchParams }: { searchParams: Promise<{ checkout?: string }> }) {
+export default async function BillingPage({ searchParams }: { searchParams: Promise<{ checkout?: string; plan?: string }> }) {
   const session = await getUser();
   if (!session) redirect("/login?next=%2Fapp%2Fbilling");
   const { checkout } = await searchParams;
@@ -22,10 +24,15 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
     .eq("id", session.user.id)
     .maybeSingle();
   const plan = planOf(profile?.plan);
+  const paid = hasPro(plan);
+  const label = planLabel(plan);
   const billing = stripeConfigured();
   const date = fmtDate(profile?.current_period_end ?? null);
   const status = profile?.plan_status ?? null;
   const ending = plan === "free" && status === "canceled";
+  const locked = plan === "pro" ? await lockedPriceCopyFor(profile?.stripe_customer_id) : null;
+  const seatsLeft = plan === "lifetime" ? 0 : await founderSeatsLeft();
+  const showLifetime = plan !== "lifetime" && seatsLeft !== 0;
 
   return (
     <div className="page site-page">
@@ -33,10 +40,10 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       <main className="boxes billing">
         <h1>Billing</h1>
 
-        {checkout === "success" && plan !== "pro" && (
-          <p className="auth-msg ok" role="status">Payment received. Pro turns on as soon as Stripe confirms it, usually within a few seconds. Refresh this page in a moment.</p>
+        {checkout === "success" && !paid && (
+          <p className="auth-msg ok" role="status">Payment received. Your plan turns on as soon as Stripe confirms it, usually within a few seconds. Refresh this page in a moment.</p>
         )}
-        {checkout === "success" && plan === "pro" && <p className="auth-msg ok" role="status">Welcome to Pro. Every feature is now unlocked.</p>}
+        {checkout === "success" && paid && <p className="auth-msg ok" role="status">You&apos;re all set. Your plan is now {label}.</p>}
         {checkout === "cancel" && <p className="auth-msg err" role="status">Checkout was cancelled. You have not been charged.</p>}
         {!billing && (
           <p className="auth-msg err" role="status">Billing is not set up on this server yet. Plans are shown below, but upgrading is unavailable.</p>
@@ -44,28 +51,55 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
         <section className="billing-current" aria-label="Your plan">
           <div>
-            <h2>You are on the {plan === "pro" ? "Pro" : "Free"} plan</h2>
+            <h2>You are on the {label} plan</h2>
+            {locked && <p className="auth-msg ok" role="status">{locked}</p>}
             <p>
               {plan === "pro" && status === "past_due" && "Your last payment failed. Stripe will retry; update your card under Manage billing to keep Pro."}
+              {plan === "business" && status === "past_due" && "Your last payment failed. Stripe will retry; update your card under Manage billing to keep Business."}
               {plan === "pro" && status !== "past_due" && (date ? `Renews on ${date}.` : "Thanks for supporting HingeLab.")}
-              {plan === "free" && (ending ? "Your Pro subscription has ended." : `Free includes up to ${FREE_PROJECT_LIMIT} cloud projects and Rounded boxes with the Straight hinge.`)}
+              {plan === "business" && status !== "past_due" && (date ? `Renews on ${date}.` : "Thanks for supporting HingeLab.")}
+              {plan === "lifetime" && "Pro features, forever. This was a one-time purchase."}
+              {plan === "free" && (ending ? "Your subscription has ended." : `Free includes up to ${FREE_PROJECT_LIMIT} cloud projects, Rounded boxes with the Straight hinge, and batches of 5 items.`)}
             </p>
           </div>
           {billing && profile?.stripe_customer_id && <ManageBilling />}
         </section>
 
         <div className="billing-plans">
-          <section className="plan-card">
+          <section className="plan-card" id="plan-free">
             <h3>Free</h3>
             <div className="plan-price">$0</div>
             <ul>{PLAN_ROWS.map((r) => <li key={r.feature}><b>{r.feature}:</b> {r.free === "✓" ? "Included" : r.free}</li>)}</ul>
           </section>
-          <section className="plan-card pro">
+          <section className="plan-card pro" id="plan-pro">
             <h3>Pro</h3>
             <div className="plan-price">${PRICES.monthly}<small> / month, or ${PRICES.yearly} / year</small></div>
             <ul>{PLAN_ROWS.map((r) => <li key={r.feature}><b>{r.feature}:</b> {r.pro === "✓" ? "Included" : r.pro}</li>)}</ul>
             {plan === "free" && <UpgradeButtons disabled={!billing} />}
           </section>
+          <section className="plan-card" id="plan-business">
+            <h3>Business</h3>
+            <div className="plan-price">${PRICES.businessMonthly}<small> / month, or ${PRICES.businessYearly} / year</small></div>
+            <ul>
+              <li><b>Includes:</b> Everything in Pro</li>
+              <li><b>Batches:</b> Unlimited</li>
+              <li><b>Devices:</b> {BUSINESS_SEATS}</li>
+              <li><b>License:</b> {COMMERCIAL_LICENSE}</li>
+              <li><b>Support:</b> Priority support</li>
+            </ul>
+            {plan !== "business" && <UpgradeButtons plan="business" disabled={!billing} />}
+          </section>
+          {showLifetime && (
+            <section className="plan-card" id="plan-lifetime">
+              <h3>Founder Lifetime</h3>
+              <div className="plan-price">${PRICES.lifetime}<small> once</small></div>
+              <ul>
+                <li><b>Includes:</b> Pro features, forever</li>
+                <li><b>Seats:</b> {seatsLeft === null ? `Limited to the first ${FOUNDER_CAP}` : `${seatsLeft} of ${FOUNDER_CAP} left`}</li>
+              </ul>
+              <LifetimeButton disabled={!billing || seatsLeft === null} />
+            </section>
+          )}
         </div>
       </main>
     </div>
