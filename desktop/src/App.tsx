@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -18,6 +18,11 @@ import { useAutoCheck, useUpdater } from "./updater";
 
 type Phase = "boot" | "signedOut" | "ready" | "updateRequired";
 
+/** Keeps a page mounted while hidden so its state and in-flight work survive a trip to another section. */
+function Keep({ on, children }: { on: boolean; children: ReactNode }) {
+  return <div className={`keep-pane${on ? " is-on" : ""}`} aria-hidden={!on}>{children}</div>;
+}
+
 export function App() {
   const [phase, setPhase] = useState<Phase>("boot");
   const [version, setVersion] = useState("");
@@ -25,6 +30,8 @@ export function App() {
   const [account, setAccount] = useState<DesktopAccount | null>(cachedAccount);
   const [catalog, setCatalog] = useState<DCatalog | null>(cachedCatalog);
   const [route, setRoute] = useState<Route>("dashboard");
+  /** Native (and web) sections opened at least once stay mounted so work is not thrown away. */
+  const [seen, setSeen] = useState<Partial<Record<Route, true>>>({ dashboard: true });
   const [signing, setSigning] = useState(false);
   const [signError, setSignError] = useState<string | null>(null);
   const [minimum, setMinimum] = useState<string | null>(null);
@@ -180,6 +187,9 @@ export function App() {
   const go = useCallback((r: Route) => (isWebRoute(r) ? openOnline(r) : setRoute(r)), [openOnline]);
   const modalOpen = useModalOpen();
   const onWebRoute = isWebRoute(route);
+  useEffect(() => {
+    setSeen((s) => (s[route] ? s : { ...s, [route]: true }));
+  }, [route]);
 
   useEffect(() => {
     const off = listen<WebDownloadEvent>("web-download", ({ payload: d }) => {
@@ -445,82 +455,115 @@ export function App() {
       <Sidebar route={route} onRoute={go} account={account} hasDesign={!!design.state.product} update={updater.status} onUpdate={() => setShowUpdate(true)} collapsed={local.sidebarCollapsed} onToggle={toggleSidebar} />
       <div className="main">
         {!online && route !== "workspace" && <div className="offline-bar" role="status">You're offline. Designs are built on HingeLab's servers, so new changes wait until you're back online.</div>}
-        {route === "dashboard" && <Dashboard account={account} catalog={catalog} recent={recent} files={files} defaultProduct={local.defaultProduct} onNew={openNew} onPreset={openPreset} onBrowse={() => setRoute("generators")} onOpenRecent={openSaved} onOpenFile={(p) => void openFile(p)} onUpgrade={() => web("upgrade")} onOnline={openOnline} />}
-        {route === "generators" && <Generators catalog={catalog} plan={plan} initial={design.state.product ?? local.defaultProduct} favorites={favorites} onPreset={openPreset} onNew={openNew} onFavorite={(p, pr) => {
-          const hit = favorites.find((f) => f.product === p.id && f.preset === pr.id);
-          setFavorites((l) => (hit ? l.filter((f) => f.id !== hit.id) : [{ id: crypto.randomUUID(), product: p.id, preset: pr.id, name: pr.name, note: pr.note, at: Date.now() }, ...l]));
-        }} />}
-        {route === "ai" && (
-          <AIPage
-            catalog={catalog}
-            plan={plan}
-            online={online}
-            onOpen={(id, params, in3d) => {
-              design.open(id, { params });
-              if (in3d) setLocal((o) => ({ ...o, view3d: true }));
-              else startView();
-              setRoute("workspace");
-            }}
-            onOnline={(path) => openOnline("web-editors", path)}
-            onUpgrade={() => web("upgrade")}
-          />
+        {seen.dashboard && (
+          <Keep on={route === "dashboard"}>
+            <Dashboard account={account} catalog={catalog} recent={recent} files={files} defaultProduct={local.defaultProduct} onNew={openNew} onPreset={openPreset} onBrowse={() => setRoute("generators")} onOpenRecent={openSaved} onOpenFile={(p) => void openFile(p)} onUpgrade={() => web("upgrade")} onOnline={openOnline} />
+          </Keep>
         )}
-        {route === "workspace" && product && (
-          <Workspace
-            product={product}
-            design={design.state}
-            plan={plan}
-            units={local.units}
-            online={online}
-            canvas={canvas}
-            favorite={!!currentFavorite}
-            onChange={design.change}
-            onChangeMany={design.changeMany}
-            onSetValues={design.setValues}
-            onScale={design.scaleBy}
-            onRename={(name) => design.change("name", name, true)}
-            onFix={design.fix}
-            onAutofix={design.autofix}
-            onRefresh={design.refresh}
-            onUndo={design.undo}
-            onRedo={design.redo}
-            onSave={() => void (product.id === "art" ? save("save") : saveProject(false))}
-            onSaveAs={() => void saveProject(true)}
-            onOpenFile={() => void openFile(null)}
-            onExportAs={() => void save("save")}
-            onResetAll={product.id === "art" ? undefined : resetAll}
-            onRandomise={canRandom ? randomise : undefined}
-            randomLabel={product.id === "hinge" ? "Randomise pattern" : undefined}
-            locks={product.id === "hinge" ? undefined : { has: locks.has, toggle: locks.toggle, count: locks.list.length }}
-            onExport={() => void save("export")}
-            onExportFormat={(f) => void save(f)}
-            onUpgrade={() => web("upgrade")}
-            onRefreshPlan={refreshPlan}
-            onFavorite={toggleFavorite}
-            onFullEditor={product.id === "art" ? undefined : () => openOnline("web-editors", `/app/editor/local?p=${encodeURIComponent(product.id)}`)}
-            onWant3d={design.setWant3d}
-          />
+        {(seen.generators || (route === "workspace" && !product)) && (
+          <Keep on={route === "generators" || (route === "workspace" && !product)}>
+            <Generators catalog={catalog} plan={plan} initial={design.state.product ?? local.defaultProduct} favorites={favorites} onPreset={openPreset} onNew={openNew} onFavorite={(p, pr) => {
+              const hit = favorites.find((f) => f.product === p.id && f.preset === pr.id);
+              setFavorites((l) => (hit ? l.filter((f) => f.id !== hit.id) : [{ id: crypto.randomUUID(), product: p.id, preset: pr.id, name: pr.name, note: pr.note, at: Date.now() }, ...l]));
+            }} />
+          </Keep>
         )}
-        {route === "workspace" && !product && <Generators catalog={catalog} plan={plan} initial={local.defaultProduct} favorites={favorites} onPreset={openPreset} onNew={openNew} onFavorite={() => {}} />}
-        {route === "recent" && <Recent recent={recent} catalog={catalog} onOpen={openSaved} onRemove={(d: SavedDesign) => setRecent((l) => l.filter((x) => x.id !== d.id))} onClear={() => setRecent([])} />}
-        {route === "favorites" && <Favorites favorites={favorites} catalog={catalog} onOpen={(f: Favorite) => openSaved(f)} onRemove={(f) => setFavorites((l) => l.filter((x) => x.id !== f.id))} />}
-        {route === "subscription" && <Subscription account={account} onWeb={web} onRefresh={refreshPlan} refreshing={refreshing} />}
-        {route === "settings" && (
-          <Settings
-            account={account} local={local} setLocal={setLocal} prefs={prefs} catalog={catalog} version={version} server={server} update={updater.status}
-            onCheck={() => void updater.checkNow()}
-            onInstall={installUpdate}
-            onChooseFolder={() => void ipc.chooseExportFolder().then(setPrefs).catch((e: AppError) => toast({ text: e.message, kind: "err" }))}
-            onExportPrefs={(clear, openAfter) => void ipc.setExportPrefs(clear, openAfter).then(setPrefs).catch((e: AppError) => toast({ text: e.message, kind: "err" }))}
-            onChooseProjectFolder={() => void ipc.chooseProjectFolder().then(setPrefs).catch((e: AppError) => toast({ text: e.message, kind: "err" }))}
-            onProjectPrefs={(clear, max) => void ipc.setProjectPrefs(clear, max).then((p) => { setPrefs(p); loadFiles(); }).catch((e: AppError) => toast({ text: e.message, kind: "err" }))}
-            onWeb={web}
-            onSignOut={() => signedOut(null)}
-            onRefreshPlan={refreshPlan}
-          />
+        {seen.ai && (
+          <Keep on={route === "ai"}>
+            <AIPage
+              catalog={catalog}
+              plan={plan}
+              online={online}
+              onOpen={(id, params, in3d) => {
+                design.open(id, { params });
+                if (in3d) setLocal((o) => ({ ...o, view3d: true }));
+                else startView();
+                setRoute("workspace");
+              }}
+              onOnline={(path) => openOnline("web-editors", path)}
+              onUpgrade={() => web("upgrade")}
+            />
+          </Keep>
         )}
-        {route === "help" && <Help onWeb={web} version={version} onHelpCentre={() => openOnline("web-studio", "/help")} />}
-        {onWebRoute && <WebHost request={webRequest} covered={modalOpen} onError={(e) => toast({ text: e.message, kind: "err" })} />}
+        {seen.workspace && product && (
+          <Keep on={route === "workspace"}>
+            <Workspace
+              product={product}
+              design={design.state}
+              plan={plan}
+              units={local.units}
+              online={online}
+              canvas={canvas}
+              favorite={!!currentFavorite}
+              onChange={design.change}
+              onChangeMany={design.changeMany}
+              onSetValues={design.setValues}
+              onScale={design.scaleBy}
+              onRename={(name) => design.change("name", name, true)}
+              onFix={design.fix}
+              onAutofix={design.autofix}
+              onRefresh={design.refresh}
+              onUndo={design.undo}
+              onRedo={design.redo}
+              onSave={() => void (product.id === "art" ? save("save") : saveProject(false))}
+              onSaveAs={() => void saveProject(true)}
+              onOpenFile={() => void openFile(null)}
+              onExportAs={() => void save("save")}
+              onResetAll={product.id === "art" ? undefined : resetAll}
+              onRandomise={canRandom ? randomise : undefined}
+              randomLabel={product.id === "hinge" ? "Randomise pattern" : undefined}
+              locks={product.id === "hinge" ? undefined : { has: locks.has, toggle: locks.toggle, count: locks.list.length }}
+              onExport={() => void save("export")}
+              onExportFormat={(f) => void save(f)}
+              onUpgrade={() => web("upgrade")}
+              onRefreshPlan={refreshPlan}
+              onFavorite={toggleFavorite}
+              onFullEditor={product.id === "art" ? undefined : () => openOnline("web-editors", `/app/editor/local?p=${encodeURIComponent(product.id)}`)}
+              onWant3d={design.setWant3d}
+            />
+          </Keep>
+        )}
+        {seen.recent && (
+          <Keep on={route === "recent"}>
+            <Recent recent={recent} catalog={catalog} onOpen={openSaved} onRemove={(d: SavedDesign) => setRecent((l) => l.filter((x) => x.id !== d.id))} onClear={() => setRecent([])} />
+          </Keep>
+        )}
+        {seen.favorites && (
+          <Keep on={route === "favorites"}>
+            <Favorites favorites={favorites} catalog={catalog} onOpen={(f: Favorite) => openSaved(f)} onRemove={(f) => setFavorites((l) => l.filter((x) => x.id !== f.id))} />
+          </Keep>
+        )}
+        {seen.subscription && (
+          <Keep on={route === "subscription"}>
+            <Subscription account={account} onWeb={web} onRefresh={refreshPlan} refreshing={refreshing} />
+          </Keep>
+        )}
+        {seen.settings && (
+          <Keep on={route === "settings"}>
+            <Settings
+              account={account} local={local} setLocal={setLocal} prefs={prefs} catalog={catalog} version={version} server={server} update={updater.status}
+              onCheck={() => void updater.checkNow()}
+              onInstall={installUpdate}
+              onChooseFolder={() => void ipc.chooseExportFolder().then(setPrefs).catch((e: AppError) => toast({ text: e.message, kind: "err" }))}
+              onExportPrefs={(clear, openAfter) => void ipc.setExportPrefs(clear, openAfter).then(setPrefs).catch((e: AppError) => toast({ text: e.message, kind: "err" }))}
+              onChooseProjectFolder={() => void ipc.chooseProjectFolder().then(setPrefs).catch((e: AppError) => toast({ text: e.message, kind: "err" }))}
+              onProjectPrefs={(clear, max) => void ipc.setProjectPrefs(clear, max).then((p) => { setPrefs(p); loadFiles(); }).catch((e: AppError) => toast({ text: e.message, kind: "err" }))}
+              onWeb={web}
+              onSignOut={() => signedOut(null)}
+              onRefreshPlan={refreshPlan}
+            />
+          </Keep>
+        )}
+        {seen.help && (
+          <Keep on={route === "help"}>
+            <Help onWeb={web} version={version} onHelpCentre={() => openOnline("web-studio", "/help")} />
+          </Keep>
+        )}
+        {(seen["web-editors"] || seen["web-studio"] || seen["web-ai"] || seen["web-projects"]) && (
+          <Keep on={onWebRoute}>
+            <WebHost request={webRequest} covered={modalOpen || !onWebRoute} onError={(e) => toast({ text: e.message, kind: "err" })} />
+          </Keep>
+        )}
       </div>
       {updateDialog}
       {askReset && <ConfirmDialog title="Reset all settings?" text="Every setting of this design goes back to its default. Ctrl+Z undoes it." action="Reset all" onConfirm={doReset} onCancel={() => setAskReset(false)} />}

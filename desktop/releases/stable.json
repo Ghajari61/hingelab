@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.34",
-    "pub_date": "2026-10-15T19:44:15.410Z",
-    "notes": "Free is preview only: saving projects and downloading cut files need Pro. The pricing card and desktop match that.",
+    "version": "1.0.35",
+    "pub_date": "2026-10-15T19:59:51.989Z",
+    "notes": "Leaving a section and coming back keeps your work. The AI designer keeps designing while you are elsewhere.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.34_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmdyV3Jmd0d2TkN3enl3VDB2Wnp3ei9DcnQ5N0xEV2JETVVlVVZoem54aUgwNTJmMGdFVnlnaGNRbVprRk1vOG9lbjVwQnFTajQvK285cDcva3I1N0FZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDkzMzQzCWZpbGU6SGluZ2VMYWJfMS4wLjM0X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMzQKOStFcE90blhTVGN5Tkk3dG9RSWkwV2l5QXVTSDg4TXEwdlBoWDQyT2xUQ3B1OTIvNEVqVS92SXRUK1dteFd2R2RBOUZTWmJPZWs2OTBYU0FhOERqQ3c9PQo=",
-        "size": 4271236
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.35_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnZxK3JqUXpEdk5aQVZTUFpTUDVwWnpVZEZqZnJJVzZON3k5cXpyaExBdkduUHJrZklHd1RIb1EvS2NSUUJ6K09QK1lWTVdJSnBWRXRYeXNaTmdpNGdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDk0MjkwCWZpbGU6SGluZ2VMYWJfMS4wLjM1X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMzUKU3NLdjZhUXliUy9Rek1XMStIdlVTWE1TL1pLWXdJUUNEWndPZGlRZy8vSFprM1BOaGpmVnB2LzJiTXpzelJWdmZKUXg0RXpFL3VhekZDZ2M4a01CREE9PQo=",
+        "size": 4272463
       }
     }
   }

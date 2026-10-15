@@ -63,6 +63,8 @@ async function command(cmd: string, args: Record<string, unknown>) {
     }
     case "ai_design": {
       const req = args.request as { prompt: string };
+      // Slow enough to leave the AI page and come back while it is still designing.
+      await new Promise((r) => setTimeout(r, 1200));
       aiRuns++;
       return { product: "hinge", productName: "Hinge Box", match: "exact", name: `AI ${aiRuns}`, summary: req.prompt, notes: [], params: { W: 60 + aiRuns } };
     }
@@ -248,15 +250,22 @@ try {
   check((await page.locator(".toast").allInnerTexts()).some((t) => t.includes("locked settings kept")), "a toast says the locked settings were kept");
   await page.getByRole("button", { name: "Unlock Face shape" }).click();
 
-  // The AI designer: Undo and Redo step through the AI edits.
+  // The AI designer: leaving mid-design keeps the work; Undo/Redo step through edits.
   await page.locator(".sidebar").getByRole("button", { name: /AI/ }).first().click();
   await page.locator("#ai-prompt").fill("a box");
   await page.getByRole("button", { name: "Design it" }).click();
-  await page.locator(".ai-result h2").waitFor({ timeout: 15000 });
+  await page.getByText("Designing…").waitFor({ timeout: 5000 });
+  await page.locator(".sidebar").getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("heading", { name: "Project files" }).waitFor({ timeout: 10000 });
+  await page.locator(".sidebar").getByRole("button", { name: /AI/ }).first().click();
+  check(await page.getByText("Designing…").isVisible().catch(() => false) || await page.locator(".ai-result h2").isVisible().catch(() => false), "AI page: leaving and coming back keeps the design in progress or its result");
+  await page.locator(".ai-result h2").waitFor({ timeout: 20000 });
+  check((await page.locator(".ai-result h2").innerText()) === "AI 1", "AI page: the design finishes after a trip away");
+  check((await page.locator("#ai-prompt").inputValue()) === "a box", "AI page: the prompt is still there");
   for (const ask of ["wider", "taller"]) {
     await page.locator("#ai-edit").fill(ask);
     await page.getByRole("button", { name: "Apply" }).click();
-    await page.waitForFunction((n) => document.querySelector(".ai-result h2")?.textContent === n, ask === "wider" ? "AI 2" : "AI 3", { timeout: 15000 });
+    await page.waitForFunction((n) => document.querySelector(".ai-result h2")?.textContent === n, ask === "wider" ? "AI 2" : "AI 3", { timeout: 20000 });
   }
   const aiName = () => page.locator(".ai-result h2").innerText();
   await page.getByRole("button", { name: "Undo edit" }).click();

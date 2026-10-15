@@ -131,6 +131,9 @@ p { margin: 0; }
 .app { --side-w: 224px; display: grid; grid-template-columns: var(--side-w) 1fr; height: 100%; transition: grid-template-columns 0.18s ease; }
 .app.side-collapsed { --side-w: 64px; }
 .main { position: relative; min-width: 0; overflow: auto; display: flex; flex-direction: column; }
+/* Once opened, native pages stay mounted (hidden) so leaving and coming back keeps their work. */
+.keep-pane { flex: 1; min-height: 0; min-width: 0; display: none; flex-direction: column; }
+.keep-pane.is-on { display: flex; }
 .sidebar { background: radial-gradient(260px 220px at 0% 0%, rgba(124, 120, 255, 0.16), transparent 70%), radial-gradient(240px 260px at 100% 100%, rgba(236, 72, 153, 0.08), transparent 70%), var(--side); color: var(--side-ink); display: flex; flex-direction: column; padding: 14px 10px; min-width: 0; overflow: hidden; border-right: 1px solid rgba(255, 255, 255, 0.04); }
 .brand { display: flex; align-items: center; gap: 10px; padding: 4px 4px 18px 10px; font: 600 16px var(--font-display); color: #fff; }
 .side-toggle { margin-left: auto; flex: none; display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 6px; background: none; color: var(--side-dim); cursor: pointer; }

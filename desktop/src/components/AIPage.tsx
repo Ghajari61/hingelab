@@ -18,8 +18,33 @@ const EXAMPLES = [
 
 const MATCH: Record<AIMatch, string> = { exact: "Exact match", close: "Close match", loose: "Nearest product" };
 
-/** The page's last answer, kept while the app runs so a trip to the workspace and back finds it. */
-let kept: { prompt: string; design: AIDesign; fromPhoto: boolean; history: AIDesign[]; future: AIDesign[] } | null = null;
+/**
+ * Draft, result and in-flight work for the AI page. Survives the React tree being torn down so a
+ * trip to another section (or a remount) finds the same prompt, photo, design and busy state.
+ */
+type Kept = {
+  prompt: string;
+  photo: string | null;
+  photoNote: string;
+  design: AIDesign | null;
+  fromPhoto: boolean;
+  history: AIDesign[];
+  future: AIDesign[];
+  editText: string;
+  error: string | null;
+  editError: string | null;
+  busy: boolean;
+  editing: boolean;
+  startedAt: number | null;
+  run: number;
+};
+let kept: Kept = {
+  prompt: "", photo: null, photoNote: "", design: null, fromPhoto: false,
+  history: [], future: [], editText: "", error: null, editError: null,
+  busy: false, editing: false, startedAt: null, run: 0,
+};
+const keptListeners = new Set<() => void>();
+const publishKept = () => { for (const fn of keptListeners) fn(); };
 
 /** AI edits kept for Undo. */
 const MAX_EDITS = 20;
@@ -53,29 +78,60 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
   onOnline: (path: string) => void;
   onUpgrade: () => void;
 }) {
-  const [prompt, setPrompt] = useState(kept?.prompt ?? "");
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [photoNote, setPhotoNote] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [design, setDesign] = useState<AIDesign | null>(kept?.design ?? null);
-  const [fromPhoto, setFromPhoto] = useState(kept?.fromPhoto ?? false);
-  const [editText, setEditText] = useState("");
-  const [editing, setEditing] = useState(false);
-  const [editError, setEditError] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState(kept.prompt);
+  const [photo, setPhoto] = useState<string | null>(kept.photo);
+  const [photoNote, setPhotoNote] = useState(kept.photoNote);
+  const [busy, setBusy] = useState(kept.busy);
+  const [elapsed, setElapsed] = useState(() => (kept.startedAt && (kept.busy || kept.editing) ? Math.round((Date.now() - kept.startedAt) / 1000) : 0));
+  const [error, setError] = useState<string | null>(kept.error);
+  const [design, setDesign] = useState<AIDesign | null>(kept.design);
+  const [fromPhoto, setFromPhoto] = useState(kept.fromPhoto);
+  const [editText, setEditText] = useState(kept.editText);
+  const [editing, setEditing] = useState(kept.editing);
+  const [editError, setEditError] = useState<string | null>(kept.editError);
   /** Designs before each AI edit, newest last; and those undone, next first. */
-  const [history, setHistory] = useState<AIDesign[]>(kept?.history ?? []);
-  const [future, setFuture] = useState<AIDesign[]>(kept?.future ?? []);
+  const [history, setHistory] = useState<AIDesign[]>(kept.history);
+  const [future, setFuture] = useState<AIDesign[]>(kept.future);
   const [saving, setSaving] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [saveNote, setSaveNote] = useState<{ text: string; ok: boolean } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const run = useRef(0);
+  const run = useRef(kept.run);
+
+  useEffect(() => {
+    kept.prompt = prompt;
+    kept.photo = photo;
+    kept.photoNote = photoNote;
+    kept.editText = editText;
+  }, [prompt, photo, photoNote, editText]);
+
+  // When a design finishes while this page was unmounted, pull the shared state back in.
+  useEffect(() => {
+    const sync = () => {
+      setPrompt(kept.prompt);
+      setPhoto(kept.photo);
+      setPhotoNote(kept.photoNote);
+      setDesign(kept.design);
+      setFromPhoto(kept.fromPhoto);
+      setHistory(kept.history);
+      setFuture(kept.future);
+      setEditText(kept.editText);
+      setError(kept.error);
+      setEditError(kept.editError);
+      setBusy(kept.busy);
+      setEditing(kept.editing);
+      run.current = kept.run;
+      if (kept.startedAt && (kept.busy || kept.editing)) setElapsed(Math.round((Date.now() - kept.startedAt) / 1000));
+    };
+    keptListeners.add(sync);
+    return () => { keptListeners.delete(sync); };
+  }, []);
 
   useEffect(() => {
     if (!busy && !editing) return;
-    const t0 = Date.now();
+    const t0 = kept.startedAt ?? Date.now();
+    if (!kept.startedAt) kept.startedAt = t0;
+    setElapsed(Math.round((Date.now() - t0) / 1000));
     const id = window.setInterval(() => setElapsed(Math.round((Date.now() - t0) / 1000)), 1000);
     return () => window.clearInterval(id);
   }, [busy, editing]);
@@ -90,42 +146,84 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
     if (busy || editing) return;
     if (!prompt.trim() && !photo) { setError("Describe the product or add a photo of it."); return; }
     const n = ++run.current;
+    kept.run = n;
+    kept.busy = true;
+    kept.editing = false;
+    kept.startedAt = Date.now();
+    kept.error = null;
     setBusy(true); setElapsed(0); setError(null);
+    const reqPrompt = prompt.trim();
+    const reqPhoto = photo;
+    const reqNote = photoNote.trim();
     try {
-      const d = await ipc.aiDesign({ prompt: prompt.trim(), ...(photo ? { image: photo, ...(photoNote.trim() ? { imageNote: photoNote.trim() } : {}) } : {}) });
+      const d = await ipc.aiDesign({ prompt: reqPrompt, ...(reqPhoto ? { image: reqPhoto, ...(reqNote ? { imageNote: reqNote } : {}) } : {}) });
       if (n !== run.current) return;
       setDesign(d);
-      setFromPhoto(!!photo);
+      setFromPhoto(!!reqPhoto);
       setHistory([]); setFuture([]); setEditText(""); setEditError(null);
-      kept = { prompt: prompt.trim(), design: d, fromPhoto: !!photo, history: [], future: [] };
+      kept.prompt = reqPrompt;
+      kept.design = d;
+      kept.fromPhoto = !!reqPhoto;
+      kept.history = [];
+      kept.future = [];
+      kept.editText = "";
+      kept.editError = null;
+      publishKept();
     } catch (e) {
       if (n !== run.current) return;
       const err = e as AppError;
-      setError(err.kind === "network" ? "Could not reach HingeLab. Check your connection and try again." : err.message);
+      const msg = err.kind === "network" ? "Could not reach HingeLab. Check your connection and try again." : err.message;
+      setError(msg);
+      kept.error = msg;
+      publishKept();
     } finally {
-      if (n === run.current) setBusy(false);
+      if (n === run.current) {
+        kept.busy = false;
+        kept.startedAt = null;
+        setBusy(false);
+        publishKept();
+      }
     }
   }
 
   async function edit() {
     if (!design || editing || busy || !editText.trim()) return;
     const n = ++run.current;
+    kept.run = n;
+    kept.editing = true;
+    kept.busy = false;
+    kept.startedAt = Date.now();
+    kept.editError = null;
     setEditing(true); setElapsed(0); setEditError(null);
+    const base = design;
+    const ask = editText.trim();
     try {
-      const d = await ipc.aiDesign({ prompt: editText.trim(), revise: reviseOf(design) });
+      const d = await ipc.aiDesign({ prompt: ask, revise: reviseOf(base) });
       if (n !== run.current) return;
-      const h = [...history, design].slice(-MAX_EDITS);
+      const h = [...history, base].slice(-MAX_EDITS);
       setHistory(h);
       setFuture([]);
       setDesign(d);
       setEditText("");
-      kept = { prompt: prompt.trim(), design: d, fromPhoto, history: h, future: [] };
+      kept.design = d;
+      kept.history = h;
+      kept.future = [];
+      kept.editText = "";
+      publishKept();
     } catch (e) {
       if (n !== run.current) return;
       const err = e as AppError;
-      setEditError(err.kind === "network" ? "Could not reach HingeLab. Check your connection and try again." : err.message);
+      const msg = err.kind === "network" ? "Could not reach HingeLab. Check your connection and try again." : err.message;
+      setEditError(msg);
+      kept.editError = msg;
+      publishKept();
     } finally {
-      if (n === run.current) setEditing(false);
+      if (n === run.current) {
+        kept.editing = false;
+        kept.startedAt = null;
+        setEditing(false);
+        publishKept();
+      }
     }
   }
 
@@ -134,7 +232,11 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
     setFuture(f);
     setDesign(d);
     setEditError(null);
-    kept = { prompt: prompt.trim(), design: d, fromPhoto, history: h, future: f };
+    kept.design = d;
+    kept.history = h;
+    kept.future = f;
+    kept.editError = null;
+    publishKept();
   }
 
   function undoEdit() {
@@ -195,7 +297,16 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
   }
 
   const step = elapsed < 6 ? 0 : elapsed < 35 ? 1 : elapsed < 60 ? 2 : 3;
-  const startOver = () => { setDesign(null); setPrompt(""); setPhoto(null); setPhotoNote(""); setError(null); setHistory([]); setFuture([]); setEditText(""); setEditError(null); kept = null; };
+  const startOver = () => {
+    run.current += 1;
+    kept = {
+      prompt: "", photo: null, photoNote: "", design: null, fromPhoto: false,
+      history: [], future: [], editText: "", error: null, editError: null,
+      busy: false, editing: false, startedAt: null, run: run.current,
+    };
+    setDesign(null); setPrompt(""); setPhoto(null); setPhotoNote(""); setError(null);
+    setHistory([]); setFuture([]); setEditText(""); setEditError(null); setBusy(false); setEditing(false);
+  };
 
   return (
     <div className="page ai-page">
@@ -252,7 +363,7 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
           </button>
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => { void addPhoto(e.target.files?.[0]); e.target.value = ""; }} />
           <span className="ai-hint">{!online ? "The AI designer needs an internet connection." : dragging ? "Drop the photo here" : "Drop or paste a photo · Ctrl + Enter to start"}</span>
-          {busy && <button type="button" className="btn ghost" onClick={() => { run.current++; setBusy(false); }}>Cancel</button>}
+          {busy && <button type="button" className="btn ghost" onClick={() => { run.current++; kept.run = run.current; kept.busy = false; kept.startedAt = null; setBusy(false); publishKept(); }}>Cancel</button>}
           <button type="submit" className="btn primary ai-go" disabled={busy || editing || !online || (!prompt.trim() && !photo)}>
             {busy ? <Loader2 size={15} className="spin" aria-hidden /> : <Sparkles size={15} aria-hidden />}
             {busy ? "Designing…" : "Design it"}
@@ -334,7 +445,7 @@ export function AIPage({ catalog, plan, online, onOpen, onOnline, onUpgrade }: {
                   onChange={(e) => setEditText(e.target.value)}
                   disabled={editing}
                 />
-                {editing && <button type="button" className="btn ghost" onClick={() => { run.current++; setEditing(false); }}>Cancel</button>}
+                {editing && <button type="button" className="btn ghost" onClick={() => { run.current++; kept.run = run.current; kept.editing = false; kept.startedAt = null; setEditing(false); publishKept(); }}>Cancel</button>}
                 <button type="submit" className="btn primary" disabled={editing || !online || !editText.trim()}>
                   {editing ? <Loader2 size={15} className="spin" aria-hidden /> : <ArrowUp size={15} aria-hidden />}
                   {editing ? "Editing…" : "Apply"}
