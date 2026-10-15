@@ -9,7 +9,7 @@ const FILES = import.meta.glob<string>("../../public/presets/{hinge,clock,puzzle
 export const presetArt = (product: string, preset: string): string | undefined => FILES[`../../public/presets/${product}/${preset}.svg`];
 
 /** Pictures for the website sections that open inside the window. */
-const ONLINE = import.meta.glob<string>("../../public/presets/{boxes/organiser,sign/layered-name,hinge/card-box}.svg", { query: "?url", import: "default", eager: true });
+const ONLINE = import.meta.glob<string>("../../public/presets/{sign/layered-name,hinge/card-box}.svg", { query: "?url", import: "default", eager: true });
 export const onlineArt = (product: string, preset: string): string | undefined => ONLINE[`../../public/presets/${product}/${preset}.svg`];
 
 const FEATURED: Record<string, string[]> = {

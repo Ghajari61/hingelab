@@ -35,7 +35,6 @@ const PRO_PERKS = ["Pill, polygon and cylinder boxes", "Wave, relief and serpent
 
 /** Website sections that open inside the window, signed in. */
 const ONLINE_TILES: { id: string; name: string; blurb: string; art: [string, string]; section: WebRoute; path: string }[] = [
-  { id: "studio", name: "Studio", blurb: "Lay out designs, text and images on one sheet, plus trays, lamps and finger-joint boxes.", art: ["boxes", "organiser"], section: "web-studio", path: "/home" },
   { id: "ai-studio", name: "AI Studio", blurb: "Pictures from words, photo clean-up, engraving, vectorizing with cut checks and an assistant, in a new Studio project.", art: ["sign", "layered-name"], section: "web-ai", path: "/home?new=ai" },
   { id: "projects", name: "Cloud projects", blurb: "Designs saved to your account on the website, from any computer.", art: ["hinge", "card-box"], section: "web-projects", path: "/app" },
 ];

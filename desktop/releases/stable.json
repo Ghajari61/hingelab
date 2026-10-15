@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.36",
-    "pub_date": "2026-10-15T20:52:13.567Z",
-    "notes": "Free is preview only with no save or download. Leaving a section keeps your work. Founder Lifetime is no longer offered.",
+    "version": "1.0.37",
+    "pub_date": "2026-10-15T23:08:56.194Z",
+    "notes": "Remove the Studio entry from the desktop sidebar and dashboard; AI Studio remains.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.36_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmtxckhWaitEMGpDekhhd2dKditzOW0zM0xSRHlJVDhPc0dhdFNCcFdObWpKOVU1T1Q5bVdZM3E5N3BlUzJEaGZDZmNKM2h2TlNJdEJudHc1blh1aGdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDk3NDA4CWZpbGU6SGluZ2VMYWJfMS4wLjM2X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMzYKbHBJYWpqa3QvUWdYaS9TM3J3d2djL3YvU2lPYUs2YnR3cmVlWFY4WDJWMHIybXBWcFc2bU90R3NMbXpQa21nZTdGSUN1RWFITEJlbXlVcnBkMjNDRGc9PQo=",
-        "size": 4272410
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.37_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmdYRDdJZW5wRHBDdVhsMVkrZzlITnd1MWlEMDdRWkJ0L2liblBDTmN4TGE2YU9UTmVxM05ESUJSQnNJSzBTUHFFMTFnK1BYR0JPZzFtaENabW1BVWc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTA1NjA5CWZpbGU6SGluZ2VMYWJfMS4wLjM3X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMzcKWU9SODVkOW5CYTZVYmhNVjBhUFFJdW9CYkw0TUlOdkFoamxzdWdIYVR2elhIcjl4RndpV0t1bkVFZGlxUVJ3K21kbHFmL0RIMUVQQld3R0pIaDhtQVE9PQo=",
+        "size": 4271275
       }
     }
   }

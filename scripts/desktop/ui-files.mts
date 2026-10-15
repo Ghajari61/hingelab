@@ -314,7 +314,7 @@ try {
   check(await page.evaluate(() => document.documentElement.style.zoom) === "", "Settings: Reset these settings restores the interface size");
   check(await page.getByRole("checkbox", { name: "Ask before Reset all settings" }).isChecked(), "Settings: Reset these settings turns Ask before Reset all back on");
 
-  // Letters and Parametric are products of the app; Studio, AI Studio and cloud projects open the website here.
+  // Letters and Parametric are products of the app; AI Studio and cloud projects open the website here.
   await page.locator(".sidebar").getByRole("button", { name: "Generators" }).click();
   await page.locator(".ws-head").waitFor({ timeout: 15000 });
   await page.locator(".sidebar").getByRole("button", { name: "Generators" }).click();
