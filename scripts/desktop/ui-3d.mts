@@ -10,7 +10,8 @@ const PORT = 5199;
 const SHOTS = resolve("docs/screenshots");
 let failed = 0;
 const check = (ok: boolean, msg: string) => { console.log(`${ok ? "ok" : "FAIL"} ${msg}`); if (!ok) failed++; };
-const requests: { product: string; model: boolean; bytes: number; objects: number }[] = [];
+const requests: { product: string; model: boolean; bytes: number; objects: number; params: Record<string, unknown> | null }[] = [];
+const getPath = (o: unknown, key: string) => key.split(".").reduce<unknown>((c, k) => (c && typeof c === "object" ? (c as Record<string, unknown>)[k] : undefined), o);
 let designId = 0;
 
 async function command(cmd: string, args: Record<string, unknown>) {
@@ -26,7 +27,7 @@ async function command(cmd: string, args: Record<string, unknown>) {
       const r = await generateDesign(req, "pro");
       if (!("product" in r.body)) return { __err: { kind: "invalid", message: (r.body as { error: string }).error } };
       const body = { ...r.body, ...(r.status === 200 ? { designId: ++designId } : {}) };
-      requests.push({ product: req.product, model: !!req.model, bytes: JSON.stringify(body.model ?? null).length, objects: body.model?.objects.length ?? 0 });
+      requests.push({ product: req.product, model: !!req.model, bytes: JSON.stringify(body.model ?? null).length, objects: body.model?.objects.length ?? 0, params: (body.params as Record<string, unknown>) ?? null });
       return { status: r.status, body };
     }
     default: return null;
@@ -138,6 +139,55 @@ try {
   await page.locator(".ws-panel input").first().press("Enter");
   await page.waitForTimeout(1500);
   check(requests.slice(before).every((r) => r.model), "edits in 3D keep asking for the model");
+
+  // The 3D handles (D170/D171): click a part, drag a face, the setting follows.
+  const hitOf = (pane: string) => page.locator(`.v3 .v3-pane[data-pane="${pane}"] .v3-hit`);
+  const handlePoints = (pane: string) => hitOf(pane).evaluate((el: HTMLElement) => {
+    const r = el.getBoundingClientRect(), pts: [number, number][] = [];
+    for (let y = r.top + 3; y < r.bottom - 3; y += 5) for (let x = r.left + 3; x < r.right - 3; x += 5) {
+      el.dispatchEvent(new PointerEvent("pointermove", { clientX: x, clientY: y, bubbles: true, buttons: 0, pointerId: 1 }));
+      if (el.style.cursor === "grab") pts.push([x, y]);
+    }
+    el.dispatchEvent(new PointerEvent("pointermove", { clientX: r.left + 1, clientY: r.top + 1, bubbles: true, buttons: 0, pointerId: 1 }));
+    return pts;
+  });
+  const handleAt = (pts: [number, number][], pick: (p: [number, number]) => number) => {
+    if (!pts.length) return null;
+    const best = pts.reduce((a, b) => (pick(b) > pick(a) ? b : a));
+    const near = pts.filter((p) => Math.hypot(p[0] - best[0], p[1] - best[1]) < 22);
+    return [near.reduce((s, p) => s + p[0], 0) / near.length, near.reduce((s, p) => s + p[1], 0) / near.length] as const;
+  };
+  const sizeDrag = async (name: string, key: string, pick: (p: [number, number]) => number, dx: number, dy: number) => {
+    await open(name);
+    await ready3d();
+    await page.locator(".v3").focus();
+    await page.keyboard.press("f");
+    if (await page.locator(".v3.quad").count()) await page.keyboard.press("Alt+w");
+    await page.waitForTimeout(800);
+    check(await page.getByTestId("v3-grips").count() === 0, `${name}: no handles until a part is selected`);
+    const b = (await hitOf("front").boundingBox())!;
+    await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+    await page.waitForTimeout(600);
+    check(await page.getByTestId("v3-grips").getByRole("button", { name: "Size" }).getAttribute("aria-pressed") === "true", `${name}: selecting a part shows its Size handles`);
+    const h = handleAt(await handlePoints("front"), pick);
+    check(!!h, `${name}: the Front view shows a handle`);
+    if (!h) return;
+    const v0 = getPath(last().params, key) as number;
+    await page.mouse.move(h[0], h[1]);
+    await page.mouse.down();
+    await page.mouse.move(h[0] + dx / 2, h[1] + dy / 2, { steps: 4 });
+    const tip = await page.getByTestId("v3-tip").innerText().catch(() => "");
+    await page.mouse.move(h[0] + dx, h[1] + dy, { steps: 4 });
+    await page.mouse.up();
+    await page.waitForTimeout(2000);
+    const v1 = getPath(last().params, key) as number;
+    check(tip.length > 0, `${name}: the pointer shows the size while dragging (${tip})`);
+    check(v1 > v0 + 10, `${name}: dragging the face out sets ${key} (${v0} → ${v1} mm) and the server rebuilds it`);
+    check(last().model, `${name}: the rebuilt design comes with its 3D model`);
+    await shot(page, `${name.toLowerCase().replace(/\s+/g, "-")}-handles`);
+  };
+  await sizeDrag("Boxes", "box.width", (p) => p[0], 90, 0);
+  await sizeDrag("Hinge Box", "H", (p) => -p[1], 0, -70);
 
   await page.getByRole("button", { name: "2D sheet", exact: true }).click();
   await page.locator('img[alt="Preview of the cut file"]').waitFor();

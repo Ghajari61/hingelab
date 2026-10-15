@@ -78,7 +78,7 @@ describe("grip maths", () => {
 describe("Hinge Box handles", () => {
   const run = (p: Params, id: string, d: number) => {
     let out: Params | null = null, rec = false;
-    byId(hingeGrips(p, (q, r) => { out = q; rec = r; }, "mm"), id).start(100)(d, true);
+    byId(hingeGrips(p, (k, v, r) => { out = { ...p, [k]: v }; rec = r; }, "mm"), id).start(100)(d, true);
     return { p: out as unknown as Params, rec };
   };
 

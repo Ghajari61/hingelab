@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState, type RefObject } from "rea
 import { AlertTriangle, Box, CircleAlert, Download, FileDown, Grid2x2, Grid3x3, Info, Lock, Maximize, Minus, Plus, Redo2, RefreshCw, Ruler, Scan, Sparkles, Square, Star, Undo2, WifiOff, Wrench } from "lucide-react";
 import type { DProduct } from "../../../lib/desktop/types";
 import type { DesignState } from "../design";
+import { desktopGrips } from "../grips";
 import type { AppError } from "../ipc";
 import { DEFAULT_PREFS, usePrefs, type LocalPrefs, type Shade3D, type SheetTone, type Units } from "../local";
 import { Canvas, zoomLabel, type CanvasHandle } from "./Canvas";
@@ -55,6 +56,7 @@ export function Workspace(p: Props) {
   const is3d = prefs.view3d;
   const [active, setActive] = useState<PaneId>("persp");
   const [explode, setExplode] = useState(0);
+  const [sel, setSel] = useState<string | null>(null);
   const { onWant3d } = p;
   useEffect(() => { onWant3d(is3d); }, [is3d, onWant3d]);
   const dim = design.busy || !!r?.locked || (!!err && err.kind !== "network" && err.kind !== "rate_limited");
@@ -176,6 +178,7 @@ export function Workspace(p: Props) {
                 ref={p.canvas} model={r?.model ?? null} material={String(r?.params.material ?? "")} explode={explode}
                 shade={prefs.view3dShade} quad={prefs.view3dQuad} active={active} dims={prefs.view3dDims} units={p.units} dim={dim}
                 onActive={(a) => setActive(a)} onQuad={(q) => set({ view3dQuad: q })} onShade={(s) => set({ view3dShade: s })}
+                onSelect={setSel} grips={sel && !explode && design.params && !r?.locked ? desktopGrips(product, design.params, p.onChange, p.units) : undefined}
               >
                 {overlays}
                 {r?.svg && !r.model && !design.busy && !err && (

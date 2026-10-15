@@ -1,4 +1,4 @@
-import { AXIS_NAMES, lenText, numberGrip, sizeGrips, type Grip, type GripAxis, type GripKind } from "@/lib/three/grips";
+import { AXIS_NAMES, lenText, numberGrip, sizeGrips, type Grip, type GripAxis, type GripKind } from "../three/grips";
 import { getPath, setPath } from "./path";
 import type { AnyGenerator, GenBase, NumberSpec } from "./types";
 
@@ -33,9 +33,37 @@ const SPECS: Record<string, (p: GenBase & Record<string, unknown>) => GripSpec[]
   },
 };
 
-export function numberField(def: AnyGenerator, key: string): NumberSpec<unknown> | undefined {
-  for (const s of def.sections) for (const f of s.fields) if (f.kind === "number" && f.key === key) return f as NumberSpec<unknown>;
+/** Number fields as the editors and the Windows app's catalog both describe them. */
+type NumberFieldLike = Pick<NumberSpec<unknown>, "key" | "label" | "unit" | "min" | "max" | "step">;
+type SectionsLike = { fields: { kind: string; key?: string }[] }[];
+
+export function numberField(sections: SectionsLike, key: string): NumberFieldLike | undefined {
+  for (const s of sections) for (const f of s.fields) if (f.kind === "number" && f.key === key) return f as unknown as NumberFieldLike;
   return undefined;
+}
+
+/**
+ * The handles of a design with its own (Boxes), or null for one without. `setKey` writes one setting
+ * (a dot path); `sections` gives each setting's label, unit, limits and step.
+ */
+export function specGrips(id: string, sections: SectionsLike, p: GenBase, setKey: (key: string, v: number, done: boolean) => void, units: "mm" | "in"): Grip[] | null {
+  const spec = SPECS[id];
+  if (!spec) return null;
+  const out: Grip[] = [];
+  for (const g of spec(p as never)) {
+    const f = numberField(sections, g.key), v0 = getPath(p, g.key);
+    if (!f || typeof v0 !== "number") continue;
+    const show = (v: number) => `${f.label} ${f.unit === "mm" ? lenText(v, units) : f.unit === "deg" ? `${v}°` : v}`;
+    const sides = g.kind !== "size" || g.one || g.axis === "y" ? [1 as const] : [1 as const, -1 as const];
+    for (const side of sides) {
+      out.push(numberGrip(`${g.kind}-${g.axis}${side > 0 ? "+" : "-"}-${g.key}`, g.kind, g.axis, {
+        v0, min: f.min, max: f.max, step: f.step, k: g.k, side,
+        set: (v, done) => setKey(g.key, v, done),
+        show,
+      }));
+    }
+  }
+  return out;
 }
 
 /**
@@ -43,24 +71,8 @@ export function numberField(def: AnyGenerator, key: string): NumberSpec<unknown>
  * whole get no handle along an axis thinner than a few sheets (a flat clock is not made thicker).
  */
 export function generatorGrips<P extends GenBase>(def: AnyGenerator, p: P, set: (p: P, record: boolean) => void, units: "mm" | "in", size: [number, number, number] | null): Grip[] {
-  const spec = SPECS[def.id];
-  if (spec) {
-    const out: Grip[] = [];
-    for (const g of spec(p as never)) {
-      const f = numberField(def, g.key), v0 = getPath(p, g.key);
-      if (!f || typeof v0 !== "number") continue;
-      const show = (v: number) => `${f.label} ${f.unit === "mm" ? lenText(v, units) : f.unit === "deg" ? `${v}°` : v}`;
-      const sides = g.kind !== "size" || g.one || g.axis === "y" ? [1 as const] : [1 as const, -1 as const];
-      for (const side of sides) {
-        out.push(numberGrip(`${g.kind}-${g.axis}${side > 0 ? "+" : "-"}-${g.key}`, g.kind, g.axis, {
-          v0, min: f.min, max: f.max, step: f.step, k: g.k, side,
-          set: (v, done) => set(setPath(p, g.key, v), done),
-          show,
-        }));
-      }
-    }
-    return out;
-  }
+  const own = specGrips(def.id, def.sections, p, (key, v, done) => set(setPath(p, key, v), done), units);
+  if (own) return own;
   if (!def.scale || !size) return [];
   const axes = (["x", "z", "y"] as GripAxis[]).filter((a) => size["xyz".indexOf(a)] > 4 * p.T);
   return sizeGrips(axes, (axis, ext, d, done) => {
