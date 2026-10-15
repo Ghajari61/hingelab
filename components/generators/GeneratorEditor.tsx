@@ -575,7 +575,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
           <ViewToggle value={viewMode} onChange={setViewMode} />
           <NestChip progress={nest.progress} onCancel={nest.cancel} />
           <div className="stage-3d" hidden={viewMode !== "3d"}>
-            {seen3d && <GeneratorView3D out={out} lay={lay} T={built.T} material={params.material} units={units} frameKey={`${def.id}|${Math.round(lay?.width ?? 0)}x${Math.round(lay?.height ?? 0)}`} />}
+            {seen3d && <GeneratorView3D out={out} lay={lay} T={built.T} material={params.material} units={units} frameKey={`${def.id}|${Math.round(lay?.width ?? 0)}x${Math.round(lay?.height ?? 0)}`} edit={{ def, params, set: replace as never }} />}
           </div>
           <section className="viewport" aria-label="Canvas">
             <div className="ruler-corner" />

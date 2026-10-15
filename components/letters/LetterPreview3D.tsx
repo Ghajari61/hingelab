@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { LayerContent, Layout, Point } from "@/lib/hinge";
 import type { LetterModel, LetterParams, LetterPart } from "@/lib/letters";
 import { buildLetterScene, WOOD } from "@/lib/letters/scene3d";
 import { flatScene, type FlatPart } from "@/lib/three/flat";
 import { lookOf } from "@/lib/three/looks";
+import { letterGrips } from "@/lib/letters/grips";
 import QuadView from "@/lib/three/QuadView";
 import { quadProps, useView3D } from "@/components/shell/view3d";
 import { View3DBarTools } from "@/components/shell/View3DTools";
@@ -30,10 +31,15 @@ function flatParts(lay: Layout<LetterPart>): FlatPart[] {
   });
 }
 
-/** The assembled letters (or their parts lying flat) in the shared 3D workspace. */
-export default function LetterPreview3D({ model, params, lay, content, units }: { model: LetterModel | null; params: LetterParams; lay: Layout<LetterPart> | null; content: LayerContent | null; units: Units }) {
+/** The assembled letters (or their parts lying flat) in the shared 3D workspace; with `edit`, a selected part shows handles. */
+export default function LetterPreview3D({ model, params, lay, content, units, edit }: {
+  model: LetterModel | null; params: LetterParams; lay: Layout<LetterPart> | null; content: LayerContent | null; units: Units;
+  edit?: { params: LetterParams; set: (p: LetterParams, record: boolean) => void };
+}) {
   const v = useView3D();
   const { flat, explode } = v;
+  const [sel, setSel] = useState<string | null>(null);
+  const grips = sel && edit && !flat && !explode ? letterGrips(edit.params, edit.set, units) : undefined;
   const lid = params.mode === "box" && params.lid !== "open";
   const scene = useMemo(() => {
     if (!model) return null;
@@ -47,6 +53,7 @@ export default function LetterPreview3D({ model, params, lay, content, units }: 
     <QuadView
       {...quadProps(v)} id="preview3d" model={scene} look={lookOf(params.material)} frameKey={key} units={units}
       measure={flat || !lid || explode === 0} label="Assembled letters in 3D: Top, Front, Left and Perspective views"
+      onSelect={setSel} grips={grips}
     >
       <View3DBarTools v={v} flat explodeLabel={lid ? "Lift lid" : null} />
     </QuadView>

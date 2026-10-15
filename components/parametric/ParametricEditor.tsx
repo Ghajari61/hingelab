@@ -49,6 +49,7 @@ import { depthPreview, estimateDepth } from "./depthProtocol";
 import { getStoredModel, getStoredPhoto, putStoredModel, putStoredPhoto, type StoredModel } from "./modelStore";
 import { Slicer } from "./slicerProtocol";
 import Viewport3D, { type ViewToggles } from "./Viewport3D";
+import { parametricGrips } from "./grips";
 import type { DesignTab } from "./DesignStudio";
 import type { Finish } from "@/lib/parametric/presets";
 import { SHEET_SPACING } from "@/lib/fit/arrange";
@@ -655,7 +656,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
           <div className="stage-chip"><span className="pe-stage">{busy || depthBusy ? (stage ?? "Slicing…") : res ? `${result!.stats.partCount} parts · ${Math.round(res.ms)} ms` : ""}</span>
             {(busy || depthBusy) && <span className="pe-progress" aria-hidden />}</div>
           <div className="pe-3d stage-3d" hidden={tab !== "3d"}>
-              <Viewport3D className="pe-view" mesh={result && !result.usesModel ? null : mesh} result={result} T={params.material.T} show={show} explode={exploded} finish={finish} selected={selected} onSelect={(id) => setSelected(id ? [id] : [])} heat={showHeat && !!result?.deviation} v={v3} units={units} />
+              <Viewport3D className="pe-view" mesh={result && !result.usesModel ? null : mesh} result={result} T={params.material.T} show={show} explode={exploded} finish={finish} selected={selected} onSelect={(id) => setSelected(id ? [id] : [])} heat={showHeat && !!result?.deviation} v={v3} units={units} grips={selected.length && !exploded ? parametricGrips(params, edit, units) : undefined} />
               {showHeat && result?.deviation && (
                 <div className="pe-legend" data-testid="deviation-legend">
                   <span>0</span>

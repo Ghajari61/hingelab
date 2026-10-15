@@ -13,6 +13,7 @@ import { Camera, Home } from "lucide-react";
 import ListingPhoto, { type Shoot } from "./ListingPhoto";
 import { applyLook, type LookId } from "./looks";
 import { dimLines, dimSVG, modelBox } from "./dims";
+import { GRIP_KINDS, axisDrag, snapDrag, turnDrag, type Grip, type GripAxis, type GripKind } from "./grips";
 
 export type PaneId = "top" | "front" | "left" | "persp";
 export type Shade3D = "shaded" | "edges";
@@ -84,9 +85,41 @@ function fitHalf(mx: number, my: number, pw: number, ph: number) {
   return Math.max(my * room(ph), (mx * room(pw) * ph) / pw, 5);
 }
 
+const AXIS_VEC: Record<GripAxis, [number, number, number]> = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] };
+const AXIS_COLOR: Record<GripAxis, number> = { x: 0xe5484d, y: 0x30a46c, z: 0x3e7bfa };
+const HOVER_COLOR = 0xffb224;
+
+/** Handle shapes in screen pixels; each view scales them to its own millimetres per pixel. */
+function gripShapes() {
+  return {
+    cube: new THREE.BoxGeometry(11, 11, 11),
+    cubeHit: new THREE.BoxGeometry(24, 24, 24),
+    shaft: new THREE.CylinderGeometry(1.4, 1.4, 58, 8).translate(0, 29, 0),
+    cone: new THREE.ConeGeometry(6, 16, 16).translate(0, 66, 0),
+    arrowHit: new THREE.CylinderGeometry(10, 10, 76, 8).translate(0, 38, 0),
+    ring: new THREE.TorusGeometry(64, 1.6, 8, 72),
+    ringHit: new THREE.TorusGeometry(64, 8, 6, 48),
+  };
+}
+type GripShapes = ReturnType<typeof gripShapes>;
+
+/** A handle placed in the overlay: `at` is where it acts (face centre or box centre), `ext` the box's size along its axis. */
+interface Handle { grip: Grip; obj: THREE.Group; hit: THREE.Mesh; mat: THREE.MeshBasicMaterial; axis: THREE.Vector3; at: THREE.Vector3; ext: number }
+
+interface Drag {
+  id: string; kind: GripKind; side: number; fn: (d: number, done: boolean) => string;
+  x0: number; y0: number; prev: [number, number]; ang: number;
+  /** Screen pixels per mm along the axis, and the handle's centre on screen. */
+  u: [number, number]; c: [number, number]; facing: boolean; d: number; text: string;
+}
+
 interface Stage {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
+  /** The handles, drawn over the model in every view. */
+  overlay: THREE.Scene;
+  shapes: GripShapes;
+  hitMat: THREE.Material;
   sun: THREE.DirectionalLight;
   ground: THREE.Mesh;
   grids: THREE.GridHelper[];
@@ -123,6 +156,8 @@ interface Props {
   onSelect?: (name: string | null) => void;
   /** Highlights the part with this name from outside (undefined leaves the selection to clicks). */
   selectName?: string | null;
+  /** Handles for the selected part: dragging one changes the design (lib/three/grips.ts). */
+  grips?: Grip[];
   id?: string;
   testId?: string;
   className?: string;
@@ -162,7 +197,18 @@ function glow(mesh: THREE.Mesh, on: boolean) {
 }
 
 const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref) {
-  const { model, look, frameKey, explode = 0, measure, shade, quad, active, onActive, onQuad, onShade, dims, units, dim, onPick, pickable, onSelect, selectName, id, testId, className = "", label = "3D views of the design", photoName, children } = props;
+  const { model, look, frameKey, explode = 0, measure, shade, quad, active, onActive, onQuad, onShade, dims, units, dim, onPick, pickable, onSelect, selectName, grips, id, testId, className = "", label = "3D views of the design", photoName, children } = props;
+  const [gripKind, setGripKind] = useState<GripKind>("size");
+  const kinds = GRIP_KINDS.filter((k) => grips?.some((g) => g.kind === k.kind));
+  const kind = kinds.some((k) => k.kind === gripKind) ? gripKind : kinds[0]?.kind;
+  const gripList = useRef<Grip[]>([]);
+  gripList.current = grips?.filter((g) => g.kind === kind) ?? [];
+  const handles = useRef<Handle[]>([]);
+  const hoverId = useRef<string | null>(null);
+  const drag = useRef<Drag | null>(null);
+  /** Until then a new frame key does not reframe: the design was resized by a drag. */
+  const holdUntil = useRef(0);
+  const tip = useRef<HTMLSpanElement>(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
   const told = useRef<string | null>(null);
@@ -252,6 +298,12 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
         renderer.setViewport(x, y, r.width, r.height);
         renderer.setScissor(x, y, r.width, r.height);
         renderer.render(scene, p.cam);
+        if (fitHandles(p, r.height)) {
+          renderer.autoClear = false;
+          renderer.clearDepth();
+          renderer.render(overlay, p.cam);
+          renderer.autoClear = true;
+        }
         if (p.svg) p.svg.innerHTML = showDims.current && bbox.current ? dimSVG(dimLines(bbox.current, p.cam, r.width, r.height), showDims.current) : "";
       }
       syncCube();
@@ -287,10 +339,30 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     const ro = new ResizeObserver(resize);
     ro.observe(el);
     for (const p of panes) ro.observe(p.el);
-    st.current = { renderer, scene, sun, ground, grids: [], panes, request };
+    const overlay = new THREE.Scene();
+    const shapes = gripShapes();
+    const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+    // Capture on the pane: a press on a handle never reaches the mouse controls.
+    const offs: (() => void)[] = [];
+    for (const p of panes) {
+      const on = <K extends keyof HTMLElementEventMap>(type: K, f: (e: HTMLElementEventMap[K]) => void, capture: boolean) => {
+        p.el.addEventListener(type, f, capture);
+        offs.push(() => p.el.removeEventListener(type, f, capture));
+      };
+      on("pointerdown", (e) => gripEvents.current.down(p, e), true);
+      on("pointermove", (e) => gripEvents.current.move(p, e), false);
+      on("pointerup", (e) => gripEvents.current.up(p, e, false), true);
+      on("pointercancel", (e) => gripEvents.current.up(p, e, true), true);
+    }
+    st.current = { renderer, scene, overlay, shapes, hitMat, sun, ground, grids: [], panes, request };
     resize();
     return () => {
       ro.disconnect();
+      for (const off of offs) off();
+      for (const k of handles.current) k.mat.dispose();
+      handles.current = [];
+      for (const g of Object.values(shapes)) g.dispose();
+      hitMat.dispose();
       cancelAnimationFrame(frame);
       for (const p of panes) p.controls.dispose();
       if (shown.current) { scene.remove(shown.current.group); shown.current.dispose(); shown.current = null; }
@@ -446,8 +518,9 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
         shown.current = model;
         model.ready?.then(() => { if (shown.current === model) st.current?.request(); });
       }
-      const reframe = !!frameKey && frameKey !== framed.current;
-      if (reframe) framed.current = frameKey;
+      const held = !!drag.current || performance.now() < holdUntil.current;
+      const reframe = !!frameKey && frameKey !== framed.current && !held;
+      if (reframe || held) framed.current = frameKey;
       settle(reframe);
       if (!onPick) select(keep ? meshesOf(model.group).find((x) => x.name === keep) ?? null : null);
     } else {
@@ -558,6 +631,171 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
   const [photo, setPhoto] = useState(false);
   const closePhoto = useCallback(() => { setPhoto(false); host.current?.focus({ preventScroll: true }); }, []);
 
+  /** Sizes the handles to this view's millimetres per pixel and hides the ones seen end-on; false when there are none. */
+  const fitHandles = (p: Pane, h: number) => {
+    if (!handles.current.length || !st.current) return false;
+    const look = p.cam.getWorldDirection(new THREE.Vector3());
+    const tan = p.cam instanceof THREE.PerspectiveCamera ? Math.tan(THREE.MathUtils.degToRad(p.cam.fov / 2)) : 0;
+    for (const k of handles.current) {
+      const mmPx = p.cam instanceof THREE.OrthographicCamera
+        ? (p.cam.top - p.cam.bottom) / p.cam.zoom / Math.max(1, h)
+        : (2 * Math.max(1, look.dot(k.at.clone().sub(p.cam.position))) * tan) / Math.max(1, h);
+      k.obj.scale.setScalar(mmPx);
+      const along = Math.abs(k.axis.dot(look));
+      k.obj.visible = k.grip.kind === "turn" ? along > 0.25 : along < 0.95;
+    }
+    st.current.overlay.updateMatrixWorld(true);
+    return true;
+  };
+
+  const paintHandles = () => {
+    const lit = drag.current?.id ?? hoverId.current;
+    for (const k of handles.current) k.mat.color.setHex(k.grip.id === lit ? HOVER_COLOR : AXIS_COLOR[k.grip.axis]);
+  };
+
+  /** The handles for the current grips, on the selected part's box or the whole design's. */
+  const placeHandles = () => {
+    const s = st.current;
+    if (!s) return;
+    for (const k of handles.current) { s.overlay.remove(k.obj); k.mat.dispose(); }
+    handles.current = [];
+    const m = shown.current, list = gripList.current;
+    if (m && list.length) {
+      m.group.updateMatrixWorld(true);
+      const whole = modelBox(m.group);
+      const part = selected.current ? new THREE.Box3().setFromObject(selected.current) : null;
+      const { shapes, hitMat } = s;
+      for (const g of list) {
+        const box = g.part && part && !part.isEmpty() ? part : whole;
+        if (box.isEmpty()) continue;
+        const axis = new THREE.Vector3(...AXIS_VEC[g.axis]);
+        const at = box.getCenter(new THREE.Vector3());
+        const ext = box.getSize(new THREE.Vector3())[g.axis];
+        const mat = new THREE.MeshBasicMaterial({ color: AXIS_COLOR[g.axis], transparent: true, opacity: 0.95 });
+        const obj = new THREE.Group();
+        let hit: THREE.Mesh;
+        if (g.kind === "size") {
+          const side = g.side ?? 1;
+          at[g.axis] = side > 0 ? box.max[g.axis] : box.min[g.axis];
+          const cube = new THREE.Mesh(shapes.cube, mat);
+          hit = new THREE.Mesh(shapes.cubeHit, hitMat);
+          cube.position.copy(axis).multiplyScalar(14 * side);
+          hit.position.copy(cube.position);
+          obj.add(cube, hit);
+        } else if (g.kind === "move") {
+          obj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
+          hit = new THREE.Mesh(shapes.arrowHit, hitMat);
+          obj.add(new THREE.Mesh(shapes.shaft, mat), new THREE.Mesh(shapes.cone, mat), hit);
+        } else {
+          obj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), axis);
+          hit = new THREE.Mesh(shapes.ringHit, hitMat);
+          obj.add(new THREE.Mesh(shapes.ring, mat), hit);
+        }
+        obj.position.copy(at);
+        s.overlay.add(obj);
+        handles.current.push({ grip: g, obj, hit, mat, axis, at, ext });
+      }
+    }
+    paintHandles();
+    s.request();
+  };
+
+  const handleAt = (p: Pane, x: number, y: number) => {
+    if (!handles.current.length) return null;
+    const r = p.el.getBoundingClientRect();
+    fitHandles(p, r.height);
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1), p.cam);
+    const vis = handles.current.filter((k) => k.obj.visible);
+    const hit = ray.intersectObjects(vis.map((k) => k.hit), false)[0];
+    return hit ? vis.find((k) => k.hit === hit.object) ?? null : null;
+  };
+
+  const showTip = (x: number, y: number, text: string | null) => {
+    const t = tip.current, h = host.current;
+    if (!t || !h) return;
+    t.hidden = text == null;
+    if (text == null) return;
+    const r = h.getBoundingClientRect();
+    t.textContent = text;
+    t.style.left = `${x - r.left + 14}px`;
+    t.style.top = `${y - r.top + 12}px`;
+  };
+
+  const endDrag = (cancel: boolean) => {
+    const g = drag.current;
+    if (!g) return;
+    drag.current = null;
+    holdUntil.current = performance.now() + 1500;
+    g.fn(cancel ? 0 : g.d, true);
+    showTip(0, 0, null);
+    paintHandles();
+    st.current?.request();
+  };
+
+  const gripEvents = useRef({ down: (_p: Pane, _e: PointerEvent) => {}, move: (_p: Pane, _e: PointerEvent) => {}, up: (_p: Pane, _e: PointerEvent, _cancel: boolean) => {} });
+  gripEvents.current = {
+    down: (p, e) => {
+      if (e.button !== 0 || drag.current) return;
+      const k = handleAt(p, e.clientX, e.clientY);
+      if (!k) return;
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      const r = p.el.getBoundingClientRect();
+      const toScreen = (v: THREE.Vector3): [number, number] => {
+        const q = v.clone().project(p.cam);
+        return [r.left + ((q.x + 1) / 2) * r.width, r.top + ((1 - q.y) / 2) * r.height];
+      };
+      const L = Math.max(1e-3, k.obj.scale.x * 100);
+      const a = toScreen(k.at), b = toScreen(k.at.clone().addScaledVector(k.axis, L));
+      const toViewer = p.cam instanceof THREE.OrthographicCamera ? p.cam.getWorldDirection(new THREE.Vector3()).negate() : p.cam.position.clone().sub(k.at);
+      drag.current = {
+        id: k.grip.id, kind: k.grip.kind, side: k.grip.side ?? 1, fn: k.grip.start(k.ext),
+        x0: e.clientX, y0: e.clientY, prev: [e.clientX, e.clientY], ang: 0,
+        u: [(b[0] - a[0]) / L, (b[1] - a[1]) / L], c: a, facing: k.axis.dot(toViewer) > 0, d: 0, text: "",
+      };
+      try { p.el.setPointerCapture(e.pointerId); } catch { /* synthetic pointer */ }
+      p.el.style.cursor = "grabbing";
+      host.current?.focus({ preventScroll: true });
+      if (active !== p.def.id) onActive(p.def.id);
+      paintHandles();
+      st.current?.request();
+    },
+    move: (p, e) => {
+      const g = drag.current;
+      if (!g) {
+        if (e.buttons || !handles.current.length) return;
+        const k = handleAt(p, e.clientX, e.clientY);
+        const id = k?.grip.id ?? null;
+        p.el.style.cursor = k ? "grab" : "";
+        if (id !== hoverId.current) { hoverId.current = id; paintHandles(); st.current?.request(); }
+        return;
+      }
+      let raw: number;
+      if (g.kind === "turn") {
+        g.ang += turnDrag(g.c, g.prev, [e.clientX, e.clientY], g.facing);
+        g.prev = [e.clientX, e.clientY];
+        raw = g.ang;
+      } else raw = axisDrag(e.clientX - g.x0, e.clientY - g.y0, g.u) * (g.kind === "size" ? g.side : 1);
+      const d = snapDrag(g.kind, raw, e.shiftKey);
+      if (d !== g.d || !g.text) { g.d = d; g.text = g.fn(d, false); }
+      showTip(e.clientX, e.clientY, g.text);
+    },
+    up: (p, e, cancel) => {
+      if (!drag.current) return;
+      e.stopImmediatePropagation();
+      try { p.el.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+      p.el.style.cursor = "";
+      endDrag(cancel);
+    },
+  };
+
+  // The handles follow the grips, the model (rebuilt while dragging) and the selection.
+  useEffect(() => {
+    placeHandles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grips, kind, model, picked, explode]);
+
   const pickAt = (id: PaneId, e: React.PointerEvent) => {
     const p = paneOf(id), m = shown.current;
     if (!p || !m) return;
@@ -579,8 +817,11 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
       return;
     }
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+    if (e.key === "Escape" && drag.current) { done(); endDrag(true); return; }
     const view = PANES.find((p) => p.key === k);
-    if (view) { done(); onActive(view.id); }
+    const handleKind = kinds.find((x) => x.key === k);
+    if (handleKind) { done(); setGripKind(handleKind.kind); }
+    else if (view) { done(); onActive(view.id); }
     else if (k === "z") { done(); if (e.shiftKey) fitAll(); else { const p = paneOf(active); if (p) fitPane(p, p.def.ortho ? undefined : p.cam.position.clone().sub(p.controls.target)); } }
     else if (e.key === "F4") { done(); onShade(shade === "edges" ? "shaded" : "edges"); }
     else if (e.key === "Escape" && (selected.current || onPick)) { done(); select(null); }
@@ -634,7 +875,15 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
       </div>
       {photo && model && <ListingPhoto shoot={shoot} name={photoName} onClose={closePhoto} />}
       {picked && <span className="v3-pick" role="status">Selected: <b>{picked}</b> · Esc to clear</span>}
-      <span className="v3-hint">Drag to orbit · middle or right-drag to pan · wheel to zoom · click a part to select · Alt+W one or four views · Z zoom extents · F4 edges</span>
+      {kinds.length > 0 && (
+        <span className="v3-seg v3-grips" role="group" aria-label="Handles" data-testid="v3-grips">
+          {kinds.map((k) => (
+            <button key={k.kind} type="button" aria-pressed={k.kind === kind} title={`${k.label} handles (${k.key.toUpperCase()}): drag them in any view · Shift snaps · Esc cancels`} onClick={() => setGripKind(k.kind)}>{k.label}</button>
+          ))}
+        </span>
+      )}
+      <span ref={tip} className="v3-tip" hidden data-testid="v3-tip" />
+      <span className="v3-hint">Drag to orbit · middle or right-drag to pan · wheel to zoom · click a part to select, then drag its handles · Alt+W one or four views · Z zoom extents · F4 edges</span>
       {children}
     </div>
   );

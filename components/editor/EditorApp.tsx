@@ -463,7 +463,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
         <div className={`stage${viewMode === "3d" ? " no-rulers" : ""}`}>
         <ViewToggle value={viewMode} onChange={setViewMode} />
         <div className={`stage-3d${stale ? " stale" : ""}`} hidden={viewMode !== "3d"}>
-          {seen3d && <HingeView3D model={stale?.model ?? model} params={stale?.built ?? built} lay={stale?.lay ?? lay} content={stale?.content ?? content} units={units} />}
+          {seen3d && <HingeView3D model={stale?.model ?? model} params={stale?.built ?? built} lay={stale?.lay ?? lay} content={stale?.content ?? content} units={units} edit={{ params, set: replace }} />}
           {seen3d && error && <div className="canvas-error">{error}</div>}
         </div>
         <section className="viewport" aria-label="Canvas">

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { MeshData, SliceResult } from "@/lib/parametric";
+import type { Grip } from "@/lib/three/grips";
 import QuadView, { type QuadModel } from "@/lib/three/QuadView";
 import { quadProps, useView3D, type View3DState } from "@/components/shell/view3d";
 import type { Units } from "@/components/editor/format";
@@ -17,7 +18,7 @@ const SELECT_COLOR = 0x3b8ff0;
  * workspace. `explode` (mm) pushes the parts apart along their plane normals; clicking a part
  * reports its id.
  */
-export default function Viewport3D({ mesh, result, T, show, explode = 0, finish = "wood", heat = false, selected = [], onSelect, className = "pdbg-view", v, units = "mm" }: {
+export default function Viewport3D({ mesh, result, T, show, explode = 0, finish = "wood", heat = false, selected = [], onSelect, className = "pdbg-view", v, units = "mm", grips }: {
   mesh: MeshData | null;
   result: SliceResult | null;
   T: number;
@@ -33,6 +34,8 @@ export default function Viewport3D({ mesh, result, T, show, explode = 0, finish 
   /** The editor's 3D settings (its toolbar); a view of its own when left out. */
   v?: View3DState;
   units?: Units;
+  /** Handles on the model while a part is selected. */
+  grips?: Grip[];
 }) {
   const own = useView3D();
   const view = v ?? own;
@@ -144,6 +147,7 @@ export default function Viewport3D({ mesh, result, T, show, explode = 0, finish 
       className={className} testId="parametric-view" label="The model, planes and parts in 3D: Top, Front, Left and Perspective views"
       pickable={(m) => m.userData.partId != null && !!layers.current.parts?.visible}
       onPick={(m) => onSelectRef.current?.((m?.userData.partId as string | undefined) ?? null)}
+      grips={grips}
     />
   );
 }

@@ -9,7 +9,10 @@ import { MATERIAL_PRESETS } from "@/lib/studio/library";
 import type { Document, PartAdjust } from "@/lib/studio/types";
 import { finishScene, slab } from "@/lib/three/flat";
 import { lookOf } from "@/lib/three/looks";
+import { assemblyGrips } from "@/lib/studio/assembly/grips";
 import QuadView, { type QuadModel } from "@/lib/three/QuadView";
+
+type V3 = [number, number, number];
 import { quadProps, useView3D } from "@/components/shell/view3d";
 import { View3DTools } from "@/components/shell/View3DTools";
 import { useEditor, useEditorApi } from "../store";
@@ -158,6 +161,7 @@ export function Assembly3D({ onBack, onShow, toast }: {
           units={doc.units === "in" ? "in" : "mm"} measure={v.flat || v.explode === 0} testId="assembly-view"
           label="The drawing put together in 3D: Top, Front, Left and Perspective views"
           onSelect={(n) => setSel(n ? scene.names.get(n) ?? null : null)} selectName={sel ? keyName.get(sel) ?? null : null}
+          grips={part && !v.flat && !v.explode && !adj.flat ? assemblyGrips(move as V3, turn as V3, (patch, tag) => setAdj(part.key, patch, patch.turn ? "Turn part in 3D" : "Move part in 3D", tag), doc.units === "in" ? "in" : "mm") : undefined}
         />
       </div>
       <aside className="asm-side" aria-label="3D assembly">
