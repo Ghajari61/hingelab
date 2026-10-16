@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.45",
-    "pub_date": "2026-10-16T18:50:47.333Z",
-    "notes": "The designer studies a picture before it draws, and traces flat artwork in more colours.",
+    "version": "1.0.46",
+    "pub_date": "2026-10-16T19:35:06.334Z",
+    "notes": "Select an AI drawing in 3D and drag its handles to resize it. Height keeps the same proportions.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.45_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnNIOUFRM0M3bGdzVUZxbHZCcWRzS1ZHQ2FwMzlocG4xV0xxcG1TR0N3ZkRYMXBlb2FDaVJvT1ZHSHo4bENaaXdSd2V2L1VTUlJCR0VJUXkzdDRjY2dNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTc2NTEzCWZpbGU6SGluZ2VMYWJfMS4wLjQ1X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDUKeTZRS2F6dzJ4cmJHNklrTWRwL1Fxdm0yNlAyZFh2YXJjbUVpWUY2aGVMYkJFRzhwMHZjWEM5dzhEUGN6dlM5aG0ybVdER0x2WFlKWHpldmUwdXNJRHc9PQo=",
-        "size": 4272241
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.46_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnE5SzBSallOYlhFQ1VPYnkvU0h2SWhkbVRHR2lBOHFSSlpMZGRtY3F6NExPeEFFeHJla1IwWTBDdTZuTlB2RmNYY1dHcWhmU0hQQVpjL0RUN1BoREFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTc5MTUyCWZpbGU6SGluZ2VMYWJfMS4wLjQ2X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDYKQVJ2NlFXM1lqMDFpNHV4ZG83ci8waDJWcUhOMEdNejF5Q2J0RGpoUVpDdVpOL2xNWHVYVGIvdDQ4SlpjSEZDMFR1RnpLNmZQazdhdVB4MVhEdDRQQ0E9PQo=",
+        "size": 4272048
       }
     }
   }

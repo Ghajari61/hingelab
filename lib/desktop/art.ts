@@ -40,9 +40,10 @@ export const ART_PRODUCT: DProduct = {
   presets: [],
   sections: [
     {
-      id: "size", title: "Size", help: "The drawing scales as a whole; its height follows the width.",
+      id: "size", title: "Size", help: "The drawing scales as a whole, so width and height stay in proportion. Select a part in 3D and drag its handles to resize it.",
       fields: [
         { kind: "number", key: "width", label: "Width", unit: "mm", min: MIN_W, max: MAX_W, step: 1, help: "Width of the whole drawing. Everything scales with it, slots and holes too." },
+        { kind: "number", key: "height", label: "Height", unit: "mm", min: MIN_W, max: MAX_W, step: 1, help: "Height of the whole drawing. The width follows, so the shape stays the same." },
         { kind: "toggle", key: "mirror", label: "Mirror", help: "Flip the drawing left to right, so engraving on the back of clear acrylic reads the right way from the front." },
       ],
     },
@@ -220,10 +221,21 @@ function artIssues(p: ArtParams, b: BuiltArt, g: ArtGeometry): Issue<ArtParams>[
   return list;
 }
 
-function formOf(b: BuiltArt): DForm {
+function formOf(b: BuiltArt, p: ArtParams): DForm {
   const has = (layer: ArtShape["layer"]) => b.shapes.some((s) => s.layer === layer);
   const hidden = [...(has("engrave") ? [] : ["engrave"]), ...(has("score") ? [] : ["score"])];
-  return { hidden, hiddenSections: hidden.length === 2 ? ["layers"] : [], labels: {} };
+  return { hidden, hiddenSections: hidden.length === 2 ? ["layers"] : [], labels: {}, values: { height: drawnHeight(b, p.width) } };
+}
+
+/** Height in mm when the drawing is scaled to `width`. */
+function drawnHeight(b: BuiltArt, width: number): number {
+  return b.box.h > 0 ? round(width * b.box.h / b.box.w) : round(width);
+}
+
+/** Width that gives the drawing this height, keeping its proportions. */
+function widthForHeight(b: BuiltArt, height: number): number {
+  const w = b.box.h > 0 ? height * b.box.w / b.box.h : height;
+  return round(Math.min(MAX_W, Math.max(MIN_W, w)));
 }
 
 // ---------------------------------------------------------------- Generate
@@ -235,7 +247,12 @@ export async function generateArt(r: GenerateRequest, plan: Plan): Promise<Gener
   if ("error" in read) return { status: 400, body: { error: read.error } };
   const { b } = read;
   let p = read.p;
-  if (r.change) {
+  if (r.change?.key === "height") {
+    const f = ART_PRODUCT.sections.flatMap((s) => s.fields).find((x) => x.key === "height")!;
+    const c = coerce(f, r.change.value);
+    if ("error" in c) return { status: 400, body: { error: c.error } };
+    p = { ...p, width: widthForHeight(b, c.v as number) };
+  } else if (r.change) {
     const q = changeArt(p, r.change);
     if ("error" in q) return { status: 400, body: { error: q.error } };
     p = q;
@@ -259,7 +276,7 @@ export async function generateArt(r: GenerateRequest, plan: Plan): Promise<Gener
   const watermark = needsWatermark(plan);
   const parts = g.parts.map((part) => movePart(p.engrave ? part : { ...part, engrave: [] }, m));
   const body: GenerateResponse = {
-    product: "art", params: p as unknown as Record<string, unknown>, form: formOf(b),
+    product: "art", params: p as unknown as Record<string, unknown>, form: formOf(b, p),
     issues: toIssues(issuesOf(p)),
     stats: [
       { label: "Size", value: `${Math.round(w)} × ${Math.round(h)} mm` },

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Art } from "@/lib/ai/art";
+import { artGrips } from "../artGrips";
 import { artGeometry } from "../art";
+import { sizeResult } from "@/lib/three/grips";
 import { desktopCatalog, generateDesign } from "../products";
 import type { GenerateResponse } from "../types";
 
@@ -46,6 +48,23 @@ describe("AI drawing in the desktop workspace", () => {
     const { body } = await gen({ params: { art: ART } }, "free");
     expect(body.watermark).toBe(true);
     expect(body.svg).not.toBe((await gen({ params: { art: ART } })).body.svg);
+  });
+
+  it("sets the height and keeps the proportions, and reports the height back", async () => {
+    const { body } = await gen({ params: { art: ART }, change: { key: "height", value: 80 } });
+    expect(body.params.width).toBe(220);
+    expect(body.form.values?.height).toBe(80);
+    expect([body.width, body.height]).toEqual([220, 80]);
+  });
+
+  it("scales a selected part from its 3D handles through the width", () => {
+    const written: unknown[] = [];
+    const g = artGrips({ width: 110, T: 3 }, (key, value) => written.push([key, value]), "mm");
+    const r = sizeResult(g!.size!, { x: 110, y: 3, z: 40 }, { x: 2, y: 2, z: 2 });
+    expect(r.values.width).toBe(220);
+    g!.size!.write(r.values);
+    expect(written).toEqual([["width", 220]]);
+    expect(artGrips({}, () => {}, "mm")).toBeUndefined();
   });
 
   it("scales the whole drawing with the width and warns that the slots grew", async () => {

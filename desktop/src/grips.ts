@@ -2,6 +2,7 @@
  * The 3D handles in the Windows app: the same mappings as the website's editors, writing the
  * settings through the workspace's changes (built on the server like any other edit).
  */
+import { artGrips } from "../../lib/desktop/artGrips";
 import type { DProduct } from "../../lib/desktop/types";
 import type { GenBase } from "../../lib/generators/types";
 import { itemGrips, specGrips } from "../../lib/generators/grips3d";
@@ -21,6 +22,7 @@ export function desktopGrips(
   selected: string | null = null, scaleBy?: (s: number) => void,
 ): GripSet | undefined {
   if (product.id === "hinge") return hingeGrips(params as unknown as Params, changeMany, units);
+  if (product.id === "art") return artGrips(params, change, units);
   const write = (values: Record<string, number>, done: boolean) => {
     const keys = Object.keys(values);
     if (keys.length === 1) change(keys[0], values[keys[0]], done);
