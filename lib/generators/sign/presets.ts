@@ -126,4 +126,36 @@ export const SIGN_PRESETS: GenPreset<SignParams>[] = [
       text: { text: "OPEN", fontId: "archivo-black", size: 60, spacing: 2 }, motif: { kind: "none" }, mount: { kind: "none" },
     },
   },
+  {
+    id: "reception-plaque", name: "Reception plaque", note: "Engraved rounded plaque on standoffs for a front desk",
+    params: {
+      name: "Reception", style: { kind: "engraved" }, board: { shape: "rounded", auto: true, pad: 22, corner: 12 },
+      text: { text: "Reception", fontId: "cinzel", size: 40 }, motif: { kind: "key", side: "above", size: 30, gap: 8 },
+      border: { kind: "engrave", inset: 7, width: 1.5 }, mount: { kind: "standoff", hole: 5 },
+    },
+  },
+  {
+    id: "nowruz-scallop", name: "Nowruz scallop", note: "Layered Persian greeting on a scalloped board",
+    params: {
+      name: "Nowruz", style: { kind: "layered" }, board: { shape: "scalloped", auto: true, pad: 24, corner: 10 },
+      text: { text: "نوروز مبارک", fontId: "lalezar", size: 44 }, motif: { kind: "sun", side: "above", size: 40, gap: 6 },
+      border: { kind: "engrave", inset: 8, width: 2 }, mount: { kind: "hanging", hole: 5 },
+    },
+  },
+  {
+    id: "bakery-banner", name: "Bakery banner", note: "Hanging banner for a bakery storefront",
+    params: {
+      name: "Fresh bakery", style: { kind: "word" }, board: { shape: "banner", auto: true, pad: 20, corner: 8 },
+      text: { text: "Fresh Bakery", fontId: "lobster", size: 46 }, motif: { kind: "cupcake", side: "left", size: 38, gap: 8 },
+      border: { kind: "none" }, mount: { kind: "hanging", hole: 6 },
+    },
+  },
+  {
+    id: "cocktail-bar-neon", name: "Cocktail bar", note: "Neon-style sign with stars for a bar or lounge",
+    params: {
+      name: "Cocktail bar", style: { kind: "neon" }, board: { shape: "pill", auto: true, pad: 20 },
+      text: { text: "Cocktail Bar", fontId: "pacifico", size: 44 }, motif: { kind: "stars", side: "right", size: 32, gap: 8 },
+      mount: { kind: "standoff", hole: 4 },
+    },
+  },
 ];

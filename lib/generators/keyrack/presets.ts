@@ -90,4 +90,32 @@ export const KEYRACK_PRESETS: GenPreset<KeyrackParams>[] = [
       hooks: { count: 3, profile: "square", y: 62, margin: 45 }, mount: { kind: "holes", y: 25 },
     },
   },
+  {
+    id: "hotel-key-board", name: "Hotel key board", note: "Six round hooks on a wide board for room keys",
+    params: {
+      name: "Room keys", board: { shape: "rect", width: 420, height: 130, corner: 6 }, text: { text: "Room Keys", fontId: "cinzel", size: 24 },
+      motif: { kind: "key", side: "left", size: 30 }, hooks: { count: 6, profile: "round" }, mount: { kind: "holes" },
+    },
+  },
+  {
+    id: "farmhouse-entry", name: "Farmhouse entry", note: "House-shaped board with square hooks",
+    params: {
+      name: "Home keys", board: { shape: "house", width: 300, height: 160, corner: 10 }, text: { text: "Home", fontId: "playfair-display", size: 24 },
+      motif: { kind: "house", side: "left", size: 26 }, hooks: { count: 4, profile: "square" }, mount: { kind: "keyhole" },
+    },
+  },
+  {
+    id: "garage-banner", name: "Garage banner", note: "Banner board with five hooks for workshop keys",
+    params: {
+      name: "Garage keys", board: { shape: "banner", width: 340, height: 120, corner: 8 }, text: { text: "Garage Keys", fontId: "anton", size: 24 },
+      motif: { kind: "none" }, hooks: { count: 5, profile: "round" }, mount: { kind: "holes" },
+    },
+  },
+  {
+    id: "persian-kelid", name: "Persian key rack", note: "Cloud board labelled کلید, four round hooks",
+    params: {
+      name: "Persian keys", board: { shape: "cloud", width: 300, height: 120, corner: 12 }, text: { text: "کلید", fontId: "vazirmatn", size: 26 },
+      motif: { kind: "key", side: "right", size: 26 }, hooks: { count: 4, profile: "round" }, mount: { kind: "keyhole" },
+    },
+  },
 ];

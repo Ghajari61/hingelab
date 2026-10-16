@@ -86,4 +86,20 @@ export const TOPPER_PRESETS: GenPreset<TopperParams>[] = [
       cupcake: { count: 12, shape: "motif", motif: "star", size: 42 },
     },
   },
+  {
+    id: "nowruz-sweets", name: "Nowruz sweets", note: "Persian New Year cake topper with a rising sun",
+    params: { name: "Nowruz topper", text: { text: "نوروز", fontId: "lalezar", size: 34 }, motif: { kind: "sun", place: "above", size: 34, gap: -4 }, style: { kind: "layered", weld: 1 } },
+  },
+  {
+    id: "yalda-night", name: "Yalda night", note: "Moon and star topper for a Yalda dessert",
+    params: { name: "Yalda topper", text: { text: "شب یلدا", fontId: "vazirmatn", size: 28 }, motif: { kind: "moonstar", place: "above", size: 32, gap: -2 }, style: { kind: "letters" } },
+  },
+  {
+    id: "she-said-yes", name: "She said yes", note: "Script engagement topper with wedding rings",
+    params: { name: "She said yes", text: { text: "She Said Yes", fontId: "dancing-script", size: 30 }, motif: { kind: "rings", place: "above", size: 34, gap: -4 }, style: { kind: "outline" } },
+  },
+  {
+    id: "oh-baby-stroller", name: "Oh baby", note: "Baby shower topper with a pram beside the words",
+    params: { name: "Oh baby topper", text: { text: "Oh Baby", fontId: "fredoka", size: 30 }, motif: { kind: "stroller", place: "left", size: 32, gap: -2 }, style: { kind: "letters" } },
+  },
 ];

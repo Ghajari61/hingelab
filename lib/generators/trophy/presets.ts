@@ -96,4 +96,32 @@ export const TROPHY_PRESETS: GenPreset<TrophyParams>[] = [
       mat: { mat2: "acrylic-gold", T2: 3 },
     },
   },
+  {
+    id: "top-sales-star", name: "Top sales", note: "Star emblem on a two-tier base for a sales award",
+    params: {
+      name: "Top sales award", emblem: { kind: "star", width: 100, height: 100, text: "#1", fontId: "anton", size: 22, laurel: false },
+      plate: { title: "Top Sales", name: "Team Member", year: "2026", width: 110 }, base: { tiers: 2, shape: "rounded", width: 130, depth: 60 },
+    },
+  },
+  {
+    id: "chef-of-the-year", name: "Chef of the year", note: "Flame emblem on an octagon base for a kitchen award",
+    params: {
+      name: "Chef of the year", emblem: { kind: "flame", width: 90, height: 120, text: "", laurel: false },
+      plate: { title: "Chef of the Year", name: "Head Chef", year: "2026", width: 115 }, base: { tiers: 2, shape: "octagon", width: 125, depth: 70 },
+    },
+  },
+  {
+    id: "innovation-medal", name: "Innovation medal", note: "Medal and laurel for a team prize",
+    params: {
+      name: "Innovation medal", emblem: { kind: "medal", width: 95, height: 115, text: "1st", fontId: "montserrat", size: 18, laurel: true },
+      plate: { title: "Innovation Award", name: "Winning Team", year: "2026", width: 110 }, base: { tiers: 1, shape: "hexagon", width: 120, depth: 65 },
+    },
+  },
+  {
+    id: "golf-classic-cup", name: "Club cup", note: "Classic cup on a round three-tier base",
+    params: {
+      name: "Club classic cup", emblem: { kind: "cup", width: 110, height: 130, text: "", laurel: false },
+      plate: { title: "Club Classic", name: "Champion", year: "2026", width: 120 }, base: { tiers: 3, shape: "circle", width: 120, depth: 120 },
+    },
+  },
 ];

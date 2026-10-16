@@ -93,4 +93,32 @@ export const TABLENUM_PRESETS: GenPreset<TablenumParams>[] = [
       text: { label: "", fontId: "pacifico", size: 48 }, motif: { kind: "tree", place: "above", size: 34, gap: 4 }, border: { kind: "score", inset: 4 },
     },
   },
+  {
+    id: "banquet-arch", name: "Banquet arch", note: "Arched wedding numbers from 1 to 12, scored border",
+    params: {
+      name: "Banquet table numbers", batch: { from: 1, to: 12 }, plate: { shape: "arch", pad: 14, corner: 8 },
+      text: { label: "Table", labelFont: "cinzel", fontId: "cinzel", size: 44 }, border: { kind: "score", inset: 5 },
+    },
+  },
+  {
+    id: "bistro-circle", name: "Bistro circle", note: "Bold round cafe numbers from 1 to 12",
+    params: {
+      name: "Bistro table numbers", batch: { from: 1, to: 12 }, plate: { shape: "circle", pad: 12, corner: 0 },
+      text: { label: "No.", labelFont: "bebas-neue", fontId: "bebas-neue", size: 52 }, border: { kind: "engrave", inset: 6 },
+    },
+  },
+  {
+    id: "persian-miz", name: "Persian table cards", note: "Scalloped plates labelled میز, numbers 1 to 12",
+    params: {
+      name: "Persian table numbers", batch: { from: 1, to: 12 }, plate: { shape: "scalloped", pad: 14, corner: 8 },
+      text: { label: "میز", labelFont: "vazirmatn", fontId: "vazirmatn", size: 40 }, border: { kind: "score", inset: 6 },
+    },
+  },
+  {
+    id: "garden-hexagon", name: "Garden hexagon", note: "Hexagon plates for an outdoor reception, 1 to 10",
+    params: {
+      name: "Garden table numbers", batch: { from: 1, to: 10 }, plate: { shape: "hexagon", pad: 14, corner: 4 },
+      text: { label: "Table", labelFont: "montserrat", fontId: "montserrat", size: 38 }, border: { kind: "none" },
+    },
+  },
 ];

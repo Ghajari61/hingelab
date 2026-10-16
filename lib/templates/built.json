@@ -253,6 +253,264 @@
    "parts.svg"
   ]
  },
+ "sign-reception": {
+  "w": 373,
+  "h": 116,
+  "sheets": 1,
+  "objects": 1,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "sign-nowruz": {
+  "w": 393,
+  "h": 393,
+  "sheets": 2,
+  "objects": 2,
+  "files": [
+   "sheet-1.svg",
+   "sheet-2.svg"
+  ]
+ },
+ "sign-bakery": {
+  "w": 366,
+  "h": 74,
+  "sheets": 1,
+  "objects": 1,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "sign-cocktail": {
+  "w": 349,
+  "h": 72,
+  "sheets": 1,
+  "objects": 1,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "topper-nowruz": {
+  "w": 114,
+  "h": 187,
+  "sheets": 2,
+  "objects": 2,
+  "files": [
+   "sheet-1.svg",
+   "sheet-2.svg"
+  ]
+ },
+ "topper-yalda": {
+  "w": 128,
+  "h": 166,
+  "sheets": 1,
+  "objects": 1,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "topper-yes": {
+  "w": 225,
+  "h": 171,
+  "sheets": 1,
+  "objects": 1,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "topper-stroller": {
+  "w": 202,
+  "h": 144,
+  "sheets": 1,
+  "objects": 1,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "trophy-sales": {
+  "w": 141,
+  "h": 291,
+  "sheets": 1,
+  "objects": 3,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "trophy-chef": {
+  "w": 136,
+  "h": 329,
+  "sheets": 1,
+  "objects": 3,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "trophy-innovation": {
+  "w": 131,
+  "h": 257,
+  "sheets": 1,
+  "objects": 2,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "trophy-club": {
+  "w": 243,
+  "h": 330,
+  "sheets": 1,
+  "objects": 4,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "tables-banquet": {
+  "w": 599,
+  "h": 398,
+  "sheets": 2,
+  "objects": 36,
+  "files": [
+   "sheet-1.svg",
+   "sheet-2.svg"
+  ]
+ },
+ "tables-bistro": {
+  "w": 590,
+  "h": 396,
+  "sheets": 2,
+  "objects": 36,
+  "files": [
+   "sheet-1.svg",
+   "sheet-2.svg"
+  ]
+ },
+ "tables-miz": {
+  "w": 565,
+  "h": 370,
+  "sheets": 2,
+  "objects": 36,
+  "files": [
+   "sheet-1.svg",
+   "sheet-2.svg"
+  ]
+ },
+ "tables-garden": {
+  "w": 584,
+  "h": 379,
+  "sheets": 2,
+  "objects": 30,
+  "files": [
+   "sheet-1.svg",
+   "sheet-2.svg"
+  ]
+ },
+ "box-saffron": {
+  "w": 557,
+  "h": 398,
+  "sheets": 1,
+  "objects": 11,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "box-cutlery": {
+  "w": 587,
+  "h": 388,
+  "sheets": 1,
+  "objects": 7,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "box-wedding-cards": {
+  "w": 557,
+  "h": 387,
+  "sheets": 1,
+  "objects": 8,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "box-hex-trinket": {
+  "w": 332,
+  "h": 342,
+  "sheets": 1,
+  "objects": 9,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "clock-lounge": {
+  "w": 369,
+  "h": 354,
+  "sheets": 1,
+  "objects": 3,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "clock-kitchen": {
+  "w": 325,
+  "h": 393,
+  "sheets": 1,
+  "objects": 3,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "clock-studio": {
+  "w": 348,
+  "h": 383,
+  "sheets": 1,
+  "objects": 3,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "clock-bloom": {
+  "w": 374,
+  "h": 351,
+  "sheets": 1,
+  "objects": 3,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "keys-hotel": {
+  "w": 587,
+  "h": 141,
+  "sheets": 1,
+  "objects": 7,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "keys-farmhouse": {
+  "w": 311,
+  "h": 290,
+  "sheets": 1,
+  "objects": 5,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "keys-garage": {
+  "w": 546,
+  "h": 131,
+  "sheets": 1,
+  "objects": 6,
+  "files": [
+   "parts.svg"
+  ]
+ },
+ "keys-kelid": {
+  "w": 311,
+  "h": 250,
+  "sheets": 1,
+  "objects": 5,
+  "files": [
+   "parts.svg"
+  ]
+ },
  "mandala-coasters": {
   "w": 220,
   "h": 220,

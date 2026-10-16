@@ -108,4 +108,32 @@ export const CLOCK_PRESETS: GenPreset<ClockParams>[] = [
       hands: { style: "baton", hour: 65, minute: 95, width: 6, tail: 14 },
     },
   },
+  {
+    id: "sunburst-lounge", name: "Lounge sunburst", note: "Large sunburst with baton hands for a lobby",
+    params: {
+      name: "Lounge sunburst", face: { shape: "sunburst", size: 360, rays: 32, depth: 40, layers: "single" },
+      markers: { style: "ticks", minutes: false }, hands: { style: "baton", hour: 80, minute: 120, width: 8, tail: 18 },
+    },
+  },
+  {
+    id: "scallop-kitchen", name: "Kitchen scallop", note: "Scalloped kitchen clock with dots and leaf hands",
+    params: {
+      name: "Kitchen scallop", face: { shape: "scallop", size: 300, layers: "single" },
+      markers: { style: "dots", fontId: "fredoka", size: 16 }, hands: { style: "leaf", hour: 65, minute: 100, width: 9, tail: 16 },
+    },
+  },
+  {
+    id: "hexagon-studio", name: "Studio hexagon", note: "Six-sided studio clock with mixed markers",
+    params: {
+      name: "Studio hexagon", face: { shape: "polygon", sides: 6, size: 320, corner: 8, layers: "single" },
+      markers: { style: "mixed", numerals: "arabic", fontId: "oswald", size: 18 }, hands: { style: "arrow", hour: 70, minute: 110, width: 14, tail: 16 },
+    },
+  },
+  {
+    id: "bloom-numerals", name: "Bloom numerals", note: "Flower face with classic numerals for a cafe",
+    params: {
+      name: "Bloom clock", face: { shape: "flower", size: 340, rays: 8, layers: "single" },
+      markers: { style: "numerals", numerals: "arabic", fontId: "playfair-display", size: 22 }, hands: { style: "classic", hour: 75, minute: 115, width: 14, tail: 16 },
+    },
+  },
 ];
