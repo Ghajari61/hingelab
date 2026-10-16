@@ -518,7 +518,6 @@ export function App() {
               onUpgrade={() => web("upgrade")}
               onRefreshPlan={refreshPlan}
               onFavorite={toggleFavorite}
-              onFullEditor={product.id === "art" ? undefined : () => openOnline("web-editors", `/app/editor/local?p=${encodeURIComponent(product.id)}`)}
               onWant3d={design.setWant3d}
             />
           </Keep>

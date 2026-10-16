@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, type RefObject } from "react";
-import { AlertTriangle, Box, CircleAlert, Dices, Download, FileDown, FileText, FolderOpen, Grid2x2, Grid3x3, Info, Lock, Maximize, Minus, PenTool, Plus, Redo2, RefreshCw, RotateCcw, Ruler, Save, Scan, Sparkles, Square, Star, Undo2, WifiOff, Wrench } from "lucide-react";
+import { AlertTriangle, Box, CircleAlert, Dices, Download, FileDown, FileText, FolderOpen, Grid2x2, Grid3x3, Info, Lock, Maximize, Minus, Plus, Redo2, RefreshCw, RotateCcw, Ruler, Save, Scan, Sparkles, Square, Star, Undo2, WifiOff, Wrench } from "lucide-react";
 import type { DProduct } from "../../../lib/desktop/types";
 import { isDirty, type DesignState } from "../design";
 import { desktopGrips } from "../grips";
@@ -57,8 +57,6 @@ interface Props {
   onUpgrade: () => void;
   onRefreshPlan: () => void;
   onFavorite: () => void;
-  /** Absent when the product has no online editor (AI drawings). */
-  onFullEditor?: () => void;
   /** The 3D view opened or closed: builds then bring the assembled model. */
   onWant3d: (on: boolean) => void;
 }
@@ -176,7 +174,6 @@ export function Workspace(p: Props) {
               <Star size={16} fill={p.favorite ? "currentColor" : "none"} aria-hidden />
             </button>
           </span>
-          {p.onFullEditor && <button type="button" className="btn ghost" aria-label="Full editor" title={`Open the online ${product.name} editor in this window: 3D view, DXF, sheets and more`} onClick={p.onFullEditor}><PenTool size={15} aria-hidden /><span>Full editor</span></button>}
           <button type="button" className="btn" aria-label={design.busy ? "Updating" : "Update"} title="Build the design again (Ctrl+Enter)" onClick={p.onRefresh} disabled={design.busy || !p.online}>
             <RefreshCw size={15} className={design.busy ? "spin" : undefined} aria-hidden /><span>{design.busy ? "Updating" : "Update"}</span>
           </button>
@@ -238,7 +235,7 @@ export function Workspace(p: Props) {
               >
                 {overlays}
                 {r?.svg && !r.model && !design.busy && !err && (
-                  <div className="overlay quiet" role="status"><Box size={20} aria-hidden /><p>{p.onFullEditor ? "This design is too large to show in 3D. Full editor shows it on the website." : "This design has no closed cut parts to show in 3D, or too many."}</p></div>
+                  <div className="overlay quiet" role="status"><Box size={20} aria-hidden /><p>This design has no closed cut parts to show in 3D, or too many.</p></div>
                 )}
                 {r?.svg && !r.model && design.busy && <div className="overlay quiet" aria-busy="true"><RefreshCw size={20} className="spin" aria-hidden /><p>Building the 3D model…</p></div>}
               </View3D>
