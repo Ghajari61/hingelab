@@ -92,10 +92,13 @@ export function isTwoTone(r: Raster): boolean {
 
 /** 16 steps per channel, so anti-aliased fringes do not each count as their own colour. */
 const bucket = (r: number, g: number, b: number) => ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+/** 8 steps per channel: a drawing's colours stay apart, a photograph's shades collapse. */
+const coarse = (r: number, g: number, b: number) => ((r >> 5) << 6) | ((g >> 5) << 3) | (b >> 5);
 
 /**
- * A drawing on a plain ground, in any colour: the edge is one colour and the picture uses only a
- * few. A photograph has a mixed edge or many colours, so it is left to the designer.
+ * A drawing on a plain ground, in any number of flat colours up to a poster. The edge is mostly one
+ * colour and the picture uses at most twenty-four. A photograph has a mixed edge or too many shades,
+ * so it is left to the designer.
  */
 export function isFlatArt(r: Raster): boolean {
   const { width: w, height: h, data: d } = r;
@@ -104,22 +107,23 @@ export function isFlatArt(r: Raster): boolean {
   const edge = new Map<number, number>();
   const add = (x: number, y: number) => {
     const i = (y * w + x) * 4;
-    const k = bucket(d[i], d[i + 1], d[i + 2]);
+    const k = coarse(d[i], d[i + 1], d[i + 2]);
     edge.set(k, (edge.get(k) ?? 0) + 1);
   };
   for (let x = 0; x < w; x++) { add(x, 0); if (h > 1) add(x, h - 1); }
   for (let y = 1; y < h - 1; y++) { add(0, y); if (w > 1) add(w - 1, y); }
-  let bg = 0, bgN = 0, edgeN = 0;
-  for (const [k, c] of edge) { edgeN += c; if (c > bgN) { bg = k; bgN = c; } }
-  if (edgeN === 0 || bgN / edgeN < 0.85) return false;
+  let bgN = 0, edgeN = 0;
+  for (const c of edge.values()) { edgeN += c; if (c > bgN) bgN = c; }
+  if (edgeN === 0 || bgN / edgeN < 0.72) return false;
   const counts = new Map<number, number>();
   for (let i = 0; i < n; i++) {
-    const k = bucket(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);
+    const k = coarse(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);
     counts.set(k, (counts.get(k) ?? 0) + 1);
   }
-  const real = [...counts.values()].filter((c) => c / n >= 0.004).length;
+  const real = [...counts.values()].filter((c) => c / n >= 0.008).length;
+  const bg = [...edge.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 0;
   const ink = 1 - (counts.get(bg) ?? 0) / n;
-  return real >= 2 && real <= 8 && ink >= 0.01 && ink <= 0.75;
+  return real >= 2 && real <= 24 && ink >= 0.01 && ink <= 0.85;
 }
 
 /** Gaussian blur (sigma in pixels), edges clamped. */
@@ -229,6 +233,39 @@ function colorInk(r: Raster): Bitmap & { up: number } {
   return { ...removeSpeckles({ width: W, height: H, bits }, Math.max(4 * up * up, Math.round(W * H * 1e-5))), up };
 }
 
+/** One bitmap per flat colour that is not the ground, on the same grid as the ink. */
+function colorLayers(r: Raster, up: number): Bitmap[] {
+  if (isTwoTone(r)) return [];
+  const { width: w, height: h, data: d } = r;
+  const n = w * h;
+  const counts = new Map<number, number>();
+  for (let i = 0; i < n; i++) {
+    const k = coarse(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  const [bgR, bgG, bgB] = ground(r);
+  const bg = coarse(Math.round(bgR), Math.round(bgG), Math.round(bgB));
+  const colors = [...counts.entries()].filter(([k, c]) => k !== bg && c / n >= 0.008).sort((a, b) => b[1] - a[1]).slice(0, 24);
+  if (colors.length < 2) return [];
+  const index = new Map(colors.map(([k], i) => [k, i]));
+  const W = w * up, H = h * up;
+  const maps = colors.map(() => new Uint8Array(W * H));
+  const minInk = INK_DIST * INK_DIST;
+  for (let Y = 0; Y < H; Y++) {
+    const y = Math.min(h - 1, Math.floor((Y + 0.5) / up));
+    for (let X = 0; X < W; X++) {
+      const x = Math.min(w - 1, Math.floor((X + 0.5) / up));
+      const i = (y * w + x) * 4;
+      const dr = d[i] - bgR, dg = d[i + 1] - bgG, db = d[i + 2] - bgB;
+      if (dr * dr + dg * dg + db * db <= minInk) continue;
+      const at = index.get(coarse(d[i], d[i + 1], d[i + 2]));
+      if (at !== undefined) maps[at][Y * W + X] = 1;
+    }
+  }
+  const speck = Math.max(4 * up * up, Math.round(W * H * 1e-5));
+  return maps.map((bits) => removeSpeckles({ width: W, height: H, bits }, speck)).filter((b) => b.bits.some((v) => v === 1));
+}
+
 // ---------- the pad ----------
 
 const bboxOf = (pts: Vec[]) => {
@@ -271,7 +308,7 @@ function onePiece(p: Paths, span: number): Paths {
   return out.length > 1 ? [hull(out)] : out;
 }
 
-export interface PadResult { engrave: string; cut: string[]; width: number; height: number; scale: number }
+export interface PadResult { engrave: string; cut: string[]; score: string[]; width: number; height: number; scale: number }
 
 /**
  * The pad round artwork outlines (any units): the artwork scaled so the piece's longest side is
@@ -318,7 +355,21 @@ export function padShapes(ink: Subpath[], spec: PadSpec): PadResult | null {
     const c = { x: got.hole.x + dx, y: got.hole.y + dy }, r = HOLE_R, f = (v: number) => Math.round(v * 100) / 100;
     cut.push(`M${f(c.x - r)} ${f(c.y)}A${r} ${r} 0 1 0 ${f(c.x + r)} ${f(c.y)}A${r} ${r} 0 1 0 ${f(c.x - r)} ${f(c.y)}Z`);
   }
-  return { engrave: pathD(move(got.art), 2), cut, width: got.box.x1 - got.box.x0, height: got.box.y1 - got.box.y0, scale: k };
+  return { engrave: pathD(move(got.art), 2), cut, score: [], width: got.box.x1 - got.box.x0, height: got.box.y1 - got.box.y0, scale: k };
+}
+
+/** The same placement padShapes used, so extra outlines land on the engraved artwork. */
+function placed(ink: Subpath[], spec: PadSpec, marks: Subpath[]): string[] {
+  const shaped = padShapes(ink, spec);
+  if (!shaped || !marks.length) return [];
+  const art = bboxOf(anchors(ink));
+  const out = bboxOf(anchors(parsePathData(shaped.engrave)));
+  const span = Math.max(art.x1 - art.x0, art.y1 - art.y0);
+  const outSpan = Math.max(out.x1 - out.x0, out.y1 - out.y0);
+  if (!(span > 0) || !(outSpan > 0)) return [];
+  const k = outSpan / span;
+  const moved = transformSubpaths(marks, [k, 0, 0, k, out.x0 - art.x0 * k, out.y0 - art.y0 * k]);
+  return moved.map((s) => pathD([s], 2)).filter((d) => d.length > 0);
 }
 
 /** Corner smoothing for `traceOutlines`: turns sharper than about 40° stay corners, so straight edges stay straight. */
@@ -326,7 +377,7 @@ const SMOOTH = 0.4;
 /** Path optimisation levels (px), tried in turn until the file is small enough to edit. */
 const OPTIMIZE_PX = [0.5, 1, 1.6, 2.5, 4, 6];
 
-const fileChars = (p: PadResult) => p.engrave.length + p.cut.reduce((n, d) => n + d.length, 0);
+const fileChars = (p: PadResult) => p.engrave.length + p.cut.reduce((n, d) => n + d.length, 0) + p.score.reduce((n, d) => n + d.length, 0);
 
 // ---------- the model's part ----------
 
@@ -374,7 +425,7 @@ async function build(p: PadResult | null, a: PadAnswer, spec: PadSpec, thickness
     name: a.name, material: a.material, thickness,
     summary: a.summary || `${Math.round(p.width)} × ${Math.round(p.height)} mm, the artwork engraved with a ${spec.pad} mm cut border round it.`,
     width: p.width, height: p.height,
-    shapes: [...p.cut.map((d) => ({ layer: "cut" as const, d })), { layer: "engrave", d: p.engrave }],
+    shapes: [...p.cut.map((d) => ({ layer: "cut" as const, d })), ...p.score.map((d) => ({ layer: "score" as const, d })), { layer: "engrave", d: p.engrave }],
     texts: [], notes: a.notes.slice(0, 1),
   });
   return buildArt(art);
@@ -389,6 +440,7 @@ export function padDesign(b: BuiltArt, spec: PadSpec, plan: Plan, match: AIMatch
 /** A new piece from black-and-white artwork. */
 export async function padFromPicture(r: Raster, request: UserContent, ask: ArtAsk): Promise<{ built: BuiltArt; spec: PadSpec }> {
   const bits = inkBitmap(r);
+  const layers = colorLayers(r, bits.up);
   let a = DEFAULT_ANSWER;
   try { a = await ask(PAD_SYSTEM, request, padSchema, "low"); } catch (e) { console.error("ai pad: sizing failed, using defaults", e); }
   const s = clampSpec(a);
@@ -397,7 +449,12 @@ export async function padFromPicture(r: Raster, request: UserContent, ask: ArtAs
   for (const optimize of OPTIMIZE_PX) {
     const ink = traceOutlines(bits, { smooth: SMOOTH, optimize: optimize * bits.up });
     p = ink.length ? padShapes(ink, spec) : null;
+    if (p && layers.length) {
+      const marks = layers.flatMap((b) => traceOutlines(b, { smooth: SMOOTH, optimize: optimize * bits.up }));
+      p = { ...p, score: placed(ink, spec, marks) };
+    }
     if (!p || fileChars(p) <= MAX_CHARS) break;
+    if (optimize === OPTIMIZE_PX[OPTIMIZE_PX.length - 1]) p = { ...p, score: [] };
   }
   return { built: await build(p, a, spec, s.thickness), spec };
 }

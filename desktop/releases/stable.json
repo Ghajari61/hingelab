@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.44",
-    "pub_date": "2026-10-16T17:42:50.380Z",
-    "notes": "Coloured drawings are traced from the picture instead of being redrawn.",
+    "version": "1.0.45",
+    "pub_date": "2026-10-16T18:50:47.333Z",
+    "notes": "The designer studies a picture before it draws, and traces flat artwork in more colours.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.44_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmxJNDFpczU2cEFHK1M3MFRZbWxhTXRDd1JXaE9UZENNNXpLSi9ScGwvQ1R1bElnZ2RVMzlRWHpBSHJhczMrN0pobGxwSk5wQ0J3eXJCTmJCY3YyelFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTcyMzM1CWZpbGU6SGluZ2VMYWJfMS4wLjQ0X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDQKQVV2UW1xdkFuQXN3ZEtwamRYSCtmcWpRN0U3dFUrWDZuRkRjK1JnZHZDaEVCR213RkNZZmJKdXQrSnJxekw4bllTV1FMQ2dGQnhWTVI0RUNQM0FkQWc9PQo=",
-        "size": 4271172
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.45_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnNIOUFRM0M3bGdzVUZxbHZCcWRzS1ZHQ2FwMzlocG4xV0xxcG1TR0N3ZkRYMXBlb2FDaVJvT1ZHSHo4bENaaXdSd2V2L1VTUlJCR0VJUXkzdDRjY2dNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTc2NTEzCWZpbGU6SGluZ2VMYWJfMS4wLjQ1X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDUKeTZRS2F6dzJ4cmJHNklrTWRwL1Fxdm0yNlAyZFh2YXJjbUVpWUY2aGVMYkJFRzhwMHZjWEM5dzhEUGN6dlM5aG0ybVdER0x2WFlKWHpldmUwdXNJRHc9PQo=",
+        "size": 4272241
       }
     }
   }

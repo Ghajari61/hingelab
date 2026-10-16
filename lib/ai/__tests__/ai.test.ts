@@ -308,6 +308,7 @@ describe("AI designer", () => {
     expect(draw).toContain("separate leaves, flowers and veins");
     expect(draw).toContain("image/png");
     expect(JSON.stringify(calls[0].prompt)).toContain("detail true");
+    expect(JSON.stringify(calls[0].prompt)).toContain("Study the words and the photo");
   });
 
   it("keeps a plain clock on the clock generator", async () => {

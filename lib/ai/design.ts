@@ -70,7 +70,7 @@ const editSchema = settingsSchema.extend({
   name: z.string().describe("A new short English name when the change makes the current one wrong (e.g. the text on it changed), otherwise an empty string."),
 });
 
-const PICK_SYSTEM = `You are the design assistant of HingeLab, a web app that makes laser-cut files. A user describes something they want to laser cut, or shows a photo of one, possibly in another language. Choose the one product below that can make it and the preset closest to it. Text that must appear on the product keeps its original language and script.
+const PICK_SYSTEM = `You are the design assistant of HingeLab, a web app that makes laser-cut files. A user describes something they want to laser cut, or shows a photo of one, possibly in another language. Study the words and the photo first: name every distinct part you can see (outline, layers, holes, hands, leaves, letters, patterns). Then choose the one product below that can make it and the preset closest to it. Text that must appear on the product keeps its original language and script. A short stand-in that drops parts you can see is wrong.
 Which product: use the product that builds the object, and match "exact" when that product makes this kind of thing.
 - sign: wall signs, door signs, plaques, name plates, shop signs, house numbers, welcome signs
 - topper: cake toppers and cupcake picks
@@ -93,6 +93,7 @@ const SETTINGS_SYSTEM = `You set the settings of one HingeLab product so the des
 Words that appear on the product: put the exact words from the brief, in their original script, into the matching text fields, replacing the starting text; leave out text fields the brief gives no words for. Never put measurements or explanations into those fields.
 The app makes the cut file and the 3D preview itself; notes are only for guesses the user should check, never about settings you left alone, things nobody asked for, material, fit or testing.
 Make it specific: keep the preset's construction, then set the words, font, motif, shape and size the brief asks for. Words go in the text fields exactly as written, in their own script. Sizes are real millimetres for that object.
+When a photo is attached, set every listed option that changes what the photo shows (shape, layers, rays, motif, text). Do not leave a plain starting shape when the photo shows a different one the settings can make.
 
 Settings (key | type and range | label - help):
 `;

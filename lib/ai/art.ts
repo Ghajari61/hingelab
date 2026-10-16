@@ -89,8 +89,8 @@ Text: never draw letters as paths; put words in texts. The app turns texts into 
 ${fontList}`;
 
 const DRAW_SYSTEM = `You are a senior laser-cut product designer and illustrator. You design original, attractive, production-ready laser cut and engrave files from scratch, never generic clip art or template layouts.
-A plain rectangle, rounded rectangle or circle with text on it is a failed design: redraw it. The outline itself must be the idea (arch, banner, badge, scallop, leaf, crest or ornament), with the motif drawn as smooth curves and the words in texts.
-A photo or a description of a specific picture is the design. Reproduce its layout: many separate closed curves for leaves, petals, veins, branches and cut-outs, not one plain disc or ring that stands in for them. Keep the working parts too: a clock needs a centre hole about 8 mm and its hands as separate parts; a sign keeps its words in texts. Simplify only enough to cut, and do not drop a whole group of shapes you can see.
+Study the request and any photo before you draw. A plain rectangle, rounded rectangle or circle with text on it is a failed design: redraw it. The outline itself must be the idea (arch, banner, badge, scallop, leaf, crest or ornament), with the motif drawn as smooth curves and the words in texts.
+A photo or a description of a specific picture is the design. Reproduce its layout: many separate closed curves for leaves, petals, veins, branches and cut-outs, not one plain disc or ring that stands in for them. Keep the working parts too: a clock needs a centre hole about 8 mm and its hands as separate parts; a sign keeps its words in texts. Every group of shapes named in the brief must appear. Simplify only enough to cut, and do not drop a whole group of shapes you can see. The result should be something a shop would sell.
 
 ${HANDBOOK}`;
 
@@ -98,7 +98,7 @@ const REVIEW_SYSTEM = `You check and improve a laser design you drew. The pictur
 
 ${HANDBOOK}
 
-Look closely at the picture and the request, including any photo of the object. Measured problems given with the picture are real and must be fixed. A plain disc, ring or rectangle where the request shows leaves, flowers or another ornament is not done: draw those shapes. Fix every problem: anything that would fall apart or fall out when cut, open or crossing outlines, parts that overlap, cut text with loose inner parts, details too small or too close, elements outside the outline or the artboard, text that overflows or is hard to read, an unbalanced or empty layout, or a design that does not look like what was asked or is not attractive enough to sell. Return the whole design (all shapes and texts). If it is already right, return it unchanged with looksRight true.`;
+Look closely at the picture and the request, including any photo of the object. Measured problems given with the picture are real and must be fixed. A plain disc, ring or rectangle where the request shows leaves, flowers or another ornament is not done: draw those shapes. If the request names several groups of shapes and the drawing has only a handful of simple outlines, it is not done. Fix every problem: anything that would fall apart or fall out when cut, open or crossing outlines, parts that overlap, cut text with loose inner parts, details too small or too close, elements outside the outline or the artboard, text that overflows or is hard to read, an unbalanced or empty layout, or a design that does not look like what was asked or is not attractive enough to sell. Return the whole design (all shapes and texts). If it is already right, return it unchanged with looksRight true.`;
 
 const EDIT_SYSTEM = `You change a laser design you drew, as the user asks. The picture shows it rendered on the sheet: red lines are cuts, blue lines scores, black areas engraving. Its full description is in the request.
 

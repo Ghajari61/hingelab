@@ -139,6 +139,16 @@ describe("the AI designer with a black-and-white picture", () => {
     expect(d.svg).toContain('id="engrave"');
   });
 
+  it("traces each colour of a flat picture, not one blob", async () => {
+    const img = picture(`<circle cx="150" cy="100" r="70" fill="#c9a227"/><circle cx="150" cy="100" r="36" fill="#1f6f78"/><circle cx="170" cy="90" r="10" fill="#1a2744"/>`, 300, 200, "#f4efe4");
+    const r = decodePhoto(img)!;
+    expect(isFlatArt(r)).toBe(true);
+    const d = await designWithAI({ prompt: "vectorize", image: img }, "pro", "user-1", mock(answer).model);
+    expect(d.notes.join(" ")).toContain("traced as it is");
+    expect(d.svg).toContain('id="score"');
+    expect(d.svg).toContain('id="engrave"');
+  });
+
   it("leaves a many-coloured photo to the designer", async () => {
     const photo = picture(`<rect width="80" height="200" fill="#111"/><circle cx="140" cy="70" r="60" fill="#2a6"/><circle cx="210" cy="120" r="70" fill="#36c"/><circle cx="120" cy="150" r="50" fill="#e0c020"/>`, 300, 200, "#c45a3a");
     expect(isFlatArt(decodePhoto(photo)!)).toBe(false);
