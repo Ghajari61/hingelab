@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.38",
-    "pub_date": "2026-10-16T00:48:59.564Z",
-    "notes": "Remove the Full editor button from the workspace toolbar.",
+    "version": "1.0.39",
+    "pub_date": "2026-10-16T05:35:25.757Z",
+    "notes": "Public site adds Make, Community and Learn plus a generator catalogue. Free stays preview only.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.38_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnUrRnhINFdiTVJIY1hyODlUdURETnFrbTZnSVFPZGZXZXQ1ZTVLbkxtSmFnTWVFWE5GWnhVNlNZSHl3cHEwYS8yR1gzOVhXZU5oaE11UXNoVUszYUEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTExNTgyCWZpbGU6SGluZ2VMYWJfMS4wLjM4X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMzgKL0NMS2FPeWFyYlZERk1ZS0ZKdDJSOUxiS2ZSNGN6QW1BbGY4MlFFSmdNR2UzMm15aURia1ByV2JyWFV4bThFMXNhbUtLdGs0aEROaUdSbGpoQzJVRFE9PQo=",
-        "size": 4270547
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.39_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnBNSEJqWXhpeUNBSS9VZW5zSUd5KzhNbW5xSG1ZQ21CVEpnR3NYMHdraFlSWlRkanB0ZGExR1pVZElscDF1Y1ZaaXNWbzREcnNYZU9DSjc0RWlHMFF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTI4Njc3CWZpbGU6SGluZ2VMYWJfMS4wLjM5X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMzkKYUpHM2lSeEFTNXUrZ243WHlCWDN1RytpNTFpbG1NczdMU00xMHp6Q0tFbU1MRHplckNQMWZmbTJnWGtSVkZBa09Ld0xHY1hrd2drQzkrb0pQTy9xQ1E9PQo=",
+        "size": 4272518
       }
     }
   }

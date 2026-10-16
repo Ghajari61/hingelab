@@ -17,7 +17,7 @@ export default async function GalleryPage({ searchParams }: { searchParams: Prom
   const r = await listGallery(page);
   return (
     <div className="page landing">
-      <SiteHeader sections={false} />
+      <SiteHeader />
       <main className="gallery-page">
         <h1>Gallery</h1>
         {!r.ok ? (

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Download } from "lucide-react";
 import type { Units } from "@/components/editor/format";
 import { makeExport, type ExportFile, type LaserFromMaterial } from "@/lib/export/bundle";
+import { recordExport } from "@/lib/generators/nav";
 import { loadMaterials } from "@/lib/materials/library";
 import { bedOf, CUSTOM_MACHINE, defaultExport, EXPORT_FORMATS, FORMAT_INFO, loadExport, overBed, saveExport, type ExportSettings, type Rect } from "@/lib/export/profiles";
 import { MACHINE_PROFILES } from "@/lib/studio/library";
@@ -22,6 +23,7 @@ function download(f: ExportFile) {
   document.body.appendChild(a);
   a.click();
   a.remove();
+  recordExport(f.name);
   window.setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 

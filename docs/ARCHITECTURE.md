@@ -62,3 +62,97 @@ Shadow Box's enclosure (`lib/generators/shadowbox/enclosure.ts`) only adds parts
 - Every server export re-runs `merge` and `sanitizeGeneratorParams`; pictures must be image data URLs (`lib/security/svg.ts`).
 - Size budgets per chunk (`scripts/perf/budgets.mjs`): the editor shell is near its 150 kB limit, so new shell code must stay small and product code goes in product chunks.
 - Licences are checked (`scripts/licenses.mjs`); only permissive dependencies.
+
+## Information architecture
+
+The public pages for this map are in place: `/generators`, `/generators/[slug]`, collections, graphics, materials, kerf, changelog, developers, about, contact, blog, bookmarks and export history. Community posts stay on the existing gallery. No new database tables.
+
+Research for the grouping is in `docs/RESEARCH_ATOMM.md`. This section is the site map and the nav mockup. No product code ships with it. Later phases stop after each one until they are approved.
+
+### Rules that stay
+
+- Free is preview only. Saving and exporting need Pro (`FREE_PROJECT_LIMIT` is 0, `EXPORT_DENIED` in `lib/plans.ts`). There is no credits balance.
+- Geometry stays where it is. Golden SVG tests stay byte-for-byte. A later phase may add a thin catalogue adapter. It does not replace `GeneratorDef`, `lib/hinge`, `lib/letters` or `lib/parametric`.
+- The Windows app does not get a Studio sidebar item or a Full editor button back. "Studio" below is the website's saved-work area (`/home`, `/projects`) only.
+- Accounts, projects and billing already use Supabase and Stripe. New community tables (public gallery posts, cloud bookmarks, invites) wait for a separate approval. Until then those pages use what is already public, or local data behind a flag.
+- UI copy stays English and original. Do not put the researched site's name, or the machine brand that owns it, in the interface.
+- Show only real counts (preset totals we generate). No fake usage numbers and no fake testimonials.
+
+### Site map
+
+| Group | Label | Now | Later |
+| --- | --- | --- | --- |
+| Make | Generators | Product menu and `/#products`. Editors stay `/app/editor/local?p=` | Catalogue page; each generator also gets `/generators/<slug>` with a real FAQ |
+| Make | Templates | `/templates` | Same route, linked from the new nav |
+| Make | Studio | `/home`, `/projects` | Same routes. Desktop sidebar unchanged |
+| Community | Gallery | `/gallery` (sample pieces, not user posts) | User posts only after a backend approval |
+| Community | Collections | `/#occasions` on the landing page | Seasonal pages in a later phase |
+| Community | Graphics | Studio's own motif set inside editors | A small public page of original SVG only |
+| Community | Materials | Thickness and kerf inside each editor | A public reference page |
+| Learn | Guides | `/help` | Same |
+| Learn | Kerf & fit tools | Test & Calibration starter (`calibration` in `lib/generators/catalog.ts`) | A public entry that opens that starter |
+| Learn | Changelog | `PROGRESS.md` (repo only) | A public page |
+| Learn | For developers | Nothing | A placeholder. No third-party SDK and no embed until asked |
+
+Search, a notifications placeholder and a feedback control are global chrome for the phase that builds the nav. Footer already has Terms and Privacy (`components/site/SiteFooter.tsx`); About, Contact, Blog and social links are added with that nav, as real pages or honest "not yet" links, not fake content.
+
+Account menu today (`components/auth/UserMenu.tsx`): My designs, Cloud projects, Account, Billing, Sign out, plus a Free/Pro chip. Add Bookmarks, Export history, Invite friends and Preferences only as disabled or local placeholders until each one has real data. Do not add a credits row.
+
+### Nav mockup
+
+Desktop, public pages. The editor keeps File / Edit / View / Help and in-editor product switching. This bar does not replace that.
+
+```
+[ Mark HingeLab ]  Make ▾   Community ▾   Learn ▾          Search     [ Free|Pro ]  Account ▾
+
+Make ▾            Community ▾         Learn ▾              Account ▾
+  Generators        Gallery             Guides               Profile
+  Templates         Collections         Kerf & fit tools     My projects
+  Studio            Graphics            Changelog            Bookmarks
+                    Materials           For developers       Export history
+                                                             Plan
+                                                             Invite friends
+                                                             Preferences
+                                                             Sign out
+```
+
+Phone: a button opens a drawer. Account sits at the top and expands. The three groups are stacked. Same labels, our type and our purple, not a copy of another site's drawer.
+
+```
+[ Mark ] HingeLab                      [ Search ] [ Menu ]
+
+Drawer
+  Account ▾
+    Profile
+    My projects
+    Plan
+    Sign out
+  Make
+    Generators
+    Templates
+    Studio
+  Community
+    Gallery
+    Collections
+    Graphics
+    Materials
+  Learn
+    Guides
+    Kerf & fit tools
+    Changelog
+    For developers
+```
+
+### Generators: already here, versus still missing
+
+Already in the product (upgrade later, do not rebuild): Hinge Box, Letters, Parametric, Shadow Box (including picture outlines and a light-box enclosure), Boxes (finger joints, trays, frames, stands), Clock, Puzzle, QR, Cake Topper, Key Holder, Sign, Table Numbers, Trophy, and the calibration starter.
+
+Still missing, and only after this document is approved, in this order:
+
+1. Name and logo tunnel (repeat a mark through layers, with bridges and min-width checks).
+2. Layered art from a photo on the device, no model API.
+3. A gift box whose lid modes are not already covered by Boxes.
+4. Living-hinge box extras that Hinge Box does not already do (lid angle in 3D).
+5. Kerf test result written back onto the user's material (the gauge itself exists).
+
+Priority 2 and 3 from the brief (layered ornament, earrings, procedural mandala, dither prep, and the rest) wait until priority 1 is approved one generator at a time. If Boxes, Sign, Clock, Topper or Puzzle already covers the job, the work is an upgrade note, not a second generator.

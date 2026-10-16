@@ -9,12 +9,15 @@ export function SiteFooter() {
         <p>Laser-cut generators for boxes, toppers, signs, trophies and more.</p>
       </div>
       <nav aria-label="Product">
-        <a href="/#products">Products</a>
-        <a href="/#desktop">Windows app</a>
+        <Link href="/generators">Generators</Link>
+        <Link href="/templates">Templates</Link>
+        <Link href="/help">Guides</Link>
         <a href="/#pricing">Pricing</a>
-        <Link href="/help">Help centre</Link>
       </nav>
-      <nav aria-label="Legal">
+      <nav aria-label="Company">
+        <Link href="/about">About</Link>
+        <Link href="/contact">Contact</Link>
+        <Link href="/blog">Blog</Link>
         <Link href="/terms">Terms</Link>
         <Link href="/privacy">Privacy</Link>
       </nav>

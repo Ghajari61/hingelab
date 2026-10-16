@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CreditCard, Crown, FolderOpen, LayoutGrid, LogOut, UserRound } from "lucide-react";
+import { Bookmark, Clock3, CreditCard, Crown, FolderOpen, LogOut, Mail, Settings, UserRound } from "lucide-react";
 import { avatarBackground, avatarInitials } from "@/lib/account/avatar";
 import { hasPro, planOf } from "@/lib/plans";
 import { useAccount } from "./useAccount";
@@ -75,10 +75,13 @@ export function UserMenu() {
             </div>
           </div>
           <hr />
-          <Link role="menuitem" href="/app"><LayoutGrid size={15} aria-hidden="true" />My designs</Link>
-          <Link role="menuitem" href="/projects"><FolderOpen size={15} aria-hidden="true" />Cloud projects</Link>
-          <Link role="menuitem" href="/account"><UserRound size={15} aria-hidden="true" />Account</Link>
-          <Link role="menuitem" href="/app/billing"><CreditCard size={15} aria-hidden="true" />{pro ? "Billing" : "Upgrade to Pro"}</Link>
+          <Link role="menuitem" href="/account"><UserRound size={15} aria-hidden="true" />Profile</Link>
+          <Link role="menuitem" href="/projects"><FolderOpen size={15} aria-hidden="true" />My projects</Link>
+          <Link role="menuitem" href="/bookmarks"><Bookmark size={15} aria-hidden="true" />Bookmarks</Link>
+          <Link role="menuitem" href="/exports"><Clock3 size={15} aria-hidden="true" />Export history</Link>
+          <Link role="menuitem" href="/app/billing"><CreditCard size={15} aria-hidden="true" />{pro ? "Plan" : "Plan · upgrade"}</Link>
+          <Link role="menuitem" href="/invite"><Mail size={15} aria-hidden="true" />Invite friends</Link>
+          <Link role="menuitem" href="/preferences"><Settings size={15} aria-hidden="true" />Preferences</Link>
           <hr />
           <form action="/auth/signout" method="post">
             <button type="submit" role="menuitem"><LogOut size={15} aria-hidden="true" />Sign out</button>

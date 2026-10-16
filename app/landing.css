@@ -233,7 +233,7 @@ html:has(.landing), body:has(> .landing) { height: auto; overflow: visible; }
   .hero, .desktop { grid-template-columns: 1fr; }
   .mosaic { transform: none; }
   .landing-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .site-nav { display: none; }
+  .site-nav.ia-nav { display: none; }
   .occ { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .features, .landing-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .site-footer { grid-template-columns: 1fr 1fr; }
