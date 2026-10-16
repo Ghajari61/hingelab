@@ -82,6 +82,7 @@ function hingeProduct(): DProduct {
   };
   const tail: Record<string, DField[]> = {
     secJoints: [
+      { kind: "toggle", key: "seamFingers", label: "Seam fingers", help: "The two ends of the wall lock together with fingers." },
       { kind: "toggle", key: "baseRing", label: "Support ring", help: "A ring glued on the base, inside the wall, so the bottom of the hinge has a shoulder to sit on." },
       { kind: "number", key: "baseRingW", label: "Ring width", help: HINGE_FIELD_HELP.baseRingW, unit: "mm", min: 3, max: 40, step: 0.5, default: 8 },
       { kind: "choice", key: "split", label: "Wall", options: [{ v: "1", text: "One strip" }, { v: "2", text: "Two halves" }] },

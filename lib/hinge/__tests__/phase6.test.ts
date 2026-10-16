@@ -143,6 +143,19 @@ describe("lid options", () => {
     expect(m.issues.some((i) => /too big/.test(i.msg))).toBe(true);
   });
 
+  it("locks the wall ends with fingers, and leaves them plain when asked", () => {
+    const wall = walls(model({}))[0];
+    const xs = wall.outline.map((q) => q[0]);
+    expect(Math.min(...xs)).toBeLessThan(-1);
+    expect(xs.some((x) => x < Math.max(...xs) - 2 && x > Math.max(...xs) - 8)).toBe(true);
+    const plain = model({ seamFingers: false });
+    expect(Math.min(...walls(plain)[0].outline.map((q) => q[0]))).toBeGreaterThan(-1);
+    const halves = walls(model({ split: 2, W: 260 }));
+    expect(halves).toHaveLength(2);
+    for (const part of halves) expect(Math.min(...part.outline.map((q) => q[0]))).toBeLessThan(-1);
+    expect(hingeRequestError(box({ seamFingers: "yes" as never }))).not.toBeNull();
+  });
+
   it("leaves the base plain until a support ring is asked for", () => {
     expect(plate(model(), "BASE RING")).toBeUndefined();
     const m = model({ baseRing: true });

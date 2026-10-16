@@ -58,6 +58,8 @@ export interface Params {
   /** Width of that ring, mm (missing: 8). */
   baseRingW?: number;
   split: number;
+  /** The wall's two ends lock with fingers (missing: they only meet). */
+  seamFingers?: boolean;
   bedW: number;
   bedH: number;
   gap: number;

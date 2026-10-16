@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.48",
-    "pub_date": "2026-10-16T22:34:05.072Z",
-    "notes": "A support ring can sit on the base, inside the hinge wall.",
+    "version": "1.0.49",
+    "pub_date": "2026-10-16T23:16:53.099Z",
+    "notes": "The two ends of a hinge wall lock together with fingers.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.48_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnFENVVIYjZoV1h3ZlZ5T21sOEZUUTNLS1JOTE1jWkVZUytCZGl3aHJiWG1TRnhqNXNRVCs1QU1vY1dtL2dMMmhOOXRNdnEra2JqWitXTnlMY083aVFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTg5ODA0CWZpbGU6SGluZ2VMYWJfMS4wLjQ4X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDgKVXN0RWtlU3o3V3hIRFVPd0kyM3llNWVnWjlsUmJhaXplLytaV3lvNzZCWWl6Z1Y5ZGlRZ3lEYW1DUjMxcTVZWFZjY1QrSXc5SG5RcGtwSWpXWE5EQXc9PQo=",
-        "size": 4271257
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.49_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm91cVo4M1R0N1JPWXZpdDBsK25zTmtoekVYdCs2bzFFdlFJZ3grcE9mRDdhNVRLdTJUcVN0WDZEeHZZaEpsZVBJVjVmZjVmZWduMytGcUt0MTNaUGd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTkyNDU2CWZpbGU6SGluZ2VMYWJfMS4wLjQ5X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDkKQkpCckhBNkVaMlhLUkFnVG96Y3kxVWUraXVzOTJQWkpiV1lkQ3FwekdWeWF4YXBNYjVFOVVzUmErdGRQaXN2MFhNU3ZaakZMYnA5YzlXNW5YV3pPQUE9PQo=",
+        "size": 4272253
       }
     }
   }

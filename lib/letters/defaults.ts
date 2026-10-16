@@ -91,6 +91,7 @@ export const bridgeWidthOf = (p: LetterParams) => p.stencilBridge ?? Math.max(2,
 export function hingeParamsOf(p: LetterParams): Params {
   return {
     ...HINGE,
+    seamFingers: false,
     lid: p.lid, material: p.material, T: p.T, K: p.K, cutStyle: p.cutStyle, slotW: p.slotW, pattern: p.pattern,
     slit: p.slit, bridge: p.bridge, pitch: p.pitch, overrun: p.overrun, stretch: p.stretch, tabW: p.tabW,
     slotClr: p.slotClr, lidGap: p.lidGap, bedW: p.bedW, bedH: p.bedH, gap: p.gap, labels: p.labels, layers: p.layers,

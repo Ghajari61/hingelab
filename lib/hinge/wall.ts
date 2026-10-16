@@ -14,8 +14,50 @@ export function tabCount(len: number, tabW: number, seam: boolean) {
   return n;
 }
 
+/** Odd finger count along a length, as close to `f` as possible. */
+function fingerCount(L: number, f: number): number {
+  if (!(L > 0) || !(f > 0)) return 1;
+  const k = L / f;
+  let n = Math.max(1, Math.round(k));
+  if (n % 2 === 0) n += k > n ? 1 : -1;
+  return Math.max(1, n);
+}
+
+/**
+ * Fingers on the vertical ends. The left end owns the even spans (including top and bottom) and
+ * they stick out; the right end is notched there, so the two ends of a closed wall lock.
+ */
+function seamCount(h: number, depth: number) {
+  return fingerCount(h, Math.max(4, depth));
+}
+
+/** Right end, top to bottom: notches where the other end's fingers fit. */
+function addRightNotches(pts: Point[], w: number, h: number, depth: number) {
+  const n = seamCount(h, depth), s = h / n;
+  let x = w;
+  for (let i = 0; i < n; i++) {
+    const y0 = i * s, y1 = (i + 1) * s, nx = i % 2 === 0 ? w - depth : w;
+    if (Math.abs(nx - x) > 1e-9) pts.push([nx, y0]);
+    pts.push([nx, y1]);
+    x = nx;
+  }
+  if (Math.abs(x - w) > 1e-9) pts.push([w, h]);
+}
+
+/** Left end, bottom to top: the fingers, on the same spans the right end notches. */
+function addLeftFingers(pts: Point[], h: number, depth: number) {
+  const n = seamCount(h, depth), s = h / n;
+  let x = 0;
+  for (let i = n - 1; i >= 0; i--) {
+    const y1 = (i + 1) * s, y0 = i * s, nx = i % 2 === 0 ? -depth : 0;
+    if (Math.abs(nx - x) > 1e-9) pts.push([nx, y1]);
+    pts.push([nx, y0]);
+    x = nx;
+  }
+}
+
 /* Wall outline: body rectangle, tabs, and (in slot mode) rounded notches for edge-reaching cuts. */
-export function wallOutline(w: number, h: number, topTabs: number[], bottomTabs: number[], cols: HingeCol[], p: Params, hs: HingeSegments) {
+export function wallOutline(w: number, h: number, topTabs: number[], bottomTabs: number[], cols: HingeCol[], p: Params, hs: HingeSegments, join = false) {
   const t = p.T, k = p.K, ky = kerfY(p), a = p.tabW, r = p.slotW / 2;
   const top: { x: number; d: number }[] = [], bot: { x: number; d: number }[] = [];
   if (mergesEdgeCuts(p)) for (const c of cols) for (const [y1, y2] of colSegments(c.kind, hs, h, p.bridge)) {
@@ -32,13 +74,22 @@ export function wallOutline(w: number, h: number, topTabs: number[], bottomTabs:
     else if (honey) { const yc = Math.max(0.2, e.d - rise); pts.push([e.x - r, 0], [e.x - r, yc], [e.x, yc + rise], [e.x + r, yc], [e.x + r, 0]); }
     else { const yc = Math.max(0.2, e.d - r + ky / 2); pts.push([e.x - r, 0], [e.x - r, yc], [e.x + r, yc], [e.x + r, 0]); }
   }
-  pts.push([w, 0], [w, h]);
+  pts.push([w, 0]);
+  const endGap = (end: number) => {
+    let g = Infinity;
+    for (const x of [...topTabs, ...bottomTabs]) g = Math.min(g, Math.abs(x - end) - a / 2);
+    return g;
+  };
+  const depth = join ? Math.min(t, endGap(0) - 0.4, endGap(w) - 0.4) : 0;
+  if (depth >= 1.5) addRightNotches(pts, w, h, depth);
+  else pts.push([w, h]);
   for (const e of ev(bot, bottomTabs).reverse()) {
     if (e.tab) pts.push([e.x + a / 2, h], [e.x + a / 2, h + t], [e.x - a / 2, h + t], [e.x - a / 2, h]);
     else if (honey) { const yc = h - Math.max(0.2, e.d - rise); pts.push([e.x + r, h], [e.x + r, yc], [e.x, yc - rise], [e.x - r, yc], [e.x - r, h]); }
     else { const yc = h - Math.max(0.2, e.d - r + ky / 2); pts.push([e.x + r, h], [e.x + r, yc], [e.x - r, yc], [e.x - r, h]); }
   }
   pts.push([0, h]);
+  if (depth >= 1.5) addLeftFingers(pts, h, depth);
   if (honey) return { outline: offsetPolyXY(simplify(pts), k, ky), caps: [] };
   const outline = ky === k ? offsetRect(simplify(pts), k / 2) : offsetRectXY(simplify(pts), k / 2, ky / 2);
   const caps: number[] = [], capLen = p.slotW - k, xs = [...top, ...bot].map(e => e.x);
@@ -131,7 +182,7 @@ export function buildWalls(p: Params, edges: Edge[], rN: number, hBody: number, 
     const w = x1 - x0;
     const tabsHere = tabX.filter(tx => tx > x0 && tx < x1).map(tx => tx - x0).sort((m, n) => m - n);
     const myCols = cols.filter(c => c.x > x0 + edgeMargin && c.x < x1 - edgeMargin).map(c => ({ x: c.x - x0, kind: c.kind }));
-    const wo = wallOutline(w, hBody, topTabs ? tabsHere : [], tabsHere, myCols, p, hs);
+    const wo = wallOutline(w, hBody, topTabs ? tabsHere : [], tabsHere, myCols, p, hs, p.seamFingers === true);
     const outline = wo.outline;
     // label on the longest straight
     let lab: number | null = null, best = 0;
