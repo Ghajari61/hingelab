@@ -112,7 +112,7 @@ export function SettingsPanel({ product, params, form, units, plan, onChange, on
             <h3>
               <button type="button" aria-expanded={open} onClick={() => setClosed((c) => ({ ...c, [s.id]: open }))}>
                 <ChevronDown size={14} className="chev" aria-hidden />
-                {s.title}
+                <span className="sec-title">{s.title}</span>
               </button>
               {changed && (
                 <button type="button" className="reset-btn sec-reset" aria-label={`Reset ${s.title}`} title={`Reset ${s.title} to the defaults`} onClick={() => onChangeMany?.(back)}>

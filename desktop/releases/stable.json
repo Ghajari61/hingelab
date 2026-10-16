@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.46",
-    "pub_date": "2026-10-16T19:35:06.334Z",
-    "notes": "Select an AI drawing in 3D and drag its handles to resize it. Height keeps the same proportions.",
+    "version": "1.0.47",
+    "pub_date": "2026-10-16T20:42:30.617Z",
+    "notes": "Section titles in the settings panel stay on one line.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.46_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnE5SzBSallOYlhFQ1VPYnkvU0h2SWhkbVRHR2lBOHFSSlpMZGRtY3F6NExPeEFFeHJla1IwWTBDdTZuTlB2RmNYY1dHcWhmU0hQQVpjL0RUN1BoREFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTc5MTUyCWZpbGU6SGluZ2VMYWJfMS4wLjQ2X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDYKQVJ2NlFXM1lqMDFpNHV4ZG83ci8waDJWcUhOMEdNejF5Q2J0RGpoUVpDdVpOL2xNWHVYVGIvdDQ4SlpjSEZDMFR1RnpLNmZQazdhdVB4MVhEdDRQQ0E9PQo=",
-        "size": 4272048
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.47_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnJQQjl5RzBKbE5uMURsd2xwYzdJVE9rN3MybzJPOVluRUFZOStpSkNvZU5pbXdWR3VzZUxycVl0UWVueHRkZVh1SEMxNVZ3VVkrNVdGVlZKamVFTFFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTgzMTk4CWZpbGU6SGluZ2VMYWJfMS4wLjQ3X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDcKcFNEcnkwSmt0QVVlZFVlNHAxZUtQTjdEaElIamZXaEp3ckhvNEt4bDcrKy9TTWdkUzgyZFRQTGppUStuOW5QSmtrWVFYN09XNnRMejRKSmtvUVd5Qnc9PQo=",
+        "size": 4271137
       }
     }
   }

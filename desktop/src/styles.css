@@ -456,10 +456,11 @@ option { background: var(--panel); color: var(--ink); }
 .settings { padding: 4px 0 8px; }
 .settings .group { margin: 8px 10px 0; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2); transition: border-color 0.15s; }
 .settings .group:hover { border-color: var(--line-2); }
-.settings .group h3 button { width: 100%; display: flex; align-items: center; gap: 7px; padding: 10px 12px; border: 0; border-radius: 12px; background: none; cursor: pointer; font: 600 13px var(--font); text-align: left; }
-.settings .group h3 button:hover { color: var(--accent-ink); }
-.settings .group h3 button .chev { flex: none; transition: transform 0.15s; color: var(--ink-3); }
+.settings .group h3 > button:first-child { flex: 1; min-width: 0; width: auto; display: flex; align-items: center; gap: 7px; padding: 10px 12px; border: 0; border-radius: 12px; background: none; cursor: pointer; font: 600 13px var(--font); text-align: left; }
+.settings .group h3 > button:first-child:hover { color: var(--accent-ink); }
+.settings .group h3 .chev { flex: none; transition: transform 0.15s; color: var(--ink-3); }
 .settings .group h3 button[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+.settings .group h3 .sec-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fields { display: grid; gap: 10px; padding: 2px 12px 14px; }
 .field { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 5px 8px; min-width: 0; }
 .field > label, .field > .label { font-size: 12.5px; color: var(--ink-2); display: flex; align-items: center; gap: 4px; }
@@ -485,9 +486,8 @@ option { background: var(--panel); color: var(--ink); }
 .rand-btn { display: flex; align-items: center; justify-content: center; gap: 7px; width: calc(100% - 20px); height: 36px; margin: 10px 10px 2px; border-color: color-mix(in srgb, var(--accent) 30%, var(--line-2)); background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; box-shadow: none; }
 .rand-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 18%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 50%, var(--line-2)); }
 .num .dice-btn { width: 28px; height: 100%; border-radius: 0; border-left: 1px solid var(--line-2); }
-.settings .group h3 { display: flex; align-items: center; }
-.settings .group h3 > button:first-child { flex: 1; }
-.sec-reset { margin-right: 10px; }
+.settings .group h3 { display: flex; align-items: center; min-width: 0; }
+.sec-reset { flex: none; width: auto; margin-right: 10px; }
 .help-btn { flex: none; border: 0; background: none; padding: 2px; color: var(--ink-3); cursor: pointer; display: grid; border-radius: 4px; opacity: 0.7; }
 .help-btn:hover, .help-btn:focus-visible, .help-btn[aria-expanded="true"] { opacity: 1; color: var(--accent-ink); background: var(--accent-soft); }
 .field-help { grid-column: 1 / -1; font-size: 12px; line-height: 1.45; color: var(--ink-2); background: var(--info-soft); border-radius: 8px; padding: 7px 9px; }
