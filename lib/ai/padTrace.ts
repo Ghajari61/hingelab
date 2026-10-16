@@ -1,9 +1,9 @@
 import "server-only";
 /**
- * Black-and-white artwork in, a laser piece out: the picture is traced exactly (our own tracer, the
- * same as Trace Bitmap) and engraved, and a cut outline, the pad, is offset round it so the whole
- * piece is one part. The model only names the piece and chooses its size, the pad width and whether
- * it hangs; it never redraws the artwork.
+ * Flat artwork in, a laser piece out: the picture is traced exactly (our own tracer, the same as
+ * Trace Bitmap) and engraved, and a cut outline, the pad, is offset round it so the whole piece is
+ * one part. Colour does not matter when the picture is a drawing on a plain ground. The model only
+ * names the piece and chooses its size, the pad width and whether it hangs; it never redraws the artwork.
  */
 import { Resvg } from "@resvg/resvg-js";
 import * as ClipperLib from "clipper-lib";
@@ -90,6 +90,38 @@ export function isTwoTone(r: Raster): boolean {
   return grey / n >= 0.97 && extreme / n >= 0.9 && Math.min(ink, n - ink) / n >= 0.002;
 }
 
+/** 16 steps per channel, so anti-aliased fringes do not each count as their own colour. */
+const bucket = (r: number, g: number, b: number) => ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+
+/**
+ * A drawing on a plain ground, in any colour: the edge is one colour and the picture uses only a
+ * few. A photograph has a mixed edge or many colours, so it is left to the designer.
+ */
+export function isFlatArt(r: Raster): boolean {
+  const { width: w, height: h, data: d } = r;
+  const n = w * h;
+  if (n < 64) return false;
+  const edge = new Map<number, number>();
+  const add = (x: number, y: number) => {
+    const i = (y * w + x) * 4;
+    const k = bucket(d[i], d[i + 1], d[i + 2]);
+    edge.set(k, (edge.get(k) ?? 0) + 1);
+  };
+  for (let x = 0; x < w; x++) { add(x, 0); if (h > 1) add(x, h - 1); }
+  for (let y = 1; y < h - 1; y++) { add(0, y); if (w > 1) add(w - 1, y); }
+  let bg = 0, bgN = 0, edgeN = 0;
+  for (const [k, c] of edge) { edgeN += c; if (c > bgN) { bg = k; bgN = c; } }
+  if (edgeN === 0 || bgN / edgeN < 0.85) return false;
+  const counts = new Map<number, number>();
+  for (let i = 0; i < n; i++) {
+    const k = bucket(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  const real = [...counts.values()].filter((c) => c / n >= 0.004).length;
+  const ink = 1 - (counts.get(bg) ?? 0) / n;
+  return real >= 2 && real <= 8 && ink >= 0.01 && ink <= 0.75;
+}
+
 /** Gaussian blur (sigma in pixels), edges clamped. */
 function blur(v: Float32Array, w: number, h: number, sigma: number): Float32Array {
   const r = Math.ceil(sigma * 2.5), k = Array.from({ length: 2 * r + 1 }, (_, i) => Math.exp(-((i - r) ** 2) / (2 * sigma * sigma)));
@@ -115,12 +147,38 @@ const BLUR_PX = 0.9;
 const UPSAMPLE = 3;
 const MAX_INK_PX = 3072;
 
+/** Mean colour of the plain ground, from the edge pixels of its majority bucket. */
+function ground(r: Raster): [number, number, number] {
+  const { width: w, height: h, data: d } = r;
+  const edge = new Map<number, number>();
+  const add = (x: number, y: number) => {
+    const i = (y * w + x) * 4;
+    const k = bucket(d[i], d[i + 1], d[i + 2]);
+    edge.set(k, (edge.get(k) ?? 0) + 1);
+  };
+  for (let x = 0; x < w; x++) { add(x, 0); if (h > 1) add(x, h - 1); }
+  for (let y = 1; y < h - 1; y++) { add(0, y); if (w > 1) add(w - 1, y); }
+  let bg = 0, bgN = 0;
+  for (const [k, c] of edge) if (c > bgN) { bg = k; bgN = c; }
+  let n = 0, R = 0, G = 0, B = 0;
+  const take = (x: number, y: number) => {
+    const i = (y * w + x) * 4;
+    if (bucket(d[i], d[i + 1], d[i + 2]) !== bg) return;
+    n++; R += d[i]; G += d[i + 1]; B += d[i + 2];
+  };
+  for (let x = 0; x < w; x++) { take(x, 0); if (h > 1) take(x, h - 1); }
+  for (let y = 1; y < h - 1; y++) { take(0, y); if (w > 1) take(w - 1, y); }
+  return n ? [R / n, G / n, B / n] : [255, 255, 255];
+}
+
 /**
- * The artwork as ink: dark parts, or the light parts when the picture is light on a dark ground, at
- * `up` times the picture's resolution.
+ * The artwork as ink. Black-and-white pictures use darkness (and flip when the ground is dark).
+ * A coloured drawing uses distance from the ground colour, so a turquoise stroke on white is ink
+ * and the white gaps inside it stay empty. Sampled at `up` times the picture's resolution.
  */
 export function inkBitmap(r: Raster): Bitmap & { up: number } {
   const { width: w, height: h } = r;
+  if (!isTwoTone(r)) return colorInk(r);
   const lum = blur(luminance(r), w, h, BLUR_PX);
   let edge = 0, dark = 0;
   const isDark = (x: number, y: number) => (lum[y * w + x] < 128 ? 1 : 0);
@@ -137,6 +195,35 @@ export function inkBitmap(r: Raster): Bitmap & { up: number } {
       const { i: x0, f: fx } = xs[X], x1 = Math.min(w - 1, x0 + 1);
       const top = lum[y0 * w + x0] * (1 - fx) + lum[y0 * w + x1] * fx, bot = lum[y1 * w + x0] * (1 - fx) + lum[y1 * w + x1] * fx;
       bits[Y * W + X] = ((top * (1 - fy) + bot * fy < 128) !== inv) ? 1 : 0;
+    }
+  }
+  return { ...removeSpeckles({ width: W, height: H, bits }, Math.max(4 * up * up, Math.round(W * H * 1e-5))), up };
+}
+
+/** How far a colour must be from the ground before it counts as ink. */
+const INK_DIST = 55;
+
+function colorInk(r: Raster): Bitmap & { up: number } {
+  const { width: w, height: h, data: d } = r;
+  const ch = [0, 1, 2].map((c) => blur(Float32Array.from({ length: w * h }, (_, i) => d[i * 4 + c]), w, h, BLUR_PX));
+  const [bgR, bgG, bgB] = ground(r);
+  const up = Math.max(1, Math.min(UPSAMPLE, Math.floor(MAX_INK_PX / Math.max(w, h))));
+  const W = w * up, H = h * up, bits = new Uint8Array(W * H);
+  const at = (p: number, n: number) => { const s = Math.min(n - 1, Math.max(0, (p + 0.5) / up - 0.5)); const i = Math.min(n - 2, Math.floor(s)); return n < 2 ? { i: 0, f: 0 } : { i, f: s - i }; };
+  const sample = (ch: Float32Array, x0: number, y0: number, x1: number, y1: number, fx: number, fy: number) => {
+    const top = ch[y0 * w + x0] * (1 - fx) + ch[y0 * w + x1] * fx;
+    const bot = ch[y1 * w + x0] * (1 - fx) + ch[y1 * w + x1] * fx;
+    return top * (1 - fy) + bot * fy;
+  };
+  const xs = Array.from({ length: W }, (_, X) => at(X, w));
+  for (let Y = 0; Y < H; Y++) {
+    const { i: y0, f: fy } = at(Y, h), y1 = Math.min(h - 1, y0 + 1);
+    for (let X = 0; X < W; X++) {
+      const { i: x0, f: fx } = xs[X], x1 = Math.min(w - 1, x0 + 1);
+      const dr = sample(ch[0], x0, y0, x1, y1, fx, fy) - bgR;
+      const dg = sample(ch[1], x0, y0, x1, y1, fx, fy) - bgG;
+      const db = sample(ch[2], x0, y0, x1, y1, fx, fy) - bgB;
+      bits[Y * W + X] = dr * dr + dg * dg + db * db > INK_DIST * INK_DIST ? 1 : 0;
     }
   }
   return { ...removeSpeckles({ width: W, height: H, bits }, Math.max(4 * up * up, Math.round(W * H * 1e-5))), up };
@@ -267,7 +354,7 @@ const PAD_RULES = `The app traces the artwork exactly, engraves it, and cuts a b
 - material and thickness: what the user says, otherwise 3 mm birch plywood.
 Name, summary and notes are in English whatever the language of the request.`;
 
-const PAD_SYSTEM = `The user sent a black-and-white picture (a logo, silhouette, line drawing or text) to make into a laser-cut piece.\n${PAD_RULES}`;
+const PAD_SYSTEM = `The user sent a picture of flat artwork (a logo, calligraphy, silhouette or drawing, in any colour) to make into a laser-cut piece.\n${PAD_RULES}`;
 const PAD_EDIT_SYSTEM = `You change a traced laser piece as the user asks. ${PAD_RULES}\nKeep every value the user does not ask to change. A size asked for is the longest side of the result.`;
 
 const clampSpec = (a: PadAnswer, fallback?: PadSpec): PadSpec & { thickness: number } => {

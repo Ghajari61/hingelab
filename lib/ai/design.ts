@@ -22,7 +22,7 @@ import { LETTER_PRESETS } from "@/lib/letters/presets";
 import type { Plan } from "@/lib/plans";
 import { aiMenu, fieldsText, LETTER_FIELDS, productsText, type MenuProduct } from "./menu";
 import { artDesign, artSchema, drawArt, editArt, type ArtOptions } from "./art";
-import { decodePhoto, editPad, isTwoTone, padDesign, padFromPicture, PadError, padOf } from "./padTrace";
+import { decodePhoto, editPad, isFlatArt, isTwoTone, padDesign, padFromPicture, PadError, padOf } from "./padTrace";
 import { gatewayConfigured } from "./request";
 import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_OPEN_PATH, type AIDesign, type AIDesignRequest, type AIOpen, type AIProduct, type AIRevise } from "./types";
 
@@ -332,10 +332,10 @@ export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: str
   }
   if (!rev && req.image) {
     const raster = decodePhoto(req.image);
-    if (raster && isTwoTone(raster)) {
+    if (raster && (isTwoTone(raster) || isFlatArt(raster))) {
       return withArt(model, userId, async (o) => {
         const r = await padJob(() => padFromPicture(raster, userContent(req), o.ask));
-        return padDesign(r.built, r.spec, plan, "exact", ["Your black-and-white picture was traced as it is and engraved, with a cut border round it."]);
+        return padDesign(r.built, r.spec, plan, "exact", ["Your picture was traced as it is and engraved, with a cut border round it."]);
       });
     }
   }

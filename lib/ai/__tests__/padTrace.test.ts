@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Resvg } from "@resvg/resvg-js";
 import { MockLanguageModelV4 } from "ai/test";
 import { designWithAI } from "../design";
-import { decodePhoto, inkBitmap, isTwoTone, padFromPicture, padShapes } from "../padTrace";
+import { decodePhoto, inkBitmap, isFlatArt, isTwoTone, padFromPicture, padShapes } from "../padTrace";
 import { reviseOf } from "../types";
 import { parsePathData } from "@/lib/studio/svgImport";
 import type { Subpath } from "@/lib/studio/types";
@@ -123,9 +123,27 @@ describe("the AI designer with a black-and-white picture", () => {
     expect(other.notes.join(" ")).toContain("open it in Studio");
   });
 
-  it("leaves colour photos to the designer as before", async () => {
+  it("traces a coloured drawing instead of redrawing it", async () => {
+    const img = picture(`<path d="M30 120 C90 20 160 180 250 70" stroke="#20c4c8" stroke-width="26" fill="none" stroke-linecap="round"/><circle cx="250" cy="50" r="10" fill="#20c4c8"/>`);
+    const r = decodePhoto(img)!;
+    expect(isTwoTone(r)).toBe(false);
+    expect(isFlatArt(r)).toBe(true);
+    const ink = inkBitmap(r);
+    const share = ink.bits.reduce((n, v) => n + v, 0) / ink.bits.length;
+    expect(share).toBeGreaterThan(0.04);
+    expect(share).toBeLessThan(0.35);
+    const { model, calls } = mock(answer);
+    const d = await designWithAI({ prompt: "vectorize", image: img }, "pro", "user-1", model);
+    expect(calls).toHaveLength(1);
+    expect(d.notes.join(" ")).toContain("traced as it is");
+    expect(d.svg).toContain('id="engrave"');
+  });
+
+  it("leaves a many-coloured photo to the designer", async () => {
+    const photo = picture(`<rect width="80" height="200" fill="#111"/><circle cx="140" cy="70" r="60" fill="#2a6"/><circle cx="210" cy="120" r="70" fill="#36c"/><circle cx="120" cy="150" r="50" fill="#e0c020"/>`, 300, 200, "#c45a3a");
+    expect(isFlatArt(decodePhoto(photo)!)).toBe(false);
     const { model, calls } = mock({ product: "parametric", preset: "slat-portrait", name: "Face", match: "exact", flat: false, brief: "Face" });
-    const d = await designWithAI({ prompt: "", image: picture(`<circle cx="150" cy="100" r="80" fill="#e03020"/>`) }, "pro", "user-1", model);
+    const d = await designWithAI({ prompt: "", image: photo }, "pro", "user-1", model);
     expect(d.product).toBe("parametric");
     expect(calls).toHaveLength(1);
   });
