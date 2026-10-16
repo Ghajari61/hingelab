@@ -143,6 +143,21 @@ describe("lid options", () => {
     expect(m.issues.some((i) => /too big/.test(i.msg))).toBe(true);
   });
 
+  it("leaves the base plain until a support ring is asked for", () => {
+    expect(plate(model(), "BASE RING")).toBeUndefined();
+    const m = model({ baseRing: true });
+    const base = plate(m, "BASE")!, ring = plate(m, "BASE RING")!;
+    expect(size(ring.bbox).w).toBeLessThan(size(base.bbox).w);
+    expect(ring.slots).toHaveLength(1);
+    const hole = ring.slots[0], xs = hole.map((q) => q[0]);
+    const span = Math.max(...xs) - Math.min(...xs);
+    expect(span).toBeLessThan(size(ring.bbox).w - 10);
+    expect(span).toBeGreaterThan(10);
+    expect(model({ baseRing: true, baseRingW: 80 }).issues.some((i) => /support ring/.test(i.msg))).toBe(true);
+    expect(hingeRequestError(box({ baseRing: true, baseRingW: 12 }))).toBeNull();
+    expect(hingeRequestError(box({ baseRing: "yes" as never }))).not.toBeNull();
+  });
+
   it("can drop the lip", () => {
     const m = model({ lidLip: false });
     expect(plate(m, "LID LIP")).toBeUndefined();

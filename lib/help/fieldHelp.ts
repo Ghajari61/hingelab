@@ -14,6 +14,7 @@ const HINGE = {
   tabW: "The width of the tabs on the wall that fit slots in the base (and a fixed lid).",
   slotClr: "Extra room in each slot for its tab. Raise it if tabs are too tight to push in; use a small negative value for a press fit.",
   lidGap: "Room between a removable lid's lip and the wall, so the lid lifts off without sticking.",
+  baseRingW: "How wide the support ring is. It sits on the base, just inside the wall, so the hinge has a shoulder to glue to.",
   bedW: "The width of your laser bed or sheet. Parts are laid out to fit inside it.",
   bedH: "The height (depth) of your laser bed or sheet.",
   gap: "The space left between parts on the sheet.",

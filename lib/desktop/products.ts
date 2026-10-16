@@ -81,7 +81,11 @@ function hingeProduct(): DProduct {
     ],
   };
   const tail: Record<string, DField[]> = {
-    secJoints: [{ kind: "choice", key: "split", label: "Wall", options: [{ v: "1", text: "One strip" }, { v: "2", text: "Two halves" }] }],
+    secJoints: [
+      { kind: "toggle", key: "baseRing", label: "Support ring", help: "A ring glued on the base, inside the wall, so the bottom of the hinge has a shoulder to sit on." },
+      { kind: "number", key: "baseRingW", label: "Ring width", help: HINGE_FIELD_HELP.baseRingW, unit: "mm", min: 3, max: 40, step: 0.5, default: 8 },
+      { kind: "choice", key: "split", label: "Wall", options: [{ v: "1", text: "One strip" }, { v: "2", text: "Two halves" }] },
+    ],
     secSheet: [
       { kind: "toggle", key: "labels", label: "Engrave part names" },
       { kind: "toggle", key: "testStrip", label: "Add a bend test strip" },
@@ -104,7 +108,8 @@ function hingeForm(p: Params): DForm {
     if (f.lab) labels[f.id] = f.lab(p);
   }
   if (p.lid === "open") hidden.push("lidGap");
-  return { hidden: [...new Set(hidden)], hiddenSections: [], labels };
+  if (!p.baseRing) hidden.push("baseRingW");
+  return { hidden: [...new Set(hidden)], hiddenSections: [], labels, ...(p.baseRing && p.baseRingW == null ? { values: { baseRingW: 8 } } : {}) };
 }
 
 // ---------------------------------------------------------------- Generators

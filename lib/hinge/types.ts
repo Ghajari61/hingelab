@@ -53,6 +53,10 @@ export interface Params {
   lidHoleD?: number;
   /** A removable lid has a lip under it that drops inside the walls (missing: true). */
   lidLip?: boolean;
+  /** A ring glued on the base, inside the wall, so the hinge has a shoulder to sit on (missing: off). */
+  baseRing?: boolean;
+  /** Width of that ring, mm (missing: 8). */
+  baseRingW?: number;
   split: number;
   bedW: number;
   bedH: number;

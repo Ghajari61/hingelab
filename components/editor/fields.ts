@@ -4,7 +4,7 @@ export type NumericKey =
   | "W" | "D" | "H" | "R" | "sides" | "dia" | "cylFlats"
   | "T" | "K" | "slotW" | "slit" | "bridge" | "pitch" | "overrun" | "stretch"
   | "tabW" | "slotClr" | "lidGap" | "bedW" | "bedH" | "gap"
-  | "Ky" | "minFeature" | "lidOver" | "lidHoleD";
+  | "Ky" | "minFeature" | "lidOver" | "lidHoleD" | "baseRingW";
 
 /** What NumberField needs to know about a field; shared by every product. */
 export interface BaseField {
@@ -52,6 +52,7 @@ export const FIELDS: FieldDef[] = [
   { id: "tabW", label: "Tab width", sec: "secJoints", len: true, step: 0.5, min: 3 },
   { id: "slotClr", label: "Slot play", sec: "secJoints", len: true, step: 0.05, min: -0.5 },
   { id: "lidGap", label: "Lid gap", sec: "secJoints", len: true, step: 0.05, min: 0, show: p => p.lid === "removable" },
+  { id: "baseRingW", label: "Ring width", sec: "secJoints", len: true, step: 0.5, min: 3, max: 40, show: p => p.baseRing === true, unset: () => 8 },
   { id: "lidOver", label: "Overhang", sec: "secLid", len: true, step: 0.5, min: 0, max: 100, unset: () => 0 },
   { id: "lidHoleD", label: "Hole size", sec: "secLid", len: true, step: 0.5, min: 1, max: 500, show: p => p.lidHole === "finger" || p.lidHole === "knob", unset: p => p.lidHole === "knob" ? 5 : 22 },
   { id: "bedW", label: "Bed W", sec: "secSheet", len: true, step: 10, min: 50 },

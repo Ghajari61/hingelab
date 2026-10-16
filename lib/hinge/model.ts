@@ -1,5 +1,5 @@
 import type { ComputeResult, Issue, Params, Part, PlatePart, Point } from "./types";
-import { buildCore, plateExtent, roundedPointsXY } from "./core";
+import { buildCore, insetPoints, plateExtent, roundedPointsXY } from "./core";
 import { buildTestStrip, buildWalls } from "./wall";
 import { barWidth, cutWidth, honeyLattice, kerfY, slotLike } from "./hinge";
 import { bboxOf } from "./polygon";
@@ -50,6 +50,12 @@ export function computeModel(input: Params): ComputeResult {
     : { kind: "plate", name, r: r0 + k / 2, edges, slots, bbox: plateExtent(edges, r0 + k / 2) };
   const over = Math.max(0, p.lidOver ?? 0);
   parts.push(plate("BASE", R, slotRects));
+  if (p.baseRing) {
+    const band = p.baseRingW ?? 8;
+    const ro = R - t - p.lidGap, ri = ro - band;
+    if (ro > 1 && ri > k + 1) parts.push(plate("BASE RING", ro, [insetPoints(edges, ri, k, ky)]));
+    else issues.push({ lvl: "warn", msg: "The box is too small for a support ring of this width, so the ring was left out. Use a wider box or a narrower ring." });
+  }
   const coreIn = Math.min(...edges.map(e => e.c[0] * e.n[0] + e.c[1] * e.n[1]));
   /** The finger or knob hole, centred, when it fits inside `inner` (the clear radius) with 3 mm to spare. */
   let holeR = 0;

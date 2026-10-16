@@ -103,6 +103,8 @@ export function buildHingeScene(model: Model, p: Params, explode = 0): Scene3D {
   const lidLift = explode * (hBody * 0.9 + 20);
   const plateR = R + p.K / 2;
   inner.add(plate(edges, plateR, 0, t, "base", 0.93));
+  const ring = model.parts.find((pt) => pt.kind === "plate" && pt.name === "BASE RING");
+  if (ring?.kind === "plate") inner.add(plate(edges, ring.r, t + wallLift * 0.45, t, "base ring", 0.78, ring.slots));
   const z0 = t + wallLift;
   inner.add(wallBand(edges, R, R - t, z0, hBody));
   inner.add(slitLines(edges, R + 0.15, z0, hBody, p.pitch, honeyLattice(p).bridge));

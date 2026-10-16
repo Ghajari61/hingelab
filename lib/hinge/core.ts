@@ -74,6 +74,18 @@ export function roundedPointsXY(edges: Edge[], r: number, kx: number, ky: number
   return out.filter((q, i) => { const n = out[(i + 1) % out.length]; return Math.hypot(q[0] - n[0], q[1] - n[1]) > 1e-6; });
 }
 
+/** The rounded core offset by r, then shrunk by the kerf ellipse, so an inner cut leaves radius r. */
+export function insetPoints(edges: Edge[], r: number, kx: number, ky: number): Point[] {
+  const out: Point[] = [];
+  const at = (q: Point, n: Point): Point => { const e = kerfPoint(n, kx, ky); return [q[0] + n[0] * r - e[0], q[1] + n[1] * r - e[1]]; };
+  for (const e of edges) {
+    out.push(at(e.p0, e.n), at(e.p1, e.n));
+    const a1 = Math.atan2(e.n[1], e.n[0]), steps = Math.max(2, Math.ceil(e.sweep / (Math.PI / 36)));
+    for (let s = 1; s < steps; s++) { const a = a1 + e.sweep * s / steps; out.push(at(e.p1, [Math.cos(a), Math.sin(a)])); }
+  }
+  return out.filter((q, i) => { const n = out[(i + 1) % out.length]; return Math.hypot(q[0] - n[0], q[1] - n[1]) > 1e-6; });
+}
+
 /** Axis-aligned extent of the rounded outline, sampled along each corner arc. */
 export function plateExtent(edges: Edge[], r: number) {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;

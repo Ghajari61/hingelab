@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.47",
-    "pub_date": "2026-10-16T20:42:30.617Z",
-    "notes": "Section titles in the settings panel stay on one line.",
+    "version": "1.0.48",
+    "pub_date": "2026-10-16T22:34:05.072Z",
+    "notes": "A support ring can sit on the base, inside the hinge wall.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.47_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnJQQjl5RzBKbE5uMURsd2xwYzdJVE9rN3MybzJPOVluRUFZOStpSkNvZU5pbXdWR3VzZUxycVl0UWVueHRkZVh1SEMxNVZ3VVkrNVdGVlZKamVFTFFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTgzMTk4CWZpbGU6SGluZ2VMYWJfMS4wLjQ3X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDcKcFNEcnkwSmt0QVVlZFVlNHAxZUtQTjdEaElIamZXaEp3ckhvNEt4bDcrKy9TTWdkUzgyZFRQTGppUStuOW5QSmtrWVFYN09XNnRMejRKSmtvUVd5Qnc9PQo=",
-        "size": 4271137
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.48_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnFENVVIYjZoV1h3ZlZ5T21sOEZUUTNLS1JOTE1jWkVZUytCZGl3aHJiWG1TRnhqNXNRVCs1QU1vY1dtL2dMMmhOOXRNdnEra2JqWitXTnlMY083aVFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTg5ODA0CWZpbGU6SGluZ2VMYWJfMS4wLjQ4X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDgKVXN0RWtlU3o3V3hIRFVPd0kyM3llNWVnWjlsUmJhaXplLytaV3lvNzZCWWl6Z1Y5ZGlRZ3lEYW1DUjMxcTVZWFZjY1QrSXc5SG5RcGtwSWpXWE5EQXc9PQo=",
+        "size": 4271257
       }
     }
   }

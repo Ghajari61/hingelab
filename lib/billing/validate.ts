@@ -20,7 +20,7 @@ const HINGE_ENUMS: Partial<Record<keyof Params, readonly string[]>> = {
 
 /** Settings added later: optional, but in range when present. */
 const HINGE_OPTIONAL: Partial<Record<keyof Params, [number, number]>> = {
-  Ky: [0, 5], lidOver: [0, 100], lidHoleD: [0, 500], gamma: [0.001, 1], minFeature: [0, 50],
+  Ky: [0, 5], lidOver: [0, 100], lidHoleD: [0, 500], gamma: [0.001, 1], minFeature: [0, 50], baseRingW: [3, 80],
 };
 
 /** [min, max] per Hinge Box number; the minimums are the editor's, the maximums are generous. */
@@ -50,6 +50,7 @@ export function hingeRequestError(p: Params): string | null {
   }
   if (p.lidHole !== undefined && !["none", "finger", "knob"].includes(p.lidHole)) return "Invalid value for lidHole.";
   if (p.lidLip !== undefined && typeof p.lidLip !== "boolean") return "Invalid value for lidLip.";
+  if (p.baseRing !== undefined && typeof p.baseRing !== "boolean") return "Invalid value for baseRing.";
   const around = p.shape === "cyl" ? Math.PI * p.dia : 2 * (p.W + (p.shape === "poly" ? p.W : p.D));
   const columns = around / p.pitch;
   const lattice = honeyLattice(p);

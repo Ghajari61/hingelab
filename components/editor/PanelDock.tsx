@@ -152,8 +152,13 @@ export function PanelDock({
         <AnalysisPanel model={model} error={error} units={units} />
         {checks}
       </Sec>
-      <Sec title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["tabW", "slotClr", "lidGap", "split"])}>
+      <Sec title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["tabW", "slotClr", "lidGap", "split", "baseRing", "baseRingW"])}>
         <div className="grid2">{fields("secJoints")}</div>
+        <CheckField
+          label="Support ring" title="A ring glued on the base, inside the wall, so the bottom of the hinge has a shoulder to sit on"
+          checked={params.baseRing === true} def={false}
+          onChange={(on) => { const next: Params = { ...params, baseRing: on }; if (!on) delete next.baseRingW; onPatch(next); }}
+        />
         <div className="rowlabel">Wall pieces<ResetMark label="Wall pieces" show={params.split !== DEFAULTS.split} to={DEFAULTS.split === 2 ? "Two halves" : "One strip"} onReset={() => onSplit(DEFAULTS.split)} /></div>
         <div className="iconseg" role="group" aria-label="Wall pieces">
           <button type="button" aria-pressed={params.split === 1} onClick={() => onSplit(1)}>One strip</button>
