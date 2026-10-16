@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.42",
-    "pub_date": "2026-10-16T15:42:39.123Z",
-    "notes": "The AI designer builds signs, toppers, trophies, boxes, clocks and key racks with the real generators.",
+    "version": "1.0.43",
+    "pub_date": "2026-10-16T16:23:25.465Z",
+    "notes": "The AI designer draws the ornament in a photo or a description, instead of a plain shape.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.42_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmliT09TNi9MS2RqSjl2YW8rS2ZVSHVVR2RmbFF4b3dYVHVrcVE5cjVma0lEWFNZdDdIZHZHOHJ0Ukg0NGpjeUpsRjZwRUNYbXZ3bmhGbW9TWi91YVFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTY1MTYwCWZpbGU6SGluZ2VMYWJfMS4wLjQyX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDIKWjF2N3dtQ1dESTFQVWgrNFMrYW16T2twQ1lHZG4wSkZtTVBId3VhSndqY01naHlRNFBlQjhrSUc5T1JKYWwvOWsxWThZb1FXYldSaUZZSWI2RlEvRGc9PQo=",
-        "size": 4271619
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.43_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnFPK3JHSWZKRkZ3Um9FUlVEUmVJMzV5Q0Q4Y3JjRjc1NFlwMmo3L044UGlxRHJiQVdjTWJCWGxaMUNUWjZmcGViT1NDcGNtTmV4QW5SWm8ydGVmdWc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTY3NjI0CWZpbGU6SGluZ2VMYWJfMS4wLjQzX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDMKMyt6WWxMN09YbHhZYWlvQTVEL0dtVDcwb1orZGMrVUZOVDZGdkhNcUFLUVhrWFVmbi8raFZXUGVlb01pM1VKTzNZelFzbDNWeWc4RzBrbHVwN3NERHc9PQo=",
+        "size": 4270672
       }
     }
   }

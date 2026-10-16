@@ -2,7 +2,8 @@ import "server-only";
 /**
  * The AI designer. A description or a photo goes to a language model in two steps: it picks the
  * product and preset that can make the thing and writes a brief, then fills in that product's
- * settings. Product code builds the geometry. Freehand drawing is only for a picture no product can make.
+ * settings. Product code builds the geometry. A photo or description with its own ornament is drawn
+ * shape by shape instead, because the product settings cannot reproduce it.
  */
 import { createHash } from "node:crypto";
 import { createAnthropic } from "@ai-sdk/anthropic";
@@ -56,7 +57,8 @@ const pickSchema = z.object({
   name: z.string().describe("A short English name for the design, e.g. \"Walnut pen box\"."),
   match: z.enum(["exact", "close", "loose"]).describe("exact: the product makes this; close: a near version of it; loose: only a rough stand-in."),
   flat: z.boolean().describe("True when the object is flat or a few flat pieces slotted or stacked together: signs, plaques, name plates, stands (phone, tablet, book), frames, ornaments, keychains, coasters, toppers, trophies, wall art. False for containers with walls (boxes, jars, cups, trays, drawers, planters), slice sculptures, puzzles, QR codes and clocks."),
-  brief: z.string().describe("Everything the next step needs: what the object is, its shape, every size in millimetres (estimate sizes in a photo from typical real sizes), the exact text on it in its original language and script, style and material."),
+  brief: z.string().describe("Everything the next step needs: what the object is, its shape, every size in millimetres (estimate sizes in a photo from typical real sizes), the exact text on it in its original language and script, style and material. When detail is true, name the separate shapes to draw."),
+  detail: z.boolean().optional().describe("True when the photo or the words show a specific picture the product settings cannot build: many leaves, flowers, veins, a scene, a portrait, a logo, or an irregular outline. False for a plain product, a standard shape, a word, or a motif the product already offers."),
 });
 
 const settingsSchema = z.object({
@@ -79,10 +81,11 @@ Which product: use the product that builds the object, and match "exact" when th
 - hinge: round, oval or curved containers whose walls bend on a living hinge
 - letters: hollow letter boxes, solid cut-out letters and stencils of a word
 - parametric: sculptures made of many slices; pick the closest preset, the shape itself cannot change
-- puzzle: jigsaw puzzles. qr: QR codes. clock: clocks with a movement hole
+- puzzle: jigsaw puzzles. qr: QR codes. clock: a plain clock (outline, ticks, numerals, hands, movement hole)
 - shadowbox: layered paper-cut tunnels, mandalas, sunbursts, landscapes and lattices
-- art: only a custom picture no product above can build, such as a logo, an ornament or an illustration. Not for signs, toppers, trophies, key holders, table numbers, stands or boxes.
-The brief describes only what the user asked for or the photo shows, in under 80 words; do not add features. When the user writes about the photo (what it is, its size, text or changes they want), that wins over what the photo seems to show.
+- art: a custom picture, logo, ornament or illustration, and anything whose detail flag is true
+Set detail true when the photo or the description is a specific picture the chosen product cannot build from its settings. A clock face covered in separate leaves and flowers, a sign whose outline is a drawing, an engraved scene: detail true, and the brief lists those shapes plus the working parts (a clock's centre hole and hands, the words on a sign). Set detail false for a plain object, a word, a standard motif or a preset shape. If you would have to tell the user the product cannot cut a pattern you can see, detail is true.
+The brief describes only what the user asked for or the photo shows, in under 120 words; do not add features. When the user writes about the photo (what it is, its size, text or changes they want), that wins over what the photo seems to show.
 
 `;
 
@@ -299,6 +302,9 @@ async function currentResult(rev: AIRevise, plan: Plan): Promise<string> {
   }
 }
 
+/** Products whose construction the drawing step must not replace. */
+const STRUCTURAL = new Set<string>(["boxes", "hinge", "letters", "parametric", "puzzle", "qr"]);
+
 /** Designs one product from a description and/or photo, on the caller's plan. */
 export interface DesignOptions {
   photoRelief?: boolean;
@@ -341,7 +347,7 @@ export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: str
   if (rev && from) {
     const now = await currentResult(rev, plan);
     choice = {
-      product: rev.product, preset: rev.preset ?? "", name: rev.name, match: rev.match, flat: false,
+      product: rev.product, preset: rev.preset ?? "", name: rev.name, match: rev.match, flat: false, detail: false,
       brief: `Edit the current design. Change only this and keep everything else as it is: ${req.prompt}\n${now ? `The current result: ${now}.\n` : ""}A size asked for here must be the size of the result: work out the settings that give it from the current values and the current result, and switch off any setting that fits or sizes it automatically and would change that size.`,
     };
   } else {
@@ -355,7 +361,10 @@ export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: str
     }
     if (rev) choice = { ...choice, name: rev.name || choice.name, match: rev.match };
   }
-  const product = revising ?? menu.find((p) => p.id === choice.product) ?? menu[0];
+  // Boxes, hinges, letters, sculptures, puzzles and QR codes stay on their generators. A flat
+  // product cannot cut a picture it has no setting for, so that picture is drawn instead.
+  const drawn = choice.detail === true && !STRUCTURAL.has(choice.product) && !rev;
+  const product = drawn ? menu.find((p) => p.id === "art")! : (revising ?? menu.find((p) => p.id === choice.product) ?? menu[0]);
   if (product.id === "art") {
     return withArt(model, userId, async (o) => {
       const query = [req.prompt, req.image ? req.imageNote : "", choice.name, choice.brief].filter(Boolean).join("\n");

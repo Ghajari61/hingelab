@@ -296,6 +296,29 @@ describe("AI designer", () => {
     expect(ok.product).toBe("art");
   });
 
+  it("draws a photo's ornament instead of a plain clock", async () => {
+    const { model, calls } = mock(
+      { product: "clock", preset: "wall-roman", name: "Floral leaf wall clock", match: "exact", flat: false, detail: true, brief: "Round wall clock 400 mm with separate leaves, flowers and veins, a centre hole and hands" },
+      art(),
+      { ...art(), looksRight: true, problems: [] },
+    );
+    const d = await designWithAI({ prompt: "یه ساعت دیواری دقیقا شبیه به این", image: PNG }, "pro", "user-1", model);
+    expect(d.product).toBe("art");
+    const draw = JSON.stringify(calls[1].prompt);
+    expect(draw).toContain("separate leaves, flowers and veins");
+    expect(draw).toContain("image/png");
+    expect(JSON.stringify(calls[0].prompt)).toContain("detail true");
+  });
+
+  it("keeps a plain clock on the clock generator", async () => {
+    const { model } = mock(
+      { product: "clock", preset: "wall-roman", name: "Wall clock", match: "exact", flat: false, detail: false, brief: "Plain round wall clock 300 mm" },
+      { settings: [], notes: [] },
+    );
+    const d = await designWithAI({ prompt: "a plain round wall clock", image: PNG }, "pro", "user-1", model);
+    expect(d.product).toBe("clock");
+  });
+
   it("builds a sign on the sign generator, with the words from the brief", async () => {
     const { model, calls } = mock(
       { product: "sign", preset: "welcome-arch", name: "Home sign", match: "exact", flat: true, brief: "Wall sign خانه ما" },
