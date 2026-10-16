@@ -6,6 +6,7 @@ import "server-only";
  * product's own ranges and options, and the product code builds, checks and fixes the design.
  */
 import { createHash } from "node:crypto";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, Output, type LanguageModel, type UserContent } from "ai";
 import { z } from "zod";
@@ -32,6 +33,18 @@ import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_OPEN_PATH, type AIDesign, type AIDesig
 const MODEL = "openai/gpt-6-astra";
 const FALLBACK_MODELS = ["openai/gpt-5.6-luna", "openai/gpt-5-mini"];
 const OPENAI_MODEL = "gpt-6-astra";
+/** Gateway model id. Docs use `anthropic/<id>` (for example `anthropic/claude-opus-5`). */
+const CLAUDE_GATEWAY = "anthropic/claude-sonnet-5-5";
+const CLAUDE_DIRECT = "claude-sonnet-5-5";
+
+type DesignHop = "claude" | "openai" | "gateway";
+
+/** AI_DESIGN_ORDER=openai,gateway restores the previous chain without a code change. */
+function designOrder(): DesignHop[] {
+  const raw = (process.env.AI_DESIGN_ORDER || "claude,openai,gateway").split(",").map((s) => s.trim());
+  const hops = raw.filter((s): s is DesignHop => s === "claude" || s === "openai" || s === "gateway");
+  return hops.length ? hops : ["claude", "openai", "gateway"];
+}
 const TIMEOUT_MS = 50_000;
 /** An original design: drawing, rendering and one look at the result (the routes allow 180 s). */
 const ART_TIMEOUT_MS = 150_000;
@@ -104,19 +117,44 @@ const userTag = (userId: string) => createHash("sha256").update(`ai-design:${use
 
 type Route = { model: LanguageModel; providerOptions: NonNullable<Parameters<typeof generateText>[0]["providerOptions"]> };
 
-/** OpenAI directly when the deployment has its own OPENAI_API_KEY (model OPENAI_MODEL), then the AI Gateway. */
+/**
+ * Claude first, then the OpenAI chain. `AI_DESIGN_ORDER` (claude, openai, gateway) changes the
+ * order. A test can still pass one model and skip the chain.
+ */
 function routes(ask: Ask): Route[] {
+  const tag = userTag(ask.userId);
   const gateway: Route = {
     model: ask.model ?? (process.env.AI_DESIGN_MODEL || MODEL),
-    providerOptions: { gateway: { models: FALLBACK_MODELS, user: userTag(ask.userId), tags: ["ai-design"] } },
+    providerOptions: { gateway: { models: FALLBACK_MODELS, user: tag, tags: ["ai-design"] } },
   };
-  const key = process.env.OPENAI_API_KEY;
-  if (ask.model || !key) return [gateway];
-  const openai: Route = {
-    model: createOpenAI({ apiKey: key })(process.env.OPENAI_MODEL || OPENAI_MODEL),
-    providerOptions: { openai: { safetyIdentifier: userTag(ask.userId) } },
+  if (ask.model) return [gateway];
+  const openaiKey = process.env.OPENAI_API_KEY;
+  const openai: Route | undefined = openaiKey
+    ? {
+        model: createOpenAI({ apiKey: openaiKey })(process.env.OPENAI_MODEL || OPENAI_MODEL),
+        providerOptions: { openai: { safetyIdentifier: tag } },
+      }
+    : undefined;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const claudeDirect: Route | undefined = anthropicKey
+    ? {
+        model: createAnthropic({ apiKey: anthropicKey })(process.env.ANTHROPIC_MODEL || CLAUDE_DIRECT),
+        providerOptions: {},
+      }
+    : undefined;
+  const claudeGateway: Route | undefined = gatewayConfigured()
+    ? {
+        model: process.env.AI_CLAUDE_MODEL || CLAUDE_GATEWAY,
+        providerOptions: { gateway: { user: tag, tags: ["ai-design"] } },
+      }
+    : undefined;
+  const byHop: Record<DesignHop, Route[]> = {
+    claude: [claudeGateway, claudeDirect].filter((r): r is Route => !!r),
+    openai: openai ? [openai] : [],
+    gateway: gatewayConfigured() ? [gateway] : [],
   };
-  return gatewayConfigured() ? [openai, gateway] : [openai];
+  const list = designOrder().flatMap((hop) => byHop[hop]);
+  return list.length ? list : [gateway];
 }
 
 type Ask = { model?: LanguageModel; userId: string; signal: AbortSignal };
@@ -136,7 +174,7 @@ async function askModel<T>(ask: Ask, system: string, content: UserContent, schem
       return output as T;
     } catch (e) {
       if (i + 1 >= list.length || ask.signal.aborted) throw e;
-      console.warn("AI designer: OpenAI failed, trying the gateway:", e instanceof Error ? e.message.slice(0, 200) : e);
+      console.warn("AI designer: model failed, trying the next:", e instanceof Error ? e.message.slice(0, 200) : e);
     }
   }
 }

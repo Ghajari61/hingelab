@@ -73,4 +73,4 @@ export function aiLimitMessage(plan: Plan, daily?: boolean): string {
 /** The AI Gateway authenticates with the deployment's OIDC token on Vercel, or a gateway key elsewhere. */
 export const gatewayConfigured = () => !!(process.env.VERCEL || process.env.VERCEL_OIDC_TOKEN || process.env.AI_GATEWAY_API_KEY);
 
-export const aiConfigured = () => gatewayConfigured() || !!process.env.OPENAI_API_KEY;
+export const aiConfigured = () => gatewayConfigured() || !!process.env.OPENAI_API_KEY || !!process.env.ANTHROPIC_API_KEY;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type Stripe from "stripe";
-import { escapeXml, inertSvgMarkup, isImageDataURL, xmlCommentText } from "../svg";
+import { escapeXml, inertSvgMarkup, isImageDataURL, laserSheetSvg, xmlCommentText } from "../svg";
 import { clientIP, declaredLength, isCrossSite, isJSONRequest } from "../request";
 import { memoryLimiter } from "../limiter";
 import { contentSecurityPolicy, downloadHeaders, securityHeaders } from "../headers";
@@ -76,6 +76,14 @@ describe("SVG output cannot be broken out of", () => {
       "",
       null,
     ]) expect(inertSvgMarkup(bad as string)).toBeUndefined();
+  });
+
+  it("keeps a model SVG only when it is inert and fits the bed", () => {
+    const circle = `<svg xmlns="http://www.w3.org/2000/svg" width="120mm" height="80mm" viewBox="0 0 120 80"><circle cx="60" cy="40" r="20" fill="none" stroke="#FF0000" stroke-width="0.1"/></svg>`;
+    expect(laserSheetSvg(circle, 900, 600)).toMatchObject({ ok: true, w: 120, h: 80 });
+    expect(laserSheetSvg(circle.replace("120mm", "1200mm"), 900, 600).ok).toBe(false);
+    expect(laserSheetSvg(circle.replace(/width="120mm"/, 'width="120"'), 900, 600).ok).toBe(false);
+    expect(laserSheetSvg(circle.replace("</svg>", "<script>x</script></svg>"), 900, 600).ok).toBe(false);
   });
 });
 

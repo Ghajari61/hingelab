@@ -28,7 +28,14 @@ export const LIMITS = {
   aiStudio: { name: "ai-studio", limit: 30, windowSec: 600 },
   aiStudioDayFree: { name: "ai-studio-day-free", limit: STUDIO_DAILY.free, windowSec: 86_400 },
   aiStudioDayPro: { name: "ai-studio-day-pro", limit: STUDIO_DAILY.pro, windowSec: 86_400 },
+  /** POST /api/svg: one allowance per signed-in user. SVG_DAILY_LIMIT overrides the default. */
+  svgDay: { name: "svg-day", limit: svgDailyLimit(), windowSec: 86_400 },
 } satisfies Record<string, LimitRule>;
+
+function svgDailyLimit(): number {
+  const n = Number(process.env.SVG_DAILY_LIMIT);
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 10;
+}
 
 const memory = memoryLimiter();
 let dbAvailable = true;

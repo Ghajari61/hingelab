@@ -36,3 +36,31 @@ export function inertSvgMarkup(s: string | null | undefined): string | undefined
   if (!s || typeof s !== "string" || !/^\s*<svg[\s>]/i.test(s) || ACTIVE.test(s)) return undefined;
   return s;
 }
+
+const MM = /(?:^|[\s])(width|height)\s*=\s*["']([\d.]+)\s*mm["']/gi;
+
+/** Width and height written in millimetres. Missing or non-mm sizes are rejected. */
+export function svgSizeMm(svg: string): { w: number; h: number } | undefined {
+  const found: Partial<Record<"width" | "height", number>> = {};
+  for (const match of svg.matchAll(MM)) {
+    const key = match[1].toLowerCase() as "width" | "height";
+    const n = Number(match[2]);
+    if (!Number.isFinite(n) || n <= 0) return undefined;
+    found[key] = n;
+  }
+  return found.width && found.height ? { w: found.width, h: found.height } : undefined;
+}
+
+/**
+ * SVG a model returned, kept only when it is inert and its millimetre size fits the bed
+ * (either orientation).
+ */
+export function laserSheetSvg(svg: string, bedW: number, bedH: number): { ok: true; svg: string; w: number; h: number } | { ok: false; error: string } {
+  const clean = inertSvgMarkup(svg.trim());
+  if (!clean) return { ok: false, error: "The SVG was rejected." };
+  const size = svgSizeMm(clean);
+  if (!size) return { ok: false, error: "The SVG needs a width and height in millimetres." };
+  const fits = (size.w <= bedW && size.h <= bedH) || (size.w <= bedH && size.h <= bedW);
+  if (!fits) return { ok: false, error: `The SVG is ${size.w}×${size.h} mm, larger than the ${bedW}×${bedH} mm bed.` };
+  return { ok: true, svg: clean, w: size.w, h: size.h };
+}

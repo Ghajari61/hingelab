@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.39",
-    "pub_date": "2026-10-16T05:35:25.757Z",
-    "notes": "Public site adds Make, Community and Learn plus a generator catalogue. Free stays preview only.",
+    "version": "1.0.40",
+    "pub_date": "2026-10-16T06:25:00.395Z",
+    "notes": "The AI designer tries Claude first, then OpenAI. SVG generation needs a signed-in account.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.39_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnBNSEJqWXhpeUNBSS9VZW5zSUd5KzhNbW5xSG1ZQ21CVEpnR3NYMHdraFlSWlRkanB0ZGExR1pVZElscDF1Y1ZaaXNWbzREcnNYZU9DSjc0RWlHMFF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTI4Njc3CWZpbGU6SGluZ2VMYWJfMS4wLjM5X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuMzkKYUpHM2lSeEFTNXUrZ243WHlCWDN1RytpNTFpbG1NczdMU00xMHp6Q0tFbU1MRHplckNQMWZmbTJnWGtSVkZBa09Ld0xHY1hrd2drQzkrb0pQTy9xQ1E9PQo=",
-        "size": 4272518
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.40_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnBEa0d6U2ZTczFHeVYxdzJ6UmZ5MlhuUjNaamc2d0txN1ljR3hCb3dmN3Uzamo4SXZXZWhnUFVVWWFyUWV5bHdCRk5haGt6NVlwc2FlZjhVN0d6SXcwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTMxNzI0CWZpbGU6SGluZ2VMYWJfMS4wLjQwX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDAKbk1hbmFxRjV5c1lMUGJ6SHE0VGJ4UDN0UmJNeHYyZlUyVmc1ZGNIQkVPazJFcU90NW1lMWUzUWJOd1pEdUVJUW5Qemo3aTcwSVVYWloxSkZ6V2hzQ3c9PQo=",
+        "size": 4270727
       }
     }
   }

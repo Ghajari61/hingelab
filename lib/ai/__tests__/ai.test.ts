@@ -352,9 +352,31 @@ describe("AI designer", () => {
     await expect(designWithAI({ prompt: "wider", revise: { ...reviseOf(first), params: { art: { shapes: 5 } } } }, "pro", "user-1", model)).rejects.toBeInstanceOf(AIDesignError);
   });
 
-  it("asks OpenAI directly when the deployment has an OpenAI key, then falls back to the gateway", async () => {
+  it("asks Claude first, then OpenAI, then the gateway", async () => {
     const hosts: string[] = [];
     vi.stubEnv("OPENAI_API_KEY", "sk-test-not-real");
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test-not-real");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "gw-test-not-real");
+    vi.stubGlobal("fetch", async (url: string | URL | Request) => {
+      hosts.push(new URL(url instanceof Request ? url.url : url).host);
+      return new Response(JSON.stringify({ error: { message: "bad key", type: "invalid_request_error" } }), { status: 401, headers: { "content-type": "application/json" } });
+    });
+    try {
+      await expect(designWithAI({ prompt: "a box" }, "pro", "user-1")).rejects.toBeInstanceOf(AIDesignError);
+      expect(hosts[0]).toMatch(/ai-gateway/);
+      expect(hosts).toContain("api.anthropic.com");
+      expect(hosts).toContain("api.openai.com");
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("follows AI_DESIGN_ORDER so OpenAI can be first again", async () => {
+    const hosts: string[] = [];
+    vi.stubEnv("AI_DESIGN_ORDER", "openai,gateway");
+    vi.stubEnv("OPENAI_API_KEY", "sk-test-not-real");
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test-not-real");
     vi.stubEnv("AI_GATEWAY_API_KEY", "gw-test-not-real");
     vi.stubGlobal("fetch", async (url: string | URL | Request) => {
       hosts.push(new URL(url instanceof Request ? url.url : url).host);
@@ -363,7 +385,7 @@ describe("AI designer", () => {
     try {
       await expect(designWithAI({ prompt: "a box" }, "pro", "user-1")).rejects.toBeInstanceOf(AIDesignError);
       expect(hosts[0]).toBe("api.openai.com");
-      expect(hosts.some((h) => h.includes("ai-gateway"))).toBe(true);
+      expect(hosts).not.toContain("api.anthropic.com");
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();
