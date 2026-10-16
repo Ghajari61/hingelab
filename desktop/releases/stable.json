@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.41",
-    "pub_date": "2026-10-16T06:52:05.094Z",
-    "notes": "New shop-ready presets and templates for signs, toppers, trophies, table numbers, boxes, clocks and key racks.",
+    "version": "1.0.42",
+    "pub_date": "2026-10-16T15:42:39.123Z",
+    "notes": "The AI designer builds signs, toppers, trophies, boxes, clocks and key racks with the real generators.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.41_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnV2QUsvQUpGVWQ4Smd2QUt5UXJoNm1zNURVTnhhRHd5RFNqL3lUUlh5c0kzQ20xdk9wSzlLdGhvL09ieTBYY09hZms4MEFOU2RuK2REb1U1L1Ficmc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTMzMzczCWZpbGU6SGluZ2VMYWJfMS4wLjQxX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDEKRSt4MTFicnNsMmVWVDlLUlNYczFiKzY0dXFVbXJ3dTNSODdjSU5STVVoaG1ieDZPT284WmNGNitzTSs5bnNWTUJENmxMdnBaTURLZnM2V3V0T1ZFRGc9PQo=",
-        "size": 4271391
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.42_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmliT09TNi9MS2RqSjl2YW8rS2ZVSHVVR2RmbFF4b3dYVHVrcVE5cjVma0lEWFNZdDdIZHZHOHJ0Ukg0NGpjeUpsRjZwRUNYbXZ3bmhGbW9TWi91YVFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTY1MTYwCWZpbGU6SGluZ2VMYWJfMS4wLjQyX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDIKWjF2N3dtQ1dESTFQVWgrNFMrYW16T2twQ1lHZG4wSkZtTVBId3VhSndqY01naHlRNFBlQjhrSUc5T1JKYWwvOWsxWThZb1FXYldSaUZZSWI2RlEvRGc9PQo=",
+        "size": 4271619
       }
     }
   }

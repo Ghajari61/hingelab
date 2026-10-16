@@ -296,21 +296,25 @@ describe("AI designer", () => {
     expect(ok.product).toBe("art");
   });
 
-  it("draws anything a product would only approximate, and never fills in a template layout", async () => {
-    const reviewed = { ...art(), looksRight: true, problems: [] };
-    const near = mock({ product: "boxes", preset: "phone-stand", name: "Phone stand", match: "close", flat: false, brief: "A circular phone stand" }, art(), reviewed);
-    expect((await designWithAI({ prompt: "circle Phone stand" }, "pro", "user-1", near.model)).product).toBe("art");
-    expect(JSON.stringify(near.calls[0].prompt)).not.toContain("## sign:");
-    const templated = mock({ product: "sign", preset: "welcome-arch", name: "Home sign", match: "exact", flat: false, brief: "Wall sign خانه ما" }, art(), reviewed);
-    const d = await designWithAI({ prompt: "تابلوی خانه ما" }, "pro", "user-1", templated.model);
-    expect(d.product).toBe("art");
-    expect(JSON.stringify(templated.calls[1].prompt)).toContain("Wall sign خانه ما");
+  it("builds a sign on the sign generator, with the words from the brief", async () => {
+    const { model, calls } = mock(
+      { product: "sign", preset: "welcome-arch", name: "Home sign", match: "exact", flat: true, brief: "Wall sign خانه ما" },
+      { settings: [{ key: "text.text", value: "خانه ما" }, { key: "text.fontId", value: "vazirmatn" }], notes: [] },
+    );
+    const d = await designWithAI({ prompt: "تابلوی خانه ما" }, "pro", "user-1", model);
+    expect(d.product).toBe("sign");
+    expect(d.preset).toBe("welcome-arch");
+    expect(d.svg).toMatch(/<svg/);
+    expect(JSON.stringify(calls[0].prompt)).toContain("## sign:");
+    expect(JSON.stringify(calls[1].prompt)).toContain("Wall sign خانه ما");
   });
 
-  it("draws flat things even when the model reaches for an engineered product", async () => {
-    const reviewed = { ...art(), looksRight: true, problems: [] };
-    const stand = mock({ product: "boxes", preset: "", name: "Phone stand", match: "exact", flat: true, brief: "A circular phone stand" }, art(), reviewed);
-    expect((await designWithAI({ prompt: "circle Phone stand" }, "pro", "user-1", stand.model)).product).toBe("art");
+  it("keeps a phone stand and a puzzle on their generators", async () => {
+    const stand = mock(
+      { product: "boxes", preset: "phone-stand", name: "Phone stand", match: "close", flat: true, brief: "A phone stand" },
+      { settings: [], notes: [] },
+    );
+    expect((await designWithAI({ prompt: "phone stand" }, "pro", "user-1", stand.model)).product).toBe("boxes");
     const puzzle = mock({ product: "puzzle", preset: "", name: "Puzzle", match: "exact", flat: true, brief: "A 12 piece puzzle" }, { settings: [], notes: [] });
     expect((await designWithAI({ prompt: "kids puzzle" }, "pro", "user-1", puzzle.model)).product).toBe("puzzle");
   });

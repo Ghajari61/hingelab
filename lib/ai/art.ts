@@ -89,6 +89,7 @@ Text: never draw letters as paths; put words in texts. The app turns texts into 
 ${fontList}`;
 
 const DRAW_SYSTEM = `You are a senior laser-cut product designer and illustrator. You design original, attractive, production-ready laser cut and engrave files from scratch, never generic clip art or template layouts.
+A plain rectangle, rounded rectangle or circle with text on it is a failed design: redraw it. The outline itself must be the idea (arch, banner, badge, scallop, leaf, crest or ornament), with one motif drawn as smooth curves and the words in texts.
 
 ${HANDBOOK}`;
 

@@ -2,8 +2,7 @@ import "server-only";
 /**
  * The AI designer. A description or a photo goes to a language model in two steps: it picks the
  * product and preset that can make the thing and writes a brief, then fills in that product's
- * settings. The model never draws geometry: its choices are checked field by field against the
- * product's own ranges and options, and the product code builds, checks and fixes the design.
+ * settings. Product code builds the geometry. Freehand drawing is only for a picture no product can make.
  */
 import { createHash } from "node:crypto";
 import { createAnthropic } from "@ai-sdk/anthropic";
@@ -69,24 +68,20 @@ const editSchema = settingsSchema.extend({
   name: z.string().describe("A new short English name when the change makes the current one wrong (e.g. the text on it changed), otherwise an empty string."),
 });
 
-/** Products that are a preset layout with the user's words in it; new designs are drawn instead (old ones still edit). */
-const TEMPLATED = new Set<AIProduct>(["sign", "trophy", "topper", "keyrack", "tablenum"]);
-/** Flat presets of the engineered products (signs, stands, frames, stencils); drawn instead too. */
-const FLAT_PRESETS: Partial<Record<AIProduct, Set<string>>> = {
-  boxes: new Set(["desk-sign", "name-plate", "office-sign", "frame-10x15", "frame-square", "phone-stand", "tablet-stand", "key-holder"]),
-  letters: new Set(["script-sign", "year-sign", "hello-sign", "open-stencil", "bar-stencil"]),
-};
-/** Engineered products that are right for flat things too. */
-const FLAT_OK = new Set<AIProduct>(["art", "parametric", "puzzle", "qr", "clock"]);
-const isFlat = (product: AIProduct, preset: string) => TEMPLATED.has(product) || !!FLAT_PRESETS[product]?.has(preset);
-
-/** The products a new design may come from: no template products or flat presets. */
-const pickMenu = (menu: MenuProduct[]) => menu
-  .filter((p) => !TEMPLATED.has(p.id))
-  .map((p) => (FLAT_PRESETS[p.id] ? { ...p, presets: p.presets.filter((x) => !FLAT_PRESETS[p.id]!.has(x.id)) } : p));
-
 const PICK_SYSTEM = `You are the design assistant of HingeLab, a web app that makes laser-cut files. A user describes something they want to laser cut, or shows a photo of one, possibly in another language. Choose the one product below that can make it and the preset closest to it. Text that must appear on the product keeps its original language and script.
-Which product: art is the default. It draws an original design from scratch for anything flat or made of a few flat pieces: signs, name plates, logos, ornaments, coasters, keychains, wall art, cake toppers, key holders, table numbers, trophies, phone and tablet stands, decorations, engraved pictures. Choose another product only for what needs its engineering and that it makes exactly (match "exact"); anything it would only approximate is art: round, oval or curved containers with bending walls are hinge; boxes, trays, drawers, money boxes and bird houses with finger joints are boxes; hollow letter boxes with walls are letters; sculptures made of many slices are parametric; jigsaw puzzles are puzzle; QR codes are qr; clocks with a movement hole are clock; layered 3D paper-cut shadow boxes of geometric patterns (tunnels, mandalas, sunbursts, landscapes, lattices) are shadowbox. Also choose a product when the user names it.
+Which product: use the product that builds the object, and match "exact" when that product makes this kind of thing.
+- sign: wall signs, door signs, plaques, name plates, shop signs, house numbers, welcome signs
+- topper: cake toppers and cupcake picks
+- trophy: trophies, medals, cups and awards
+- keyrack: key holders, leash hooks and mug racks
+- tablenum: a set of table numbers
+- boxes: finger-joint boxes, trays, drawers, money boxes, bird houses, photo frames, phone stands and tablet stands
+- hinge: round, oval or curved containers whose walls bend on a living hinge
+- letters: hollow letter boxes, solid cut-out letters and stencils of a word
+- parametric: sculptures made of many slices; pick the closest preset, the shape itself cannot change
+- puzzle: jigsaw puzzles. qr: QR codes. clock: clocks with a movement hole
+- shadowbox: layered paper-cut tunnels, mandalas, sunbursts, landscapes and lattices
+- art: only a custom picture no product above can build, such as a logo, an ornament or an illustration. Not for signs, toppers, trophies, key holders, table numbers, stands or boxes.
 The brief describes only what the user asked for or the photo shows, in under 80 words; do not add features. When the user writes about the photo (what it is, its size, text or changes they want), that wins over what the photo seems to show.
 
 `;
@@ -94,6 +89,7 @@ The brief describes only what the user asked for or the photo shows, in under 80
 const SETTINGS_SYSTEM = `You set the settings of one HingeLab product so the design matches a brief. Use only keys from the list below, values inside the ranges and options from the lists. Set what the brief decides (sizes in millimetres, shape, style, material) and leave everything else out, so it keeps the starting value.
 Words that appear on the product: put the exact words from the brief, in their original script, into the matching text fields, replacing the starting text; leave out text fields the brief gives no words for. Never put measurements or explanations into those fields.
 The app makes the cut file and the 3D preview itself; notes are only for guesses the user should check, never about settings you left alone, things nobody asked for, material, fit or testing.
+Make it specific: keep the preset's construction, then set the words, font, motif, shape and size the brief asks for. Words go in the text fields exactly as written, in their own script. Sizes are real millimetres for that object.
 
 Settings (key | type and range | label - help):
 `;
@@ -180,7 +176,7 @@ async function askModel<T>(ask: Ask, system: string, content: UserContent, schem
 }
 
 const pick = (req: AIDesignRequest, menu: MenuProduct[], ask: Ask) =>
-  askModel(ask, PICK_SYSTEM + productsText(menu), userContent(req), pickSchema);
+  askModel(ask, PICK_SYSTEM + productsText(menu), userContent(req), pickSchema, "medium");
 
 function settings(req: AIDesignRequest, product: MenuProduct, brief: string, start: Record<string, unknown>, ask: Ask, editing?: string) {
   const current = Object.fromEntries(product.fields.map((f) => [f.key, f.key.split(".").reduce<unknown>((o, k) => (o && typeof o === "object" ? (o as Record<string, unknown>)[k] : undefined), start)]));
@@ -352,13 +348,12 @@ export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: str
     try {
       // A sculpture has no settings to edit, so an edit picks its style again from the request.
       const current = rev ? `Current design: "${rev.name}", preset ${rev.preset ?? "none"}. Pick the preset that best fits the design with this change.` : undefined;
-      choice = await pick(current ? { prompt: `${req.prompt}\n\n${current}` } : req, revising ? [revising] : pickMenu(menu), ask);
+      choice = await pick(current ? { prompt: `${req.prompt}\n\n${current}` } : req, revising ? [revising] : menu, ask);
     } catch (e) {
       console.error("ai design: pick failed", e);
       throw new AIDesignError("The AI designer could not read the request. Try again or describe it differently.");
     }
     if (rev) choice = { ...choice, name: rev.name || choice.name, match: rev.match };
-    else if (isFlat(choice.product, choice.preset) || choice.match !== "exact" || (choice.flat && !FLAT_OK.has(choice.product))) choice = { ...choice, product: "art", preset: "", match: "exact" };
   }
   const product = revising ?? menu.find((p) => p.id === choice.product) ?? menu[0];
   if (product.id === "art") {
