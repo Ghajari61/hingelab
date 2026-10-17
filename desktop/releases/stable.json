@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.53",
-    "pub_date": "2026-10-17T09:02:27.826Z",
-    "notes": "AI Studio draws again: when the picture service is unavailable, Claude draws clean vector artwork instead. A calmer, brighter look with new colours, buttons and icons.",
+    "version": "1.0.54",
+    "pub_date": "2026-10-17T15:46:31.000Z",
+    "notes": "AI Studio makes pictures with Google's Nano Banana first, then OpenAI, with Claude vector drawings as the fallback.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.53_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmdRcHlwcEJyV1dKdFA4dk1pNVREMVNtMWI4YUgvRzdUN21pZmZvYjJaT0RHMDNhUVRXdElXS3hzVElEUFl4QVdhdVUxWEpZdHoyMjN4MEM2K010ZHdNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjI3NTI2CWZpbGU6SGluZ2VMYWJfMS4wLjUzX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTMKWHZvdXRZUUZISkRzRnBCR3puVHJNZWdrNjM3dnpMZjE5aS9Eb1R2QlNhZHc4RllEemQ3emtiVzNwSFJxU1JIUDRPVDdKeXh4eXRrN1hacVp1QU1tQ0E9PQo=",
-        "size": 4273310
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.54_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnBob3FGUy9DVXJVTmhoSHJqZmtYZU80NC9uYk1zKzZKdTE3YjVkVk9zSUIrY1J2RG9VQVZna3Z6UjRVUVZ3Q2tjejkzSjRxUGhVMjRWQTVPUmE3S3dZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjUxODM5CWZpbGU6SGluZ2VMYWJfMS4wLjU0X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTQKSkVvSEZqVFgwVmZIWUZManlabVVxQjNWOUhWUHlJS3p6YjgrVmZrY1lnZmVDcXhNL0c5ZFZEWkdJOHBMYzgxc1VQQzFqN1ZHQ3MrZmJKRXFFelA2Qmc9PQo=",
+        "size": 4273846
       }
     }
   }
