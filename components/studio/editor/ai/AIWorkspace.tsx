@@ -17,7 +17,7 @@ import { dailyNote } from "@/lib/ai/studio/credits";
 import { briefLine, METHOD_NAMES, METHOD_SHORT, nextStep, PRODUCT_NAMES } from "@/lib/ai/studio/brief";
 import { INSPIRATION } from "@/lib/ai/studio/inspiration";
 import { DESIGN_KITS, KIT_CATEGORIES, kitFont, type DesignKit, type KitCategory } from "@/lib/ai/studio/kits";
-import { BRIEF_METHODS, BRIEF_PRODUCTS, MAX_STUDIO_PROMPT, MAX_VARIATIONS, type BriefMethod, type BriefProduct, type CritiqueResponse, type EnhanceResponse, type LaserBrief } from "@/lib/ai/studio/request";
+import { BRIEF_METHODS, BRIEF_PRODUCTS, MAX_IMAGE_PROMPT, MAX_STUDIO_PROMPT, MAX_VARIATIONS, type BriefMethod, type BriefProduct, type CritiqueResponse, type EnhanceResponse, type LaserBrief } from "@/lib/ai/studio/request";
 import { STYLE_GROUPS, STYLE_PRESETS, styleById, type StyleGroup } from "@/lib/ai/studio/styles";
 import { styleArt } from "@/lib/ai/studio/styleArt";
 import type { StyleId } from "@/lib/ai/studio/styles";
@@ -103,6 +103,7 @@ export function AIWorkspace(props: AIStudioProps) {
   const [error, setError] = useState<string | null>(null);
   const [favourites, setFavourites] = useState<Favourite[]>([]);
   const refInput = useRef<HTMLInputElement>(null);
+  const ideaRef = useRef<HTMLTextAreaElement>(null);
   const ctl = useRef<AbortController | null>(null);
 
   useEffect(() => { setFavourites(loadFavourites()); }, []);
@@ -157,23 +158,27 @@ export function AIWorkspace(props: AIStudioProps) {
   const unit = costOf("generate") + (quality === "high" ? r.highExtra : 0);
   const textForPiece = direction?.text.join("  ·  ") ?? "";
 
+  const askForIdea = (message: string) => { setError(message); ideaRef.current?.focus(); };
+
   const make = (over: Partial<PictureSet> = {}) => {
-    const p = over.prompt ?? finalPrompt;
-    if (p.length < 3) { setError("Describe the picture in a few words first."); return; }
+    const { prompt: overPrompt, ...rest } = over;
+    const p = (overPrompt ?? finalPrompt).trim();
+    if (p.length < 3) { askForIdea("Write your idea in the box above first (a few words in any language), then press Make."); return; }
     setError(null);
     const step = nextStep(brief);
     const ok = r.makeSet({
-      prompt: withBrief(p), style, count, aspect, widthMm: brief.widthMm ?? 120, quality: r.highQuality ? quality : "medium", transparent,
+      style, count, aspect, widthMm: brief.widthMm ?? 120, quality: r.highQuality ? quality : "medium", transparent,
       refs: refs.map((x) => x.url), label: direction?.title || "AI Studio",
       ...(textForPiece ? { text: textForPiece, font: kitFont(undefined, textForPiece) } : {}),
       ...(PRODUCT_TARGET[brief.product] && step === "vectorize" ? { then: "vectorize" as const, target: PRODUCT_TARGET[brief.product] as DesignKit["target"] } : {}),
-      ...over,
+      ...rest,
+      prompt: withBrief(p).slice(0, MAX_IMAGE_PROMPT),
     });
     if (ok) { setCenter("results"); setSelected(null); }
   };
 
   const direct = async () => {
-    if (idea.trim().length < 2) { setError("Write your idea first, in any language."); return; }
+    if (idea.trim().length < 2) { askForIdea("Write your idea in the box first, in any language. The Creative Director turns it into a detailed brief."); return; }
     setDirecting(true); setError(null);
     const c = new AbortController(); ctl.current = c;
     try {
@@ -351,9 +356,9 @@ export function AIWorkspace(props: AIStudioProps) {
 
           <section className="aiw-card">
             <h3>Your idea</h3>
-            <textarea className="ui-text aiw-idea" rows={4} maxLength={MAX_STUDIO_PROMPT} dir="auto" value={idea} data-testid="aiw-prompt"
+            <textarea ref={ideaRef} className="ui-text aiw-idea" rows={4} maxLength={MAX_STUDIO_PROMPT} dir="auto" value={idea} data-testid="aiw-prompt"
               placeholder="Describe it in any language: a fox asleep under a crescent moon, نقش اسلیمی با انار…" onChange={(e) => { setIdea(e.target.value); setDirection(null); }} />
-            <button type="button" className="ui-btn aiw-director" disabled={directing || !!cloudBlock || idea.trim().length < 2} onClick={() => void direct()} data-testid="aiw-direct">
+            <button type="button" className="ui-btn aiw-director" disabled={directing || !!cloudBlock} onClick={() => void direct()} data-testid="aiw-direct">
               {directing ? <Loader2 size={14} className="spin" aria-hidden /> : <Lightbulb size={14} aria-hidden />} Creative Director ({credits(costOf("enhance"))})
             </button>
             {direction && (
@@ -406,7 +411,8 @@ export function AIWorkspace(props: AIStudioProps) {
 
           <div className="aiw-make">
             {error && <p className="aiw-err" role="alert"><CircleAlert size={13} aria-hidden /> {error}</p>}
-            <button type="button" className="ui-btn primary lg" disabled={!!cloudBlock || finalPrompt.length < 3} onClick={() => make()} data-testid="aiw-make">
+            {!error && finalPrompt.length < 3 && !cloudBlock && <p className="dlg-note aiw-hint">Write your idea above, or pick one from Inspiration or Recipes.</p>}
+            <button type="button" className="ui-btn primary lg" disabled={!!cloudBlock} onClick={() => make()} data-testid="aiw-make">
               <Sparkles size={15} aria-hidden /> Make {count === 1 ? "picture" : `${count} variations`} · {credits(count * unit)}
             </button>
             {finalPrompt.length >= 3 && <button type="button" className="ui-btn ghost small" onClick={() => saveFavourite({ prompt: finalPrompt, style, product: brief.product, method: brief.method })}><Star size={12} aria-hidden /> Save to favourites</button>}

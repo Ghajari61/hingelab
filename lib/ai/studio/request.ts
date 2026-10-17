@@ -6,6 +6,8 @@ import { z } from "zod";
 import { STYLE_PRESETS } from "./styles";
 
 export const MAX_STUDIO_PROMPT = 1000;
+/** A picture prompt as sent: the user's words (or the Creative Director's brief) plus the Laser Brief line. */
+export const MAX_IMAGE_PROMPT = 2000;
 /**
  * Largest picture sent (data URL characters). The Studio sends JPEG at most 1536 px on the long side,
  * plus a small PNG mask; Vercel takes request bodies up to 4.5 MB.
@@ -27,13 +29,13 @@ const quality = z.enum(["medium", "high"]).default("medium");
 
 export const imageRequestSchema = z.discriminatedUnion("op", [
   z.object({
-    op: z.literal("generate"), prompt: z.string().trim().min(3).max(MAX_STUDIO_PROMPT), style: z.enum(STYLE_IDS).optional(), aspect: z.enum(["square", "wide", "tall"]).default("square"),
+    op: z.literal("generate"), prompt: z.string().trim().min(3).max(MAX_IMAGE_PROMPT), style: z.enum(STYLE_IDS).optional(), aspect: z.enum(["square", "wide", "tall"]).default("square"),
     quality, transparent: z.boolean().default(false),
     /** Which of several variations this is (0-based): each asks for a different composition. */
     variation: z.number().int().min(0).max(MAX_VARIATIONS - 1).optional(),
     refs: z.array(dataUrl(MAX_STUDIO_REF)).max(MAX_STUDIO_REFS).optional(),
   }),
-  z.object({ op: z.literal("restyle"), prompt: z.string().trim().max(MAX_STUDIO_PROMPT).default(""), style: z.enum(STYLE_IDS).optional(), image: dataUrl(MAX_STUDIO_IMAGE), sketch: z.boolean().default(false), quality }),
+  z.object({ op: z.literal("restyle"), prompt: z.string().trim().max(MAX_IMAGE_PROMPT).default(""), style: z.enum(STYLE_IDS).optional(), image: dataUrl(MAX_STUDIO_IMAGE), sketch: z.boolean().default(false), quality }),
   z.object({ op: z.literal("redraw"), prompt: z.string().trim().min(2).max(MAX_STUDIO_PROMPT), image: dataUrl(MAX_STUDIO_IMAGE), mask: dataUrl(MAX_STUDIO_MASK) }),
   z.object({ op: z.literal("expand"), prompt: z.string().trim().max(MAX_STUDIO_PROMPT).default(""), image: dataUrl(MAX_STUDIO_IMAGE), mask: dataUrl(MAX_STUDIO_MASK) }),
   z.object({ op: z.literal("cutout"), image: dataUrl(MAX_STUDIO_IMAGE) }),
