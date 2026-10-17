@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.81",
+    "@ai-sdk/google": "^4.0.99",
     "@ai-sdk/openai": "4.0.92",
     "@anthropic-ai/sdk": "^0.135.0",
     "@resvg/resvg-js": "2.6.2",

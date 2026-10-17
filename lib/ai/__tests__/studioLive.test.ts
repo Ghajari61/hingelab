@@ -18,6 +18,17 @@ const CASES = [
   { id: "topper", prompt: "روباه کوچک با بادکنک برای تولد بچه", style: "silhouette", method: "cut" as const, product: "topper" as const },
 ];
 
+describe.skipIf(process.env.LIVE_AI !== "1" || !process.env.GOOGLE_GENERATIVE_AI_API_KEY)("Nano Banana, live", () => {
+  it("makes a picture with the deployment's Google key", async () => {
+    const { imageProviders } = await import("@/lib/ai/providers");
+    const google = imageProviders().find((p) => p.id === "google")!;
+    const r = await google.image({ prompt: "Clean black line drawing of a fox asleep under a crescent moon, pure white background, no text.", size: "1024x1024", user: "live-test", signal: AbortSignal.timeout(120_000) });
+    mkdirSync("tmp", { recursive: true });
+    writeFileSync("tmp/live-nano-banana.png", r.data);
+    expect(r.data.length).toBeGreaterThan(10_000);
+  }, 150_000);
+});
+
 describe.skipIf(!live)("AI Studio vector engine, live", () => {
   mkdirSync("tmp", { recursive: true });
   for (const c of CASES) {

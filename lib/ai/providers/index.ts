@@ -1,11 +1,12 @@
 import "server-only";
 /**
- * Real providers for the deployment's environment: OpenAI with the deployment's own key, then the
- * Vercel AI Gateway. Keys stay in process.env on the server; the browser and the desktop app only
+ * Real providers for the deployment's environment: Google's Nano Banana and OpenAI with the
+ * deployment's own keys, then the Vercel AI Gateway. Keys stay in process.env on the server; the browser and the desktop app only
  * ever talk to HingeLab's routes.
  */
 import { createHash } from "node:crypto";
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { gateway, generateImage, type ImageModel } from "ai";
 import { ASSISTANT_FALLBACKS, gatewayAvailable, imagePlan, textPlan, type Env, type ProviderPlan } from "./config";
@@ -20,6 +21,40 @@ export const userTag = (scope: string, userId: string) => createHash("sha256").u
 
 /** Prompts the provider's safety system blocks would be blocked by the next provider too. */
 const BLOCKED = /safety|moderation|content[_ ]policy|policy violation|not allowed|rejected by/i;
+
+const ASPECT: Record<string, "1:1" | "3:2" | "2:3"> = { "1024x1024": "1:1", "1536x1024": "3:2", "1024x1536": "2:3" };
+
+/**
+ * Google's Nano Banana (Gemini image): sizes become aspect ratios, and it takes no mask, so an edit
+ * sends the mask as a second picture and says where to paint. No transparent background either:
+ * the Studio turns white into transparent where it needs to.
+ */
+export function googleImageProvider(plan: ProviderPlan, model: ImageModel): ImageProvider {
+  return {
+    id: plan.id,
+    model: plan.model,
+    async image(job: ImageJob) {
+      try {
+        const files = [...(job.images ?? []), ...(job.mask ? [job.mask] : [])].map((i) => i.data);
+        const text = job.mask
+          ? `${job.prompt}\nThe last picture is a mask of the first: change only where the mask is transparent and keep everything else exactly as it is.`
+          : job.prompt;
+        const { image } = await generateImage({
+          model,
+          prompt: files.length ? { text, images: files } : text,
+          aspectRatio: ASPECT[job.size ?? "1024x1024"] ?? "1:1",
+          n: 1,
+          maxRetries: 1,
+          abortSignal: job.signal,
+        });
+        return { data: image.uint8Array, mediaType: image.mediaType || "image/png", provider: plan.id, model: plan.model };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        throw new ProviderError(msg.slice(0, 300), plan.id, !BLOCKED.test(msg));
+      }
+    },
+  };
+}
 
 export function aiSdkImageProvider(plan: ProviderPlan, model: ImageModel): ImageProvider {
   return {
@@ -52,7 +87,9 @@ export function aiSdkImageProvider(plan: ProviderPlan, model: ImageModel): Image
 }
 
 export function imageProviders(env: Env = process.env): ImageProvider[] {
-  return imagePlan(env).map((p) => aiSdkImageProvider(p, p.id === "openai" ? createOpenAI({ apiKey: env.OPENAI_API_KEY }).image(p.model) : gateway.image(p.model)));
+  return imagePlan(env).map((p) => p.id === "google"
+    ? googleImageProvider(p, createGoogleGenerativeAI({ apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY }).image(p.model))
+    : aiSdkImageProvider(p, p.id === "openai" ? createOpenAI({ apiKey: env.OPENAI_API_KEY }).image(p.model) : gateway.image(p.model)));
 }
 
 /** Gateway and direct Claude, used first for writing and judging designs. */
