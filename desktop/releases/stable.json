@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.50",
-    "pub_date": "2026-10-17T06:34:41.466Z",
-    "notes": "AI Studio 2: a full workspace with a Laser Brief, a Creative Director, four variations at once, a laser readiness score, 25 styles, 30+ recipes and one-click pipelines. The app and the website share one look.",
+    "version": "1.0.51",
+    "pub_date": "2026-10-17T07:09:21.187Z",
+    "notes": "AI Studio tells you to write your idea first instead of a dead Make button, and long design briefs are no longer refused.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.50_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnJLaVZCOWl4U1dhWDRFZi9HcHZENUtQVDRHNkdhYmQ0UkZDTHN1TFhpRCtwR1NabWJ1L0cwMlBNenFKcUJpTjFEVC80Z0pMcEpteXUxYndwTGdUK0F3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjE4NjAxCWZpbGU6SGluZ2VMYWJfMS4wLjUwX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTAKNzRpeXFFUDZkSXUyZXYzSi9PV1dhaTF0WXZOZ0hDek5Wai9mYTAvaDR0M1lQMm9HOGF2WVpWQStxa2QyRzB4dWZPWU1qcmQ4YitqSEhEejNZSGhZRHc9PQo=",
-        "size": 4272091
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.51_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm1DV0VWNi9rRUJacDZSUVNsNVg1bEI1SmxwWVB6c0UxbzZSS1RINytoWGFtTFlGNWpjUjZUaExJeTZWVWRDb0NWOHJ1VVV4SmkxWWFqR0NVNlRKMkFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjIwODU2CWZpbGU6SGluZ2VMYWJfMS4wLjUxX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTEKandjUjRFS2JTMEU4YWZ3c0puQWlWTTZRQUhmMEdPd3RWQ3FTbTF4eE9heEJQcVp4SEtmV25UNXJXWFBhK2hBTVNvOVZSRGlsM3dzVnlNK09XcEowRFE9PQo=",
+        "size": 4270226
       }
     }
   }
