@@ -12,7 +12,7 @@ import { machineById, MATERIAL_PRESETS, STARTING_POINT_NOTE, type LaserType, typ
 import { aiAllowance, aiLimitMessage } from "@/lib/ai/request";
 import { AIDesignError, designWithAI } from "@/lib/ai/design";
 import { examplesFor } from "@/lib/ai/examples";
-import { claudeFirstRoutes, imageProviders, isBillingError, userTag, withFallback, ProviderError, type ImageData, type ImageProvider, type ImageSize } from "@/lib/ai/providers";
+import { claudeFirstRoutes, imageProviders, isBillingError, isBusyError, userTag, withFallback, ProviderError, type ImageData, type ImageProvider, type ImageSize } from "@/lib/ai/providers";
 import { COSTS, imageCost, STUDIO_DAILY, type CloudOp } from "./credits";
 import { directorTurn } from "./director";
 import { drawVectorArt, type VectorAsk, type VectorResult } from "./vectorArt";
@@ -26,6 +26,7 @@ export class StudioError extends Error {
 
 /** Shown when the AI provider accounts behind HingeLab have run out of paid credit. */
 export const SERVICE_UNPAID = "AI Studio's AI service has reached its usage limit, so nothing was made. Please try again later.";
+export const SERVICE_BUSY = "AI Studio's AI service is very busy right now, so nothing was made. Please try again in a minute.";
 /** Redraw, Expand and AI Cutout need a picture service; the vector engine cannot do them. */
 export const RASTER_ONLY = "This tool needs the AI picture service, which is not available right now. Quick Cutout, Smart Adjust, Line art and the other tools on this computer still work.";
 export const VECTOR_NOTE = "Drawn as clean vectors by the AI";
@@ -119,6 +120,7 @@ async function vectorImage(req: ImageRequest, userId: string, signal: AbortSigna
     if (e instanceof StudioError) throw e;
     console.error("AI Studio vector failed", e instanceof Error ? e.message.slice(0, 300) : e);
     if (isBillingError(e)) throw new StudioError(SERVICE_UNPAID, 503);
+    if (isBusyError(e)) throw new StudioError(SERVICE_BUSY, 503);
     throw new StudioError("The picture could not be made. Try again in a minute.");
   }
 }
@@ -276,7 +278,7 @@ export async function assistantTurn(req: AssistantRequest, plan: Plan, userId: s
       return generateText({
         model: r.model, providerOptions: r.providerOptions,
         system: `${ASSISTANT_SYSTEM}\n\nThe user's Studio:\n${ctx}`,
-        messages, tools, stopWhen: stepCountIs(4), maxRetries: 1, abortSignal: signal,
+        messages, tools, stopWhen: stepCountIs(4), maxRetries: 0, abortSignal: signal,
       });
     }, signal, (r, e) => console.warn(`AI Studio assistant: ${r.id} failed:`, e instanceof Error ? e.message.slice(0, 200) : e));
     const reply = result.text.trim() || (actions.length ? "Done. Apply it with the button below." : "I could not answer that. Try asking differently.");
@@ -285,6 +287,7 @@ export async function assistantTurn(req: AssistantRequest, plan: Plan, userId: s
     if (signal.aborted) throw new StudioError("The assistant took too long. Try again.", 504);
     console.error("AI Studio assistant failed", e);
     if (isBillingError(e)) throw new StudioError(SERVICE_UNPAID, 503);
+    if (isBusyError(e)) throw new StudioError(SERVICE_BUSY, 503);
     throw new StudioError("The assistant could not answer. Try again in a minute.");
   }
 }

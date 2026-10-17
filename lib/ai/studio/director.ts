@@ -6,11 +6,11 @@ import "server-only";
  */
 import { generateText, Output, type LanguageModel, type ModelMessage } from "ai";
 import { z } from "zod";
-import { claudeFirstRoutes, isBillingError, userTag, withFallback, type TextRoute } from "@/lib/ai/providers";
+import { claudeFirstRoutes, isBillingError, isBusyError, userTag, withFallback, type TextRoute } from "@/lib/ai/providers";
 import { COSTS } from "./credits";
 import { briefLine, METHOD_NAMES, PRODUCT_NAMES } from "./brief";
 import type { CritiqueResponse, DirectorRequest, EnhanceResponse, LaserBrief } from "./request";
-import { decodeDataUrl, SERVICE_UNPAID, StudioError } from "./server";
+import { decodeDataUrl, SERVICE_BUSY, SERVICE_UNPAID, StudioError } from "./server";
 import { styleById } from "./styles";
 
 const enhanceSchema = z.object({
@@ -46,7 +46,7 @@ async function ask<T>(a: Ask, system: string, content: string | ModelMessage[], 
   if (!routes.length) throw new StudioError("AI Studio's cloud tools are not set up on this server.", 503);
   const messages: ModelMessage[] = typeof content === "string" ? [{ role: "user", content }] : content;
   const { result } = await withFallback(routes, async (r) => {
-    const { output } = await generateText({ model: r.model, providerOptions: r.providerOptions, system, messages, output: Output.object({ schema }), maxRetries: 1, abortSignal: a.signal });
+    const { output } = await generateText({ model: r.model, providerOptions: r.providerOptions, system, messages, output: Output.object({ schema }), maxRetries: 0, abortSignal: a.signal });
     return output as T;
   }, a.signal, (r, e) => console.warn(`AI Studio director: ${r.id} failed:`, e instanceof Error ? e.message.slice(0, 200) : e));
   return result;
@@ -95,6 +95,7 @@ export async function directorTurn(req: DirectorRequest, userId: string, signal:
     if (e instanceof StudioError) throw e;
     if (signal.aborted) throw new StudioError("The Creative Director took too long. Try again.", 504);
     if (isBillingError(e)) throw new StudioError(SERVICE_UNPAID, 503);
+    if (isBusyError(e)) throw new StudioError(SERVICE_BUSY, 503);
     throw new StudioError("The Creative Director could not answer. Try again in a minute.");
   }
 }

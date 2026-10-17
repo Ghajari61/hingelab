@@ -50,6 +50,10 @@ export interface TextRoute {
 export const isBillingError = (e: unknown) =>
   /no credits remaining|insufficient_quota|exceeded your current quota|billing|free tier users|top.?up|payment required/i.test(e instanceof Error ? e.message : String(e));
 
+/** The model is overloaded for a while (Gemini's "high demand"): trying again later works. */
+export const isBusyError = (e: unknown) =>
+  /high demand|overloaded|currently unavailable|UNAVAILABLE|try again later/i.test(e instanceof Error ? e.message : String(e));
+
 /** A provider failure. `retry` false means the next provider would refuse too (the prompt was blocked). */
 export class ProviderError extends Error {
   constructor(message: string, readonly provider: string, readonly retry = true) {

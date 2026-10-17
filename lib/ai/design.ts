@@ -7,7 +7,7 @@ import "server-only";
  */
 import { createHash } from "node:crypto";
 import { generateText, Output, type LanguageModel, type UserContent } from "ai";
-import { designRoutes, imageProviders, isBillingError } from "@/lib/ai/providers";
+import { designRoutes, imageProviders, isBillingError, isBusyError } from "@/lib/ai/providers";
 import { z } from "zod";
 import { coerce, designFromChanges, generateDesign } from "@/lib/desktop/products";
 import type { DesktopProductId, DField, GenerateResponse } from "@/lib/desktop/types";
@@ -26,6 +26,7 @@ import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_OPEN_PATH, type AIDesign, type AIDesig
 
 const TIMEOUT_MS = 50_000;
 export const SERVICE_LIMIT = "The AI service has reached its usage limit, so nothing was made. Please try again later.";
+export const SERVICE_BUSY = "The AI service is very busy right now, so nothing was made. Please try again in a minute.";
 /** An original design: drawing, rendering and one look at the result (the routes allow 180 s). */
 const ART_TIMEOUT_MS = 150_000;
 
@@ -112,7 +113,9 @@ type Ask = { model?: LanguageModel; userId: string; signal: AbortSignal };
 
 async function askModel<T>(ask: Ask, system: string, content: UserContent, schema: z.ZodType<T>, reasoning: "low" | "medium" = "low"): Promise<T> {
   const list = routes(ask);
+  let busy = false;
   for (let i = 0; ; i++) {
+    const last = i + 1 >= list.length;
     try {
       const { output } = await generateText({
         ...list[i],
@@ -120,12 +123,17 @@ async function askModel<T>(ask: Ask, system: string, content: UserContent, schem
         messages: [{ role: "user", content }],
         output: Output.object({ schema }),
         reasoning,
-        maxRetries: 1,
+        // A busy or out-of-quota model would make a retry wait; the next model is quicker.
+        maxRetries: last ? 1 : 0,
         abortSignal: ask.signal,
       });
       return output as T;
     } catch (e) {
-      if (i + 1 >= list.length || ask.signal.aborted) throw isBillingError(e) ? new AIDesignError(SERVICE_LIMIT) : e;
+      busy ||= isBusyError(e);
+      if (last || ask.signal.aborted) {
+        if (busy && !ask.signal.aborted) throw new AIDesignError(SERVICE_BUSY);
+        throw isBillingError(e) ? new AIDesignError(SERVICE_LIMIT) : e;
+      }
       console.warn("AI designer: model failed, trying the next:", e instanceof Error ? e.message.slice(0, 200) : e);
     }
   }

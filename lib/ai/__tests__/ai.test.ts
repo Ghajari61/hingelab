@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { MockLanguageModelV4 } from "ai/test";
-import { AIDesignError, designWithAI, SERVICE_LIMIT } from "../design";
+import { AIDesignError, designWithAI, SERVICE_BUSY, SERVICE_LIMIT } from "../design";
 import { aiMenu, fieldsText, productsText } from "../menu";
 import { parseAIRequest } from "../request";
 import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_IMAGE_NOTE, MAX_OPEN_PATH, MAX_PROMPT, MAX_REVISE_CHARS, reviseOf } from "../types";
@@ -410,6 +410,23 @@ describe("AI designer", () => {
       vi.unstubAllEnvs();
     }
   });
+
+  it("tries every Gemini model once when they are busy, then says so", async () => {
+    const models: string[] = [];
+    vi.stubEnv("GOOGLE_GENERATIVE_AI_API_KEY", "g-test-not-real");
+    vi.stubGlobal("fetch", async (url: string | URL | Request) => {
+      models.push(new URL(url instanceof Request ? url.url : url).pathname.split("/").pop()!.split(":")[0]);
+      return new Response(JSON.stringify({ error: { code: 503, message: "This model is currently experiencing high demand. Please try again later.", status: "UNAVAILABLE" } }), { status: 503, headers: { "content-type": "application/json" } });
+    });
+    try {
+      await expect(designWithAI({ prompt: "a box" }, "pro", "user-1")).rejects.toThrow(SERVICE_BUSY);
+      expect(new Set(models).size).toBeGreaterThanOrEqual(5);
+      expect(models.length).toBeLessThanOrEqual(new Set(models).size + 1);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  }, 30_000);
 
   it("is not set up when only the stopped vendors have keys", async () => {
     vi.stubEnv("GOOGLE_GENERATIVE_AI_API_KEY", "");

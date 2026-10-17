@@ -44,7 +44,7 @@ export function googleImageProvider(plan: ProviderPlan, model: ImageModel): Imag
           prompt: files.length ? { text, images: files } : text,
           aspectRatio: ASPECT[job.size ?? "1024x1024"] ?? "1:1",
           n: 1,
-          maxRetries: 1,
+          maxRetries: 0,
           abortSignal: job.signal,
         });
         return { data: image.uint8Array, mediaType: image.mediaType || "image/png", provider: plan.id, model: plan.model };
@@ -71,7 +71,7 @@ export function aiSdkImageProvider(plan: ProviderPlan, model: ImageModel): Image
           prompt,
           size: job.size ?? "1024x1024",
           n: 1,
-          maxRetries: 1,
+          maxRetries: 0,
           abortSignal: job.signal,
           providerOptions: plan.id === "gateway"
             ? { gateway: { user: job.user, tags: ["ai-studio"] }, openai }
@@ -96,12 +96,12 @@ export function imageProviders(env: Env = process.env): ImageProvider[] {
 export const CLAUDE_GATEWAY_MODEL = "anthropic/claude-sonnet-5-5";
 export const CLAUDE_DIRECT_MODEL = "claude-sonnet-5-5";
 
-/** Gemini text routes: the strongest model, then the fast one. */
+/** Gemini text routes: the strongest model, then the fast ones. */
 export function googleTextRoutes(env: Env = process.env): TextRoute[] {
   const plan = googleTextPlan(env);
   if (!plan.length) return [];
   const google = createGoogleGenerativeAI({ apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY });
-  return plan.map((m, i): TextRoute => ({ id: i ? "google-fast" : "google", model: google(m), providerOptions: {} }));
+  return plan.map((m, i): TextRoute => ({ id: i ? `google:${m}` : "google", model: google(m), providerOptions: {} }));
 }
 
 /**

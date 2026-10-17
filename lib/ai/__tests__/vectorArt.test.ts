@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MockLanguageModelV4 } from "ai/test";
 import { mockImageProvider } from "../providers/mock";
 import { claudeFirstRoutes } from "../providers";
+import { GOOGLE_TEXT_FALLBACKS } from "../providers/config";
 import { RASTER_ONLY, studioImage, VECTOR_NOTE, type VectorDraw } from "../studio/server";
 import { cleanVectorSvg, drawVectorArt, renderVector, shapeCount, vectorProblems } from "../studio/vectorArt";
 
@@ -87,12 +88,12 @@ describe("AI Studio falls back to vectors", () => {
     await expect(studioImage({ op: "cutout", image: PNG_1x1 }, "u", signal, [broke()], "pro", draw)).rejects.toMatchObject({ status: 503, message: RASTER_ONLY });
     const down = mockImageProvider("x", () => { throw new Error("503 upstream"); });
     expect((await studioImage({ op: "generate", prompt: "a sun" }, "u", signal, [down], "pro", draw)).provider).toBe("claude-vector");
-    const nothing = async () => { throw new Error("overloaded"); };
+    const nothing = async () => { throw new Error("bad output"); };
     await expect(studioImage({ op: "generate", prompt: "a sun" }, "u", signal, [down], "pro", nothing)).rejects.toMatchObject({ status: 502 });
   });
 
   it("draws with Gemini by default, and Claude only when it is turned back on", () => {
-    expect(claudeFirstRoutes("u", "t", { GOOGLE_GENERATIVE_AI_API_KEY: "g", ANTHROPIC_API_KEY: "z" }).map((r) => r.id)).toEqual(["google", "google-fast"]);
+    expect(claudeFirstRoutes("u", "t", { GOOGLE_GENERATIVE_AI_API_KEY: "g", ANTHROPIC_API_KEY: "z" }).map((r) => r.id)).toEqual(["google", ...GOOGLE_TEXT_FALLBACKS.map((m) => `google:${m}`)]);
     expect(claudeFirstRoutes("u", "t", { AI_VENDORS: "anthropic,gateway", AI_GATEWAY_API_KEY: "x", ANTHROPIC_API_KEY: "z" }).map((r) => r.id).slice(0, 2)).toEqual(["claude", "claude-gateway"]);
   });
 });

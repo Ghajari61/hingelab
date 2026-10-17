@@ -31,9 +31,12 @@ export const OPENAI_TEXT_MODEL = "gpt-6-astra";
 /** Google's Nano Banana image models, newest first; GOOGLE_IMAGE_MODEL puts another one first. */
 export const GOOGLE_IMAGE_MODEL = "gemini-nano-banana-2.1";
 export const GOOGLE_IMAGE_FALLBACKS = ["gemini-3.1-flash-image-preview", "gemini-2.5-flash-image"];
-/** Gemini for words, plans and SVG drawings: the strongest first, then the fast one. GOOGLE_TEXT_MODEL overrides the first. */
+/**
+ * Gemini for words, plans and SVG drawings: the strongest first, then fast ones. Each model has its
+ * own quota and can be busy on its own, so the chain is long. GOOGLE_TEXT_MODEL overrides the first.
+ */
 export const GOOGLE_TEXT_MODEL = "gemini-pro-latest";
-export const GOOGLE_TEXT_FALLBACK = "gemini-flash-latest";
+export const GOOGLE_TEXT_FALLBACKS = ["gemini-flash-latest", "gemini-3.8-flash", "gemini-3.5-flash", "gemini-2.5-flash", "gemini-flash-lite-latest"];
 
 export const gatewayAvailable = (env: Env) => allows(env, "gateway") && !!(env.VERCEL || env.VERCEL_OIDC_TOKEN || env.AI_GATEWAY_API_KEY);
 export const openaiAvailable = (env: Env) => allows(env, "openai") && !!env.OPENAI_API_KEY;
@@ -62,7 +65,7 @@ export function imagePlan(env: Env): ProviderPlan[] {
 /** Gemini text models, in the order to try them. */
 export function googleTextPlan(env: Env): string[] {
   if (!googleAvailable(env)) return [];
-  return [...new Set([env.GOOGLE_TEXT_MODEL || GOOGLE_TEXT_MODEL, GOOGLE_TEXT_FALLBACK])];
+  return [...new Set([env.GOOGLE_TEXT_MODEL || GOOGLE_TEXT_MODEL, ...GOOGLE_TEXT_FALLBACKS])];
 }
 
 export function textPlan(env: Env): { id: "openai" | "gateway"; model: string }[] {

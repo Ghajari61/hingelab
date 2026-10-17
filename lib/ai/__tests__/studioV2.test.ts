@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 import { MockLanguageModelV4 } from "ai/test";
 import { mockImageProvider } from "../providers/mock";
 import { claudeFirstRoutes } from "../providers";
+import { GOOGLE_TEXT_FALLBACKS } from "../providers/config";
 import { briefLine, nextStep, PRODUCT_NAMES } from "../studio/brief";
 import { COSTS, HIGH_QUALITY_EXTRA, imageCost } from "../studio/credits";
 import { directorTurn, DIRECTOR_SYSTEM } from "../studio/director";
 import { INSPIRATION } from "../studio/inspiration";
 import { DESIGN_KITS, isRtl, KIT_CATEGORIES, kitFont, kitPrompt } from "../studio/kits";
 import { assistantRequestSchema, BRIEF_PRODUCTS, directorRequestSchema, imageRequestSchema, MAX_VARIATIONS } from "../studio/request";
-import { ASSISTANT_SYSTEM, generatePrompt, SERVICE_UNPAID, studioImage, VARIATION_HINTS } from "../studio/server";
+import { ASSISTANT_SYSTEM, generatePrompt, SERVICE_BUSY, SERVICE_UNPAID, studioImage, VARIATION_HINTS } from "../studio/server";
 import { styleArt, styleArtIds } from "../studio/styleArt";
 import { STYLE_GROUPS, STYLE_PRESETS, styleById } from "../studio/styles";
 
@@ -113,7 +114,9 @@ describe("AI Studio engine", () => {
     await expect(studioImage({ op: "generate", prompt: "a fox" }, "u", signal, [broke, free], "pro", noClaude)).rejects.toMatchObject({ status: 503, message: SERVICE_UNPAID });
     const down = mockImageProvider("x", () => { throw new Error("503 upstream"); });
     const overloaded = async () => { throw new Error("overloaded"); };
-    await expect(studioImage({ op: "generate", prompt: "a fox" }, "u", signal, [down], "pro", overloaded)).rejects.toMatchObject({ status: 502 });
+    await expect(studioImage({ op: "generate", prompt: "a fox" }, "u", signal, [down], "pro", overloaded)).rejects.toMatchObject({ status: 503, message: SERVICE_BUSY });
+    const broken = async () => { throw new Error("bad output"); };
+    await expect(studioImage({ op: "generate", prompt: "a fox" }, "u", signal, [down], "pro", broken)).rejects.toMatchObject({ status: 502 });
   });
 
   it("checks the new requests", () => {
@@ -128,7 +131,7 @@ describe("AI Studio engine", () => {
 
   it("uses only Gemini by default, and the other vendors only when AI_VENDORS names them", () => {
     const env = { AI_GATEWAY_API_KEY: "x", OPENAI_API_KEY: "y", ANTHROPIC_API_KEY: "z", GOOGLE_GENERATIVE_AI_API_KEY: "g" };
-    expect(claudeFirstRoutes("u", "t", env).map((r) => r.id)).toEqual(["google", "google-fast"]);
+    expect(claudeFirstRoutes("u", "t", env).map((r) => r.id)).toEqual(["google", ...GOOGLE_TEXT_FALLBACKS.map((m) => `google:${m}`)]);
     expect(claudeFirstRoutes("u", "t", { ...env, GOOGLE_GENERATIVE_AI_API_KEY: "" })).toEqual([]);
     expect(claudeFirstRoutes("u", "t", { ...env, AI_VENDORS: "anthropic,openai,gateway" }).map((r) => r.id)).toEqual(["claude", "claude-gateway", "openai", "gateway"]);
   });
