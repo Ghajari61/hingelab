@@ -2,7 +2,7 @@
 .gallery-page h1 { margin: 0 0 8px; }
 .gal-note { color: var(--fg-dim, #666); max-width: 680px; }
 .gal-grid { list-style: none; margin: 24px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
-.gal-card { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line, #e3e3e3); border-radius: 12px; background: var(--panel, #fff); }
+.gal-card { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--panel); box-shadow: var(--shadow-1); }
 .gal-card img { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: contain; background: #faf8f4; border-radius: 8px; }
 .gal-meta { display: grid; gap: 2px; }
 .gal-meta span { font-size: 12px; color: var(--fg-dim, #666); }

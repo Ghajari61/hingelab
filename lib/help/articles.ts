@@ -110,13 +110,24 @@ export const ARTICLES: HelpArticle[] = [
   {
     slug: "ai-studio", product: "general", title: "AI Studio",
     summary: "Make pictures from words, clean up photos, prepare engravings and cut-ready outlines, and ask the assistant, all inside a Studio project.",
-    keywords: ["ai", "ai studio", "text to image", "image to image", "sketch", "dither", "engrave photo", "vectorize", "upscale", "cutout", "remove background", "inpaint", "outpaint", "depth", "relief", "assistant", "chat", "credits"],
+    keywords: ["ai", "ai studio", "text to image", "image to image", "sketch", "dither", "engrave photo", "vectorize", "upscale", "cutout", "remove background", "inpaint", "outpaint", "depth", "relief", "assistant", "chat", "credits", "creative director", "variations", "laser readiness", "recipes", "pipelines", "inspiration", "girih", "eslimi", "calligraphy"],
     blocks: [
-      { p: "Open a Studio project and pick AI Studio in the panel dock (or Window → AI Studio). In the Windows app, the AI Studio tile on the dashboard opens a new project with the panel showing." },
+      { p: "Open a Studio project and press Open the full AI Studio in the AI Studio panel (or Window → AI Studio). In the Windows app, the AI Studio tile on the dashboard opens a new project straight into the full AI Studio. Back to the canvas, or Esc, returns to the drawing; every result is also an image on the canvas." },
+      { h: "The full AI Studio", list: [
+        "Laser Brief: say what you are making (cake topper, sign, coaster, ornament, lamp panel, shadow box and more), how the laser treats it (cut out, engrave, score or stacked layers), the material and the width. Every prompt is written for that brief, so an acrylic cut-out and a slate engraving come out differently.",
+        "Your idea, in any language. The Creative Director turns it into a precise design brief: the parts it shows, the composition, the line weight and the words to set afterwards. Edit it before you make the pictures.",
+        "Style: 25 laser styles in four groups (lines, shapes, tones and ornament), from line art and stencil to Persian girih, eslimi, calligraphy frames, Celtic knots, Art Nouveau, low poly, topographic lines, paper cut and stained glass.",
+        "Options: one to four variations at once, each asked for a different take; square, wide or tall; high quality on Pro; a transparent background; and up to three reference pictures for the subject or style.",
+        "Results: every picture gets a laser readiness score from 0 to 100, measured on this computer for free. It checks the background, the contrast, the share of ink and, for cut-outs, parts that are too thin and pieces that would fall out. Fix and make again adds what is missing to the prompt.",
+        "Design review asks the model to judge the picture against your brief, list what to improve and write a better prompt. Next step vectorizes, engraves or cuts the picture into layers for your brief; More like this redraws it; Add words sets names and dates as real text in the Studio's fonts, so they are always spelt right.",
+        "Recipes: more than 30 ready designs in eight groups (celebrations, weddings, kids, home decor, Persian and Nowruz, business, pets and holidays). Name the subject, add any names or dates, and the recipe makes the variations and takes them to the next step.",
+        "Pipelines: one click from a picture to a laser file: pet photo to engraving, photo to shadow box, sketch to a clean cut file, logo to sign, and words and motif to a cake topper.",
+        "Inspiration: ready ideas to start from, your favourite prompts and the prompts used in this project.",
+      ] },
       { h: "Create", list: [
-        "Text to image: describe the picture, pick a style (line art, flat vector, engraving hatch, woodcut, stencil, mandala, silhouette, sticker or layered) and the shape. The picture lands on the canvas as an image object.",
+        "In the compact panel, Text to image makes one, two or four variations of a description in the chosen style. The picture lands on the canvas as an image object.",
         "Image to design: select a picture or a photo of a hand sketch and the model redraws it in the chosen style.",
-        "Design kits fill in the words for you (cake topper, pet coaster, door sign, trophy emblem, lantern pattern, kids' puzzle, mandala set, layered wall art) and take the result to the next step.",
+        "Recipes fill in the words for you and take the result to the next step.",
       ] },
       { h: "Image", list: [
         "Smart Adjust suggests black point, white point and mid-tones for the selected image; change them and apply. Auto enhance and Upscale 2× or 4× sharpen and enlarge it.",
@@ -130,9 +141,9 @@ export const ARTICLES: HelpArticle[] = [
         "Depth map and Stacked relief read the depth of a photo on this computer and cut it into sheets to glue in a stack; Open as a 3D relief hands the photo to Parametric.",
       ] },
       { h: "Assistant, jobs and credits", list: [
-        "The assistant knows the project's material, machine and layers. It suggests power and speed from the material library, makes finished designs (“a 120 mm hinge box with my name on the lid”) and prepares pictures; nothing changes until you press Apply.",
+        "The assistant knows the project's material, machine and layers and answers in your language. It suggests power and speed from the material library, makes finished designs (“a 120 mm hinge box with my name on the lid”), prepares sets of pictures, starts recipes and reviews the selected picture; nothing changes until you press Apply.",
         "Every job shows its progress in Jobs, where you can cancel it, select its result, run it again or change its prompt. Results are ordinary objects, so Ctrl+Z undoes them.",
-        "Tools that run on this computer are free. Cloud tools (pictures, redraw, expand, AI cutout and the assistant) use credits: 12 a day on the free plan and 150 on Pro. Sign in to use them.",
+        "Tools that run on this computer are free, the laser readiness score included. Cloud tools (pictures, redraw, expand, AI cutout, the Creative Director, design review and the assistant) use credits: 12 a day on the free plan and 150 on Pro. A high-quality picture costs 2 credits more. Sign in to use them.",
       ] },
     ],
     related: ["ai-designer", "checks-and-fixes"],

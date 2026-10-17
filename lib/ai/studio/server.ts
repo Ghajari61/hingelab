@@ -12,9 +12,11 @@ import { machineById, MATERIAL_PRESETS, STARTING_POINT_NOTE, type LaserType, typ
 import { aiAllowance, aiLimitMessage } from "@/lib/ai/request";
 import { AIDesignError, designWithAI } from "@/lib/ai/design";
 import { examplesFor } from "@/lib/ai/examples";
-import { imageProviders, textRoutes, userTag, withFallback, ProviderError, type ImageData, type ImageProvider, type ImageSize } from "@/lib/ai/providers";
-import { COSTS, STUDIO_DAILY, type CloudOp } from "./credits";
-import type { AssistantAction, AssistantRequest, AssistantResponse, ImageRequest, ImageResponse } from "./request";
+import { claudeFirstRoutes, imageProviders, userTag, withFallback, ProviderError, type ImageData, type ImageProvider, type ImageSize } from "@/lib/ai/providers";
+import { COSTS, imageCost, STUDIO_DAILY, type CloudOp } from "./credits";
+import { directorTurn } from "./director";
+import { DESIGN_KITS, kitById } from "./kits";
+import { MAX_VARIATIONS, type AssistantAction, type AssistantRequest, type AssistantResponse, type ImageRequest, type ImageResponse } from "./request";
 import { STYLE_PRESETS, stylePrompt } from "./styles";
 
 export class StudioError extends Error {
@@ -67,7 +69,7 @@ export const sizeFor = (w: number, h: number): ImageSize => (w / h > 1.2 ? "1536
 /** The words sent to the image model for each operation. */
 export function imagePrompt(req: ImageRequest): string {
   switch (req.op) {
-    case "generate": return stylePrompt(req.prompt, req.style);
+    case "generate": return generatePrompt(req);
     case "restyle": return stylePrompt([
       req.sketch ? "Turn this rough sketch into a finished, clean design. Keep its layout, proportions and every element it shows." : "Redraw this picture as a new design. Keep the subject, its pose and the composition.",
       req.prompt,
@@ -78,11 +80,30 @@ export function imagePrompt(req: ImageRequest): string {
   }
 }
 
-export async function studioImage(req: ImageRequest, userId: string, signal: AbortSignal, providers: ImageProvider[] = imageProviders()): Promise<ImageResponse> {
+/** Each variation of one prompt asks for a different take, so a set of four is not four copies. */
+export const VARIATION_HINTS = [
+  "",
+  "Variation: a different composition and viewpoint from the obvious one.",
+  "Variation: simpler and bolder, fewer and larger shapes.",
+  "Variation: richer and more ornate, with more fine detail that still holds together.",
+];
+
+/** Text-to-image prompt with its variation hint and reference note. */
+export function generatePrompt(req: Extract<ImageRequest, { op: "generate" }>): string {
+  const words = [req.prompt, VARIATION_HINTS[req.variation ?? 0], req.refs?.length ? "Use the attached pictures as references for the subject and style; make a new design, do not copy them." : ""]
+    .filter(Boolean).join("\n");
+  const styled = stylePrompt(words, req.style);
+  return req.transparent ? styled.replace("Pure white background", "Transparent background") : styled;
+}
+
+export async function studioImage(req: ImageRequest, userId: string, signal: AbortSignal, providers: ImageProvider[] = imageProviders(), plan: Plan = "pro"): Promise<ImageResponse> {
   const user = userTag("ai-studio", userId);
   let size: ImageSize = req.op === "generate" ? (req.aspect === "wide" ? "1536x1024" : req.aspect === "tall" ? "1024x1536" : "1024x1024") : "1024x1024";
   const images: ImageData[] = [];
   let mask: ImageData | undefined;
+  const quality = (req.op === "generate" || req.op === "restyle") && req.quality === "high" && hasPro(plan) ? "high" : "medium";
+  const transparent = req.op === "generate" && req.transparent;
+  if (req.op === "generate" && req.refs?.length) for (const r of req.refs) images.push(decodeDataUrl(r));
   if (req.op !== "generate") {
     const img = decodeDataUrl(req.image);
     const d = imageDims(img.data);
@@ -91,9 +112,9 @@ export async function studioImage(req: ImageRequest, userId: string, signal: Abo
     if (req.op === "redraw" || req.op === "expand") mask = decodeDataUrl(req.mask);
   }
   try {
-    const { result } = await withFallback(providers, (p) => p.image({ prompt: imagePrompt(req), images, mask, size, user, signal }), signal,
+    const { result } = await withFallback(providers, (p) => p.image({ prompt: imagePrompt(req), images, mask, size, user, signal, quality, ...(transparent ? { transparent } : {}) }), signal,
       (p, e) => console.warn(`AI Studio: ${p.id} image failed:`, e instanceof Error ? e.message.slice(0, 200) : e));
-    return { image: `data:${result.mediaType};base64,${Buffer.from(result.data).toString("base64")}`, credits: COSTS[req.op], provider: result.provider, model: result.model };
+    return { image: `data:${result.mediaType};base64,${Buffer.from(result.data).toString("base64")}`, credits: imageCost(req.op, quality), provider: result.provider, model: result.model };
   } catch (e) {
     if (signal.aborted) throw new StudioError("The picture took too long. Try again.", 504);
     if (e instanceof ProviderError && !e.retry) throw new StudioError("The AI provider refused this request. Change the words or the picture and try again.", 422);
@@ -125,11 +146,14 @@ export function laserSettings(material: string, laser: LaserType, operation: "cu
   };
 }
 
-const ASSISTANT_SYSTEM = `You are the assistant in HingeLab Studio, a laser-cutting design editor. Help the user plan and make laser-cut and engraved things. Answer in short, plain English (at most 120 words).
+export const ASSISTANT_SYSTEM = `You are the creative partner in HingeLab AI Studio, a laser-cutting design editor. You are an expert laser maker and a gifted illustrator. Help the user plan and make laser-cut and engraved things that look professional and sell well.
+Answer in the user's language, short and plain (at most 120 words). Be concrete: sizes in mm, the material, the method and one good idea the user did not think of.
 Tools:
 - laser_settings: power and speed for a material and operation, from HingeLab's tested library. Use it whenever settings are asked for; never invent numbers. Say they are a starting point to test.
-- make_design: a complete, ready-to-cut product (boxes, hinge boxes, signs, letters, toppers, puzzles, clocks, trophies, original drawings) from a description with sizes in mm and any text. Use it when the user wants something made.
-- make_image: a picture made by the image model in a laser style, for engraving or tracing. Use it for artwork, motifs and illustrations.
+- make_design: a complete, ready-to-cut product (boxes, hinge boxes, signs, letters, toppers, puzzles, clocks, trophies, original drawings) from a description with sizes in mm and any text. Use it when the user wants a finished product.
+- make_image: artwork from the image model in a laser style, for engraving or tracing. Write a rich, specific English prompt (subject, every element, composition, line weight, detail level) and never ask the image model for words. Offer 2 to 4 variations when the user is exploring.
+- use_recipe: one of the ready AI Studio recipes, when the request matches it closely; give the subject words and any names or dates.
+- review_selection: judge the picture selected on the canvas for the laser and say what to fix. Use it when the user asks whether the selected picture is good.
 After a tool, tell the user what is ready and that they can apply it with the button under your message. Never mention tool names.`;
 
 export async function assistantTurn(req: AssistantRequest, plan: Plan, userId: string, signal: AbortSignal): Promise<AssistantResponse> {
@@ -170,11 +194,40 @@ export async function assistantTurn(req: AssistantRequest, plan: Plan, userId: s
       },
     }),
     make_image: tool({
-      description: "Prepares a picture for the image model; the user starts it with one click.",
-      inputSchema: z.object({ prompt: z.string().max(800), style: z.enum(STYLE_PRESETS.map((s) => s.id) as [string, ...string[]]).optional() }),
-      execute: async ({ prompt, style }) => {
-        actions.push({ kind: "image", prompt, ...(style ? { style } : {}) });
+      description: "Prepares pictures for the image model; the user starts them with one click.",
+      inputSchema: z.object({
+        prompt: z.string().max(1000),
+        style: z.enum(STYLE_PRESETS.map((s) => s.id) as [string, ...string[]]).optional(),
+        count: z.number().int().min(1).max(MAX_VARIATIONS).optional().describe("How many variations, 1 to 4."),
+      }),
+      execute: async ({ prompt, style, count }) => {
+        actions.push({ kind: "image", prompt, ...(style ? { style } : {}), ...(count && count > 1 ? { count } : {}) });
         return { ready: true };
+      },
+    }),
+    use_recipe: tool({
+      description: `Starts one of AI Studio's ready recipes. Recipes: ${DESIGN_KITS.map((k) => `${k.id} (${k.name}: ${k.blurb})`).join("; ")}.`,
+      inputSchema: z.object({
+        recipe: z.enum(DESIGN_KITS.map((k) => k.id) as [string, ...string[]]),
+        words: z.string().max(200).describe("The subject words the recipe asks for."),
+        text: z.string().max(120).optional().describe("Names, dates or a message to set as real text on the piece."),
+      }),
+      execute: async ({ recipe, words, text }) => {
+        actions.push({ kind: "recipe", recipe, words, ...(text ? { fields: { text } } : {}) });
+        return { ready: true, recipe: kitById(recipe)?.name };
+      },
+    }),
+    review_selection: tool({
+      description: "Reviews the picture selected on the canvas for laser use: a score and what to fix.",
+      inputSchema: z.object({ request: z.string().max(600).describe("What the picture is meant to be.") }),
+      execute: async ({ request }) => {
+        if (!req.context.image) return { error: "No picture is selected. Ask the user to select one first." };
+        try {
+          const r = await directorTurn({ op: "critique", image: req.context.image, prompt: request, brief: { product: "canvas", method: "cut", material: req.context.material ?? "" } }, userId, signal);
+          return r;
+        } catch (e) {
+          return { error: e instanceof StudioError ? e.message : "The picture could not be reviewed." };
+        }
       },
     }),
   };
@@ -184,11 +237,12 @@ export async function assistantTurn(req: AssistantRequest, plan: Plan, userId: s
     req.context.sheet && `Sheet: ${Math.round(req.context.sheet.w)} × ${Math.round(req.context.sheet.h)} mm`,
     layers.length && `Cut layers: ${layers.map((l) => `${l.index} ${l.name} (${l.mode})`).join(", ")}`,
     req.context.selection && `Selected: ${req.context.selection}`,
+    req.context.image && "A picture is selected; review_selection can look at it.",
   ].filter(Boolean).join("\n");
   const messages: ModelMessage[] = req.messages.map((m) => ({ role: m.role, content: m.text }));
   const user = userTag("ai-studio", userId);
   try {
-    const { result } = await withFallback(textRoutes(user, "ai-studio"), async (r) => {
+    const { result } = await withFallback(claudeFirstRoutes(user, "ai-studio"), async (r) => {
       actions.length = 0;
       return generateText({
         model: r.model, providerOptions: r.providerOptions,

@@ -2,13 +2,16 @@
 
 import type { Plan } from "@/lib/plans";
 import type { CloudOp } from "@/lib/ai/studio/credits";
-import type { AssistantRequest, AssistantResponse, ImageRequest, ImageResponse } from "@/lib/ai/studio/request";
+import type { AssistantRequest, AssistantResponse, CritiqueResponse, EnhanceResponse, ImageRequest, ImageResponse, LaserBrief } from "@/lib/ai/studio/request";
 
 export interface StudioStatus {
   signedIn: boolean;
   plan: Plan;
   daily: number;
   costs: Record<CloudOp, number>;
+  /** Extra credits for a high-quality picture, and whether this plan may ask for one. */
+  highExtra?: number;
+  highQuality?: boolean;
   cloud: boolean;
 }
 
@@ -40,3 +43,9 @@ export type ImageAsk = { [K in ImageRequest["op"]]: Partial<Extract<ImageRequest
 export const cloudImage = (req: ImageAsk, signal: AbortSignal) => post<ImageResponse>("/api/ai/studio/image", req, signal);
 
 export const askAssistant = (req: AssistantRequest, signal: AbortSignal) => post<AssistantResponse>("/api/ai/studio/assistant", req, signal);
+
+type Brief = Partial<LaserBrief>;
+export const enhancePrompt = (req: { prompt: string; style?: string; brief?: Brief }, signal: AbortSignal) =>
+  post<EnhanceResponse>("/api/ai/studio/director", { op: "enhance", ...req }, signal);
+export const critiquePicture = (req: { image: string; prompt?: string; brief?: Brief }, signal: AbortSignal) =>
+  post<CritiqueResponse>("/api/ai/studio/director", { op: "critique", ...req }, signal);

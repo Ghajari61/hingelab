@@ -19,6 +19,10 @@ export interface ImageJob {
   /** Where an edit may paint: fully transparent pixels are repainted, the rest is kept. */
   mask?: ImageData;
   size?: ImageSize;
+  /** "high" costs more and draws finer detail (missing: medium). */
+  quality?: "medium" | "high";
+  /** A transparent background instead of a white one, for stickers and layered art. */
+  transparent?: boolean;
   /** Hashed user id, passed to the provider for abuse tracking. */
   user: string;
   signal?: AbortSignal;

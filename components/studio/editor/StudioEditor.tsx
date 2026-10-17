@@ -43,6 +43,7 @@ import { ToolFooter } from "./ToolFooter";
 import { SnapControls } from "./SnapBar";
 import { SwatchBar } from "./SwatchBar";
 import { useTextSync } from "./useTextSync";
+import { openWorkspace, workspaceStore } from "./ai/jobs";
 import type { StoreApi } from "zustand";
 import { Dialog } from "@/components/ui";
 
@@ -57,6 +58,7 @@ const Assembly3D = dynamic(() => import("./assembly/Assembly3D").then((m) => m.A
 /** What the keyboard still does while the 3D assembly is shown (the 3D view has its own keys). */
 const KEYS_IN_3D = new Set(["edit.undo", "edit.redo", "file.save", "view.assembly3d", "window.palette"]);
 const AIStudioPanel = dynamic(() => import("./ai/AIStudioPanel").then((m) => m.AIStudioPanel), { ssr: false, loading: () => <p className="dlg-note" style={{ padding: 12 }}>Loading AI Studio…</p> });
+const AIWorkspace = dynamic(() => import("./ai/AIWorkspace").then((m) => m.AIWorkspace), { ssr: false, loading: () => <div className="aiw aiw-loading" role="status">Loading AI Studio…</div> });
 
 type SaveState = "saved" | "saving" | "error";
 type DialogId = EditorDialog | "revert";
@@ -138,11 +140,14 @@ function EditorShell({ opened }: { opened: Document }) {
   useEditor((s) => s.lastTransform);
   const ui = useEditor((s) => s.ui);
   const tool = useEditor((s) => s.tool);
+  const aiOpen = useStore(workspaceStore, (s) => s.open);
+  useEffect(() => () => openWorkspace(false), []);
 
   useEffect(() => {
     setKeymapState(loadKeymap());
     const loaded = loadWorkspaces(), panel = new URLSearchParams(window.location.search).get("panel");
     if (panel && panel in PANEL_LABELS) loaded.layouts[loaded.current] = showPanel(loaded.layouts[loaded.current], panel as PanelId);
+    if (panel === "aiStudio") openWorkspace(true);
     setWs(loaded);
     const on = (e: Event) => setKeymapState((e as CustomEvent<Keymap>).detail);
     window.addEventListener("hingelab-keymap", on);
@@ -367,6 +372,11 @@ function EditorShell({ opened }: { opened: Document }) {
   const keyOf = (t: ToolId) => bindings.get(`tool.${t}`)?.[0];
   const slots = useMemo(() => toolSlots(keyOf), [bindings]); // eslint-disable-line react-hooks/exhaustive-deps
   const generators = doc.root.children.filter((n) => n.type === "generator");
+  const aiProps = {
+    toast, notify: toastAction, viewCenter: () => canvasRef.current?.center() ?? { x: 0, y: 0 },
+    beforeLeave: async () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } await persist(api.getState().doc); },
+    preflight: (ids: string[], label: string, cut: boolean) => runPreflight(api, toastAction, ids, label, cut),
+  };
   const panelContent = (p: PanelId) => {
     switch (p) {
       case "properties": return <PropertiesPanel toast={toast} handlers={handlers} />;
@@ -378,11 +388,7 @@ function EditorShell({ opened }: { opened: Document }) {
       case "document": return <DocumentPanel toast={toast} />;
       case "liveEffects": return <LiveEffectsPanel toast={toast} />;
       case "inspector": return <InspectorPanel toast={toast} />;
-      case "aiStudio": return (
-        <AIStudioPanel toast={toast} notify={toastAction} viewCenter={() => canvasRef.current?.center() ?? { x: 0, y: 0 }}
-          beforeLeave={async () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } await persist(api.getState().doc); }}
-          preflight={(ids, label, cut) => runPreflight(api, toastAction, ids, label, cut)} />
-      );
+      case "aiStudio": return <AIStudioPanel {...aiProps} />;
     }
   };
   const dockTabs = [
@@ -445,6 +451,7 @@ function EditorShell({ opened }: { opened: Document }) {
           onCollapse={(dockCollapsed) => setLayout((w) => ({ ...w, dockCollapsed }))}
           onResize={(dockWidth) => setLayout((w) => ({ ...w, dockWidth }))}
         />
+        {aiOpen && <AIWorkspace {...aiProps} />}
         {view3d && (
           <Assembly3D
             toast={toast} onBack={() => setView3d(false)}

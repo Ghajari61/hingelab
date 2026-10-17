@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.49",
-    "pub_date": "2026-10-16T23:16:53.099Z",
-    "notes": "The two ends of a hinge wall lock together with fingers.",
+    "version": "1.0.50",
+    "pub_date": "2026-10-17T06:34:41.466Z",
+    "notes": "AI Studio 2: a full workspace with a Laser Brief, a Creative Director, four variations at once, a laser readiness score, 25 styles, 30+ recipes and one-click pipelines. The app and the website share one look.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.49_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm91cVo4M1R0N1JPWXZpdDBsK25zTmtoekVYdCs2bzFFdlFJZ3grcE9mRDdhNVRLdTJUcVN0WDZEeHZZaEpsZVBJVjVmZjVmZWduMytGcUt0MTNaUGd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTkyNDU2CWZpbGU6SGluZ2VMYWJfMS4wLjQ5X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNDkKQkpCckhBNkVaMlhLUkFnVG96Y3kxVWUraXVzOTJQWkpiV1lkQ3FwekdWeWF4YXBNYjVFOVVzUmErdGRQaXN2MFhNU3ZaakZMYnA5YzlXNW5YV3pPQUE9PQo=",
-        "size": 4272253
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.50_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnJLaVZCOWl4U1dhWDRFZi9HcHZENUtQVDRHNkdhYmQ0UkZDTHN1TFhpRCtwR1NabWJ1L0cwMlBNenFKcUJpTjFEVC80Z0pMcEpteXUxYndwTGdUK0F3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjE4NjAxCWZpbGU6SGluZ2VMYWJfMS4wLjUwX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTAKNzRpeXFFUDZkSXUyZXYzSi9PV1dhaTF0WXZOZ0hDek5Wai9mYTAvaDR0M1lQMm9HOGF2WVpWQStxa2QyRzB4dWZPWU1qcmQ4YitqSEhEejNZSGhZRHc9PQo=",
+        "size": 4272091
       }
     }
   }

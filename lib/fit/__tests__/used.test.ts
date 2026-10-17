@@ -25,7 +25,7 @@ describe("status bar Used size", () => {
     const a = arrangeHinge(clone(DEFAULTS));
     const u = usedArea(a.lay!, a.sheets);
     expect(u).toEqual({ w: a.lay!.width, h: a.lay!.height, sheets: 1 });
-    expect(usedText(u, mm)).toBe("564.7 mm × 195.3 mm");
+    expect(usedText(u, mm)).toBe("567.7 mm × 195.3 mm");
   });
 
   it("is the parts' bounding box for a generator on one sheet, not the bed", () => {

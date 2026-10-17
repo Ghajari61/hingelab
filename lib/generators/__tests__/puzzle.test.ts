@@ -189,7 +189,7 @@ describe("puzzle plan", () => {
     const pro = await exportGeneratorForPlan("puzzle", { pieces: { count: 100 } }, "pro");
     expect(pro.ok && pro.svg).toMatch(/^<\?xml/);
     const small = await exportGeneratorForPlan("puzzle", {}, "free");
-    expect(small.ok).toBe(true);
+    expect(small).toMatchObject({ ok: false, status: 403 });
     expect(await exportGeneratorForPlan("nope", {}, "pro")).toMatchObject({ ok: false, status: 400 });
     const text = await exportGeneratorForPlan("puzzle", { pieces: { count: 60 }, engrave: { kind: "text", text: "Hi" } }, "pro");
     expect(text.ok && text.svg).toMatch(/Engrave/);

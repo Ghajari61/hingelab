@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Ban, Box, Flame, ImagePlus, Loader2, Trash2 } from "lucide-react";
+import { ArrowUp, Ban, Box, Flame, ImagePlus, Loader2, Trash2, Wand2 } from "lucide-react";
 import { materialById } from "@/lib/studio/library";
 import { pasteNodes, selectionBox, topLevel } from "@/lib/studio/scene";
 import { layerCode } from "@/lib/studio/cutLayers";
+import { kitById } from "@/lib/ai/studio/kits";
 import { styleById } from "@/lib/ai/studio/styles";
-import { MAX_CHAT_TEXT, MAX_CHAT_TURNS, type AssistantAction, type AssistantRequest } from "@/lib/ai/studio/request";
+import { MAX_CHAT_IMAGE, MAX_CHAT_TEXT, MAX_CHAT_TURNS, type AssistantAction, type AssistantRequest } from "@/lib/ai/studio/request";
 import type { Document, Vec } from "@/lib/studio/types";
 import { useEditor, useEditorApi } from "../store";
+import { pickImage, readNodeImage, uploadUrl } from "./assets";
 import { askAssistant } from "./cloud";
 import { spent } from "./jobs";
 import { openInGenerator } from "./targets";
@@ -26,13 +28,15 @@ type Props = {
   toast: (m: string, undo?: boolean) => void;
   viewCenter: () => Vec;
   beforeLeave: () => Promise<void>;
-  makeImage: (prompt: string, style?: string) => void;
+  makeImage: (prompt: string, style?: string, count?: number) => void;
+  runRecipe: (recipe: string, words: string, fields?: Record<string, string>) => void;
 };
 
 const EXAMPLES = [
   "What power and speed should I use to cut 3 mm birch plywood?",
   "Make a 120 mm hinge box with my name, Sam, on the lid",
-  "I need a line-art fox to engrave on a coaster",
+  "Give me four ideas for a Nowruz wall piece in Persian style",
+  "Is the selected picture good enough to cut?",
 ];
 
 const chatKey = (docId: string) => `hingelab-ai-chat:${docId}`;
@@ -56,7 +60,7 @@ function studioContext(d: Document, selection: string[]): AssistantRequest["cont
 }
 
 /** AI Studio ▸ Assistant: a chat that suggests laser settings, makes designs and prepares pictures; nothing changes until the user applies it. */
-export function AssistantChat({ cloudBlock, cost, toast, viewCenter, beforeLeave, makeImage }: Props) {
+export function AssistantChat({ cloudBlock, cost, toast, viewCenter, beforeLeave, makeImage, runRecipe }: Props) {
   const api = useEditorApi();
   const docId = useEditor((s) => s.doc.id);
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -82,7 +86,10 @@ export function AssistantChat({ cloudBlock, cost, toast, viewCenter, beforeLeave
     ctl.current = c;
     try {
       const s = api.getState();
-      const r = await askAssistant({ messages: next.slice(-MAX_CHAT_TURNS).map((t) => ({ role: t.role, text: t.text })), context: studioContext(s.doc, s.selection) }, c.signal);
+      const picked = pickImage(s);
+      const image = picked ? await readNodeImage(docId, picked, 640).then((img) => uploadUrl(img, 640)).catch(() => undefined) : undefined;
+      const context = { ...studioContext(s.doc, s.selection), ...(image && image.length <= MAX_CHAT_IMAGE ? { image } : {}) };
+      const r = await askAssistant({ messages: next.slice(-MAX_CHAT_TURNS).map((t) => ({ role: t.role, text: t.text })), context }, c.signal);
       spent(r.credits);
       keep([...next, { role: "assistant", text: r.reply, actions: r.actions, done: [] }]);
     } catch (e) {
@@ -106,7 +113,10 @@ export function AssistantChat({ cloudBlock, cost, toast, viewCenter, beforeLeave
       toast(`${layerTitle(a.layer, a.name)}: ${a.power}% power, ${a.speed} mm/s. Run a test first.`, true);
       mark(ti, ai);
     } else if (a.kind === "image") {
-      makeImage(a.prompt, a.style);
+      makeImage(a.prompt, a.style, a.count);
+      mark(ti, ai);
+    } else if (a.kind === "recipe") {
+      runRecipe(a.recipe, a.words, a.fields);
       mark(ti, ai);
     } else if (a.svg) {
       const { importSvg } = await import("@/lib/studio/svgImport");
@@ -156,8 +166,15 @@ export function AssistantChat({ cloudBlock, cost, toast, viewCenter, beforeLeave
               if (a.kind === "image") return (
                 <div key={ai} className="ai-action">
                   <ImagePlus size={14} aria-hidden />
-                  <span>“{a.prompt}”{a.style ? <small>{styleById(a.style)?.name}</small> : null}</span>
+                  <span>“{a.prompt}”{a.style || a.count ? <small>{[a.style ? styleById(a.style)?.name : "", a.count ? `${a.count} variations` : ""].filter(Boolean).join(" · ")}</small> : null}</span>
                   <button type="button" className="ui-btn small" disabled={done || !!cloudBlock} onClick={() => void apply(a, ti, ai)}>{done ? "Started" : "Make it"}</button>
+                </div>
+              );
+              if (a.kind === "recipe") return (
+                <div key={ai} className="ai-action">
+                  <Wand2 size={14} aria-hidden />
+                  <span><b>{kitById(a.recipe)?.name ?? a.recipe}</b><small>{a.words}{a.fields?.text ? ` · “${a.fields.text}”` : ""}</small></span>
+                  <button type="button" className="ui-btn small" disabled={done || !!cloudBlock} onClick={() => void apply(a, ti, ai)}>{done ? "Started" : "Run recipe"}</button>
                 </div>
               );
               return (

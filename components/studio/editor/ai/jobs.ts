@@ -48,7 +48,8 @@ interface JobsState {
   jobs: Job[];
 }
 
-const MAX_RUNNING = 2;
+/** A set of four variations runs at once. */
+const MAX_RUNNING = 4;
 const MAX_HISTORY = 40;
 const historyKey = (docId: string) => `hingelab-ai-history:${docId}`;
 
@@ -121,7 +122,7 @@ async function start(job: Job) {
   }
 }
 
-/** Queues a job; at most two run at once. Returns its id. */
+/** Queues a job; at most four run at once. Returns its id. */
 export function enqueue(docId: string, input: JobInput, cloud: boolean, run: Runner): string {
   const id = `job-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
   runners.set(id, run);
@@ -147,6 +148,10 @@ export function forget(id: string) {
   jobsStore.setState((s) => ({ jobs: s.jobs.filter((x) => x.id !== id) }));
   save(j.docId);
 }
+
+/** Whether the full AI Studio workspace covers the canvas. */
+export const workspaceStore = createStore<{ open: boolean }>(() => ({ open: false }));
+export const openWorkspace = (open = true) => workspaceStore.setState({ open });
 
 // Credits used today on this device (the server keeps the real count).
 const creditsKey = () => `hingelab-ai-credits:${new Date().toISOString().slice(0, 10)}`;

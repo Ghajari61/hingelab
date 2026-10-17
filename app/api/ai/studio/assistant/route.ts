@@ -2,14 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { currentPlan } from "@/lib/billing/plan";
 import { anyProvider } from "@/lib/ai/providers/config";
 import { COSTS } from "@/lib/ai/studio/credits";
-import { assistantRequestSchema, firstIssue, MAX_CHAT_TEXT, MAX_CHAT_TURNS } from "@/lib/ai/studio/request";
+import { assistantRequestSchema, firstIssue, MAX_CHAT_IMAGE, MAX_CHAT_TEXT, MAX_CHAT_TURNS } from "@/lib/ai/studio/request";
 import { assistantTurn, creditsMessage, spendCredits, StudioError } from "@/lib/ai/studio/server";
 import { declaredLength, isCrossSite, isJSONRequest, siteOrigins } from "@/lib/security/request";
 
 /** A design made by the assistant runs the AI designer (two model calls and a build). */
 export const maxDuration = 180;
 
-const MAX_BODY = MAX_CHAT_TURNS * (MAX_CHAT_TEXT + 64) + 8_000;
+const MAX_BODY = MAX_CHAT_TURNS * (MAX_CHAT_TEXT + 64) + MAX_CHAT_IMAGE + 8_000;
 
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   NextResponse.json(body, { status, headers: { "cache-control": "no-store", ...headers } });

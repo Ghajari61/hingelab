@@ -11,6 +11,7 @@ import { engrave, type EngraveOptions } from "./dither";
 import { imgFromBits, type Img } from "./image";
 import { cartoon, lineArt, type CartoonOptions, type LineArtOptions } from "./lineart";
 import { depthLayers, type LayerOptions } from "./relief";
+import { readiness, type Readiness, type ReadinessOptions } from "./readiness";
 import { cutLength, cutSafety, type SafetyContext } from "./safety";
 import { cleanVectorize, inkBitmap, vectorizeBitmap, type VectorizeOptions } from "./vectorize";
 
@@ -25,7 +26,8 @@ export type ImagingRequest =
   | { op: "cartoon"; img: Img; options: Partial<CartoonOptions> }
   | { op: "engrave"; img: Img; options: EngraveOptions }
   | { op: "vectorize"; img: Img; options: Partial<VectorizeOptions>; ctx: SafetyContext; fixAll?: boolean }
-  | { op: "layers"; depth: DepthMap; options: Partial<LayerOptions>; vector: Partial<VectorizeOptions> };
+  | { op: "layers"; depth: DepthMap; options: Partial<LayerOptions>; vector: Partial<VectorizeOptions> }
+  | { op: "readiness"; img: Img; options: ReadinessOptions };
 
 /** A cut-safety issue with each fix's resulting settings (functions can't cross to the page). */
 export interface PlainIssue {
@@ -55,7 +57,8 @@ export type ImagingResult =
   | { kind: "adjust"; options: AdjustOptions }
   | { kind: "engrave"; img: Img; dpi: number }
   | { kind: "vector"; vector: VectorResult }
-  | { kind: "layers"; sheets: Subpath[][]; widthMm: number; heightMm: number };
+  | { kind: "layers"; sheets: Subpath[][]; widthMm: number; heightMm: number }
+  | { kind: "readiness"; readiness: Readiness };
 
 export const plainIssues = (issues: Issue<VectorizeOptions>[], p: VectorizeOptions): PlainIssue[] =>
   issues.map((i) => ({ code: i.code, level: i.level, message: i.message, fixes: i.fixes.map((f) => ({ id: f.id, label: f.label, safe: f.safe, settings: f.apply(p) })) }));
@@ -98,5 +101,6 @@ export function runImaging(req: ImagingRequest): ImagingResult {
       const sheets = depthLayers(req.depth, req.options).map((b) => vectorizeBitmap(b, req.vector));
       return { kind: "layers", sheets: sheets.map((v) => v.subpaths), widthMm: sheets[0]?.widthMm ?? 0, heightMm: sheets[0]?.heightMm ?? 0 };
     }
+    case "readiness": return { kind: "readiness", readiness: readiness(req.img, req.options) };
   }
 }

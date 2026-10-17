@@ -9,6 +9,14 @@
 .ui-btn.ghost { background: none; border-color: transparent; color: var(--text-secondary); box-shadow: none; }
 .ui-btn.ghost:hover:not(:disabled) { background: var(--surface-raised); color: var(--text-primary); }
 .ui-btn.small { height: 24px; padding-inline: var(--space-4); font-size: var(--text-small); }
+.ui-btn.lg { height: 40px; padding-inline: var(--space-6); font-size: 14px; border-radius: var(--radius-control); }
+.ui-btn.cta { background: var(--cta); border-color: var(--cta); color: var(--cta-ink); font-weight: 600; }
+.ui-btn.cta:hover:not(:disabled) { background: var(--cta-hi); border-color: var(--cta-hi); }
+
+/* The one card: pages, galleries and panels build on it. */
+.ui-card { display: grid; gap: var(--space-4); padding: var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface-chrome); box-shadow: var(--shadow-1); min-width: 0; }
+.ui-card.hover { transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
+.ui-card.hover:hover { border-color: var(--accent); box-shadow: var(--shadow-2); transform: translateY(-1px); }
 .ui-btn:focus-visible, .ui-icon-btn:focus-visible, .ui-seg button:focus-visible, .ui-tab:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 .ui-icon-btn { position: relative; width: 28px; height: 28px; display: inline-grid; place-items: center; border-radius: var(--radius-2); border: 0; background: none; color: var(--text-secondary); cursor: pointer; padding: 0; }

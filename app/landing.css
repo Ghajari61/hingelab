@@ -28,7 +28,7 @@ html:has(.landing), body:has(> .landing) { height: auto; overflow: visible; }
 .grad { background: var(--brand-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 /* ---------- header / footer ---------- */
-.site-header { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 28px; padding: 12px clamp(16px, 4vw, 48px); background: color-mix(in srgb, var(--pasteboard) 78%, transparent); backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); font-size: 15px; }
+.site-header { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 28px; min-height: var(--header-h); padding: 8px clamp(16px, 4vw, 48px); background: color-mix(in srgb, var(--pasteboard) 78%, transparent); backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); font-size: 15px; }
 .site-logo { display: inline-flex; align-items: center; gap: 10px; color: var(--fg); text-decoration: none; font-family: var(--display); font-weight: 800; font-stretch: 108%; font-size: 19px; letter-spacing: -0.01em; }
 .site-nav { display: flex; align-items: center; gap: 4px; }
 .site-nav > a, .nav-menu > a { display: inline-flex; align-items: center; gap: 4px; padding: 7px 12px; border-radius: 999px; color: var(--fg-dim); text-decoration: none; font-weight: 500; transition: background var(--dur-fast), color var(--dur-fast); }
