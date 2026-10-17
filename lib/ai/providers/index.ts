@@ -9,12 +9,12 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { gateway, generateImage, type ImageModel } from "ai";
-import { ASSISTANT_FALLBACKS, gatewayAvailable, imagePlan, textPlan, type Env, type ProviderPlan } from "./config";
+import { anthropicAvailable, ASSISTANT_FALLBACKS, gatewayAvailable, googleTextPlan, imagePlan, textPlan, vendors, type Env, type ProviderPlan } from "./config";
 import { ProviderError, type ImageJob, type ImageProvider, type TextRoute } from "./types";
 
 export * from "./types";
 export { withFallback } from "./fallback";
-export { anyProvider, imagePlan, textPlan } from "./config";
+export { anyProvider, designProvider, imagePlan, textPlan, vendors } from "./config";
 
 /** A user id the providers can track abuse by, without learning who the user is. */
 export const userTag = (scope: string, userId: string) => createHash("sha256").update(`${scope}:${userId}`).digest("hex").slice(0, 24);
@@ -96,21 +96,31 @@ export function imageProviders(env: Env = process.env): ImageProvider[] {
 export const CLAUDE_GATEWAY_MODEL = "anthropic/claude-sonnet-5-5";
 export const CLAUDE_DIRECT_MODEL = "claude-sonnet-5-5";
 
+/** Gemini text routes: the strongest model, then the fast one. */
+export function googleTextRoutes(env: Env = process.env): TextRoute[] {
+  const plan = googleTextPlan(env);
+  if (!plan.length) return [];
+  const google = createGoogleGenerativeAI({ apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY });
+  return plan.map((m, i): TextRoute => ({ id: i ? "google-fast" : "google", model: google(m), providerOptions: {} }));
+}
+
 /**
- * Claude first (the Gateway, then a direct key), then the OpenAI chain, the same order as the AI
- * designer. AI_DESIGN_ORDER=openai,gateway drops Claude without a code change.
+ * Every model for words, plans and drawings, in the deployment's vendor order (AI_VENDORS; Google
+ * only unless it says otherwise): Gemini, then Claude, OpenAI and the Gateway when allowed.
  */
 export function claudeFirstRoutes(user: string, tag: string, env: Env = process.env): TextRoute[] {
-  const order = (env.AI_DESIGN_ORDER || "claude,openai,gateway").split(",").map((s) => s.trim());
-  // The deployment's own key first: the Gateway may be on its free tier, which refuses Claude.
   const claude: TextRoute[] = [];
-  if (env.ANTHROPIC_API_KEY) claude.push({ id: "claude", model: createAnthropic({ apiKey: env.ANTHROPIC_API_KEY })(env.ANTHROPIC_MODEL || CLAUDE_DIRECT_MODEL), providerOptions: {} });
-  if (gatewayAvailable(env)) claude.push({ id: "claude-gateway", model: env.AI_CLAUDE_MODEL || CLAUDE_GATEWAY_MODEL, providerOptions: { gateway: { user, tags: [tag] } } });
+  if (anthropicAvailable(env)) claude.push({ id: "claude", model: createAnthropic({ apiKey: env.ANTHROPIC_API_KEY })(env.ANTHROPIC_MODEL || CLAUDE_DIRECT_MODEL), providerOptions: {} });
+  if (anthropicAvailable(env) && gatewayAvailable(env)) claude.push({ id: "claude-gateway", model: env.AI_CLAUDE_MODEL || CLAUDE_GATEWAY_MODEL, providerOptions: { gateway: { user, tags: [tag] } } });
   const rest = textRoutes(user, tag, env);
-  const byHop: Record<string, TextRoute[]> = { claude, openai: rest.filter((r) => r.id === "openai"), gateway: rest.filter((r) => r.id === "gateway") };
-  const list = order.flatMap((h) => byHop[h] ?? []);
-  return list.length ? list : [...claude, ...rest];
+  const byVendor: Record<string, TextRoute[]> = {
+    google: googleTextRoutes(env), anthropic: claude, openai: rest.filter((r) => r.id === "openai"), gateway: rest.filter((r) => r.id === "gateway"),
+  };
+  return vendors(env).flatMap((v) => byVendor[v] ?? []);
 }
+
+/** The same routes under the name the AI designer uses. */
+export const designRoutes = claudeFirstRoutes;
 
 /** Language models for the assistant, in the order to try them. */
 export function textRoutes(user: string, tag: string, env: Env = process.env): TextRoute[] {

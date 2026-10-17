@@ -100,8 +100,8 @@ function request(o: VectorAsk): UserContent {
   return [{ type: "text", text }, ...pictures.map((p) => ({ type: "file" as const, mediaType: p.mediaType, data: Buffer.from(p.data).toString("base64") }))];
 }
 
-/** Claude routes only: the vector engine needs a model that draws SVG well and can see pictures. */
-export const vectorRoutes = (userId: string) => claudeFirstRoutes(userTag("ai-studio", userId), "ai-studio").filter((r) => r.id.startsWith("claude"));
+/** Gemini or Claude only: the vector engine needs a model that draws SVG well and can see pictures. */
+export const vectorRoutes = (userId: string) => claudeFirstRoutes(userTag("ai-studio", userId), "ai-studio").filter((r) => r.id.startsWith("google") || r.id.startsWith("claude"));
 
 /** Draws the picture as SVG with Claude and renders it; asks once more when the first drawing is weak. */
 export async function drawVectorArt(o: VectorAsk, userId: string, signal: AbortSignal, model?: LanguageModel): Promise<VectorResult> {

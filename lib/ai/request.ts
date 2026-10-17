@@ -1,5 +1,6 @@
 import "server-only";
 /** Request checks shared by the website's and the desktop app's AI designer routes. */
+import { designProvider } from "@/lib/ai/providers/config";
 import { hasPro, type Plan } from "@/lib/plans";
 import { LIMITS, rateLimit, type LimitResult } from "@/lib/security/rateLimit";
 import { isImageDataURL } from "@/lib/security/svg";
@@ -73,4 +74,5 @@ export function aiLimitMessage(plan: Plan, daily?: boolean): string {
 /** The AI Gateway authenticates with the deployment's OIDC token on Vercel, or a gateway key elsewhere. */
 export const gatewayConfigured = () => !!(process.env.VERCEL || process.env.VERCEL_OIDC_TOKEN || process.env.AI_GATEWAY_API_KEY);
 
-export const aiConfigured = () => gatewayConfigured() || !!process.env.OPENAI_API_KEY || !!process.env.ANTHROPIC_API_KEY;
+/** A model the AI designer may use (the deployment's vendors: Google only unless AI_VENDORS says otherwise). */
+export const aiConfigured = () => designProvider(process.env);

@@ -1,4 +1,5 @@
-import Anthropic, { APIError } from "@anthropic-ai/sdk";
+import { generateText } from "ai";
+import { designRoutes, userTag } from "@/lib/ai/providers";
 import { currentPlan } from "@/lib/billing/plan";
 import { hasPro } from "@/lib/plans";
 import { LIMITS, rateLimit } from "@/lib/security/rateLimit";
@@ -7,8 +8,6 @@ import { laserSheetSvg } from "@/lib/security/svg";
 
 export const maxDuration = 60;
 
-const SONNET = "claude-sonnet-5-5";
-const OPUS = "claude-opus-5-5";
 const MAX_PROMPT = 1000;
 const MAX_BODY = 8_000;
 
@@ -36,9 +35,8 @@ export async function POST(req: Request) {
   const { plan, userId } = await currentPlan();
   if (!userId) return Response.json({ error: "Sign in to generate an SVG." }, { status: 401 });
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return Response.json({ error: "ANTHROPIC_API_KEY is not set" }, { status: 500 });
-  }
+  const routes = designRoutes(userTag("svg", userId), "svg");
+  if (!routes.length) return Response.json({ error: "The SVG designer is not set up on this server." }, { status: 503 });
 
   let body: unknown;
   try {
@@ -64,37 +62,28 @@ export async function POST(req: Request) {
     );
   }
 
-  const model = quality === "high" ? OPUS : SONNET;
-  try {
-    const anthropic = new Anthropic();
-    const message = await anthropic.messages.create({
-      model,
-      max_tokens: 8000,
-      messages: [
-        {
-          role: "user",
-          content:
-            "Return one SVG cut file and nothing else. Use millimetres: width and height attributes ending in mm. " +
-            "Cut lines are stroke #FF0000 with fill none. No scripts, images, links, or styles. " +
-            `The sheet must fit a ${bed().w} by ${bed().h} mm bed. Request: ${prompt}`,
-        },
-      ],
-    });
-    const text = message.content
-      .filter((block) => block.type === "text")
-      .map((block) => block.text)
-      .join("");
-    const match = text.match(/<svg[\s\S]*<\/svg>/i);
-    if (!match) return Response.json({ error: "The model did not return an SVG." }, { status: 502 });
-    const sheet = laserSheetSvg(match[0], bed().w, bed().h);
-    if (!sheet.ok) return Response.json({ error: sheet.error }, { status: 422 });
-    return new Response(sheet.svg, {
-      status: 200,
-      headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "no-store", "x-hingelab-model": model },
-    });
-  } catch (e) {
-    const status = e instanceof APIError && e.status ? e.status : 500;
-    const message = e instanceof Error ? e.message : "SVG request failed";
-    return Response.json({ error: message }, { status });
+  // High quality starts with the strongest model; normal requests start with the fast one.
+  const order = quality === "high" ? routes : [...routes].reverse();
+  const ask =
+    "Return one SVG cut file and nothing else. Use millimetres: width and height attributes ending in mm. " +
+    "Cut lines are stroke #FF0000 with fill none. No scripts, images, links, or styles. " +
+    `The sheet must fit a ${bed().w} by ${bed().h} mm bed. Request: ${prompt}`;
+  let last = "SVG request failed";
+  for (const route of order) {
+    try {
+      const { text } = await generateText({ model: route.model, providerOptions: route.providerOptions, maxOutputTokens: 8000, prompt: ask, abortSignal: AbortSignal.timeout(55_000) });
+      const match = text.match(/<svg[\s\S]*<\/svg>/i);
+      if (!match) { last = "The model did not return an SVG."; continue; }
+      const sheet = laserSheetSvg(match[0], bed().w, bed().h);
+      if (!sheet.ok) return Response.json({ error: sheet.error }, { status: 422 });
+      return new Response(sheet.svg, {
+        status: 200,
+        headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "no-store", "x-hingelab-model": route.id },
+      });
+    } catch (e) {
+      last = e instanceof Error ? e.message : last;
+      console.warn(`svg: ${route.id} failed:`, last.slice(0, 200));
+    }
   }
+  return Response.json({ error: "The SVG designer could not answer. Try again in a minute." }, { status: 502 });
 }

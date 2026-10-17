@@ -126,10 +126,11 @@ describe("AI Studio engine", () => {
     expect(assistantRequestSchema.safeParse({ messages: [{ role: "user", text: "hi" }], context: { image: PNG_1x1 } }).success).toBe(true);
   });
 
-  it("puts Claude first and keeps the OpenAI chain after it", () => {
-    const env = { AI_GATEWAY_API_KEY: "x", OPENAI_API_KEY: "y", ANTHROPIC_API_KEY: "z" };
-    expect(claudeFirstRoutes("u", "t", env).map((r) => r.id)).toEqual(["claude", "claude-gateway", "openai", "gateway"]);
-    expect(claudeFirstRoutes("u", "t", { ...env, AI_DESIGN_ORDER: "openai,gateway" }).map((r) => r.id)).toEqual(["openai", "gateway"]);
+  it("uses only Gemini by default, and the other vendors only when AI_VENDORS names them", () => {
+    const env = { AI_GATEWAY_API_KEY: "x", OPENAI_API_KEY: "y", ANTHROPIC_API_KEY: "z", GOOGLE_GENERATIVE_AI_API_KEY: "g" };
+    expect(claudeFirstRoutes("u", "t", env).map((r) => r.id)).toEqual(["google", "google-fast"]);
+    expect(claudeFirstRoutes("u", "t", { ...env, GOOGLE_GENERATIVE_AI_API_KEY: "" })).toEqual([]);
+    expect(claudeFirstRoutes("u", "t", { ...env, AI_VENDORS: "anthropic,openai,gateway" }).map((r) => r.id)).toEqual(["claude", "claude-gateway", "openai", "gateway"]);
   });
 });
 

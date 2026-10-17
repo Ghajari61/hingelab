@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MockImageModelV4 } from "ai/test";
-import { anyProvider, GOOGLE_IMAGE_MODEL, imagePlan } from "../providers/config";
+import { anyProvider, GOOGLE_IMAGE_FALLBACKS, GOOGLE_IMAGE_MODEL, imagePlan } from "../providers/config";
 import { googleImageProvider, imageProviders } from "../providers";
 import { ProviderError } from "../providers/types";
 
@@ -19,12 +19,14 @@ function model() {
 }
 
 describe("Nano Banana (Google Gemini image)", () => {
-  it("comes first when its key is set, and counts as a provider", () => {
+  it("is the only picture service by default, and counts as a provider", () => {
     const env = { GOOGLE_GENERATIVE_AI_API_KEY: "g", OPENAI_API_KEY: "o", VERCEL: "1" };
-    expect(imagePlan(env).map((p) => p.id)).toEqual(["google", "openai", "gateway"]);
+    expect(imagePlan(env).map((p) => p.model)).toEqual([GOOGLE_IMAGE_MODEL, ...GOOGLE_IMAGE_FALLBACKS]);
+    expect(new Set(imagePlan(env).map((p) => p.id))).toEqual(new Set(["google"]));
+    expect(imagePlan({ ...env, AI_VENDORS: "google,openai,gateway" }).map((p) => p.id).slice(-2)).toEqual(["openai", "gateway"]);
     expect(imagePlan({ GOOGLE_GENERATIVE_AI_API_KEY: "g", GOOGLE_IMAGE_MODEL: "gemini-3-pro-image-preview" })[0].model).toBe("gemini-3-pro-image-preview");
     expect(anyProvider({ GOOGLE_GENERATIVE_AI_API_KEY: "g" })).toBe(true);
-    expect(imageProviders({ GOOGLE_GENERATIVE_AI_API_KEY: "g" }).map((p) => p.id)).toEqual(["google"]);
+    expect(new Set(imageProviders({ GOOGLE_GENERATIVE_AI_API_KEY: "g" }).map((p) => p.id))).toEqual(new Set(["google"]));
   });
 
   it("asks for an aspect ratio instead of a size and returns the picture", async () => {

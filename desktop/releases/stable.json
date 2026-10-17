@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.54",
-    "pub_date": "2026-10-17T15:46:31.000Z",
-    "notes": "AI Studio makes pictures with Google's Nano Banana first, then OpenAI, with Claude vector drawings as the fallback.",
+    "version": "1.0.55",
+    "pub_date": "2026-10-17T16:08:32.590Z",
+    "notes": "All AI now runs on Google: Nano Banana draws pictures, Gemini writes plans and vector drawings. The AI designer sketches each original design with Nano Banana first, then traces it into a laser-ready file.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.54_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnBob3FGUy9DVXJVTmhoSHJqZmtYZU80NC9uYk1zKzZKdTE3YjVkVk9zSUIrY1J2RG9VQVZna3Z6UjRVUVZ3Q2tjejkzSjRxUGhVMjRWQTVPUmE3S3dZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjUxODM5CWZpbGU6SGluZ2VMYWJfMS4wLjU0X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTQKSkVvSEZqVFgwVmZIWUZManlabVVxQjNWOUhWUHlJS3p6YjgrVmZrY1lnZmVDcXhNL0c5ZFZEWkdJOHBMYzgxc1VQQzFqN1ZHQ3MrZmJKRXFFelA2Qmc9PQo=",
-        "size": 4273846
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.55_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnBQZ3RPeDRWNnpmbVFGZmVTZDYxSm84UEFwMm5rR3pTc0E2RGlLZ1krLzRReG9LOXJSN0gxSmdjMU1BRWNQRkliUVNuYlZKWFExWUdqZlU3NzBtZVFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjUzMTM2CWZpbGU6SGluZ2VMYWJfMS4wLjU1X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTUKNmduaGJRQXVPUWgrdjM4OTM1Y0ZlZ3E2OE1GL3JsTFRWK0dUQ3BYc2I1YUdSck16UHAzZjVKdkY1WWo2TUFVdUNUZ0dNc3NFU29HWnNQaXFjZTByQkE9PQo=",
+        "size": 4271428
       }
     }
   }

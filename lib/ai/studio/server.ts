@@ -28,7 +28,7 @@ export class StudioError extends Error {
 export const SERVICE_UNPAID = "AI Studio's AI service is out of paid credit right now, so nothing was made. Please try again later.";
 /** Redraw, Expand and AI Cutout need a picture service; the vector engine cannot do them. */
 export const RASTER_ONLY = "This tool needs the AI picture service, which is not available right now. Quick Cutout, Smart Adjust, Line art and the other tools on this computer still work.";
-export const VECTOR_NOTE = "Drawn as clean vectors by Claude";
+export const VECTOR_NOTE = "Drawn as clean vectors by the AI";
 
 /** Spends `cost` credits: the burst limit once, then one daily hit per credit. */
 export async function spendCredits(plan: Plan, userId: string, cost: number): Promise<LimitResult & { daily?: boolean }> {

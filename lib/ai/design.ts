@@ -6,9 +6,8 @@ import "server-only";
  * shape by shape instead, because the product settings cannot reproduce it.
  */
 import { createHash } from "node:crypto";
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, Output, type LanguageModel, type UserContent } from "ai";
+import { designRoutes, imageProviders } from "@/lib/ai/providers";
 import { z } from "zod";
 import { coerce, designFromChanges, generateDesign } from "@/lib/desktop/products";
 import type { DesktopProductId, DField, GenerateResponse } from "@/lib/desktop/types";
@@ -23,28 +22,8 @@ import type { Plan } from "@/lib/plans";
 import { aiMenu, fieldsText, LETTER_FIELDS, productsText, type MenuProduct } from "./menu";
 import { artDesign, artSchema, drawArt, editArt, type ArtOptions } from "./art";
 import { decodePhoto, editPad, isFlatArt, isTwoTone, padDesign, padFromPicture, PadError, padOf } from "./padTrace";
-import { gatewayConfigured } from "./request";
 import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_OPEN_PATH, type AIDesign, type AIDesignRequest, type AIOpen, type AIProduct, type AIRevise } from "./types";
 
-/**
- * Gateway model ids (provider/model), tried in order; the deployment can override the first with
- * AI_DESIGN_MODEL. The last one is open to AI Gateway's free tier, which refuses the others.
- */
-const MODEL = "openai/gpt-6-astra";
-const FALLBACK_MODELS = ["openai/gpt-5.6-luna", "openai/gpt-5-mini"];
-const OPENAI_MODEL = "gpt-6-astra";
-/** Gateway model id. Docs use `anthropic/<id>` (for example `anthropic/claude-opus-5`). */
-const CLAUDE_GATEWAY = "anthropic/claude-sonnet-5-5";
-const CLAUDE_DIRECT = "claude-sonnet-5-5";
-
-type DesignHop = "claude" | "openai" | "gateway";
-
-/** AI_DESIGN_ORDER=openai,gateway restores the previous chain without a code change. */
-function designOrder(): DesignHop[] {
-  const raw = (process.env.AI_DESIGN_ORDER || "claude,openai,gateway").split(",").map((s) => s.trim());
-  const hops = raw.filter((s): s is DesignHop => s === "claude" || s === "openai" || s === "gateway");
-  return hops.length ? hops : ["claude", "openai", "gateway"];
-}
 const TIMEOUT_MS = 50_000;
 /** An original design: drawing, rendering and one look at the result (the routes allow 180 s). */
 const ART_TIMEOUT_MS = 150_000;
@@ -118,43 +97,14 @@ const userTag = (userId: string) => createHash("sha256").update(`ai-design:${use
 type Route = { model: LanguageModel; providerOptions: NonNullable<Parameters<typeof generateText>[0]["providerOptions"]> };
 
 /**
- * Claude first, then the OpenAI chain. `AI_DESIGN_ORDER` (claude, openai, gateway) changes the
- * order. A test can still pass one model and skip the chain.
+ * The deployment's models in its vendor order (Google's Gemini only, unless AI_VENDORS allows
+ * others). A test can still pass one model and skip the chain.
  */
 function routes(ask: Ask): Route[] {
-  const tag = userTag(ask.userId);
-  const gateway: Route = {
-    model: ask.model ?? (process.env.AI_DESIGN_MODEL || MODEL),
-    providerOptions: { gateway: { models: FALLBACK_MODELS, user: tag, tags: ["ai-design"] } },
-  };
-  if (ask.model) return [gateway];
-  const openaiKey = process.env.OPENAI_API_KEY;
-  const openai: Route | undefined = openaiKey
-    ? {
-        model: createOpenAI({ apiKey: openaiKey })(process.env.OPENAI_MODEL || OPENAI_MODEL),
-        providerOptions: { openai: { safetyIdentifier: tag } },
-      }
-    : undefined;
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  const claudeDirect: Route | undefined = anthropicKey
-    ? {
-        model: createAnthropic({ apiKey: anthropicKey })(process.env.ANTHROPIC_MODEL || CLAUDE_DIRECT),
-        providerOptions: {},
-      }
-    : undefined;
-  const claudeGateway: Route | undefined = gatewayConfigured()
-    ? {
-        model: process.env.AI_CLAUDE_MODEL || CLAUDE_GATEWAY,
-        providerOptions: { gateway: { user: tag, tags: ["ai-design"] } },
-      }
-    : undefined;
-  const byHop: Record<DesignHop, Route[]> = {
-    claude: [claudeGateway, claudeDirect].filter((r): r is Route => !!r),
-    openai: openai ? [openai] : [],
-    gateway: gatewayConfigured() ? [gateway] : [],
-  };
-  const list = designOrder().flatMap((hop) => byHop[hop]);
-  return list.length ? list : [gateway];
+  if (ask.model) return [{ model: ask.model, providerOptions: {} }];
+  const list = designRoutes(userTag(ask.userId), "ai-design").map((r) => ({ model: r.model, providerOptions: r.providerOptions }));
+  if (!list.length) throw new AIDesignError("The AI designer is not set up on this server.");
+  return list;
 }
 
 type Ask = { model?: LanguageModel; userId: string; signal: AbortSignal };
@@ -281,6 +231,40 @@ async function withArt(model: LanguageModel | undefined, userId: string, job: (o
   }
 }
 
+/** Nano Banana's picture of an original design gets at most this long; the drawing goes on without it. */
+const REFERENCE_MS = 45_000;
+
+/**
+ * A picture of the design made by the image model (Nano Banana), for the drawing step to follow:
+ * its composition and ornament are far richer than shapes a language model invents alone. Words are
+ * left out of the picture and set as real text by the drawing. None when no picture service answers.
+ */
+async function referencePicture(name: string, brief: string, userId: string): Promise<Exclude<UserContent, string> | undefined> {
+  const providers = imageProviders();
+  if (!providers.length) return undefined;
+  const prompt = [
+    `A finished laser-cut and engraved product design: ${name}.`, brief,
+    "Draw it as a professional, beautiful product mock-up seen straight from the front: crisp black ornament and shapes on a pure white background, rich and well balanced detail, a clean outline around the whole piece.",
+    "Leave clean empty space where words go; never draw letters, words or numbers. No shadows, no photo background, no watermark.",
+  ].join("\n");
+  try {
+    const signal = AbortSignal.timeout(REFERENCE_MS);
+    for (const p of providers) {
+      try {
+        const r = await p.image({ prompt, size: "1024x1024", user: userTag(userId), signal });
+        return [
+          { type: "text", text: "Reference picture made for this brief by the image model. Follow its outline, composition, shapes and ornament closely, as a skilled illustrator would trace it; set any words from the brief as real text (texts), never as drawn shapes." },
+          { type: "file", mediaType: r.mediaType, data: Buffer.from(r.data).toString("base64") },
+        ];
+      } catch (e) {
+        if (signal.aborted) break;
+        console.warn(`ai design: reference picture from ${p.id} failed:`, e instanceof Error ? e.message.slice(0, 200) : e);
+      }
+    }
+  } catch { /* the drawing goes on without a picture */ }
+  return undefined;
+}
+
 /** A traced-picture job, with its own messages for the user. */
 async function padJob<T>(job: () => Promise<T>): Promise<T> {
   try {
@@ -369,8 +353,12 @@ export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: str
   if (product.id === "art") {
     return withArt(model, userId, async (o) => {
       const query = [req.prompt, req.image ? req.imageNote : "", choice.name, choice.brief].filter(Boolean).join("\n");
-      const examples = opts.examples ? await opts.examples(query).catch(() => undefined) : undefined;
-      const b = await drawArt(userContent(req, `Name: ${choice.name}\nBrief: ${choice.brief}`), o, examples);
+      const [examples, reference] = await Promise.all([
+        opts.examples ? opts.examples(query).catch(() => undefined) : Promise.resolve(undefined),
+        req.image || model ? Promise.resolve(undefined) : referencePicture(choice.name, choice.brief, userId),
+      ]);
+      const content = userContent(req, `Name: ${choice.name}\nBrief: ${choice.brief}`);
+      const b = await drawArt(reference ? [...(typeof content === "string" ? [{ type: "text" as const, text: content }] : content), ...reference] : content, o, examples);
       return artDesign(b, plan, choice.match);
     });
   }

@@ -13,27 +13,39 @@ import { COSTS, STUDIO_DAILY } from "../studio/credits";
 const PNG_1x1 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
 describe("provider configuration", () => {
-  it("uses the deployment's OpenAI key first, then the gateway", () => {
+  it("uses only Google by default, whatever other keys are set", () => {
     expect(imagePlan({})).toEqual([]);
     expect(anyProvider({})).toBe(false);
-    expect(imagePlan({ OPENAI_API_KEY: "k" }).map((p) => p.id)).toEqual(["openai"]);
-    expect(imagePlan({ VERCEL: "1" })).toEqual([{ id: "gateway", model: IMAGE_MODEL }]);
-    expect(imagePlan({ AI_GATEWAY_API_KEY: "g", OPENAI_API_KEY: "k" })).toEqual([{ id: "openai", model: OPENAI_IMAGE_MODEL }, { id: "gateway", model: IMAGE_MODEL }]);
-    expect(textPlan({ VERCEL_OIDC_TOKEN: "t" }).map((p) => p.id)).toEqual(["gateway"]);
+    const others = { OPENAI_API_KEY: "k", ANTHROPIC_API_KEY: "a", VERCEL: "1", AI_GATEWAY_API_KEY: "g" };
+    expect(imagePlan(others)).toEqual([]);
+    expect(textPlan(others)).toEqual([]);
+    expect(anyProvider(others)).toBe(false);
+    expect(new Set(imagePlan({ ...others, GOOGLE_GENERATIVE_AI_API_KEY: "g" }).map((p) => p.id))).toEqual(new Set(["google"]));
+  });
+
+  it("can turn the OpenAI key and the gateway back on with AI_VENDORS", () => {
+    const on = { AI_VENDORS: "openai,gateway" };
+    expect(imagePlan({ ...on, OPENAI_API_KEY: "k" }).map((p) => p.id)).toEqual(["openai"]);
+    expect(imagePlan({ ...on, VERCEL: "1" })).toEqual([{ id: "gateway", model: IMAGE_MODEL }]);
+    expect(imagePlan({ ...on, AI_GATEWAY_API_KEY: "g", OPENAI_API_KEY: "k" })).toEqual([{ id: "openai", model: OPENAI_IMAGE_MODEL }, { id: "gateway", model: IMAGE_MODEL }]);
+    expect(textPlan({ ...on, VERCEL_OIDC_TOKEN: "t" }).map((p) => p.id)).toEqual(["gateway"]);
   });
 
   it("models can be overridden by the environment", () => {
-    expect(imagePlan({ VERCEL: "1", AI_IMAGE_MODEL: "bfl/flux-2-pro" })[0].model).toBe("bfl/flux-2-pro");
-    expect(imagePlan({ OPENAI_API_KEY: "k", OPENAI_IMAGE_MODEL: "gpt-image-1" })[0].model).toBe("gpt-image-1");
-    expect(textPlan({ VERCEL: "1", AI_DESIGN_MODEL: "a/b" })[0].model).toBe("a/b");
-    expect(textPlan({ VERCEL: "1", AI_DESIGN_MODEL: "a/b", AI_ASSISTANT_MODEL: "c/d" })[0].model).toBe("c/d");
+    const on = { AI_VENDORS: "openai,gateway" };
+    expect(imagePlan({ ...on, VERCEL: "1", AI_IMAGE_MODEL: "bfl/flux-2-pro" })[0].model).toBe("bfl/flux-2-pro");
+    expect(imagePlan({ ...on, OPENAI_API_KEY: "k", OPENAI_IMAGE_MODEL: "gpt-image-1" })[0].model).toBe("gpt-image-1");
+    expect(textPlan({ ...on, VERCEL: "1", AI_DESIGN_MODEL: "a/b" })[0].model).toBe("a/b");
+    expect(textPlan({ ...on, VERCEL: "1", AI_DESIGN_MODEL: "a/b", AI_ASSISTANT_MODEL: "c/d" })[0].model).toBe("c/d");
+    expect(imagePlan({ GOOGLE_GENERATIVE_AI_API_KEY: "g", GOOGLE_IMAGE_MODEL: "gemini-3-pro-image-preview" })[0].model).toBe("gemini-3-pro-image-preview");
   });
 
   it("builds real providers without calling them", () => {
-    const ps = imageProviders({ OPENAI_API_KEY: "sk-test", VERCEL: "1" });
+    const ps = imageProviders({ AI_VENDORS: "openai,gateway", OPENAI_API_KEY: "sk-test", VERCEL: "1" });
     expect(ps.map((p) => p.id)).toEqual(["openai", "gateway"]);
-    expect(textRoutes("u", "t", { AI_GATEWAY_API_KEY: "g" }).map((r) => r.id)).toEqual(["gateway"]);
+    expect(textRoutes("u", "t", { AI_VENDORS: "gateway", AI_GATEWAY_API_KEY: "g" }).map((r) => r.id)).toEqual(["gateway"]);
     expect(imageProviders({})).toEqual([]);
+    expect(imageProviders({ OPENAI_API_KEY: "sk-test", VERCEL: "1" })).toEqual([]);
   });
 
   it("hashes user ids per scope", () => {
