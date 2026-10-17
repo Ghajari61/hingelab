@@ -12,7 +12,7 @@ import { machineById, MATERIAL_PRESETS, STARTING_POINT_NOTE, type LaserType, typ
 import { aiAllowance, aiLimitMessage } from "@/lib/ai/request";
 import { AIDesignError, designWithAI } from "@/lib/ai/design";
 import { examplesFor } from "@/lib/ai/examples";
-import { claudeFirstRoutes, imageProviders, userTag, withFallback, ProviderError, type ImageData, type ImageProvider, type ImageSize } from "@/lib/ai/providers";
+import { claudeFirstRoutes, imageProviders, isBillingError, userTag, withFallback, ProviderError, type ImageData, type ImageProvider, type ImageSize } from "@/lib/ai/providers";
 import { COSTS, imageCost, STUDIO_DAILY, type CloudOp } from "./credits";
 import { directorTurn } from "./director";
 import { DESIGN_KITS, kitById } from "./kits";
@@ -22,6 +22,9 @@ import { STYLE_PRESETS, stylePrompt } from "./styles";
 export class StudioError extends Error {
   constructor(message: string, readonly status = 502) { super(message); }
 }
+
+/** Shown when the AI provider accounts behind HingeLab have run out of paid credit. */
+export const SERVICE_UNPAID = "AI Studio's AI service is out of paid credit right now, so nothing was made. Please try again later.";
 
 /** Spends `cost` credits: the burst limit once, then one daily hit per credit. */
 export async function spendCredits(plan: Plan, userId: string, cost: number): Promise<LimitResult & { daily?: boolean }> {
@@ -118,6 +121,7 @@ export async function studioImage(req: ImageRequest, userId: string, signal: Abo
   } catch (e) {
     if (signal.aborted) throw new StudioError("The picture took too long. Try again.", 504);
     if (e instanceof ProviderError && !e.retry) throw new StudioError("The AI provider refused this request. Change the words or the picture and try again.", 422);
+    if (isBillingError(e)) throw new StudioError(SERVICE_UNPAID, 503);
     throw new StudioError("The picture could not be made. Try again in a minute.");
   }
 }
@@ -255,6 +259,7 @@ export async function assistantTurn(req: AssistantRequest, plan: Plan, userId: s
   } catch (e) {
     if (signal.aborted) throw new StudioError("The assistant took too long. Try again.", 504);
     console.error("AI Studio assistant failed", e);
+    if (isBillingError(e)) throw new StudioError(SERVICE_UNPAID, 503);
     throw new StudioError("The assistant could not answer. Try again in a minute.");
   }
 }

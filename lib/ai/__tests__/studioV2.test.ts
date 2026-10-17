@@ -8,7 +8,7 @@ import { directorTurn, DIRECTOR_SYSTEM } from "../studio/director";
 import { INSPIRATION } from "../studio/inspiration";
 import { DESIGN_KITS, isRtl, KIT_CATEGORIES, kitFont, kitPrompt } from "../studio/kits";
 import { assistantRequestSchema, BRIEF_PRODUCTS, directorRequestSchema, imageRequestSchema, MAX_VARIATIONS } from "../studio/request";
-import { ASSISTANT_SYSTEM, generatePrompt, studioImage, VARIATION_HINTS } from "../studio/server";
+import { ASSISTANT_SYSTEM, generatePrompt, SERVICE_UNPAID, studioImage, VARIATION_HINTS } from "../studio/server";
 import { styleArt, styleArtIds } from "../studio/styleArt";
 import { STYLE_GROUPS, STYLE_PRESETS, styleById } from "../studio/styles";
 
@@ -104,6 +104,14 @@ describe("AI Studio engine", () => {
     await studioImage({ op: "generate", prompt: "an owl", refs: [PNG_1x1, PNG_1x1] }, "u", signal, [p]);
     expect(p.jobs[0].images).toHaveLength(2);
     expect(p.jobs[0].prompt).toMatch(/references/);
+  });
+
+  it("says plainly when the AI accounts have no paid credit", async () => {
+    const broke = mockImageProvider("openai", () => { throw new Error("AI_APICallError: You have no credits remaining. Add credits to continue"); });
+    const free = mockImageProvider("gateway", () => { throw new Error("Free tier users do not have access to this model."); });
+    await expect(studioImage({ op: "generate", prompt: "a fox" }, "u", signal, [broke, free])).rejects.toMatchObject({ status: 503, message: SERVICE_UNPAID });
+    const down = mockImageProvider("x", () => { throw new Error("503 upstream"); });
+    await expect(studioImage({ op: "generate", prompt: "a fox" }, "u", signal, [down])).rejects.toMatchObject({ status: 502 });
   });
 
   it("checks the new requests", () => {

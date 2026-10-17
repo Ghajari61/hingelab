@@ -6,11 +6,11 @@ import "server-only";
  */
 import { generateText, Output, type LanguageModel, type ModelMessage } from "ai";
 import { z } from "zod";
-import { claudeFirstRoutes, userTag, withFallback, type TextRoute } from "@/lib/ai/providers";
+import { claudeFirstRoutes, isBillingError, userTag, withFallback, type TextRoute } from "@/lib/ai/providers";
 import { COSTS } from "./credits";
 import { briefLine, METHOD_NAMES, PRODUCT_NAMES } from "./brief";
 import type { CritiqueResponse, DirectorRequest, EnhanceResponse, LaserBrief } from "./request";
-import { decodeDataUrl, StudioError } from "./server";
+import { decodeDataUrl, SERVICE_UNPAID, StudioError } from "./server";
 import { styleById } from "./styles";
 
 const enhanceSchema = z.object({
@@ -94,6 +94,7 @@ export async function directorTurn(req: DirectorRequest, userId: string, signal:
   } catch (e) {
     if (e instanceof StudioError) throw e;
     if (signal.aborted) throw new StudioError("The Creative Director took too long. Try again.", 504);
+    if (isBillingError(e)) throw new StudioError(SERVICE_UNPAID, 503);
     throw new StudioError("The Creative Director could not answer. Try again in a minute.");
   }
 }
