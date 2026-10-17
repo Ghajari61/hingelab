@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { currentPlan } from "@/lib/billing/plan";
-import { anyProvider } from "@/lib/ai/providers/config";
+import { studioProvider } from "@/lib/ai/providers/config";
 import { COSTS, HIGH_QUALITY_EXTRA, STUDIO_DAILY } from "@/lib/ai/studio/credits";
 import { hasPro } from "@/lib/plans";
 
@@ -8,7 +8,7 @@ import { hasPro } from "@/lib/plans";
 export async function GET() {
   const { plan, userId } = await currentPlan();
   return NextResponse.json(
-    { signedIn: !!userId, plan, daily: STUDIO_DAILY[plan], costs: COSTS, highExtra: HIGH_QUALITY_EXTRA, highQuality: hasPro(plan), cloud: anyProvider(process.env) },
+    { signedIn: !!userId, plan, daily: STUDIO_DAILY[plan], costs: COSTS, highExtra: HIGH_QUALITY_EXTRA, highQuality: hasPro(plan), cloud: studioProvider(process.env) },
     { headers: { "cache-control": "no-store" } },
   );
 }

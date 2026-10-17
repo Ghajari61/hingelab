@@ -19,6 +19,8 @@ export const OPENAI_TEXT_MODEL = "gpt-6-astra";
 export const gatewayAvailable = (env: Env) => !!(env.VERCEL || env.VERCEL_OIDC_TOKEN || env.AI_GATEWAY_API_KEY);
 export const openaiAvailable = (env: Env) => !!env.OPENAI_API_KEY;
 export const anyProvider = (env: Env) => gatewayAvailable(env) || openaiAvailable(env);
+/** Anything AI Studio's cloud tools can use: a picture service, or Claude for vector drawings. */
+export const studioProvider = (env: Env) => anyProvider(env) || !!env.ANTHROPIC_API_KEY;
 
 export interface ProviderPlan { id: "openai" | "gateway"; model: string }
 

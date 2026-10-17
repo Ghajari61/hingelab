@@ -80,7 +80,7 @@ export function Dashboard({ account, catalog, recent, files, defaultProduct, onN
         <div className="dash-main">
           <section className="dash-card dash-new" aria-labelledby="dash-new">
             <div className="sec-head">
-              <h2 id="dash-new" className="sub">Start a new design</h2>
+              <h2 id="dash-new" className="sub"><span className="icon-chip sm" aria-hidden><Plus size={14} /></span>Start a new design</h2>
               <button type="button" className="link-btn" onClick={onBrowse}>All presets<ArrowRight size={13} aria-hidden /></button>
             </div>
             <div className="tiles">
@@ -102,7 +102,7 @@ export function Dashboard({ account, catalog, recent, files, defaultProduct, onN
           {ideas.length > 0 && (
             <section className="dash-card dash-ideas" aria-labelledby="dash-ideas">
               <div className="sec-head">
-                <h2 id="dash-ideas" className="sub">Ready-made designs</h2>
+                <h2 id="dash-ideas" className="sub"><span className="icon-chip sm peach" aria-hidden><Star size={14} /></span>Ready-made designs</h2>
                 <button type="button" className="link-btn" onClick={onBrowse}>See all<ArrowRight size={13} aria-hidden /></button>
               </div>
               <ul className="ideas">
@@ -126,7 +126,7 @@ export function Dashboard({ account, catalog, recent, files, defaultProduct, onN
 
           <section className="dash-card dash-online" aria-labelledby="dash-online">
             <div className="sec-head">
-              <h2 id="dash-online" className="sub">From the website</h2>
+              <h2 id="dash-online" className="sub"><span className="icon-chip sm teal" aria-hidden><Globe size={14} /></span>From the website</h2>
               <button type="button" className="link-btn" onClick={() => onOnline("web-editors", "/app/editor/local")}>All editors<ArrowRight size={13} aria-hidden /></button>
             </div>
             <div className="online">
@@ -146,7 +146,7 @@ export function Dashboard({ account, catalog, recent, files, defaultProduct, onN
         <aside className="dash-side" aria-label="Your work">
           <section className="dash-card dash-recent" aria-labelledby="dash-recent">
             <div className="sec-head">
-              <h2 id="dash-recent" className="sub">Recent designs</h2>
+              <h2 id="dash-recent" className="sub"><span className="icon-chip sm" aria-hidden><History size={14} /></span>Recent designs</h2>
             </div>
             {recent.length
               ? (
@@ -179,7 +179,7 @@ export function Dashboard({ account, catalog, recent, files, defaultProduct, onN
           </section>
           <section className="dash-card dash-files" aria-labelledby="dash-files">
             <div className="sec-head">
-              <h2 id="dash-files" className="sub">Project files</h2>
+              <h2 id="dash-files" className="sub"><span className="icon-chip sm teal" aria-hidden><FolderOpen size={14} /></span>Project files</h2>
               <button type="button" className="link-btn" onClick={() => onOpenFile(null)}>Open<FolderOpen size={13} aria-hidden /></button>
             </div>
             {files.length ? (

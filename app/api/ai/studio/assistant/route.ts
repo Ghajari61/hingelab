@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { currentPlan } from "@/lib/billing/plan";
-import { anyProvider } from "@/lib/ai/providers/config";
+import { studioProvider } from "@/lib/ai/providers/config";
 import { COSTS } from "@/lib/ai/studio/credits";
 import { assistantRequestSchema, firstIssue, MAX_CHAT_IMAGE, MAX_CHAT_TEXT, MAX_CHAT_TURNS } from "@/lib/ai/studio/request";
 import { assistantTurn, creditsMessage, spendCredits, StudioError } from "@/lib/ai/studio/server";
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   if (length !== null && length > MAX_BODY) return json({ error: "The conversation is too long. Start a new one." }, 413);
   const { plan, userId } = await currentPlan();
   if (!userId) return json({ error: "Sign in to use the assistant." }, 401);
-  if (!anyProvider(process.env)) return json({ error: "The assistant is not set up on this server." }, 503);
+  if (!studioProvider(process.env)) return json({ error: "The assistant is not set up on this server." }, 503);
   const text = await request.text();
   if (text.length > MAX_BODY) return json({ error: "The conversation is too long. Start a new one." }, 413);
   let raw: unknown;

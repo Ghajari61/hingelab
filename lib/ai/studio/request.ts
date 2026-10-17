@@ -50,6 +50,8 @@ export interface ImageResponse {
   credits: number;
   provider: string;
   model: string;
+  /** Shown with the result, e.g. that Claude drew it as vectors. */
+  note?: string;
 }
 
 // ------------------------------------------------------------------ Creative Director and review

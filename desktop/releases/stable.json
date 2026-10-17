@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.52",
-    "pub_date": "2026-10-17T07:28:43.882Z",
-    "notes": "AI Studio says plainly when its AI service is out of paid credit.",
+    "version": "1.0.53",
+    "pub_date": "2026-10-17T09:02:27.826Z",
+    "notes": "AI Studio draws again: when the picture service is unavailable, Claude draws clean vector artwork instead. A calmer, brighter look with new colours, buttons and icons.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.52_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnI3b0QwSHR1dnFldFM0NllkYlhNSVJ6VXBjaU9Ucms3azRiMzcvTGwySjhOU0N1TU05amdhK1ZRVmdPUFRiZVh5ZEdYV2FrYmtzZ0drbnJYZkZ2NWdFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjIxOTgzCWZpbGU6SGluZ2VMYWJfMS4wLjUyX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTIKMVgySmxFcm0zdE9JQ284THkxemVTSFJ0NloyZ2xCQUtvMldpY1J2Z25vdEtDYUN4VEZSNUd3bDN4TmlVOUpZeDVQWDRpSFRsc09WOUwxWDJ1VmxuQWc9PQo=",
-        "size": 4270715
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.53_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmdRcHlwcEJyV1dKdFA4dk1pNVREMVNtMWI4YUgvRzdUN21pZmZvYjJaT0RHMDNhUVRXdElXS3hzVElEUFl4QVdhdVUxWEpZdHoyMjN4MEM2K010ZHdNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjI3NTI2CWZpbGU6SGluZ2VMYWJfMS4wLjUzX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTMKWHZvdXRZUUZISkRzRnBCR3puVHJNZWdrNjM3dnpMZjE5aS9Eb1R2QlNhZHc4RllEemQ3emtiVzNwSFJxU1JIUDRPVDdKeXh4eXRrN1hacVp1QU1tQ0E9PQo=",
+        "size": 4273310
       }
     }
   }

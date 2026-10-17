@@ -109,9 +109,11 @@ describe("AI Studio engine", () => {
   it("says plainly when the AI accounts have no paid credit", async () => {
     const broke = mockImageProvider("openai", () => { throw new Error("AI_APICallError: You have no credits remaining. Add credits to continue"); });
     const free = mockImageProvider("gateway", () => { throw new Error("Free tier users do not have access to this model."); });
-    await expect(studioImage({ op: "generate", prompt: "a fox" }, "u", signal, [broke, free])).rejects.toMatchObject({ status: 503, message: SERVICE_UNPAID });
+    const noClaude = async () => { throw new Error("Your credit balance is too low (billing)"); };
+    await expect(studioImage({ op: "generate", prompt: "a fox" }, "u", signal, [broke, free], "pro", noClaude)).rejects.toMatchObject({ status: 503, message: SERVICE_UNPAID });
     const down = mockImageProvider("x", () => { throw new Error("503 upstream"); });
-    await expect(studioImage({ op: "generate", prompt: "a fox" }, "u", signal, [down])).rejects.toMatchObject({ status: 502 });
+    const overloaded = async () => { throw new Error("overloaded"); };
+    await expect(studioImage({ op: "generate", prompt: "a fox" }, "u", signal, [down], "pro", overloaded)).rejects.toMatchObject({ status: 502 });
   });
 
   it("checks the new requests", () => {
@@ -126,7 +128,7 @@ describe("AI Studio engine", () => {
 
   it("puts Claude first and keeps the OpenAI chain after it", () => {
     const env = { AI_GATEWAY_API_KEY: "x", OPENAI_API_KEY: "y", ANTHROPIC_API_KEY: "z" };
-    expect(claudeFirstRoutes("u", "t", env).map((r) => r.id)).toEqual(["claude-gateway", "claude", "openai", "gateway"]);
+    expect(claudeFirstRoutes("u", "t", env).map((r) => r.id)).toEqual(["claude", "claude-gateway", "openai", "gateway"]);
     expect(claudeFirstRoutes("u", "t", { ...env, AI_DESIGN_ORDER: "openai,gateway" }).map((r) => r.id)).toEqual(["openai", "gateway"]);
   });
 });

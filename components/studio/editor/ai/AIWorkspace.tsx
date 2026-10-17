@@ -447,6 +447,7 @@ export function AIWorkspace(props: AIStudioProps) {
                     <button key={node.id} type="button" className={`aiw-result${selected === node.id ? " on" : ""}`} onClick={() => setSelected(node.id)} data-testid="aiw-result">
                       <NodePicture docId={docId} node={node} alt={job.input.label} />
                       <ScoreBadge r={scores[node.id]} />
+                      {job.stage && /vector/i.test(job.stage) && <span className="aiw-vec" title={job.stage}><PenTool size={10} aria-hidden /> Vector</span>}
                       <span className="nm">{job.input.label}</span>
                     </button>
                   ))}

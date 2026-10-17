@@ -15,6 +15,7 @@ import { examplesFor } from "@/lib/ai/examples";
 import { claudeFirstRoutes, imageProviders, isBillingError, userTag, withFallback, ProviderError, type ImageData, type ImageProvider, type ImageSize } from "@/lib/ai/providers";
 import { COSTS, imageCost, STUDIO_DAILY, type CloudOp } from "./credits";
 import { directorTurn } from "./director";
+import { drawVectorArt, type VectorAsk, type VectorResult } from "./vectorArt";
 import { DESIGN_KITS, kitById } from "./kits";
 import { MAX_VARIATIONS, type AssistantAction, type AssistantRequest, type AssistantResponse, type ImageRequest, type ImageResponse } from "./request";
 import { STYLE_PRESETS, stylePrompt } from "./styles";
@@ -25,6 +26,9 @@ export class StudioError extends Error {
 
 /** Shown when the AI provider accounts behind HingeLab have run out of paid credit. */
 export const SERVICE_UNPAID = "AI Studio's AI service is out of paid credit right now, so nothing was made. Please try again later.";
+/** Redraw, Expand and AI Cutout need a picture service; the vector engine cannot do them. */
+export const RASTER_ONLY = "This tool needs the AI picture service, which is not available right now. Quick Cutout, Smart Adjust, Line art and the other tools on this computer still work.";
+export const VECTOR_NOTE = "Drawn as clean vectors by Claude";
 
 /** Spends `cost` credits: the burst limit once, then one daily hit per credit. */
 export async function spendCredits(plan: Plan, userId: string, cost: number): Promise<LimitResult & { daily?: boolean }> {
@@ -99,7 +103,28 @@ export function generatePrompt(req: Extract<ImageRequest, { op: "generate" }>): 
   return req.transparent ? styled.replace("Pure white background", "Transparent background") : styled;
 }
 
-export async function studioImage(req: ImageRequest, userId: string, signal: AbortSignal, providers: ImageProvider[] = imageProviders(), plan: Plan = "pro"): Promise<ImageResponse> {
+/** Draws with the vector engine instead of a picture service (generate and restyle). */
+export type VectorDraw = (o: VectorAsk, userId: string, signal: AbortSignal) => Promise<VectorResult>;
+
+async function vectorImage(req: ImageRequest, userId: string, signal: AbortSignal, draw: VectorDraw, plan: Plan): Promise<ImageResponse> {
+  if (req.op !== "generate" && req.op !== "restyle") throw new StudioError(RASTER_ONLY, 503);
+  const quality = req.quality === "high" && hasPro(plan) ? "high" : "medium";
+  try {
+    const r = req.op === "generate"
+      ? await draw({ prompt: [req.prompt, VARIATION_HINTS[req.variation ?? 0]].filter(Boolean).join("\n"), style: req.style, aspect: req.aspect ?? "square", refs: req.refs?.map(decodeDataUrl), transparent: !!req.transparent }, userId, signal)
+      : await draw({ prompt: req.prompt ?? "", style: req.style, source: decodeDataUrl(req.image), sketch: !!req.sketch }, userId, signal);
+    return { image: `data:image/png;base64,${Buffer.from(r.png).toString("base64")}`, credits: imageCost(req.op, quality), provider: "claude-vector", model: r.model, note: VECTOR_NOTE };
+  } catch (e) {
+    if (signal.aborted) throw new StudioError("The picture took too long. Try again.", 504);
+    if (e instanceof StudioError) throw e;
+    console.error("AI Studio vector failed", e instanceof Error ? e.message.slice(0, 300) : e);
+    if (isBillingError(e)) throw new StudioError(SERVICE_UNPAID, 503);
+    throw new StudioError("The picture could not be made. Try again in a minute.");
+  }
+}
+
+export async function studioImage(req: ImageRequest, userId: string, signal: AbortSignal, providers: ImageProvider[] = imageProviders(), plan: Plan = "pro", draw: VectorDraw = drawVectorArt): Promise<ImageResponse> {
+  if (!providers.length) return vectorImage(req, userId, signal, draw, plan);
   const user = userTag("ai-studio", userId);
   let size: ImageSize = req.op === "generate" ? (req.aspect === "wide" ? "1536x1024" : req.aspect === "tall" ? "1024x1536" : "1024x1024") : "1024x1024";
   const images: ImageData[] = [];
@@ -121,8 +146,8 @@ export async function studioImage(req: ImageRequest, userId: string, signal: Abo
   } catch (e) {
     if (signal.aborted) throw new StudioError("The picture took too long. Try again.", 504);
     if (e instanceof ProviderError && !e.retry) throw new StudioError("The AI provider refused this request. Change the words or the picture and try again.", 422);
-    if (isBillingError(e)) throw new StudioError(SERVICE_UNPAID, 503);
-    throw new StudioError("The picture could not be made. Try again in a minute.");
+    // No credit, an outage or a broken key: Claude draws it instead (Redraw, Expand and Cutout say they need the picture service).
+    return vectorImage(req, userId, signal, draw, plan);
   }
 }
 

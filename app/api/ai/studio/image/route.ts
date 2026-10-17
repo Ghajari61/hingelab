@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { currentPlan } from "@/lib/billing/plan";
-import { anyProvider } from "@/lib/ai/providers/config";
+import { studioProvider } from "@/lib/ai/providers/config";
 import { imageCost } from "@/lib/ai/studio/credits";
 import { hasPro } from "@/lib/plans";
 import { firstIssue, imageRequestSchema, MAX_STUDIO_BODY } from "@/lib/ai/studio/request";
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
   if (length !== null && length > MAX_STUDIO_BODY) return json({ error: "The picture is too large. Use a smaller one." }, 413);
   const { plan, userId } = await currentPlan();
   if (!userId) return json({ error: "Sign in to use AI Studio's cloud tools." }, 401);
-  if (!anyProvider(process.env)) return json({ error: "AI Studio's cloud tools are not set up on this server." }, 503);
+  if (!studioProvider(process.env)) return json({ error: "AI Studio's cloud tools are not set up on this server." }, 503);
   const text = await request.text();
   if (text.length > MAX_STUDIO_BODY) return json({ error: "The picture is too large. Use a smaller one." }, 413);
   let raw: unknown;

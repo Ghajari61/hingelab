@@ -102,7 +102,8 @@ describe("AI Studio pictures", () => {
     const refuse = mockImageProvider("x", () => { throw new ProviderError("safety system", "x", false); });
     await expect(studioImage({ op: "generate", prompt: "abc", aspect: "square" }, "u", signal, [refuse])).rejects.toMatchObject({ status: 422 });
     const down = mockImageProvider("x", () => { throw new Error("503"); });
-    await expect(studioImage({ op: "generate", prompt: "abc", aspect: "square" }, "u", signal, [down])).rejects.toBeInstanceOf(StudioError);
+    const noVector = async () => { throw new Error("503"); };
+    await expect(studioImage({ op: "generate", prompt: "abc", aspect: "square" }, "u", signal, [down], "pro", noVector)).rejects.toBeInstanceOf(StudioError);
   });
 
   it("prompts for each operation keep the original where they should", () => {

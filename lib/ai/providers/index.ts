@@ -65,9 +65,10 @@ export const CLAUDE_DIRECT_MODEL = "claude-sonnet-5-5";
  */
 export function claudeFirstRoutes(user: string, tag: string, env: Env = process.env): TextRoute[] {
   const order = (env.AI_DESIGN_ORDER || "claude,openai,gateway").split(",").map((s) => s.trim());
+  // The deployment's own key first: the Gateway may be on its free tier, which refuses Claude.
   const claude: TextRoute[] = [];
-  if (gatewayAvailable(env)) claude.push({ id: "claude-gateway", model: env.AI_CLAUDE_MODEL || CLAUDE_GATEWAY_MODEL, providerOptions: { gateway: { user, tags: [tag] } } });
   if (env.ANTHROPIC_API_KEY) claude.push({ id: "claude", model: createAnthropic({ apiKey: env.ANTHROPIC_API_KEY })(env.ANTHROPIC_MODEL || CLAUDE_DIRECT_MODEL), providerOptions: {} });
+  if (gatewayAvailable(env)) claude.push({ id: "claude-gateway", model: env.AI_CLAUDE_MODEL || CLAUDE_GATEWAY_MODEL, providerOptions: { gateway: { user, tags: [tag] } } });
   const rest = textRoutes(user, tag, env);
   const byHop: Record<string, TextRoute[]> = { claude, openai: rest.filter((r) => r.id === "openai"), gateway: rest.filter((r) => r.id === "gateway") };
   const list = order.flatMap((h) => byHop[h] ?? []);

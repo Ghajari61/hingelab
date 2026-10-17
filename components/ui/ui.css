@@ -1,10 +1,26 @@
 /* HingeLab UI component library (spec §15). Every value comes from styles/tokens.css. */
 
-.ui-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-3); height: 28px; padding-inline: var(--space-5); border-radius: var(--radius-2); border: 1px solid var(--line); background: var(--surface-raised); color: var(--text-primary); font: inherit; font-size: var(--text-ui); cursor: pointer; white-space: nowrap; box-shadow: var(--shadow-1); transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
-.ui-btn:hover:not(:disabled) { border-color: var(--line-strong); background: color-mix(in srgb, var(--surface-raised) 85%, var(--text-primary)); }
-.ui-btn:disabled { color: var(--text-disabled); cursor: default; }
-.ui-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 4px 12px -3px color-mix(in srgb, var(--accent) 60%, transparent); }
-.ui-btn.primary:hover:not(:disabled) { background: var(--accent-hi); border-color: var(--accent-hi); }
+.ui-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-3); height: 28px; padding-inline: var(--space-5); border-radius: var(--radius-3); border: 1px solid var(--line); background: var(--surface-raised); color: var(--text-primary); font: inherit; font-size: var(--text-ui); font-weight: 500; cursor: pointer; white-space: nowrap; box-shadow: var(--shadow-1); transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }
+.ui-btn:hover:not(:disabled) { border-color: color-mix(in srgb, var(--accent) 40%, var(--line-strong)); background: color-mix(in srgb, var(--accent) 7%, var(--surface-raised)); color: var(--text-primary); }
+.ui-btn:active:not(:disabled) { transform: translateY(1px); }
+.ui-btn:disabled { color: var(--text-disabled); cursor: default; box-shadow: none; }
+.ui-btn.primary { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 86%, #fff), var(--accent)); border-color: transparent; color: var(--accent-ink); font-weight: 600; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), var(--glow); }
+.ui-btn.primary:hover:not(:disabled) { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 92%, #fff), var(--accent-hi)); border-color: transparent; color: var(--accent-ink); transform: var(--lift); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 10px 24px -8px color-mix(in srgb, var(--accent) 75%, transparent); }
+.ui-btn.primary:disabled { background: color-mix(in srgb, var(--accent) 35%, var(--surface-raised)); color: color-mix(in srgb, var(--accent-ink) 75%, transparent); }
+.ui-btn.brand { background: var(--brand-grad); border-color: transparent; color: #fff; font-weight: 600; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), var(--glow); }
+.ui-btn.brand:hover:not(:disabled) { filter: brightness(1.06); transform: var(--lift); }
+.ui-btn.soft { background: var(--accent-soft); border-color: transparent; color: var(--accent-hi); box-shadow: none; }
+.ui-btn.soft:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent-hi); }
+
+/* An icon on a soft tinted tile (duotone feel): section headers, cards and tiles. */
+.icon-chip { display: inline-grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-hi); }
+.icon-chip.teal { background: var(--teal-soft); color: var(--teal-ink); }
+.icon-chip.peach { background: color-mix(in srgb, var(--cta) 14%, transparent); color: color-mix(in srgb, var(--cta) 80%, var(--text-primary)); }
+.icon-chip.sm { width: 24px; height: 24px; border-radius: 7px; }
+.icon-chip svg { width: 55%; height: 55%; }
+
+/* One stroke weight for every lucide icon. */
+svg.lucide { stroke-width: 1.75; }
 .ui-btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
 .ui-btn.ghost { background: none; border-color: transparent; color: var(--text-secondary); box-shadow: none; }
 .ui-btn.ghost:hover:not(:disabled) { background: var(--surface-raised); color: var(--text-primary); }

@@ -127,7 +127,7 @@ export function useAIRunner(props: AIStudioProps) {
   }, [docId, putImage, sourceOf]);
 
   /** Sends a picture (padded to the model's shape) and returns the answer cropped back to the original. */
-  const cloudPicture = useCallback(async (ctx: JobContext, ask: (url: string) => ImageAsk, img: Img, frame = true): Promise<Img> => {
+  const cloudPicture = useCallback(async (ctx: JobContext, ask: (url: string) => ImageAsk, img: Img, frame = true): Promise<{ img: Img; note?: string }> => {
     const framed = frame ? padTo(img, nearestAspect(img.width / img.height), WHITE) : { img, rect: { x: 0, y: 0, w: 1, h: 1 } as FrameRect };
     ctx.stage("Sending the picture…", 0.15);
     const url = await uploadUrl(framed.img, 1536);
@@ -136,7 +136,7 @@ export function useAIRunner(props: AIStudioProps) {
     spent(r.credits);
     ctx.stage("Placing…", 0.9);
     const out = await decodeImage(await dataUrlToBlob(r.image));
-    return frame ? cropTo(out, framed.rect) : out;
+    return { img: frame ? cropTo(out, framed.rect) : out, note: r.note };
   }, []);
 
   // `run` and `followUp` call each other (a recipe's picture is then engraved), so followUp reads run late.
@@ -249,23 +249,23 @@ export function useAIRunner(props: AIStudioProps) {
         const widthMm = Number(o.widthMm) || 100, c = viewCenter(), k = Number(o.index) || 0;
         const ids = await putImage(img, input, { kind: "at", center: { x: c.x + k * (widthMm + 10), y: c.y }, widthMm });
         if (ids[0]) followUp(ids[0], o);
-        return { ids, credits: r.credits };
+        return { ids, credits: r.credits, note: r.note };
       }; break;
       case "restyle": work = async (ctx) => {
         const src = sourceOf(input);
         ctx.stage("Reading the image…", 0.05);
         const img = await readNodeImage(docId, src, 1536);
         const out = await cloudPicture(ctx, (url) => ({ op: "restyle", prompt: input.prompt ?? "", style: input.style, image: url, sketch: !!o.sketch, ...(o.quality === "high" ? { quality: "high" as const } : {}) }), img);
-        const ids = await putImage(out, input, { kind: "beside", source: src });
+        const ids = await putImage(out.img, input, { kind: "beside", source: src });
         if (ids[0] && (o.then || o.text)) followUp(ids[0], o);
-        return { ids, credits: COSTS.restyle };
+        return { ids, credits: COSTS.restyle, note: out.note };
       }; break;
       case "aiCutout": work = async (ctx) => {
         const src = sourceOf(input);
         ctx.stage("Reading the image…", 0.05);
         const img = await readNodeImage(docId, src, 1536);
         const white = await cloudPicture(ctx, (url) => ({ op: "cutout", image: url }), img);
-        const r = await imaging({ op: "whiteToAlpha", img: white, tolerance: 0.08 }, ctx.signal);
+        const r = await imaging({ op: "whiteToAlpha", img: white.img, tolerance: 0.08 }, ctx.signal);
         if (r.kind !== "image") throw new Error("Unexpected result.");
         return { ids: await putImage(r.img, input, { kind: "over", source: src }, { hideSource: true }), credits: COSTS.cutout };
       }; break;
