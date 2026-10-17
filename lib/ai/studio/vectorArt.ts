@@ -112,7 +112,7 @@ export async function drawVectorArt(o: VectorAsk, userId: string, signal: AbortS
     const ask = async () => {
       const { text } = await generateText({
         model: r.model, providerOptions: { ...r.providerOptions, anthropic: { effort: VECTOR_EFFORT } },
-        system: VECTOR_SYSTEM, messages, maxOutputTokens: 16_000, abortSignal: signal,
+        system: VECTOR_SYSTEM, messages, maxOutputTokens: 16_000, maxRetries: 1, abortSignal: signal,
       });
       return text;
     };

@@ -7,7 +7,7 @@ import "server-only";
  */
 import { createHash } from "node:crypto";
 import { generateText, Output, type LanguageModel, type UserContent } from "ai";
-import { designRoutes, imageProviders } from "@/lib/ai/providers";
+import { designRoutes, imageProviders, isBillingError } from "@/lib/ai/providers";
 import { z } from "zod";
 import { coerce, designFromChanges, generateDesign } from "@/lib/desktop/products";
 import type { DesktopProductId, DField, GenerateResponse } from "@/lib/desktop/types";
@@ -25,6 +25,7 @@ import { decodePhoto, editPad, isFlatArt, isTwoTone, padDesign, padFromPicture, 
 import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_OPEN_PATH, type AIDesign, type AIDesignRequest, type AIOpen, type AIProduct, type AIRevise } from "./types";
 
 const TIMEOUT_MS = 50_000;
+export const SERVICE_LIMIT = "The AI service has reached its usage limit, so nothing was made. Please try again later.";
 /** An original design: drawing, rendering and one look at the result (the routes allow 180 s). */
 const ART_TIMEOUT_MS = 150_000;
 
@@ -119,11 +120,12 @@ async function askModel<T>(ask: Ask, system: string, content: UserContent, schem
         messages: [{ role: "user", content }],
         output: Output.object({ schema }),
         reasoning,
+        maxRetries: 1,
         abortSignal: ask.signal,
       });
       return output as T;
     } catch (e) {
-      if (i + 1 >= list.length || ask.signal.aborted) throw e;
+      if (i + 1 >= list.length || ask.signal.aborted) throw isBillingError(e) ? new AIDesignError(SERVICE_LIMIT) : e;
       console.warn("AI designer: model failed, trying the next:", e instanceof Error ? e.message.slice(0, 200) : e);
     }
   }
@@ -341,6 +343,7 @@ export async function designWithAI(req: AIDesignRequest, plan: Plan, userId: str
       const current = rev ? `Current design: "${rev.name}", preset ${rev.preset ?? "none"}. Pick the preset that best fits the design with this change.` : undefined;
       choice = await pick(current ? { prompt: `${req.prompt}\n\n${current}` } : req, revising ? [revising] : menu, ask);
     } catch (e) {
+      if (e instanceof AIDesignError) throw e;
       console.error("ai design: pick failed", e);
       throw new AIDesignError("The AI designer could not read the request. Try again or describe it differently.");
     }

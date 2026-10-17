@@ -46,7 +46,7 @@ async function ask<T>(a: Ask, system: string, content: string | ModelMessage[], 
   if (!routes.length) throw new StudioError("AI Studio's cloud tools are not set up on this server.", 503);
   const messages: ModelMessage[] = typeof content === "string" ? [{ role: "user", content }] : content;
   const { result } = await withFallback(routes, async (r) => {
-    const { output } = await generateText({ model: r.model, providerOptions: r.providerOptions, system, messages, output: Output.object({ schema }), abortSignal: a.signal });
+    const { output } = await generateText({ model: r.model, providerOptions: r.providerOptions, system, messages, output: Output.object({ schema }), maxRetries: 1, abortSignal: a.signal });
     return output as T;
   }, a.signal, (r, e) => console.warn(`AI Studio director: ${r.id} failed:`, e instanceof Error ? e.message.slice(0, 200) : e));
   return result;

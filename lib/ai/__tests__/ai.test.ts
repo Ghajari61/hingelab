@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { MockLanguageModelV4 } from "ai/test";
-import { AIDesignError, designWithAI } from "../design";
+import { AIDesignError, designWithAI, SERVICE_LIMIT } from "../design";
 import { aiMenu, fieldsText, productsText } from "../menu";
 import { parseAIRequest } from "../request";
 import { AI_OPEN_PREFIX, AI_PRODUCTS, MAX_IMAGE_NOTE, MAX_OPEN_PATH, MAX_PROMPT, MAX_REVISE_CHARS, reviseOf } from "../types";
@@ -394,6 +394,17 @@ describe("AI designer", () => {
       await expect(designWithAI({ prompt: "a box" }, "pro", "user-1")).rejects.toBeInstanceOf(AIDesignError);
       expect(hosts.length).toBeGreaterThan(0);
       expect(new Set(hosts)).toEqual(new Set(["generativelanguage.googleapis.com"]));
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("says the usage limit is reached when Google refuses for quota", async () => {
+    vi.stubEnv("GOOGLE_GENERATIVE_AI_API_KEY", "g-test-not-real");
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ error: { code: 400, message: "You exceeded your current quota, please check your plan and billing details.", status: "FAILED_PRECONDITION" } }), { status: 400, headers: { "content-type": "application/json" } }));
+    try {
+      await expect(designWithAI({ prompt: "a box" }, "pro", "user-1")).rejects.toThrow(SERVICE_LIMIT);
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();

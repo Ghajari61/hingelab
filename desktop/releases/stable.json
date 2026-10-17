@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.55",
-    "pub_date": "2026-10-17T16:08:32.590Z",
-    "notes": "All AI now runs on Google: Nano Banana draws pictures, Gemini writes plans and vector drawings. The AI designer sketches each original design with Nano Banana first, then traces it into a laser-ready file.",
+    "version": "1.0.56",
+    "pub_date": "2026-10-17T17:17:07.952Z",
+    "notes": "AI requests fail fast with a clear message when the AI service reaches its usage limit, instead of waiting and timing out.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.55_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnBQZ3RPeDRWNnpmbVFGZmVTZDYxSm84UEFwMm5rR3pTc0E2RGlLZ1krLzRReG9LOXJSN0gxSmdjMU1BRWNQRkliUVNuYlZKWFExWUdqZlU3NzBtZVFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjUzMTM2CWZpbGU6SGluZ2VMYWJfMS4wLjU1X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTUKNmduaGJRQXVPUWgrdjM4OTM1Y0ZlZ3E2OE1GL3JsTFRWK0dUQ3BYc2I1YUdSck16UHAzZjVKdkY1WWo2TUFVdUNUZ0dNc3NFU29HWnNQaXFjZTByQkE9PQo=",
-        "size": 4271428
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.56_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm5KTHRBNVBMT1hXaHlPRUcyNTZWOFFMRVdmMkg2V3BlZE9heitVUmVUNnVQRUxHOWVIa05VN3VEQmJSYW1rQ3kvRVRzSEhENHJVRCttUUl2Q1ZUclFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjU3MzA5CWZpbGU6SGluZ2VMYWJfMS4wLjU2X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTYKc2pvWFMzWHVjU3NqUlp0SSt3eE1INlFEeG52S3hqTFkrMUdzM0VvOFI2TWRxYjArNHBSUks1ZVA2TW9jVDBaMDBDVnVxR01vVXA1elRxWll4WFYwQkE9PQo=",
+        "size": 4271716
       }
     }
   }

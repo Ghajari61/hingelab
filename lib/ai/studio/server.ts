@@ -25,7 +25,7 @@ export class StudioError extends Error {
 }
 
 /** Shown when the AI provider accounts behind HingeLab have run out of paid credit. */
-export const SERVICE_UNPAID = "AI Studio's AI service is out of paid credit right now, so nothing was made. Please try again later.";
+export const SERVICE_UNPAID = "AI Studio's AI service has reached its usage limit, so nothing was made. Please try again later.";
 /** Redraw, Expand and AI Cutout need a picture service; the vector engine cannot do them. */
 export const RASTER_ONLY = "This tool needs the AI picture service, which is not available right now. Quick Cutout, Smart Adjust, Line art and the other tools on this computer still work.";
 export const VECTOR_NOTE = "Drawn as clean vectors by the AI";
@@ -276,7 +276,7 @@ export async function assistantTurn(req: AssistantRequest, plan: Plan, userId: s
       return generateText({
         model: r.model, providerOptions: r.providerOptions,
         system: `${ASSISTANT_SYSTEM}\n\nThe user's Studio:\n${ctx}`,
-        messages, tools, stopWhen: stepCountIs(4), abortSignal: signal,
+        messages, tools, stopWhen: stepCountIs(4), maxRetries: 1, abortSignal: signal,
       });
     }, signal, (r, e) => console.warn(`AI Studio assistant: ${r.id} failed:`, e instanceof Error ? e.message.slice(0, 200) : e));
     const reply = result.text.trim() || (actions.length ? "Done. Apply it with the button below." : "I could not answer that. Try asking differently.");
