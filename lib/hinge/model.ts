@@ -7,6 +7,7 @@ import { ellipse, kerfAcross } from "@/lib/materials/axes";
 import { bendAnalysis } from "./analysis";
 import { r3 } from "./util";
 import { coreDistance, isLidSlot, lidSlotSize, slotAlongY, slotOutline } from "./lidSlot";
+import { buildDividers, hasDividers } from "./dividers";
 
 const NUMS = ["W", "D", "H", "R", "dia", "T", "K", "slotW", "slit", "bridge", "pitch", "overrun", "tabW", "slotClr", "lidGap", "bedW", "bedH", "gap"] as const;
 
@@ -50,13 +51,16 @@ export function computeModel(input: Params): ComputeResult {
     ? { kind: "plate", name, r: r0, ek: [k, ky], edges, slots, bbox: bboxOf(roundedPointsXY(edges, r0, k, ky)) }
     : { kind: "plate", name, r: r0 + k / 2, edges, slots, bbox: plateExtent(edges, r0 + k / 2) };
   const over = Math.max(0, p.lidOver ?? 0);
-  parts.push(plate("BASE", R, slotRects));
+  let ring: PlatePart | null = null, ringIn: number | null = null;
   if (p.baseRing) {
     const band = p.baseRingW ?? 8;
     const ro = R - t - p.lidGap, ri = ro - band;
-    if (ro > 1 && ri > k + 1) parts.push(plate("BASE RING", ro, [insetPoints(edges, ri, k, ky)]));
+    if (ro > 1 && ri > k + 1) { ring = plate("BASE RING", ro, [insetPoints(edges, ri, k, ky)]); ringIn = ri; }
     else issues.push({ lvl: "warn", msg: "The box is too small for a support ring of this width, so the ring was left out. Use a wider box or a narrower ring." });
   }
+  const div = hasDividers(p) ? buildDividers(p, edges, R - t, hBody, ringIn) : null;
+  parts.push(plate("BASE", R, div ? [...slotRects, ...div.baseSlots] : slotRects));
+  if (ring) parts.push(ring);
   const coreIn = Math.min(...edges.map(e => e.c[0] * e.n[0] + e.c[1] * e.n[1]));
   /** The finger or knob hole, centred, when it fits inside `inner` (the clear radius) with 3 mm to spare. */
   let holeR = 0;
@@ -89,6 +93,8 @@ export function computeModel(input: Params): ComputeResult {
     else if (p.lidLip !== false) issues.push({ lvl: "warn", msg: "Corner radius is too small for a lid lip, so the lip was left out. Increase the radius above " + r3(t + p.lidGap + 1) + " mm." });
   }
 
+  if (div) { parts.push(...div.parts); issues.push(...div.issues); }
+
   // ---- bend test strip
   if (p.testStrip && zoneLen > 0) parts.push(buildTestStrip(p, zoneLen, hBody, hs));
 
@@ -105,5 +111,5 @@ export function computeModel(input: Params): ComputeResult {
   if (edges.some(e => e.len > 0.01 && e.tabs.length === 0 && !e.seam) || edges.every(e => e.tabs.length === 0)) {
     if (edges.every(e => e.tabs.length === 0)) issues.push({ lvl: "warn", msg: "No flat side is long enough for a tab, so the wall must be glued in place. Use smaller tabs or a larger box." });
   }
-  return { core, R, rN, L, hBody, parts, cols, hs, issues, zoneLen, analysis: Object.assign(an, { columns: cols.length }) };
+  return { core, R, rN, L, hBody, parts, cols, hs, issues, zoneLen, analysis: Object.assign(an, { columns: cols.length }), ...(div?.places.length ? { dividers: div.places } : {}) };
 }

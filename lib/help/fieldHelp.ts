@@ -33,6 +33,9 @@ export const HINGE_FIELD_HELP: Record<NumericKey, string> = {
   minFeature: "The narrowest bar your material holds without breaking or burning away. Auto-fit keeps hinge bars at least this wide; 0 uses the usual minimum.",
   lidOver: "How far the lid reaches past the walls all round, for a flat top with an edge to lift. 0 keeps the lid flush.",
   lidHoleD: "The diameter of the lid's hole: about 22 mm for a fingertip, or the size of your knob's screw. For a tissue or coin slot, the slot's length.",
+  divX: "How many dividers split the box across its width. Each runs front to back and stands in slots in the base.",
+  divY: "How many dividers split the box across its depth. Each runs left to right; where dividers cross they lock with half-lap slots.",
+  divH: "How tall the dividers stand. 0 makes them as tall as fits: just under a fixed lid, or under a lid's lip.",
   lidHoleW: "How wide the tissue or coin slot is. About 25 to 35 mm lets tissues pull through; 3 to 4 mm takes coins.",
   ...HINGE,
 };

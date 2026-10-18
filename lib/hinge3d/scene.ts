@@ -108,12 +108,19 @@ export function buildHingeScene(model: Model, p: Params, explode = 0): Scene3D {
   const z0 = t + wallLift;
   inner.add(wallBand(edges, R, R - t, z0, hBody));
   inner.add(slitLines(edges, R + 0.15, z0, hBody, p.pitch, honeyLattice(p).bridge));
+  for (const d of model.dividers ?? []) {
+    const [a, b] = [d.at - t / 2, d.at + t / 2];
+    const foot: Point[] = d.axis === "x" ? [[a, d.from], [b, d.from], [b, d.to], [a, d.to]] : [[d.from, a], [d.to, a], [d.to, b], [d.from, b]];
+    const m = slab(foot, [], t + wallLift * 0.7, d.h, d.name.toLowerCase());
+    m.userData.tint = 0.9;
+    inner.add(m);
+  }
   const top = t + hBody;
   const lidR = plateR + Math.max(0, p.lidOver ?? 0);
   const lid = model.parts.find((pt) => pt.kind === "plate" && pt.name === "LID");
-  const base = model.parts.find((pt) => pt.kind === "plate" && pt.name === "BASE");
-  // The tabs fill the tab slots, so only the finger or knob hole (after them) shows.
-  const holes = lid?.kind === "plate" ? lid.slots.slice(p.lid === "fixed" && base?.kind === "plate" ? base.slots.length : 0) : [];
+  // The wall's tabs fill the lid's first slots, so only the opening (after them) shows.
+  const tabSlots = edges.reduce((n, e) => n + e.tabs.length, 0);
+  const holes = lid?.kind === "plate" ? lid.slots.slice(p.lid === "fixed" ? tabSlots : 0) : [];
   if (p.lid === "fixed") inner.add(plate(edges, lidR, top + lidLift, t, "lid", 1.04, holes));
   if (p.lid === "removable") {
     const lipR = R - t - p.lidGap + p.K / 2;

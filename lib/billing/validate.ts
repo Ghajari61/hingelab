@@ -21,6 +21,7 @@ const HINGE_ENUMS: Partial<Record<keyof Params, readonly string[]>> = {
 /** Settings added later: optional, but in range when present. */
 const HINGE_OPTIONAL: Partial<Record<keyof Params, [number, number]>> = {
   Ky: [0, 5], lidOver: [0, 100], lidHoleD: [0, 500], lidHoleW: [1, 200], gamma: [0.001, 1], minFeature: [0, 50], baseRingW: [3, 80],
+  divX: [0, 8], divY: [0, 8], divH: [0, 3000],
 };
 
 /** [min, max] per Hinge Box number; the minimums are the editor's, the maximums are generous. */

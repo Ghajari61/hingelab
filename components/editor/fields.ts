@@ -5,7 +5,7 @@ export type NumericKey =
   | "W" | "D" | "H" | "R" | "sides" | "dia" | "cylFlats"
   | "T" | "K" | "slotW" | "slit" | "bridge" | "pitch" | "overrun" | "stretch"
   | "tabW" | "slotClr" | "lidGap" | "bedW" | "bedH" | "gap"
-  | "Ky" | "minFeature" | "lidOver" | "lidHoleD" | "lidHoleW" | "baseRingW";
+  | "Ky" | "minFeature" | "lidOver" | "lidHoleD" | "lidHoleW" | "baseRingW" | "divX" | "divY" | "divH";
 
 /** What NumberField needs to know about a field; shared by every product. */
 export interface BaseField {
@@ -25,7 +25,7 @@ export interface BaseField {
 
 export interface FieldDef extends BaseField {
   id: NumericKey;
-  sec: "secDims" | "secMat" | "secHinge" | "secJoints" | "secLid" | "secSheet";
+  sec: "secDims" | "secMat" | "secHinge" | "secJoints" | "secLid" | "secDiv" | "secSheet";
   show?: (p: Params) => boolean;
   lab?: (p: Params) => string;
   /** The value an optional setting has while the design leaves it out. */
@@ -57,6 +57,9 @@ export const FIELDS: FieldDef[] = [
   { id: "lidOver", label: "Overhang", sec: "secLid", len: true, step: 0.5, min: 0, max: 100, unset: () => 0 },
   { id: "lidHoleD", label: "Hole size", sec: "secLid", len: true, step: 0.5, min: 1, max: 500, show: p => !!p.lidHole && p.lidHole !== "none", lab: p => isLidSlot(p.lidHole) ? "Slot length" : "Hole size", unset: p => isLidSlot(p.lidHole) ? lidSlotSize(p).len : p.lidHole === "knob" ? 5 : 22 },
   { id: "lidHoleW", label: "Slot width", sec: "secLid", len: true, step: 0.5, min: 1, max: 200, show: p => isLidSlot(p.lidHole), unset: p => lidSlotSize(p).w },
+  { id: "divX", label: "Across width", sec: "secDiv", step: 1, min: 0, max: 8, unset: () => 0 },
+  { id: "divY", label: "Across depth", sec: "secDiv", step: 1, min: 0, max: 8, unset: () => 0 },
+  { id: "divH", label: "Height", sec: "secDiv", len: true, step: 1, min: 0, max: 3000, show: p => (p.divX ?? 0) + (p.divY ?? 0) > 0, lab: () => "Height (0 = full)", unset: () => 0 },
   { id: "bedW", label: "Bed W", sec: "secSheet", len: true, step: 10, min: 50 },
   { id: "bedH", label: "Bed H", sec: "secSheet", len: true, step: 10, min: 50 },
   { id: "gap", label: "Spacing", sec: "secSheet", len: true, step: 0.5, min: 0 },

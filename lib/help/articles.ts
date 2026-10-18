@@ -598,9 +598,27 @@ export const ARTICLES: HelpArticle[] = [
         "Overhang: the lid reaches this far past the walls all round, so a flat top has an edge to lift by. 0 keeps it flush with the box.",
         "Hole: a finger hole (about 22 mm) to lift a removable lid, or a knob hole sized for your knob's screw. A hole too big for the lid is left out, and Checks says so.",
         "Lip under the lid (removable lids): a second plate that sits inside the walls and keeps the lid in place. Turn it off for a lid that simply rests on top.",
+        "Tissue and coin slots: a long slot with round ends along the box's long side, sized to the box (tissue) or 32 × 4 mm (coin). Set its length and width; a slot too big for the lid is left out.",
+        "Score the lip on the lid: marks where the lip goes, so it lines up when you glue it. Put the scored side down.",
       ] },
     ],
-    related: ["box-joints", "hinge-dimensions"],
+    related: ["box-joints", "hinge-dimensions", "hinge-dividers"],
+  },
+  {
+    slug: "hinge-dividers", product: "hinge", title: "Dividers",
+    summary: "Strips that split the inside of a box into compartments, locking together where they cross.",
+    keywords: ["dividers", "partitions", "compartments", "grid", "organiser", "inserts"],
+    fields: [{ product: "hinge", secs: ["secDiv"] }],
+    blocks: [
+      { list: [
+        "Across width: strips that run front to back. Across depth: strips that run left to right. 2 and 1 make six compartments.",
+        "Each strip is cut to the inside of the wall where it stands, so dividers in round and polygon boxes follow the wall too.",
+        "Where strips cross they lock with half-lap slots: front-to-back strips are slotted from the top, left-to-right ones from the bottom. Slide them together, then push the grid in.",
+        "Tabs on the bottom edge go into slots in the base. Over a support ring, the strip's ends step up onto the ring.",
+        "Height 0 makes them as tall as fits: just under a fixed lid, or under the lip of a removable one. Compartments narrower than 12 mm are left out.",
+      ] },
+    ],
+    related: ["hinge-lid", "box-joints"],
   },
   {
     slug: "hinge-tips", product: "hinge", title: "Tips for the Hinge Box",

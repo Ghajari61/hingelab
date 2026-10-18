@@ -57,7 +57,8 @@ const HINGE_SECTIONS: { id: FieldDef["sec"] | "secShape"; title: string; help: s
   { id: "secMat", title: "Material", help: "The sheet you cut: its thickness and the laser's kerf." },
   { id: "secHinge", title: "Hinge", help: "The living-hinge pattern cut into the bending wall." },
   { id: "secJoints", title: "Joints", help: "Tabs and slots that join the wall to the base and lid." },
-  { id: "secLid", title: "Lid", help: "Extras for a removable lid." },
+  { id: "secLid", title: "Lid", help: "The lid's opening, overhang and lip." },
+  { id: "secDiv", title: "Dividers", help: "Strips that split the inside into compartments." },
   { id: "secSheet", title: "Sheet", help: "Your laser bed and how parts are laid out on it." },
 ];
 
@@ -106,6 +107,11 @@ function hingeProduct(): DProduct {
       { kind: "number", key: "lidOver", label: "Overhang", help: HINGE_FIELD_HELP.lidOver, unit: "mm", min: 0, max: 100, step: 0.5, default: 0 },
       { kind: "toggle", key: "lidLipScore", label: "Score the lip on the lid", help: "Marks the lip's outline on the lid, so the lip lines up when you glue it. Put the scored side down." },
     ],
+    secDiv: [
+      { kind: "number", key: "divX", label: "Across width", help: HINGE_FIELD_HELP.divX, unit: "", min: 0, max: 8, step: 1, int: true, default: 0 },
+      { kind: "number", key: "divY", label: "Across depth", help: HINGE_FIELD_HELP.divY, unit: "", min: 0, max: 8, step: 1, int: true, default: 0 },
+      { kind: "number", key: "divH", label: "Height (0 = full)", help: HINGE_FIELD_HELP.divH, unit: "mm", min: 0, max: 3000, step: 1, default: 0 },
+    ],
     secSheet: [
       { kind: "choice", key: "bed", label: "Machine bed", help: "Sets the sheet to your laser's bed or a common sheet size.", default: bedPresetId(DEFAULTS.bedW, DEFAULTS.bedH), options: [
         { v: "custom", text: "Custom size" },
@@ -143,6 +149,8 @@ export function hingeForm(p: Params): DForm {
   if (p.lidOver == null && p.lid !== "open") values.lidOver = 0;
   if (opening !== "none" && p.lidHoleD == null) values.lidHoleD = isLidSlot(opening) ? lidSlotSize(p).len : opening === "knob" ? 5 : 22;
   if (isLidSlot(opening) && p.lidHoleW == null) values.lidHoleW = lidSlotSize(p).w;
+  if ((p.divX ?? 0) + (p.divY ?? 0) === 0) hidden.push("divH");
+  for (const k of ["divX", "divY", "divH"] as const) if (p[k] == null) values[k] = 0;
   return { hidden: [...new Set(hidden)], hiddenSections: p.lid === "open" ? ["secLid"] : [], labels, ...(Object.keys(values).length ? { values } : {}) };
 }
 

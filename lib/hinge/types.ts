@@ -61,6 +61,12 @@ export interface Params {
   baseRing?: boolean;
   /** Width of that ring, mm (missing: 8). */
   baseRingW?: number;
+  /** Dividers across the width, each running front to back (missing: none). */
+  divX?: number;
+  /** Dividers across the depth, each running left to right (missing: none). */
+  divY?: number;
+  /** Divider height, mm (missing or 0: as tall as fits under the lid). */
+  divH?: number;
   split: number;
   /** The wall's two ends lock with fingers (missing: they only meet). */
   seamFingers?: boolean;
@@ -123,6 +129,18 @@ export interface WallPart {
   bbox: BBox;
   /** True for the bend test strip. */
   test?: boolean;
+  /** True for an inside divider (a flat strip, no hinge). */
+  divider?: boolean;
+}
+
+/** Where a divider stands in the box: on the line `axis` = `at`, from `from` to `to`, `h` tall. */
+export interface DividerPlace {
+  axis: "x" | "y";
+  at: number;
+  from: number;
+  to: number;
+  h: number;
+  name: string;
 }
 
 export interface PlatePart {
@@ -188,6 +206,8 @@ export interface Model {
   /** Length of the longest merged hinge zone along the strip. */
   zoneLen: number;
   analysis: Analysis;
+  /** Inside dividers, when there are any. */
+  dividers?: DividerPlace[];
 }
 
 export interface ModelError {

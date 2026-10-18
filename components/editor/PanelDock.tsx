@@ -206,6 +206,10 @@ export function PanelDock({
         )}
         <p className="note">Overhang makes a flat top wider than the box. A finger hole lifts a removable lid; a knob hole takes a knob&apos;s screw. A tissue slot makes a tissue box, a coin slot a money box.</p>
       </Sec>
+      <Sec title="Dividers" meta={(params.divX ?? 0) + (params.divY ?? 0) > 0 ? `${(params.divX ?? 0) + 1} × ${(params.divY ?? 0) + 1}` : undefined} onReset={() => onResetSection("Dividers", ["divX", "divY", "divH"])}>
+        <div className="grid2">{fields("secDiv")}</div>
+        <p className="note">Dividers split the inside into compartments. They stand in slots in the base, lock together where they cross, and step up onto a support ring.</p>
+      </Sec>
       <Sec title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
         <LayersPanel layers={params.layers} labels={params.labels} onVis={onVis} onExp={onExp} onLabels={onLabels} />
       </Sec>
