@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.56",
-    "pub_date": "2026-10-17T17:17:07.952Z",
-    "notes": "AI requests fail fast with a clear message when the AI service reaches its usage limit, instead of waiting and timing out.",
+    "version": "1.0.57",
+    "pub_date": "2026-10-18T05:22:03.503Z",
+    "notes": "Hinge Box: a new option scores the lid lip outline on the lid, so the lip lines up when gluing. AI Studio gives credits back when a job fails.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.56_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm5KTHRBNVBMT1hXaHlPRUcyNTZWOFFMRVdmMkg2V3BlZE9heitVUmVUNnVQRUxHOWVIa05VN3VEQmJSYW1rQ3kvRVRzSEhENHJVRCttUUl2Q1ZUclFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjU3MzA5CWZpbGU6SGluZ2VMYWJfMS4wLjU2X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTYKc2pvWFMzWHVjU3NqUlp0SSt3eE1INlFEeG52S3hqTFkrMUdzM0VvOFI2TWRxYjArNHBSUks1ZVA2TW9jVDBaMDBDVnVxR01vVXA1elRxWll4WFYwQkE9PQo=",
-        "size": 4271716
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.57_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnE3V1cvWmc3U01uMnV3ZHJJL1hwMXVRWXBJcDNHTktWZ2NsVUZjSE9JS05ENzA5L2VXUlB3NDd2R3A3VXA5MUM1V2pGaTNocVRBU1BEa01zdFluVlFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzAwNzkzCWZpbGU6SGluZ2VMYWJfMS4wLjU3X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTcKNWNJcGYwNWtyQkQva3B2dnhFTlF6YUZTMnFTRGRLYXdPemJNalc0N1pWWE1oa0pmZkRleHdmWXhtcWkrb1N0SnhTdlhSQkFPM2dzblFxRXI1dWtUQ2c9PQo=",
+        "size": 4272631
       }
     }
   }
