@@ -65,6 +65,20 @@ export async function rateLimit(rule: LimitRule, who: string): Promise<LimitResu
   }
 }
 
+/** Gives back counts a request could not use. Best effort: a failed refund never fails the request. */
+export async function refundLimit(rule: LimitRule, who: string, amount: number): Promise<void> {
+  if (amount < 1) return;
+  const key = keyOf(rule, who);
+  memory.refund(key, amount);
+  if (!dbAvailable || !process.env.SUPABASE_SERVICE_ROLE_KEY) return;
+  try {
+    const { error } = await createAdminClient().rpc("rate_limit_refund", { p_key: key, p_amount: amount });
+    if (error) throw error;
+  } catch (e) {
+    console.warn("rate limit refund failed:", e instanceof Error ? e.message : (e as { message?: string })?.message ?? e);
+  }
+}
+
 export function tooManyRequests(r: LimitResult): Response {
   return Response.json(
     { error: "Too many requests. Wait a minute and try again." },

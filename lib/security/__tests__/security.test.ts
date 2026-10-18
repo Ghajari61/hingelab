@@ -170,6 +170,19 @@ describe("rate limiter", () => {
     t = 60_000;
     expect(lim.hit("a", rule).ok).toBe(true);
   });
+
+  it("gives back counts a failed job did not use", () => {
+    const lim = memoryLimiter(() => 0);
+    const rule = { name: "x", limit: 2, windowSec: 60 };
+    lim.hit("a", rule);
+    lim.hit("a", rule);
+    expect(lim.hit("a", rule).ok).toBe(false);
+    lim.refund("a", 2);
+    expect(lim.hit("a", rule).ok).toBe(true);
+    lim.refund("a", 10);
+    lim.refund("missing", 1);
+    expect([lim.hit("a", rule).ok, lim.hit("a", rule).ok, lim.hit("a", rule).ok]).toEqual([true, true, false]);
+  });
 });
 
 describe("headers", () => {

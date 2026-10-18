@@ -28,5 +28,9 @@ export function memoryLimiter(now: () => number = Date.now) {
       w.count++;
       return w.count <= rule.limit ? { ok: true, retryAfter: 0 } : { ok: false, retryAfter: Math.ceil((w.reset - t) / 1000) };
     },
+    refund(key: string, amount: number) {
+      const w = windows.get(key);
+      if (w && w.reset > now()) w.count = Math.max(0, w.count - amount);
+    },
   };
 }

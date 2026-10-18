@@ -7,7 +7,7 @@ import "server-only";
 import { generateText, stepCountIs, tool, type ModelMessage } from "ai";
 import { z } from "zod";
 import { hasPro, type Plan } from "@/lib/plans";
-import { LIMITS, rateLimit, type LimitResult } from "@/lib/security/rateLimit";
+import { LIMITS, rateLimit, refundLimit, type LimitResult } from "@/lib/security/rateLimit";
 import { machineById, MATERIAL_PRESETS, STARTING_POINT_NOTE, type LaserType, type MaterialPreset } from "@/lib/studio/library";
 import { aiAllowance, aiLimitMessage } from "@/lib/ai/request";
 import { AIDesignError, designWithAI } from "@/lib/ai/design";
@@ -39,9 +39,17 @@ export async function spendCredits(plan: Plan, userId: string, cost: number): Pr
   let last: LimitResult = { ok: true, retryAfter: 0 };
   for (let i = 0; i < cost; i++) {
     last = await rateLimit(rule, `user:${userId}`);
-    if (!last.ok) return { ...last, daily: true };
+    if (!last.ok) {
+      await refundLimit(rule, `user:${userId}`, i + 1);
+      return { ...last, daily: true };
+    }
   }
   return last;
+}
+
+/** Gives back the credits of a job that made nothing (the AI service failed or refused). */
+export function refundCredits(plan: Plan, userId: string, cost: number): Promise<void> {
+  return refundLimit(hasPro(plan) ? LIMITS.aiStudioDayPro : LIMITS.aiStudioDayFree, `user:${userId}`, cost);
 }
 
 export function creditsMessage(plan: Plan, daily?: boolean): string {

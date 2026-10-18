@@ -3,7 +3,7 @@ import { currentPlan } from "@/lib/billing/plan";
 import { studioProvider } from "@/lib/ai/providers/config";
 import { COSTS } from "@/lib/ai/studio/credits";
 import { assistantRequestSchema, firstIssue, MAX_CHAT_IMAGE, MAX_CHAT_TEXT, MAX_CHAT_TURNS } from "@/lib/ai/studio/request";
-import { assistantTurn, creditsMessage, spendCredits, StudioError } from "@/lib/ai/studio/server";
+import { assistantTurn, creditsMessage, refundCredits, spendCredits, StudioError } from "@/lib/ai/studio/server";
 import { declaredLength, isCrossSite, isJSONRequest, siteOrigins } from "@/lib/security/request";
 
 /** A design made by the assistant runs the AI designer (two model calls and a build). */
@@ -29,11 +29,13 @@ export async function POST(request: NextRequest) {
   try { raw = JSON.parse(text); } catch { return json({ error: "Invalid request." }, 400); }
   const parsed = assistantRequestSchema.safeParse(raw);
   if (!parsed.success) return json({ error: firstIssue(parsed.error) }, 400);
-  const allowed = await spendCredits(plan, userId, COSTS.assistant);
+  const cost = COSTS.assistant;
+  const allowed = await spendCredits(plan, userId, cost);
   if (!allowed.ok) return json({ error: creditsMessage(plan, allowed.daily) }, 429, { "retry-after": String(Math.max(1, allowed.retryAfter)) });
   try {
     return json(await assistantTurn(parsed.data, plan, userId, AbortSignal.any([request.signal, AbortSignal.timeout(170_000)])), 200, { "x-hingelab-plan": plan });
   } catch (e) {
+    await refundCredits(plan, userId, cost);
     if (e instanceof StudioError) return json({ error: e.message }, e.status);
     console.error("ai studio assistant failed", e);
     return json({ error: "The assistant could not answer. Try again." }, 500);

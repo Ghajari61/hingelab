@@ -4,7 +4,7 @@ import { studioProvider } from "@/lib/ai/providers/config";
 import { COSTS } from "@/lib/ai/studio/credits";
 import { directorTurn } from "@/lib/ai/studio/director";
 import { directorRequestSchema, firstIssue, MAX_STUDIO_BODY } from "@/lib/ai/studio/request";
-import { creditsMessage, spendCredits, StudioError } from "@/lib/ai/studio/server";
+import { creditsMessage, refundCredits, spendCredits, StudioError } from "@/lib/ai/studio/server";
 import { declaredLength, isCrossSite, isJSONRequest, siteOrigins } from "@/lib/security/request";
 
 export const maxDuration = 90;
@@ -27,11 +27,13 @@ export async function POST(request: NextRequest) {
   try { raw = JSON.parse(text); } catch { return json({ error: "Invalid request." }, 400); }
   const parsed = directorRequestSchema.safeParse(raw);
   if (!parsed.success) return json({ error: firstIssue(parsed.error) }, 400);
-  const allowed = await spendCredits(plan, userId, COSTS[parsed.data.op]);
+  const cost = COSTS[parsed.data.op];
+  const allowed = await spendCredits(plan, userId, cost);
   if (!allowed.ok) return json({ error: creditsMessage(plan, allowed.daily) }, 429, { "retry-after": String(Math.max(1, allowed.retryAfter)) });
   try {
     return json(await directorTurn(parsed.data, userId, AbortSignal.any([request.signal, AbortSignal.timeout(80_000)])), 200, { "x-hingelab-plan": plan });
   } catch (e) {
+    await refundCredits(plan, userId, cost);
     if (e instanceof StudioError) return json({ error: e.message }, e.status);
     console.error("ai studio director failed", e);
     return json({ error: "The Creative Director could not answer. Try again." }, 500);

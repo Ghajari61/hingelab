@@ -88,6 +88,10 @@ export type Database = {
         Args: { p_key: string; p_limit: number; p_window_seconds: number };
         Returns: { allowed: boolean; retry_after: number }[];
       };
+      rate_limit_refund: {
+        Args: { p_key: string; p_amount: number };
+        Returns: undefined;
+      };
       desktop_code_create: {
         Args: { p_user: string; p_code_hash: string; p_challenge: string; p_redirect: string; p_ttl_seconds: number };
         Returns: undefined;

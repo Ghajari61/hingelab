@@ -4,7 +4,7 @@ import { studioProvider } from "@/lib/ai/providers/config";
 import { imageCost } from "@/lib/ai/studio/credits";
 import { hasPro } from "@/lib/plans";
 import { firstIssue, imageRequestSchema, MAX_STUDIO_BODY } from "@/lib/ai/studio/request";
-import { creditsMessage, spendCredits, studioImage, StudioError } from "@/lib/ai/studio/server";
+import { creditsMessage, refundCredits, spendCredits, studioImage, StudioError } from "@/lib/ai/studio/server";
 import { declaredLength, isCrossSite, isJSONRequest, siteOrigins } from "@/lib/security/request";
 
 /** One image model call, which can take a minute. */
@@ -34,11 +34,13 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return json({ error: firstIssue(parsed.error) }, 400);
   const d = parsed.data;
   const quality = (d.op === "generate" || d.op === "restyle") && d.quality === "high" && hasPro(plan) ? "high" : "medium";
-  const allowed = await spendCredits(plan, userId, imageCost(d.op, quality));
+  const cost = imageCost(d.op, quality);
+  const allowed = await spendCredits(plan, userId, cost);
   if (!allowed.ok) return json({ error: creditsMessage(plan, allowed.daily) }, 429, { "retry-after": String(Math.max(1, allowed.retryAfter)) });
   try {
     return json(await studioImage(d, userId, AbortSignal.any([request.signal, AbortSignal.timeout(110_000)]), undefined, plan), 200, { "x-hingelab-plan": plan });
   } catch (e) {
+    await refundCredits(plan, userId, cost);
     if (e instanceof StudioError) return json({ error: e.message }, e.status);
     console.error("ai studio image failed", e);
     return json({ error: "The picture could not be made. Try again." }, 500);
