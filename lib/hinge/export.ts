@@ -13,6 +13,9 @@ export const EXPORT_LAYERS: ExportLayer[] = [
   { key: "labels",  name: "Part labels (engrave)", code: "00", color: "#000000", ui: "var(--l-labels)" },
 ];
 
+/** Scored lines: marked on the surface, not cut through. Written only when a design has some. */
+export const SCORE_LAYER = { name: "Score lines", code: "05", color: "#FF8000", ui: "var(--l-score, #FF8000)" };
+
 /** Path and label data in sheet coordinates, shared by the canvas and the SVG exporter. */
 export function layerContent(model: Model, lay: Layout, p: Params): LayerContent {
   const L: LayerContent = { outline: [], slots: [], hinge: [], labels: [], fills: [] };
@@ -27,6 +30,7 @@ export function layerContent(model: Model, lay: Layout, p: Params): LayerContent
       const d = pt.ek ? polyD(roundedPointsXY(pt.edges, pt.r, pt.ek[0], pt.ek[1]), ox, oy) : roundedPath(pt.edges, pt.r, ox, oy);
       L.outline.push(d); L.fills.push(d);
       for (const s of pt.slots) L.slots.push(polyD(s, ox, oy));
+      if (pt.scoreR) (L.score ??= []).push(roundedPath(pt.edges, pt.scoreR, ox, oy));
       const w = pt.bbox.x1 - pt.bbox.x0, h = pt.bbox.y1 - pt.bbox.y0;
       const size = clamp(Math.min(w, h) / 9, 3, 8);
       L.labels.push({ x: ox, y: pt.hole ? oy + pt.hole + size : oy, text: pt.name, size });
@@ -40,7 +44,7 @@ export function exportSVG(model: Model, lay: Layout, p: Params) {
   const LC = layerContent(model, lay, p);
   const m = p.shape === "cyl" ? `cylinder Ø${r3(p.dia)}` : `${r3(p.W)}x${p.shape === "poly" ? p.sides + "-gon" : r3(p.D)}`;
   const kerf = p.Ky != null && p.Ky !== p.K ? `kerf ${p.K} mm across vertical edges and ${p.Ky} mm across horizontal ones` : `kerf ${p.K} mm`;
-  const comment = `HingeLab living-hinge box: ${m} x ${r3(p.H)} mm, ${p.lid} lid, ${p.pattern} pattern. Material ${p.T} mm, ${kerf} (compensated). Cut order: slots, hinge, outline.`;
+  const comment = `HingeLab living-hinge box: ${m} x ${r3(p.H)} mm, ${p.lid} lid, ${p.pattern} pattern. Material ${p.T} mm, ${kerf} (compensated). Cut order: ${LC.score?.length ? "score, " : ""}slots, hinge, outline.`;
   return layeredSVG(lay.width, lay.height, comment, LC, p.layers, p.labels);
 }
 
@@ -51,8 +55,15 @@ export function layeredSVG(width: number, height: number, comment: string, LC: L
   const W = r3(width), H = r3(height);
   let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">\n`;
   s += `<!-- ${xmlCommentText(comment)} -->\n`;
-  const order = ["labels", "slots", "hinge", "outline"] as const;
+  const order = ["labels", "score", "slots", "hinge", "outline"] as const;
   for (const key of order) {
+    if (key === "score") {
+      if (!LC.score?.length) continue;
+      s += `<g id="score" inkscape:groupmode="layer" inkscape:label="${SCORE_LAYER.code} ${SCORE_LAYER.name}" fill="none" stroke="${SCORE_LAYER.color}" stroke-width="0.1">\n`;
+      for (const d of LC.score) s += `  <path d="${d}"/>\n`;
+      s += `</g>\n`;
+      continue;
+    }
     const def = EXPORT_LAYERS.find(l => l.key === key)!;
     if (!layers[key].exp || (key === "labels" && !labels)) continue;
     s += `<g id="${key}" inkscape:groupmode="layer" inkscape:label="${def.code} ${def.name}" fill="none" stroke="${def.color}" stroke-width="0.1">\n`;

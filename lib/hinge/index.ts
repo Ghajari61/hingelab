@@ -11,7 +11,7 @@ export { tabCount, wallOutline, outlinePath, P_slotW, buildWalls, buildTestStrip
 export { bendAnalysis, autoFit, withFittedLattice } from "./analysis";
 export { computeModel } from "./model";
 export { layoutParts } from "./layout";
-export { EXPORT_LAYERS, layerContent, exportSVG, layeredSVG } from "./export";
+export { EXPORT_LAYERS, SCORE_LAYER, layerContent, exportSVG, layeredSVG } from "./export";
 export { inspectorSVG } from "./inspector";
 export { r3, clamp, TAU } from "./util";
 export type {

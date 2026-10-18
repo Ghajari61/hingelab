@@ -73,7 +73,8 @@ export function computeModel(input: Params): ComputeResult {
     const lip = p.lidLip !== false && lipR > 0.5;
     // The hole goes through the lip too, when there is one, so it must fit the smaller plate.
     const hole = lidHole(coreIn + (lip ? lipR : R + over), lip ? "lid lip" : "lid");
-    parts.push(withHole(plate("LID", R + over, hole)));
+    const lid = withHole(plate("LID", R + over, hole));
+    parts.push(lip && p.lidLipScore ? { ...lid, scoreR: R - t - p.lidGap } : lid);
     if (lip) parts.push(withHole(plate("LID LIP", R - t - p.lidGap, hole)));
     else if (p.lidLip !== false) issues.push({ lvl: "warn", msg: "Corner radius is too small for a lid lip, so the lip was left out. Increase the radius above " + r3(t + p.lidGap + 1) + " mm." });
   }

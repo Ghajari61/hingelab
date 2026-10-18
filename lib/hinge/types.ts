@@ -53,6 +53,8 @@ export interface Params {
   lidHoleD?: number;
   /** A removable lid has a lip under it that drops inside the walls (missing: true). */
   lidLip?: boolean;
+  /** Score the lip's outline on the lid, to line the lip up when gluing (missing: off). */
+  lidLipScore?: boolean;
   /** A ring glued on the base, inside the wall, so the hinge has a shoulder to sit on (missing: off). */
   baseRing?: boolean;
   /** Width of that ring, mm (missing: 8). */
@@ -130,6 +132,8 @@ export interface PlatePart {
   ek?: [number, number];
   /** Radius of the centred finger or knob hole, when there is one (the label moves below it). */
   hole?: number;
+  /** Corner radius of a scored outline on the plate (the lid lip's place on the lid), before kerf. */
+  scoreR?: number;
   edges: Edge[];
   slots: Point[][];
   bbox: BBox;
@@ -224,6 +228,8 @@ export interface LayerContent {
   hinge: string[];
   labels: LabelMark[];
   fills: string[];
+  /** Scored lines (missing when a design has none, so its file has no score layer). */
+  score?: string[];
 }
 
 export interface ExportLayer {

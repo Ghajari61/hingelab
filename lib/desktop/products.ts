@@ -55,6 +55,7 @@ const HINGE_SECTIONS: { id: FieldDef["sec"] | "secShape"; title: string; help: s
   { id: "secMat", title: "Material", help: "The sheet you cut: its thickness and the laser's kerf." },
   { id: "secHinge", title: "Hinge", help: "The living-hinge pattern cut into the bending wall." },
   { id: "secJoints", title: "Joints", help: "Tabs and slots that join the wall to the base and lid." },
+  { id: "secLid", title: "Lid", help: "Extras for a removable lid." },
   { id: "secSheet", title: "Sheet", help: "Your laser bed and how parts are laid out on it." },
 ];
 
@@ -87,6 +88,9 @@ function hingeProduct(): DProduct {
       { kind: "number", key: "baseRingW", label: "Ring width", help: HINGE_FIELD_HELP.baseRingW, unit: "mm", min: 3, max: 40, step: 0.5, default: 8 },
       { kind: "choice", key: "split", label: "Wall", options: [{ v: "1", text: "One strip" }, { v: "2", text: "Two halves" }] },
     ],
+    secLid: [
+      { kind: "toggle", key: "lidLipScore", label: "Score the lip on the lid", help: "Marks the lip's outline on the lid, so the lip lines up when you glue it. Put the scored side down." },
+    ],
     secSheet: [
       { kind: "toggle", key: "labels", label: "Engrave part names" },
       { kind: "toggle", key: "testStrip", label: "Add a bend test strip" },
@@ -101,7 +105,7 @@ function hingeProduct(): DProduct {
   return { id: "hinge", name: "Hinge Box", blurb: "Living-hinge boxes in rounded, pill, polygon and cylinder shapes, with tabs and a lid.", icon: "box", sections, presets };
 }
 
-function hingeForm(p: Params): DForm {
+export function hingeForm(p: Params): DForm {
   const hidden: string[] = [];
   const labels: Record<string, string> = {};
   for (const f of FIELDS) {
@@ -110,7 +114,8 @@ function hingeForm(p: Params): DForm {
   }
   if (p.lid === "open") hidden.push("lidGap");
   if (!p.baseRing) hidden.push("baseRingW");
-  return { hidden: [...new Set(hidden)], hiddenSections: [], labels, ...(p.baseRing && p.baseRingW == null ? { values: { baseRingW: 8 } } : {}) };
+  const lipScore = p.lid === "removable" && p.lidLip !== false;
+  return { hidden: [...new Set(hidden)], hiddenSections: lipScore ? [] : ["secLid"], labels, ...(p.baseRing && p.baseRingW == null ? { values: { baseRingW: 8 } } : {}) };
 }
 
 // ---------------------------------------------------------------- Generators

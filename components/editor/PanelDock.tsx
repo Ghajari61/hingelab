@@ -171,7 +171,7 @@ export function PanelDock({
         </div>
         <p className="note">Two halves fits long walls on small beds. Seams land in the middle of flat sides.</p>
       </Sec>
-      <Sec title="Lid" onReset={() => onResetSection("Lid", ["lidOver", "lidHole", "lidHoleD", "lidLip"])}>
+      <Sec title="Lid" onReset={() => onResetSection("Lid", ["lidOver", "lidHole", "lidHoleD", "lidLip", "lidLipScore"])}>
         <div className="grid2">{fields("secLid")}</div>
         <div className="rowlabel">Hole<ResetMark label="Lid hole" show={(params.lidHole ?? "none") !== "none"} to="None" onReset={() => { const next: Params = { ...params }; delete next.lidHole; delete next.lidHoleD; onPatch(next); }} /></div>
         <div className="iconseg" role="group" aria-label="Lid hole">
@@ -186,6 +186,13 @@ export function PanelDock({
           <CheckField
             label="Lip under the lid" title="A second plate under the lid that sits inside the walls and keeps it in place"
             checked={params.lidLip !== false} def={DEFAULTS.lidLip !== false} onChange={(on) => onPatch({ ...params, lidLip: on })}
+          />
+        )}
+        {params.lid === "removable" && params.lidLip !== false && (
+          <CheckField
+            label="Score the lip on the lid" title="Marks the lip's outline on the lid, so the lip lines up when you glue it. Put the scored side down."
+            checked={params.lidLipScore === true} def={false}
+            onChange={(on) => { const next: Params = { ...params, lidLipScore: on }; if (!on) delete next.lidLipScore; onPatch(next); }}
           />
         )}
         <p className="note">Overhang makes a flat top wider than the box. A finger hole lifts a removable lid; a knob hole takes a knob&apos;s screw.</p>

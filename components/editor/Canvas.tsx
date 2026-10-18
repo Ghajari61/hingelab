@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { clamp, r3, type LayerContent, type LayerKey, type Layers } from "@/lib/hinge";
+import { clamp, r3, SCORE_LAYER, type LayerContent, type LayerKey, type Layers } from "@/lib/hinge";
 import { GRID_GAP, sheetGrid, sheetLabel } from "@/lib/fit/grid";
 import type { View } from "@/hooks/useCanvasView";
 import { Maximize, ZoomIn, ZoomOut } from "lucide-react";
@@ -125,6 +125,7 @@ export function Canvas({
         />
       )}
       {vis("slots") && <path d={content.slots.join(" ")} fill="none" stroke="var(--l-slots)" strokeWidth={sw} />}
+      {content.score && <path d={content.score.join(" ")} fill="none" stroke={SCORE_LAYER.ui} strokeWidth={sw} strokeDasharray={`${r3(4 / view.z)} ${r3(2.5 / view.z)}`} />}
       {vis("outline") && <path d={content.outline.join(" ")} fill="none" stroke="var(--l-outline)" strokeWidth={sw * 1.2} strokeLinejoin="round" />}
       {vis("labels") && labels && content.labels.map((lb, i) => (
         <text key={`l${i}`} x={r3(lb.x)} y={r3(lb.y)} fontFamily="Source Sans 3, sans-serif" fontWeight={600} fontSize={r3(lb.size)} fill="var(--l-labels)" fillOpacity={0.8} textAnchor="middle" dominantBaseline="middle" transform={lb.rot ? `rotate(${lb.rot} ${r3(lb.x)} ${r3(lb.y)})` : undefined}>{lb.text}</text>

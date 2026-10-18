@@ -50,6 +50,7 @@ export function hingeRequestError(p: Params): string | null {
   }
   if (p.lidHole !== undefined && !["none", "finger", "knob"].includes(p.lidHole)) return "Invalid value for lidHole.";
   if (p.lidLip !== undefined && typeof p.lidLip !== "boolean") return "Invalid value for lidLip.";
+  if (p.lidLipScore !== undefined && typeof p.lidLipScore !== "boolean") return "Invalid value for lidLipScore.";
   if (p.baseRing !== undefined && typeof p.baseRing !== "boolean") return "Invalid value for baseRing.";
   if (p.seamFingers !== undefined && typeof p.seamFingers !== "boolean") return "Invalid value for seamFingers.";
   const around = p.shape === "cyl" ? Math.PI * p.dia : 2 * (p.W + (p.shape === "poly" ? p.W : p.D));
