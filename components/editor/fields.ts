@@ -25,7 +25,7 @@ export interface BaseField {
 
 export interface FieldDef extends BaseField {
   id: NumericKey;
-  sec: "secDims" | "secMat" | "secHinge" | "secJoints" | "secLid" | "secDiv" | "secSheet";
+  sec: "secDims" | "secMat" | "secHinge" | "secJoints" | "secLid" | "secDiv" | "secText" | "secSheet";
   show?: (p: Params) => boolean;
   lab?: (p: Params) => string;
   /** The value an optional setting has while the design leaves it out. */

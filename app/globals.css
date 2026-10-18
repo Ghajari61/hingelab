@@ -200,6 +200,8 @@ select.sel:focus { border-color: var(--accent); outline: none; }
 .iconseg.full button { flex: 1; justify-content: center; }
 .gen-shuffle { width: 100%; }
 .sheet-rotate { width: 100%; margin-top: 6px; height: 30px; }
+.base-text { width: 100%; min-height: 64px; resize: vertical; background: var(--field); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; font: inherit; font-size: 13px; line-height: 1.45; }
+.base-text:focus { outline: none; border-color: var(--select); }
 .iconseg.wrap { display: flex; flex-wrap: wrap; }
 .iconseg.wrap button { flex: 1 1 auto; justify-content: center; }
 .textin { width: 100%; resize: vertical; min-height: 56px; background: var(--field); border: 1px solid transparent; border-radius: 8px; color: var(--fg); font: 16px/1.35 var(--font-ui); padding: 6px 8px; outline: none; }

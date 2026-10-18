@@ -18,6 +18,9 @@ import { clone, DEFAULTS, exportSVG, MATERIALS, mergeParams, type Params } from 
 import { HINGE_PRESETS, hingePresetParams, randomHingeBox } from "@/lib/hinge/presets";
 import { isLidSlot, lidSlotSize } from "@/lib/hinge/lidSlot";
 import { SHEET_PRESETS } from "@/lib/studio/library";
+import { hingeTextContext } from "@/lib/billing/hingeText";
+import { applyStandardSize, insideText, STANDARD_SIZES, standardSizeOf } from "@/lib/hinge/standardSizes";
+import { BASE_TEXT_FONT, BASE_TEXT_SIZE, MAX_BASE_TEXT } from "@/lib/hinge/baseText";
 import { randomiseParams } from "@/lib/generators/randomise";
 import { autoFixAll, sortIssues, type Issue } from "@/lib/issues";
 import { hingeIssues } from "@/lib/issues/hinge";
@@ -59,6 +62,7 @@ const HINGE_SECTIONS: { id: FieldDef["sec"] | "secShape"; title: string; help: s
   { id: "secJoints", title: "Joints", help: "Tabs and slots that join the wall to the base and lid." },
   { id: "secLid", title: "Lid", help: "The lid's opening, overhang and lip." },
   { id: "secDiv", title: "Dividers", help: "Strips that split the inside into compartments." },
+  { id: "secText", title: "Text under the box", help: "A name, phone number or message engraved on the base." },
   { id: "secSheet", title: "Sheet", help: "Your laser bed and how parts are laid out on it." },
 ];
 
@@ -77,6 +81,12 @@ const bedPresetId = (w: number, h: number) => SHEET_PRESETS.find((s) => Math.abs
 
 function hingeProduct(): DProduct {
   const extra: Record<string, DField[]> = {
+    secDims: [
+      { kind: "choice", key: "standard", label: "Standard size", help: "Sets the outside size for what goes inside, for your material thickness and lid.", default: "custom", options: [
+        { v: "custom", text: "My own size" },
+        ...STANDARD_SIZES.map((x) => ({ v: x.id, text: `${x.group} · ${x.name} (${insideText(x)})` })),
+      ] },
+    ],
     secShape: [
       { kind: "choice", key: "shape", label: "Shape", options: (["rect", "pill", "poly", "cyl"] as const).map((v) => ({ v, text: SHAPE_NAMES[v], pro: !FREE_SHAPES.includes(v) })) },
       { kind: "choice", key: "lid", label: "Lid", options: [{ v: "open", text: "Open tray", title: "No lid" }, { v: "fixed", text: "Fixed lid", title: "A lid joined to the walls" }, { v: "removable", text: "Removable lid", title: "A lid with a lip that lifts off" }] },
@@ -112,6 +122,11 @@ function hingeProduct(): DProduct {
       { kind: "number", key: "divY", label: "Across depth", help: HINGE_FIELD_HELP.divY, unit: "", min: 0, max: 8, step: 1, int: true, default: 0 },
       { kind: "number", key: "divH", label: "Height (0 = full)", help: HINGE_FIELD_HELP.divH, unit: "mm", min: 0, max: 3000, step: 1, default: 0 },
     ],
+    secText: [
+      { kind: "text", key: "baseText", label: "Text under the box", help: "Engraved in the middle of the base: a company name, phone number or message. One line per line.", placeholder: "Company name\nPhone 0912 000 0000", multiline: true, maxLength: MAX_BASE_TEXT },
+      { kind: "number", key: "baseTextSize", label: "Letter height", help: "Height of the capital letters, mm. Long text is shrunk to fit inside the walls.", unit: "mm", min: 1.5, max: 40, step: 0.5, default: BASE_TEXT_SIZE },
+      { kind: "choice", key: "baseTextFont", label: "Font", default: BASE_TEXT_FONT, options: BUNDLED_FONTS.map((x) => ({ v: x.id, text: `${x.name} · ${x.note}` })) },
+    ],
     secSheet: [
       { kind: "choice", key: "bed", label: "Machine bed", help: "Sets the sheet to your laser's bed or a common sheet size.", default: bedPresetId(DEFAULTS.bedW, DEFAULTS.bedH), options: [
         { v: "custom", text: "Custom size" },
@@ -143,7 +158,10 @@ export function hingeForm(p: Params): DForm {
   const opening = p.lidHole ?? "none";
   if (opening === "none") hidden.push("lidHoleD");
   if (!isLidSlot(opening)) hidden.push("lidHoleW");
-  const values: Record<string, unknown> = { bed: bedPresetId(p.bedW, p.bedH) };
+  const values: Record<string, unknown> = { bed: bedPresetId(p.bedW, p.bedH), standard: standardSizeOf(p) || "custom" };
+  if (!p.baseText?.trim()) hidden.push("baseTextSize", "baseTextFont");
+  if (p.baseTextSize == null) values.baseTextSize = BASE_TEXT_SIZE;
+  if (p.baseTextFont == null) values.baseTextFont = BASE_TEXT_FONT;
   if (p.baseRing && p.baseRingW == null) values.baseRingW = 8;
   if (p.lidHole == null && p.lid !== "open") values.lidHole = "none";
   if (p.lidOver == null && p.lid !== "open") values.lidOver = 0;
@@ -356,6 +374,11 @@ function changeHinge(p: Params, product: DProduct, change: Change): Params | { e
   if (!f) return { error: "Unknown setting." };
   const c = coerce(f, change.value);
   if ("error" in c) return c;
+  if (change.key === "standard") {
+    const st = STANDARD_SIZES.find((x) => x.id === c.v);
+    return st ? applyStandardSize(p, st) : p;
+  }
+  if (change.key === "baseText" && typeof c.v === "string" && !c.v.trim()) { const q = { ...p }; delete q.baseText; return q; }
   if (change.key === "bed") {
     const s = SHEET_PRESETS.find((x) => x.id === c.v);
     return s ? { ...p, bedW: s.w, bedH: s.h } : p;
@@ -416,7 +439,7 @@ export async function designFromChanges(id: DesktopProductId, preset: string | n
   return { params: sanitizeGeneratorParams(def, def.merge(p)) as unknown as Record<string, unknown>, skipped };
 }
 
-function generateHinge(r: GenerateRequest, product: DProduct, plan: Plan): GenerateResult {
+async function generateHinge(r: GenerateRequest, product: DProduct, plan: Plan): Promise<GenerateResult> {
   let p: Params;
   if (typeof r.preset === "string") {
     const pr = HINGE_PRESETS.find((x) => x.id === r.preset);
@@ -457,7 +480,7 @@ function generateHinge(r: GenerateRequest, product: DProduct, plan: Plan): Gener
   const a = arrangeHinge(p);
   if ("error" in a.result) return { status: 422, body: { ...base(p, issues, applied), error: a.result.error } };
   if (!a.lay) return { status: 422, body: { ...base(p, issues, applied), error: "The parts could not be laid out." } };
-  const raw = exportSVG(a.result, a.lay, a.params);
+  const raw = exportSVG(a.result, a.lay, a.params, await hingeTextContext(a.params).catch(() => undefined));
   const watermark = needsWatermark(plan);
   const svg = watermark ? addWatermark(raw) : raw;
   const size = sheetSize(svg);

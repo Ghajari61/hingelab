@@ -17,6 +17,9 @@ import { SheetSection } from "@/components/shell/SheetSection";
 import { HelpMark } from "@/components/help/HelpContext";
 import { CheckField, ResetMark } from "./ResetMark";
 import type { Units } from "./format";
+import { applyStandardSize, insideText, STANDARD_GROUPS, STANDARD_SIZES, standardSizeOf } from "@/lib/hinge/standardSizes";
+import { BASE_TEXT_FONT, BASE_TEXT_SIZE, MAX_BASE_TEXT } from "@/lib/hinge/baseText";
+import { BUNDLED_FONTS } from "@/lib/letters/fonts";
 
 /** What the Sheet section needs from the editor: the fit result and the two setters. */
 export interface SheetProps {
@@ -78,9 +81,13 @@ const LID_HOLES = [
 
 export function PanelDock({
   params, model, error, units, dimsMeta, patMeta,
-  onLive, onCommit, onMaterial, onPatch, onSplit, onCutStyle, onAutoFit, onTestStrip,
+  onLive, onCommit, onMaterial, onPatch, onStandard, textError, onSplit, onCutStyle, onAutoFit, onTestStrip,
   onVis, onExp, onLabels, onResetSection, sheet, checks,
 }: {
+  /** A standard size picked: the new settings and the size's name. */
+  onStandard?: (next: Params, name: string) => void;
+  /** The text under the box could not be shaped (font failed to load). */
+  textError?: string | null;
   /** Several settings at once, as one undo step. */
   onPatch: (next: Params) => void;
   /** The checks list with its fixes (under Bend Analysis). */
@@ -120,7 +127,19 @@ export function PanelDock({
   return (
     <aside className="dock" aria-label="Panels">
       <Sec title="Dimensions" meta={dimsMeta} startOpen onReset={() => onResetSection("Dimensions", ["W", "D", "H", "R", "sides", "dia", "cylFlats"])}>
-
+        <div className="rowlabel">Standard size</div>
+        <select
+          className="sel" aria-label="Standard size" value={standardSizeOf(params) || "custom"}
+          title="Sizes for what goes inside: tissues, cards, jewellery and more. The outside size follows your material."
+          onChange={(e) => { const st = STANDARD_SIZES.find((x) => x.id === e.target.value); if (st) (onStandard ?? ((n) => onPatch(n)))(applyStandardSize(params, st), st.name); }}
+        >
+          <option value="custom">My own size</option>
+          {STANDARD_GROUPS.map((g) => (
+            <optgroup key={g} label={g}>
+              {STANDARD_SIZES.filter((x) => x.group === g).map((x) => <option key={x.id} value={x.id}>{x.name} ({insideText(x)})</option>)}
+            </optgroup>
+          ))}
+        </select>
         <div className="grid2">{fields("secDims")}</div>
       </Sec>
       <Sec title="Material" startOpen onReset={() => onResetSection("Material", ["material", "T", "K", "Ky", "gamma", "minFeature"])}>
@@ -209,6 +228,30 @@ export function PanelDock({
       <Sec title="Dividers" meta={(params.divX ?? 0) + (params.divY ?? 0) > 0 ? `${(params.divX ?? 0) + 1} × ${(params.divY ?? 0) + 1}` : undefined} onReset={() => onResetSection("Dividers", ["divX", "divY", "divH"])}>
         <div className="grid2">{fields("secDiv")}</div>
         <p className="note">Dividers split the inside into compartments. They stand in slots in the base, lock together where they cross, and step up onto a support ring.</p>
+      </Sec>
+      <Sec title="Text under the box" meta={params.baseText?.trim() ? "On" : undefined} onReset={() => onResetSection("Text under the box", ["baseText", "baseTextSize", "baseTextFont"])}>
+        <textarea
+          className="txt base-text" rows={3} maxLength={MAX_BASE_TEXT} dir="auto" aria-label="Text under the box"
+          placeholder={"Company name\nPhone 0912 000 0000"} value={params.baseText ?? ""}
+          onChange={(e) => { const next: Params = { ...params, baseText: e.target.value }; if (!e.target.value.trim()) delete next.baseText; onPatch(next); }}
+        />
+        {params.baseText?.trim() ? (
+          <>
+            <div className="grid2">
+              <NumberField
+                field={{ id: "baseTextSize", label: "Letter height", len: true, step: 0.5, min: 1.5, max: 40 }}
+                value={params.baseTextSize ?? BASE_TEXT_SIZE} defaultValue={BASE_TEXT_SIZE} units={units} label="Letter height" hidden={false}
+                onLive={(v) => onPatch({ ...params, baseTextSize: v })} onCommit={(v) => onPatch({ ...params, baseTextSize: v })}
+              />
+            </div>
+            <div className="rowlabel">Font</div>
+            <select className="sel" aria-label="Font for the text under the box" value={params.baseTextFont ?? BASE_TEXT_FONT} onChange={(e) => onPatch({ ...params, baseTextFont: e.target.value })}>
+              {BUNDLED_FONTS.map((x) => <option key={x.id} value={x.id}>{x.name} · {x.note}</option>)}
+            </select>
+          </>
+        ) : null}
+        {textError && <p className="note warn">{textError}</p>}
+        <p className="note">Engraved in the middle of the base, as filled vectors, so any laser program reads it. Long text shrinks to fit inside the walls. Put the engraved side down when you assemble.</p>
       </Sec>
       <Sec title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
         <LayersPanel layers={params.layers} labels={params.labels} onVis={onVis} onExp={onExp} onLabels={onLabels} />

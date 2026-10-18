@@ -5,6 +5,8 @@ import { colSegments, hingeCutPaths } from "./hinge";
 import { outlinePath } from "./wall";
 import { clamp, r3 } from "./util";
 import { xmlCommentText } from "@/lib/security/svg";
+import type { BuildContext } from "@/lib/generators/types";
+import { baseTextShape, contoursD } from "./baseText";
 
 export const EXPORT_LAYERS: ExportLayer[] = [
   { key: "outline", name: "Outline cut", code: "02", color: "#FF0000", ui: "var(--l-outline)" },
@@ -16,8 +18,11 @@ export const EXPORT_LAYERS: ExportLayer[] = [
 /** Scored lines: marked on the surface, not cut through. Written only when a design has some. */
 export const SCORE_LAYER = { name: "Score lines", code: "05", color: "#FF8000", ui: "var(--l-score, #FF8000)" };
 
-/** Path and label data in sheet coordinates, shared by the canvas and the SVG exporter. */
-export function layerContent(model: Model, lay: Layout, p: Params): LayerContent {
+/**
+ * Path and label data in sheet coordinates, shared by the canvas and the SVG exporter. `ctx` shapes
+ * the text under the box; without it (fonts still loading) the text is left out.
+ */
+export function layerContent(model: Model, lay: Layout, p: Params, ctx?: BuildContext): LayerContent {
   const L: LayerContent = { outline: [], slots: [], hinge: [], labels: [], fills: [] };
   for (const it of lay.items) {
     const pt = it.pt, ox = it.ox, oy = it.oy;
@@ -33,18 +38,22 @@ export function layerContent(model: Model, lay: Layout, p: Params): LayerContent
       if (pt.scoreR) (L.score ??= []).push(roundedPath(pt.edges, pt.scoreR, ox, oy));
       const w = pt.bbox.x1 - pt.bbox.x0, h = pt.bbox.y1 - pt.bbox.y0;
       const size = clamp(Math.min(w, h) / 9, 3, 8);
-      L.labels.push({ x: ox, y: pt.hole ? oy + pt.hole + size : oy, text: pt.name, size });
+      const text = pt.name === "BASE" && ctx ? baseTextShape(p, pt.edges, model.R - p.T, ctx) : null;
+      if (text?.contours.length) (L.engrave ??= []).push(contoursD(text.contours, ox, oy));
+      // The part name moves above the text under the box.
+      const lift = text?.contours.length ? text.height / 2 + size * 0.9 : 0;
+      L.labels.push({ x: ox, y: lift ? oy - lift : pt.hole ? oy + pt.hole + size : oy, text: pt.name, size });
     }
   }
   return L;
 }
 
 /** Layered SVG for LightBurn / Inkscape. Stroke width is 0.1 mm; document size is in mm. */
-export function exportSVG(model: Model, lay: Layout, p: Params) {
-  const LC = layerContent(model, lay, p);
+export function exportSVG(model: Model, lay: Layout, p: Params, ctx?: BuildContext) {
+  const LC = layerContent(model, lay, p, ctx);
   const m = p.shape === "cyl" ? `cylinder Ø${r3(p.dia)}` : `${r3(p.W)}x${p.shape === "poly" ? p.sides + "-gon" : r3(p.D)}`;
   const kerf = p.Ky != null && p.Ky !== p.K ? `kerf ${p.K} mm across vertical edges and ${p.Ky} mm across horizontal ones` : `kerf ${p.K} mm`;
-  const comment = `HingeLab living-hinge box: ${m} x ${r3(p.H)} mm, ${p.lid} lid, ${p.pattern} pattern. Material ${p.T} mm, ${kerf} (compensated). Cut order: ${LC.score?.length ? "score, " : ""}slots, hinge, outline.`;
+  const comment = `HingeLab living-hinge box: ${m} x ${r3(p.H)} mm, ${p.lid} lid, ${p.pattern} pattern. Material ${p.T} mm, ${kerf} (compensated). Cut order: ${LC.engrave?.length ? "engrave, " : ""}${LC.score?.length ? "score, " : ""}slots, hinge, outline.`;
   return layeredSVG(lay.width, lay.height, comment, LC, p.layers, p.labels);
 }
 
@@ -55,6 +64,11 @@ export function layeredSVG(width: number, height: number, comment: string, LC: L
   const W = r3(width), H = r3(height);
   let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">\n`;
   s += `<!-- ${xmlCommentText(comment)} -->\n`;
+  if (LC.engrave?.length && layers.labels.exp) {
+    s += `<g id="engrave" inkscape:groupmode="layer" inkscape:label="00 Engraved text" fill="#000000" stroke="none">\n`;
+    for (const d of LC.engrave) s += `  <path d="${d}" fill-rule="evenodd"/>\n`;
+    s += `</g>\n`;
+  }
   const order = ["labels", "score", "slots", "hinge", "outline"] as const;
   for (const key of order) {
     if (key === "score") {

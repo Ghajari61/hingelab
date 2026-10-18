@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { exportGeneratorForPlan, fontUploads } from "@/lib/billing/exportGenerator";
 import { exportHingeForPlan } from "@/lib/billing/exportHinge";
+import { hingeTextContext } from "@/lib/billing/hingeText";
 import { exportLettersForPlan, parseLetterRequest } from "@/lib/billing/exportLetters";
 import { exportParametricForPlan, parseParametricRequest } from "@/lib/billing/exportParametric";
 import { serverManifold } from "@/lib/billing/serverManifold";
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
     if (!out.ok) return NextResponse.json({ error: out.error }, { status: out.status });
     return new NextResponse(out.body as BodyInit, { headers: { ...downloadHeaders(out.type, out.fileName), "x-hingelab-plan": plan } });
   }
-  const out = body.product === "letters" ? await exportLetters(body, plan) : exportHingeForPlan(body.params, plan);
+  const out = body.product === "letters" ? await exportLetters(body, plan) : exportHingeForPlan(body.params, plan, await hingeTextContext(body.params as never).catch(() => undefined));
   if (!out.ok) return NextResponse.json({ error: out.error }, { status: out.status });
   return new NextResponse(out.svg, { headers: { ...downloadHeaders("image/svg+xml; charset=utf-8"), "x-hingelab-plan": plan } });
 }

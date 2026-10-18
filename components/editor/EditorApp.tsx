@@ -42,6 +42,7 @@ import { useSharedView } from "@/components/shell/SharedView";
 import { SHARED_ID } from "@/lib/share/id";
 import { useProjectFile } from "@/components/shell/useProjectFile";
 import { Canvas } from "./Canvas";
+import { useBaseTextContext } from "./useBaseText";
 import { rulerSvg } from "./Rulers";
 import { PanelDock } from "./PanelDock";
 import { hingeMeta, hingeSize, type HingeMeta } from "./summary";
@@ -118,7 +119,8 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   const model = "error" in result ? null : result;
   const error = "error" in result ? explainHingeError(built, result.error) : null;
   const lay = model ? arranged.lay : null;
-  const content = useMemo(() => (model && lay ? layerContent(model, lay, built) : null), [model, lay, built]);
+  const baseText = useBaseTextContext(built);
+  const content = useMemo(() => (model && lay ? layerContent(model, lay, built, baseText.ctx) : null), [model, lay, built, baseText.ctx]);
   const fitSet = cleanFit(params.fit);
   const checked = useDeferredValue(params);
   const issues = useMemo(() => hingeIssues(checked), [checked]);
@@ -220,13 +222,13 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
    * The file to export. With accounts the server builds it so Free cannot bypass the plan.
    * Without accounts everything is open and it is built here.
    */
-  const localSVG = () => (model && lay ? exportSVG(model, lay, built) : null);
+  const localSVG = () => (model && lay ? exportSVG(model, lay, built, baseText.ctx) : null);
 
   async function exportedSVG(): Promise<string | null> {
     if (!model || !lay) { toastMsg("Fix the settings before exporting"); return null; }
     if (locks.length) { setUpgrade(lockedReason()); return null; }
     if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return null; }
-    if (!account.configured) return exportSVG(model, lay, built);
+    if (!account.configured) return exportSVG(model, lay, built, baseText.ctx);
     try {
       const res = await fetch("/api/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ params }) });
       if (res.ok) return await res.text();
@@ -519,6 +521,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
             bedH={params.bedH}
             sheets={stale ? stale.sheets : arranged.sheets}
             content={stale ? stale.content : content}
+            engrave={(stale ? stale.content : content)?.engrave}
             stale={!!stale}
             layers={params.layers}
             labels={params.labels}
@@ -550,6 +553,8 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
           onCommit={(id, v, mat) => setField(id, v, mat, true)}
           onMaterial={(id, info) => patch(hingeWithMaterial(params, id, info), true)}
           onPatch={(next) => patch(next, true)}
+          onStandard={(next, name) => { patch(next, true); toastMsg(`${name}: the outside size fits it in your ${next.T} mm material. Ctrl+Z undoes it.`); }}
+          textError={baseText.error}
           onSplit={(n) => patch({ ...params, split: n }, true)}
           onCutStyle={(v: CutStyle) => setChoice("cutStyle", v)}
           onAutoFit={runAutoFit}

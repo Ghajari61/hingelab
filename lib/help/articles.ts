@@ -605,6 +605,20 @@ export const ARTICLES: HelpArticle[] = [
     related: ["box-joints", "hinge-dimensions", "hinge-dividers"],
   },
   {
+    slug: "hinge-standard-text", product: "hinge", title: "Standard sizes and text under the box",
+    summary: "Box sizes for tissues, playing cards, jewellery, gold and more, and a name or phone number engraved on the base.",
+    keywords: ["standard size", "tissue box", "card box", "poker", "tarot", "jewellery", "gold", "ring box", "engrave", "text", "company", "phone", "logo", "advert"],
+    blocks: [
+      { list: [
+        "Standard size (Dimensions): pick what goes inside, such as a regular or cube tissue pack, one or two poker decks, a tarot deck, a ring, a necklace or a gold bar. The list gives inside sizes; the outside size is worked out for your material thickness and lid, so the contents fit.",
+        "Picking a size also sets the lid and its opening (a tissue slot, finger hole or knob) and any dividers. Material, hinge pattern and sheet stay as they are.",
+        "Text under the box: type a company name, phone number or message, one line per line. It is engraved in the middle of the base as filled vectors, so LightBurn, xTool and Glowforge all read it.",
+        "Persian and English can share a line with the default font, Vazirmatn. Long text shrinks to fit inside the walls. Put the engraved side down when you assemble, so it is on the outside of the box.",
+      ] },
+    ],
+    related: ["hinge-dimensions", "hinge-lid", "hinge-dividers"],
+  },
+  {
     slug: "hinge-dividers", product: "hinge", title: "Dividers",
     summary: "Strips that split the inside of a box into compartments, locking together where they cross.",
     keywords: ["dividers", "partitions", "compartments", "grid", "organiser", "inserts"],

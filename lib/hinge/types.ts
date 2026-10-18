@@ -61,6 +61,12 @@ export interface Params {
   baseRing?: boolean;
   /** Width of that ring, mm (missing: 8). */
   baseRingW?: number;
+  /** Text engraved under the box, one line per line (missing: none). */
+  baseText?: string;
+  /** Cap height of that text, mm (missing: 5). */
+  baseTextSize?: number;
+  /** Its font, a Letters font id (missing: Vazirmatn Bold, Persian and Latin). */
+  baseTextFont?: string;
   /** Dividers across the width, each running front to back (missing: none). */
   divX?: number;
   /** Dividers across the depth, each running left to right (missing: none). */
@@ -252,6 +258,8 @@ export interface LayerContent {
   fills: string[];
   /** Scored lines (missing when a design has none, so its file has no score layer). */
   score?: string[];
+  /** Filled engraving (text under the box), even-odd paths; missing when there is none. */
+  engrave?: string[];
 }
 
 export interface ExportLayer {
