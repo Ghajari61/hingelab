@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.57",
-    "pub_date": "2026-10-18T05:22:03.503Z",
-    "notes": "Hinge Box: a new option scores the lid lip outline on the lid, so the lip lines up when gluing. AI Studio gives credits back when a job fails.",
+    "version": "1.0.58",
+    "pub_date": "2026-10-18T05:56:48.741Z",
+    "notes": "Hinge Box: Randomise box makes a whole new box idea (tissue box, money box, lantern, planter and more). New tissue and coin slots for the lid, 11 new presets, a Machine bed menu, and a Lid section with the opening and overhang.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.57_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnE3V1cvWmc3U01uMnV3ZHJJL1hwMXVRWXBJcDNHTktWZ2NsVUZjSE9JS05ENzA5L2VXUlB3NDd2R3A3VXA5MUM1V2pGaTNocVRBU1BEa01zdFluVlFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzAwNzkzCWZpbGU6SGluZ2VMYWJfMS4wLjU3X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTcKNWNJcGYwNWtyQkQva3B2dnhFTlF6YUZTMnFTRGRLYXdPemJNalc0N1pWWE1oa0pmZkRleHdmWXhtcWkrb1N0SnhTdlhSQkFPM2dzblFxRXI1dWtUQ2c9PQo=",
-        "size": 4272631
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.58_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnI3OHk5Unp5QW9jNjlCdW1RMDZDYW9GQjhwamM0VXBtZEFrdjRqWE5KbmpRQzVwM3JYNDdiSlJsVElGdDVqYmF1dWtCY3AxYVZheUdZWWE2eUMvTnd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzAyODg5CWZpbGU6SGluZ2VMYWJfMS4wLjU4X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTgKZlZNWTdkUHBzb2cxaWM3dmFmR05DZGtNR2hSU21HV0QrWUh4dDMxdERnTnJPNmQvZTVuR0FHWkJsQUFSb244OUthckphdlJ5YlZHNWo1S3JhVnBtQ0E9PQo=",
+        "size": 4419414
       }
     }
   }
