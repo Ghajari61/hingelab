@@ -15,7 +15,9 @@ import { sanitizeGeneratorParams } from "@/lib/generators/sanitize";
 import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, type AnyGenerator, type FieldSpec, type GenBase } from "@/lib/generators/types";
 import { HINGE_FIELD_HELP } from "@/lib/help/fieldHelp";
 import { clone, DEFAULTS, exportSVG, MATERIALS, mergeParams, type Params } from "@/lib/hinge";
-import { HINGE_PRESETS, hingePresetParams, randomHingePattern } from "@/lib/hinge/presets";
+import { HINGE_PRESETS, hingePresetParams, randomHingeBox } from "@/lib/hinge/presets";
+import { isLidSlot, lidSlotSize } from "@/lib/hinge/lidSlot";
+import { SHEET_PRESETS } from "@/lib/studio/library";
 import { randomiseParams } from "@/lib/generators/randomise";
 import { autoFixAll, sortIssues, type Issue } from "@/lib/issues";
 import { hingeIssues } from "@/lib/issues/hinge";
@@ -69,6 +71,9 @@ function hingeNumber(f: FieldDef): DField {
   };
 }
 
+/** The sheet preset with this size, or "custom". */
+const bedPresetId = (w: number, h: number) => SHEET_PRESETS.find((s) => Math.abs(s.w - w) < 0.05 && Math.abs(s.h - h) < 0.05)?.id ?? "custom";
+
 function hingeProduct(): DProduct {
   const extra: Record<string, DField[]> = {
     secShape: [
@@ -89,9 +94,23 @@ function hingeProduct(): DProduct {
       { kind: "choice", key: "split", label: "Wall", options: [{ v: "1", text: "One strip" }, { v: "2", text: "Two halves" }] },
     ],
     secLid: [
+      { kind: "choice", key: "lidHole", label: "Opening", default: "none", options: [
+        { v: "none", text: "None", title: "A plain lid" },
+        { v: "finger", text: "Finger", title: "A round hole to lift the lid with a fingertip" },
+        { v: "knob", text: "Knob", title: "A small hole for a knob's screw" },
+        { v: "tissue", text: "Tissue", title: "A long slot to pull tissues through" },
+        { v: "coin", text: "Coin", title: "A narrow slot for coins: a money box" },
+      ] },
+      { kind: "number", key: "lidHoleD", label: "Hole size", help: HINGE_FIELD_HELP.lidHoleD, unit: "mm", min: 1, max: 500, step: 0.5, default: 22 },
+      { kind: "number", key: "lidHoleW", label: "Slot width", help: HINGE_FIELD_HELP.lidHoleW, unit: "mm", min: 1, max: 200, step: 0.5, default: 30 },
+      { kind: "number", key: "lidOver", label: "Overhang", help: HINGE_FIELD_HELP.lidOver, unit: "mm", min: 0, max: 100, step: 0.5, default: 0 },
       { kind: "toggle", key: "lidLipScore", label: "Score the lip on the lid", help: "Marks the lip's outline on the lid, so the lip lines up when you glue it. Put the scored side down." },
     ],
     secSheet: [
+      { kind: "choice", key: "bed", label: "Machine bed", help: "Sets the sheet to your laser's bed or a common sheet size.", default: bedPresetId(DEFAULTS.bedW, DEFAULTS.bedH), options: [
+        { v: "custom", text: "Custom size" },
+        ...SHEET_PRESETS.map((s) => ({ v: s.id, text: `${s.name} (${s.w} × ${s.h} mm)` })),
+      ] },
       { kind: "toggle", key: "labels", label: "Engrave part names" },
       { kind: "toggle", key: "testStrip", label: "Add a bend test strip" },
     ],
@@ -114,8 +133,17 @@ export function hingeForm(p: Params): DForm {
   }
   if (p.lid === "open") hidden.push("lidGap");
   if (!p.baseRing) hidden.push("baseRingW");
-  const lipScore = p.lid === "removable" && p.lidLip !== false;
-  return { hidden: [...new Set(hidden)], hiddenSections: lipScore ? [] : ["secLid"], labels, ...(p.baseRing && p.baseRingW == null ? { values: { baseRingW: 8 } } : {}) };
+  if (!(p.lid === "removable" && p.lidLip !== false)) hidden.push("lidLipScore");
+  const opening = p.lidHole ?? "none";
+  if (opening === "none") hidden.push("lidHoleD");
+  if (!isLidSlot(opening)) hidden.push("lidHoleW");
+  const values: Record<string, unknown> = { bed: bedPresetId(p.bedW, p.bedH) };
+  if (p.baseRing && p.baseRingW == null) values.baseRingW = 8;
+  if (p.lidHole == null && p.lid !== "open") values.lidHole = "none";
+  if (p.lidOver == null && p.lid !== "open") values.lidOver = 0;
+  if (opening !== "none" && p.lidHoleD == null) values.lidHoleD = isLidSlot(opening) ? lidSlotSize(p).len : opening === "knob" ? 5 : 22;
+  if (isLidSlot(opening) && p.lidHoleW == null) values.lidHoleW = lidSlotSize(p).w;
+  return { hidden: [...new Set(hidden)], hiddenSections: p.lid === "open" ? ["secLid"] : [], labels, ...(Object.keys(values).length ? { values } : {}) };
 }
 
 // ---------------------------------------------------------------- Generators
@@ -320,9 +348,15 @@ function changeHinge(p: Params, product: DProduct, change: Change): Params | { e
   if (!f) return { error: "Unknown setting." };
   const c = coerce(f, change.value);
   if ("error" in c) return c;
+  if (change.key === "bed") {
+    const s = SHEET_PRESETS.find((x) => x.id === c.v);
+    return s ? { ...p, bedW: s.w, bedH: s.h } : p;
+  }
   const key = change.key as keyof Params;
   let q: Params = key === "material" ? withMaterial(p, c.v as string) : ({ ...p, [key]: key === "split" ? Number(c.v) : c.v } as Params);
   if (FIELDS.some((x) => x.id === key && x.mat) && q.material !== "custom") q = { ...q, material: "custom" };
+  // A new opening starts at its own size, not the last one's.
+  if (key === "lidHole") { delete q.lidHoleD; delete q.lidHoleW; }
   return q;
 }
 
@@ -388,7 +422,7 @@ function generateHinge(r: GenerateRequest, product: DProduct, plan: Plan): Gener
     if ("error" in q) return { status: 400, body: { error: q.error } };
     p = q;
   }
-  if (r.randomise) p = randomHingePattern(p, (x) => canUsePattern(plan, x));
+  if (r.randomise) p = randomHingeBox(p, plan);
   const base = (q: Params, issues: DIssue[] = [], applied: string[] = []): GenerateResponse => ({
     product: "hinge", params: q as unknown as Record<string, unknown>, form: hingeForm(q), issues, stats: [], summary: hingeSummary(q), applied,
   });

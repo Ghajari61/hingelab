@@ -48,7 +48,9 @@ describe("score the lid lip on the lid", () => {
     expect(hingeRequestError(box({ lidLipScore: true }))).toBeNull();
     expect(hingeRequestError(box({ lidLipScore: "yes" as never }))).not.toBeNull();
     expect(hingeForm(box()).hiddenSections).not.toContain("secLid");
-    expect(hingeForm(box({ lidLip: false })).hiddenSections).toContain("secLid");
+    expect(hingeForm(box()).hidden).not.toContain("lidLipScore");
+    expect(hingeForm(box({ lidLip: false })).hidden).toContain("lidLipScore");
+    expect(hingeForm(box({ lid: "fixed" })).hidden).toContain("lidLipScore");
     expect(hingeForm(box({ lid: "open" })).hiddenSections).toContain("secLid");
   });
 });

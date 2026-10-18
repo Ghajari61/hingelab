@@ -233,7 +233,7 @@ export function App() {
     if (!canRandom || !design.state.params || design.state.busy) return;
     const hinge = design.state.product === "hinge";
     design.randomise(hinge ? [] : locks.list);
-    toast({ text: hinge ? "A random hinge pattern. Ctrl+Z undoes it." : locks.list.length ? "New random design; locked settings kept. Ctrl+Z undoes it." : "New random design. Ctrl+Z undoes it.", kind: "ok" });
+    toast({ text: hinge ? "A new box idea: shape, size, lid and pattern. Your material and sheet stay. Ctrl+Z undoes it." : locks.list.length ? "New random design; locked settings kept. Ctrl+Z undoes it." : "New random design. Ctrl+Z undoes it.", kind: "ok" });
   }, [canRandom, design, locks.list, toast]);
 
   // Settings > Open designs in: the sheet or 3D, whatever was showing last.
@@ -511,7 +511,7 @@ export function App() {
               onExportAs={() => void save("save")}
               onResetAll={product.id === "art" ? undefined : resetAll}
               onRandomise={canRandom ? randomise : undefined}
-              randomLabel={product.id === "hinge" ? "Randomise pattern" : undefined}
+              randomLabel={product.id === "hinge" ? "Randomise box" : undefined}
               locks={product.id === "hinge" ? undefined : { has: locks.has, toggle: locks.toggle, count: locks.list.length }}
               onExport={() => void save("export")}
               onExportFormat={(f) => void save(f)}

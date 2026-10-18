@@ -50,7 +50,7 @@ interface Props {
   onResetAll?: () => void;
   /** A new random design (unlocked style settings only), as one undo step. */
   onRandomise?: () => void;
-  /** What Randomise does here ("Randomise design", or "Randomise pattern" for the Hinge Box). */
+  /** What Randomise does here ("Randomise design", or "Randomise box" for the Hinge Box). */
   randomLabel?: string;
   /** Settings Randomise keeps. */
   locks?: Locks & { count: number };

@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, RotateCw } from "lucide-react";
 import { SHEET_PRESETS } from "@/lib/studio/library";
 import { MAX_FIT_SHEETS, type FitSettings } from "@/lib/fit/fitToSheets";
 import type { FitInfo } from "@/lib/fit/arrange";
@@ -52,6 +52,11 @@ export function SheetSection({ bedW, bedH, fit, info, size, onSheet, onFit, chil
           </optgroup>
         ))}
       </select>
+      {Math.abs(bedW - bedH) > 0.05 && (
+        <button type="button" className="btn-auto sheet-rotate" onClick={() => onSheet(bedH, bedW)} title="Swap the sheet's width and height">
+          <RotateCw size={14} aria-hidden /> Turn sheet ({bedH} × {bedW} mm)
+        </button>
+      )}
       {children}
       <div className="rowlabel">Fit product to</div>
       <div className="iconseg full" role="group" aria-label="Fit product to">

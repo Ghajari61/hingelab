@@ -20,7 +20,7 @@ const HINGE_ENUMS: Partial<Record<keyof Params, readonly string[]>> = {
 
 /** Settings added later: optional, but in range when present. */
 const HINGE_OPTIONAL: Partial<Record<keyof Params, [number, number]>> = {
-  Ky: [0, 5], lidOver: [0, 100], lidHoleD: [0, 500], gamma: [0.001, 1], minFeature: [0, 50], baseRingW: [3, 80],
+  Ky: [0, 5], lidOver: [0, 100], lidHoleD: [0, 500], lidHoleW: [1, 200], gamma: [0.001, 1], minFeature: [0, 50], baseRingW: [3, 80],
 };
 
 /** [min, max] per Hinge Box number; the minimums are the editor's, the maximums are generous. */
@@ -48,7 +48,7 @@ export function hingeRequestError(p: Params): string | null {
     const v = p[k];
     if (v !== undefined && (!finite(v) || v < lo || v > hi)) return `${k} must be a number between ${lo} and ${hi}.`;
   }
-  if (p.lidHole !== undefined && !["none", "finger", "knob"].includes(p.lidHole)) return "Invalid value for lidHole.";
+  if (p.lidHole !== undefined && !["none", "finger", "knob", "tissue", "coin"].includes(p.lidHole)) return "Invalid value for lidHole.";
   if (p.lidLip !== undefined && typeof p.lidLip !== "boolean") return "Invalid value for lidLip.";
   if (p.lidLipScore !== undefined && typeof p.lidLipScore !== "boolean") return "Invalid value for lidLipScore.";
   if (p.baseRing !== undefined && typeof p.baseRing !== "boolean") return "Invalid value for baseRing.";

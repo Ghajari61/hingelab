@@ -6,6 +6,7 @@ import { bboxOf } from "./polygon";
 import { ellipse, kerfAcross } from "@/lib/materials/axes";
 import { bendAnalysis } from "./analysis";
 import { r3 } from "./util";
+import { coreDistance, isLidSlot, lidSlotSize, slotAlongY, slotOutline } from "./lidSlot";
 
 const NUMS = ["W", "D", "H", "R", "dia", "T", "K", "slotW", "slit", "bridge", "pitch", "overrun", "tabW", "slotClr", "lidGap", "bedW", "bedH", "gap"] as const;
 
@@ -60,6 +61,15 @@ export function computeModel(input: Params): ComputeResult {
   /** The finger or knob hole, centred, when it fits inside `inner` (the clear radius) with 3 mm to spare. */
   let holeR = 0;
   const lidHole = (inner: number, where: string): Point[][] => {
+    if (isLidSlot(p.lidHole)) {
+      // The slot keeps 3 mm of the plate around it; `inner - coreIn` is the plate's corner radius.
+      const { len, w } = lidSlotSize(p), along = slotAlongY(p), rad = inner - coreIn;
+      const pts = slotOutline(len, w, along, k, ky);
+      const name = p.lidHole === "coin" ? "coin slot" : "tissue slot";
+      if (w > k + 0.5 && len >= w && pts.every((q) => coreDistance(edges, q) <= rad - 3)) { holeR = (along ? len : w) / 2; return [pts]; }
+      issues.push({ lvl: "warn", msg: `The ${name} is too big for the ${where}, so it was left out. Make the slot shorter or narrower, or the box larger.` });
+      return [];
+    }
     if (p.lidHole !== "finger" && p.lidHole !== "knob") return [];
     const d = p.lidHoleD ?? (p.lidHole === "knob" ? 5 : 22);
     if (d / 2 + 3 <= inner && d > k + 0.5) { holeR = d / 2; return [ellipse(0, 0, (d - k) / 2, (d - ky) / 2, 72)]; }

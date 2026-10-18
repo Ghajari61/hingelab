@@ -1,5 +1,7 @@
 "use client";
 
+import { Dices } from "lucide-react";
+
 import { keepSetup } from "@/lib/prefs/editor";
 import { editorPrefs } from "@/lib/prefs/editorStore";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
@@ -34,7 +36,7 @@ import { ViewToggle, type ViewMode } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
 import type { Preset } from "@/lib/presets";
-import { HINGE_VARIANTS, hingePresetParams, hingeVariantOf, randomHingePattern } from "@/lib/hinge/presets";
+import { HINGE_VARIANTS, hingePresetParams, hingeVariantOf, randomHingeBox, randomHingePattern } from "@/lib/hinge/presets";
 import { useMyPresets } from "@/components/shell/useMyPresets";
 import { useSharedView } from "@/components/shell/SharedView";
 import { SHARED_ID } from "@/lib/share/id";
@@ -300,6 +302,12 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
     patch({ ...params, pattern: DEFAULTS.pattern, slit: DEFAULTS.slit, bridge: DEFAULTS.bridge, pitch: DEFAULTS.pitch, overrun: DEFAULTS.overrun, stretch: DEFAULTS.stretch, cutStyle: DEFAULTS.cutStyle, slotW: DEFAULTS.slotW }, true);
   }
 
+  function randomBox() {
+    const next = randomHingeBox(params, account.plan);
+    patch(next, true);
+    toastMsg(`${next.name}: a new box idea. Ctrl+Z undoes it.`);
+  }
+
   function randomPattern() {
     const next = randomHingePattern(params, (p) => canUsePattern(account.plan, p));
     patch(next, true);
@@ -429,6 +437,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
       { label: "Undo", kbd: "Ctrl+Z", run: doUndo, disabled: !canUndo },
       { label: "Redo", kbd: "Ctrl+Shift+Z", run: doRedo, disabled: !canRedo },
       "-",
+      { label: "Randomise box", kbd: "", run: randomBox },
       { label: "Randomise hinge pattern", kbd: "", run: randomPattern },
       { label: "Reset hinge pattern", kbd: "", run: resetPattern },
       { label: "Reset all settings", kbd: "", run: resetAll },
@@ -487,7 +496,11 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
           groups={hingeGroups({ params, plan: account.plan, onShape: (v) => setChoice("shape", v), onLid: (v) => setChoice("lid", v), onPattern: (v) => setChoice("pattern", v), onVariant: (v) => { patch({ ...params, ...v.params }, true); toastMsg(`${v.name} hinge style`); }, onRandom: randomPattern })}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
           inert={shared.viewing}
-        />
+        >
+          <button type="button" className="btn-auto gen-shuffle" onClick={randomBox} title="A whole new box idea: tissue box, money box, lantern, planter and more. Your material and sheet stay. Ctrl+Z undoes it.">
+            <Dices size={15} aria-hidden /> Randomise box
+          </button>
+        </GalleryRail>
         <div className={`stage${viewMode === "3d" ? " no-rulers" : ""}`}>
         <ViewToggle value={viewMode} onChange={setViewMode} />
         <div className={`stage-3d${stale ? " stale" : ""}`} hidden={viewMode !== "3d"}>

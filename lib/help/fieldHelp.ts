@@ -32,7 +32,8 @@ export const HINGE_FIELD_HELP: Record<NumericKey, string> = {
   Ky: "The kerf across cuts that run left to right, for a machine that cuts wider on one axis. Measure a cut 20 mm square across both ways; Kerf is then the kerf across cuts that run up and down.",
   minFeature: "The narrowest bar your material holds without breaking or burning away. Auto-fit keeps hinge bars at least this wide; 0 uses the usual minimum.",
   lidOver: "How far the lid reaches past the walls all round, for a flat top with an edge to lift. 0 keeps the lid flush.",
-  lidHoleD: "The diameter of the lid's hole: about 22 mm for a fingertip, or the size of your knob's screw.",
+  lidHoleD: "The diameter of the lid's hole: about 22 mm for a fingertip, or the size of your knob's screw. For a tissue or coin slot, the slot's length.",
+  lidHoleW: "How wide the tissue or coin slot is. About 25 to 35 mm lets tissues pull through; 3 to 4 mm takes coins.",
   ...HINGE,
 };
 

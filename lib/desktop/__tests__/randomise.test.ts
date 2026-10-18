@@ -30,13 +30,14 @@ describe("desktop Randomise", () => {
     expect(changed).toBeGreaterThan(0);
   }, 60000);
 
-  it("gives the Hinge Box a new pattern within the plan, keeping its size", async () => {
+  it("gives the Hinge Box a whole new box within the plan, keeping the material and sheet", async () => {
     const start = body(await generateDesign({ product: "hinge" }, "free")).params;
     for (let i = 0; i < 6; i++) {
       const r = await generateDesign({ product: "hinge", params: start, randomise: {} }, "free");
       expect(r.status, body(r).error ?? body(r).locked).toBe(200);
       const q = body(r).params;
-      for (const k of ["W", "D", "H", "shape", "material"]) expect(q[k]).toEqual(start[k]);
+      for (const k of ["material", "T", "K", "bedW", "bedH"]) expect(q[k]).toEqual(start[k]);
+      expect(q.shape).toBe("rect");
     }
   }, 60000);
 

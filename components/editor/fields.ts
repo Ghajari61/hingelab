@@ -1,10 +1,11 @@
 import type { Params } from "@/lib/hinge";
+import { isLidSlot, lidSlotSize } from "@/lib/hinge/lidSlot";
 
 export type NumericKey =
   | "W" | "D" | "H" | "R" | "sides" | "dia" | "cylFlats"
   | "T" | "K" | "slotW" | "slit" | "bridge" | "pitch" | "overrun" | "stretch"
   | "tabW" | "slotClr" | "lidGap" | "bedW" | "bedH" | "gap"
-  | "Ky" | "minFeature" | "lidOver" | "lidHoleD" | "baseRingW";
+  | "Ky" | "minFeature" | "lidOver" | "lidHoleD" | "lidHoleW" | "baseRingW";
 
 /** What NumberField needs to know about a field; shared by every product. */
 export interface BaseField {
@@ -54,7 +55,8 @@ export const FIELDS: FieldDef[] = [
   { id: "lidGap", label: "Lid gap", sec: "secJoints", len: true, step: 0.05, min: 0, show: p => p.lid === "removable" },
   { id: "baseRingW", label: "Ring width", sec: "secJoints", len: true, step: 0.5, min: 3, max: 40, show: p => p.baseRing === true, unset: () => 8 },
   { id: "lidOver", label: "Overhang", sec: "secLid", len: true, step: 0.5, min: 0, max: 100, unset: () => 0 },
-  { id: "lidHoleD", label: "Hole size", sec: "secLid", len: true, step: 0.5, min: 1, max: 500, show: p => p.lidHole === "finger" || p.lidHole === "knob", unset: p => p.lidHole === "knob" ? 5 : 22 },
+  { id: "lidHoleD", label: "Hole size", sec: "secLid", len: true, step: 0.5, min: 1, max: 500, show: p => !!p.lidHole && p.lidHole !== "none", lab: p => isLidSlot(p.lidHole) ? "Slot length" : "Hole size", unset: p => isLidSlot(p.lidHole) ? lidSlotSize(p).len : p.lidHole === "knob" ? 5 : 22 },
+  { id: "lidHoleW", label: "Slot width", sec: "secLid", len: true, step: 0.5, min: 1, max: 200, show: p => isLidSlot(p.lidHole), unset: p => lidSlotSize(p).w },
   { id: "bedW", label: "Bed W", sec: "secSheet", len: true, step: 10, min: 50 },
   { id: "bedH", label: "Bed H", sec: "secSheet", len: true, step: 10, min: 50 },
   { id: "gap", label: "Spacing", sec: "secSheet", len: true, step: 0.5, min: 0 },

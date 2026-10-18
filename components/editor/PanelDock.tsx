@@ -67,6 +67,15 @@ export function Sec({ title, meta, startOpen, onReset, children }: {
   );
 }
 
+/** Lid openings: value, button text, tooltip. */
+const LID_HOLES = [
+  ["none", "None", "A plain lid"],
+  ["finger", "Finger", "A round hole to lift the lid with a fingertip"],
+  ["knob", "Knob", "A small hole for a knob's screw"],
+  ["tissue", "Tissue", "A long slot to pull tissues through"],
+  ["coin", "Coin", "A narrow slot for coins: a money box"],
+] as const;
+
 export function PanelDock({
   params, model, error, units, dimsMeta, patMeta,
   onLive, onCommit, onMaterial, onPatch, onSplit, onCutStyle, onAutoFit, onTestStrip,
@@ -171,14 +180,14 @@ export function PanelDock({
         </div>
         <p className="note">Two halves fits long walls on small beds. Seams land in the middle of flat sides.</p>
       </Sec>
-      <Sec title="Lid" onReset={() => onResetSection("Lid", ["lidOver", "lidHole", "lidHoleD", "lidLip", "lidLipScore"])}>
+      <Sec title="Lid" onReset={() => onResetSection("Lid", ["lidOver", "lidHole", "lidHoleD", "lidHoleW", "lidLip", "lidLipScore"])}>
         <div className="grid2">{fields("secLid")}</div>
-        <div className="rowlabel">Hole<ResetMark label="Lid hole" show={(params.lidHole ?? "none") !== "none"} to="None" onReset={() => { const next: Params = { ...params }; delete next.lidHole; delete next.lidHoleD; onPatch(next); }} /></div>
-        <div className="iconseg" role="group" aria-label="Lid hole">
-          {([["none", "None"], ["finger", "Finger"], ["knob", "Knob"]] as const).map(([v, text]) => (
+        <div className="rowlabel">Hole<ResetMark label="Lid hole" show={(params.lidHole ?? "none") !== "none"} to="None" onReset={() => { const next: Params = { ...params }; delete next.lidHole; delete next.lidHoleD; delete next.lidHoleW; onPatch(next); }} /></div>
+        <div className="iconseg wrap" role="group" aria-label="Lid hole">
+          {LID_HOLES.map(([v, text, title]) => (
             <button
-              key={v} type="button" aria-pressed={(params.lidHole ?? "none") === v}
-              onClick={() => { const next: Params = { ...params, lidHole: v }; delete next.lidHoleD; onPatch(next); }}
+              key={v} type="button" title={title} aria-pressed={(params.lidHole ?? "none") === v}
+              onClick={() => { const next: Params = { ...params, lidHole: v }; delete next.lidHoleD; delete next.lidHoleW; onPatch(next); }}
             >{text}</button>
           ))}
         </div>
@@ -195,7 +204,7 @@ export function PanelDock({
             onChange={(on) => { const next: Params = { ...params, lidLipScore: on }; if (!on) delete next.lidLipScore; onPatch(next); }}
           />
         )}
-        <p className="note">Overhang makes a flat top wider than the box. A finger hole lifts a removable lid; a knob hole takes a knob&apos;s screw.</p>
+        <p className="note">Overhang makes a flat top wider than the box. A finger hole lifts a removable lid; a knob hole takes a knob&apos;s screw. A tissue slot makes a tissue box, a coin slot a money box.</p>
       </Sec>
       <Sec title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
         <LayersPanel layers={params.layers} labels={params.labels} onVis={onVis} onExp={onExp} onLabels={onLabels} />

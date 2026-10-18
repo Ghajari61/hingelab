@@ -5,7 +5,7 @@ export type Point = [number, number];
 export type Shape = "rect" | "pill" | "poly" | "cyl";
 export type Lid = "open" | "fixed" | "removable";
 export type Pattern = "straight" | "wave" | "relief" | "serpentine" | "honeycomb";
-export type LidHole = "none" | "finger" | "knob";
+export type LidHole = "none" | "finger" | "knob" | "tissue" | "coin";
 export type CutStyle = "slot" | "line";
 
 export interface LayerFlags {
@@ -49,8 +49,10 @@ export interface Params {
   lidOver?: number;
   /** A hole through the middle of a removable lid: to lift it with a finger or to fix a knob (missing: none). */
   lidHole?: LidHole;
-  /** That hole's diameter, mm. */
+  /** That hole's diameter, mm; for a tissue or coin slot, the slot's length. */
   lidHoleD?: number;
+  /** Width of a tissue or coin slot, mm (missing: sized to the box). */
+  lidHoleW?: number;
   /** A removable lid has a lip under it that drops inside the walls (missing: true). */
   lidLip?: boolean;
   /** Score the lip's outline on the lid, to line the lip up when gluing (missing: off). */

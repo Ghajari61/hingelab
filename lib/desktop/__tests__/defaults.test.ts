@@ -19,10 +19,11 @@ describe("desktop catalog defaults (the reset buttons)", () => {
   it("matches the settings of a new design", async () => {
     for (const p of (await desktopCatalog()).products) {
       const r = await generateDesign({ product: p.id }, "pro");
-      const params = (r.body as GenerateResponse).params;
+      const { params, form } = r.body as GenerateResponse;
       for (const s of p.sections) {
         for (const f of s.fields) {
-          const v = getPath(params, f.key);
+          // Unset settings show the form's value, as the app's settings panel does.
+          const v = getPath(params, f.key) ?? form.values?.[f.key];
           if (f.kind === "choice") expect(String(v), `${p.id} ${f.key}`).toBe(f.default);
           else if (f.kind === "toggle") expect(v === true, `${p.id} ${f.key}`).toBe(f.default);
           else if (f.kind === "text") expect(String(v ?? ""), `${p.id} ${f.key}`).toBe(f.default);
