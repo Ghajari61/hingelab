@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.58",
-    "pub_date": "2026-10-18T05:56:48.741Z",
-    "notes": "Hinge Box: Randomise box makes a whole new box idea (tissue box, money box, lantern, planter and more). New tissue and coin slots for the lid, 11 new presets, a Machine bed menu, and a Lid section with the opening and overhang.",
+    "version": "1.0.59",
+    "pub_date": "2026-10-18T06:20:25.231Z",
+    "notes": "Hinge Box: inside dividers. Set how many across the width and depth; they lock together with half-lap slots, stand in slots in the base and follow round walls. New Tea chest and Jewellery organiser presets.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.58_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnI3OHk5Unp5QW9jNjlCdW1RMDZDYW9GQjhwamM0VXBtZEFrdjRqWE5KbmpRQzVwM3JYNDdiSlJsVElGdDVqYmF1dWtCY3AxYVZheUdZWWE2eUMvTnd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzAyODg5CWZpbGU6SGluZ2VMYWJfMS4wLjU4X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTgKZlZNWTdkUHBzb2cxaWM3dmFmR05DZGtNR2hSU21HV0QrWUh4dDMxdERnTnJPNmQvZTVuR0FHWkJsQUFSb244OUthckphdlJ5YlZHNWo1S3JhVnBtQ0E9PQo=",
-        "size": 4419414
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.59_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnFMalVwWHVpUjJ5Qm40MkNJTXdFYkxFVm9OQXhzdzBsTTFHRDlWRkNjYlJEZXF5cVgvTVB4Vko4TStnYjZodjU1Z1Y4Nkw3TTVYNU5EelY5UjlJNndJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzA0MjU5CWZpbGU6SGluZ2VMYWJfMS4wLjU5X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNTkKQS9WOEJJZlJVR1dVZU1ML1lEK2VHL1FIT3ZhYktlMXAxZlluV1JDK1M1LzZSS0cxOWdPcnBFb2dMM1dIR0VNNkJuOU84RXpvVzl4bnlWTllPZmhqQVE9PQo=",
+        "size": 4425272
       }
     }
   }
