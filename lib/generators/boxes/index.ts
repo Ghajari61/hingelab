@@ -7,7 +7,7 @@ import { buildBoxes, type BoxesOutput } from "./build";
 import { checkBoxes } from "./check";
 import { fingerPanel } from "./joints";
 import { hasArt } from "./more";
-import { BOXES_DEFAULTS, BOXES_VERSION, DESIGN_NAMES, LID_NAMES, migrateBoxes, mergeBoxes, type BoxesParams, type Design, type LidKind } from "./params";
+import { BOXES_DEFAULTS, BOXES_VERSION, DESIGN_NAMES, FIT_NAMES, LID_NAMES, PIERCE_SHAPES, migrateBoxes, mergeBoxes, type BoxesParams, type Design, type JointFit, type LidKind, type PierceShape } from "./params";
 import { BOXES_PRESETS } from "./presets";
 import { FRET_KINDS, FRET_NAMES, fretSample } from "../fretwork";
 
@@ -42,6 +42,11 @@ const sections: SectionSpec<BoxesParams>[] = [
       },
       { kind: "number", key: "joint.finger", label: "Finger width", unit: "mm", min: 3, max: 40, step: 0.5, help: "Target width of each finger; it is adjusted so every edge gets an odd number of equal fingers." },
       { kind: "toggle", key: "joint.outside", label: "Outside sizes", help: "Turn on to enter the outside size; otherwise the sizes are inside, so things you measured will fit." },
+      {
+        kind: "choice", key: "joint.fit", label: "Fit",
+        help: "How tightly the joints go together, on top of the kerf. Standard suits most plywood; go looser if the parts need force, tighter if they fall apart. Each step is 0.05 mm on every edge.",
+        options: (Object.keys(FIT_NAMES) as JointFit[]).map((v) => ({ v, text: FIT_NAMES[v] })),
+      },
     ],
   },
   {
@@ -150,7 +155,10 @@ const sections: SectionSpec<BoxesParams>[] = [
     help: "A decorative pattern cut right through the walls and the lid, such as a lattice, floral rosettes or Moroccan quatrefoils. Holes stay clear of the joints, and of a framed label round the lid's text.",
     fields: [
       { kind: "choice", key: "pierce.pattern", shuffle: true, label: "Pattern", rail: true, help: "The shape of the holes; None leaves the panels plain.", options: FRET_KINDS.map((v) => ({ v, text: FRET_NAMES[v] })) },
-      { kind: "choice", key: "pierce.on", label: "Cut it in", show: (p) => p.pierce.pattern !== "none", help: "The walls, the lid (the front cover of a book box) or both.", options: [{ v: "both", text: "Walls and lid" }, { v: "walls", text: "Walls" }, { v: "lid", text: "Lid" }] },
+      { kind: "choice", key: "pierce.on", label: "Put it on", show: (p) => p.pierce.pattern !== "none", help: "The walls, the lid (the front cover of a book box), both, or only the front wall.", options: [{ v: "both", text: "Walls and lid" }, { v: "walls", text: "Walls" }, { v: "lid", text: "Lid" }, { v: "front", text: "Front" }, { v: "front-lid", text: "Front and lid" }] },
+      { kind: "choice", key: "pierce.shape", label: "Shape", show: (p) => p.pierce.pattern !== "none", help: "Fill the whole face, or only a shape in its middle: a circle, heart, star, hexagon or diamond.", options: (Object.keys(PIERCE_SHAPES) as PierceShape[]).map((v) => ({ v, text: PIERCE_SHAPES[v] })) },
+      { kind: "number", key: "pierce.size", label: "Shape size", unit: "%", min: 20, max: 100, step: 1, show: (p) => p.pierce.pattern !== "none" && p.pierce.shape !== "full", help: "The shape's size as a share of the face (inside the joints)." },
+      { kind: "choice", key: "pierce.mark", label: "Mark", show: (p) => p.pierce.pattern !== "none", help: "Cut the pattern through, engrave it, or score its outlines. Engraved and scored patterns keep the box closed and strong.", options: [{ v: "cut", text: "Cut out" }, { v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }] },
       { kind: "number", key: "pierce.cell", label: "Pattern size", unit: "mm", min: 6, max: 80, step: 0.5, show: (p) => p.pierce.pattern !== "none", help: "How far the pattern repeats; larger shapes cut faster." },
       { kind: "number", key: "pierce.bar", label: "Bar width", unit: "mm", min: 1, max: 15, step: 0.25, show: (p) => p.pierce.pattern !== "none", help: "The narrowest wood left between holes; keep it at least the material thickness for plywood." },
     ],

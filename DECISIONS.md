@@ -1415,3 +1415,15 @@ The user asked for the Test Cards section to be deleted completely.
 ## D185. Retired Persian sign draft
 
 The removed Persian sign sample (name "Persian sign", text سلام) was still reopening from this device's Letters autosave. `retiredLetterSample` recognises that draft, and Letters opens a new design instead and saves over it. A design the user named themselves keeps its text, Persian included. No geometry changed.
+
+## D187. Box options from MakerWorld's Laser Box Generator
+
+The user asked to study MakerWorld's MakerLab Laser Box Generator and add its good options. Its editor needs a Bambu Lab sign-in, so the study used Bambu's announcement and the public description of the same generator. HingeLab's Boxes generator already had its box types (open tray, lift-off lid, hinged lid, chest of drawers), inside or outside sizes, finger and tab joints, compartments, kerf, materials, patterns on walls and lid, multi-sheet export and the 3D view. Added:
+
+- **Joint fit** (`joint.fit`): Looser, Loose, Standard, Snug, Tighter. Each step adds 0.05 mm to every edge of every part of a jointed design (holes shrink by the same), on top of the kerf. It is applied after the build, so the designs keep one code path. Standard changes nothing, so saved designs and golden geometry are unchanged.
+- **Pattern faces** (`pierce.on`): Front, and Front and lid, besides Walls, Lid and both.
+- **Pattern window** (`pierce.shape`, `pierce.size`): the pattern fills the whole face, or a circle, heart, star, hexagon or diamond in the middle of the face (inside the joints), sized as a share of it. Whole face is the old code path.
+- **Pattern mark** (`pierce.mark`): cut out, engraved, or scored as outlines. Engraved and scored patterns keep a lift-off lid's lip solid.
+- **Presets**: Coaster box, Photo box (a heart of flowers on the lid), Trinket drawer, Star lantern, Engraved lattice chest, Moon window box.
+
+Not taken: a latch for the hinged lid (a laser-cut latch that holds a pin-hinged lid needs its own part design and cutting tests), Bambu's H2D `.lac` export (a proprietary job format) and picking single faces in 3D (the face choices above cover the common cases). The 28 preset pictures for presets added in 1.0.41 had never been committed; they are now.

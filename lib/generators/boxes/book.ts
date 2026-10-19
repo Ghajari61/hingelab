@@ -13,7 +13,7 @@ import { rect } from "../geom";
 import { fretHoles, type KeepOut } from "../fretwork";
 import type { BuildContext, Contour, GenPart, Pt } from "../types";
 import { lidArt, r1, wall, flat, type V2Output } from "./more";
-import { labelBox, labelFrame, pierce, pierced, pierceWalls } from "./pierce";
+import { labelBox, labelFrame, patternHoles, pierce, pierced, pierceWallIds, pierceWalls } from "./pierce";
 import type { BoxesParams } from "./params";
 
 const shift = (c: Contour, dx: number, dy: number): Contour => c.map(([x, y]) => [x + dx, y + dy] as Pt);
@@ -61,15 +61,19 @@ export function buildBook(p: BoxesParams, ctx: BuildContext): V2Output {
     if (pierced(p)) { const k = labelBox(cx, cy, art.w, art.h); keep.push(k); engrave.push(...labelFrame(k)); }
   }
   let coverHoles = 0;
+  const patternScore: Contour[] = [];
   if (pierced(p)) {
     const m = Math.max(5, p.pierce.bar + 3);
-    const fh = fretHoles({ kind: p.pierce.pattern, cell: Math.max(6, p.pierce.cell), bar: Math.max(1, p.pierce.bar) }, fx + 2, m, fx + Lc - m, Hc - m, keep);
-    holes.push(...fh);
+    const fh = p.pierce.shape === "full" ? fretHoles({ kind: p.pierce.pattern, cell: Math.max(6, p.pierce.cell), bar: Math.max(1, p.pierce.bar) }, fx + 2, m, fx + Lc - m, Hc - m, keep) : patternHoles(p, fx + 2, m, fx + Lc - m, Hc - m, keep);
+    if (p.pierce.mark === "engrave") engrave.push(...fh);
+    else if (p.pierce.mark === "score") patternScore.push(...fh);
+    else holes.push(...fh);
     coverHoles = fh.length;
   }
   const cover: GenPart = {
     id: "cover", name: "Cover (bends round the spine)", outer: strip, holes, cuts,
     ...(engrave.length ? (p.engrave.mark === "score" ? { score: engrave.map((c) => [...c, c[0]]) } : { engrave }) : {}),
+    ...(patternScore.length ? { score: [...(p.engrave.mark === "score" ? engrave.map((c) => [...c, c[0]]) : []), ...patternScore.map((c) => [...c, c[0]])] } : {}),
     // Its back cover under the walls (turned, so the slots meet the tabs); the 3D view uses views3d.
     place: { x: r + Lc, y: Hc, z: 0, rot: 180 },
   };
@@ -101,7 +105,10 @@ export function buildBook(p: BoxesParams, ctx: BuildContext): V2Output {
     { id: "fore", name: "Fore-edge wall", outer: foreWall(), holes: [], place: wall(fore, Dk - T, over, 90) },
   ];
   let wallHoles = 0;
-  if (pierceWalls(p)) for (const w of walls) wallHoles += pierce(p, w, T + Math.max(1, p.pierce.bar) + 1);
+  if (pierceWalls(p)) {
+    const ids = pierceWallIds(p, walls.map((w) => w.id));
+    for (const w of walls) if (ids.includes(w.id)) wallHoles += pierce(p, w, T + Math.max(1, p.pierce.bar) + 1);
+  }
 
   const insideW = fore - 2 * T, insideH = Hc - 2 * over - 2 * T;
   return {

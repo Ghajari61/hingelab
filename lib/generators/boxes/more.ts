@@ -16,7 +16,7 @@ import { textBlock } from "../weld";
 import { boxPanels, fingerCount, fingerPanel, type EdgeSpec } from "./joints";
 import type { BoxesParams, LidKind } from "./params";
 import { FRET_NAMES, type KeepOut } from "../fretwork";
-import { labelBox, labelFrame, pierce, pierceLid, pierceWalls, pierced } from "./pierce";
+import { labelBox, labelFrame, pierce, pierceCuts, pierceLid, pierceWallIds, pierceWalls, pierced } from "./pierce";
 
 type Place = NonNullable<GenPart["place"]>;
 export interface V2Info {
@@ -310,7 +310,7 @@ export function pierceBox(p: BoxesParams, parts: GenPart[], kit: LidKit, art: Ar
   if (!pierced(p)) return [];
   const T = p.T, edge = T + Math.max(1, p.pierce.bar) + 1;
   let walls = 0, top = 0;
-  if (pierceWalls(p)) for (const id of ["front", "back", "left", "right"]) { const w = parts.find((q) => q.id === id); if (w) walls += pierce(p, w, edge); }
+  if (pierceWalls(p)) for (const id of pierceWallIds(p, ["front", "back", "left", "right"])) { const w = parts.find((q) => q.id === id); if (w) walls += pierce(p, w, edge); }
   if (pierceLid(p) && kit.face && lid !== "inset" && lid !== "open" && lid !== "none") {
     const part = parts.find((q) => q.id === kit.face!.id);
     if (part) {
@@ -322,14 +322,15 @@ export function pierceBox(p: BoxesParams, parts: GenPart[], kit: LidKit, art: Ar
       }
       top = pierce(p, part, edge, keep);
       const lip = parts.find((q) => q.id === "lip");
-      if (lip && top) {
+      if (lip && top && pierceCuts(p)) {
         const xs = lip.outer.map((q) => q[0]), ys = lip.outer.map((q) => q[1]), w = Math.max(6, 2 * T);
         const x0 = Math.min(...xs), y0 = Math.min(...ys), x1 = Math.max(...xs), y1 = Math.max(...ys);
         if (x1 - x0 > 3 * w && y1 - y0 > 3 * w) { lip.holes.push(rect(x0 + w, y0 + w, x1 - x0 - 2 * w, y1 - y0 - 2 * w)); lip.name = "Lid lip (frame)"; }
       }
     }
   }
-  return [{ label: "Pattern", value: `${FRET_NAMES[p.pierce.pattern]}: ${walls} holes in the walls, ${top} in the lid` }];
+  const what = p.pierce.mark === "engrave" ? "engraved shapes" : p.pierce.mark === "score" ? "scored shapes" : "holes";
+  return [{ label: "Pattern", value: `${FRET_NAMES[p.pierce.pattern]}: ${walls} ${what} in the walls, ${top} in the lid` }];
 }
 
 const insideH = (p: BoxesParams, h: number, lid: LidKind | "none") => (p.joint.outside ? h : h + lidWalls(lid) * p.T);
