@@ -12,7 +12,7 @@ import { boxPanels, fingerCount } from "./joints";
 import { buildBoxV2, buildDrawer, buildHex, buildInsert, buildMoney, buildStack, buildTrayV2, hasArt } from "./more";
 import { pierced } from "./pierce";
 import { buildBook } from "./book";
-import { DESIGN_NAMES, type BoxesParams } from "./params";
+import { DESIGN_NAMES, FIT_MM, FIT_NAMES, type BoxesParams } from "./params";
 
 export interface BoxesInfo {
   /** Outside size of the finished piece, mm. */
@@ -324,6 +324,25 @@ const isV1Box = (p: BoxesParams) => (p.box.lid === "closed" || p.box.lid === "op
 
 export function buildBoxes(p: BoxesParams, ctx: BuildContext): BoxesOutput {
   if (!(p.T > 0)) return { parts: [], stats: [], error: "Set the material thickness." };
+  const out = buildDesign(p, ctx);
+  const d = FIT_MM[p.joint.fit] ?? 0;
+  if (!d || out.error || !JOINTED.has(p.design)) return out;
+  return { ...out, parts: out.parts.map((pt) => fitPart(pt, d / 2)), stats: [...out.stats, { label: "Fit", value: `${FIT_NAMES[p.joint.fit]} (${d > 0 ? "+" : ""}${d} mm on every joint)` }] };
+}
+
+/** Designs whose parts lock together with fingers, tabs or slots (the fit setting applies to them). */
+const JOINTED = new Set<BoxesParams["design"]>(["box", "tray", "drawer", "hex", "insert", "money", "stack", "book", "bird", "sign", "stand"]);
+
+/** A part grown by `e` mm on every edge (holes shrink by the same), so its joints go tighter. */
+function fitPart(pt: GenPart, e: number): GenPart {
+  const grown = offsetShapes([makeShape(pt.outer, [])], e, "miter");
+  if (!grown.length) return pt;
+  const outer = grown.reduce((a, b) => (b.area > a.area ? b : a)).outer;
+  const holes = pt.holes.flatMap((h) => { const s = offsetShapes([makeShape(h, [])], -e, "miter"); return s.length ? s.map((x) => x.outer) : []; });
+  return { ...pt, outer, holes };
+}
+
+function buildDesign(p: BoxesParams, ctx: BuildContext): BoxesOutput {
   switch (p.design) {
     case "box": return isV1Box(p) ? buildBox(p) : buildBoxV2(p, ctx);
     case "tray": return p.tray.lid === "none" && p.joint.style !== "tabs" && !pierced(p) ? buildTray(p) : buildTrayV2(p, ctx);

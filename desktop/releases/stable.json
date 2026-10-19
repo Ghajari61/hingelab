@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.64",
-    "pub_date": "2026-10-19T07:33:32.018Z",
-    "notes": "New Paper Box generator: reverse and straight tuck-end cartons, mailer boxes and two-piece gift boxes in card or board, with creases, slit locks, bleed and 27 presets.",
+    "version": "1.0.65",
+    "pub_date": "2026-10-19T13:48:51.004Z",
+    "notes": "Boxes: joint fit from looser to tighter; cut-out patterns on the front only, inside a circle, heart, star, hexagon or diamond, and cut, engraved or scored; six new presets including a photo box, star lantern and trinket drawer.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.64_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnN5QVNNQjdMK3I4bnk0Y1JwRXAvc2EvT21QL3Z4KzZYZEpmQ1FzeHhaQlNnbHl3N1JWV2dBNnJZS25kZnR0cCtsVkl4OHExS1lMYW1MUFNHUnBZbndrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzk1MDA3CWZpbGU6SGluZ2VMYWJfMS4wLjY0X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNjQKMjlKTzcvU0h5Y29nOWVMQ280bWVGcDltR2I2Y1V4K1U3Z0xpZFJmYzJMNUpqc1JXR0NVR2xKa21sbzNROVcvNFgraXVmREYrTjcrRHUyeVpPcGdKQ3c9PQo=",
-        "size": 4501210
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.65_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmhnUFhTMXZ2ZFBNcTVQc2VXTDc5cHpvV0tXS0poMmZqOUxSZ240ZXBGazhFbjRwL0NiRUZJOWFQVjFadlFSVHdtNDR0cktkWm44dFg0d0FGcHdadEFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyNDE3NTY0CWZpbGU6SGluZ2VMYWJfMS4wLjY1X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNjUKNGNFZDRxWER6d1BzODg2b2g1T0xseGdqaVRmNExyR1psNktGZFVEc3RpZGtuVjFPdzU4T2sxYUxWdXdNMXIrN3NVTERSUS8ycm5GVEtOU1h6SEZ5RHc9PQo=",
+        "size": 4544003
       }
     }
   }

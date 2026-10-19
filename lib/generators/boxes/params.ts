@@ -11,6 +11,18 @@ export type LidKind = "closed" | "open" | "liftoff" | "sliding" | "pin" | "inset
 /** Lids a tray can take (a tray with a lid is a tea, card or jewellery box). */
 export type TrayLid = "none" | "liftoff" | "sliding" | "pin" | "inset";
 export type JointStyle = "fingers" | "tabs";
+/** How tight the joints go together, from looser (hand pressure) to tighter (needs a mallet). */
+export type JointFit = "looser" | "loose" | "standard" | "snug" | "tight";
+/** Material added to (or taken off) every edge of every part, mm: the fit steps. */
+export const FIT_MM: Record<JointFit, number> = { looser: -0.1, loose: -0.05, standard: 0, snug: 0.05, tight: 0.1 };
+export const FIT_NAMES: Record<JointFit, string> = { looser: "Looser", loose: "Loose", standard: "Standard", snug: "Snug", tight: "Tighter" };
+/** Faces that carry the cut-out pattern. */
+export type PierceOn = "both" | "walls" | "lid" | "front" | "front-lid";
+/** The window the pattern fills: the whole face, or a shape in its middle. */
+export type PierceShape = "full" | "circle" | "heart" | "star" | "hexagon" | "diamond";
+export const PIERCE_SHAPES: Record<PierceShape, string> = { full: "Whole face", circle: "Circle", heart: "Heart", star: "Star", hexagon: "Hexagon", diamond: "Diamond" };
+/** The pattern cut through, engraved, or scored as outlines. */
+export type PierceMark = "cut" | "engrave" | "score";
 
 export const DESIGN_NAMES: Record<Design, string> = {
   box: "Box", tray: "Tray", drawer: "Drawer box", hex: "Hexagon box", insert: "Divider insert", money: "Money box", stack: "Stacking trays", book: "Book box",
@@ -30,6 +42,8 @@ export interface BoxesParams extends GenBase {
     outside: boolean;
     /** Fingers at every edge, or tabs through slots in a bottom (and top) that overhangs the walls. */
     style: JointStyle;
+    /** Fit of every joint (on top of the kerf). */
+    fit: JointFit;
   };
   box: { width: number; depth: number; height: number; lid: LidKind; clearance: number; notch: boolean; pin: number };
   tray: { width: number; depth: number; height: number; cols: number; rows: number; dividers: number; lid: TrayLid };
@@ -48,7 +62,7 @@ export interface BoxesParams extends GenBase {
   /** A box shaped like a book: one cover piece bends round a living-hinge spine. Sizes are outside. */
   book: { width: number; height: number; thickness: number; over: number };
   /** A decorative pattern cut through the walls and lid (or the book's cover). */
-  pierce: { pattern: FretKind; on: "both" | "walls" | "lid"; cell: number; bar: number };
+  pierce: { pattern: FretKind; on: PierceOn; cell: number; bar: number; shape: PierceShape; size: number; mark: PierceMark };
 }
 
 export const BOXES_DEFAULTS: BoxesParams = {
@@ -64,7 +78,7 @@ export const BOXES_DEFAULTS: BoxesParams = {
   job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   design: "box",
-  joint: { finger: 10, outside: false, style: "fingers" },
+  joint: { finger: 10, outside: false, style: "fingers", fit: "standard" },
   box: { width: 120, depth: 80, height: 60, lid: "closed", clearance: 0.3, notch: false, pin: 3 },
   tray: { width: 240, depth: 160, height: 50, cols: 3, rows: 2, dividers: 85, lid: "none" },
   engrave: { text: "", fontId: "pacifico", size: 14, motif: "none", motifSize: 30, border: 0, art: { ...MOTIF_ART }, mark: "engrave" },
@@ -79,7 +93,7 @@ export const BOXES_DEFAULTS: BoxesParams = {
   keys: { width: 220, height: 90, corner: 10, hooks: 4, reach: 35, text: "KEYS", fontId: "fredoka", size: 18 },
   bird: { width: 120, depth: 120, height: 150, pitch: 40, hole: 32, perch: false, overhang: 20 },
   book: { width: 120, height: 160, thickness: 50, over: 3 },
-  pierce: { pattern: "none", on: "both", cell: 16, bar: 3 },
+  pierce: { pattern: "none", on: "both", cell: 16, bar: 3, shape: "full", size: 70, mark: "cut" },
 };
 
 export function mergeBoxes(raw: unknown): BoxesParams {
@@ -90,7 +104,10 @@ export function mergeBoxes(raw: unknown): BoxesParams {
   p.engrave.art = cleanMotifArt(p.engrave.art);
   if (p.engrave.mark !== "score") p.engrave.mark = "engrave";
   if (!(p.pierce.pattern in FRET_NAMES)) p.pierce.pattern = "none";
-  if (p.pierce.on !== "walls" && p.pierce.on !== "lid") p.pierce.on = "both";
+  if (!["walls", "lid", "front", "front-lid"].includes(p.pierce.on)) p.pierce.on = "both";
+  if (!(p.pierce.shape in PIERCE_SHAPES)) p.pierce.shape = "full";
+  if (p.pierce.mark !== "engrave" && p.pierce.mark !== "score") p.pierce.mark = "cut";
+  if (!(p.joint.fit in FIT_MM)) p.joint.fit = "standard";
   return p;
 }
 
