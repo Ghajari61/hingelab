@@ -4,7 +4,7 @@
  */
 import type { DProduct } from "../../lib/desktop/types";
 
-const FILES = import.meta.glob<string>("../../public/presets/{hinge,clock,puzzle,qr,boxes,topper,keyrack,sign,tablenum,trophy,shadowbox,letters,parametric}/*.svg", { query: "?url", import: "default", eager: true });
+const FILES = import.meta.glob<string>("../../public/presets/{hinge,clock,puzzle,qr,boxes,topper,keyrack,sign,tablenum,trophy,shadowbox,paperbox,letters,parametric}/*.svg", { query: "?url", import: "default", eager: true });
 
 export const presetArt = (product: string, preset: string): string | undefined => FILES[`../../public/presets/${product}/${preset}.svg`];
 
@@ -24,6 +24,7 @@ const FEATURED: Record<string, string[]> = {
   tablenum: ["wedding-arch", "number-stand", "round-acrylic"],
   trophy: ["star-award", "champion-cup", "medal-acrylic"],
   shadowbox: ["star-tunnel", "lotus-mandala", "mountain-range"],
+  paperbox: ["tea-box", "small-mailer", "jewelry-6x6x3"],
 };
 
 /** The picture that stands for a product. */

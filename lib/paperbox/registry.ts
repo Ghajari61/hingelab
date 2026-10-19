@@ -8,7 +8,9 @@ import type { BoxParams, BoxStyle, ParamField } from "./types";
 const STYLES = new Map<string, BoxStyle>();
 
 export function registerBoxStyle<P extends BoxParams>(style: BoxStyle<P>): BoxStyle<P> {
-  if (STYLES.has(style.id)) throw new Error(`Box style "${style.id}" is registered twice.`);
+  const had = STYLES.get(style.id);
+  if (had === (style as unknown as BoxStyle)) return style;
+  if (had) throw new Error(`Box style "${style.id}" is registered twice.`);
   STYLES.set(style.id, style as unknown as BoxStyle);
   return style;
 }

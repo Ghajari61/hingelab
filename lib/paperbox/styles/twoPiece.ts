@@ -30,7 +30,7 @@ export const TWO_PIECE = registerBoxStyle({
   defaultParams: { ...BASE_DEFAULTS, paper: "chip1", L: 100, W: 100, H: 50, lidH: 0, clearance: 0.5 } as BoxParams,
   paramSchema: [sizeGroup("Base height"), boardGroup, {
     id: "lid", title: "Lid", fields: [
-      { key: "lidH", label: "Lid height", kind: "length", min: 0, max: 500, step: 0.5, help: "0 makes it about a third of the base's height." },
+      { key: "lidH", label: "Lid height", kind: "length", min: 0, max: 500, step: 0.5, help: "Leave it at 0 for about a third of the base's height." },
       { key: "clearance", label: "Clearance", kind: "length", min: 0, max: 5, step: 0.1, help: "Room between the lid and the base, each side." },
     ],
   }],

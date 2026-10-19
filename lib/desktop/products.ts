@@ -194,7 +194,7 @@ const GEN_SHEET: DSection = {
   id: "_sheet", title: "Material and sheet", help: "The sheet you cut, your laser bed and how parts are laid out.",
   fields: [
     { kind: "choice", key: "material", label: "Material", options: MATERIAL_OPTIONS },
-    { kind: "number", key: "T", label: "Thick", help: HINGE_FIELD_HELP.T, unit: "mm", min: 0.5, max: 30, step: 0.1 },
+    { kind: "number", key: "T", label: "Thick", help: HINGE_FIELD_HELP.T, unit: "mm", min: 0.1, max: 30, step: 0.05 },
     { kind: "number", key: "K", label: "Kerf", help: HINGE_FIELD_HELP.K, unit: "mm", min: 0, max: 1, step: 0.01 },
     { kind: "number", key: "bedW", label: "Bed W", help: HINGE_FIELD_HELP.bedW, unit: "mm", min: 50, max: 10000, step: 10 },
     { kind: "number", key: "bedH", label: "Bed H", help: HINGE_FIELD_HELP.bedH, unit: "mm", min: 50, max: 10000, step: 10 },

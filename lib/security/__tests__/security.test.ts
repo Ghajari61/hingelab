@@ -229,7 +229,8 @@ describe("generator settings are held to the editor's ranges", () => {
     expect(p.pieces.cols).toBe(50);
     expect(p.pieces.rows).toBe(1);
     expect(p.pieces.count).toBe(1000);
-    expect(p.T).toBe(0.5);
+    // Card and paper go down to 0.1 mm.
+    expect(p.T).toBe(0.1);
     expect(p.sheet.copies).toBeLessThanOrEqual(MAX_COPIES);
     expect(p.tabs.style).toBe(def.defaults().tabs.style);
     expect(p.name.length).toBe(200);

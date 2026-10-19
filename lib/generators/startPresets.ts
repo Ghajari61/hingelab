@@ -12,6 +12,7 @@ import { SIGN_PRESETS } from "./sign/presets";
 import { TABLENUM_PRESETS } from "./tablenum/presets";
 import { TROPHY_PRESETS } from "./trophy/presets";
 import { TOPPER_PRESETS } from "./topper/presets";
+import { PAPERBOX_PRESETS } from "./paperbox/presets";
 import type { GeneratorId } from "./ids";
 import type { GenPreset } from "./types";
 
@@ -25,7 +26,9 @@ export const START_PRESETS: Record<GeneratorId, GenPreset<unknown>[]> = {
   sign: SIGN_PRESETS as GenPreset<unknown>[],
   tablenum: TABLENUM_PRESETS as GenPreset<unknown>[],
   trophy: TROPHY_PRESETS as GenPreset<unknown>[],
-  shadowbox: [],};
+  shadowbox: [],
+  paperbox: PAPERBOX_PRESETS as GenPreset<unknown>[],
+};
 
 export interface LazyStart {
   /** Presets the generator editor has. */

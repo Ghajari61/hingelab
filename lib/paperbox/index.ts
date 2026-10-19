@@ -1,5 +1,7 @@
 /** The paper box engine: pure geometry, no UI. Importing it registers every built-in style. */
-import "./styles";
+import { BUILT_IN_STYLES } from "./styles";
+import { registerBoxStyle } from "./registry";
+for (const s of BUILT_IN_STYLES) registerBoxStyle(s);
 export * from "./types";
 export { registerBoxStyle, getBoxStyle, listBoxStyles, cleanParams, fieldsOf } from "./registry";
 export { PAPERS, paperById, panelSizes } from "./paper";

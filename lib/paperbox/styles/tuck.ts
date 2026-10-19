@@ -74,10 +74,10 @@ export function tuckEnd(T: TubeLayout, p: BoxParams, f: Face, end: "top" | "bott
 }
 
 const tuckFields: ParamField[] = [
-  { key: "tuckLen", label: "Tuck length", kind: "length", min: 0, max: 200, step: 0.5, help: "0 sizes it to the box." },
+  { key: "tuckLen", label: "Tuck length", kind: "length", min: 0, max: 200, step: 0.5, help: "Leave it at 0 to size it to the box." },
   { key: "tuckR", label: "Tuck corner radius", kind: "length", min: 0, max: 40, step: 0.5 },
   { key: "slitLock", label: "Slit locks", kind: "toggle", help: "Short cuts at the ends of the tuck's fold; the tuck clicks shut and stays." },
-  { key: "dustDepth", label: "Dust flap depth", kind: "length", min: 0, max: 300, step: 0.5, help: "0 sizes them to the box." },
+  { key: "dustDepth", label: "Dust flap depth", kind: "length", min: 0, max: 300, step: 0.5, help: "Leave it at 0 to size them to the box." },
   { key: "dustR", label: "Dust flap radius", kind: "length", min: 0, max: 30, step: 0.5 },
 ];
 export const glueFields: ParamField[] = [

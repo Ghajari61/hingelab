@@ -13,7 +13,7 @@ const finite = (v: unknown): v is number => typeof v === "number" && Number.isFi
 
 /** The shell's own fields (material, sheet, extras), with the ranges the dock allows. */
 const BASE_RANGES: { key: string; min: number; max: number; int?: boolean }[] = [
-  { key: "T", min: 0.5, max: MAX_THICKNESS },
+  { key: "T", min: 0.1, max: MAX_THICKNESS },
   { key: "K", min: 0, max: MAX_KERF },
   { key: "sheet.kerfY", min: 0, max: MAX_KERF },
   { key: "sheet.minFeature", min: 0, max: MAX_FEATURE },

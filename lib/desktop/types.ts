@@ -3,7 +3,7 @@
  * shipping anything from the server.
  */
 
-export type DesktopProductId = "hinge" | "clock" | "puzzle" | "qr" | "boxes" | "topper" | "keyrack" | "sign" | "tablenum" | "trophy" | "shadowbox" | "letters" | "parametric";
+export type DesktopProductId = "hinge" | "clock" | "puzzle" | "qr" | "boxes" | "topper" | "keyrack" | "sign" | "tablenum" | "trophy" | "shadowbox" | "paperbox" | "letters" | "parametric";
 /** Everything the workspace opens: the products, and "art", a drawing from the AI designer. */
 export type WorkspaceProductId = DesktopProductId | "art";
 export type DesktopPlan = "free" | "pro";

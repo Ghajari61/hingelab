@@ -34,6 +34,7 @@ export const GENERATORS: GeneratorMeta[] = [
   { id: "jigsaw", n: 9, name: "Jigsaw Puzzle", category: "Games", plan: "free", freeLimit: "Free up to 50 pieces", opens: { editor: "/app/editor/local?p=puzzle" }, blurb: "Puzzles of any shape with shared single-line cuts." },
   { id: "calibration", n: 10, name: "Test & Calibration", category: "Tools", plan: "free", opens: "studio", blurb: "Kerf gauge, slot-fit comb and living-hinge test strip for your material." },
   { id: "shadow-box", n: 11, name: "3D Shadow Box", category: "Home", plan: "free", opens: { editor: "/app/editor/local?p=shadowbox" }, blurb: "Layered paper-cut panels from geometric patterns or your own picture, for a laser or a Cricut: 132 designs." },
+  { id: "paper-box", n: 12, name: "Paper Box", category: "Boxes", plan: "free", opens: { editor: "/app/editor/local?p=paperbox" }, blurb: "Folding cartons, mailers and gift boxes in card: tuck ends, mailers and two-piece boxes with creases and slit locks." },
 ];
 
 export const generatorMeta = (id: string) => GENERATORS.find((g) => g.id === id);

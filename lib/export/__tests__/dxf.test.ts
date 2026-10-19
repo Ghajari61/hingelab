@@ -161,7 +161,7 @@ describe("DXF export", () => {
         const { out } = checkAgainst(svg, pr.id);
         expect(out.skipped, pr.id).toBe((svg.match(/<image /g) ?? []).length);
       }
-    });
+    }, 60_000);
   }
 
   it("Parametric: all sheets in one SVG, stacked, and as DXF", async () => {

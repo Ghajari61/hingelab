@@ -32,7 +32,7 @@ export function numberField(f: NumberSpec<P>): BaseField {
 }
 
 const MAT_FIELDS: BaseField[] = [
-  { id: "T", label: "Thick", len: true, step: 0.1, min: 0.5, max: MAX_THICKNESS, mat: true },
+  { id: "T", label: "Thick", len: true, step: 0.05, min: 0.1, max: MAX_THICKNESS, mat: true },
   { id: "K", label: "Kerf", len: true, step: 0.01, min: 0, max: MAX_KERF, mat: true },
 ];
 const KERF_Y_FIELD: BaseField = { id: "sheet.kerfY", label: "Kerf Y", len: true, step: 0.01, min: 0, max: MAX_KERF, mat: true, help: "Kerf across cuts that run left to right, for a machine that cuts wider on one axis." };
