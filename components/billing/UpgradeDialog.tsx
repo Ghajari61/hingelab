@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PRICES, PRO_BENEFITS } from "@/lib/plans";
 
 const BUSINESS_BENEFITS = [
@@ -16,7 +16,19 @@ import { startCheckout } from "./billingClient";
  * "Upgrade to Pro" dialog shown when a locked feature is used. Signed-out visitors are sent to
  * sign up first and come back to Billing.
  */
-export function UpgradeDialog({ reason, signedIn, onClose }: { reason: string; signedIn: boolean; onClose: () => void }) {
+/** Largest drawing shown as the preview (a very large file would make the dialog slow to open). */
+const MAX_PREVIEW = 3 * 1024 * 1024;
+
+export function UpgradeDialog({ reason, signedIn, onClose, preview }: {
+  reason: string; signedIn: boolean; onClose: () => void;
+  /** The design's cut file as drawn here, shown so the visitor sees what Pro downloads. */
+  preview?: () => string | null;
+}) {
+  const previewSrc = useMemo(() => {
+    const svg = preview?.();
+    return svg && svg.length < MAX_PREVIEW ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- drawn once, when the dialog opens
+  }, []);
   const [busy, setBusy] = useState<"month" | "year" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const business = reason.includes("unlimited batches");
@@ -49,6 +61,12 @@ export function UpgradeDialog({ reason, signedIn, onClose }: { reason: string; s
         <header>{business ? "Upgrade to Business" : "Upgrade to Pro"}<button type="button" aria-label="Close" onClick={onClose}>×</button></header>
         <div className="mb">
           <p className="upgrade-reason">{reason}</p>
+          {previewSrc && (
+            <figure className="upgrade-preview">
+              <img src={previewSrc} alt="The cut file of this design" />
+              <figcaption>Your design, ready to cut: this is the file Pro downloads.</figcaption>
+            </figure>
+          )}
           <ul className="upgrade-list">
             {benefits.map((b) => <li key={b}>{b}</li>)}
           </ul>

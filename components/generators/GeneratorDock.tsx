@@ -22,6 +22,7 @@ import { ImagePicker } from "./ImagePicker";
 import type { TracedPicture } from "./levelsClient";
 import { usePhotoLooks } from "./usePhotoLooks";
 import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, MAX_FEATURE, MAX_KERF, MAX_THICKNESS, SHEET_EXTRAS, type AnyGenerator, type FieldSpec, type GenBase, type GenOutput, type NumberSpec } from "@/lib/generators/types";
+import { orderSections } from "@/lib/generators/sectionOrder";
 
 type P = GenBase & Record<string, unknown>;
 
@@ -237,7 +238,7 @@ export function GeneratorDock({
 
   return (
     <aside className="dock" aria-label="Panels">
-      {def.sections.map((s) => ((s.show && !s.show(params)) || s.fields.every((f) => f.kind === "choice" && f.rail) ? null : (
+      {orderSections(def.id, def.sections).map((s) => ((s.show && !s.show(params)) || s.fields.every((f) => f.kind === "choice" && f.rail) ? null : (
         <Sec key={s.id} title={s.title} startOpen={s.open ?? true} onReset={() => onResetSection(s.title, s.fields.map((f) => f.key))}>
           {body(s.fields as FieldSpec<P>[])}
         </Sec>

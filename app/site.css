@@ -90,6 +90,9 @@
 .iconseg button.locked[aria-pressed="true"] .lock-icon { color: var(--accent-ink); }
 .modal.upgrade { width: min(440px, 100%); }
 .upgrade-reason { color: var(--fg) !important; font-size: 13.5px; }
+.upgrade-preview { margin: 10px 0 4px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--sheet, #fbf7ef); }
+.upgrade-preview img { display: block; width: 100%; max-height: 180px; object-fit: contain; }
+.upgrade-preview figcaption { margin-top: 6px; font-size: 12px; color: var(--fg-dim); text-align: center; }
 .upgrade-list { list-style: none; padding: 0 !important; }
 .upgrade-list li { padding-inline-start: 22px; position: relative; }
 .upgrade-list li::before { content: "✓"; position: absolute; left: 4px; color: var(--ok, #2fa37e); font-weight: 700; }
@@ -299,3 +302,7 @@ button.ai-lib-drop:hover:not(:disabled), .ai-lib-drop-btn:hover:not(:disabled) {
   .ia-nav { display: none; }
   .ia-menu-btn { display: inline-flex; }
 }
+
+/* Header: the editor button stays on one line; narrow screens drop "the". */
+.site-header .site-open { white-space: nowrap; }
+@media (max-width: 480px) { .site-header .site-open-the { display: none; } }

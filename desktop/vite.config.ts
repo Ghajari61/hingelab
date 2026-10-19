@@ -72,6 +72,7 @@ export default defineConfig(({ mode }) => ({
       { find: /^@hingelab\/platform$/, replacement: resolve(repo, "packages/platform/src/index.ts") },
       { find: /^@hingelab\/platform\/(.*)$/, replacement: resolve(repo, "packages/platform/src/$1") },
       { find: /^@hingelab\/app\/(.*)$/, replacement: resolve(repo, "packages/app/src/$1") },
+      { find: /^@hingelab\/ui$/, replacement: resolve(repo, "packages/ui/src/index.ts") },
       { find: /^@hingelab\/ui\/(.*)$/, replacement: resolve(repo, "packages/ui/src/$1") },
       { find: /^@\//, replacement: `${repo}/` },
     ],

@@ -1,6 +1,7 @@
 "use client";
 
 import { platform } from "@hingelab/platform";
+import { useShortcutKey } from "@/components/shell/useShortcutKey";
 import { keepSetup } from "@/lib/prefs/editor";
 import { editorPrefs } from "@/lib/prefs/editorStore";
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -129,6 +130,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   const myPresets = useMyPresets();
   const thumbRef = useRef<() => string | null>(() => null);
   const [modal, setModal] = useState<ModalState>(null);
+  useShortcutKey(useCallback(() => setModal({ type: "keys" }), []));
   const [exporting, setExporting] = useState(false);
   const [sharing, setSharing] = useState(false);
   const help = useHelpPanel("parametric");
@@ -616,7 +618,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     help: [
       ...help.menu,
       "-",
-      { label: "Keyboard shortcuts", kbd: "", run: () => setModal({ type: "keys" }) },
+      { label: "Keyboard shortcuts", kbd: "?", run: () => setModal({ type: "keys" }) },
     ],
   };
 

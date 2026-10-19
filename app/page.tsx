@@ -121,7 +121,7 @@ export default async function HomePage() {
             {mosaic.map((p, i) => (
               <span key={p.id} className={`m-card m${i}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.picture} alt="" width={300} height={200} loading={i < 4 ? "eager" : "lazy"} />
+                <img src={p.picture} alt="" width={300} height={200} loading={i < 4 ? "eager" : "lazy"} fetchPriority={i === 0 ? "high" : undefined} decoding={i < 4 ? "sync" : "async"} />
                 <b>{p.name}</b>
               </span>
             ))}

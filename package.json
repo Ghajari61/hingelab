@@ -28,7 +28,8 @@
     "build-storybook": "storybook build -o storybook-static",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p .",
-    "analyze": "node scripts/perf/analyze.mjs"
+    "analyze": "node scripts/perf/analyze.mjs",
+    "a11y": "node scripts/a11y/axe.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.81",
@@ -69,6 +70,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/eslintrc": "^3.3.7",
     "@next/bundle-analyzer": "^15.5.28",
     "@storybook/react-vite": "^10.6.1",

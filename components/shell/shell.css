@@ -186,7 +186,7 @@ details.sec > summary:hover .sec-rst, .sec-rst:focus-visible { opacity: 1; }
 .start-tile .ico { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--brand-grad); color: #fff; box-shadow: 0 6px 14px -6px rgba(91, 95, 239, .7); }
 .start-tile .nm { font-size: 17px; font-weight: 650; }
 .start-tile .bl { font-size: 13px; color: var(--fg-dim); line-height: 1.4; }
-.start-tile .go { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--cta); }
+.start-tile .go { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12.5px; font-weight: 600; color: color-mix(in srgb, var(--cta) 66%, var(--text-primary)); }
 .start-gens { margin: -18px 0 36px; }
 .start-gens h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 16px; }
 .gen-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
@@ -198,7 +198,7 @@ details.sec > summary:hover .sec-rst, .sec-rst:focus-visible { opacity: 1; }
 .gen-tile .ico { grid-row: span 2; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--brand-grad); color: #fff; box-shadow: 0 6px 14px -6px rgba(91, 95, 239, .7); }
 .gen-tile .nm { font-size: 15px; font-weight: 650; }
 .gen-tile .bl { font-size: 12.5px; color: var(--fg-dim); line-height: 1.4; }
-.gen-tile .go { grid-column: 2; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--cta); }
+.gen-tile .go { grid-column: 2; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: color-mix(in srgb, var(--cta) 66%, var(--text-primary)); }
 .start-presets { margin-bottom: 30px; }
 .start-presets h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 16px; }
 .preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 12px; }
@@ -217,7 +217,7 @@ details.sec > summary:hover .sec-rst, .sec-rst:focus-visible { opacity: 1; }
 .preset-card .thumb img { width: 100%; height: 100%; object-fit: contain; }
 .preset-card .nm { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
 .preset-card .nt { font-size: 11.5px; color: var(--fg-dim); line-height: 1.35; }
-.pro-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: var(--pro); color: #fff; letter-spacing: .02em; }
+.pro-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: var(--pro); color: #3a2a00; letter-spacing: .02em; }
 :root[data-theme="dark"] .preset-card, :root[data-theme="darker"] .preset-card { --card-fill: #4A3F2E; --card-fill-2: #3A3124; --card-ink: #E3E3E3; --card-ink-soft: #C9A36A; }
 @media (max-width: 760px) { .start-products { grid-template-columns: minmax(0, 1fr); } }
 .preset-card.mine { position: relative; padding: 0; }
@@ -345,3 +345,38 @@ details.sec > summary:hover .sec-rst, .sec-rst:focus-visible { opacity: 1; }
 .help-drawer-head { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 13px; color: var(--fg); }
 .help-drawer-head span { margin-inline-end: auto; }
 .help-drawer iframe { width: 100%; height: 100%; border: 0; background: var(--panel); }
+
+/* Export: the Free plan's note and badge, and the first-export reminder (DockColumn). */
+.pro-note { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font-size: 11.5px; color: var(--fg-dim); }
+.btn-export .pro-badge { margin-inline-start: 6px; padding: 1px 6px; border-radius: 999px; background: color-mix(in srgb, #e0b341 85%, #fff); color: #3a2a00; font-size: 10.5px; font-weight: 700; letter-spacing: .02em; }
+.first-export { margin: 0 0 8px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); border-radius: 10px; background: var(--accent-soft); font-size: 12.5px; line-height: 1.45; animation: hl-pop-in var(--dur-fast) var(--ease-out); }
+.first-export p { margin: 0 0 8px; }
+.first-export > div { display: flex; justify-content: flex-end; gap: 6px; }
+@keyframes hl-pop-in { from { opacity: 0; transform: translateY(4px); } }
+
+/* First-visit tour (Onboarding.tsx): a card over the bottom of the canvas, not a modal. */
+.onboarding { position: fixed; z-index: 45; left: 50%; bottom: 72px; transform: translateX(-50%); width: min(380px, calc(100vw - 32px)); padding: 16px 18px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel, var(--surface-raised)); color: var(--fg); box-shadow: var(--shadow-3); animation: hl-pop-in var(--dur-med) var(--ease-out); }
+.onboarding h2 { margin: 2px 0 6px; font-size: 15px; }
+.onboarding p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--fg-dim); }
+.onboarding .onboarding-step { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); }
+.onboarding-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+.onboarding-actions span { display: flex; gap: 6px; }
+.onboarding-x { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 8px; background: none; color: var(--fg-dim); cursor: pointer; }
+.onboarding-x:hover { background: var(--field); color: var(--fg); }
+
+/* Phones: the canvas full width and pinned at the top; the presets and settings rise over it as a
+   sheet (Hinge Box, Letters, Parametric; the generators have their own phone flow). */
+@media (max-width: 600px) {
+  .main > .stage { order: -1; position: sticky; top: 0; z-index: 3; height: 44vh; min-height: 260px; }
+  .main > .stage .viewport { height: 100%; min-height: 0; }
+  .main > .gallery, .main > .dock-col { position: relative; z-index: 4; background: var(--panel); }
+  .main > .gallery { margin-top: -14px; border-radius: 16px 16px 0 0; box-shadow: 0 -10px 28px -14px rgba(20, 22, 40, .35); padding-top: 14px; }
+  .main > .gallery::before { content: ""; position: absolute; top: 6px; left: 50%; width: 38px; height: 4px; margin-left: -19px; border-radius: 4px; background: var(--line-strong); }
+  .main > .dock-col { height: auto; }
+}
+
+/* Section headers: help and reset beside the summary (not inside it), over its right end. */
+.sec-wrap { position: relative; }
+.sec-wrap > details.sec > summary { padding-inline-end: 68px; }
+.sec-tools { position: absolute; top: 11px; right: 20px; display: flex; align-items: center; gap: 2px; }
+.sec-wrap:hover .sec-rst, .sec-wrap:focus-within .sec-rst { opacity: 1; }

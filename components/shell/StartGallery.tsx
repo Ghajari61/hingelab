@@ -106,7 +106,7 @@ export function StartGallery({ onPick }: { onPick: (choice: StartChoice) => void
         {note && <div className="toast" role="status">{note}</div>}
         <div className="start-products">
           {CORE_PRODUCTS.map((k) => (
-            <button key={k} type="button" className="start-tile" aria-label={PRODUCT_INFO[k].name} onClick={() => onPick({ product: k })}>
+            <button key={k} type="button" className="start-tile" onClick={() => onPick({ product: k })}>
               <span className="ico" aria-hidden>{PRODUCT_INFO[k].icon}</span>
               <span className="nm">{PRODUCT_INFO[k].name}</span>
               <span className="bl">{BLURB[k]}</span>
@@ -118,7 +118,7 @@ export function StartGallery({ onPick }: { onPick: (choice: StartChoice) => void
           <h2><Shapes size={16} aria-hidden />Generators</h2>
           <div className="gen-tiles">
             {GENERATOR_IDS.map((k) => (
-              <button key={k} type="button" className="gen-tile" aria-label={PRODUCT_INFO[k].name} onClick={() => onPick({ product: k })}>
+              <button key={k} type="button" className="gen-tile" onClick={() => onPick({ product: k })}>
                 {cover(k) && <span className="pic" aria-hidden><img src={`/presets/${k}/${cover(k)}.svg`} alt="" loading="lazy" width={300} height={200} /></span>}
                 <span className="ico" aria-hidden>{PRODUCT_INFO[k].icon}</span>
                 <span className="nm">{PRODUCT_INFO[k].name}</span>

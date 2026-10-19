@@ -2,110 +2,49 @@
    is scoped to .dk, so these styles and the app's tokens never reach the shared editor, which uses
    the website's stylesheets as they are. */
 
+/* The window's screens use the website's tokens (styles/tokens.css) under the names they were
+   written with; only the always-dark sidebar and two pictures are the app's own. */
 .dk {
-  --font: "Inter Variable", "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
-  --font-display: "Inter Variable", "Inter", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
-  --accent: #5558e3;
-  --accent-hi: #4447cc;
-  --accent-text: #4447cc;
-  --accent-soft: #ecedff;
-  --accent-ink: #ffffff;
+  --font: var(--font-ui);
+  --font-display: var(--font-ui);
+  --accent-text: var(--accent-hi);
   --on-accent: var(--accent-ink);
-  --success: #1fa885;
-  --warning: #e39a2d;
-  --danger: #e5566b;
-  --info: #3b8ff0;
-  --teal: #14b8a6;
-  --teal-ink: #0f766e;
-  --teal-soft: rgba(20, 184, 166, 0.14);
-  --cta: #ee7445;
-  --radius-control: 10px;
+  --btn-grad: linear-gradient(180deg, color-mix(in srgb, var(--accent) 86%, #fff), var(--accent));
+  --bg: var(--pasteboard);
+  --hover: var(--surface-hover);
+  --seg-on: var(--surface-raised);
+  --ink: var(--text-primary);
+  --ink-2: var(--text-secondary);
+  --ink-3: color-mix(in srgb, var(--text-secondary) 75%, var(--text-disabled));
+  --line-2: var(--line-strong);
+  --err-soft: var(--error-bg);
+  --warn-soft: var(--notice-bg);
+  --info-soft: var(--accent-soft);
+  --shadow-sm: var(--shadow-1);
+  --shadow: var(--shadow-2);
+  --shadow-pop: var(--shadow-3);
+  --shadow-lg: var(--shadow-3);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
   --radius-card: 14px;
-  --brand-grad: linear-gradient(135deg, #5b5fef 0%, #8b6cf6 55%, #14b8a6 100%);
-  --btn-grad: linear-gradient(180deg, #6a6df2 0%, #5558e3 100%);
+  --radius-sm: 8px;
+  --radius: 10px;
+  --radius-lg: 14px;
   --side: #161a30;
   --side-ink: #d3d6ee;
   --side-dim: #8f94b8;
   --side-hover: #20253f;
   --side-active: #2a3054;
-  --bg: #f2f3fa;
-  --panel: #ffffff;
-  --panel-2: #f8f9fd;
-  --hover: #edeff8;
-  --seg-on: #ffffff;
-  --glass: rgba(255, 255, 255, 0.86);
-  --ink: #1d2136;
-  --ink-2: #474c68;
-  --ink-3: #696f8c;
-  --line: #e2e5f0;
-  --line-2: #cfd3e4;
-  --field: #f3f4fa;
-  --bed: #e7e9f2;
-  --bed-minor: rgba(60, 64, 120, 0.08);
-  --bed-major: rgba(60, 64, 120, 0.16);
-  --sheet: #ffffff;
-  --ruler-bg: #f8f8fc;
-  --ruler-ink: #7a7e98;
-  --ok: #138a5a;
-  --warn: #b7791f;
-  --err: #c53030;
-  --err-soft: #fdecec;
-  --warn-soft: #fdf4e3;
-  --info-soft: #eeedff;
-  --shadow-sm: 0 1px 2px rgba(40, 44, 96, 0.06), 0 1px 3px rgba(40, 44, 96, 0.04);
-  --shadow: 0 1px 2px rgba(40, 44, 96, 0.05), 0 12px 28px -10px rgba(60, 64, 150, 0.18);
-  --shadow-pop: 0 2px 6px rgba(40, 44, 96, 0.06), 0 18px 40px -12px rgba(60, 64, 150, 0.26);
-  --shadow-lg: 0 28px 64px -16px rgba(60, 64, 150, 0.3);
-  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
-  --radius-sm: 8px;
-  --radius: 10px;
-  --radius-lg: 14px;
   --chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b8fae' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   --art-bg: radial-gradient(120% 120% at 20% 0%, #ffffff 0%, #eef0fa 55%, #e6e8f5 100%);
-  color-scheme: light;
 }
 
 :root[data-theme="dark"] .dk {
-  --accent: #7c7ff7;
-  --accent-hi: #a0a3fa;
-  --accent-text: #aeb1ff;
-  --accent-soft: #272b52;
-  --teal: #2dd4bf;
-  --teal-ink: #5eead4;
-  --teal-soft: rgba(45, 212, 191, 0.16);
-  --btn-grad: linear-gradient(180deg, #8a8dfa 0%, #7c7ff7 100%);
   --side: #10132a;
   --side-ink: #ccd0ec;
   --side-dim: #8287ab;
   --side-hover: #1a1e38;
   --side-active: #252a4e;
-  --bg: #141726;
-  --panel: #1c2034;
-  --panel-2: #1f2338;
-  --hover: #262b44;
-  --seg-on: #343a68;
-  --glass: rgba(30, 34, 54, 0.86);
-  --ink: #e7e9f4;
-  --ink-2: #b4b8d2;
-  --ink-3: #8a8fae;
-  --line: #2d3250;
-  --line-2: #3b4163;
-  --field: #20243c;
-  --bed: #171a30;
-  --bed-minor: rgba(170, 175, 230, 0.05);
-  --bed-major: rgba(170, 175, 230, 0.11);
-  --sheet: #f7f8fa;
-  --ruler-bg: #181a31;
-  --ruler-ink: #878bab;
-  --err-soft: #3a2224;
-  --warn-soft: #3a3020;
-  --info-soft: #23244a;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px -8px rgba(0, 0, 0, 0.45);
-  --shadow-pop: 0 2px 6px rgba(0, 0, 0, 0.3), 0 18px 44px -10px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 24px 60px -16px rgba(0, 0, 0, 0.6);
   --art-bg: radial-gradient(120% 120% at 20% 0%, #2c2f52 0%, #1f2140 70%);
-  color-scheme: dark;
 }
 
 .dk * { box-sizing: border-box; }

@@ -1,6 +1,7 @@
 "use client";
 
 import { platform } from "@hingelab/platform";
+import { useShortcutKey } from "@/components/shell/useShortcutKey";
 import { keepSetup } from "@/lib/prefs/editor";
 import { editorPrefs } from "@/lib/prefs/editorStore";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
@@ -124,6 +125,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
   const [saved, setSaved] = useState(cloud ? "Saved to cloud" : "Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
+  useShortcutKey(useCallback(() => setModal({ type: "keys" }), []));
   const [exporting, setExporting] = useState(false);
   const [sharing, setSharing] = useState(false);
   const help = useHelpPanel("letters");
@@ -487,7 +489,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
     help: [
       ...help.menu,
       "-",
-      { label: "Keyboard shortcuts", kbd: "", run: () => setModal({ type: "keys" }) },
+      { label: "Keyboard shortcuts", kbd: "?", run: () => setModal({ type: "keys" }) },
     ],
   };
 
@@ -630,7 +632,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
         />
       )}
       {shared.banner}
-      {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
+      {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} preview={localSVG} />}
       {toast && <div className="toast" role="status">{toast}</div>}
       {file.input}
       {help.drawer}

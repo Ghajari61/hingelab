@@ -24,3 +24,14 @@
 - SVGO over the preset pictures (7.2 → 4.4 MB); new thumbnails optimised as they are made.
 - The Windows program carries no local paths; the build checks it.
 - Budgets tightened; numbers in `PERF.md`; decisions in D189.
+
+## Phase 3: visual design and UX
+
+- One palette for the laser operations on the canvas, in the legend and in the files (`packages/ui/src/ops.ts`).
+- `packages/ui`: the component library with Button, Input, Popover and Skeleton; the Windows window's screens on the website's tokens.
+- Boxes' panel shows the box and its size first and the joints last.
+- Checks frame their parts on the canvas (Show); "?" opens the shortcuts; a three-step first-visit tour; a material and kerf reminder at the first export.
+- Free plan: "Export needs Pro" and a Pro badge on Export; the upgrade dialog shows the design's cut file.
+- Phones: the canvas pinned on top, the settings in a sheet below.
+- Motion 150-200 ms ease-out; landing header and hero picture fixes.
+- `npm run a11y` (axe, WCAG 2.1 AA): every page and editor passes, contrast included. Decisions in D190.

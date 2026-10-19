@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Download, RotateCcw } from "lucide-react";
+import { Download, Lock, RotateCcw } from "lucide-react";
+import { useSession } from "@hingelab/app/session";
 import type { Units } from "@/components/editor/format";
 import { useEditorPrefs } from "@/lib/prefs/editorStore";
+
+const FIRST_EXPORT_KEY = "hingelab-first-export-v1";
 
 /** Settings › Units: the open editor switches (detail: "mm" | "in"). */
 export const UNITS_EVENT = "hingelab:units";
@@ -25,6 +28,17 @@ export function DockColumn({ children, onExport, exportLabel, alt = [], units, o
 }) {
   const [confirm, setConfirm] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  const session = useSession();
+  // Free plan: say so beside Export before the click (Export then shows the upgrade with a preview).
+  const needsPro = session.configured && !session.loading && !session.pro;
+  const [tip, setTip] = useState(false);
+  const exportNow = () => {
+    // The first export ever: a reminder about material and kerf, beside the download.
+    try {
+      if (!localStorage.getItem(FIRST_EXPORT_KEY)) { localStorage.setItem(FIRST_EXPORT_KEY, "1"); setTip(true); }
+    } catch { /* storage off */ }
+    onExport();
+  };
   const prefs = useEditorPrefs();
   const setUnits = useRef(onUnits);
   setUnits.current = onUnits;
@@ -70,8 +84,18 @@ export function DockColumn({ children, onExport, exportLabel, alt = [], units, o
       {children}
       <div className="dock-foot">
         {extra}
+        {tip && (
+          <div className="first-export" role="status">
+            <p><b>Before the first cut:</b> check the material&apos;s thickness and kerf in Material, and cut the small kerf test square first, so joints fit.</p>
+            <div>
+              <a className="btn-ghost-sm" href="/learn/kerf" target="_blank" rel="noopener">Kerf guide</a>
+              <button type="button" className="btn-dark-sm" onClick={() => setTip(false)}>Got it</button>
+            </div>
+          </div>
+        )}
+        {needsPro && <p className="pro-note"><Lock size={12} aria-hidden /> Export needs Pro. Designing and previewing are free.</p>}
         <div className="export-row">
-          <button className="btn-export wide" type="button" onClick={onExport}><Download size={16} aria-hidden />{exportLabel}</button>
+          <button className="btn-export wide" type="button" onClick={exportNow}><Download size={16} aria-hidden />{exportLabel}{needsPro && <span className="pro-badge">Pro</span>}</button>
           {alt.map((a) => <button key={a.label} className="btn-export-alt" type="button" title={a.title} onClick={a.run}>{a.label}</button>)}
         </div>
       </div>

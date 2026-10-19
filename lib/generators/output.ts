@@ -326,14 +326,16 @@ export function sheetIssues<P extends GenBase>(def: GeneratorDef<P>, p: P, arran
     const fixes: Issue<P>["fixes"] = [];
     if (def.scale) fixes.push({ id: "fit-1", label: "Fit to 1 sheet", safe: true, apply: (q) => ({ ...q, fit: { mode: "sheets", sheets: 1 } }) });
     fixes.push({ id: "big-sheet", label: "Use a 600 × 400 mm sheet", safe: false, apply: (q) => ({ ...q, bedW: Math.max(q.bedW, 600), bedH: Math.max(q.bedH, 400) }) });
-    out.push({ code: "TOO_BIG", level: "error", message: "A part is larger than the sheet.", fixes });
+    const big = arranged.lay.items.filter((it) => it.w > p.bedW + 1e-6 || it.h > p.bedH + 1e-6).map((it) => it.pt.src.id);
+    out.push({ code: "TOO_BIG", level: "error", message: "A part is larger than the sheet.", fixes, ...(big.length ? { partIds: [...new Set(big)] } : {}) });
   }
   const w = cleanExtras(p.sheet).minFeature ?? 0;
   if (w > 0 && arranged.result && !("error" in arranged.result)) {
-    const thin = thinParts(arranged.result.parts, w);
-    if (thin.length) {
+    const found = thinPartList(arranged.result.parts, w);
+    if (found.length) {
+      const thin = found.map((t) => t.name);
       const list = thin.length > 4 ? `${thin.slice(0, 4).join(", ")} and ${thin.length - 4} more` : thin.join(", ");
-      out.push({ code: "THIN", level: "warn", message: `Some features are narrower than the ${r3(w)} mm your material holds: ${list}. They may break or burn away.`, fixes: [] });
+      out.push({ code: "THIN", level: "warn", message: `Some features are narrower than the ${r3(w)} mm your material holds: ${list}. They may break or burn away.`, fixes: [], partIds: found.map((t) => t.id) });
     }
   }
   return out;
@@ -347,7 +349,12 @@ const MAX_THIN_PARTS = 150;
  * removes such features, so a removed piece larger than w² is one (a corner only loses ~0.05 w²).
  */
 export function thinParts(parts: CutPart[], w: number): string[] {
-  const out: string[] = [];
+  return thinPartList(parts, w).map((t) => t.name);
+}
+
+/** `thinParts` with each part's id (the part as built, shared by its copies). */
+function thinPartList(parts: CutPart[], w: number): { name: string; id: string }[] {
+  const out: { name: string; id: string }[] = [];
   const seen = new Set<string>();
   for (const pt of parts.slice(0, MAX_THIN_PARTS)) {
     const key = pt.src.id;
@@ -356,7 +363,7 @@ export function thinParts(parts: CutPart[], w: number): string[] {
     const shape = unionShapes([...pt.outline, ...pt.inner], [], true);
     const opened = offsetShapes(offsetShapes(shape, -w / 2), w / 2);
     const lost = differenceShapes(shapeContours(shape), shapeContours(opened));
-    if (lost.some((s) => s.area > w * w)) out.push(pt.name);
+    if (lost.some((s) => s.area > w * w)) out.push({ name: pt.name, id: key });
   }
   return out;
 }

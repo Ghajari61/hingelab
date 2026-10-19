@@ -11,7 +11,7 @@ export function StatusBar({
   saved: string;
 }) {
   return (
-    <footer className="statusbar">
+    <footer className="statusbar" tabIndex={0} aria-label="Status">
       <span>X <span className="num">{x}</span></span>
       <span>Y <span className="num">{y}</span></span>
       <span>Zoom <span className="num">{zoom}</span></span>

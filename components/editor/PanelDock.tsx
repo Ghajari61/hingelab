@@ -44,7 +44,9 @@ export function Sec({ title, meta, startOpen, onReset, children }: {
   children: React.ReactNode;
 }) {
   const init = useRef(false);
+  // The help and reset buttons sit beside the summary, not in it (a summary is itself a button).
   return (
+    <div className="sec-wrap">
     <details
       className="sec"
       ref={(el) => {
@@ -57,17 +59,20 @@ export function Sec({ title, meta, startOpen, onReset, children }: {
       <summary>
         <Chevron />
         {title}
-        <HelpMark title={title} />
         {meta ? <span className="sum-meta">{meta}</span> : null}
-        {onReset && (
-          <button
-            type="button" className="sec-rst" aria-label={`Reset ${title} section`} title={`Reset ${title} to defaults`}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReset(); }}
-          ><RotateCcw size={13} /></button>
-        )}
       </summary>
       <div className="sec-body">{children}</div>
     </details>
+    <span className="sec-tools">
+      <HelpMark title={title} />
+      {onReset && (
+        <button
+          type="button" className="sec-rst" aria-label={`Reset ${title} section`} title={`Reset ${title} to defaults`}
+          onClick={onReset}
+        ><RotateCcw size={13} /></button>
+      )}
+    </span>
+    </div>
   );
 }
 

@@ -1,10 +1,2 @@
-import "./ui.css";
-
-export * from "./primitives";
-export * from "./NumberInput";
-export * from "./Menu";
-export * from "./Dialog";
-export * from "./Toolbar";
-export * from "./Panel";
-export * from "./Pickers";
-export { formatShortcut, isMac } from "./shortcut";
+// The shared components moved to packages/ui; this path stays for Studio's imports.
+export * from "@hingelab/ui";

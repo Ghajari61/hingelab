@@ -14,6 +14,7 @@ import { START_LAZY, START_PRESETS } from "@/lib/generators/startPresets";
 import { TEMPLATE_PRESETS } from "@/lib/templates/presets";
 import { AI_START_KEY } from "@/lib/ai/types";
 import { StartGallery, type StartChoice } from "@/components/shell/StartGallery";
+import { Onboarding } from "@/components/shell/Onboarding";
 
 // Each product is its own chunk, loaded when it opens.
 const LettersEditor = lazy(() => import("@/components/letters/LettersEditor"));
@@ -199,9 +200,12 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
   const preset = start?.product === product ? start.preset : undefined;
   const key = `${product}|${preset?.id ?? "autosave"}`;
   const boot = <div className="boot">Loading{product === "letters" ? " Letters" : product === "parametric" ? " Parametric" : ""}…</div>;
-  if (isGeneratorId(product)) return <Suspense fallback={boot}><GeneratorEditor key={key} id={product} onProduct={choose} onHome={home} start={preset} /></Suspense>;
-  if (product === "parametric") return <Suspense fallback={boot}><ParametricEditor key={key} onProduct={choose} onHome={home} start={preset} cloud={doc} /></Suspense>;
-  return product === "letters"
-    ? <Suspense fallback={boot}><LettersEditor key={key} onProduct={choose} onHome={home} start={preset} cloud={doc} /></Suspense>
-    : <EditorApp key={key} onProduct={choose} onHome={home} start={preset} cloud={doc} />;
+  const editor = isGeneratorId(product)
+    ? <Suspense fallback={boot}><GeneratorEditor key={key} id={product} onProduct={choose} onHome={home} start={preset} /></Suspense>
+    : product === "parametric"
+      ? <Suspense fallback={boot}><ParametricEditor key={key} onProduct={choose} onHome={home} start={preset} cloud={doc} /></Suspense>
+      : product === "letters"
+        ? <Suspense fallback={boot}><LettersEditor key={key} onProduct={choose} onHome={home} start={preset} cloud={doc} /></Suspense>
+        : <EditorApp key={key} onProduct={choose} onHome={home} start={preset} cloud={doc} />;
+  return <>{editor}<Onboarding /></>;
 }

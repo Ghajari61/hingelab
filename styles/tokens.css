@@ -172,8 +172,9 @@
   --text-label: 11px;
 
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --dur-fast: 120ms;
-  --dur-med: 180ms;
+  /* Panels, menus and dialogs: 150-200 ms, ease-out. The canvas does not animate. */
+  --dur-fast: 150ms;
+  --dur-med: 200ms;
 
   /* Legacy names used by the single-product editors. */
   --pasteboard: var(--surface-pasteboard);
@@ -184,16 +185,21 @@
   --field: var(--surface-field);
   --fg: var(--text-primary);
   --fg-dim: var(--text-secondary);
-  --fg-faint: var(--text-disabled);
-  --ok: var(--success);
-  --warn: var(--warning);
+  /* Quiet text that still informs (units, summaries): AA contrast, unlike --text-disabled. */
+  --fg-faint: color-mix(in srgb, var(--text-secondary) 82%, var(--text-disabled));
+  /* Success as text: darker (lighter in the dark themes) than the brand green, for AA contrast. */
+  --ok: color-mix(in srgb, var(--success) 62%, var(--text-primary));
+  /* Warning as text: AA contrast in every theme. */
+  --warn: color-mix(in srgb, var(--warning) 58%, var(--text-primary));
   --err: var(--danger);
   --sheet: var(--surface-sheet);
   --wood: #C9A36A;
-  --l-outline: #E5383B;
-  --l-slots: #1FA94F;
-  --l-hinge: #2F80ED;
-  --l-labels: #3A3A40;
+  /* Laser operations: the cut files' colours (packages/ui/src/ops.ts; a test keeps them equal). */
+  --l-outline: #FF0000;
+  --l-slots: #00E000;
+  --l-hinge: #0000FF;
+  --l-score: #FF8000;
+  --l-labels: #000000;
 }
 
 :root[data-theme="dark"], :root[data-theme="darker"] {
@@ -202,7 +208,8 @@
   --teal-soft: rgba(45, 212, 191, 0.16);
   --l-outline: #FF5252;
   --l-slots: #3DDC6E;
-  --l-hinge: #4DA6FF;
+  --l-hinge: #6E8BFF;
+  --l-score: #FF9F40;
   --l-labels: #D8D8D8;
 }
 

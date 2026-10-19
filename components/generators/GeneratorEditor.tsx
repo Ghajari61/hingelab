@@ -1,6 +1,7 @@
 "use client";
 
 import { platform } from "@hingelab/platform";
+import { useShortcutKey } from "@/components/shell/useShortcutKey";
 import { keepSetup } from "@/lib/prefs/editor";
 import { editorPrefs } from "@/lib/prefs/editorStore";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
@@ -39,6 +40,7 @@ import { generatorHelpMap } from "@/lib/generators/helpMap";
 import { GENERATOR_INFO, type GeneratorId } from "@/lib/generators/ids";
 import { arrangeGenerator, assemblySteps, genContent, genSVG, sheetIssues } from "@/lib/generators/output";
 import { useArranged } from "./useArranged";
+import { partFrames } from "./highlight";
 import { NestChip, useNestWorker } from "./useNestWorker";
 import { getPath, setPath } from "@/lib/generators/path";
 import { loadGenerator } from "@/lib/generators/registry";
@@ -126,6 +128,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
   const [saved, setSaved] = useState("Autosaved locally");
   const [modal, setModal] = useState<ModalState>(null);
+  useShortcutKey(useCallback(() => setModal({ type: "keys" }), []));
   const [exporting, setExporting] = useState(false);
   const [batching, setBatching] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -216,6 +219,10 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const error = fontError ?? ("error" in arranged.result ? arranged.result.error : null);
   const lay = model ? arranged.lay : null;
   const content = useMemo(() => (lay ? genContent(lay) : null), [lay]);
+  // Show in a check: a frame round the parts it is about, until the design changes.
+  const [highlight, setHighlight] = useState<string[] | null>(null);
+  useEffect(() => { setHighlight(null); }, [deferred]);
+  const highlightOverlay = useMemo(() => (highlight && lay ? partFrames(lay, highlight) : null), [highlight, lay]);
   const photos = out ? out.parts.reduce((n, pt) => n + (pt.images?.length ?? 0), 0) : 0;
   const gated = out ? designGates(built as { sheet?: { nest?: unknown } }, photos, account.plan, flags) : [];
   const lock = [out && def.pro ? def.pro(built, out) : null, ...gated].filter(Boolean).join(" ") || null;
@@ -487,7 +494,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       { label: "Units: inches", kbd: "", run: () => setUnits("in") },
       ...(phoneFlow.narrow ? ["-" as const, { label: "Simple phone view", kbd: "", run: phoneFlow.simple }] : []),
     ],
-    help: [...help.menu, "-", { label: "Keyboard shortcuts", kbd: "", run: () => setModal({ type: "keys" }) }],
+    help: [...help.menu, "-", { label: "Keyboard shortcuts", kbd: "?", run: () => setModal({ type: "keys" }) }],
   };
 
   // Left rail: the definition's big choices as picture cards, then the presets.
@@ -588,7 +595,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
           onSVG={() => void exportNow()} onDXF={() => void exportDXFNow()} onFull={phoneFlow.full} onHome={onHome}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
         />
-        {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
+        {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} preview={localSVG} />}
         {toast && <div className="toast" role="status">{toast}</div>}
         {help.drawer}
       </HelpContext.Provider>
@@ -638,6 +645,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
               tool={tool}
               spaceDown={spaceDown}
               units={units}
+              overlay={highlightOverlay}
               onCursor={(x, y) => setCursor({ x, y })}
               zoomAt={viewApi.zoomAt}
               panBy={viewApi.panBy}
@@ -670,7 +678,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
             onBatch={() => { const l = gateLock("batch", account.plan, flags); if (l) setUpgrade(l); else setBatching(true); }}
             checks={<>
               {batchNote && <p className="note err" role="status">{batchNote} <button type="button" className="btn-ghost-sm" onClick={() => setUpgrade(batchNote)}>Upgrade</button></p>}
-              <IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} />
+              <IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} onShow={setHighlight} />
               {lay && <JobEstimate svg={localSVG} version={lay} sheets={arranged.sheets} material={params.material} units={units === "in" ? "in" : "mm"} />}
             </>}
           />
@@ -715,7 +723,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
         />
       )}
       {shared.banner}
-      {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} />}
+      {upgrade && <UpgradeDialog reason={upgrade} signedIn={account.signedIn} onClose={() => setUpgrade(null)} preview={localSVG} />}
       {toast && <div className="toast" role="status">{toast}</div>}
       {file.input}
       {help.drawer}

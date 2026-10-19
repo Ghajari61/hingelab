@@ -106,6 +106,7 @@ function Keys() {
       <li><kbd>Ctrl/⌘ + Z</kbd> Undo · <kbd>Ctrl/⌘ + Shift + Z</kbd> Redo</li>
       <li><kbd>Ctrl/⌘ + S</kbd> Save project · <kbd>Ctrl/⌘ + O</kbd> Open · <kbd>Ctrl/⌘ + E</kbd> Export SVG · <kbd>Ctrl/⌘ + Shift + E</kbd> More formats</li>
       <li>In a field: <kbd>↑</kbd> <kbd>↓</kbd> to step, with <kbd>Shift</kbd> for ×10. Drag a field label to scrub.</li>
+      <li><kbd>?</kbd> This list (when you are not typing in a field)</li>
     </ul>
   );
 }
