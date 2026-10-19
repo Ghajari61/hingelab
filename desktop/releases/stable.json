@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.62",
-    "pub_date": "2026-10-19T05:57:19.989Z",
-    "notes": "Cut-out patterns (lattice, floral, Moroccan quatrefoil, honeycomb, circles, stars, woven leaves) for Boxes walls and lids and the Hinge Box lid and walls, with a framed title. New Book box design with a living-hinge spine. New presets.",
+    "version": "1.0.63",
+    "pub_date": "2026-10-19T06:38:44.439Z",
+    "notes": "Groundwork for the coming Paper Box Generator (tuck-end, mailer and two-piece box nets). No visible changes yet.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.62_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmg4bkxzb0JmRUkra1hoNEZCWER3OHlOV0RUbnhIdUNOMXZ1MmhRSGRWbXJRbG1TeGc3Q01GanVJeWdjYmVWdlZzWm8vRlFFRWR2aGZLMFJuZExCalE4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzg5MjQ2CWZpbGU6SGluZ2VMYWJfMS4wLjYyX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNjIKVmVadlZyZVFhU3Zrak1QMWRqOVpobzBsMzZoeUdrc0VpKzdiMHlTWDc0UDVOWTNSaTFIdVZDdlpucFFKNW51YVlmb0FYR0JCV0ZFSHRIZFVBamFUQVE9PQo=",
-        "size": 4490141
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.63_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnY4MVZvcjZaUzgrWSsveTk4WTViN1doV3BXSkdwL0E0MitvaXlTWHBORmNjWnEweExHR3hrMkx6M0t1NGtkSjZPOVRXdHJYaUhZLzZpenlwY3JFeHd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzkxNzAxCWZpbGU6SGluZ2VMYWJfMS4wLjYzX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNjMKWnp0TkJGRElzQVhvZzdVQ2kyc0gyVUo1MjZCcmI4NjFPcWdnc3VNTWdhdjZxOWxmMW5KNE9wdEhBNVY2UkRrTGg5OXRtTEVIeDJZTGpkYXNrMThPQnc9PQo=",
+        "size": 4490779
       }
     }
   }
