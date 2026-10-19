@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { SITE_DESCRIPTION, SITE_NAME, siteOrigin } from "@/lib/site/config";
 import { THEME_BOOT_SCRIPT } from "@/lib/studio/themeBoot";
+import "@/styles/fonts";
 import "@/styles/tokens.css";
 import "./globals.css";
 import "./site.css";
@@ -30,9 +31,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,600..800&family=Inter:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet" />
       </head>
       <body>{children}</body>
     </html>

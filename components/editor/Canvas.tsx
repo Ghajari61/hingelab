@@ -96,7 +96,7 @@ export function Canvas({
   /** "Sheet N of M" sized to fit the gap above the sheet and the sheet's width; hidden when unreadable. */
   const labelOf = (s: { x: number; y: number; w: number; label: string; warn?: boolean }) => {
     const { size, lift } = sheetLabel(view.z, s.w, s.label.length);
-    return size ? <text x={s.x} y={s.y - lift} fontFamily="Source Sans 3, sans-serif" fontSize={size} fill={s.warn ? "var(--warn, #E8A33D)" : "var(--fg-faint)"}>{s.label}</text> : null;
+    return size ? <text x={s.x} y={s.y - lift} fontFamily="Source Sans 3 Variable, Source Sans 3, sans-serif" fontSize={size} fill={s.warn ? "var(--warn, #E8A33D)" : "var(--fg-faint)"}>{s.label}</text> : null;
   };
 
   const art = content && (
@@ -128,7 +128,7 @@ export function Canvas({
       {content.score && <path d={content.score.join(" ")} fill="none" stroke={SCORE_LAYER.ui} strokeWidth={sw} strokeDasharray={`${r3(4 / view.z)} ${r3(2.5 / view.z)}`} />}
       {vis("outline") && <path d={content.outline.join(" ")} fill="none" stroke="var(--l-outline)" strokeWidth={sw * 1.2} strokeLinejoin="round" />}
       {vis("labels") && labels && content.labels.map((lb, i) => (
-        <text key={`l${i}`} x={r3(lb.x)} y={r3(lb.y)} fontFamily="Source Sans 3, sans-serif" fontWeight={600} fontSize={r3(lb.size)} fill="var(--l-labels)" fillOpacity={0.8} textAnchor="middle" dominantBaseline="middle" transform={lb.rot ? `rotate(${lb.rot} ${r3(lb.x)} ${r3(lb.y)})` : undefined}>{lb.text}</text>
+        <text key={`l${i}`} x={r3(lb.x)} y={r3(lb.y)} fontFamily="Source Sans 3 Variable, Source Sans 3, sans-serif" fontWeight={600} fontSize={r3(lb.size)} fill="var(--l-labels)" fillOpacity={0.8} textAnchor="middle" dominantBaseline="middle" transform={lb.rot ? `rotate(${lb.rot} ${r3(lb.x)} ${r3(lb.y)})` : undefined}>{lb.text}</text>
       ))}
       {overlay?.map((o, i) => (
         <path key={`o${i}`} d={o.d} fill="none" stroke={o.color} strokeWidth={o.width} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
@@ -185,7 +185,7 @@ export function Canvas({
               )) : (
                 <>
                   <rect x={0} y={0} width={bedW} height={bedH} fill="var(--sheet)" stroke="var(--sheet-edge)" strokeWidth={sw} className="sheet-rect" />
-                  <text x={0} y={-6 / view.z} fontFamily="Source Sans 3, sans-serif" fontSize={11 / view.z} fill="var(--fg-faint)">
+                  <text x={0} y={-6 / view.z} fontFamily="Source Sans 3 Variable, Source Sans 3, sans-serif" fontSize={11 / view.z} fill="var(--fg-faint)">
                     {`Laser bed ${fmtLen(bedW, units)} × ${fmtLen(bedH, units)}`}
                   </text>
                 </>

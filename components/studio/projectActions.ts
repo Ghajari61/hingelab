@@ -1,5 +1,6 @@
 "use client";
 
+import { platform } from "@hingelab/platform";
 import { createDocument, newId, type NewDocumentOptions } from "@/lib/studio/doc";
 import { openHingelab, packHingelab, type OpenedFile } from "@/lib/studio/file";
 import { oclcName } from "@/lib/projects/file";
@@ -168,13 +169,5 @@ export async function saveProjectToComputer(doc: Document, asNew: boolean): Prom
 }
 
 export function downloadBytes(bytes: Uint8Array | string, name: string, mime: string) {
-  const blob = new Blob([bytes as BlobPart], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  void platform().saveFile({ name, data: bytes, mime });
 }

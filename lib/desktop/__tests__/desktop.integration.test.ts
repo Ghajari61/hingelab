@@ -12,6 +12,7 @@ import { POST as generatePOST } from "@/app/api/desktop/generate/route";
 import { POST as aiPOST } from "@/app/api/desktop/ai/route";
 import { GET as updateGET } from "@/app/api/desktop/update/[target]/[arch]/[version]/route";
 import { POST as webSessionPOST } from "@/app/api/desktop/web-session/route";
+import { POST as exportPOST } from "@/app/api/export/route";
 import { createClient } from "@supabase/supabase-js";
 import { adminClient, deleteUser, localSupabaseUp, newUser } from "@/lib/testing/supabase";
 import stableManifest from "@/desktop/releases/stable.json";
@@ -96,6 +97,19 @@ describe.skipIf(!up)("desktop API (local Supabase)", () => {
     await adminClient().from("profiles").update({ current_period_end: new Date(Date.now() - 10 * 864e5).toISOString() }).eq("id", user.id);
     const lapsed = await meGET(get("/api/desktop/me", auth(t.access_token)));
     expect((await lapsed.json()).plan).toBe("free");
+    await adminClient().from("profiles").update({ plan: "free", plan_status: null, current_period_end: null }).eq("id", user.id);
+  });
+
+  it("exports through the website's route with the app's token and the plan from the database", async () => {
+    const t = await signIn(user.id);
+    const body = { product: "hinge", params: {} };
+    expect((await exportPOST(post("/api/export", body, { authorization: "Bearer nope" }) as never)).status).toBe(401);
+    expect((await exportPOST(post("/api/export", body, auth(t.access_token)) as never)).status).not.toBe(200);
+    await adminClient().from("profiles").update({ plan: "pro", plan_status: "active", current_period_end: new Date(Date.now() + 864e5).toISOString() }).eq("id", user.id);
+    const pro = await exportPOST(post("/api/export", body, auth(t.access_token)) as never);
+    expect(pro.status).toBe(200);
+    expect(pro.headers.get("x-hingelab-plan")).toBe("pro");
+    expect(await pro.text()).toContain("<svg");
     await adminClient().from("profiles").update({ plan: "free", plan_status: null, current_period_end: null }).eq("id", user.id);
   });
 

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import dynamic from "next/dynamic";
+import { clientOnly } from "@hingelab/ui/lazy";
 import { MATERIALS } from "@/lib/hinge/defaults";
 import { materialInfo, type MaterialInfo } from "@/lib/materials/library";
 import type { Units } from "@/components/editor/format";
 import { useMaterials } from "./useMaterials";
 
-const MaterialsDialog = dynamic(() => import("./MaterialsDialog"), { ssr: false });
+const MaterialsDialog = clientOnly(() => import("./MaterialsDialog"));
 
 const MANAGE = "__manage";
 

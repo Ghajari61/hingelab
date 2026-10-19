@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import { platform } from "@hingelab/platform";
 import { getBrowserClient } from "@/lib/supabase/client";
 import type { ProfileRow } from "@/lib/supabase/types";
+import { planOf } from "@/lib/plans";
 
 export type Account = {
   /** False in guest mode (no Supabase settings on this server). */
@@ -14,9 +16,30 @@ export type Account = {
   profile: ProfileRow | null;
 };
 
-/** The signed-in user and their profile (plan), kept in sync with auth changes. */
+/** The desktop app's account (from the HingeLab server through Rust), in the website's shape. */
+function useDesktopAccount(on: boolean): Account {
+  const [state, setState] = useState<Account>({ configured: true, loading: on, user: null, profile: null });
+  useEffect(() => {
+    if (!on) return;
+    let alive = true;
+    const load = () => platform().auth.session().then((s) => {
+      if (!alive) return;
+      const user = s.user ? ({ id: s.user.id, email: s.user.email ?? undefined, user_metadata: { full_name: s.user.name } } as unknown as User) : null;
+      const profile = s.user ? ({ id: s.user.id, email: s.user.email, plan: planOf(s.plan), plan_status: s.status, current_period_end: s.periodEnd, founder: false, stripe_customer_id: null, stripe_price_id: null, created_at: null } as ProfileRow) : null;
+      setState({ configured: true, loading: false, user, profile });
+    });
+    void load();
+    const off = platform().auth.onChange(() => void load());
+    return () => { alive = false; off(); };
+  }, [on]);
+  return state;
+}
+
+/** The signed-in user and their profile (plan), kept in sync with auth changes, on the website or in the app. */
 export function useAccount(): Account {
-  const supabase = getBrowserClient();
+  const desktop = platform().kind !== "web";
+  const fromDesktop = useDesktopAccount(desktop);
+  const supabase = desktop ? null : getBrowserClient();
   const [state, setState] = useState<Account>({ configured: !!supabase, loading: !!supabase, user: null, profile: null });
 
   useEffect(() => {
@@ -40,5 +63,5 @@ export function useAccount(): Account {
     };
   }, [supabase]);
 
-  return state;
+  return desktop ? fromDesktop : state;
 }

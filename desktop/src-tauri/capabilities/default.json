@@ -40,6 +40,10 @@
     "allow-web-open",
     "allow-web-bounds",
     "allow-web-hide",
-    "allow-web-action"
+    "allow-web-action",
+    "allow-api-request",
+    "allow-save-file",
+    "allow-open-file",
+    "allow-open-external"
   ]
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { platform } from "@hingelab/platform";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Download } from "lucide-react";
 import { MAX_ZIP_ROWS, parseRows } from "@/lib/batch/rows";
@@ -75,15 +76,9 @@ export default function BatchDialog({ def, params, ctx, start, pro, base, onClos
         onProgress: (done, total) => setProgress({ done, total }), cancelled: () => cancel.current,
       });
       if (!r) { toast("Batch cancelled"); setProgress(null); return; }
-      const a = document.createElement("a");
-      const url = URL.createObjectURL(new Blob([r.zip as BlobPart], { type: "application/zip" }));
-      a.href = url;
-      a.download = `${base}-batch.zip`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-      toast(`Downloading ${a.download}: ${r.made} of ${parsed.rows.length} rows${r.failed.length ? `, ${r.failed.length} skipped (see summary.csv)` : ""}`);
+      const zipName = `${base}-batch.zip`;
+      await platform().saveFile({ name: zipName, data: r.zip, mime: "application/zip", intent: "export" });
+      toast(`Saved ${zipName}: ${r.made} of ${parsed.rows.length} rows${r.failed.length ? `, ${r.failed.length} skipped (see summary.csv)` : ""}`);
       if (r.failed.length && !r.made) { setErr(`No row could be built: ${r.failed[0].why}`); setProgress(null); return; }
       onClose();
     } catch (e) {

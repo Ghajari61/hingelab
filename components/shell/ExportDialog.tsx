@@ -1,5 +1,6 @@
 "use client";
 
+import { platform } from "@hingelab/platform";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Download } from "lucide-react";
 import type { Units } from "@/components/editor/format";
@@ -16,15 +17,8 @@ import JobEstimate from "./JobEstimate";
 import "./export-dialog.css";
 
 function download(f: ExportFile) {
-  const a = document.createElement("a");
-  const url = URL.createObjectURL(new Blob([f.data as BlobPart], { type: f.mime }));
-  a.href = url;
-  a.download = f.name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  void platform().saveFile({ name: f.name, data: f.data as string | Uint8Array, mime: f.mime, intent: "export" });
   recordExport(f.name);
-  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
 /**

@@ -3,11 +3,10 @@ import { listen } from "@tauri-apps/api/event";
 import { ArrowLeft, ArrowRight, ExternalLink, Globe, Loader2, RotateCw } from "lucide-react";
 import { ipc, type AppError, type WebBounds, type WebPageEvent } from "../ipc";
 
-export type WebRoute = "web-editors" | "web-studio" | "web-ai" | "web-projects";
+export type WebRoute = "web-studio" | "web-ai" | "web-projects";
 
 /** The website's sections the app shows inside its window, and where each one starts. */
 export const WEB_HOME: Record<WebRoute, string> = {
-  "web-editors": "/app/editor/local",
   "web-studio": "/home",
   "web-ai": "/home?new=ai",
   "web-projects": "/app",

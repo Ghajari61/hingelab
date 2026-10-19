@@ -1,5 +1,7 @@
 "use client";
 
+import { platform } from "@hingelab/platform";
+import { productHref } from "@hingelab/app/routes";
 /**
  * Opening and saving `.oclc` project files in the browser. Where the browser lets a page keep a file
  * (the File System Access API), Save writes over the same file; elsewhere each save downloads a copy.
@@ -104,14 +106,7 @@ export async function writeHandle(h: FileSystemFileHandle, data: string | Uint8A
 /** Starts a download of `data`; returns false when the browser refused. */
 export function downloadFile(name: string, data: string | Uint8Array, mime: string): boolean {
   try {
-    const a = document.createElement("a");
-    const url = URL.createObjectURL(new Blob([data as BlobPart], { type: mime }));
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+    void platform().saveFile({ name, data, mime });
     return true;
   } catch {
     return false;
@@ -158,7 +153,8 @@ export async function openProjectFile(file: File, handle: FileSystemFileHandle |
     toast("This browser blocked the hand-off between sections. Switch to the section and open the file there.");
     return null;
   }
-  window.location.assign(`/app/editor/local?p=${d.section}&open=1`);
+  const to = productHref(d.section, platform().kind);
+  platform().router.navigate(`${to}${to.includes("?") ? "&" : "?"}open=1`);
   return null;
 }
 

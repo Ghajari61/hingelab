@@ -1,7 +1,7 @@
 /* Public site: landing, terms, privacy. A light, airy page on the brand gradient; the laser bed
    (honeycomb, real export colours) appears where the live hinge-box demo runs. */
 .landing {
-  --display: "Archivo", "Inter", system-ui, sans-serif;
+  --display: "Archivo Variable", "Archivo", "Inter Variable", system-ui, sans-serif;
   --ply: #DCBF8F;
   --ply-edge: #B48F58;
   --bed: #191A1C;

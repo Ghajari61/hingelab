@@ -25,6 +25,24 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@hingelab/platform": [
+        "./packages/platform/src/index.ts"
+      ],
+      "@hingelab/platform/*": [
+        "./packages/platform/src/*"
+      ],
+      "@hingelab/app": [
+        "./packages/app/src/index.ts"
+      ],
+      "@hingelab/app/*": [
+        "./packages/app/src/*"
+      ],
+      "@hingelab/ui": [
+        "./packages/ui/src/index.ts"
+      ],
+      "@hingelab/ui/*": [
+        "./packages/ui/src/*"
       ]
     }
   },

@@ -1,9 +1,10 @@
 "use client";
 
+import { platform } from "@hingelab/platform";
 import { keepSetup } from "@/lib/prefs/editor";
 import { editorPrefs } from "@/lib/prefs/editorStore";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import dynamic from "next/dynamic";
+import { clientOnly } from "@hingelab/ui/lazy";
 import { autoFit, clone, MATERIALS } from "@/lib/hinge";
 import {
   baseOffset, exportLetterSVG, hingeParamsOf, LETTER_DEFAULTS,
@@ -55,11 +56,10 @@ import { usePlan } from "@/components/billing/usePlan";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 
-const ExportDialog = dynamic(() => import("@/components/shell/ExportDialog"), { ssr: false });
-const JobEstimate = dynamic(() => import("@/components/shell/JobEstimate"), { ssr: false });
-const ShareDialog = dynamic(() => import("@/components/shell/ShareDialog"), { ssr: false });
-const LetterPreview3D = dynamic(() => import("./LetterPreview3D"), {
-  ssr: false,
+const ExportDialog = clientOnly(() => import("@/components/shell/ExportDialog"));
+const JobEstimate = clientOnly(() => import("@/components/shell/JobEstimate"));
+const ShareDialog = clientOnly(() => import("@/components/shell/ShareDialog"));
+const LetterPreview3D = clientOnly(() => import("./LetterPreview3D"), {
   loading: () => <div id="preview3d" className="v3" aria-busy="true" />,
 });
 
@@ -227,19 +227,9 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   }
 
   function offerFile(filename: string, data: string, mime: string) {
-    try {
-      const a = document.createElement("a");
-      const url = URL.createObjectURL(new Blob([data], { type: mime }));
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-      toastMsg(`Downloading ${filename}`);
-    } catch {
-      setModal({ type: "code", name: filename, data });
-    }
+    platform().saveFile({ name: filename, data, mime, intent: "export" })
+      .then((r) => toastMsg(r.message))
+      .catch(() => setModal({ type: "code", name: filename, data }));
   }
 
   /** The uploaded font for an export request, or an error message. */
@@ -273,11 +263,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
         toastMsg(upload.error);
         return null;
       }
-      const res = await fetch("/api/export", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ product: "letters", params: deferred, ...(upload ? { font: upload } : {}) }),
-      });
+      const res = await platform().exportFile({ product: "letters", params: deferred, ...(upload ? { font: upload } : {}) });
       if (res.ok) return await res.text();
       const err = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Export failed. Try again.";
       if (res.status === 403) setUpgrade(err);

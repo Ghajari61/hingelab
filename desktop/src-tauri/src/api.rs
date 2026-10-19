@@ -168,6 +168,45 @@ impl Api {
         }
         Err(CmdError::unauthorized())
     }
+
+    /// An authenticated call whose answer goes back to the page as it came (any status but 401 and
+    /// 426, which end the session or ask for an update here). Returns status, content type and body.
+    pub async fn raw(&self, method: Method, path: &str, content_type: Option<&str>, body: Option<&str>) -> CmdResult<(u16, Option<String>, Vec<u8>)> {
+        let mut token = self.access_token(None).await?;
+        for attempt in 0..2 {
+            let mut req = self.http.request(method.clone(), self.url(path)).bearer_auth(&token);
+            if let Some(ct) = content_type {
+                req = req.header(header::CONTENT_TYPE, ct);
+            }
+            if let Some(b) = body {
+                req = req.body(b.to_owned());
+            }
+            let res = req.send().await.map_err(|e| CmdError::network(&e))?;
+            let status = res.status();
+            if status == StatusCode::UNAUTHORIZED && attempt == 0 {
+                token = self.access_token(Some(&token)).await?;
+                continue;
+            }
+            if status == StatusCode::UNAUTHORIZED {
+                *self.tokens.lock().await = None;
+                store::clear();
+                return Err(CmdError::unauthorized());
+            }
+            if status.as_u16() == 426 {
+                return Err(status_error(status, res).await);
+            }
+            let ct = res.headers().get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok()).map(|s| s.chars().take(120).collect());
+            if res.content_length().is_some_and(|n| n as usize > MAX_BODY) {
+                return Err(CmdError::new("server", "The answer is too large."));
+            }
+            let bytes = res.bytes().await.map_err(|e| CmdError::network(&e))?;
+            if bytes.len() > MAX_BODY {
+                return Err(CmdError::new("server", "The answer is too large."));
+            }
+            return Ok((status.as_u16(), ct, bytes.to_vec()));
+        }
+        Err(CmdError::unauthorized())
+    }
 }
 
 async fn read_json(res: reqwest::Response) -> CmdResult<Value> {

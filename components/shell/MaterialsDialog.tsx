@@ -1,5 +1,6 @@
 "use client";
 
+import { platform } from "@hingelab/platform";
 import { useEffect, useRef, useState } from "react";
 import { MATERIALS } from "@/lib/hinge/defaults";
 import {
@@ -28,14 +29,7 @@ const laserText = (m: UserMaterial): LaserText => Object.fromEntries(LASER_OPS.m
 })) as LaserText;
 
 function download(name: string, text: string) {
-  const a = document.createElement("a");
-  const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+  void platform().saveFile({ name, data: text, mime: "application/json" });
 }
 
 /**

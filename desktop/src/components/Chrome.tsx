@@ -1,12 +1,12 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { ArrowDownCircle, Clock3, Cloud, CreditCard, FolderOpen, Globe, HelpCircle, LayoutDashboard, Loader2, PanelLeftClose, PanelLeftOpen, PenTool, Settings as Cog, Shapes, ShieldCheck, Sparkles, Star, WandSparkles, X } from "lucide-react";
+import { ArrowDownCircle, Cloud, CreditCard, FolderOpen, Globe, HelpCircle, Layers, LayoutDashboard, Loader2, PanelLeftClose, PanelLeftOpen, PenTool, Settings as Cog, ShieldCheck, WandSparkles, X } from "lucide-react";
 import { avatarBackground, avatarInitials } from "../../../lib/account/avatar";
 import type { DesktopAccount } from "../ipc";
 import type { UpdateStatus } from "../updater";
 import { formatBytes } from "../updater";
 import type { WebRoute } from "./Web";
 
-export type Route = "dashboard" | "generators" | "ai" | "workspace" | "recent" | "favorites" | "subscription" | "settings" | "help" | WebRoute;
+export type Route = "editor" | "files" | "subscription" | "settings" | "help" | WebRoute;
 
 export function Logo({ size = 28 }: { size?: number }) {
   return (
@@ -25,25 +25,22 @@ export function Logo({ size = 28 }: { size?: number }) {
 }
 
 const NAV: { id: Route; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "generators", label: "Generators", icon: Shapes },
-  { id: "ai", label: "AI designer", icon: Sparkles },
-  { id: "recent", label: "Recent designs", icon: Clock3 },
-  { id: "favorites", label: "Favorites", icon: Star },
+  { id: "editor", label: "Design", icon: PenTool },
+  { id: "files", label: "Project files", icon: FolderOpen },
   { id: "subscription", label: "Subscription", icon: CreditCard },
   { id: "settings", label: "Settings", icon: Cog },
   { id: "help", label: "Help", icon: HelpCircle },
 ];
 
-/** The website's editors and pages, shown inside the window and signed in as this account. */
+/** The website's sections the app has no local copy of, shown inside the window and signed in as this account. */
 const ONLINE: { id: WebRoute; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: "web-editors", label: "All editors", icon: PenTool },
+  { id: "web-studio", label: "Free-form Studio", icon: Layers },
   { id: "web-ai", label: "AI Studio", icon: WandSparkles },
   { id: "web-projects", label: "Cloud projects", icon: Cloud },
 ];
 
-export function Sidebar({ route, onRoute, account, hasDesign, update, onUpdate, collapsed, onToggle }: {
-  route: Route; onRoute: (r: Route) => void; account: DesktopAccount | null; hasDesign: boolean; update: UpdateStatus; onUpdate: () => void;
+export function Sidebar({ route, onRoute, account, update, onUpdate, collapsed, onToggle }: {
+  route: Route; onRoute: (r: Route) => void; account: DesktopAccount | null; update: UpdateStatus; onUpdate: () => void;
   collapsed: boolean; onToggle: () => void;
 }) {
   const updateText = update.phase === "available" ? `Update to ${update.info.version}` : "Updating…";
@@ -52,16 +49,16 @@ export function Sidebar({ route, onRoute, account, hasDesign, update, onUpdate, 
     <nav className="sidebar" aria-label="Main">
       <div className="brand">
         <Logo size={26} /><span>HingeLab</span>
-        <button type="button" className="side-toggle" aria-expanded={!collapsed} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={`${collapsed ? "Expand" : "Collapse"} sidebar (Ctrl+B)`} onClick={onToggle}>
+        <button type="button" className="side-toggle" aria-expanded={!collapsed} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={`${collapsed ? "Expand" : "Collapse"} sidebar (Ctrl+Shift+B)`} onClick={onToggle}>
           {collapsed ? <PanelLeftOpen size={16} aria-hidden /> : <PanelLeftClose size={16} aria-hidden />}
         </button>
       </div>
       <ul>
         {NAV.map((n) => {
-          const active = route === n.id || (n.id === "generators" && route === "workspace");
+          const active = route === n.id;
           return (
             <li key={n.id}>
-              <button type="button" aria-current={active ? "page" : undefined} aria-label={collapsed ? n.label : undefined} title={collapsed ? n.label : undefined} onClick={() => onRoute(n.id === "generators" && hasDesign && route !== "workspace" ? "workspace" : n.id)}>
+              <button type="button" aria-current={active ? "page" : undefined} aria-label={collapsed ? n.label : undefined} title={collapsed ? n.label : undefined} onClick={() => onRoute(n.id)}>
                 <n.icon size={17} aria-hidden />
                 <span>{n.label}</span>
               </button>

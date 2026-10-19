@@ -1,5 +1,6 @@
 // Scans desktop build output for things that must never ship in the app: secrets (Stripe, Supabase
-// service role, signing keys, values of secret env vars) and server-side geometry code.
+// service role, signing keys, values of secret env vars) and server-only code. The geometry and the
+// editors are shared with the website and ship on purpose (DECISIONS.md D186, R1).
 // `node scripts/desktop/scan.mjs [paths...]` (defaults to desktop/dist and the built executables).
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
@@ -20,18 +21,15 @@ const PATTERNS = [
   [/VERCEL_OIDC_TOKEN|VERCEL_TOKEN/, "Vercel token name"],
 ];
 
-/** Text that only exists in the server's geometry and export code. */
+/** Text that only exists in server-only modules: sessions, billing, admin access and plan checks. */
 const SERVER_CODE = [
-  "Torsion bars are under",
-  "Corner radius must be at least",
-  "Slit spacing is too tight",
-  "inkscape:groupmode",
-  "Made with HingeLab</text>",
-  "computeModel",
-  "arrangeGenerator",
-  "sanitizeGeneratorParams",
-  "hingeRequestError",
   "desktop_session_refresh",
+  "desktop_session_user",
+  "HINGELAB_DEV_USER",
+  "STRIPE_SECRET_KEY",
+  "STRIPE_WEBHOOK_SECRET",
+  "x-hingelab-plan",
+  "server-only",
 ];
 
 /** Values of secret variables from the local env files and the signing key files. */

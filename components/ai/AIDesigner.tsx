@@ -1,5 +1,6 @@
 "use client";
 
+import { platform } from "@hingelab/platform";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ArrowUp, Check, Download, ImagePlus, Info, Layers, Library, Loader2, PenTool, Redo2, RotateCcw, ScanEye, Sparkles, Undo2, Wand2, X } from "lucide-react";
@@ -253,11 +254,7 @@ export function AIDesigner({ plan, curator = false }: { plan: Plan; curator?: bo
   function download() {
     if (!design?.svg) return;
     if (!hasPro(plan)) { setError("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return; }
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([design.svg], { type: "image/svg+xml" }));
-    a.download = design.fileName ?? fileName(design.name);
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    void platform().saveFile({ name: design.fileName ?? fileName(design.name), data: design.svg, mime: "image/svg+xml", intent: "export" });
   }
 
   function startOver() {

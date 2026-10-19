@@ -32,6 +32,10 @@ const COMMANDS: &[&str] = &[
     "web_bounds",
     "web_hide",
     "web_action",
+    "api_request",
+    "save_file",
+    "open_file",
+    "open_external",
 ];
 
 fn main() {

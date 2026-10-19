@@ -1,37 +1,40 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { ConfirmDialog, Sidebar, SignIn, Toasts, UpdateDialog, UpdateRequired, useModalOpen, type Route, type Toast } from "./components/Chrome";
-import { Dashboard, Favorites, Generators, Help, Recent, Settings, Subscription } from "./components/Pages";
-import { Workspace } from "./components/Workspace";
-import { resetValues } from "./components/SettingsPanel";
-import { AIPage } from "./components/AIPage";
+import { platform } from "@hingelab/platform";
+import { matchRoute, productHref } from "@hingelab/app/routes";
+import { AI_START_KEY } from "@/lib/ai/types";
+import { Sidebar, SignIn, Toasts, UpdateDialog, UpdateRequired, useModalOpen, type Route, type Toast } from "./components/Chrome";
+import { Files } from "./components/Files";
+import { Help, Settings, Subscription } from "./components/Pages";
 import { isWebRoute, WEB_HOME, WebHost, type WebRequest, type WebRoute } from "./components/Web";
-import type { CanvasHandle } from "./components/Canvas";
-import { isDirty, useDesign, type Params } from "./design";
-import { ipc, type AppError, type DCatalog, type DesktopAccount, type ExportAs, type Prefs, type RecentProject, type WebDownloadEvent, type WebPage } from "./ipc";
-import { projectText, readProject } from "./projectFile";
-import { designThumb } from "./thumb";
-import { addRecent, setRecentThumb, cacheAccount, cacheCatalog, cachedAccount, cachedCatalog, lastParams, rememberParams, useFavorites, useLocks, usePrefs, useRecent, type Favorite, type SavedDesign } from "./local";
+import { ipc, type AppError, type DesktopAccount, type Prefs, type RecentProject, type WebDownloadEvent, type WebPage } from "./ipc";
+import { cacheAccount, cachedAccount, useFavorites, usePrefs, type Favorite } from "./local";
 import { useAutoCheck, useUpdater } from "./updater";
+
+/** The website's editor, the same code, built into the app: designs are made on this computer. */
+const Workspace = lazy(() => import("@/components/editor/Workspace"));
 
 type Phase = "boot" | "signedOut" | "ready" | "updateRequired";
 
 /** Keeps a page mounted while hidden so its state and in-flight work survive a trip to another section. */
-function Keep({ on, children }: { on: boolean; children: ReactNode }) {
-  return <div className={`keep-pane${on ? " is-on" : ""}`} aria-hidden={!on}>{children}</div>;
+function Keep({ on, children, shell = true }: { on: boolean; children: ReactNode; shell?: boolean }) {
+  return <div className={`keep-pane${shell ? " dk" : ""}${on ? " is-on" : ""}`} aria-hidden={!on}>{children}</div>;
 }
+
+const unb64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
 export function App() {
   const [phase, setPhase] = useState<Phase>("boot");
   const [version, setVersion] = useState("");
   const [server, setServer] = useState("");
   const [account, setAccount] = useState<DesktopAccount | null>(cachedAccount);
-  const [catalog, setCatalog] = useState<DCatalog | null>(cachedCatalog);
-  const [route, setRoute] = useState<Route>("dashboard");
+  const [route, setRoute] = useState<Route>("editor");
   /** Native (and web) sections opened at least once stay mounted so work is not thrown away. */
-  const [seen, setSeen] = useState<Partial<Record<Route, true>>>({ dashboard: true });
+  const [seen, setSeen] = useState<Partial<Record<Route, true>>>({ editor: true });
+  /** A new key opens the editor afresh at the address in the hash (a file, a preset, the start gallery). */
+  const [editorKey, setEditorKey] = useState(0);
   const [signing, setSigning] = useState(false);
   const [signError, setSignError] = useState<string | null>(null);
   const [minimum, setMinimum] = useState<string | null>(null);
@@ -42,10 +45,8 @@ export function App() {
   const [showUpdate, setShowUpdate] = useState(false);
   const [local, setLocal] = usePrefs();
   const toggleSidebar = useCallback(() => setLocal((old) => ({ ...old, sidebarCollapsed: !old.sidebarCollapsed })), [setLocal]);
-  const [recent, setRecent] = useRecent();
   const [favorites, setFavorites] = useFavorites();
   const updater = useUpdater();
-  const canvas = useRef<CanvasHandle>(null);
   const toastId = useRef(0);
 
   const toast = useCallback((t: Omit<Toast, "id">) => {
@@ -56,12 +57,13 @@ export function App() {
 
   const signedOut = useCallback((message: string | null) => {
     void ipc.signOut().catch(() => {});
-    setRoute("dashboard");
+    setRoute("editor");
     webSection.current = null;
     cacheAccount(null);
     setAccount(null);
     setSignError(message);
     setPhase("signedOut");
+    platform().auth.refresh();
   }, []);
 
   /** Errors that change the whole app: an ended session or an unsupported version. */
@@ -73,15 +75,12 @@ export function App() {
     }
   }, [signedOut]);
 
-  const design = useDesign(fatal);
-
   const loadAccount = useCallback(async () => {
     try {
-      const [a, c] = await Promise.all([ipc.me(), ipc.catalog()]);
+      const a = await ipc.me();
       setAccount(a);
       cacheAccount(a);
-      setCatalog(c);
-      cacheCatalog(c);
+      platform().auth.refresh();
       return true;
     } catch (e) {
       const err = e as AppError;
@@ -92,7 +91,7 @@ export function App() {
     }
   }, [fatal, toast]);
 
-  // Start-up: version, session, then account and catalog in the background (cached copies show at once).
+  // Start-up: version, session, then the account in the background (a cached copy shows at once).
   useEffect(() => {
     void (async () => {
       setVersion(await getVersion().catch(() => ""));
@@ -119,17 +118,6 @@ export function App() {
       window.removeEventListener("offline", off);
     };
   }, []);
-  useEffect(() => {
-    if (design.state.error?.kind === "network") setOnline(false);
-    else if (design.state.result && !design.state.error) setOnline(true);
-  }, [design.state.error, design.state.result]);
-  // Back online: the change that could not be sent goes now.
-  const unsent = useRef(false);
-  unsent.current = design.state.unsent;
-  const { refresh } = design;
-  useEffect(() => {
-    if (online && unsent.current) refresh();
-  }, [online, refresh]);
 
   // Theme.
   useEffect(() => {
@@ -161,7 +149,7 @@ export function App() {
       setAccount(a);
       cacheAccount(a);
       setPhase("ready");
-      setRoute("dashboard");
+      setRoute("editor");
       void loadAccount();
       void ipc.getPrefs().then(setPrefs).catch(() => {});
     } catch (e) {
@@ -175,9 +163,9 @@ export function App() {
 
   const web = useCallback((p: WebPage) => void ipc.openWeb(p).catch((e: AppError) => toast({ text: e.message, kind: "err" })), [toast]);
 
-  // The website inside the window: one view, kept (hidden) while native pages show, so going back
-  // to the same section finds it as it was left.
-  const [webRequest, setWebRequest] = useState<WebRequest>({ path: WEB_HOME["web-editors"], n: 0 });
+  // The website inside the window (Studio, AI Studio, cloud projects): one view, kept (hidden)
+  // while native pages show, so going back to the same section finds it as it was left.
+  const [webRequest, setWebRequest] = useState<WebRequest>({ path: WEB_HOME["web-studio"], n: 0 });
   const webSection = useRef<WebRoute | null>(null);
   const openOnline = useCallback((section: WebRoute, path?: string) => {
     if (path || webSection.current !== section) setWebRequest((old) => ({ path: path ?? WEB_HOME[section], n: old.n + 1 }));
@@ -190,6 +178,50 @@ export function App() {
   useEffect(() => {
     setSeen((s) => (s[route] ? s : { ...s, [route]: true }));
   }, [route]);
+
+  /** Opens the editor at an app address (`/editor/clock?preset=…`), afresh. */
+  const openEditor = useCallback((to: string) => {
+    window.history.replaceState(null, "", `#${to}`);
+    setEditorKey((k) => k + 1);
+    setRoute("editor");
+  }, []);
+
+  // The shared code moves between pages through the router; pages the app has no local copy of
+  // open in the website view (Studio, cloud projects) or the browser (account).
+  useEffect(() => {
+    const on = () => {
+      const r = platform().router;
+      const m = matchRoute(r.path());
+      const q = r.search().toString();
+      if (m.page === "editor" || m.page === "start" || m.page === "generators") { setEditorKey((k) => k + 1); setRoute("editor"); }
+      else if (m.page === "studio") openOnline("web-studio", `/editor/${encodeURIComponent(m.projectId)}`);
+      else if (m.page === "projects") openOnline("web-projects", "/app");
+      else if (m.page === "account") web("account");
+      else openOnline("web-studio", `${r.path()}${q ? `?${q}` : ""}`);
+    };
+    window.addEventListener("hashchange", on);
+    return () => window.removeEventListener("hashchange", on);
+  }, [openOnline, web]);
+
+  // Links in the shared pages: app routes stay here; other HingeLab pages open in the browser.
+  useEffect(() => {
+    const click = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!a || e.defaultPrevented) return;
+      const href = a.getAttribute("href") ?? "";
+      if (href.startsWith("#") || href.startsWith("blob:") || href.startsWith("data:") || a.hasAttribute("download")) return;
+      e.preventDefault();
+      if (!href.startsWith("/") || href.startsWith("//")) {
+        if (/^https?:\/\//i.test(href)) void platform().openExternal(href).catch(() => toast({ text: "HingeLab opens its own pages only.", kind: "err" }));
+        return;
+      }
+      const m = matchRoute(href.split(/[?#]/)[0]);
+      if (m.page === "editor" || m.page === "start") platform().router.navigate(href);
+      else void platform().openExternal(href).catch((err: AppError) => toast({ text: err.message, kind: "err" }));
+    };
+    document.addEventListener("click", click);
+    return () => document.removeEventListener("click", click);
+  }, [toast]);
 
   useEffect(() => {
     const off = listen<WebDownloadEvent>("web-download", ({ payload: d }) => {
@@ -204,136 +236,44 @@ export function App() {
     setRefreshing(true);
     const ok = await loadAccount();
     setRefreshing(false);
-    if (ok) {
-      if (design.state.result?.locked) design.refresh();
-      toast({ text: "Plan updated." });
-    }
-  }, [loadAccount, design, toast]);
+    if (ok) toast({ text: "Plan updated." });
+  }, [loadAccount, toast]);
 
-  const product = useMemo(() => (catalog?.art?.id === design.state.product ? catalog.art : catalog?.products.find((p) => p.id === design.state.product)) ?? null, [catalog, design.state.product]);
-
-  const [askReset, setAskReset] = useState(false);
-  const resetAll = () => {
-    if (!product || !design.state.params) return;
-    if (local.confirmReset) setAskReset(true);
-    else doReset();
-  };
-  const doReset = () => {
-    setAskReset(false);
-    if (!product || !design.state.params) return;
-    const values = resetValues(product.sections.flatMap((s) => s.fields), design.state.params, design.state.result?.form);
-    if (!Object.keys(values).length) return toast({ text: "Every setting is already at its default.", kind: "ok" });
-    design.changeMany(values);
-    toast({ text: "All settings reset. Ctrl+Z undoes it.", kind: "ok" });
-  };
-
-  const locks = useLocks(product && product.id !== "art" ? product.id : null);
-  const canRandom = !!product && (product.id === "hinge" || product.sections.some((s) => s.fields.some((f) => f.kind !== "text" && f.shuffle)));
-  const randomise = useCallback(() => {
-    if (!canRandom || !design.state.params || design.state.busy) return;
-    const hinge = design.state.product === "hinge";
-    design.randomise(hinge ? [] : locks.list);
-    toast({ text: hinge ? "A new box idea: shape, size, lid and pattern. Your material and sheet stay. Ctrl+Z undoes it." : locks.list.length ? "New random design; locked settings kept. Ctrl+Z undoes it." : "New random design. Ctrl+Z undoes it.", kind: "ok" });
-  }, [canRandom, design, locks.list, toast]);
-
-  // Settings > Open designs in: the sheet or 3D, whatever was showing last.
-  const startView = useCallback(() => {
-    if (local.openIn !== "last") setLocal((o) => ({ ...o, view3d: local.openIn === "3d" }));
-  }, [local.openIn, setLocal]);
-  const openNew = useCallback((id: string) => {
-    const saved = local.reuseLastSettings ? lastParams(id) : null;
-    design.open(id, saved ? { params: saved } : {});
-    startView();
-    setRoute("workspace");
-  }, [design, local.reuseLastSettings, startView]);
-  const openPreset = useCallback((id: string, preset: string) => {
-    design.open(id, { preset });
-    startView();
-    setRoute("workspace");
-  }, [design, startView]);
-  const openSaved = useCallback((d: { product: string; params?: Params; preset?: string }) => {
-    design.open(d.product, d.preset ? { preset: d.preset } : { params: d.params });
-    startView();
-    setRoute("workspace");
-  }, [design, startView]);
-
-  // Remember designs as they change (settings only, on this computer).
-  const r = design.state.result;
-  useEffect(() => {
-    if (!r || (design.state.status !== 200 && design.state.status !== 403)) return;
-    if (r.product !== "art") rememberParams(r.product, r.params);
-    const name = String(r.params.name ?? "Untitled");
-    setRecent((list) => addRecent(list, { product: r.product, name, params: r.params, summary: r.summary }));
-    if (!r.svg) return;
-    const svg = r.svg;
-    let live = true;
-    const t = window.setTimeout(() => {
-      void designThumb(svg).then((thumb) => {
-        if (live && thumb) setRecent((list) => setRecentThumb(list, r.product, name, thumb));
-      });
-    }, 700);
-    return () => { live = false; window.clearTimeout(t); };
-  }, [r, design.state.status, setRecent]);
-
-  const currentFavorite = r ? favorites.find((f) => !f.preset && f.product === r.product && f.name === String(r.params.name)) : undefined;
-  const toggleFavorite = useCallback(() => {
-    if (!r) return;
-    if (currentFavorite) setFavorites((l) => l.filter((f) => f.id !== currentFavorite.id));
-    else setFavorites((l) => [{ id: crypto.randomUUID(), product: r.product, params: r.params, name: String(r.params.name ?? "Untitled"), note: r.summary, at: Date.now() }, ...l]);
-  }, [r, currentFavorite, setFavorites]);
-
-  // Project files (.oclc).
+  // Project files (.oclc): the editor reads the file itself; Studio projects open in the website view.
   const [files, setFiles] = useState<RecentProject[]>([]);
   const loadFiles = useCallback(() => void ipc.recentProjects().then((l) => setFiles(Array.isArray(l) ? l : [])).catch(() => {}), []);
   useEffect(() => { if (phase === "ready") loadFiles(); }, [phase, loadFiles]);
 
-  const saveProject = useCallback(async (asNew: boolean) => {
-    if ((account?.plan ?? "free") !== "pro") {
-      toast({ text: "Saving and exporting need Pro. Upgrade to download cut files.", kind: "err" });
-      return;
-    }
-    design.flush();
-    const cur = design.current();
-    if (!cur.product || !cur.params || cur.product === "art") return;
-    const text = projectText(cur.product, cur.params, design.state.result?.version ?? 1);
-    const name = String(cur.params.name ?? "") || (product?.name ?? "design");
-    const file = design.state.file;
-    try {
-      const out = asNew || !file ? await ipc.saveProjectAs(text, name) : await ipc.saveProject(text, name, file.path);
-      if (!out.path || !out.name) return;
-      design.markSaved({ path: out.path, name: out.name });
-      toast({ text: `Saved ${out.name}`, kind: "ok", path: out.path });
-      loadFiles();
-    } catch (e) {
-      toast({ text: (e as AppError).message, kind: "err" });
-    }
-  }, [account?.plan, design, product, toast, loadFiles]);
-
-  const nativeIds = useMemo(() => new Set(["hinge", ...(catalog?.products.map((p) => p.id) ?? [])]), [catalog]);
   const openFile = useCallback(async (path: string | null) => {
     try {
-      const f = await ipc.openProject(path);
+      const f = await invoke<{ path: string; name: string; data: string } | null>("open_file", { path });
       if (!f) return;
       loadFiles();
-      const r = readProject(f.text, nativeIds);
-      if (r.kind === "error") { toast({ text: r.message, kind: "err" }); return; }
-      if (r.kind === "native") {
-        design.open(r.product, { params: r.params, version: r.version, file: { path: f.path, name: f.name } });
-        startView();
-        setRoute("workspace");
-        toast({ text: `Opened ${f.name}` });
+      const bytes = unb64(f.data);
+      if (bytes[0] === 0x50 && bytes[1] === 0x4b) {
+        openOnline("web-studio", await ipc.webOpenFile(f.path));
+        toast({ text: `Opening ${f.name} in the online Studio…` });
         return;
       }
-      openOnline(r.section === "studio" ? "web-studio" : "web-editors", await ipc.webOpenFile(f.path));
-      toast({ text: `Opening ${f.name} in the online ${r.section === "studio" ? "Studio" : "editor"}…` });
+      // The same file opened twice is still a new address, so the editor opens it again.
+      window.history.replaceState(null, "", "#/");
+      const { openProjectFile } = await import("@/components/shell/projectFiles");
+      await openProjectFile(new File([bytes], f.name), null, null, (text) => toast({ text }));
     } catch (e) {
-      toast({ text: (e as AppError).message, kind: "err" });
+      toast({ text: (e as AppError).message ?? "That file could not be opened.", kind: "err" });
       loadFiles();
     }
-  }, [design, nativeIds, openOnline, toast, loadFiles, startView]);
+  }, [loadFiles, openOnline, toast]);
+
+  const openFavorite = useCallback((f: Favorite) => {
+    if (!f.preset && f.params) {
+      try { sessionStorage.setItem(AI_START_KEY, JSON.stringify({ product: f.product, preset: { id: `favorite-${f.id}`, name: f.name, note: f.note ?? "", params: f.params } })); } catch { /* storage off */ }
+      openEditor(`${productHref(f.product, "tauri")}?ai=1`);
+    } else openEditor(`${productHref(f.product, "tauri")}${f.preset ? `?preset=${encodeURIComponent(f.preset)}` : ""}`);
+  }, [openEditor]);
 
   // A file double-clicked in Explorer, dropped on the window or passed to a second launch.
-  const canOpen = phase === "ready" && !!catalog;
+  const canOpen = phase === "ready";
   const openRef = useRef(openFile);
   openRef.current = openFile;
   const started = useRef(false);
@@ -355,67 +295,27 @@ export function App() {
     return () => void off.then((f) => f());
   }, [canOpen]);
 
-  // The window title names the open file, with a dot while it has unsaved changes.
-  const titleName = route === "workspace" && design.state.product ? (design.state.file?.name ?? String(design.state.params?.name ?? product?.name ?? "")) : "";
-  const titleDirty = route === "workspace" && !!design.state.file && isDirty(design.state);
-  useEffect(() => {
-    void getCurrentWindow().setTitle(titleName ? `${titleDirty ? "\u2022 " : ""}${titleName} \u2014 HingeLab` : "HingeLab").catch(() => {});
-  }, [titleName, titleDirty]);
-
-  const save = useCallback(async (how: "save" | "export" | ExportAs) => {
-    if ((account?.plan ?? "free") !== "pro") {
-      toast({ text: "Saving and exporting need Pro. Upgrade to download cut files.", kind: "err" });
-      return;
-    }
-    const id = design.state.result?.designId;
-    if (!id) return;
-    try {
-      const out = how === "save" ? await ipc.saveDesign(id) : how === "export" ? await ipc.exportDesign(id) : await ipc.exportDesignAs(id, how);
-      if (out.path) toast({ text: `Saved ${out.path.split(/[\\/]/).pop()}`, kind: "ok", path: out.path });
-    } catch (e) {
-      toast({ text: (e as AppError).message, kind: "err" });
-    }
-  }, [account?.plan, design.state.result, toast]);
-
-  // Keyboard shortcuts.
+  // App shortcuts; the editor has its own (Ctrl+S, Ctrl+Z, zoom...) while it shows.
   useEffect(() => {
     if (phase !== "ready") return;
     const key = (e: KeyboardEvent) => {
-      const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement;
       if (e.key === "F1") { e.preventDefault(); setRoute("help"); return; }
       if (!e.ctrlKey || e.altKey) return;
       const k = e.key.toLowerCase();
-      const inWs = route === "workspace";
-      const art = design.state.product === "art";
       if (k === ",") { e.preventDefault(); setRoute("settings"); }
-      else if (k === "b") { e.preventDefault(); toggleSidebar(); }
-      else if (k === "o") { e.preventDefault(); void openFile(null); }
-      else if (k === "s" && inWs) { e.preventDefault(); if (art) void save("save"); else void saveProject(e.shiftKey); }
-      else if (k === "e" && inWs) { e.preventDefault(); void save(e.shiftKey ? "save" : "export"); }
-      else if (k === "enter" && inWs) { e.preventDefault(); design.refresh(); }
-      else if ((k === "=" || k === "+") && inWs) { e.preventDefault(); canvas.current?.zoomIn(); }
-      else if (k === "-" && inWs) { e.preventDefault(); canvas.current?.zoomOut(); }
-      else if (k === "0" && inWs) { e.preventDefault(); canvas.current?.fit(); }
-      else if (k === "1" && inWs) { e.preventDefault(); canvas.current?.reset(); }
-      else if (k === "z" && inWs && !typing) { e.preventDefault(); if (e.shiftKey) design.redo(); else design.undo(); }
-      else if (k === "y" && inWs && !typing) { e.preventDefault(); design.redo(); }
-      else if (k === "r") { e.preventDefault(); if (inWs && !typing) randomise(); }
+      else if (k === "b" && e.shiftKey) { e.preventDefault(); toggleSidebar(); }
+      else if (k === "o" && route !== "editor") { e.preventDefault(); void openFile(null); }
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [phase, route, save, saveProject, openFile, design, toggleSidebar, randomise]);
+  }, [phase, route, openFile, toggleSidebar]);
 
-  // Block the WebView's own context menu and file drops (dropped project files are opened by the app itself).
+  // Block the WebView's own file drops (dropped project files are opened by the app itself).
   useEffect(() => {
-    const menu = (e: MouseEvent) => {
-      if (!(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) e.preventDefault();
-    };
-    const drop = (e: DragEvent) => e.preventDefault();
-    window.addEventListener("contextmenu", menu);
+    const drop = (e: DragEvent) => { if (!(e.target instanceof HTMLInputElement)) e.preventDefault(); };
     window.addEventListener("dragover", drop);
     window.addEventListener("drop", drop);
     return () => {
-      window.removeEventListener("contextmenu", menu);
       window.removeEventListener("dragover", drop);
       window.removeEventListener("drop", drop);
     };
@@ -426,110 +326,54 @@ export function App() {
     await updater.install();
   }, [updater]);
 
-  if (phase === "boot") return <div className="boot" aria-busy="true" />;
+  if (phase === "boot") return <div className="dk boot" aria-busy="true" />;
   if (phase === "updateRequired") {
     return (
-      <UpdateRequired
-        minimum={minimum}
-        status={updater.status}
-        onUpdate={async () => {
-          if (await updater.checkNow()) await updater.install();
-        }}
-        onWebsite={() => web("home")}
-      />
+      <div className="dk dk-fill">
+        <UpdateRequired
+          minimum={minimum}
+          status={updater.status}
+          onUpdate={async () => {
+            if (await updater.checkNow()) await updater.install();
+          }}
+          onWebsite={() => web("home")}
+        />
+      </div>
     );
   }
-  const updateDialog = showUpdate && <UpdateDialog status={updater.status} onInstall={installUpdate} onLater={() => { setShowUpdate(false); if (updater.status.phase === "error") updater.dismiss(); }} onRetry={async () => { if (await updater.checkNow()) await updater.install(); }} />;
+  const updateDialog = showUpdate && <div className="dk dk-contents"><UpdateDialog status={updater.status} onInstall={installUpdate} onLater={() => { setShowUpdate(false); if (updater.status.phase === "error") updater.dismiss(); }} onRetry={async () => { if (await updater.checkNow()) await updater.install(); }} /></div>;
   if (phase === "signedOut") {
     return (
-      <>
+      <div className="dk dk-fill">
         <SignIn busy={signing} error={signError} version={version} onSignIn={signIn} onCancel={() => void ipc.cancelSignIn()} onSignUp={() => web("signup")} />
         {updateDialog}
-      </>
+      </div>
     );
   }
 
-  const plan = account?.plan ?? "free";
   return (
-    <div className={`app${local.sidebarCollapsed ? " side-collapsed" : ""}${onWebRoute ? " on-web" : ""}`}>
-      <Sidebar route={route} onRoute={go} account={account} hasDesign={!!design.state.product} update={updater.status} onUpdate={() => setShowUpdate(true)} collapsed={local.sidebarCollapsed} onToggle={toggleSidebar} />
-      <div className="main">
-        {!online && route !== "workspace" && <div className="offline-bar" role="status">You&apos;re offline. Designs are built on HingeLab&apos;s servers, so new changes wait until you&apos;re back online.</div>}
-        {seen.dashboard && (
-          <Keep on={route === "dashboard"}>
-            <Dashboard account={account} catalog={catalog} recent={recent} files={files} defaultProduct={local.defaultProduct} onNew={openNew} onPreset={openPreset} onBrowse={() => setRoute("generators")} onOpenRecent={openSaved} onOpenFile={(p) => void openFile(p)} onUpgrade={() => web("upgrade")} onOnline={openOnline} />
-          </Keep>
-        )}
-        {(seen.generators || (route === "workspace" && !product)) && (
-          <Keep on={route === "generators" || (route === "workspace" && !product)}>
-            <Generators catalog={catalog} plan={plan} initial={design.state.product ?? local.defaultProduct} favorites={favorites} onPreset={openPreset} onNew={openNew} onFavorite={(p, pr) => {
-              const hit = favorites.find((f) => f.product === p.id && f.preset === pr.id);
-              setFavorites((l) => (hit ? l.filter((f) => f.id !== hit.id) : [{ id: crypto.randomUUID(), product: p.id, preset: pr.id, name: pr.name, note: pr.note, at: Date.now() }, ...l]));
-            }} />
-          </Keep>
-        )}
-        {seen.ai && (
-          <Keep on={route === "ai"}>
-            <AIPage
-              catalog={catalog}
-              plan={plan}
-              online={online}
-              onOpen={(id, params, in3d) => {
-                design.open(id, { params });
-                if (in3d) setLocal((o) => ({ ...o, view3d: true }));
-                else startView();
-                setRoute("workspace");
-              }}
-              onOnline={(path) => openOnline("web-editors", path)}
-              onUpgrade={() => web("upgrade")}
+    <div className={`dk-app${local.sidebarCollapsed ? " side-collapsed" : ""}${onWebRoute ? " on-web" : ""}`}>
+      <div className="dk dk-side">
+        <Sidebar route={route} onRoute={go} account={account} update={updater.status} onUpdate={() => setShowUpdate(true)} collapsed={local.sidebarCollapsed} onToggle={toggleSidebar} />
+      </div>
+      <div className="dk-main">
+        {!online && route !== "editor" && <div className="dk offline-bar" role="status">You&apos;re offline. You can keep designing; exporting cut files and the online sections need a connection.</div>}
+        <Keep on={route === "editor"} shell={false}>
+          <div className="dk-editor">
+            <Suspense fallback={<div className="boot">Loading HingeLab…</div>}>
+              <Workspace key={editorKey} />
+            </Suspense>
+          </div>
+        </Keep>
+        {seen.files && (
+          <Keep on={route === "files"}>
+            <Files
+              files={files} favorites={favorites}
+              onOpenFile={(p) => void openFile(p)}
+              onForget={(p) => void ipc.forgetRecent(p).then(loadFiles).catch((e: AppError) => toast({ text: e.message, kind: "err" }))}
+              onOpenFavorite={openFavorite}
+              onRemoveFavorite={(f) => setFavorites((l) => l.filter((x) => x.id !== f.id))}
             />
-          </Keep>
-        )}
-        {seen.workspace && product && (
-          <Keep on={route === "workspace"}>
-            <Workspace
-              product={product}
-              design={design.state}
-              plan={plan}
-              units={local.units}
-              online={online}
-              canvas={canvas}
-              favorite={!!currentFavorite}
-              onChange={design.change}
-              onChangeMany={design.changeMany}
-              onSetValues={design.setValues}
-              onScale={design.scaleBy}
-              onRename={(name) => design.change("name", name, true)}
-              onFix={design.fix}
-              onAutofix={design.autofix}
-              onRefresh={design.refresh}
-              onUndo={design.undo}
-              onRedo={design.redo}
-              onSave={() => void (product.id === "art" ? save("save") : saveProject(false))}
-              onSaveAs={() => void saveProject(true)}
-              onOpenFile={() => void openFile(null)}
-              onExportAs={() => void save("save")}
-              onResetAll={product.id === "art" ? undefined : resetAll}
-              onRandomise={canRandom ? randomise : undefined}
-              randomLabel={product.id === "hinge" ? "Randomise box" : undefined}
-              locks={product.id === "hinge" ? undefined : { has: locks.has, toggle: locks.toggle, count: locks.list.length }}
-              onExport={() => void save("export")}
-              onExportFormat={(f) => void save(f)}
-              onUpgrade={() => web("upgrade")}
-              onRefreshPlan={refreshPlan}
-              onFavorite={toggleFavorite}
-              onWant3d={design.setWant3d}
-            />
-          </Keep>
-        )}
-        {seen.recent && (
-          <Keep on={route === "recent"}>
-            <Recent recent={recent} catalog={catalog} onOpen={openSaved} onRemove={(d: SavedDesign) => setRecent((l) => l.filter((x) => x.id !== d.id))} onClear={() => setRecent([])} />
-          </Keep>
-        )}
-        {seen.favorites && (
-          <Keep on={route === "favorites"}>
-            <Favorites favorites={favorites} catalog={catalog} onOpen={(f: Favorite) => openSaved(f)} onRemove={(f) => setFavorites((l) => l.filter((x) => x.id !== f.id))} />
           </Keep>
         )}
         {seen.subscription && (
@@ -540,7 +384,7 @@ export function App() {
         {seen.settings && (
           <Keep on={route === "settings"}>
             <Settings
-              account={account} local={local} setLocal={setLocal} prefs={prefs} catalog={catalog} version={version} server={server} update={updater.status}
+              account={account} local={local} setLocal={setLocal} prefs={prefs} version={version} server={server} update={updater.status}
               onCheck={() => void updater.checkNow()}
               onInstall={installUpdate}
               onChooseFolder={() => void ipc.chooseExportFolder().then(setPrefs).catch((e: AppError) => toast({ text: e.message, kind: "err" }))}
@@ -558,15 +402,16 @@ export function App() {
             <Help onWeb={web} version={version} onHelpCentre={() => openOnline("web-studio", "/help")} />
           </Keep>
         )}
-        {(seen["web-editors"] || seen["web-studio"] || seen["web-ai"] || seen["web-projects"]) && (
+        {(seen["web-studio"] || seen["web-ai"] || seen["web-projects"]) && (
           <Keep on={onWebRoute}>
             <WebHost request={webRequest} covered={modalOpen || !onWebRoute} onError={(e) => toast({ text: e.message, kind: "err" })} />
           </Keep>
         )}
       </div>
       {updateDialog}
-      {askReset && <ConfirmDialog title="Reset all settings?" text="Every setting of this design goes back to its default. Ctrl+Z undoes it." action="Reset all" onConfirm={doReset} onCancel={() => setAskReset(false)} />}
-      <Toasts items={toasts} onReveal={(p) => void ipc.revealFile(p).catch((e: AppError) => toast({ text: e.message, kind: "err" }))} onClose={(id) => setToasts((l) => l.filter((x) => x.id !== id))} />
+      <div className="dk dk-contents">
+        <Toasts items={toasts} onReveal={(p) => void ipc.revealFile(p).catch((e: AppError) => toast({ text: e.message, kind: "err" }))} onClose={(id) => setToasts((l) => l.filter((x) => x.id !== id))} />
+      </div>
     </div>
   );
 }

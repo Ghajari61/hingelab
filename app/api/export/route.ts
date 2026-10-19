@@ -6,7 +6,7 @@ import { exportLettersForPlan, parseLetterRequest } from "@/lib/billing/exportLe
 import { exportParametricForPlan, parseParametricRequest } from "@/lib/billing/exportParametric";
 import { serverManifold } from "@/lib/billing/serverManifold";
 import { bundledFont, FontError, serverHarfBuzz, uploadedFont } from "@/lib/billing/letterFonts";
-import { currentPlan } from "@/lib/billing/plan";
+import { requestPlan } from "@/lib/billing/plan";
 import { isGeneratorId } from "@/lib/generators/ids";
 import type { Plan } from "@/lib/plans";
 import { LIMITS, rateLimit, tooManyRequests } from "@/lib/security/rateLimit";
@@ -44,7 +44,9 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
-  const { plan, userId } = await currentPlan();
+  const who = await requestPlan(request);
+  if (who instanceof Response) return who;
+  const { plan, userId } = who;
   const limited = await rateLimit(body.product === "parametric" ? LIMITS.exportHeavy : LIMITS.export, userId ? `user:${userId}` : `ip:${clientIP(request)}`);
   if (!limited.ok) return tooManyRequests(limited);
 

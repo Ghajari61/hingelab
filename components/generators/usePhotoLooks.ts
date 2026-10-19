@@ -1,5 +1,6 @@
 "use client";
 
+import { platform } from "@hingelab/platform";
 import { useRef, useState } from "react";
 import { getPath, setPath } from "@/lib/generators/path";
 import type { FieldSpec, GenBase, GenOutput, ImageSpec } from "@/lib/generators/types";
@@ -137,11 +138,7 @@ export function usePhotoLooks(
         place: { x: im.x, y: im.y, w: im.w, h: im.h }, clip: im.clip, spec: f.look.spec(p), paper: f.look.paper(p),
         caption: `${fileName}: print at actual size (100 %), then cut along the dashed line.`,
       });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(new Blob([r.pdf as BlobPart], { type: "application/pdf" }));
-      a.download = `${fileName}-photo.pdf`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 30_000);
+      await platform().saveFile({ name: `${fileName}-photo.pdf`, data: r.pdf, mime: "application/pdf", intent: "export" });
       const size = `${Math.round(r.w)} × ${Math.round(r.h)} mm`;
       put(f.key, kept
         ? { note: `Print PDF made: ${size} at ${r.dpi} dpi${r.custom ? ", on a page of its own size (it is larger than the paper)" : ""}.` }

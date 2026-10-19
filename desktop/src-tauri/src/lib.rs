@@ -7,6 +7,7 @@ mod config;
 mod error;
 mod files;
 mod projects;
+mod shared;
 mod store;
 mod web;
 
@@ -753,7 +754,11 @@ pub fn run() {
             web::web_open,
             web::web_bounds,
             web::web_hide,
-            web::web_action
+            web::web_action,
+            shared::api_request,
+            shared::save_file,
+            shared::open_file,
+            shared::open_external
         ])
         .run(tauri::generate_context!())
         .expect("error while running HingeLab");

@@ -17,3 +17,17 @@ export async function currentPlan(): Promise<{ plan: Plan; userId: string | null
   const { data } = await session.supabase.from("profiles").select("plan").eq("id", session.user.id).maybeSingle();
   return { plan: planOf(data?.plan), userId: session.user.id };
 }
+
+/**
+ * `currentPlan` for routes the Windows app also calls: a bearer token is the app's session (checked
+ * like every desktop call, version first); otherwise the website's cookie session. A refused token
+ * answers with the desktop error (401 or 426) so the app signs out or asks for an update.
+ */
+export async function requestPlan(request: Request): Promise<{ plan: Plan; userId: string | null } | Response> {
+  if (!/^bearer\s/i.test(request.headers.get("authorization") ?? "")) return currentPlan();
+  const { requireDesktopUser } = await import("@/lib/desktop/http");
+  const who = await requireDesktopUser(request);
+  if (who instanceof Response) return who;
+  const { desktopProfile } = await import("@/lib/desktop/session");
+  return { plan: (await desktopProfile(who.userId)).plan, userId: who.userId };
+}

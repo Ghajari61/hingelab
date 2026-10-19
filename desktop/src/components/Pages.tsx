@@ -1,403 +1,10 @@
-import { useLayoutEffect, useRef, useState, type KeyboardEvent, type WheelEvent } from "react";
-import { ArrowDownCircle, ArrowRight, BookOpen, Box, Cake, ChevronLeft, ChevronRight, Clock, Clock3, CreditCard, Crown, ExternalLink, FileDown, FolderOpen, Globe, Hash, History, Info, KeyRound, Keyboard, LayoutGrid, LayoutPanelLeft, LifeBuoy, Lock, LogOut, Palette, Plus, Puzzle, QrCode, RotateCcw, Ruler, Shapes, Signpost, SquareStack, Star, Trash2, Trophy, Type, UserRound, Wand2, Wrench } from "lucide-react";
-import type { DCatalog, DProduct } from "../../../lib/desktop/types";
-import { onlineArt, presetArt, productArt, showcase } from "../art";
-import type { WebRoute } from "./Web";
-import type { DesktopAccount, Prefs, RecentProject, WebPage } from "../ipc";
-import { DEFAULT_PREFS, UI_ZOOMS, type Favorite, type LocalPrefs, type SavedDesign, type SheetTone } from "../local";
+import { ArrowDownCircle, BookOpen, Box, CreditCard, ExternalLink, FileDown, FolderOpen, Info, Keyboard, LifeBuoy, LogOut, Palette, RotateCcw, UserRound, Wrench } from "lucide-react";
+import type { DesktopAccount, Prefs, WebPage } from "../ipc";
+import { DEFAULT_PREFS, UI_ZOOMS, type LocalPrefs } from "../local";
 import type { UpdateStatus } from "../updater";
 import { formatBytes } from "../updater";
 
-export const ICONS = { box: Box, clock: Clock, puzzle: Puzzle, qr: QrCode, cake: Cake, key: KeyRound, sign: Signpost, hash: Hash, trophy: Trophy, layers: SquareStack, wand: Wand2, type: Type, shapes: Shapes } as const;
-
-export function ProductIcon({ product, size = 18 }: { product: DProduct; size?: number }) {
-  const I = ICONS[product.icon] ?? Box;
-  return <I size={size} aria-hidden />;
-}
-
-const ago = (t: number) => {
-  const s = (Date.now() - t) / 1000;
-  if (s < 60) return "just now";
-  if (s < 3600) return `${Math.round(s / 60)} min ago`;
-  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
-  return new Date(t).toLocaleDateString();
-};
-
-const folderOf = (path: string) => path.replace(/[\\/][^\\/]*$/, "");
-
 const planName = (a: DesktopAccount | null) => a?.tier === "business" ? "Business" : a?.tier === "lifetime" ? "Founder" : a?.plan === "pro" ? "Pro" : "Free";
-
-// ---------------------------------------------------------------- Dashboard
-
-const HERO_PRODUCTS = ["clock", "hinge", "boxes"];
-
-const PRO_PERKS = ["Pill, polygon and cylinder boxes", "Wave, relief and serpentine hinges", "Large puzzles and every generator design", "Save projects and export cut files"];
-
-/** Website sections that open inside the window, signed in. */
-const ONLINE_TILES: { id: string; name: string; blurb: string; art: [string, string]; section: WebRoute; path: string }[] = [
-  { id: "ai-studio", name: "AI Studio", blurb: "Designs from words in any language: a Creative Director, four variations at once, a laser readiness score, 30+ recipes and one-click pipelines to a cut file.", art: ["sign", "layered-name"], section: "web-ai", path: "/home?new=ai" },
-  { id: "projects", name: "Cloud projects", blurb: "Designs saved to your account on the website, from any computer.", art: ["hinge", "card-box"], section: "web-projects", path: "/app" },
-];
-
-export function Dashboard({ account, catalog, recent, files, defaultProduct, onNew, onPreset, onBrowse, onOpenRecent, onOpenFile, onUpgrade, onOnline }: {
-  account: DesktopAccount | null; catalog: DCatalog | null; recent: SavedDesign[]; files: RecentProject[]; defaultProduct: string;
-  /** Opens a project file: one from the list, or (null) one picked in the Open dialog. */
-  onOpenFile: (path: string | null) => void;
-  onNew: (product: string) => void; onPreset: (product: string, preset: string) => void; onBrowse: () => void;
-  onOpenRecent: (d: SavedDesign) => void; onUpgrade: () => void; onOnline: (section: WebRoute, path: string) => void;
-}) {
-  const first = (account?.user.name || account?.user.email || "").split(/[\s@]/)[0];
-  const pro = account?.plan === "pro";
-  const products = catalog?.products ?? [];
-  const start = products.find((p) => p.id === defaultProduct) ?? products[0];
-  const heroArt = HERO_PRODUCTS.flatMap((id) => {
-    const p = products.find((x) => x.id === id);
-    const src = p && productArt(p);
-    return src ? [src] : [];
-  });
-  const ideas = showcase(products, 6);
-  const last = recent[0];
-  return (
-    <div className="page dash">
-      <section className="hero" aria-labelledby="dash-title">
-        <div className="hero-text">
-          <h1 id="dash-title">{first ? `Welcome back, ${first}` : "Welcome to HingeLab"}</h1>
-          <p>Boxes, clocks, puzzles and QR signs as clean SVG files at true size, ready for LightBurn, xTool Creative Space or Inkscape.</p>
-        </div>
-        <div className="hero-actions">
-          {last
-            ? <button type="button" className="btn primary big" onClick={() => onOpenRecent(last)}><History size={16} aria-hidden /><span className="clip">Continue “{last.name}”</span></button>
-            : start && <button type="button" className="btn primary big" onClick={() => onNew(start.id)}><Plus size={16} aria-hidden />New {start.name}</button>}
-          <button type="button" className="btn big ghost" onClick={onBrowse}><LayoutGrid size={16} aria-hidden />Browse presets</button>
-          <button type="button" className="btn big ghost" title="Open a HingeLab project file (.oclc) (Ctrl+O)" onClick={() => onOpenFile(null)}><FolderOpen size={16} aria-hidden />Open project</button>
-        </div>
-        <div className="hero-art" aria-hidden>
-          {heroArt.map((src, i) => <span key={src} className={`hero-card c${i}`}><img src={src} alt="" /></span>)}
-        </div>
-      </section>
-
-      <div className="dash-grid">
-        <div className="dash-main">
-          <section className="dash-card dash-new" aria-labelledby="dash-new">
-            <div className="sec-head">
-              <h2 id="dash-new" className="sub"><span className="icon-chip sm" aria-hidden><Plus size={14} /></span>Start a new design</h2>
-              <button type="button" className="link-btn" onClick={onBrowse}>All presets<ArrowRight size={13} aria-hidden /></button>
-            </div>
-            <div className="tiles">
-              {catalog ? products.map((p) => {
-                const src = productArt(p);
-                return (
-                  <button key={p.id} type="button" className="tile" title={p.blurb} onClick={() => onNew(p.id)}>
-                    <span className="tile-media">{src ? <img src={src} alt="" /> : <ProductIcon product={p} size={36} />}</span>
-                    <span className="tile-body">
-                      <span className="tile-icon"><ProductIcon product={p} size={14} /></span>
-                      <span className="tile-name"><b>{p.name}</b><small>{p.presets.length} presets</small></span>
-                    </span>
-                  </button>
-                );
-              }) : <div className="sk tall" />}
-            </div>
-          </section>
-
-          {ideas.length > 0 && (
-            <section className="dash-card dash-ideas" aria-labelledby="dash-ideas">
-              <div className="sec-head">
-                <h2 id="dash-ideas" className="sub"><span className="icon-chip sm peach" aria-hidden><Star size={14} /></span>Ready-made designs</h2>
-                <button type="button" className="link-btn" onClick={onBrowse}>See all<ArrowRight size={13} aria-hidden /></button>
-              </div>
-              <ul className="ideas">
-                {ideas.map(({ product, preset, src }) => (
-                  <li key={`${product.id}/${preset.id}`}>
-                    <button type="button" className="idea" onClick={() => onPreset(product.id, preset.id)}>
-                      <span className="idea-media">
-                        <img src={src} alt="" />
-                        {preset.pro && !pro && <span className="badge"><Lock size={10} aria-hidden />Pro</span>}
-                      </span>
-                      <span className="idea-text">
-                        <b>{preset.name}</b>
-                        <small>{product.name}</small>
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          <section className="dash-card dash-online" aria-labelledby="dash-online">
-            <div className="sec-head">
-              <h2 id="dash-online" className="sub"><span className="icon-chip sm teal" aria-hidden><Globe size={14} /></span>From the website</h2>
-              <button type="button" className="link-btn" onClick={() => onOnline("web-editors", "/app/editor/local")}>All editors<ArrowRight size={13} aria-hidden /></button>
-            </div>
-            <div className="online">
-              {ONLINE_TILES.map((t) => {
-                const src = onlineArt(...t.art);
-                return (
-                  <button key={t.id} type="button" className="tile" title={t.blurb} onClick={() => onOnline(t.section, t.path)}>
-                    <span className="tile-media">{src ? <img src={src} alt="" /> : <Globe size={22} aria-hidden />}</span>
-                    <span className="tile-name"><b>{t.name}</b><small><Globe size={11} aria-hidden />Opens here</small></span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        </div>
-
-        <aside className="dash-side" aria-label="Your work">
-          <section className="dash-card dash-recent" aria-labelledby="dash-recent">
-            <div className="sec-head">
-              <h2 id="dash-recent" className="sub"><span className="icon-chip sm" aria-hidden><History size={14} /></span>Recent designs</h2>
-            </div>
-            {recent.length
-              ? (
-                <ul className="rlist">
-                  {recent.slice(0, 8).map((d) => {
-                    const p = catalog?.products.find((x) => x.id === d.product);
-                    const src = d.thumb ?? (p && productArt(p));
-                    return (
-                      <li key={d.id}>
-                        <button type="button" className="rrow" onClick={() => onOpenRecent(d)}>
-                          <span className={`rcard-media${d.thumb ? " drawn" : ""}`}>{src ? <img src={src} alt="" loading="lazy" /> : p && <ProductIcon product={p} size={20} />}</span>
-                          <span className="rrow-text">
-                            <b>{d.name}</b>
-                            <small>{p?.name ?? d.summary} · {ago(d.at)}</small>
-                          </span>
-                          <ArrowRight size={14} aria-hidden className="rrow-go" />
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )
-              : (
-                <div className="rempty">
-                  {heroArt[1] && <img src={heroArt[1]} alt="" />}
-                  <b>No designs yet</b>
-                  <p>Designs you work on appear here, so you can pick up where you left off.</p>
-                </div>
-              )}
-          </section>
-          <section className="dash-card dash-files" aria-labelledby="dash-files">
-            <div className="sec-head">
-              <h2 id="dash-files" className="sub"><span className="icon-chip sm teal" aria-hidden><FolderOpen size={14} /></span>Project files</h2>
-              <button type="button" className="link-btn" onClick={() => onOpenFile(null)}>Open<FolderOpen size={13} aria-hidden /></button>
-            </div>
-            {files.length ? (
-              <ul className="flist">
-                {files.slice(0, 6).map((f) => (
-                  <li key={f.path}>
-                    <button type="button" className="frow" disabled={!f.exists} title={f.exists ? f.path : `${f.path} (moved or deleted)`} onClick={() => onOpenFile(f.path)}>
-                      <FolderOpen size={14} aria-hidden />
-                      <span className="frow-text"><b>{f.name}</b><small>{f.exists ? folderOf(f.path) : "Moved or deleted"}</small></span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted small">Ctrl+S saves the open design as a project file (.oclc) you can open again here or on the website.</p>
-            )}
-          </section>
-          <section className={`dash-card plan-card${pro ? " is-pro" : " upsell"}`} aria-labelledby="dash-plan">
-            <div className="plan-top">
-              <span className="plan-icon"><Crown size={18} aria-hidden /></span>
-              <div>
-                <h2 id="dash-plan" className="plan-label">Your plan</h2>
-                <p className="plan-name">{planName(account)}</p>
-              </div>
-            </div>
-            <p title={PRO_PERKS.join(" · ")}>{pro ? "Every shape, pattern and generator, with clean exports." : "Unlock every shape and generator, and save and export cut files."}</p>
-            {!pro && <button type="button" className="btn primary" onClick={onUpgrade}><Crown size={15} aria-hidden />Upgrade to Pro</button>}
-          </section>
-        </aside>
-      </div>
-    </div>
-  );
-}
-
-function RecentGrid({ items, catalog, onOpen, onRemove }: { items: SavedDesign[]; catalog: DCatalog | null; onOpen: (d: SavedDesign) => void; onRemove?: (d: SavedDesign) => void }) {
-  return (
-    <ul className="rgrid">
-      {items.map((d) => {
-        const p = catalog?.products.find((x) => x.id === d.product);
-        const src = d.thumb ?? (p && productArt(p));
-        return (
-          <li key={d.id} className="rcard">
-            <button type="button" className="rcard-open" onClick={() => onOpen(d)}>
-              <span className={`rcard-media${d.thumb ? " drawn" : ""}`}>{src ? <img src={src} alt="" loading="lazy" /> : p && <ProductIcon product={p} size={28} />}</span>
-              <span className="rcard-text">
-                <b>{d.name}</b>
-                <small>{p?.name ?? d.summary}</small>
-                <small className="rcard-meta"><Clock3 size={11} aria-hidden />{ago(d.at)}</small>
-              </span>
-            </button>
-            {onRemove && <button type="button" className="icon-btn rcard-del" title="Remove from this list" aria-label={`Remove ${d.name} from this list`} onClick={() => onRemove(d)}><Trash2 size={14} aria-hidden /></button>}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-// ---------------------------------------------------------------- Generators
-
-export function Generators({ catalog, plan, initial, favorites, onPreset, onNew, onFavorite }: {
-  catalog: DCatalog | null; plan: "free" | "pro"; initial: string; favorites: Favorite[];
-  onPreset: (product: string, preset: string) => void; onNew: (product: string) => void; onFavorite: (product: DProduct, preset: { id: string; name: string; note: string }) => void;
-}) {
-  const [tab, setTab] = useState(initial);
-  const product = catalog?.products.find((p) => p.id === tab) ?? catalog?.products[0];
-  if (!catalog || !product) return <div className="page"><div className="sk tall" /></div>;
-  const ids = catalog.products.map((p) => p.id);
-  const onTabKey = (e: KeyboardEvent) => {
-    const i = ids.indexOf(product.id);
-    const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: ids.length - 1 }[e.key];
-    if (next === undefined) return;
-    e.preventDefault();
-    const id = ids[(next + ids.length) % ids.length];
-    setTab(id);
-    document.getElementById(`gen-tab-${id}`)?.focus();
-  };
-  return (
-    <div className="page gen">
-      <header className="gen-head">
-        <div className="gen-title">
-          <h1>Generators</h1>
-          <p>{product.blurb}</p>
-        </div>
-        <button type="button" className="btn primary" onClick={() => onNew(product.id)}><Plus size={15} aria-hidden />New {product.name}</button>
-      </header>
-      <div className="gen-tabs" role="tablist" aria-label="Generators" onKeyDown={onTabKey}>
-        {catalog.products.map((p) => {
-          const on = p.id === product.id;
-          return (
-            <button key={p.id} id={`gen-tab-${p.id}`} type="button" role="tab" aria-selected={on} aria-controls="gen-panel" tabIndex={on ? 0 : -1} title={p.name} onClick={() => setTab(p.id)}>
-              <ProductIcon product={p} size={15} /><span className="gen-tab-label">{p.name}</span>
-            </button>
-          );
-        })}
-      </div>
-      <PresetPager key={product.id} product={product} plan={plan} favorites={favorites} onPreset={onPreset} onFavorite={onFavorite} />
-    </div>
-  );
-}
-
-const CARD_MIN_W = 200;
-const CARD_MIN_H = 168;
-const CARD_GAP = 12;
-
-/** Shows as many presets as fit the space and pages through the rest, so the page never scrolls. */
-function PresetPager({ product, plan, favorites, onPreset, onFavorite }: {
-  product: DProduct; plan: "free" | "pro"; favorites: Favorite[];
-  onPreset: (product: string, preset: string) => void; onFavorite: (product: DProduct, preset: { id: string; name: string; note: string }) => void;
-}) {
-  const ref = useRef<HTMLUListElement>(null);
-  const [fit, setFit] = useState({ cols: 4, rows: 3 });
-  const [page, setPage] = useState(0);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([e]) => {
-      const { width, height } = e.contentRect;
-      const cols = Math.min(6, Math.max(1, Math.floor((width + CARD_GAP) / (CARD_MIN_W + CARD_GAP))));
-      const rows = Math.max(1, Math.floor((height + CARD_GAP) / (CARD_MIN_H + CARD_GAP)));
-      setFit((f) => (f.cols === cols && f.rows === rows ? f : { cols, rows }));
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  const per = fit.cols * fit.rows;
-  const pages = Math.max(1, Math.ceil(product.presets.length / per));
-  const at = Math.min(page, pages - 1);
-  const shown = product.presets.slice(at * per, at * per + per);
-  const wheelAt = useRef(-Infinity);
-  const onWheel = (e: WheelEvent) => {
-    if (pages < 2 || Math.abs(e.deltaY) < 20 || e.timeStamp - wheelAt.current < 450) return;
-    const next = at + Math.sign(e.deltaY);
-    if (next < 0 || next >= pages) return;
-    wheelAt.current = e.timeStamp;
-    setPage(next);
-  };
-  return (
-    <>
-      <ul ref={ref} id="gen-panel" role="tabpanel" onWheel={onWheel} aria-labelledby={`gen-tab-${product.id}`} className="presets" style={{ gridTemplateColumns: `repeat(${fit.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${fit.rows}, minmax(0, 1fr))` }}>
-        {shown.map((pr) => {
-          const fav = favorites.some((f) => f.product === product.id && f.preset === pr.id);
-          const src = presetArt(product.id, pr.id);
-          return (
-            <li key={pr.id} className="preset">
-              <button type="button" className="preset-open" title={pr.note} onClick={() => onPreset(product.id, pr.id)}>
-                <span className="preset-media">{src ? <img src={src} alt="" /> : <ProductIcon product={product} size={32} />}</span>
-                <span className="preset-text"><b>{pr.name}</b><small>{pr.note}</small></span>
-              </button>
-              {pr.pro && plan !== "pro" && <span className="badge preset-pro"><Lock size={10} aria-hidden />Pro</span>}
-              <button type="button" className="icon-btn star" aria-pressed={fav} aria-label={`${fav ? "Remove" : "Add"} ${pr.name} ${fav ? "from" : "to"} favorites`} title={fav ? "Remove from favorites" : "Add to favorites"} onClick={() => onFavorite(product, pr)}>
-                <Star size={14} fill={fav ? "currentColor" : "none"} aria-hidden />
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-      <nav className="gen-foot" aria-label="Preset pages">
-        <span className="gen-count">{product.presets.length} designs</span>
-        {pages > 1 && (
-          <span className="pager">
-            <button type="button" className="icon-btn" aria-label="Previous page" disabled={at === 0} onClick={() => setPage(at - 1)}><ChevronLeft size={16} aria-hidden /></button>
-            {Array.from({ length: pages }, (_, i) => (
-              <button key={i} type="button" className="pg-dot" aria-label={`Page ${i + 1} of ${pages}`} aria-current={i === at ? "page" : undefined} onClick={() => setPage(i)} />
-            ))}
-            <button type="button" className="icon-btn" aria-label="Next page" disabled={at === pages - 1} onClick={() => setPage(at + 1)}><ChevronRight size={16} aria-hidden /></button>
-          </span>
-        )}
-      </nav>
-    </>
-  );
-}
-
-// ---------------------------------------------------------------- Recent and favorites
-
-export function Recent({ recent, catalog, onOpen, onRemove, onClear }: { recent: SavedDesign[]; catalog: DCatalog | null; onOpen: (d: SavedDesign) => void; onRemove: (d: SavedDesign) => void; onClear: () => void }) {
-  return (
-    <div className="page">
-      <header className="page-head row-between">
-        <div>
-          <h1>Recent designs</h1>
-          <p>The last {recent.length || ""} designs you worked on, kept on this computer.</p>
-        </div>
-        {recent.length > 0 && <button type="button" className="btn" onClick={onClear}>Clear list</button>}
-      </header>
-      {recent.length ? <RecentGrid items={recent} catalog={catalog} onOpen={onOpen} onRemove={onRemove} /> : <p className="empty">Nothing here yet. Open a generator and your designs will be listed here.</p>}
-    </div>
-  );
-}
-
-export function Favorites({ favorites, catalog, onOpen, onRemove }: { favorites: Favorite[]; catalog: DCatalog | null; onOpen: (f: Favorite) => void; onRemove: (f: Favorite) => void }) {
-  return (
-    <div className="page">
-      <header className="page-head">
-        <h1>Favorites</h1>
-        <p>Designs and presets you starred. Star one from a design&apos;s title bar or a preset card.</p>
-      </header>
-      {favorites.length ? (
-        <ul className="list">
-          {favorites.map((f) => {
-            const p = catalog?.products.find((x) => x.id === f.product);
-            const src = (f.preset && presetArt(f.product, f.preset)) || (p && productArt(p));
-            return (
-              <li key={f.id}>
-                <button type="button" className="list-item" onClick={() => onOpen(f)}>
-                  {src ? <span className="li-thumb"><img src={src} alt="" loading="lazy" /></span> : p && <span className="li-icon"><ProductIcon product={p} size={16} /></span>}
-                  <span className="li-text"><b>{f.name}</b><small>{f.note || p?.name}</small></span>
-                  <span className="li-meta">{f.preset ? "Preset" : "Design"}</span>
-                </button>
-                <button type="button" className="icon-btn" title="Remove from favorites" onClick={() => onRemove(f)}><Trash2 size={14} aria-hidden /></button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : <p className="empty">No favorites yet.</p>}
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------- Subscription
 
@@ -409,7 +16,7 @@ export function Subscription({ account, onWeb, onRefresh, refreshing }: { accoun
     <div className="page narrow">
       <header className="page-head">
         <h1>Subscription</h1>
-        <p>Your plan is checked by HingeLab&apos;s servers every time a design is built.</p>
+        <p>Your plan is checked by HingeLab&apos;s servers each time you export a cut file.</p>
       </header>
       <section className="card">
         <CardTitle icon={CreditCard}>Your plan</CardTitle>
@@ -440,8 +47,6 @@ export function Subscription({ account, onWeb, onRefresh, refreshing }: { accoun
 
 // ---------------------------------------------------------------- Settings
 
-const SHEET_TONE_NAMES: [SheetTone, string][] = [["plywood", "Plywood"], ["grey", "Soft grey"], ["white", "White"], ["dark", "Dark"]];
-
 /** A card heading with its icon. */
 function CardTitle({ id, icon: I, danger, children }: { id?: string; icon: typeof Box; danger?: boolean; children: React.ReactNode }) {
   return <h2 id={id}><span className={`h-icon${danger ? " danger" : ""}`} aria-hidden><I size={16} /></span>{children}</h2>;
@@ -460,7 +65,7 @@ function Choice<T extends string | number>({ label, value, options, onChange }: 
 }
 
 export function Settings(props: {
-  account: DesktopAccount | null; local: LocalPrefs; setLocal: (p: LocalPrefs) => void; prefs: Prefs | null; catalog: DCatalog | null;
+  account: DesktopAccount | null; local: LocalPrefs; setLocal: (p: LocalPrefs) => void; prefs: Prefs | null;
   version: string; server: string; update: UpdateStatus;
   onCheck: () => void; onInstall: () => void; onChooseFolder: () => void; onExportPrefs: (clear: boolean, openAfter: boolean) => void;
   onChooseProjectFolder: () => void; onProjectPrefs: (clear: boolean, recentMax: number) => void;
@@ -500,38 +105,6 @@ export function Settings(props: {
         </div>
       </section>
 
-      <section className="card" aria-labelledby="s-units">
-        <CardTitle id="s-units" icon={Ruler}>Measurements</CardTitle>
-        <Choice label="Units" value={local.units} onChange={(units) => set({ units })} options={[["mm", "Millimetres"], ["in", "Inches"]]} />
-        <p className="fine">Files are always saved in millimetres; this only changes how lengths are shown and typed.</p>
-        <Choice label="Decimals in 3D dimensions" value={local.decimals} onChange={(decimals) => set({ decimals })} options={[[0, "0"], [1, "0.0"], [2, "0.00"]]} />
-      </section>
-
-      <section className="card" aria-labelledby="s-ws">
-        <CardTitle id="s-ws" icon={LayoutPanelLeft}>Workspace</CardTitle>
-        <Choice label="Open designs in" value={local.openIn} onChange={(openIn) => set({ openIn })} options={[["last", "As last time"], ["2d", "2D sheet"], ["3d", "3D"]]} />
-        <label className="field-row">
-          <span>Sheet colour</span>
-          <select value={local.sheetTone} onChange={(e) => set({ sheetTone: e.target.value as SheetTone })}>
-            {SHEET_TONE_NAMES.map(([v, n]) => <option key={v} value={v}>{n}</option>)}
-          </select>
-        </label>
-        <label className="field-row">
-          <span>10 mm grid on the sheet</span>
-          <input type="checkbox" checked={local.sheetGrid} onChange={(e) => set({ sheetGrid: e.target.checked })} />
-        </label>
-        <Choice label="3D layout" value={local.view3dQuad ? "quad" : "one"} onChange={(v) => set({ view3dQuad: v === "quad" })} options={[["one", "One view"], ["quad", "Four views"]]} />
-        <Choice label="3D display" value={local.view3dShade} onChange={(view3dShade) => set({ view3dShade })} options={[["shaded", "Shaded"], ["edges", "Shaded with edges"]]} />
-        <label className="field-row">
-          <span>Overall dimensions in 3D</span>
-          <input type="checkbox" checked={local.view3dDims} onChange={(e) => set({ view3dDims: e.target.checked })} />
-        </label>
-        <label className="field-row">
-          <span>Ask before Reset all settings</span>
-          <input type="checkbox" checked={local.confirmReset} onChange={(e) => set({ confirmReset: e.target.checked })} />
-        </label>
-      </section>
-
       <section className="card" aria-labelledby="s-files">
         <CardTitle id="s-files" icon={FolderOpen}>Project files</CardTitle>
         <p className="path">{prefs?.homeDir ? <><FolderOpen size={14} aria-hidden /> {prefs.homeDir}</> : "No project folder: Save and Open start where the last project was."}</p>
@@ -554,20 +127,6 @@ export function Settings(props: {
       </div>
       <div className="settings-col">
 
-      <section className="card" aria-labelledby="s-gen">
-        <CardTitle id="s-gen" icon={Shapes}>Generator defaults</CardTitle>
-        <label className="field-row">
-          <span>Open first</span>
-          <select value={local.defaultProduct} onChange={(e) => set({ defaultProduct: e.target.value })}>
-            {props.catalog?.products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </label>
-        <label className="field-row">
-          <span>New designs start from the last settings I used</span>
-          <input type="checkbox" checked={local.reuseLastSettings} onChange={(e) => set({ reuseLastSettings: e.target.checked })} />
-        </label>
-      </section>
-
       <section className="card" aria-labelledby="s-look">
         <CardTitle id="s-look" icon={Palette}>Appearance</CardTitle>
         <div className="segmented" role="radiogroup" aria-labelledby="s-look">
@@ -585,7 +144,7 @@ export function Settings(props: {
 
       <section className="card" aria-labelledby="s-export">
         <CardTitle id="s-export" icon={FileDown}>Export</CardTitle>
-        <p className="path">{prefs?.exportDir ? <><FolderOpen size={14} aria-hidden /> {prefs.exportDir}</> : "No export folder: Export asks where to save each SVG."}</p>
+        <p className="path">{prefs?.exportDir ? <><FolderOpen size={14} aria-hidden /> {prefs.exportDir}</> : "No export folder: Export asks where to save each file."}</p>
         <div className="row">
           <button type="button" className="btn" onClick={props.onChooseFolder}>Choose folder…</button>
           {prefs?.exportDir && <button type="button" className="btn" onClick={() => props.onExportPrefs(true, prefs.openAfterExport)}>Clear</button>}
@@ -613,7 +172,7 @@ export function Settings(props: {
       <section className="card" aria-labelledby="s-ver">
         <CardTitle id="s-ver" icon={Info}>About</CardTitle>
         <p>HingeLab for Windows {props.version}</p>
-        <p className="fine">Connected to {props.server}. Designs are built on HingeLab&apos;s servers.</p>
+        <p className="fine">Connected to {props.server}. Designs are made on this computer; HingeLab&apos;s servers check your plan when you export.</p>
         <div className="row">
           <button type="button" className="btn" onClick={() => props.onWeb("help")}><LifeBuoy size={14} aria-hidden />Help centre</button>
           <button type="button" className="btn" onClick={() => props.onWeb("privacy")}>Privacy</button>
@@ -634,19 +193,13 @@ export function Settings(props: {
 // ---------------------------------------------------------------- Help
 
 const SHORTCUTS: [string, string][] = [
-  ["Ctrl + S", "Save the project (.oclc)"],
-  ["Ctrl + Shift + S", "Save the project as a new file"],
-  ["Ctrl + O", "Open a project file"],
-  ["Ctrl + E", "Export the SVG (to the export folder, if one is set)"],
-  ["Ctrl + Shift + E", "Export the SVG and choose where"],
-  ["Ctrl + Enter", "Update the design"],
-  ["Ctrl + Z / Ctrl + Y", "Undo / redo"],
+  ["Ctrl + Z / Ctrl + Shift + Z", "Undo / redo in the editor"],
   ["Ctrl + = / Ctrl + -", "Zoom in / out"],
   ["Ctrl + 0", "Fit to window"],
-  ["Ctrl + 1", "Actual size (100%)"],
   ["Ctrl + wheel", "Zoom at the pointer"],
+  ["Ctrl + O", "Open a project file (from Project files)"],
   ["Ctrl + ,", "Settings"],
-  ["Ctrl + B", "Collapse or expand the sidebar"],
+  ["Ctrl + Shift + B", "Collapse or expand the sidebar"],
   ["F1", "Help"],
 ];
 
@@ -655,7 +208,7 @@ export function Help({ onWeb, version, onHelpCentre }: { onWeb: (p: WebPage) => 
     <div className="page narrow">
       <header className="page-head">
         <h1>Help</h1>
-        <p>HingeLab builds every design on its servers and sends back an SVG for your laser cutter. You need an internet connection to change a design; a preview you already have can always be saved.</p>
+        <p>The same editors as the website, on this computer: designs update as you type, also offline. Exporting a cut file checks your plan with HingeLab&apos;s servers, so it needs a connection.</p>
       </header>
       <section className="card">
         <CardTitle icon={Keyboard}>Keyboard shortcuts</CardTitle>
@@ -663,13 +216,13 @@ export function Help({ onWeb, version, onHelpCentre }: { onWeb: (p: WebPage) => 
       </section>
       <section className="card">
         <CardTitle icon={FileDown}>Saving and cutting</CardTitle>
-        <p>Save keeps the design as a HingeLab project file (.oclc): the first Save asks where, later saves update the same file. Project files open in the app (double-click one, drop it on the window or press Ctrl+O) and on the website, in the section that made them.</p>
-        <p>Export writes the cut file (SVG) straight into the folder chosen in Settings, or asks where when no folder is set. Files are in millimetres at true size: import them into LightBurn, xTool Creative Space or Inkscape at 100%.</p>
+        <p>File › Save project keeps the design as a HingeLab project file (.oclc). Project files open in the app (double-click one, drop it on the window, or use Project files) and on the website, in the section that made them.</p>
+        <p>Export writes the cut file (SVG, DXF, PDF or LightBurn) straight into the folder chosen in Settings, or asks where when no folder is set. Files are in millimetres at true size: import them into LightBurn, xTool Creative Space or Inkscape at 100%.</p>
         <p>The Free plan is for trying the designers. Saving projects and downloading cut files need Pro.</p>
       </section>
       <section className="card">
         <CardTitle icon={Wrench}>Troubleshooting</CardTitle>
-        <p><b>Offline.</b> Check your connection; HingeLab tries again when you change a setting or choose Update.</p>
+        <p><b>Offline.</b> Keep designing; export again when you are back online.</p>
         <p><b>Signed out.</b> Sessions end after 30 days without use, or when you sign out on another device. Sign in again from the start screen.</p>
         <p><b>Windows SmartScreen.</b> If Windows warns about the installer, check that it came from hingelab.vercel.app, then choose More info and Run anyway.</p>
         <div className="row">

@@ -1,5 +1,6 @@
 "use client";
 
+import { platform } from "@hingelab/platform";
 import { Dices } from "lucide-react";
 
 import { keepSetup } from "@/lib/prefs/editor";
@@ -30,7 +31,7 @@ import { fmtLen, type Units } from "./format";
 import type { NumericKey } from "./fields";
 import { MenuBar, type MenuEntry } from "./MenuBar";
 import { hingeGroups, PRODUCT_INFO, type Product } from "./ControlBar";
-import dynamic from "next/dynamic";
+import { clientOnly } from "@hingelab/ui/lazy";
 import { GalleryRail } from "@/components/shell/GalleryRail";
 import { ViewToggle, type ViewMode } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
@@ -49,12 +50,11 @@ import { hingeMeta, hingeSize, type HingeMeta } from "./summary";
 import { StatusBar } from "./StatusBar";
 import { Dialogs, type ModalState } from "./dialogs";
 
-const ExportDialog = dynamic(() => import("@/components/shell/ExportDialog"), { ssr: false });
-const JobEstimate = dynamic(() => import("@/components/shell/JobEstimate"), { ssr: false });
-const ShareDialog = dynamic(() => import("@/components/shell/ShareDialog"), { ssr: false });
-const UpgradeDialog = dynamic(() => import("@/components/billing/UpgradeDialog").then((m) => m.UpgradeDialog), { ssr: false });
-const HingeView3D = dynamic(() => import("./HingeView3D"), {
-  ssr: false,
+const ExportDialog = clientOnly(() => import("@/components/shell/ExportDialog"));
+const JobEstimate = clientOnly(() => import("@/components/shell/JobEstimate"));
+const ShareDialog = clientOnly(() => import("@/components/shell/ShareDialog"));
+const UpgradeDialog = clientOnly(() => import("@/components/billing/UpgradeDialog").then((m) => ({ default: m.UpgradeDialog })));
+const HingeView3D = clientOnly(() => import("./HingeView3D"), {
   loading: () => <div id="preview3d" className="v3" aria-busy="true" />,
 });
 
@@ -158,19 +158,9 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   }
 
   function offerFile(filename: string, data: string, mime: string) {
-    try {
-      const a = document.createElement("a");
-      const url = URL.createObjectURL(new Blob([data], { type: mime }));
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-      toastMsg(`Downloading ${filename}`);
-    } catch {
-      setModal({ type: "code", name: filename, data });
-    }
+    platform().saveFile({ name: filename, data, mime, intent: "export" })
+      .then((r) => toastMsg(r.message))
+      .catch(() => setModal({ type: "code", name: filename, data }));
   }
 
   function applyFit(next: Params) {
@@ -230,7 +220,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
     if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return null; }
     if (!account.configured) return exportSVG(model, lay, built, baseText.ctx);
     try {
-      const res = await fetch("/api/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ params }) });
+      const res = await platform().exportFile({ params });
       if (res.ok) return await res.text();
       const err = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Export failed. Try again.";
       if (res.status === 403) setUpgrade(err);

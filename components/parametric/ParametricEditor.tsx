@@ -1,5 +1,6 @@
 "use client";
 
+import { platform } from "@hingelab/platform";
 import { keepSetup } from "@/lib/prefs/editor";
 import { editorPrefs } from "@/lib/prefs/editorStore";
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -320,19 +321,9 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   viewApi.fitArgs.current = { bedW: layout.W || params.material.sheetW, bedH: layout.H || params.material.sheetH, layW: 0, layH: 0, sheets: sheetRects };
 
   function offerFile(filename: string, data: string | Uint8Array, mime: string) {
-    try {
-      const a = document.createElement("a");
-      const url = URL.createObjectURL(new Blob([data as BlobPart], { type: mime }));
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-      toastMsg(`Downloading ${filename}`);
-    } catch {
-      if (typeof data === "string") setModal({ type: "code", name: filename, data });
-    }
+    platform().saveFile({ name: filename, data, mime, intent: "export" })
+      .then((r) => toastMsg(r.message))
+      .catch(() => { if (typeof data === "string") setModal({ type: "code", name: filename, data }); });
   }
 
   type ExportWhat = { kind: "zip" } | { kind: "all" } | { kind: "sheet"; index: number } | { kind: "guide" };
@@ -355,7 +346,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     if (!account.configured || hasPro(account.plan)) return { data: build(), marked: false };
     try {
       toastMsg("Preparing the export…");
-      const res = await fetch("/api/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ product: "parametric", params, what }) });
+      const res = await platform().exportFile({ product: "parametric", params, what });
       if (!res.ok) {
         const err = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Export failed. Try again.";
         if (res.status === 403) setUpgrade(err); else toastMsg(err);

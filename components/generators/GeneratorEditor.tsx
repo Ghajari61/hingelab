@@ -1,9 +1,10 @@
 "use client";
 
+import { platform } from "@hingelab/platform";
 import { keepSetup } from "@/lib/prefs/editor";
 import { editorPrefs } from "@/lib/prefs/editorStore";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import dynamic from "next/dynamic";
+import { clientOnly } from "@hingelab/ui/lazy";
 import type { LayerKey } from "@/lib/hinge";
 import { genWithMaterial } from "@/lib/materials/apply";
 import type { HarfBuzz, LoadedFont } from "@/lib/letters/fonts";
@@ -59,13 +60,12 @@ import "./generators.css";
 
 addRailGroups(GEN_RAIL_GROUPS);
 
-const ExportDialog = dynamic(() => import("@/components/shell/ExportDialog"), { ssr: false });
-const JobEstimate = dynamic(() => import("@/components/shell/JobEstimate"), { ssr: false });
-const BatchDialog = dynamic(() => import("./BatchDialog"), { ssr: false });
-const ShareDialog = dynamic(() => import("@/components/shell/ShareDialog"), { ssr: false });
-const PhoneFlow = dynamic(() => import("./PhoneFlow"), { ssr: false, loading: () => <div className="boot">Loading…</div> });
-const GeneratorView3D = dynamic(() => import("./GeneratorView3D"), {
-  ssr: false,
+const ExportDialog = clientOnly(() => import("@/components/shell/ExportDialog"));
+const JobEstimate = clientOnly(() => import("@/components/shell/JobEstimate"));
+const BatchDialog = clientOnly(() => import("./BatchDialog"));
+const ShareDialog = clientOnly(() => import("@/components/shell/ShareDialog"));
+const PhoneFlow = clientOnly(() => import("./PhoneFlow"), { loading: () => <div className="boot">Loading…</div> });
+const GeneratorView3D = clientOnly(() => import("./GeneratorView3D"), {
   loading: () => <div id="preview3d" className="v3" aria-busy="true" />,
 });
 
@@ -276,19 +276,9 @@ function GenEditor({ def, onProduct, onHome, start }: {
   }
 
   function offerFile(filename: string, data: string, mime: string) {
-    try {
-      const a = document.createElement("a");
-      const url = URL.createObjectURL(new Blob([data], { type: mime }));
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-      toastMsg(`Downloading ${filename}`);
-    } catch {
-      setModal({ type: "code", name: filename, data });
-    }
+    platform().saveFile({ name: filename, data, mime, intent: "export" })
+      .then((r) => toastMsg(r.message))
+      .catch(() => setModal({ type: "code", name: filename, data }));
   }
 
   const localSVG = () => (lay && out && !out.notice ? genSVG(def, built, lay) : null);
@@ -307,7 +297,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
     try {
       const fonts = await fontsForExport(def.fonts?.(built) ?? []);
       if ("error" in fonts) { toastMsg(fonts.error); return null; }
-      const res = await fetch("/api/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ product: def.id, params, ...(fonts.length ? { fonts } : {}) }) });
+      const res = await platform().exportFile({ product: def.id, params, ...(fonts.length ? { fonts } : {}) });
       if (res.ok) return await res.text();
       const err = ((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Export failed. Try again.";
       if (res.status === 403) setUpgrade(err);

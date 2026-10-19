@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { CircleHelp, ExternalLink, X } from "lucide-react";
 import { RAIL_HELP, SECTION_HELP, TIPS_HELP, type HelpProduct } from "@/lib/help/sections";
+import { platform } from "@hingelab/platform";
 import type { MenuEntry } from "@/components/editor/MenuBar";
 
 const NAMES: Record<HelpProduct, string> = { hinge: "the Hinge Box", letters: "Letters", parametric: "Parametric" };
@@ -21,11 +22,13 @@ const mapOf = (p: HelpProduct): HelpMap => ({ name: NAMES[p], section: SECTION_H
 export function useHelpPanel(product: HelpProduct | HelpMap) {
   const [slug, setSlug] = useState<string | null>(null);
   const map = useMemo(() => (typeof product === "string" ? mapOf(product) : product), [product]);
-  const ctx = useMemo(() => ({ map, open: setSlug }), [map]);
+  // The Windows app shows website pages in the browser (its window loads only its own files).
+  const open = useCallback((s: string) => (platform().kind === "web" ? setSlug(s) : void platform().openExternal(`/help/${s}`).catch(() => {})), []);
+  const ctx = useMemo(() => ({ map, open }), [map, open]);
   const close = useCallback(() => setSlug(null), []);
   const menu: MenuEntry[] = [
-    { label: "Help centre", kbd: "", run: () => { window.open("/help", "_blank", "noopener"); } },
-    { label: `Tips for ${map.name}`, kbd: "", run: () => setSlug(map.tips) },
+    { label: "Help centre", kbd: "", run: () => { if (platform().kind === "web") window.open("/help", "_blank", "noopener"); else void platform().openExternal("/help").catch(() => {}); } },
+    { label: `Tips for ${map.name}`, kbd: "", run: () => open(map.tips) },
   ];
   return { ctx, menu, drawer: slug ? <HelpDrawer slug={slug} onClose={close} /> : null };
 }

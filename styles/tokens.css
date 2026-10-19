@@ -165,8 +165,8 @@
   --radius-control: 10px; --radius-card: 14px; --header-h: 56px;
   --space-1: 2px; --space-2: 4px; --space-3: 6px; --space-4: 8px; --space-5: 12px; --space-6: 16px; --space-7: 24px; --space-8: 32px;
 
-  --font-ui: "Inter", "Source Sans 3", "Segoe UI", system-ui, sans-serif;
-  --font-num: "Source Code Pro", ui-monospace, Menlo, Consolas, monospace;
+  --font-ui: "Inter Variable", "Inter", "Source Sans 3 Variable", "Segoe UI", system-ui, sans-serif;
+  --font-num: "Source Code Pro Variable", "Source Code Pro", ui-monospace, Menlo, Consolas, monospace;
   --text-ui: 13px;
   --text-small: 12px;
   --text-label: 11px;

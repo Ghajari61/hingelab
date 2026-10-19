@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { platform } from "@hingelab/platform";
+import { productFromPath, productHref } from "@hingelab/app/routes";
 import EditorApp from "./EditorApp";
 import { ALL_PRODUCTS, type CoreProduct, type Product } from "./ControlBar";
 import { readLocalCopy, type CloudDoc } from "@/hooks/useCloudAutosave";
@@ -14,20 +15,10 @@ import { TEMPLATE_PRESETS } from "@/lib/templates/presets";
 import { AI_START_KEY } from "@/lib/ai/types";
 import { StartGallery, type StartChoice } from "@/components/shell/StartGallery";
 
-const LettersEditor = dynamic(() => import("@/components/letters/LettersEditor"), {
-  ssr: false,
-  loading: () => <div className="boot">Loading Letters…</div>,
-});
-
-const ParametricEditor = dynamic(() => import("@/components/parametric/ParametricEditor"), {
-  ssr: false,
-  loading: () => <div className="boot">Loading Parametric…</div>,
-});
-
-const GeneratorEditor = dynamic(() => import("@/components/generators/GeneratorEditor"), {
-  ssr: false,
-  loading: () => <div className="boot">Loading…</div>,
-});
+// Each product is its own chunk, loaded when it opens.
+const LettersEditor = lazy(() => import("@/components/letters/LettersEditor"));
+const ParametricEditor = lazy(() => import("@/components/parametric/ParametricEditor"));
+const GeneratorEditor = lazy(() => import("@/components/generators/GeneratorEditor"));
 
 const PRODUCT_KEY = "hingelab-product";
 
@@ -35,10 +26,12 @@ function storeProduct(p: Product) {
   try { localStorage.setItem(PRODUCT_KEY, p); } catch { /* private mode */ }
 }
 
-/** The open product is kept in `?p=` so a reload returns to the editor instead of the start page. */
+const search = () => platform().router.search();
+
+/** The open product is in the path (`/editor/hinge`), or `?p=` on older links, so a reload returns to the editor. */
 function urlProduct(): Product | null {
   try {
-    const v = new URLSearchParams(window.location.search).get("p") as Product | null;
+    const v = (productFromPath(platform().router.path()) ?? search().get("p")) as Product | null;
     return v && ALL_PRODUCTS.includes(v) ? v : null;
   } catch {
     return null;
@@ -59,7 +52,7 @@ function aiStart(p: Product): StartChoice | null {
 function urlPreset(p: Product | null): StartChoice | null {
   if (!p) return null;
   try {
-    const q = new URLSearchParams(window.location.search);
+    const q = search();
     if (q.get("ai") === "1") return aiStart(p);
     const tid = q.get("template");
     const t = tid && Object.prototype.hasOwnProperty.call(TEMPLATE_PRESETS, tid) ? TEMPLATE_PRESETS[tid] : undefined;
@@ -76,13 +69,23 @@ function urlPreset(p: Product | null): StartChoice | null {
   }
 }
 
+/** The address for the open product (or the start gallery), without the one-time preset, template or AI parameters. */
 function setUrlProduct(p: Product | null) {
-  const u = new URL(window.location.href);
-  u.searchParams.delete("preset");
-  u.searchParams.delete("template");
-  u.searchParams.delete("ai");
-  if (p) u.searchParams.set("p", p); else u.searchParams.delete("p");
-  window.history.replaceState(window.history.state, "", u.pathname + u.search + u.hash);
+  const keep = new URLSearchParams(search());
+  for (const k of ["preset", "template", "ai", "p", "open", "desktop-open"]) keep.delete(k);
+  const [path, own] = productHref(p, platform().kind).split("?");
+  const q = new URLSearchParams(own);
+  keep.forEach((v, k) => q.set(k, v));
+  const rest = q.toString();
+  platform().router.navigate(`${path}${rest ? `?${rest}` : ""}${typeof window !== "undefined" && platform().kind === "web" ? window.location.hash : ""}`, { replace: true });
+}
+
+/** Drops one parameter from the address. */
+function dropParam(name: string) {
+  const q = new URLSearchParams(search());
+  q.delete(name);
+  const rest = q.toString();
+  platform().router.navigate(`${platform().router.path()}${rest ? `?${rest}` : ""}${platform().kind === "web" ? window.location.hash : ""}`, { replace: true });
 }
 
 const PRODUCT_ID: Record<CoreProduct, ProductId> = { hinge: "hinge-box", letters: "letters", parametric: "parametric" };
@@ -105,12 +108,10 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
   // A share link (`#share=…`) opens its design read-only; the decoder loads only for such links.
   const [opening, setOpening] = useState(() => !doc && !!product && /(?:^#|&)share=/.test(window.location.hash));
   // `?open=1`: a project file opened in another section waits in IndexedDB.
-  const [handoff, setHandoff] = useState(() => !doc && !!product && new URLSearchParams(window.location.search).get("open") === "1");
+  const [handoff, setHandoff] = useState(() => !doc && !!product && search().get("open") === "1");
   useEffect(() => {
     if (!handoff) return;
-    const u = new URL(window.location.href);
-    u.searchParams.delete("open");
-    window.history.replaceState(window.history.state, "", u.pathname + u.search + u.hash);
+    dropParam("open");
     void import("@/components/shell/projectFiles").then(async ({ takeHandoff, handoffPreset }) => {
       const h = await takeHandoff();
       if (!h) return;
@@ -121,12 +122,10 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
     }, () => {}).finally(() => setHandoff(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // `?desktop-open=1`: the Windows app hands over a project file it opened (Letters, Parametric, Studio).
-  const [desktopOpen, setDesktopOpen] = useState<string | null>(() => (!doc && new URLSearchParams(window.location.search).get("desktop-open") === "1" ? "Opening the project file…" : null));
+  const [desktopOpen, setDesktopOpen] = useState<string | null>(() => (!doc && search().get("desktop-open") === "1" ? "Opening the project file…" : null));
   useEffect(() => {
     if (!desktopOpen) return;
-    const u = new URL(window.location.href);
-    u.searchParams.delete("desktop-open");
-    window.history.replaceState(window.history.state, "", u.pathname + u.search + u.hash);
+    dropParam("desktop-open");
     const w = window as Window & { hingelabDesktopOpen?: (b64: string, name: string) => void };
     const idle = window.setTimeout(() => setDesktopOpen(null), 15000);
     w.hingelabDesktopOpen = (b64, name) => {
@@ -154,17 +153,17 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
         const name = typeof s.params.name === "string" && s.params.name.trim() ? s.params.name.trim().slice(0, 80) : productName(product);
         setStart({ product, preset: { id: SHARED_ID, name, note: "Shared design", params: s.params } });
       } else {
-        window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+        platform().router.navigate(`${platform().router.path()}${search().toString() ? `?${search()}` : ""}`, { replace: true });
       }
     }, () => {}).finally(() => setOpening(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const choose = (p: Product) => {
     if (doc) {
-      if (isGeneratorId(p)) { storeProduct(p); window.location.assign(`/app/editor/local?p=${p}`); return; }
+      if (isGeneratorId(p)) { storeProduct(p); platform().router.navigate(productHref(p, platform().kind)); return; }
       if (PRODUCT_ID[p] === doc.product) return;
       void openNewCloudProject(PRODUCT_ID[p]).then((err) => {
-        if (err && p === "parametric") { storeProduct(p); window.location.assign("/app/editor/local?p=parametric"); }
+        if (err && p === "parametric") { storeProduct(p); platform().router.navigate(productHref("parametric", platform().kind)); }
       });
       return;
     }
@@ -180,7 +179,7 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
     setUrlProduct(c.product);
   };
   const home = () => {
-    if (doc) { window.location.assign("/app"); return; }
+    if (doc) { platform().router.navigate("/projects"); return; }
     setStart(null);
     setProduct(null);
     setUrlProduct(null);
@@ -199,9 +198,10 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
   if (!product) return <StartGallery onPick={pick} />;
   const preset = start?.product === product ? start.preset : undefined;
   const key = `${product}|${preset?.id ?? "autosave"}`;
-  if (isGeneratorId(product)) return <GeneratorEditor key={key} id={product} onProduct={choose} onHome={home} start={preset} />;
-  if (product === "parametric") return <ParametricEditor key={key} onProduct={choose} onHome={home} start={preset} cloud={doc} />;
+  const boot = <div className="boot">Loading{product === "letters" ? " Letters" : product === "parametric" ? " Parametric" : ""}…</div>;
+  if (isGeneratorId(product)) return <Suspense fallback={boot}><GeneratorEditor key={key} id={product} onProduct={choose} onHome={home} start={preset} /></Suspense>;
+  if (product === "parametric") return <Suspense fallback={boot}><ParametricEditor key={key} onProduct={choose} onHome={home} start={preset} cloud={doc} /></Suspense>;
   return product === "letters"
-    ? <LettersEditor key={key} onProduct={choose} onHome={home} start={preset} cloud={doc} />
+    ? <Suspense fallback={boot}><LettersEditor key={key} onProduct={choose} onHome={home} start={preset} cloud={doc} /></Suspense>
     : <EditorApp key={key} onProduct={choose} onHome={home} start={preset} cloud={doc} />;
 }

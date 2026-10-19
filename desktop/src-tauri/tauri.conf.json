@@ -14,7 +14,7 @@
     "windows": [],
     "withGlobalTauri": false,
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'",
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'",
       "freezePrototype": false,
       "capabilities": [
         "main"
@@ -31,7 +31,7 @@
     "copyright": "© 2026 HingeLab",
     "category": "Graphics and Design",
     "shortDescription": "Laser-cut design generators",
-    "longDescription": "HingeLab for Windows: living-hinge boxes, clocks, puzzles, QR codes and boxes, built on the HingeLab servers and saved as SVG for your laser cutter.",
+    "longDescription": "HingeLab for Windows: the same laser-cut design generators as the website (living-hinge boxes, clocks, puzzles, signs, paper boxes and more), designed on your computer and exported as SVG, DXF, PDF or LightBurn files.",
     "homepage": "https://hingelab.vercel.app",
     "fileAssociations": [
       {

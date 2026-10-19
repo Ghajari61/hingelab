@@ -46,8 +46,8 @@ export function contentSecurityPolicy({ dev, https, preview, supabaseURL, depthM
     "default-src": "'self'",
     // Next.js and the theme boot script are inline; WebAssembly (manifold, HarfBuzz, ONNX) needs wasm-unsafe-eval.
     "script-src": `'self' 'unsafe-inline' 'wasm-unsafe-eval'${dev ? " 'unsafe-eval'" : ""}${toolbar}`,
-    "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src": "'self' data: https://fonts.gstatic.com",
+    "style-src": "'self' 'unsafe-inline'",
+    "font-src": "'self' data:",
     "img-src": `'self' data: blob: https://*.googleusercontent.com${toolbar} ${preview ? "https://vercel.com" : ""}`.trim(),
     "connect-src": `'self' ${supabase} ${originOf(depthModelURL)} https://*.supabase.co wss://*.supabase.co https://huggingface.co https://*.huggingface.co https://*.hf.co${dev ? " ws: http://127.0.0.1:* http://localhost:*" : ""}${toolbar}`.replace(/\s+/g, " "),
     "worker-src": "'self' blob:",
