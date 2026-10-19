@@ -19,7 +19,7 @@ import { CheckField, ResetMark } from "./ResetMark";
 import type { Units } from "./format";
 import { applyStandardSize, insideText, STANDARD_GROUPS, STANDARD_SIZES, standardSizeOf } from "@/lib/hinge/standardSizes";
 import { BASE_TEXT_FONT, BASE_TEXT_SIZE, MAX_BASE_TEXT } from "@/lib/hinge/baseText";
-import { BUNDLED_FONTS } from "@/lib/letters/fonts";
+import { BUNDLED_FONTS } from "@/lib/letters/fontList";
 import { FRET_KINDS, FRET_NAMES } from "@/lib/generators/fretwork";
 
 /** What the Sheet section needs from the editor: the fit result and the two setters. */

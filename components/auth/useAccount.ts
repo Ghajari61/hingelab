@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { platform } from "@hingelab/platform";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { loadBrowserClientWhenIdle } from "@/lib/supabase/browser";
+import { supabaseConfigured } from "@/lib/supabase/config";
 import type { ProfileRow } from "@/lib/supabase/types";
 import { planOf } from "@/lib/plans";
 
@@ -39,29 +40,34 @@ function useDesktopAccount(on: boolean): Account {
 export function useAccount(): Account {
   const desktop = platform().kind !== "web";
   const fromDesktop = useDesktopAccount(desktop);
-  const supabase = desktop ? null : getBrowserClient();
-  const [state, setState] = useState<Account>({ configured: !!supabase, loading: !!supabase, user: null, profile: null });
+  const configured = !desktop && supabaseConfigured();
+  const [state, setState] = useState<Account>({ configured, loading: configured, user: null, profile: null });
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!configured) return;
     let alive = true;
-    const load = async (user: User | null) => {
-      let profile: ProfileRow | null = null;
-      if (user) {
-        const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-        profile = data;
-      }
-      if (alive) setState({ configured: true, loading: false, user, profile });
-    };
-    supabase.auth.getUser().then(({ data }) => load(data.user));
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") void load(session?.user ?? null);
+    let unsubscribe = () => {};
+    void loadBrowserClientWhenIdle().then((supabase) => {
+      if (!supabase || !alive) return;
+      const load = async (user: User | null) => {
+        let profile: ProfileRow | null = null;
+        if (user) {
+          const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+          profile = data;
+        }
+        if (alive) setState({ configured: true, loading: false, user, profile });
+      };
+      supabase.auth.getUser().then(({ data }) => load(data.user));
+      const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") void load(session?.user ?? null);
+      });
+      unsubscribe = () => sub.subscription.unsubscribe();
     });
     return () => {
       alive = false;
-      sub.subscription.unsubscribe();
+      unsubscribe();
     };
-  }, [supabase]);
+  }, [configured]);
 
   return desktop ? fromDesktop : state;
 }

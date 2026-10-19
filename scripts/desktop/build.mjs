@@ -9,7 +9,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { verifyFile } from "./minisign.mjs";
 import { scanPaths } from "./scan.mjs";
 
@@ -30,6 +30,9 @@ if (!env.TAURI_SIGNING_PRIVATE_KEY) {
 }
 // A release build must talk to the production site only.
 delete env.HINGELAB_API_BASE;
+// Paths compiled into the program (panic locations, dependency sources) name no user folder.
+const remap = [`--remap-path-prefix=${homedir()}=~`, `--remap-path-prefix=${resolve(root)}=hingelab`];
+env.RUSTFLAGS = [env.RUSTFLAGS, ...remap].filter(Boolean).join(" ");
 
 const tauri = join(root, "node_modules/.bin/tauri.cmd");
 const r = spawnSync(process.platform === "win32" ? tauri : join(root, "node_modules/.bin/tauri"), ["build", ...extra], { cwd: join(root, "desktop"), env, stdio: "inherit", shell: process.platform === "win32" });
@@ -64,4 +67,11 @@ if (!args.includes("--no-scan")) {
     process.exit(1);
   }
   console.log("Secret and server-code scan: clean");
+  const home = homedir();
+  const raw = readFileSync(exe);
+  if (raw.toString("latin1").includes(home) || raw.toString("utf16le").includes(home)) {
+    console.error(`\nThe program still contains the path ${home}; check RUSTFLAGS (--remap-path-prefix).`);
+    process.exit(1);
+  }
+  console.log("Local paths in the program: none");
 }

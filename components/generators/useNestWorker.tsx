@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { putNest, skipNest, withNestDeferral, type NestJob } from "@/lib/nest/deferred";
 import { nestOutlines, type OutlineNest, type OutlinePart, type OutlineSheetSpec } from "@/lib/nest/outline";
+import { shareNests } from "./useArranged";
 
 export type NestRequest = { id: number; parts: OutlinePart[]; spec: OutlineSheetSpec };
 export type NestResponse = { id: number; progress: number } | { id: number; res: OutlineNest; ms: number } | { id: number; error: string };
@@ -65,7 +66,7 @@ class NestRunner {
     const n = this.jobs.length;
     if ("progress" in m) { this.onProgress((this.at + m.progress) / n); return; }
     const job = this.jobs[this.at];
-    if ("res" in m) putNest(job, m.res, m.ms);
+    if ("res" in m) { putNest(job, m.res, m.ms); shareNests([{ job, res: m.res, ms: m.ms }]); }
     else skipNest(job.key);
     if (++this.at < n) { this.onProgress(this.at / n); this.post(); return; }
     this.jobs = [];
@@ -93,7 +94,9 @@ export function useNestWorker() {
   }, []);
   const flush = useCallback(() => runner.start(asked.current), [runner]);
   const cancel = useCallback(() => runner.cancel(), [runner]);
-  return { progress, tick, arrange, flush, cancel };
+  /** Nests the build worker asked for (it arranged the design off the page). */
+  const queue = useCallback((jobs: NestJob[]) => { asked.current = jobs; runner.start(jobs); }, [runner]);
+  return { progress, tick, arrange, flush, cancel, queue };
 }
 
 /** "Nesting parts" with a progress bar and Cancel, over the canvas. */

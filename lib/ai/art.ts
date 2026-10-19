@@ -9,7 +9,7 @@ import { Resvg } from "@resvg/resvg-js";
 import type { UserContent } from "ai";
 import { z } from "zod";
 import { bundledFont, serverHarfBuzz } from "@/lib/billing/letterFonts";
-import { BUNDLED_FONTS, fontInfo } from "@/lib/letters/fonts";
+import { BUNDLED_FONTS, fontInfo } from "@/lib/letters/fontList";
 import { shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { shapeText } from "@/lib/letters/shape";
 import { addWatermark, needsWatermark, type Plan } from "@/lib/plans";

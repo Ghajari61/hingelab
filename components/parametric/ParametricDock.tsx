@@ -9,7 +9,7 @@ import { cutSpeedOf, fmtMinutes } from "@/lib/parametric/cutTime";
 import { LIBRARY } from "@/lib/parametric/source/library";
 import type { CurveNormalParams, FormulaSpec, LibraryId, ModelUnits, ParametricParams, Part, SliceResult, WarningCode } from "@/lib/parametric/types";
 import { SHAPE_TARGETS, applyShape, contextOf } from "@/lib/parametric/shapes";
-import { BUNDLED_FONTS, fontInfo } from "@/lib/letters/fonts";
+import { BUNDLED_FONTS, fontInfo } from "@/lib/letters/fontList";
 import { ShapePicker } from "./ShapePicker";
 import { StyleSection } from "./StyleSection";
 import { RELIEF_LIBRARY } from "@/lib/parametric/source/reliefs";

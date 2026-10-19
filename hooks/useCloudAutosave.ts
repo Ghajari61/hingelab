@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { loadBrowserClient } from "@/lib/supabase/browser";
 import { localCopyKey, SaveScheduler, type LocalCopy, type SaveStatus } from "@/lib/projects/sync";
 import { saveProject } from "@/lib/projects/repo";
 import type { ProductId } from "@/lib/supabase/types";
@@ -50,8 +50,8 @@ export function useCloudAutosave<P>(
 
   useEffect(() => {
     if (!id || !product) return;
-    const db = getBrowserClient();
     const s = new SaveScheduler<P>(async (p) => {
+      const db = await loadBrowserClient();
       if (!db || (typeof navigator !== "undefined" && navigator.onLine === false)) throw new Error("offline");
       let t: string | null | undefined;
       try { t = thumb.current(); } catch { t = undefined; }

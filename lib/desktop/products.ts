@@ -25,7 +25,7 @@ import { BASE_TEXT_FONT, BASE_TEXT_SIZE, MAX_BASE_TEXT } from "@/lib/hinge/baseT
 import { randomiseParams } from "@/lib/generators/randomise";
 import { autoFixAll, sortIssues, type Issue } from "@/lib/issues";
 import { hingeIssues } from "@/lib/issues/hinge";
-import { BUNDLED_FONTS, FONT_CATEGORIES } from "@/lib/letters/fonts";
+import { BUNDLED_FONTS, FONT_CATEGORIES } from "@/lib/letters/fontList";
 import { addWatermark, batchLimitMessage, canUsePattern, designBatchCount, FREE_PATTERNS, FREE_SHAPES, hasPro, hingeLocks, needsWatermark, PATTERN_NAMES, SHAPE_NAMES, type Plan } from "@/lib/plans";
 import { generatorScene } from "@/lib/generators/scene3d";
 import { buildHingeScene } from "@/lib/hinge3d/scene";

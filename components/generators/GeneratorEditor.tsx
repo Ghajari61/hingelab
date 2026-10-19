@@ -38,6 +38,7 @@ import type { Preset } from "@/lib/presets";
 import { generatorHelpMap } from "@/lib/generators/helpMap";
 import { GENERATOR_INFO, type GeneratorId } from "@/lib/generators/ids";
 import { arrangeGenerator, assemblySteps, genContent, genSVG, sheetIssues } from "@/lib/generators/output";
+import { useArranged } from "./useArranged";
 import { NestChip, useNestWorker } from "./useNestWorker";
 import { getPath, setPath } from "@/lib/generators/path";
 import { loadGenerator } from "@/lib/generators/registry";
@@ -205,11 +206,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const ctx = useMemo<BuildContext>(() => (hb ? { text: makeTextFn(hb, (fid) => fonts[fid] ?? null) } : {}), [hb, fonts]);
 
   const nest = useNestWorker();
-  const arranged = useMemo(
-    () => nest.arrange(() => arrangeGenerator(def, deferred, ctx)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- nest.tick: the worker stored a nest
-    [def, deferred, ctx, nest.arrange, nest.tick],
-  );
+  const arranged = useArranged(def, deferred, ctx, nest);
   const flushNest = nest.flush;
   useEffect(() => { flushNest(); }, [arranged, flushNest]);
   const nesting = nest.progress != null;

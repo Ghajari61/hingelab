@@ -2,7 +2,8 @@
  * Browser-side loading for Letters: the HarfBuzz WASM module, parsed fonts, and CSS font faces
  * for the picker previews.
  */
-import { fontFamilyName, fontInfo, loadFont, type HarfBuzz, type LoadedFont } from "@/lib/letters";
+import { fontInfo } from "@/lib/letters/fontList";
+import type { HarfBuzz, LoadedFont } from "@/lib/letters/fonts";
 import { getStoredFont, putStoredFont } from "./fontStore";
 
 export const UPLOAD_PREFIX = "upload:";
@@ -24,6 +25,7 @@ export async function addFontFile(file: File): Promise<{ id: string; name: strin
   const sig = bytes.byteLength >= 4 ? new DataView(bytes).getUint32(0) : 0;
   if (sig === 0x774f4646 || sig === 0x774f4632) bytes = (await import("@/lib/letters/woff")).woffToSfnt(bytes);
   const id = UPLOAD_PREFIX + crypto.randomUUID();
+  const { fontFamilyName, loadFont } = await import("@/lib/letters/fonts");
   const probe = loadFont(hb, id, file.name, bytes.slice(0));
   const name = fontFamilyName(probe) || file.name.replace(FONT_FILE, "");
   await putStoredFont({ id, name, fileName: file.name, added: Date.now(), bytes });
@@ -59,7 +61,7 @@ async function fontBytes(id: string): Promise<{ name: string; bytes: ArrayBuffer
 export function getLoadedFont(hb: HarfBuzz, id: string): Promise<LoadedFont> {
   let p = fonts.get(id);
   if (!p) {
-    p = fontBytes(id).then(({ name, bytes }) => loadFont(hb, id, name, bytes));
+    p = Promise.all([fontBytes(id), import("@/lib/letters/fonts")]).then(([{ name, bytes }, { loadFont }]) => loadFont(hb, id, name, bytes));
     p.catch(() => fonts.delete(id));
     fonts.set(id, p);
   }

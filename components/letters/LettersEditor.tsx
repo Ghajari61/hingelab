@@ -37,7 +37,7 @@ import { StatusBar } from "@/components/editor/StatusBar";
 import { Dialogs, type ModalState } from "@/components/editor/dialogs";
 import { lettersGroups } from "./LettersControlBar";
 import { randomLetterStyle } from "@/lib/letters/randomStyle";
-import { BUNDLED_FONTS } from "@/lib/letters/fonts";
+import { BUNDLED_FONTS } from "@/lib/letters/fontList";
 import { LettersDock } from "./LettersDock";
 import { MARQUEE_KEYS, isMarqueeKey, type LetterNumKey } from "./fields";
 import { deleteStoredFont, FONTS_EVENT, getStoredFont, listStoredFonts, type StoredFontMeta } from "./fontStore";
@@ -53,7 +53,7 @@ import { HelpContext, useHelpPanel } from "@/components/help/HelpContext";
 import { hasPro, lettersLock } from "@/lib/plans";
 import { MAX_UPLOAD_FONT_BYTES } from "@/lib/billing/exportLetters";
 import { usePlan } from "@/components/billing/usePlan";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { supabaseConfigured } from "@/lib/supabase/config";
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 
 const ExportDialog = clientOnly(() => import("@/components/shell/ExportDialog"));
@@ -91,7 +91,7 @@ function loadInitial(cloud: CloudDoc | null) {
   const units: Units = stored?.units === "in" ? "in" : "mm";
   // A saved draft keeps its mode, locked or not (previewing is free). Without accounts every mode is open.
   // The removed Persian sign sample still sits in older drafts; those open as a new design.
-  if (!stored?.params || retiredLetterSample(stored.params)) return { params: freshParams(!getBrowserClient()), units };
+  if (!stored?.params || retiredLetterSample(stored.params)) return { params: freshParams(!supabaseConfigured()), units };
   return { params: mergeParams(stored.params), units };
 }
 

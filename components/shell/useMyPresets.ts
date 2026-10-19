@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { loadBrowserClient } from "@/lib/supabase/browser";
 import type { Json } from "@/lib/supabase/types";
 import {
   MY_GENERATOR_PRESETS_KEY, MY_PRESETS_KEY, addMyPreset, cleanPresetName, isCloudPresetProduct, mergeCloudPresets,
@@ -23,7 +23,7 @@ function writeLocal(list: MyPreset[]) {
 }
 
 async function signedInClient() {
-  const db = getBrowserClient();
+  const db = await loadBrowserClient();
   if (!db) return null;
   const { data } = await db.auth.getUser().catch(() => ({ data: { user: null } }));
   return data.user ? db : null;

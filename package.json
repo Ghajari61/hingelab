@@ -85,7 +85,6 @@
     "jsqr": "^1.4.0",
     "playwright": "^1.64.0",
     "storybook": "^10.6.1",
-    "subset-font": "^2.9.0",
     "svgo": "^3.3.5",
     "typescript": "^5.9.2",
     "vite": "^7.3.7",

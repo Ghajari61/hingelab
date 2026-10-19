@@ -18,7 +18,7 @@ import { clone } from "@/lib/hinge";
 import { hasPro, parametricLock, parametricLocks } from "@/lib/plans";
 import { thumbnailSVG } from "@/lib/projects";
 import { downloadModelFile, uploadModelFile } from "@/lib/projects/files";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { loadBrowserClient } from "@/lib/supabase/browser";
 import { useCloudAutosave, type CloudDoc } from "@/hooks/useCloudAutosave";
 import { usePlan } from "@/components/billing/usePlan";
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
@@ -52,7 +52,11 @@ import { ParametricDock } from "./ParametricDock";
 import { depthPreview, estimateDepth } from "./depthProtocol";
 import { getStoredModel, getStoredPhoto, putStoredModel, putStoredPhoto, type StoredModel } from "./modelStore";
 import { Slicer } from "./slicerProtocol";
-import Viewport3D, { type ViewToggles } from "./Viewport3D";
+import type { ViewToggles } from "./Viewport3D";
+import { clientOnly } from "@hingelab/ui/lazy";
+
+// three.js is its own chunk: the controls show while it loads.
+const Viewport3D = clientOnly(() => import("./Viewport3D"), { loading: () => <div className="pe-view" aria-busy="true" /> });
 import { parametricGrips } from "./grips";
 import type { DesignTab } from "./DesignStudio";
 import type { Finish } from "@/lib/parametric/presets";
@@ -200,12 +204,14 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     && !((srcRef.kind === "mesh" ? model : photo)?.name === srcRef.fileName);
   useEffect(() => {
     if (!needsCloudFile || cloudFile !== "idle" || !srcRef?.fileId) return;
-    const db = getBrowserClient();
-    if (!db) { setCloudFile("failed"); return; }
     setCloudFile("loading");
     setStage(srcRef.kind === "mesh" ? "Loading the model from the cloud" : "Loading the photo's depth from the cloud");
     const { kind, fileName, fileId } = srcRef;
-    downloadModelFile(db, fileId)
+    loadBrowserClient()
+      .then((db) => {
+        if (!db) throw new Error("no accounts");
+        return downloadModelFile(db, fileId);
+      })
       .then((bytes) => {
         const m: StoredModel = { name: fileName, key: fileId, bytes };
         if (kind === "mesh") { setModel(m); void putStoredModel(m).catch(() => {}); }
@@ -410,7 +416,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
 
   /** In a cloud project, keeps the file in Storage so the project opens on any device. */
   async function keepInCloud(name: string, bytes: ArrayBuffer): Promise<string | undefined> {
-    const db = cloud ? getBrowserClient() : null;
+    const db = cloud ? await loadBrowserClient() : null;
     if (!db || !cloud) return undefined;
     try {
       const { data } = await db.auth.getUser();

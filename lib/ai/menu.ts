@@ -6,7 +6,7 @@
 import { desktopCatalog } from "@/lib/desktop/products";
 import type { DField, DProduct } from "@/lib/desktop/types";
 import { MATERIALS } from "@/lib/hinge";
-import { BUNDLED_FONTS } from "@/lib/letters/fonts";
+import { BUNDLED_FONTS } from "@/lib/letters/fontList";
 import { LETTER_PRESETS } from "@/lib/letters/presets";
 import { PARAMETRIC_PRESETS } from "@/lib/parametric/presets";
 import { AI_PRODUCTS, type AIProduct } from "./types";

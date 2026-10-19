@@ -6,7 +6,7 @@ import {
   BringToFront, CircleDot, Diamond, DiamondPlus, Expand, FlipHorizontal2, FlipVertical2, GitCommitHorizontal, Group, Link, Link2, Merge, MoveRight,
   RotateCcw, RotateCw, SendToBack, Shrink, Slash, Spline, SplinePointer, Square, Ungroup, Unlink, Unlink2, Unplug,
 } from "lucide-react";
-import { BUNDLED_FONTS } from "@/lib/letters/fonts";
+import { BUNDLED_FONTS } from "@/lib/letters/fontList";
 import { isEmptyBox, shapeForBox } from "@/lib/studio/geom";
 import { layerCode } from "@/lib/studio/cutLayers";
 import { setConnectorMode } from "@/lib/studio/connectors";

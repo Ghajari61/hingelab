@@ -13,15 +13,8 @@ export function sheetFor(p: Params): Sheet | null {
   return { model: m, params: p, width: lay.width, height: lay.height, content: layerContent(m, lay, p) };
 }
 
-export type HeroShape = "rect" | "pill" | "poly" | "cyl";
-export const HERO_SHAPES: { v: HeroShape; label: string }[] = [
-  { v: "rect", label: "Rounded" },
-  { v: "pill", label: "Pill" },
-  { v: "poly", label: "Hexagon" },
-  { v: "cyl", label: "Cylinder" },
-];
-export const HERO_WIDTH = { min: 90, max: 200, start: 140 };
-export const HERO_HEIGHT = { min: 50, max: 110, start: 70 };
+export { HERO_HEIGHT, HERO_SHAPES, HERO_WIDTH, type HeroShape } from "./hero";
+import type { HeroShape } from "./hero";
 
 /** The hero's mini generator: one shape and two sizes, everything else from the defaults. */
 export function heroParams(shape: HeroShape, W: number, H: number): Params {

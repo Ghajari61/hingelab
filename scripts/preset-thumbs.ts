@@ -15,13 +15,14 @@ import { facesAsPlaced, lettersThumbSVG, partsThumbSVG } from "@/lib/presetThumb
 import { ALL_GENERATORS } from "@/lib/generators/all";
 import { makeTextFn } from "@/lib/generators/text";
 import { assembledSVG } from "@/lib/generators/thumb";
+import { optimiseSVG } from "./perf/svgo-presets.mjs";
 
 const root = process.cwd();
 const out = (product: string, id: string, svg: string) => {
   if (!svg) throw new Error(`${product}/${id}: empty thumbnail`);
   const dir = join(root, "public", "presets", product);
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, `${id}.svg`), svg);
+  writeFileSync(join(dir, `${id}.svg`), optimiseSVG(svg));
   console.log(`${product}/${id}.svg ${(svg.length / 1024).toFixed(1)} kB`);
 };
 

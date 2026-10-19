@@ -5,7 +5,7 @@
  */
 import type { BuildContext, Contour } from "@/lib/generators/types";
 import { textBlock } from "@/lib/generators/weld";
-import { BUNDLED_FONTS } from "@/lib/letters/fonts";
+import { BUNDLED_FONTS } from "@/lib/letters/fontList";
 import { coreDistance } from "./lidSlot";
 import type { Edge, Params } from "./types";
 

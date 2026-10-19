@@ -7,7 +7,7 @@ import { PARAM_FIELDS } from "@/components/parametric/fields";
 import type { Params } from "@/lib/hinge";
 import { honeyLattice } from "@/lib/hinge/hinge";
 import { MAX_BASE_LINES, MAX_BASE_TEXT } from "@/lib/hinge/baseText";
-import { BUNDLED_FONTS } from "@/lib/letters/fonts";
+import { BUNDLED_FONTS } from "@/lib/letters/fontList";
 import { FRET_NAMES } from "@/lib/generators/fretwork";
 import type { ParametricParams } from "@/lib/parametric";
 import { RELIEF_IDS } from "@/lib/parametric/source/reliefs";

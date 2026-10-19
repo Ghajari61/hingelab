@@ -3,7 +3,7 @@
  * (a new pattern brings its own starting values), then toggles and fonts, then the numbers that
  * the new design shows.
  */
-import { BUNDLED_FONTS } from "@/lib/letters/fonts";
+import { BUNDLED_FONTS } from "@/lib/letters/fontList";
 import { setPath } from "./path";
 import type { AnyGenerator, ChoiceSpec, FontSpec, GenBase, NumberSpec, ToggleSpec } from "./types";
 

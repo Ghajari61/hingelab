@@ -8,13 +8,15 @@ import {
 import { sceneSVG } from "@/components/editor/scene3d";
 import { CutSheet } from "@/components/site/CutSheet";
 import { HeroGenerator } from "@/components/site/HeroGenerator";
+import { heroText } from "@/components/site/heroEngine";
+import { HERO_HEIGHT, HERO_WIDTH } from "@/lib/site/hero";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Pricing, type PriceCard } from "@/components/site/Pricing";
 import { BATCH_FREE, BATCH_PRO, BUSINESS_SEATS, COMMERCIAL_LICENSE, PLAN_ROWS, PRICES, PRO_BENEFITS } from "@/lib/plans";
 import { desktopRelease } from "@/lib/site/release";
 import { siteProducts, totalPresets, type SiteIcon } from "@/lib/site/products";
-import { GALLERY, isProSample, sheetFor } from "@/lib/site/samples";
+import { GALLERY, heroParams, isProSample, sheetFor } from "@/lib/site/samples";
 import { SITE_DESCRIPTION } from "@/lib/site/config";
 import "./landing.css";
 
@@ -91,6 +93,7 @@ export default async function HomePage() {
   const presets = totalPresets();
   const mosaic = products.slice(0, 9);
   const gallery = GALLERY.map((s) => ({ ...s, sheet: sheetFor(s.params)! }));
+  const heroSheet = sheetFor(heroParams("rect", HERO_WIDTH.start, HERO_HEIGHT.start));
   const release = desktopRelease();
   return (
     <div className="page landing">
@@ -206,7 +209,13 @@ export default async function HomePage() {
             <h2>Try the living-hinge box, right here</h2>
             <p>Change the shape and size: the cut file below is the real one, with slots, hinge slits and outline on their own layers.</p>
           </div>
-          <HeroGenerator />
+          {heroSheet && (
+            <HeroGenerator
+              scene={sceneSVG(heroSheet.model, heroSheet.params, -0.6, 0.35)}
+              sheet={<CutSheet sheet={heroSheet} trace className="hero-sheet" />}
+              {...heroText(heroSheet, "rect", HERO_WIDTH.start, HERO_HEIGHT.start)}
+            />
+          )}
           <ul className="landing-gallery">
             {gallery.map((g) => (
               <li key={g.title}>
