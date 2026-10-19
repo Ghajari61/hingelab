@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.61",
-    "pub_date": "2026-10-19T05:08:50.928Z",
-    "notes": "Hinge Box: open top with a rim. The lid's middle is cut away leaving a frame of the width you set (Top rim width), as on a pen holder. New Rounded pen holder preset and pen holder standard sizes.",
+    "version": "1.0.62",
+    "pub_date": "2026-10-19T05:57:19.989Z",
+    "notes": "Cut-out patterns (lattice, floral, Moroccan quatrefoil, honeycomb, circles, stars, woven leaves) for Boxes walls and lids and the Hinge Box lid and walls, with a framed title. New Book box design with a living-hinge spine. New presets.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.61_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnV3U0Z6YXFzVWh2c3h4OGdjM0ZGYnBWS1Vjb3R2RlU1M041anVBM2MzRFFOWmg0MDQxdjEvU1FoL0hBWVhTaXdUSC96ckMvclFHcVlPbVB0RnJMN3dVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzg2MjMzCWZpbGU6SGluZ2VMYWJfMS4wLjYxX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNjEKVDdkTG9hQ2YvM1kwR2VnbzZYcnZQU2lYMlFVRHdqbGJGSHBpYTEvcTZock51MWIvdmhuYUQ1QVFuRGNwMjE5ZmNScXdINkFVMm0rTFZ0SDJEWTJBQWc9PQo=",
-        "size": 4426165
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.62_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmg4bkxzb0JmRUkra1hoNEZCWER3OHlOV0RUbnhIdUNOMXZ1MmhRSGRWbXJRbG1TeGc3Q01GanVJeWdjYmVWdlZzWm8vRlFFRWR2aGZLMFJuZExCalE4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzg5MjQ2CWZpbGU6SGluZ2VMYWJfMS4wLjYyX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNjIKVmVadlZyZVFhU3Zrak1QMWRqOVpobzBsMzZoeUdrc0VpKzdiMHlTWDc0UDVOWTNSaTFIdVZDdlpucFFKNW51YVlmb0FYR0JCV0ZFSHRIZFVBamFUQVE9PQo=",
+        "size": 4490141
       }
     }
   }
