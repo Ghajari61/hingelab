@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.60",
-    "pub_date": "2026-10-18T06:41:13.495Z",
-    "notes": "Hinge Box: 48 standard box sizes (tissue boxes, playing cards, jewellery and gold, gifts, office, kitchen and tea) that fit your material, and text engraved under the box for a company name or phone number, Persian and English.",
+    "version": "1.0.61",
+    "pub_date": "2026-10-19T05:08:50.928Z",
+    "notes": "Hinge Box: open top with a rim. The lid's middle is cut away leaving a frame of the width you set (Top rim width), as on a pen holder. New Rounded pen holder preset and pen holder standard sizes.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.60_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmdmbEwrVHE4alZHWDFPdGdyRnRFQ3pKMmMvMmFPS2JMOTkzWGYvYVFUTjhsNG53WjdldW16SzdEejlka1MzR3hmVzRsV2xYTlF1Sk5EVkFCYUlEb3dFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzA1NTAwCWZpbGU6SGluZ2VMYWJfMS4wLjYwX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNjAKMENWUVl5VExXd2c3M1dEZVBrNXBPZDQ4a00vYWNhR3FYOWpKcXphb0hhczdnZmgxT2FZQVM1OE5mbFZIZHRRK25QdStYK0cvQ0dXQWxFSFNkcUN4RFE9PQo=",
-        "size": 4424586
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.61_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnV3U0Z6YXFzVWh2c3h4OGdjM0ZGYnBWS1Vjb3R2RlU1M041anVBM2MzRFFOWmg0MDQxdjEvU1FoL0hBWVhTaXdUSC96ckMvclFHcVlPbVB0RnJMN3dVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzg2MjMzCWZpbGU6SGluZ2VMYWJfMS4wLjYxX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNjEKVDdkTG9hQ2YvM1kwR2VnbzZYcnZQU2lYMlFVRHdqbGJGSHBpYTEvcTZock51MWIvdmhuYUQ1QVFuRGNwMjE5ZmNScXdINkFVMm0rTFZ0SDJEWTJBQWc9PQo=",
+        "size": 4426165
       }
     }
   }
