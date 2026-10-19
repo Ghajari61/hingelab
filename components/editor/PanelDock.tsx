@@ -77,6 +77,7 @@ const LID_HOLES = [
   ["knob", "Knob", "A small hole for a knob's screw"],
   ["tissue", "Tissue", "A long slot to pull tissues through"],
   ["coin", "Coin", "A narrow slot for coins: a money box"],
+  ["rim", "Rim", "An open top: the lid's middle is cut away, leaving a rim round the edge, as on a pen holder"],
 ] as const;
 
 export function PanelDock({
@@ -223,7 +224,7 @@ export function PanelDock({
             onChange={(on) => { const next: Params = { ...params, lidLipScore: on }; if (!on) delete next.lidLipScore; onPatch(next); }}
           />
         )}
-        <p className="note">Overhang makes a flat top wider than the box. A finger hole lifts a removable lid; a knob hole takes a knob&apos;s screw. A tissue slot makes a tissue box, a coin slot a money box.</p>
+        <p className="note">Overhang makes a flat top wider than the box. A finger hole lifts a removable lid; a knob hole takes a knob&apos;s screw. A tissue slot makes a tissue box, a coin slot a money box, and a rim an open top with a frame, as on a pen holder.</p>
       </Sec>
       <Sec title="Dividers" meta={(params.divX ?? 0) + (params.divY ?? 0) > 0 ? `${(params.divX ?? 0) + 1} × ${(params.divY ?? 0) + 1}` : undefined} onReset={() => onResetSection("Dividers", ["divX", "divY", "divH"])}>
         <div className="grid2">{fields("secDiv")}</div>

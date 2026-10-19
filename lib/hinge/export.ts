@@ -37,12 +37,13 @@ export function layerContent(model: Model, lay: Layout, p: Params, ctx?: BuildCo
       for (const s of pt.slots) L.slots.push(polyD(s, ox, oy));
       if (pt.scoreR) (L.score ??= []).push(roundedPath(pt.edges, pt.scoreR, ox, oy));
       const w = pt.bbox.x1 - pt.bbox.x0, h = pt.bbox.y1 - pt.bbox.y0;
-      const size = clamp(Math.min(w, h) / 9, 3, 8);
+      const size = pt.rim ? clamp(pt.rim * 0.45, 2, 5) : clamp(Math.min(w, h) / 9, 3, 8);
       const text = pt.name === "BASE" && ctx ? baseTextShape(p, pt.edges, model.R - p.T, ctx) : null;
       if (text?.contours.length) (L.engrave ??= []).push(contoursD(text.contours, ox, oy));
       // The part name moves above the text under the box.
       const lift = text?.contours.length ? text.height / 2 + size * 0.9 : 0;
-      L.labels.push({ x: ox, y: lift ? oy - lift : pt.hole ? oy + pt.hole + size : oy, text: pt.name, size });
+      // An open top's label sits on the bottom of its rim.
+      L.labels.push({ x: ox, y: lift ? oy - lift : pt.rim ? oy + pt.bbox.y1 - pt.rim / 2 : pt.hole ? oy + pt.hole + size : oy, text: pt.name, size });
     }
   }
   return L;

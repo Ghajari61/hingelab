@@ -6,7 +6,7 @@ import { bboxOf } from "./polygon";
 import { ellipse, kerfAcross } from "@/lib/materials/axes";
 import { bendAnalysis } from "./analysis";
 import { r3 } from "./util";
-import { coreDistance, isLidSlot, lidSlotSize, slotAlongY, slotOutline } from "./lidSlot";
+import { coreDistance, defaultRimWidth, isLidSlot, lidSlotSize, slotAlongY, slotOutline } from "./lidSlot";
 import { buildDividers, hasDividers } from "./dividers";
 
 const NUMS = ["W", "D", "H", "R", "dia", "T", "K", "slotW", "slit", "bridge", "pitch", "overrun", "tabW", "slotClr", "lidGap", "bedW", "bedH", "gap"] as const;
@@ -64,7 +64,17 @@ export function computeModel(input: Params): ComputeResult {
   const coreIn = Math.min(...edges.map(e => e.c[0] * e.n[0] + e.c[1] * e.n[1]));
   /** The finger or knob hole, centred, when it fits inside `inner` (the clear radius) with 3 mm to spare. */
   let holeR = 0;
+  let rimW = 0;
   const lidHole = (inner: number, where: string): Point[][] => {
+    if (p.lidHole === "rim") {
+      // An open top: the lid keeps a band `w` wide from its edge and at least 2 mm past the tab slots or the lip.
+      const w = p.lidHoleW ?? defaultRimWidth(t), rOpen = R + over - w, rad = inner - coreIn;
+      if (rOpen > k + 1 && rOpen <= rad - 2) { rimW = w; return [insetPoints(edges, rOpen, k, ky)]; }
+      issues.push({ lvl: "warn", msg: rOpen <= k + 1
+        ? `The rim is too wide for the ${where}, so the top was left closed. Use a rim under ${r3(Math.max(0, R + over - k - 2))} mm.`
+        : `The rim is too narrow for the ${where}, so the top was left closed. Use a rim of at least ${r3(R + over - rad + 2)} mm.` });
+      return [];
+    }
     if (isLidSlot(p.lidHole)) {
       // The slot keeps 3 mm of the plate around it; `inner - coreIn` is the plate's corner radius.
       const { len, w } = lidSlotSize(p), along = slotAlongY(p), rad = inner - coreIn;
@@ -80,7 +90,7 @@ export function computeModel(input: Params): ComputeResult {
     issues.push({ lvl: "warn", msg: `The ${p.lidHole === "knob" ? "knob" : "finger"} hole is too big for the ${where}, so it was left out. Use a hole under ${r3(Math.max(0, 2 * (inner - 3)))} mm.` });
     return [];
   };
-  const withHole = (pt: PlatePart): PlatePart => (holeR ? { ...pt, hole: holeR } : pt);
+  const withHole = (pt: PlatePart): PlatePart => (holeR ? { ...pt, hole: holeR } : rimW ? { ...pt, rim: rimW - (pt.name === "LID LIP" ? R + over - (R - t - p.lidGap) : 0) } : pt);
   if (p.lid === "fixed") parts.push(withHole(plate("LID", R + over, [...slotRects, ...lidHole(coreIn + R - t - Math.max(0, p.slotClr), "lid")])));
   if (p.lid === "removable") {
     const lipR = R - t - p.lidGap + k / 2;

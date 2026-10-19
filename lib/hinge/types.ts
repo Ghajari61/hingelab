@@ -5,7 +5,7 @@ export type Point = [number, number];
 export type Shape = "rect" | "pill" | "poly" | "cyl";
 export type Lid = "open" | "fixed" | "removable";
 export type Pattern = "straight" | "wave" | "relief" | "serpentine" | "honeycomb";
-export type LidHole = "none" | "finger" | "knob" | "tissue" | "coin";
+export type LidHole = "none" | "finger" | "knob" | "tissue" | "coin" | "rim";
 export type CutStyle = "slot" | "line";
 
 export interface LayerFlags {
@@ -158,6 +158,8 @@ export interface PlatePart {
   ek?: [number, number];
   /** Radius of the centred finger or knob hole, when there is one (the label moves below it). */
   hole?: number;
+  /** Width of the band left round an open top (the label goes on it), mm. */
+  rim?: number;
   /** Corner radius of a scored outline on the plate (the lid lip's place on the lid), before kerf. */
   scoreR?: number;
   edges: Edge[];

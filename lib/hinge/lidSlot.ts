@@ -19,6 +19,9 @@ export function lidSlotSize(p: Params): { len: number; w: number } {
   return { len: p.lidHoleD ?? Math.round(clamp(long * 0.55, 50, 160)), w: p.lidHoleW ?? Math.round(clamp(short * 0.26, 16, 40)) };
 }
 
+/** An open top's rim, mm from the lid's edge: room for the tab slots and a band to hold. */
+export const defaultRimWidth = (t: number) => Math.max(8, Math.round(3 * t + 4));
+
 /** The slot runs along the box's longer side. */
 export const slotAlongY = (p: Params) => (p.shape === "rect" || p.shape === "pill") && p.D > p.W;
 

@@ -51,7 +51,7 @@ export function hingeRequestError(p: Params): string | null {
     const v = p[k];
     if (v !== undefined && (!finite(v) || v < lo || v > hi)) return `${k} must be a number between ${lo} and ${hi}.`;
   }
-  if (p.lidHole !== undefined && !["none", "finger", "knob", "tissue", "coin"].includes(p.lidHole)) return "Invalid value for lidHole.";
+  if (p.lidHole !== undefined && !["none", "finger", "knob", "tissue", "coin", "rim"].includes(p.lidHole)) return "Invalid value for lidHole.";
   if (p.lidLip !== undefined && typeof p.lidLip !== "boolean") return "Invalid value for lidLip.";
   if (p.lidLipScore !== undefined && typeof p.lidLipScore !== "boolean") return "Invalid value for lidLipScore.";
   if (p.baseRing !== undefined && typeof p.baseRing !== "boolean") return "Invalid value for baseRing.";

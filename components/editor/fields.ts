@@ -1,5 +1,5 @@
 import type { Params } from "@/lib/hinge";
-import { isLidSlot, lidSlotSize } from "@/lib/hinge/lidSlot";
+import { defaultRimWidth, isLidSlot, lidSlotSize } from "@/lib/hinge/lidSlot";
 
 export type NumericKey =
   | "W" | "D" | "H" | "R" | "sides" | "dia" | "cylFlats"
@@ -55,8 +55,8 @@ export const FIELDS: FieldDef[] = [
   { id: "lidGap", label: "Lid gap", sec: "secJoints", len: true, step: 0.05, min: 0, show: p => p.lid === "removable" },
   { id: "baseRingW", label: "Ring width", sec: "secJoints", len: true, step: 0.5, min: 3, max: 40, show: p => p.baseRing === true, unset: () => 8 },
   { id: "lidOver", label: "Overhang", sec: "secLid", len: true, step: 0.5, min: 0, max: 100, unset: () => 0 },
-  { id: "lidHoleD", label: "Hole size", sec: "secLid", len: true, step: 0.5, min: 1, max: 500, show: p => !!p.lidHole && p.lidHole !== "none", lab: p => isLidSlot(p.lidHole) ? "Slot length" : "Hole size", unset: p => isLidSlot(p.lidHole) ? lidSlotSize(p).len : p.lidHole === "knob" ? 5 : 22 },
-  { id: "lidHoleW", label: "Slot width", sec: "secLid", len: true, step: 0.5, min: 1, max: 200, show: p => isLidSlot(p.lidHole), unset: p => lidSlotSize(p).w },
+  { id: "lidHoleD", label: "Hole size", sec: "secLid", len: true, step: 0.5, min: 1, max: 500, show: p => !!p.lidHole && p.lidHole !== "none" && p.lidHole !== "rim", lab: p => isLidSlot(p.lidHole) ? "Slot length" : "Hole size", unset: p => isLidSlot(p.lidHole) ? lidSlotSize(p).len : p.lidHole === "knob" ? 5 : 22 },
+  { id: "lidHoleW", label: "Slot width", sec: "secLid", len: true, step: 0.5, min: 1, max: 200, show: p => isLidSlot(p.lidHole) || p.lidHole === "rim", lab: p => p.lidHole === "rim" ? "Top rim width" : "Slot width", unset: p => p.lidHole === "rim" ? defaultRimWidth(p.T) : lidSlotSize(p).w },
   { id: "divX", label: "Across width", sec: "secDiv", step: 1, min: 0, max: 8, unset: () => 0 },
   { id: "divY", label: "Across depth", sec: "secDiv", step: 1, min: 0, max: 8, unset: () => 0 },
   { id: "divH", label: "Height", sec: "secDiv", len: true, step: 1, min: 0, max: 3000, show: p => (p.divX ?? 0) + (p.divY ?? 0) > 0, lab: () => "Height (0 = full)", unset: () => 0 },

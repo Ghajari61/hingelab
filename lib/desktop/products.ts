@@ -16,7 +16,7 @@ import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, type AnyGenerator, type FieldSpe
 import { HINGE_FIELD_HELP } from "@/lib/help/fieldHelp";
 import { clone, DEFAULTS, exportSVG, MATERIALS, mergeParams, type Params } from "@/lib/hinge";
 import { HINGE_PRESETS, hingePresetParams, randomHingeBox } from "@/lib/hinge/presets";
-import { isLidSlot, lidSlotSize } from "@/lib/hinge/lidSlot";
+import { defaultRimWidth, isLidSlot, lidSlotSize } from "@/lib/hinge/lidSlot";
 import { SHEET_PRESETS } from "@/lib/studio/library";
 import { hingeTextContext } from "@/lib/billing/hingeText";
 import { applyStandardSize, insideText, STANDARD_SIZES, standardSizeOf } from "@/lib/hinge/standardSizes";
@@ -111,6 +111,7 @@ function hingeProduct(): DProduct {
         { v: "knob", text: "Knob", title: "A small hole for a knob's screw" },
         { v: "tissue", text: "Tissue", title: "A long slot to pull tissues through" },
         { v: "coin", text: "Coin", title: "A narrow slot for coins: a money box" },
+        { v: "rim", text: "Rim", title: "An open top: the lid's middle is cut away, leaving a rim round the edge" },
       ] },
       { kind: "number", key: "lidHoleD", label: "Hole size", help: HINGE_FIELD_HELP.lidHoleD, unit: "mm", min: 1, max: 500, step: 0.5, default: 22 },
       { kind: "number", key: "lidHoleW", label: "Slot width", help: HINGE_FIELD_HELP.lidHoleW, unit: "mm", min: 1, max: 200, step: 0.5, default: 30 },
@@ -156,8 +157,8 @@ export function hingeForm(p: Params): DForm {
   if (!p.baseRing) hidden.push("baseRingW");
   if (!(p.lid === "removable" && p.lidLip !== false)) hidden.push("lidLipScore");
   const opening = p.lidHole ?? "none";
-  if (opening === "none") hidden.push("lidHoleD");
-  if (!isLidSlot(opening)) hidden.push("lidHoleW");
+  if (opening === "none" || opening === "rim") hidden.push("lidHoleD");
+  if (!isLidSlot(opening) && opening !== "rim") hidden.push("lidHoleW");
   const values: Record<string, unknown> = { bed: bedPresetId(p.bedW, p.bedH), standard: standardSizeOf(p) || "custom" };
   if (!p.baseText?.trim()) hidden.push("baseTextSize", "baseTextFont");
   if (p.baseTextSize == null) values.baseTextSize = BASE_TEXT_SIZE;
@@ -165,6 +166,7 @@ export function hingeForm(p: Params): DForm {
   if (p.baseRing && p.baseRingW == null) values.baseRingW = 8;
   if (p.lidHole == null && p.lid !== "open") values.lidHole = "none";
   if (p.lidOver == null && p.lid !== "open") values.lidOver = 0;
+  if (opening === "rim" && p.lidHoleW == null) values.lidHoleW = defaultRimWidth(p.T);
   if (opening !== "none" && p.lidHoleD == null) values.lidHoleD = isLidSlot(opening) ? lidSlotSize(p).len : opening === "knob" ? 5 : 22;
   if (isLidSlot(opening) && p.lidHoleW == null) values.lidHoleW = lidSlotSize(p).w;
   if ((p.divX ?? 0) + (p.divY ?? 0) === 0) hidden.push("divH");

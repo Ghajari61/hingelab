@@ -73,6 +73,8 @@ export const STANDARD_SIZES: StandardSize[] = [
   S("Office & desk", "business-cards", "Business card box", 92, 58, 45, { lidHole: "finger" }),
   S("Office & desk", "pencils", "Pencil box", 200, 60, 30, { lidHole: "finger" }),
   S("Office & desk", "pen-cup", "Pen cup", 80, 80, 100, { shape: "cyl", lid: "open" }),
+  S("Office & desk", "pen-holder-rim", "Pen holder with a rim", 84, 64, 104, { R: 20, lid: "fixed", lidHole: "rim" }),
+  S("Office & desk", "pen-holder-round", "Round pen holder with a rim", 74, 74, 104, { shape: "cyl", lid: "fixed", lidHole: "rim" }),
   S("Office & desk", "desk-organiser", "Desk organiser", 220, 110, 60, { lid: "open", divX: 2 }),
   S("Office & desk", "remote", "Remote control holder", 140, 70, 100, { lid: "open", divX: 1 }),
 
