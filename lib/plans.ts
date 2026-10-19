@@ -31,10 +31,17 @@ export const BATCH_FREE = 5;
 export const BATCH_PRO = 30;
 
 /**
- * Stated on the Business card and in the Terms. Free and Pro may already sell what they cut;
- * Business is the plan that says so as a license.
+ * What each plan allows: the one source for the pricing table, the FAQ, the upgrade dialog and the
+ * Terms. Free downloads nothing, so it has nothing to license.
  */
-export const COMMERCIAL_LICENSE = "Business includes a commercial-use license: you may sell the physical objects you cut and the files you export, including work for clients, without a per-item royalty to HingeLab.";
+export const LICENSES = {
+  free: "Designing and previewing for personal use. Free has no downloads.",
+  pro: "Personal use, and selling the physical items you cut from your exports.",
+  business: "Everything Pro allows, plus work for clients and selling or sharing the exported files themselves.",
+} as const;
+
+/** Stated on the Business card and in the Terms. */
+export const COMMERCIAL_LICENSE = "Business includes a commercial-use license: personal use and selling the physical items you cut, as on Pro, plus work for clients and selling the exported files, without a per-item royalty to HingeLab.";
 
 /** Shown on the Business card. Not enforced yet — there is no device or seat ledger. */
 export const BUSINESS_SEATS = "Up to 3 devices signed in at once";

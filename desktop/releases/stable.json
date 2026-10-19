@@ -9,7 +9,8 @@
       "windows-x86_64": {
         "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.65_x64-setup.exe",
         "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmhnUFhTMXZ2ZFBNcTVQc2VXTDc5cHpvV0tXS0poMmZqOUxSZ240ZXBGazhFbjRwL0NiRUZJOWFQVjFadlFSVHdtNDR0cktkWm44dFg0d0FGcHdadEFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyNDE3NTY0CWZpbGU6SGluZ2VMYWJfMS4wLjY1X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNjUKNGNFZDRxWER6d1BzODg2b2g1T0xseGdqaVRmNExyR1psNktGZFVEc3RpZGtuVjFPdzU4T2sxYUxWdXdNMXIrN3NVTERSUS8ycm5GVEtOU1h6SEZ5RHc9PQo=",
-        "size": 4544003
+        "size": 4544003,
+        "sha256": "1a9f72fcd3d449574f0c4c927bf9111901e8084b160420b29fc31a0d55846654"
       }
     }
   }

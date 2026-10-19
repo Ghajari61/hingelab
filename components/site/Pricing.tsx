@@ -27,7 +27,7 @@ export function Pricing({ cards }: { cards: PriceCard[] }) {
     <div className="pricing">
       <div className="bill-toggle" role="group" aria-label="Billing period">
         <button type="button" aria-pressed={!yearly} onClick={() => setYearly(false)}>Monthly</button>
-        <button type="button" aria-pressed={yearly} onClick={() => setYearly(true)}>Yearly <span className="save">Save ~30%</span></button>
+        <button type="button" aria-pressed={yearly} onClick={() => setYearly(true)}>Yearly <span className="save">Save up to 30%</span></button>
       </div>
       <div className={`plan-grid${cards.length < 4 ? " three" : ""}`}>
         {cards.map((c) => {

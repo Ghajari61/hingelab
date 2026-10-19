@@ -10,13 +10,13 @@ export function SiteHeader({ sections = true }: { sections?: boolean }) {
   const { configured, user } = useAccount();
   return (
     <header className="site-header">
-      <Link href="/" className="site-logo"><LogoMark size={28} /> HingeLab</Link>
+      <Link href="/" className="site-logo" aria-label="HingeLab home"><LogoMark size={28} /> <span className="site-logo-word">HingeLab</span></Link>
       {sections && <SiteNav />}
       <div className="site-cta">
         {configured && (user
           ? <Link href="/app" className="site-link">My designs</Link>
           : <Link href="/login" className="site-link">Sign in</Link>)}
-        <Link href="/app/editor/local" className="btn-primary site-open">Open <span className="site-open-the">the </span>editor</Link>
+        <Link href="/app/editor/local" className="btn-primary site-open"><span>Open <span className="site-open-the">the </span>editor</span></Link>
       </div>
     </header>
   );

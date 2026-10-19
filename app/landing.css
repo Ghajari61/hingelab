@@ -249,3 +249,7 @@ html:has(.landing), body:has(> .landing) { height: auto; overflow: visible; }
   .plan-grid, .plan-grid.three { grid-template-columns: 1fr; }
   .price { font-size: 34px; }
 }
+
+/* Download: the installer's SHA-256, selectable in one piece, and the note for this device. */
+.d-sha code { font-family: var(--font-num); font-size: 11px; word-break: break-all; user-select: all; }
+.d-os a { color: var(--accent-hi); }

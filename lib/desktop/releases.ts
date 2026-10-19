@@ -11,6 +11,8 @@ export interface PlatformRelease {
   signature: string;
   /** Installer size in bytes, shown in the update dialog. */
   size: number;
+  /** SHA-256 of the installer (hex), shown beside the download so it can be checked. */
+  sha256?: string;
 }
 
 export interface Release {
@@ -84,6 +86,7 @@ export function manifestError(m: unknown): string | null {
     if (!isSignature(p.signature)) return `${k}.signature`;
     if (signedVersion(p.signature) !== l.version) return `${k}.signature was not made for ${l.version}`;
     if (!Number.isInteger(p.size) || p.size <= 0 || p.size > 500 * 1024 * 1024) return `${k}.size`;
+    if (p.sha256 !== undefined && !/^[0-9a-f]{64}$/.test(p.sha256)) return `${k}.sha256`;
   }
   return null;
 }

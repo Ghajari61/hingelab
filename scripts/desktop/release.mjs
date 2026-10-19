@@ -68,7 +68,7 @@ manifest.latest = {
   version: conf.version,
   pub_date: new Date().toISOString(),
   notes: (arg("notes") ?? "").slice(0, 5000),
-  platforms: { "windows-x86_64": { url, signature, size: bytes.length } },
+  platforms: { "windows-x86_64": { url, signature, size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") } },
 };
 if (arg("minimum")) manifest.minimumVersion = arg("minimum");
 writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");

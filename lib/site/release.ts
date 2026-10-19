@@ -7,6 +7,8 @@ export interface SiteRelease {
   version: string;
   url: string;
   size: string;
+  /** SHA-256 of the installer (hex), when the manifest has it. */
+  sha256: string | null;
 }
 
 export function desktopRelease(): SiteRelease | null {
@@ -16,7 +18,8 @@ export function desktopRelease(): SiteRelease | null {
     const win = latest?.platforms?.["windows-x86_64"];
     if (!latest?.version || !win?.url) return null;
     const bytes = Number(win.size) || 0;
-    return { version: latest.version, url: new URL(win.url).pathname, size: bytes ? `${(bytes / 1048576).toFixed(1)} MB` : "" };
+    const sha256 = typeof win.sha256 === "string" && /^[0-9a-f]{64}$/.test(win.sha256) ? win.sha256 : null;
+    return { version: latest.version, url: new URL(win.url).pathname, size: bytes ? `${(bytes / 1048576).toFixed(1)} MB` : "", sha256 };
   } catch {
     return null;
   }

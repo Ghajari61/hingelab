@@ -12,7 +12,7 @@ describe("public catalogue", () => {
   });
 
   it("keeps the three menus on this site", () => {
-    expect(MAKE.map((l) => l.label)).toEqual(["Generators", "Templates", "Studio"]);
+    expect(MAKE.map((l) => l.label)).toEqual(["Generators", "Templates", "Free-form Studio"]);
     expect(COMMUNITY.map((l) => l.label)).toEqual(["Gallery", "Collections", "Graphics", "Materials"]);
     expect(LEARN.map((l) => l.label)).toEqual(["Guides", "Kerf & fit tools", "Changelog", "For developers"]);
   });

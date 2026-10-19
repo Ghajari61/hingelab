@@ -1,6 +1,6 @@
 /**
  * Presets the start page and `?preset=` links read, kept small for the editor shell. Most generators list
- * every preset; Shadow Box (132 designs) loads a few featured cards after the page, with no settings:
+ * every preset; Shadow Box (over a hundred designs) loads a few featured cards after the page, with no settings:
  * the generator editor takes those from the generator's own presets.
  */
 import { BOXES_PRESETS } from "./boxes/presets";

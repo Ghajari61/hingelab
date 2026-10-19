@@ -305,4 +305,10 @@ button.ai-lib-drop:hover:not(:disabled), .ai-lib-drop-btn:hover:not(:disabled) {
 
 /* Header: the editor button stays on one line; narrow screens drop "the". */
 .site-header .site-open { white-space: nowrap; }
-@media (max-width: 480px) { .site-header .site-open-the { display: none; } }
+@media (max-width: 480px) {
+  .site-header .site-open-the { display: none; }
+  .site-header { padding-inline: 12px; gap: 8px; }
+  .site-header .site-open { padding-inline: 11px; font-size: 13px; }
+  .site-header .site-cta { gap: 8px; }
+}
+@media (max-width: 400px) { .site-header .site-logo-word { display: none; } }

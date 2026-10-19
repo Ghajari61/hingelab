@@ -7,13 +7,14 @@ import {
 } from "lucide-react";
 import { sceneSVG } from "@/components/editor/scene3d";
 import { CutSheet } from "@/components/site/CutSheet";
+import { DownloadNote } from "@/components/site/DownloadNote";
 import { HeroGenerator } from "@/components/site/HeroGenerator";
 import { heroText } from "@/components/site/heroEngine";
 import { HERO_HEIGHT, HERO_WIDTH } from "@/lib/site/hero";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Pricing, type PriceCard } from "@/components/site/Pricing";
-import { BATCH_FREE, BATCH_PRO, BUSINESS_SEATS, COMMERCIAL_LICENSE, PLAN_ROWS, PRICES, PRO_BENEFITS } from "@/lib/plans";
+import { BATCH_FREE, BATCH_PRO, BUSINESS_SEATS, LICENSES, PLAN_ROWS, PRICES, PRO_BENEFITS } from "@/lib/plans";
 import { desktopRelease } from "@/lib/site/release";
 import { siteProducts, totalPresets, type SiteIcon } from "@/lib/site/products";
 import { GALLERY, heroParams, isProSample, sheetFor } from "@/lib/site/samples";
@@ -72,7 +73,7 @@ const FAQ = [
   },
   {
     q: "Is there a desktop app?",
-    a: "Yes. HingeLab for Windows has every generator in a native window with a true-scale bed, works with your account, and updates itself. The website's editors open inside it too.",
+    a: "Yes. HingeLab for Windows is the same editors as the website in their own window: designs are made on your computer, also offline, project files open with a double-click, exports go straight to your folder, and it updates itself. It uses your HingeLab account and plan.",
   },
   {
     q: "Do I need an account?",
@@ -81,6 +82,10 @@ const FAQ = [
   {
     q: "What does Pro add?",
     a: `${PRO_BENEFITS.join(". ")}. Batches of up to ${BATCH_PRO} items. Pro is $${PRICES.monthly} a month or $${PRICES.yearly} a year, and you can cancel at any time from Billing.`,
+  },
+  {
+    q: "Can I sell what I make?",
+    a: `On Pro: ${LICENSES.pro.charAt(0).toLowerCase()}${LICENSES.pro.slice(1)} On Business: ${LICENSES.business.charAt(0).toLowerCase()}${LICENSES.business.slice(1)}`,
   },
   {
     q: "What does Business add?",
@@ -102,7 +107,7 @@ export default async function HomePage() {
         <section className="hero">
           <div className="hero-copy">
             <p className="hero-eyebrow"><Sparkles size={14} aria-hidden="true" />{products.length} generators · {presets}+ ready-made designs</p>
-            <h1>Laser-ready designs, <span className="grad">made in seconds</span></h1>
+            <h1>Design free in your browser. <span className="grad">Export with Pro.</span></h1>
             <p className="hero-lead">
               Boxes, cake toppers, signs, table numbers, trophies, clocks and puzzles. Pick a design, type your text, and download a file
               your laser cuts right the first time.
@@ -232,12 +237,14 @@ export default async function HomePage() {
           <div className="desktop">
             <div className="d-copy">
               <p className="hero-eyebrow"><Award size={14} aria-hidden="true" />HingeLab for Windows</p>
-              <h2>Every generator, in a native app</h2>
-              <p>A true-scale laser bed with rulers, export straight to your job folder, favourites and recent designs, and the website&apos;s editors built in. Signed in with your account; it updates itself.</p>
+              <h2>The same editors, in their own window</h2>
+              <p>Every generator, made on your computer and working offline. Exports go straight to your job folder, project files open with a double-click, and it updates itself. Signed in with your HingeLab account.</p>
               {release ? (
                 <>
                   <a href={release.url} className="btn-primary btn-lg" download><Download size={18} aria-hidden="true" />Download for Windows</a>
                   <p className="d-fine">Version {release.version} · {release.size} · Windows 10 and 11 (64-bit)</p>
+                  {release.sha256 && <p className="d-fine d-sha">SHA-256 <code>{release.sha256}</code></p>}
+                  <DownloadNote />
                 </>
               ) : (
                 <p className="d-fine">The Windows installer will be available here soon.</p>
@@ -261,7 +268,8 @@ export default async function HomePage() {
         <section id="pricing" className="band">
           <div className="band-head"><h2>Pricing</h2><p>Start free. Upgrade when you sell what you make.</p></div>
           <Pricing cards={priceCards()} />
-          <table className="pricing-sr">
+          <div className="pricing-sr">
+          <table>
             <caption>Plan comparison</caption>
             <thead>
               <tr>
@@ -281,13 +289,14 @@ export default async function HomePage() {
                 </tr>
               ))}
               <tr>
-                <th scope="row">Commercial-use license</th>
-                <td>Personal and commercial cutting</td>
-                <td>Personal and commercial cutting</td>
-                <td>{COMMERCIAL_LICENSE}</td>
+                <th scope="row">License</th>
+                <td>{LICENSES.free}</td>
+                <td>{LICENSES.pro}</td>
+                <td>{LICENSES.business}</td>
               </tr>
             </tbody>
           </table>
+          </div>
         </section>
 
         <section id="faq" className="band faq">
@@ -327,14 +336,14 @@ function priceCards(): PriceCard[] {
     {
       id: "pro", badge: "Most popular", popular: true, name: "Pro", monthly: PRICES.monthly, yearly: PRICES.yearly,
       alt: "",
-      features: ["Save and export cut files", "Unlimited cloud projects", "All shapes and patterns", "Letters and every tool", "Full parametric sculptures", `Batches of ${BATCH_PRO}`],
+      features: ["Save and export cut files", "Unlimited cloud projects", "All shapes and patterns", "Letters and every tool", "Full parametric sculptures", `Batches of ${BATCH_PRO}`, "Sell the items you cut"],
       cta: "Get Pro", href: billingNext("pro"), primary: true,
     },
     {
       id: "business", badge: "For a shop", name: "Business", monthly: PRICES.businessMonthly, yearly: PRICES.businessYearly,
       alt: "",
       features: ["Everything in Pro", "Unlimited batches", BUSINESS_SEATS, "Commercial-use license", "Priority support"],
-      note: COMMERCIAL_LICENSE,
+      note: LICENSES.business,
       cta: "Get Business", href: billingNext("business"), primary: true,
     },
   ];

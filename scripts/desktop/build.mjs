@@ -57,7 +57,7 @@ let authenticode = "unknown";
 try {
   authenticode = execFileSync("powershell", ["-NoProfile", "-Command", `(Get-AuthenticodeSignature -LiteralPath '${setup.replace(/'/g, "''")}').Status`], { encoding: "utf8" }).trim();
 } catch {}
-console.log(`Authenticode: ${authenticode}${authenticode === "NotSigned" ? " (no code-signing certificate configured; see WINDOWS_RELEASE_CHECKLIST.md)" : ""}`);
+console.log(`Authenticode: ${authenticode}${authenticode === "NotSigned" ? " (Azure Trusted Signing not configured; see docs/SIGNING.md)" : ""}`);
 
 if (!args.includes("--no-scan")) {
   const exe = join(root, "desktop/src-tauri/target", debug ? "debug" : "release", `${conf.mainBinaryName ?? conf.productName}.exe`);

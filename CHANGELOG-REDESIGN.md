@@ -35,3 +35,12 @@
 - Phones: the canvas pinned on top, the settings in a sheet below.
 - Motion 150-200 ms ease-out; landing header and hero picture fixes.
 - `npm run a11y` (axe, WCAG 2.1 AA): every page and editor passes, contrast included. Decisions in D190.
+
+## Phase 4: copy, consistency and release prep
+
+- Hero: "Design free in your browser. Export with Pro."
+- One licensing statement in `lib/plans.ts` for the pricing table, cards, FAQ and Terms; "Save up to 30%".
+- Design counts from the data, with a test against typed counts; "Free-form Studio" in the nav.
+- Download block: version, size, SHA-256 and a note for non-Windows devices; `stable.json` records the SHA-256.
+- Authenticode signing with Azure Trusted Signing (`scripts/desktop/sign.mjs`, skips without secrets), a Windows CI build workflow and `docs/SIGNING.md`.
+- Phones: the header fits, and the page no longer scrolls sideways. Decisions in D191.

@@ -63,6 +63,13 @@
         "displayLanguageSelector": false,
         "installerIcon": "icons/icon.ico",
         "startMenuFolder": "HingeLab"
+      },
+      "signCommand": {
+        "cmd": "node",
+        "args": [
+          "../../scripts/desktop/sign.mjs",
+          "%1"
+        ]
       }
     }
   },
