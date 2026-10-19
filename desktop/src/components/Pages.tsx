@@ -375,7 +375,7 @@ export function Favorites({ favorites, catalog, onOpen, onRemove }: { favorites:
     <div className="page">
       <header className="page-head">
         <h1>Favorites</h1>
-        <p>Designs and presets you starred. Star one from a design's title bar or a preset card.</p>
+        <p>Designs and presets you starred. Star one from a design&apos;s title bar or a preset card.</p>
       </header>
       {favorites.length ? (
         <ul className="list">
@@ -409,7 +409,7 @@ export function Subscription({ account, onWeb, onRefresh, refreshing }: { accoun
     <div className="page narrow">
       <header className="page-head">
         <h1>Subscription</h1>
-        <p>Your plan is checked by HingeLab's servers every time a design is built.</p>
+        <p>Your plan is checked by HingeLab&apos;s servers every time a design is built.</p>
       </header>
       <section className="card">
         <CardTitle icon={CreditCard}>Your plan</CardTitle>
@@ -613,7 +613,7 @@ export function Settings(props: {
       <section className="card" aria-labelledby="s-ver">
         <CardTitle id="s-ver" icon={Info}>About</CardTitle>
         <p>HingeLab for Windows {props.version}</p>
-        <p className="fine">Connected to {props.server}. Designs are built on HingeLab's servers.</p>
+        <p className="fine">Connected to {props.server}. Designs are built on HingeLab&apos;s servers.</p>
         <div className="row">
           <button type="button" className="btn" onClick={() => props.onWeb("help")}><LifeBuoy size={14} aria-hidden />Help centre</button>
           <button type="button" className="btn" onClick={() => props.onWeb("privacy")}>Privacy</button>

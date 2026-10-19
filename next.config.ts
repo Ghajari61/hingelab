@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import bundleAnalyzer from "@next/bundle-analyzer";
 import { contentSecurityPolicy, securityHeaders } from "./lib/security/headers";
 
 const site = {
@@ -34,4 +35,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// `npm run analyze` writes per-route bundle reports to .next/analyze (ANALYZE=1).
+const withAnalyzer = bundleAnalyzer({ enabled: process.env.ANALYZE === "1", openAnalyzer: false });
+
+export default withAnalyzer(nextConfig);

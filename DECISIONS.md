@@ -1415,3 +1415,18 @@ The user asked for the Test Cards section to be deleted completely.
 ## D185. Retired Persian sign draft
 
 The removed Persian sign sample (name "Persian sign", text سلام) was still reopening from this device's Letters autosave. `retiredLetterSample` recognises that draft, and Letters opens a new design instead and saves over it. A design the user named themselves keeps its text, Persian included. No geometry changed.
+
+## D186. One app for web and desktop (redesign, R1-R9)
+
+Taken without asking, as the redesign brief asked; each lists what, why and the alternative.
+
+- **R1. The shared frontend is bundled in the EXE; D96 is replaced.** The editors run in the app from local files, offline and under the same strict CSP (`connect-src ipc:` only). Why: one product, offline .oclc projects, no remote content in the window. The EXE now holds the same client geometry the browser downloads from the website; plan checks and Pro exports still run on the server, so the trust model is the website's. `scan.mjs` keeps every secret check and adds a check for server-only modules (billing, Stripe, Supabase admin, desktop server code); the geometry markers are dropped. Alternative: keep the remote website view (rejected: two UIs, online only).
+- **R2. One API for both.** `/api/export` (and the endpoints the shared app calls) accept the cookie session or the desktop bearer token through `requestUser(req)`; the Rust command `api_request` forwards only allow-listed paths with the token from Windows Credential Manager. Alternative: a second set of desktop endpoints (rejected: duplicated plan logic).
+- **R3. `/editor/[id]`.** A product id opens that product's editor; anything else is a Studio project id, as today. `/app/editor/local?p=` keeps working. Alternative: `/editor/g/[generator]` (rejected: longer URLs, two editor trees).
+- **R4. Studio and cloud pages on the desktop.** Pages that are not yet platform-neutral (the Studio editor, AI, cloud projects, account) stay in the website view, which keeps no IPC at all (stricter than a `remote.urls` capability). Recorded per page in CHANGELOG-REDESIGN.md.
+- **R5. Lint.** ESLint 9 flat config with `next/core-web-vitals` and `next/typescript`. Rules with many existing hits (`no-explicit-any`, `no-unused-vars`, `exhaustive-deps`, `prefer-const`, `no-unused-expressions`) are warnings; `no-img-element` is off (previews are SVG data and blob URLs). The shared packages may not import `next/*` or `@tauri-apps/*`.
+- **R6. Operation colours.** Canvas, legend and export dialog use the export palette from one module (`packages/ui/src/ops.ts`): cut #FF0000, inner cut #00E000, score #0000FF, engrave #000000 (shown lighter on dark themes). Exported files are unchanged. Alternative: softer canvas colours (rejected: the brief asks for identical colours).
+- **R7. "Studio" nav item** renamed "Free-form Studio".
+- **R8. Signing.** `bundle.windows.signCommand` runs `scripts/desktop/sign.mjs`: Azure Trusted Signing when the `AZURE_*` secrets are present, otherwise a warning and exit 0. The minisign updater signature is unchanged. No self-signed certificates.
+- **R9. Release.** When phase 5 is green, main is fast-forwarded to the branch and the normal desktop and site release runs.
+- **Tooling.** `@next/bundle-analyzer` (per-route reports), `svgo` (preset SVGs) and `subset-font` (font subsets) are development dependencies only.

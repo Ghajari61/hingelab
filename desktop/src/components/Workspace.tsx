@@ -93,14 +93,14 @@ export function Workspace(p: Props) {
           <p>{r.locked}</p>
           <div className="row">
             <button type="button" className="btn primary" onClick={p.onUpgrade}>Upgrade to Pro</button>
-            <button type="button" className="btn" onClick={p.onRefreshPlan}>I've upgraded</button>
+            <button type="button" className="btn" onClick={p.onRefreshPlan}>I&apos;ve upgraded</button>
           </div>
         </div>
       )}
       {!r?.locked && r?.error && !design.busy && (
         <div className="overlay problem" role="alert">
           <CircleAlert size={22} aria-hidden />
-          <h2>This design can't be built</h2>
+          <h2>This design can&apos;t be built</h2>
           <p>{r.error}</p>
           {issues.some((i) => i.fixes.length) && <p className="hint">The checks on the right suggest fixes.</p>}
         </div>

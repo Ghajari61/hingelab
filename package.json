@@ -25,7 +25,10 @@
     "desktop:build": "node scripts/licenses.mjs --cargo && node scripts/desktop/build.mjs",
     "desktop:test": "cd desktop/src-tauri && cargo test",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build -o storybook-static"
+    "build-storybook": "storybook build -o storybook-static",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p .",
+    "analyze": "node scripts/perf/analyze.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.81",
@@ -62,6 +65,8 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
+    "@next/bundle-analyzer": "^15.5.28",
     "@storybook/react-vite": "^10.6.1",
     "@tauri-apps/cli": "^2.12.2",
     "@types/clipper-lib": "^6.4.0",
@@ -70,10 +75,14 @@
     "@types/react-dom": "^19.1.9",
     "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^5.2.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.28",
     "fake-indexeddb": "^6.2.5",
     "jsqr": "^1.4.0",
     "playwright": "^1.64.0",
     "storybook": "^10.6.1",
+    "subset-font": "^2.9.0",
+    "svgo": "^3.3.5",
     "typescript": "^5.9.2",
     "vite": "^7.3.7",
     "vite-node": "^5.3.0",

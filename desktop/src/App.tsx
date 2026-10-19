@@ -454,7 +454,7 @@ export function App() {
     <div className={`app${local.sidebarCollapsed ? " side-collapsed" : ""}${onWebRoute ? " on-web" : ""}`}>
       <Sidebar route={route} onRoute={go} account={account} hasDesign={!!design.state.product} update={updater.status} onUpdate={() => setShowUpdate(true)} collapsed={local.sidebarCollapsed} onToggle={toggleSidebar} />
       <div className="main">
-        {!online && route !== "workspace" && <div className="offline-bar" role="status">You're offline. Designs are built on HingeLab's servers, so new changes wait until you're back online.</div>}
+        {!online && route !== "workspace" && <div className="offline-bar" role="status">You&apos;re offline. Designs are built on HingeLab&apos;s servers, so new changes wait until you&apos;re back online.</div>}
         {seen.dashboard && (
           <Keep on={route === "dashboard"}>
             <Dashboard account={account} catalog={catalog} recent={recent} files={files} defaultProduct={local.defaultProduct} onNew={openNew} onPreset={openPreset} onBrowse={() => setRoute("generators")} onOpenRecent={openSaved} onOpenFile={(p) => void openFile(p)} onUpgrade={() => web("upgrade")} onOnline={openOnline} />

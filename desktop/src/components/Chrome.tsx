@@ -104,7 +104,7 @@ export function SignIn({ busy, error, version, onSignIn, onCancel, onSignUp }: {
       <div className="signin-card">
         <Logo size={44} />
         <h1>Sign in to HingeLab</h1>
-        <p>Your browser opens HingeLab's sign-in page. Use Google or your email, then choose Allow, and come back here.</p>
+        <p>Your browser opens HingeLab&apos;s sign-in page. Use Google or your email, then choose Allow, and come back here.</p>
         {error && <p className="msg err" role="alert">{error}</p>}
         {busy ? (
           <div className="waiting" role="status">
@@ -186,8 +186,8 @@ export function UpdateDialog({ status, onInstall, onLater, onRetry }: { status: 
           {i.size && <div><dt>Download</dt><dd>{formatBytes(i.size)}</dd></div>}
           {i.date && <div><dt>Released</dt><dd>{new Date(i.date).toLocaleDateString()}</dd></div>}
         </dl>
-        {i.notes && <div className="notes"><h3>What's new</h3><p>{i.notes}</p></div>}
-        <p className="fine">HingeLab closes while the update installs and opens again when it's done.</p>
+        {i.notes && <div className="notes"><h3>What&apos;s new</h3><p>{i.notes}</p></div>}
+        <p className="fine">HingeLab closes while the update installs and opens again when it&apos;s done.</p>
         <div className="row end">
           <button type="button" className="btn" onClick={onLater}>Later</button>
           <button type="button" className="btn primary" onClick={onInstall}>Update now</button>

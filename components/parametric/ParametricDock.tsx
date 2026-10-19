@@ -528,7 +528,7 @@ export function ParametricDock({
           ]} />
         )}
         <div className="grid2">{fields("joints")}</div>
-        {hasTabs(params) && <p className="note">Tabs are spread evenly along each fin's wall edge; a short edge gets fewer, so every tab keeps 2 mm to the next.</p>}
+        {hasTabs(params) && <p className="note">Tabs are spread evenly along each fin&apos;s wall edge; a short edge gets fewer, so every tab keeps 2 mm to the next.</p>}
         <p className="note">Slots are drawn {fmtLen(params.material.T, units, true)} + slot play wide; kerf is compensated once, on export.</p>
       </Sec>
 
