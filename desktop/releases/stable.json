@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.65",
-    "pub_date": "2026-10-19T13:48:51.004Z",
-    "notes": "Boxes: joint fit from looser to tighter; cut-out patterns on the front only, inside a circle, heart, star, hexagon or diamond, and cut, engraved or scored; six new presets including a photo box, star lantern and trinket drawer.",
+    "version": "1.1.0",
+    "pub_date": "2026-10-19T17:26:20.727Z",
+    "notes": "HingeLab for Windows now runs the same editors as the website, on your computer: designs update as you type, also offline. One colour palette for cut, score and engrave; checks that point at their parts; press ? for shortcuts; exports straight to your folder. Free-form Studio, AI Studio and cloud projects open in the app's website view.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.65_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmhnUFhTMXZ2ZFBNcTVQc2VXTDc5cHpvV0tXS0poMmZqOUxSZ240ZXBGazhFbjRwL0NiRUZJOWFQVjFadlFSVHdtNDR0cktkWm44dFg0d0FGcHdadEFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyNDE3NTY0CWZpbGU6SGluZ2VMYWJfMS4wLjY1X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNjUKNGNFZDRxWER6d1BzODg2b2g1T0xseGdqaVRmNExyR1psNktGZFVEc3RpZGtuVjFPdzU4T2sxYUxWdXdNMXIrN3NVTERSUS8ycm5GVEtOU1h6SEZ5RHc9PQo=",
-        "size": 4544003,
-        "sha256": "1a9f72fcd3d449574f0c4c927bf9111901e8084b160420b29fc31a0d55846654"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.1.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm1nWmtVREJMUUdUeTN2eURuakoxS0ZFM2YvUDBRSGJRdTBqL2s5RjJ2S3hHdWFHOThuZDlzTHNJTGI3K1lVL2syYTFXa2VvZFpPOW8rQTJZN1NZYkFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyNDMwNTE1CWZpbGU6SGluZ2VMYWJfMS4xLjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMS4wCmhZUmRhT1VNU3BFU2ZWeDV0TmwzSnFwcDEyZmtjR0hMQkQxM2lFaTFZbXdJbXRXTitERklTMjNwWGhGQ2R6MzJ3eUkrL1N0TGwzcXVmdDVGUEtqekRRPT0K",
+        "size": 10023583,
+        "sha256": "db7734b216b38a22e8baaabad3a84f8c73d54e575bb4ff40b1a5ac3dd3d5c57d"
       }
     }
   }

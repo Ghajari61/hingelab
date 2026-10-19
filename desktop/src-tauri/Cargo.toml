@@ -1,6 +1,6 @@
 [package]
 name = "hingelab-desktop"
-version = "1.0.65"
+version = "1.1.0"
 description = "HingeLab for Windows"
 authors = ["HingeLab"]
 edition = "2021"
