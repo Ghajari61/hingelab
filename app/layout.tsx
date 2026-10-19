@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import { SITE_DESCRIPTION, SITE_NAME, siteOrigin } from "@/lib/site/config";
 import { THEME_BOOT_SCRIPT } from "@/lib/studio/themeBoot";
 import "@/styles/fonts";
@@ -24,11 +25,22 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: "HingeLab: laser-cut generators for boxes, toppers, signs and more", description: SITE_DESCRIPTION },
 };
 
+/** The headings' display face, preloaded (the landing page's largest text is set in it). */
+const archivo = localFont({
+  src: "../node_modules/@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2",
+  variable: "--font-archivo",
+  weight: "100 900",
+  display: "swap",
+  preload: true,
+  declarations: [{ prop: "font-stretch", value: "62% 125%" }],
+  fallback: ["Inter Variable", "system-ui", "sans-serif"],
+});
+
 export const viewport: Viewport = { themeColor: "#FFFFFF", colorScheme: "light dark" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={archivo.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>

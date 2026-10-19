@@ -1,13 +1,13 @@
 /* Public site: landing, terms, privacy. A light, airy page on the brand gradient; the laser bed
    (honeycomb, real export colours) appears where the live hinge-box demo runs. */
 .landing {
-  --display: "Archivo Variable", "Archivo", "Inter Variable", system-ui, sans-serif;
+  --display: var(--font-archivo), "Archivo Variable", "Archivo", "Inter Variable", system-ui, sans-serif;
   --ply: #DCBF8F;
   --ply-edge: #B48F58;
   --bed: #191A1C;
   --cut-outline: #FF0000;
   --cut-hinge: #0000FF;
-  --cut-slots: #00B400;
+  --cut-slots: #00E000;
   --ink-soft: color-mix(in srgb, var(--fg) 70%, transparent);
   font-size: 17px;
   line-height: 1.55;
@@ -253,3 +253,7 @@ html:has(.landing), body:has(> .landing) { height: auto; overflow: visible; }
 /* Download: the installer's SHA-256, selectable in one piece, and the note for this device. */
 .d-sha code { font-family: var(--font-num); font-size: 11px; word-break: break-all; user-select: all; }
 .d-os a { color: var(--accent-hi); }
+
+/* Gallery pictures are files (app/landing-art); the frame stays as before. */
+img.g-box { width: 100%; height: auto; display: block; object-fit: contain; }
+img.g-sheet { box-sizing: border-box; object-fit: contain; }

@@ -45,6 +45,20 @@ What changed:
 
 Measured with `scripts/perf/latency.mjs` (key press to canvas), `scripts/perf/inp.mjs` (Event Timing duration of key presses on a slow design) and `scripts/perf/budgets.mjs`, on a production build with `next start`. The landing page's LCP element is a product picture below the hero; it is addressed with the landing redesign in phase 3.
 
-## After (phase 5)
+## After (phase 5, 19 Oct 2026)
 
-Filled in at phase 5.
+| Measure | Landing `/` before | Landing after | Editor before | Editor after |
+|---|---|---|---|---|
+| Lighthouse performance | 72 | 87 | 80 | 81 |
+| Accessibility / Best practices / SEO | 96 / 100 / 100 | 100 / 100 / 100 | 92 / 100 / 91 | 95 / 100 / 91 |
+| LCP | 5.4 s | 3.7 s | 5.3 s | 5.1 s |
+| FCP | 3.6 s | 2.3 s | 1.4 s | 1.2 s |
+| TBT / CLS | 0 ms / 0 | 20 ms / 0 | 60 ms / 0.045 | 10 ms / 0 |
+| First-load JS (gzip) | 314.5 KB | 134.1 KB | 104.5 KB + 284.3 KB shell | 104.6 KB + 154.4 KB shell |
+| HTML (gzip) | 182 KB | 85 KB | | |
+| Input latency, Hinge Box, median / p90 | | | 14 ms / 19 ms | 12 ms / 16 ms |
+| Slowest key press, Shadow Box "Oval weave" | | | about 380 ms | 32 ms |
+
+Phase 5 added, after phase 2: the landing gallery's pictures as static files (`app/landing-art`, 300 KB of HTML that React's payload repeated), the stylesheets inlined in the page (`experimental.inlineCss`, no render-blocking request), and the headings' Archivo preloaded with `next/font`.
+
+Targets: landing JS under 150 KB gzip, met (134 KB). Editor interaction under 100 ms, met (16 ms p90 on the Hinge Box, 32 ms worst on the slowest generator design). LCP under 2 s, not met: Lighthouse's mobile profile simulates a 1.6 Mbps connection with 150 ms round trips, on which the landing page's 85 KB of HTML (the live demo's first frame and the inlined styles) and the 89 KB display font take most of the 3.7 s. The editor is drawn in the browser by design (its geometry runs on the device), so its LCP waits for the editor's code. The next steps would be splitting the global stylesheet per route (the editor's 60 KB of styles are inlined into the landing page too) and a smaller subset of the display font.

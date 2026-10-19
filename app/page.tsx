@@ -222,10 +222,12 @@ export default async function HomePage() {
             />
           )}
           <ul className="landing-gallery">
-            {gallery.map((g) => (
+            {gallery.map((g, i) => (
               <li key={g.title}>
-                <div className="g-box" aria-hidden="true" dangerouslySetInnerHTML={{ __html: sceneSVG(g.sheet.model, g.sheet.params, -0.6, 0.35) }} />
-                <CutSheet sheet={g.sheet} className="g-sheet" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="g-box" src={`/landing-art/box-${i}.svg`} alt="" width={280} height={186} loading="lazy" decoding="async" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="g-sheet" src={`/landing-art/sheet-${i}.svg`} alt={`Cut file: ${g.sheet.content.outline.length} parts`} width={560} height={280} loading="lazy" decoding="async" />
                 <h3>{g.title}{isProSample(g.params) && <span className="pro-tag">Pro</span>}</h3>
                 <p>{g.note}</p>
               </li>

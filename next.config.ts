@@ -13,6 +13,8 @@ const site = {
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // The stylesheets go into the page itself: no render-blocking request before the first paint.
+  experimental: { inlineCss: true },
   // Lets a production build run next to `next dev` (NEXT_DIST_DIR=.next-build npm run build).
   distDir: process.env.NEXT_DIST_DIR || ".next",
   // HarfBuzz and manifold-3d load their own .wasm next to their modules, so the server must import them from node_modules.

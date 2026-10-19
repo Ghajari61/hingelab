@@ -1,5 +1,16 @@
 # Redesign changelog (branch `redesign/unified-app`)
 
+## Summary
+
+HingeLab's website and Windows app are one product now. The Windows app shows the website's own editors, built into the installer, with designs made on the computer (also offline); the server checks the plan when a cut file is exported, as on the website. The app keeps what only it can do: sign-in through the browser, the session in Windows Credential Manager, project files from Explorer, the export folder, the signed updater. Free-form Studio, AI Studio and cloud projects open in its website view.
+
+- **Lighter**: landing first-load JS 314 → 134 KB, the editor shell 284 → 154 KB, the landing HTML 182 → 85 KB; slow generator designs build in a worker (the slowest key press 380 → 32 ms).
+- **Clearer**: one colour palette for cut, inner cut, hinge, score and engrave on the canvas and in the files; checks that frame their parts; "?" for shortcuts; a three-step first visit; "Export needs Pro" before the click and a preview in the upgrade dialog; phones with the canvas on top.
+- **Consistent**: one statement of what each plan allows; counts from the data; "Free-form Studio"; the installer's SHA-256 on the download page.
+- **Checked**: WCAG 2.1 AA with axe on every main page and editor; smoke tests for the website and the Windows UI bundle; Authenticode signing ready for Azure Trusted Signing.
+
+Numbers in `PERF.md`, decisions in `DECISIONS.md` (D186, D188-D192), the release checklist in `docs/SMOKE-TEST.md`, signing in `docs/SIGNING.md`.
+
 ## Phase 0: audit
 
 - `AUDIT.md` (structure, duplication, branches, bundles, workers, tokens, copy issues) and the baseline in `PERF.md`.
@@ -44,3 +55,10 @@
 - Download block: version, size, SHA-256 and a note for non-Windows devices; `stable.json` records the SHA-256.
 - Authenticode signing with Azure Trusted Signing (`scripts/desktop/sign.mjs`, skips without secrets), a Windows CI build workflow and `docs/SIGNING.md`.
 - Phones: the header fits, and the page no longer scrolls sideways. Decisions in D191.
+
+## Phase 5: verify, report and release
+
+- Landing: gallery pictures as static files, stylesheets inlined, the display font preloaded. HTML 182 → 85 KB gzip; Lighthouse performance 72 → 87, accessibility 96 → 100, LCP 5.4 → 3.7 s.
+- New checks: `npm run smoke:web` (14 products, two widths), `npm run desktop:smoke` (the Windows UI bundle under the window's CSP), `npm run a11y`; `docs/SMOKE-TEST.md`.
+- `PERF.md` before and after; decisions in D192.
+- Released as HingeLab for Windows 1.1.0 with the website.

@@ -29,7 +29,9 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p .",
     "analyze": "node scripts/perf/analyze.mjs",
-    "a11y": "node scripts/a11y/axe.mjs"
+    "a11y": "node scripts/a11y/axe.mjs",
+    "smoke:web": "node scripts/smoke/web.mjs",
+    "desktop:smoke": "node scripts/desktop/bundle-smoke.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.81",
