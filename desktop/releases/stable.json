@@ -2,14 +2,14 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.0.63",
-    "pub_date": "2026-10-19T06:38:44.439Z",
-    "notes": "Groundwork for the coming Paper Box Generator (tuck-end, mailer and two-piece box nets). No visible changes yet.",
+    "version": "1.0.64",
+    "pub_date": "2026-10-19T07:33:32.018Z",
+    "notes": "New Paper Box generator: reverse and straight tuck-end cartons, mailer boxes and two-piece gift boxes in card or board, with creases, slit locks, bleed and 27 presets.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.63_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnY4MVZvcjZaUzgrWSsveTk4WTViN1doV3BXSkdwL0E0MitvaXlTWHBORmNjWnEweExHR3hrMkx6M0t1NGtkSjZPOVRXdHJYaUhZLzZpenlwY3JFeHd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzkxNzAxCWZpbGU6SGluZ2VMYWJfMS4wLjYzX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNjMKWnp0TkJGRElzQVhvZzdVQ2kyc0gyVUo1MjZCcmI4NjFPcWdnc3VNTWdhdjZxOWxmMW5KNE9wdEhBNVY2UkRrTGg5OXRtTEVIeDJZTGpkYXNrMThPQnc9PQo=",
-        "size": 4490779
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.0.64_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnN5QVNNQjdMK3I4bnk0Y1JwRXAvc2EvT21QL3Z4KzZYZEpmQ1FzeHhaQlNnbHl3N1JWV2dBNnJZS25kZnR0cCtsVkl4OHExS1lMYW1MUFNHUnBZbndrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzk1MDA3CWZpbGU6SGluZ2VMYWJfMS4wLjY0X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjAuNjQKMjlKTzcvU0h5Y29nOWVMQ280bWVGcDltR2I2Y1V4K1U3Z0xpZFJmYzJMNUpqc1JXR0NVR2xKa21sbzNROVcvNFgraXVmREYrTjcrRHUyeVpPcGdKQ3c9PQo=",
+        "size": 4501210
       }
     }
   }
