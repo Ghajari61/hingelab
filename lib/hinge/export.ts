@@ -30,6 +30,7 @@ export function layerContent(model: Model, lay: Layout, p: Params, ctx?: BuildCo
       const d = outlinePath(pt, ox, oy);
       L.outline.push(d); L.fills.push(d);
       for (const c of pt.cols) L.hinge.push(...hingeCutPaths(c.x, colSegments(c.kind, model.hs, pt.hBody, p.bridge), pt.hBody, p, ox, oy));
+      for (const h of pt.holes ?? []) L.slots.push(polyD(h, ox, oy));
       if (pt.label) L.labels.push({ x: pt.label.x + ox, y: pt.label.y + oy, text: pt.name, size: pt.label.vertical ? clamp(pt.hBody / 11, 2.5, 5) : clamp(pt.hBody / 7, 3, 7), rot: pt.label.vertical ? -90 : 0 });
     } else {
       const d = pt.ek ? polyD(roundedPointsXY(pt.edges, pt.r, pt.ek[0], pt.ek[1]), ox, oy) : roundedPath(pt.edges, pt.r, ox, oy);

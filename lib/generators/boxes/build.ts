@@ -10,6 +10,8 @@ import { tagItem } from "../items";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { boxPanels, fingerCount } from "./joints";
 import { buildBoxV2, buildDrawer, buildHex, buildInsert, buildMoney, buildStack, buildTrayV2, hasArt } from "./more";
+import { pierced } from "./pierce";
+import { buildBook } from "./book";
 import { DESIGN_NAMES, type BoxesParams } from "./params";
 
 export interface BoxesInfo {
@@ -318,13 +320,14 @@ function buildKeys(p: BoxesParams, ctx: BuildContext): BoxesOutput {
 }
 
 /** Boxes that version 1 could make, built exactly as it did. */
-const isV1Box = (p: BoxesParams) => (p.box.lid === "closed" || p.box.lid === "open" || p.box.lid === "liftoff") && p.joint.style !== "tabs" && !(p.box.notch && p.box.lid === "open") && !(hasArt(p) && p.box.lid !== "open");
+const isV1Box = (p: BoxesParams) => (p.box.lid === "closed" || p.box.lid === "open" || p.box.lid === "liftoff") && p.joint.style !== "tabs" && !(p.box.notch && p.box.lid === "open") && !(hasArt(p) && p.box.lid !== "open") && !pierced(p);
 
 export function buildBoxes(p: BoxesParams, ctx: BuildContext): BoxesOutput {
   if (!(p.T > 0)) return { parts: [], stats: [], error: "Set the material thickness." };
   switch (p.design) {
     case "box": return isV1Box(p) ? buildBox(p) : buildBoxV2(p, ctx);
-    case "tray": return p.tray.lid === "none" && p.joint.style !== "tabs" ? buildTray(p) : buildTrayV2(p, ctx);
+    case "tray": return p.tray.lid === "none" && p.joint.style !== "tabs" && !pierced(p) ? buildTray(p) : buildTrayV2(p, ctx);
+    case "book": return buildBook(p, ctx);
     case "drawer": return buildDrawer(p, ctx);
     case "hex": return buildHex(p, ctx);
     case "insert": return buildInsert(p);

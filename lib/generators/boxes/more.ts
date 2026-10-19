@@ -15,6 +15,8 @@ import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { textBlock } from "../weld";
 import { boxPanels, fingerCount, fingerPanel, type EdgeSpec } from "./joints";
 import type { BoxesParams, LidKind } from "./params";
+import { FRET_NAMES, type KeepOut } from "../fretwork";
+import { labelBox, labelFrame, pierce, pierceLid, pierceWalls, pierced } from "./pierce";
 
 type Place = NonNullable<GenPart["place"]>;
 export interface V2Info {
@@ -300,6 +302,36 @@ function engraveLid(p: BoxesParams, kit: LidKit, all: GenPart[], art: Art) {
   return { textWidth: art.w, textRoom: f.w, artHeight: art.h, artRoom: f.h };
 }
 
+/**
+ * The pattern through the walls and the lid face. On the lid a label is left solid round the
+ * engraving, in a double frame; a lift-off lid's lip becomes a frame so the holes stay open.
+ */
+export function pierceBox(p: BoxesParams, parts: GenPart[], kit: LidKit, art: Art, lid: LidKind | "none"): { label: string; value: string }[] {
+  if (!pierced(p)) return [];
+  const T = p.T, edge = T + Math.max(1, p.pierce.bar) + 1;
+  let walls = 0, top = 0;
+  if (pierceWalls(p)) for (const id of ["front", "back", "left", "right"]) { const w = parts.find((q) => q.id === id); if (w) walls += pierce(p, w, edge); }
+  if (pierceLid(p) && kit.face && lid !== "inset" && lid !== "open" && lid !== "none") {
+    const part = parts.find((q) => q.id === kit.face!.id);
+    if (part) {
+      const keep: KeepOut[] = [];
+      if (art.cs.length) {
+        const k = labelBox(kit.face.cx, kit.face.cy, art.w, art.h);
+        keep.push(k);
+        part.engrave = [...(part.engrave ?? []), ...labelFrame(k)];
+      }
+      top = pierce(p, part, edge, keep);
+      const lip = parts.find((q) => q.id === "lip");
+      if (lip && top) {
+        const xs = lip.outer.map((q) => q[0]), ys = lip.outer.map((q) => q[1]), w = Math.max(6, 2 * T);
+        const x0 = Math.min(...xs), y0 = Math.min(...ys), x1 = Math.max(...xs), y1 = Math.max(...ys);
+        if (x1 - x0 > 3 * w && y1 - y0 > 3 * w) { lip.holes.push(rect(x0 + w, y0 + w, x1 - x0 - 2 * w, y1 - y0 - 2 * w)); lip.name = "Lid lip (frame)"; }
+      }
+    }
+  }
+  return [{ label: "Pattern", value: `${FRET_NAMES[p.pierce.pattern]}: ${walls} holes in the walls, ${top} in the lid` }];
+}
+
 const insideH = (p: BoxesParams, h: number, lid: LidKind | "none") => (p.joint.outside ? h : h + lidWalls(lid) * p.T);
 
 /** A box with any lid, finger or tab-and-slot joints, a finger notch and an engraved lid. */
@@ -312,11 +344,13 @@ export function buildBoxV2(p: BoxesParams, ctx: BuildContext): V2Output {
   const parts = [...sh.parts, ...kit.parts];
   const art = lidArt(p, ctx);
   const sizes = engraveLid(p, kit, parts, art);
+  const pattern = pierceBox(p, parts, kit, art, b.lid);
   return {
     parts,
     stats: [
       { label: "Outside", value: `${r1(W + 2 * sh.m)} × ${r1(D + 2 * sh.m)} × ${r1(kit.total)} mm` },
       { label: "Inside", value: `${r1(W - 2 * T)} × ${r1(D - 2 * T)} × ${r1(H - lidWalls(b.lid) * T)} mm` },
+      ...pattern,
       { label: p.joint.style === "tabs" ? "Joints" : "Fingers", value: p.joint.style === "tabs" ? "Tabs through the bottom, fingers at the corners" : `${fingerCount(W - 2 * T, f)} × ${fingerCount(D - 2 * T, f)} × ${fingerCount(H - 2 * T, f)}` },
     ],
     assembly: [
@@ -361,10 +395,12 @@ export function buildTrayV2(p: BoxesParams, ctx: BuildContext): V2Output {
   const parts = [...sh.parts, ...dv.parts, ...kit.parts];
   const art = lidArt(p, ctx);
   const sizes = engraveLid(p, kit, parts, art);
+  const pattern = pierceBox(p, parts, kit, art, t.lid);
   return {
     parts,
     stats: [
       { label: "Outside", value: `${r1(W + 2 * sh.m)} × ${r1(D + 2 * sh.m)} × ${r1(kit.total)} mm` },
+      ...pattern,
       { label: "Compartments", value: `${cols} × ${rows}, each ${r1(dv.cx)} × ${r1(dv.cy)} mm` },
       { label: "Dividers", value: `${cols + rows - 2}, ${r1(hd)} mm tall` },
     ],

@@ -4,15 +4,16 @@ import { isMotifKind } from "../motifs";
 import { MOTIF_ART, cleanMotifArt, type MotifArt } from "../motifArt";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
 import { mergeInto } from "../util";
+import { FRET_NAMES, type FretKind } from "../fretwork";
 
-export type Design = "box" | "tray" | "drawer" | "hex" | "insert" | "money" | "stack" | "sign" | "frame" | "stand" | "keys" | "bird";
+export type Design = "box" | "tray" | "drawer" | "hex" | "insert" | "money" | "stack" | "book" | "sign" | "frame" | "stand" | "keys" | "bird";
 export type LidKind = "closed" | "open" | "liftoff" | "sliding" | "pin" | "inset";
 /** Lids a tray can take (a tray with a lid is a tea, card or jewellery box). */
 export type TrayLid = "none" | "liftoff" | "sliding" | "pin" | "inset";
 export type JointStyle = "fingers" | "tabs";
 
 export const DESIGN_NAMES: Record<Design, string> = {
-  box: "Box", tray: "Tray", drawer: "Drawer box", hex: "Hexagon box", insert: "Divider insert", money: "Money box", stack: "Stacking trays",
+  box: "Box", tray: "Tray", drawer: "Drawer box", hex: "Hexagon box", insert: "Divider insert", money: "Money box", stack: "Stacking trays", book: "Book box",
   sign: "Desk sign", frame: "Photo frame", stand: "Phone stand", keys: "Key holder", bird: "Bird house",
 };
 
@@ -44,6 +45,10 @@ export interface BoxesParams extends GenBase {
   stand: { width: number; angle: number; slot: number; lip: number; height: number };
   keys: { width: number; height: number; corner: number; hooks: number; reach: number; text: string; fontId: string; size: number };
   bird: { width: number; depth: number; height: number; pitch: number; hole: number; perch: boolean; overhang: number };
+  /** A box shaped like a book: one cover piece bends round a living-hinge spine. Sizes are outside. */
+  book: { width: number; height: number; thickness: number; over: number };
+  /** A decorative pattern cut through the walls and lid (or the book's cover). */
+  pierce: { pattern: FretKind; on: "both" | "walls" | "lid"; cell: number; bar: number };
 }
 
 export const BOXES_DEFAULTS: BoxesParams = {
@@ -73,6 +78,8 @@ export const BOXES_DEFAULTS: BoxesParams = {
   stand: { width: 75, angle: 65, slot: 14, lip: 10, height: 95 },
   keys: { width: 220, height: 90, corner: 10, hooks: 4, reach: 35, text: "KEYS", fontId: "fredoka", size: 18 },
   bird: { width: 120, depth: 120, height: 150, pitch: 40, hole: 32, perch: false, overhang: 20 },
+  book: { width: 120, height: 160, thickness: 50, over: 3 },
+  pierce: { pattern: "none", on: "both", cell: 16, bar: 3 },
 };
 
 export function mergeBoxes(raw: unknown): BoxesParams {
@@ -82,6 +89,8 @@ export function mergeBoxes(raw: unknown): BoxesParams {
   if (p.engrave.motif !== "none" && !isMotifKind(p.engrave.motif)) p.engrave.motif = "none";
   p.engrave.art = cleanMotifArt(p.engrave.art);
   if (p.engrave.mark !== "score") p.engrave.mark = "engrave";
+  if (!(p.pierce.pattern in FRET_NAMES)) p.pierce.pattern = "none";
+  if (p.pierce.on !== "walls" && p.pierce.on !== "lid") p.pierce.on = "both";
   return p;
 }
 

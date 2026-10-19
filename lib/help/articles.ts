@@ -619,6 +619,21 @@ export const ARTICLES: HelpArticle[] = [
     related: ["hinge-dimensions", "hinge-lid", "hinge-dividers"],
   },
   {
+    slug: "hinge-fretwork", product: "hinge", title: "Cut-out patterns",
+    summary: "Lattice, floral, Moroccan quatrefoil and other patterns cut right through the lid and walls.",
+    keywords: ["pattern", "fretwork", "pierced", "lattice", "floral", "quatrefoil", "moroccan", "honeycomb", "lantern", "cut out"],
+    fields: [{ product: "hinge", secs: ["secFret"] }],
+    blocks: [
+      { list: [
+        "Pick a pattern and where it goes: the lid, the walls or both. On the walls it fills the flat stretches between the hinge zones.",
+        "Pattern size sets how far the pattern repeats; Bar width is the narrowest wood left between holes. Keep bars at least the material thickness in plywood.",
+        "Holes stay clear of the tab slots, the lid's opening and the hinge cuts. With a lid lip, the holes go through the lip too, so you can see through.",
+        "The Boxes generator has the same patterns for finger-jointed boxes, trays and the book box.",
+      ] },
+    ],
+    related: ["hinge-lid", "hinge-dividers"],
+  },
+  {
     slug: "hinge-dividers", product: "hinge", title: "Dividers",
     summary: "Strips that split the inside of a box into compartments, locking together where they cross.",
     keywords: ["dividers", "partitions", "compartments", "grid", "organiser", "inserts"],

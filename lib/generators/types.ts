@@ -124,6 +124,11 @@ export interface GenPart {
    * with its thickness toward -x).
    */
   place?: { x: number; y: number; z: number; rot?: number; upright?: boolean; tilt?: number; yaw?: number };
+  /**
+   * A part that bends (a book cover round its spine) is drawn in 3D as these flat pieces instead,
+   * each in its own frame and place; the cut file keeps the one part.
+   */
+  views3d?: { outer: Contour; holes: Contour[]; engrave?: Contour[]; place: NonNullable<GenPart["place"]> }[];
   /** Thickness when it differs from the material (for example acrylic hands). */
   t?: number;
   /** Shade in 3D (1 = the material; lower is darker), for a contrasting layer. */

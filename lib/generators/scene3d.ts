@@ -6,7 +6,7 @@ import * as THREE from "three";
 import { unionShapes } from "@/lib/letters/polygon";
 import { finishScene, slab, slabs, type Scene3D } from "@/lib/three/flat";
 import { ITEM_SEP, itemOf, itemSkinName } from "./items";
-import type { Contour, GenImage, GenOutput } from "./types";
+import type { Contour, GenImage, GenOutput, GenPart } from "./types";
 
 const ENGRAVE = new THREE.MeshStandardMaterial({ color: "#3a2a1c", roughness: 0.9 });
 ENGRAVE.userData.shared = true;
@@ -78,8 +78,12 @@ function pictureSkin(im: GenImage, z: number, name: string, loads: Promise<void>
 export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D {
   const inner = new THREE.Group();
   const loads: Promise<void>[] = [];
-  const levels = [...new Set(out.parts.map((p) => p.place?.z ?? 0))].sort((a, b) => a - b);
-  out.parts.forEach((p) => {
+  // A part that bends is drawn as its flat pieces, each where it sits.
+  const parts: GenPart[] = out.parts.flatMap((p) => p.views3d?.length
+    ? p.views3d.map((v, i) => ({ ...p, id: `${p.id}-${i}`, outer: v.outer, holes: v.holes, cuts: undefined, score: undefined, engrave: v.engrave, images: undefined, pieces: undefined, place: v.place, views3d: undefined }))
+    : [p]);
+  const levels = [...new Set(parts.map((p) => p.place?.z ?? 0))].sort((a, b) => a - b);
+  parts.forEach((p) => {
     const pl = p.place ?? { x: 0, y: 0, z: 0 };
     const t = p.t ?? T;
     const z = pl.z + explode * 30 * levels.indexOf(pl.z);

@@ -18,6 +18,7 @@ import { clone, DEFAULTS, exportSVG, MATERIALS, mergeParams, type Params } from 
 import { HINGE_PRESETS, hingePresetParams, randomHingeBox } from "@/lib/hinge/presets";
 import { defaultRimWidth, isLidSlot, lidSlotSize } from "@/lib/hinge/lidSlot";
 import { SHEET_PRESETS } from "@/lib/studio/library";
+import { FRET_KINDS, FRET_NAMES } from "@/lib/generators/fretwork";
 import { hingeTextContext } from "@/lib/billing/hingeText";
 import { applyStandardSize, insideText, STANDARD_SIZES, standardSizeOf } from "@/lib/hinge/standardSizes";
 import { BASE_TEXT_FONT, BASE_TEXT_SIZE, MAX_BASE_TEXT } from "@/lib/hinge/baseText";
@@ -62,6 +63,7 @@ const HINGE_SECTIONS: { id: FieldDef["sec"] | "secShape"; title: string; help: s
   { id: "secJoints", title: "Joints", help: "Tabs and slots that join the wall to the base and lid." },
   { id: "secLid", title: "Lid", help: "The lid's opening, overhang and lip." },
   { id: "secDiv", title: "Dividers", help: "Strips that split the inside into compartments." },
+  { id: "secFret", title: "Cut-out pattern", help: "A decorative pattern cut through the lid and the wall's flat stretches." },
   { id: "secText", title: "Text under the box", help: "A name, phone number or message engraved on the base." },
   { id: "secSheet", title: "Sheet", help: "Your laser bed and how parts are laid out on it." },
 ];
@@ -123,6 +125,12 @@ function hingeProduct(): DProduct {
       { kind: "number", key: "divY", label: "Across depth", help: HINGE_FIELD_HELP.divY, unit: "", min: 0, max: 8, step: 1, int: true, default: 0 },
       { kind: "number", key: "divH", label: "Height (0 = full)", help: HINGE_FIELD_HELP.divH, unit: "mm", min: 0, max: 3000, step: 1, default: 0 },
     ],
+    secFret: [
+      { kind: "choice", key: "fret", label: "Pattern", default: "none", options: FRET_KINDS.map((v) => ({ v, text: FRET_NAMES[v] })) },
+      { kind: "choice", key: "fretOn", label: "Cut it in", default: "both", options: [{ v: "both", text: "Lid and walls" }, { v: "lid", text: "Lid" }, { v: "walls", text: "Walls" }] },
+      { kind: "number", key: "fretCell", label: "Pattern size", help: HINGE_FIELD_HELP.fretCell, unit: "mm", min: 6, max: 80, step: 0.5, default: 16 },
+      { kind: "number", key: "fretBar", label: "Bar width", help: HINGE_FIELD_HELP.fretBar, unit: "mm", min: 1, max: 15, step: 0.25, default: 3 },
+    ],
     secText: [
       { kind: "text", key: "baseText", label: "Text under the box", help: "Engraved in the middle of the base: a company name, phone number or message. One line per line.", placeholder: "Company name\nPhone 0912 000 0000", multiline: true, maxLength: MAX_BASE_TEXT },
       { kind: "number", key: "baseTextSize", label: "Letter height", help: "Height of the capital letters, mm. Long text is shrunk to fit inside the walls.", unit: "mm", min: 1.5, max: 40, step: 0.5, default: BASE_TEXT_SIZE },
@@ -161,6 +169,11 @@ export function hingeForm(p: Params): DForm {
   if (!isLidSlot(opening) && opening !== "rim") hidden.push("lidHoleW");
   const values: Record<string, unknown> = { bed: bedPresetId(p.bedW, p.bedH), standard: standardSizeOf(p) || "custom" };
   if (!p.baseText?.trim()) hidden.push("baseTextSize", "baseTextFont");
+  if (!p.fret || p.fret === "none") hidden.push("fretOn", "fretCell", "fretBar");
+  if (p.fret == null) values.fret = "none";
+  if (p.fretOn == null) values.fretOn = "both";
+  if (p.fretCell == null) values.fretCell = 16;
+  if (p.fretBar == null) values.fretBar = 3;
   if (p.baseTextSize == null) values.baseTextSize = BASE_TEXT_SIZE;
   if (p.baseTextFont == null) values.baseTextFont = BASE_TEXT_FONT;
   if (p.baseRing && p.baseRingW == null) values.baseRingW = 8;

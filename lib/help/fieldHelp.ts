@@ -33,6 +33,8 @@ export const HINGE_FIELD_HELP: Record<NumericKey, string> = {
   minFeature: "The narrowest bar your material holds without breaking or burning away. Auto-fit keeps hinge bars at least this wide; 0 uses the usual minimum.",
   lidOver: "How far the lid reaches past the walls all round, for a flat top with an edge to lift. 0 keeps the lid flush.",
   lidHoleD: "The diameter of the lid's hole: about 22 mm for a fingertip, or the size of your knob's screw. For a tissue or coin slot, the slot's length.",
+  fretCell: "How far the cut-out pattern repeats. Larger shapes cut faster and leave the wall stronger.",
+  fretBar: "The narrowest wood left between the pattern's holes; keep it at least the material thickness for plywood.",
   divX: "How many dividers split the box across its width. Each runs front to back and stands in slots in the base.",
   divY: "How many dividers split the box across its depth. Each runs left to right; where dividers cross they lock with half-lap slots.",
   divH: "How tall the dividers stand. 0 makes them as tall as fits: just under a fixed lid, or under a lid's lip.",

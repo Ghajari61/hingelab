@@ -134,7 +134,7 @@ export function buildHingeScene(model: Model, p: Params, explode = 0): Scene3D {
 export function hingeFlatScene(lay: Layout, content: LayerContent | null, p: Params): Scene3D {
   const parts: FlatPart[] = lay.items.map(({ pt, ox, oy }) => {
     const sh = (q: Point): Point => [q[0] + ox, q[1] + oy];
-    if (pt.kind === "wall") return { name: pt.name, outer: pt.outline.map(sh), holes: [] };
+    if (pt.kind === "wall") return { name: pt.name, outer: pt.outline.map(sh), holes: (pt.holes ?? []).map((h) => h.map(sh)) };
     return { name: pt.name, outer: outline(pt.edges, pt.r).map(sh), holes: pt.slots.map((s) => s.map(sh)) };
   });
   return flatScene(parts, p.T, content ? { d: content.hinge, width: lay.width, height: lay.height } : undefined);

@@ -132,6 +132,8 @@ export const HINGE_PRESETS: Preset<Params>[] = [
   { id: "money-box", name: "Money box", note: "Round, closed, with a coin slot", params: { name: "Money box", shape: "cyl", dia: 100, H: 120, lid: "fixed", lidHole: "coin" } },
   { id: "cookie-jar", name: "Cookie jar", note: "Tall cylinder, knob on the lid", params: { name: "Cookie jar", shape: "cyl", dia: 140, H: 150, lidHole: "knob", lidOver: 3, pattern: "wave" } },
   { id: "ring-box", name: "Ring box", note: "Small round box for a ring", params: { name: "Ring box", shape: "cyl", dia: 65, H: 42, cylFlats: 5 } },
+  { id: "moroccan-lantern", name: "Moroccan lantern", note: "Open cylinder with quatrefoil walls, for an LED tealight", params: { name: "Moroccan lantern", W: 120, D: 120, R: 30, H: 150, lid: "open", fret: "quatrefoil", fretOn: "walls", fretCell: 16, fretBar: 3 } },
+  { id: "floral-jewel", name: "Floral jewellery box", note: "Floral fretwork lid and walls, lift-off lid", params: { name: "Floral jewellery box", W: 180, D: 110, H: 70, R: 26, fret: "floral", fretCell: 14, fretBar: 2.5, lidLipScore: false } },
   { id: "pen-holder-rim", name: "Rounded pen holder", note: "90 × 70 × 110 mm, open top with a 13 mm rim", params: { name: "Rounded pen holder", W: 90, D: 70, H: 110, R: 20, lid: "fixed", lidHole: "rim", lidHoleW: 13 } },
   { id: "honey-lantern", name: "Honeycomb lantern", note: "Open cylinder for an LED tealight", params: { name: "Honeycomb lantern", shape: "cyl", dia: 95, H: 130, lid: "open", pattern: "honeycomb" } },
   { id: "watch-box", name: "Watch box", note: "Pill box with a scored lid lip", params: { name: "Watch box", shape: "pill", W: 160, D: 70, H: 55, lidLipScore: true, pattern: "relief" } },

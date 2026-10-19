@@ -9,18 +9,19 @@ import { fingerPanel } from "./joints";
 import { hasArt } from "./more";
 import { BOXES_DEFAULTS, BOXES_VERSION, DESIGN_NAMES, LID_NAMES, migrateBoxes, mergeBoxes, type BoxesParams, type Design, type LidKind } from "./params";
 import { BOXES_PRESETS } from "./presets";
+import { FRET_KINDS, FRET_NAMES, fretSample } from "../fretwork";
 
 const is = (...d: Design[]) => (p: BoxesParams) => d.includes(p.design);
 /** Designs with an engraved face: a lid, the cabinet top, or the money box's front. */
 const engraved = (p: BoxesParams) =>
-  (p.design === "box" && p.box.lid !== "open") || (p.design === "tray" && p.tray.lid !== "none") || p.design === "drawer" || (p.design === "hex" && p.hex.lid === "liftoff") || p.design === "money" || (p.design === "stack" && p.stack.lid);
+  (p.design === "box" && p.box.lid !== "open") || (p.design === "tray" && p.tray.lid !== "none") || p.design === "drawer" || (p.design === "hex" && p.hex.lid === "liftoff") || p.design === "money" || (p.design === "stack" && p.stack.lid) || p.design === "book";
 /** Names a design switch may replace: the user has not named the piece yet. */
 const BUILT_IN_NAMES = new Set<string>([BOXES_DEFAULTS.name, ...Object.values(DESIGN_NAMES), ...BOXES_PRESETS.map((p) => p.params.name ?? "")]);
 
 const sections: SectionSpec<BoxesParams>[] = [
   {
     id: "design", title: "Design", open: true,
-    help: "What to make: a finger-jointed box, a tray with dividers, a drawer box, a hexagon box, a divider insert, a money box, stacking trays, a desk sign, a photo frame, a phone stand, a key holder or a bird house.",
+    help: "What to make: a finger-jointed box, a tray with dividers, a drawer box, a hexagon box, a divider insert, a money box, stacking trays, a book box, a desk sign, a photo frame, a phone stand, a key holder or a bird house.",
     fields: [
       {
         kind: "choice", key: "design", label: "Design", rail: true,
@@ -135,6 +136,26 @@ const sections: SectionSpec<BoxesParams>[] = [
     ],
   },
   {
+    id: "book", title: "Book box", open: true, show: is("book"),
+    help: "A box shaped like a book: one cover piece bends round a living-hinge spine and opens like a book, with walls inside for the pages.",
+    fields: [
+      { kind: "number", key: "book.width", label: "Width", unit: "mm", min: 60, max: 600, step: 1, help: "Outside width of the closed book, from the rounded spine to the fore edge." },
+      { kind: "number", key: "book.height", label: "Height", unit: "mm", min: 60, max: 600, step: 1, help: "Outside height of the book, head to tail." },
+      { kind: "number", key: "book.thickness", label: "Thickness", unit: "mm", min: 15, max: 200, step: 1, help: "Thickness of the closed book; the spine is a half circle this wide." },
+      { kind: "number", key: "book.over", label: "Cover overhang", unit: "mm", min: 0, max: 15, step: 0.5, help: "How far the covers reach past the walls inside, as on a real book." },
+    ],
+  },
+  {
+    id: "pierce", title: "Cut-out pattern", open: false, show: is("box", "tray", "book"),
+    help: "A decorative pattern cut right through the walls and the lid, such as a lattice, floral rosettes or Moroccan quatrefoils. Holes stay clear of the joints, and of a framed label round the lid's text.",
+    fields: [
+      { kind: "choice", key: "pierce.pattern", shuffle: true, label: "Pattern", rail: true, help: "The shape of the holes; None leaves the panels plain.", options: FRET_KINDS.map((v) => ({ v, text: FRET_NAMES[v] })) },
+      { kind: "choice", key: "pierce.on", label: "Cut it in", show: (p) => p.pierce.pattern !== "none", help: "The walls, the lid (the front cover of a book box) or both.", options: [{ v: "both", text: "Walls and lid" }, { v: "walls", text: "Walls" }, { v: "lid", text: "Lid" }] },
+      { kind: "number", key: "pierce.cell", label: "Pattern size", unit: "mm", min: 6, max: 80, step: 0.5, show: (p) => p.pierce.pattern !== "none", help: "How far the pattern repeats; larger shapes cut faster." },
+      { kind: "number", key: "pierce.bar", label: "Bar width", unit: "mm", min: 1, max: 15, step: 0.25, show: (p) => p.pierce.pattern !== "none", help: "The narrowest wood left between holes; keep it at least the material thickness for plywood." },
+    ],
+  },
+  {
     id: "engrave", title: "Engraving", open: false, show: engraved,
     help: "Text, a motif (built in, your own picture or your own text) and a border, engraved or scored on the lid (the cabinet top of a drawer box, the front of a money box).",
     fields: [
@@ -236,6 +257,10 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
     }
     return [];
   }
+  if (key === "pierce.pattern") {
+    if (v === "none") return [{ d: fitArt([rect(0, 0, 40, 40)], 38).join(" "), fill: true }];
+    return [{ d: fitArt([rect(0, 0, 40, 40), ...fretSample(v as (typeof FRET_KINDS)[number])], 38).join(" "), fill: true }];
+  }
   if (key !== "design") return [];
   const E = { mate: true, ends: true };
   switch (v as Design) {
@@ -265,6 +290,8 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
       return open([roundedRect(0, 0, 48, 22, 3), [[10, 14], [10, 28], [14, 28]], [[24, 14], [24, 28], [28, 28]], [[38, 14], [38, 28], [42, 28]]], [false, true, true, true]);
     case "bird":
       return [{ d: fitArt([[[0, 14], [18, 0], [36, 14], [36, 44], [0, 44]], circle(18, 24, 5)], 38).join(" "), fill: true }];
+    case "book":
+      return [{ d: fitArt([roundedRect(0, 0, 40, 48, 2), rect(8, 14, 24, 14), rect(0, 0, 5, 48)], 38).join(" "), fill: true }];
   }
   return [];
 }
@@ -284,6 +311,7 @@ function size(p: BoxesParams): string {
     case "insert": return `${Math.round(p.insert.cols)} × ${Math.round(p.insert.rows)} for ${p.insert.width} × ${p.insert.depth} mm`;
     case "money": return `${o(p.money.width)} × ${o(p.money.depth)} × ${o(p.money.height)} mm`;
     case "stack": return `${Math.round(p.stack.trays)} trays, ${o(p.stack.width)} × ${o(p.stack.depth)} mm`;
+    case "book": return `${p.book.width} × ${p.book.height} × ${p.book.thickness} mm`;
   }
 }
 
@@ -302,6 +330,7 @@ function fileTail(p: BoxesParams): string {
     case "insert": return `${Math.round(p.insert.cols)}x${Math.round(p.insert.rows)}`;
     case "money": return `${o(p.money.width)}x${o(p.money.depth)}x${o(p.money.height)}mm`;
     case "stack": return `${Math.round(p.stack.trays)}-trays`;
+    case "book": return `${Math.round(p.book.width)}x${Math.round(p.book.height)}x${Math.round(p.book.thickness)}mm`;
   }
 }
 
@@ -323,8 +352,9 @@ export const BOXES: GeneratorDef<BoxesParams> = {
   summary: (p) => `${DESIGN_NAMES[p.design]}, ${size(p)}`,
   help: {
     intro: [
-      "The Boxes generator makes classic laser-cut pieces that slot together: finger-jointed boxes with a closed, open, lift-off, sliding, pin-hinged or inset lid, trays with half-lap dividers (with a lid they make tea and card boxes), drawer boxes with up to four drawers, hexagon boxes, divider inserts for boxes you already have, money boxes, stacking trays, desk signs, three-layer photo frames, phone and tablet stands, key holders and bird houses.",
+      "The Boxes generator makes classic laser-cut pieces that slot together: finger-jointed boxes with a closed, open, lift-off, sliding, pin-hinged or inset lid, trays with half-lap dividers (with a lid they make tea and card boxes), drawer boxes with up to four drawers, hexagon boxes, divider inserts for boxes you already have, money boxes, stacking trays, book boxes with a living-hinge spine, desk signs, three-layer photo frames, phone and tablet stands, key holders and bird houses.",
       "Boxes can use tab-and-slot joints instead of fingers on the bottom and top, and lids can carry engraved text, a motif and a border.",
+      "A cut-out pattern (lattice, floral rosettes, Moroccan quatrefoils, honeycomb, circles, stars or woven leaves) can go through the walls and the lid; the lid's text then sits in a framed label in the middle of it.",
       "Finger joints are worked out per edge: each edge gets an odd number of equal fingers, and every finger belongs to exactly one panel, so the panels always mate. Enter inside sizes for things you have measured, or outside sizes to fit a space.",
       "The kerf setting tightens every finger, tab and slot by the same amount; cut a small box from scrap first, then adjust the kerf until the joints press together by hand.",
     ],
@@ -335,7 +365,7 @@ export const BOXES: GeneratorDef<BoxesParams> = {
       "Dry-fit everything before gluing, and glue with a thin bead; squeeze-out is hard to clean between fingers.",
       "Open the 3D view to check how the parts go together before cutting.",
     ],
-    keywords: ["box", "finger joint", "tab and slot", "sliding lid", "hinged lid", "drawer", "hexagon box", "insert", "money box", "piggy bank", "pencil box", "tea box", "wine box", "stacking trays", "tray", "organiser", "divider", "sign", "photo frame", "phone stand", "key holder", "bird house", "boxes.py"],
+    keywords: ["box", "finger joint", "tab and slot", "sliding lid", "hinged lid", "drawer", "hexagon box", "insert", "money box", "piggy bank", "pencil box", "tea box", "wine box", "stacking trays", "book box", "pierced", "fretwork", "lattice", "floral", "tray", "organiser", "divider", "sign", "photo frame", "phone stand", "key holder", "bird house", "boxes.py"],
   },
 };
 

@@ -5,7 +5,7 @@ export type NumericKey =
   | "W" | "D" | "H" | "R" | "sides" | "dia" | "cylFlats"
   | "T" | "K" | "slotW" | "slit" | "bridge" | "pitch" | "overrun" | "stretch"
   | "tabW" | "slotClr" | "lidGap" | "bedW" | "bedH" | "gap"
-  | "Ky" | "minFeature" | "lidOver" | "lidHoleD" | "lidHoleW" | "baseRingW" | "divX" | "divY" | "divH";
+  | "Ky" | "minFeature" | "lidOver" | "lidHoleD" | "lidHoleW" | "baseRingW" | "divX" | "divY" | "divH" | "fretCell" | "fretBar";
 
 /** What NumberField needs to know about a field; shared by every product. */
 export interface BaseField {
@@ -25,7 +25,7 @@ export interface BaseField {
 
 export interface FieldDef extends BaseField {
   id: NumericKey;
-  sec: "secDims" | "secMat" | "secHinge" | "secJoints" | "secLid" | "secDiv" | "secText" | "secSheet";
+  sec: "secDims" | "secMat" | "secHinge" | "secJoints" | "secLid" | "secDiv" | "secFret" | "secText" | "secSheet";
   show?: (p: Params) => boolean;
   lab?: (p: Params) => string;
   /** The value an optional setting has while the design leaves it out. */
@@ -60,6 +60,8 @@ export const FIELDS: FieldDef[] = [
   { id: "divX", label: "Across width", sec: "secDiv", step: 1, min: 0, max: 8, unset: () => 0 },
   { id: "divY", label: "Across depth", sec: "secDiv", step: 1, min: 0, max: 8, unset: () => 0 },
   { id: "divH", label: "Height", sec: "secDiv", len: true, step: 1, min: 0, max: 3000, show: p => (p.divX ?? 0) + (p.divY ?? 0) > 0, lab: () => "Height (0 = full)", unset: () => 0 },
+  { id: "fretCell", label: "Pattern size", sec: "secFret", len: true, step: 0.5, min: 6, max: 80, show: p => !!p.fret && p.fret !== "none", unset: () => 16 },
+  { id: "fretBar", label: "Bar width", sec: "secFret", len: true, step: 0.25, min: 1, max: 15, show: p => !!p.fret && p.fret !== "none", unset: () => 3 },
   { id: "bedW", label: "Bed W", sec: "secSheet", len: true, step: 10, min: 50 },
   { id: "bedH", label: "Bed H", sec: "secSheet", len: true, step: 10, min: 50 },
   { id: "gap", label: "Spacing", sec: "secSheet", len: true, step: 0.5, min: 0 },

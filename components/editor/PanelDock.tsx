@@ -20,6 +20,7 @@ import type { Units } from "./format";
 import { applyStandardSize, insideText, STANDARD_GROUPS, STANDARD_SIZES, standardSizeOf } from "@/lib/hinge/standardSizes";
 import { BASE_TEXT_FONT, BASE_TEXT_SIZE, MAX_BASE_TEXT } from "@/lib/hinge/baseText";
 import { BUNDLED_FONTS } from "@/lib/letters/fonts";
+import { FRET_KINDS, FRET_NAMES } from "@/lib/generators/fretwork";
 
 /** What the Sheet section needs from the editor: the fit result and the two setters. */
 export interface SheetProps {
@@ -229,6 +230,23 @@ export function PanelDock({
       <Sec title="Dividers" meta={(params.divX ?? 0) + (params.divY ?? 0) > 0 ? `${(params.divX ?? 0) + 1} × ${(params.divY ?? 0) + 1}` : undefined} onReset={() => onResetSection("Dividers", ["divX", "divY", "divH"])}>
         <div className="grid2">{fields("secDiv")}</div>
         <p className="note">Dividers split the inside into compartments. They stand in slots in the base, lock together where they cross, and step up onto a support ring.</p>
+      </Sec>
+      <Sec title="Cut-out pattern" meta={params.fret && params.fret !== "none" ? FRET_NAMES[params.fret] : undefined} onReset={() => onResetSection("Cut-out pattern", ["fret", "fretOn", "fretCell", "fretBar"])}>
+        <div className="rowlabel">Pattern</div>
+        <select className="sel" aria-label="Cut-out pattern" value={params.fret ?? "none"} onChange={(e) => { const next: Params = { ...params, fret: e.target.value as Params["fret"] }; if (e.target.value === "none") { delete next.fret; delete next.fretOn; } onPatch(next); }}>
+          {FRET_KINDS.map((k) => <option key={k} value={k}>{FRET_NAMES[k]}</option>)}
+        </select>
+        {params.fret && params.fret !== "none" ? (
+          <>
+            <div className="iconseg full" role="group" aria-label="Where the pattern goes">
+              {([["both", "Lid and walls"], ["lid", "Lid"], ["walls", "Walls"]] as const).map(([v, text]) => (
+                <button key={v} type="button" aria-pressed={(params.fretOn ?? "both") === v} onClick={() => onPatch({ ...params, fretOn: v })}>{text}</button>
+              ))}
+            </div>
+            <div className="grid2">{fields("secFret")}</div>
+          </>
+        ) : null}
+        <p className="note">A decorative pattern cut right through the lid and the wall&apos;s flat stretches, as on a pierced jewellery box or a lantern. Holes stay clear of the tabs, the hinge and the lid&apos;s opening.</p>
       </Sec>
       <Sec title="Text under the box" meta={params.baseText?.trim() ? "On" : undefined} onReset={() => onResetSection("Text under the box", ["baseText", "baseTextSize", "baseTextFont"])}>
         <textarea

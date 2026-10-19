@@ -61,6 +61,14 @@ export interface Params {
   baseRing?: boolean;
   /** Width of that ring, mm (missing: 8). */
   baseRingW?: number;
+  /** A decorative pattern cut through the lid and the wall's flat stretches (missing: none). */
+  fret?: import("@/lib/generators/fretwork").FretKind;
+  /** Where the pattern goes (missing: both). */
+  fretOn?: "both" | "lid" | "walls";
+  /** Pattern repeat, mm (missing: 16). */
+  fretCell?: number;
+  /** Narrowest wood between holes, mm (missing: 3). */
+  fretBar?: number;
   /** Text engraved under the box, one line per line (missing: none). */
   baseText?: string;
   /** Cap height of that text, mm (missing: 5). */
@@ -137,6 +145,8 @@ export interface WallPart {
   test?: boolean;
   /** True for an inside divider (a flat strip, no hinge). */
   divider?: boolean;
+  /** Decorative holes cut through the strip (already kerf-compensated). */
+  holes?: Point[][];
 }
 
 /** Where a divider stands in the box: on the line `axis` = `at`, from `from` to `to`, `h` tall. */
