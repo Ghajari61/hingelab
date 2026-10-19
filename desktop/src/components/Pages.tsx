@@ -138,7 +138,7 @@ export function Settings(props: {
           <input type="checkbox" checked={local.reduceMotion} onChange={(e) => set({ reduceMotion: e.target.checked })} />
         </label>
         <div className="row">
-          <button type="button" className="btn" onClick={() => setLocal({ ...DEFAULT_PREFS, sidebarCollapsed: local.sidebarCollapsed, defaultProduct: local.defaultProduct })}><RotateCcw size={14} aria-hidden />Reset these settings</button>
+          <button type="button" className="btn" onClick={() => setLocal({ ...DEFAULT_PREFS, sidebarCollapsed: local.sidebarCollapsed, openLast: local.openLast })}><RotateCcw size={14} aria-hidden />Reset these settings</button>
         </div>
       </section>
 

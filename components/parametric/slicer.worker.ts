@@ -11,7 +11,7 @@ let wasm: Promise<ManifoldToplevel> | null = null;
 function manifold() {
   wasm ??= (async () => {
     const url = "/manifold/manifold.js";
-    const mod = (await import(/* webpackIgnore: true */ url)) as { default: (o?: object) => Promise<ManifoldToplevel> };
+    const mod = (await import(/* webpackIgnore: true */ /* @vite-ignore */ url)) as { default: (o?: object) => Promise<ManifoldToplevel> };
     const w = await mod.default({ locateFile: () => "/manifold/manifold.wasm" });
     w.setup();
     return w;

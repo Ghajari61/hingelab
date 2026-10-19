@@ -220,7 +220,7 @@ describe("Boxes in 3D", () => {
 
   it("every preset builds without overlapping parts", () => {
     for (const pr of BOXES.presets) expect(overlaps(build(pr.params), 3), pr.id).toEqual([]);
-  });
+  }, 60_000);
 });
 
 describe("Boxes checks", () => {

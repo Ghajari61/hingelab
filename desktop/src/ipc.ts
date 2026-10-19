@@ -1,12 +1,12 @@
 /**
- * The app's only way out: typed calls to the Rust commands. JavaScript has no network, file or
- * token access of its own; the Rust side talks to the server and keeps the session.
+ * The window's own calls to the Rust commands (sign-in, settings, files, the website view). The
+ * shared editors use packages/platform instead. JavaScript has no network, file or token access of
+ * its own; the Rust side talks to the server and keeps the session.
  */
 import { invoke } from "@tauri-apps/api/core";
-import type { DCatalog, DesktopAccount, GenerateRequest, GenerateResponse, TraceRequest, TraceResponse } from "../../lib/desktop/types";
-import type { AIDesign, AIDesignRequest } from "../../lib/ai/types";
+import type { DesktopAccount } from "@/lib/desktop/types";
 
-export type { DCatalog, DesktopAccount, GenerateRequest, GenerateResponse };
+export type { DesktopAccount };
 
 export interface AppError {
   kind: "unauthorized" | "update_required" | "rate_limited" | "network" | "server" | "invalid" | "forbidden" | "cancelled" | "timeout" | "storage" | "io" | "not_found";
@@ -34,16 +34,7 @@ export interface Prefs {
   recentMax: number;
 }
 
-export interface ProjectSaved { path: string | null; name: string | null }
-/** `text` is the JSON project; null for a Studio project (a ZIP). */
-export interface OpenedProject { path: string; name: string; text: string | null }
 export interface RecentProject { path: string; name: string; exists: boolean }
-/** A picked picture: an SVG file's text, or a photo or drawing in base64 with its type. */
-export interface PickedPicture { name: string; svg: string | null; data: string | null; mime: string | null }
-
-export type Generated = { status: number; body: GenerateResponse & { designId?: number } };
-
-export type ExportAs = "dxf" | "pdf" | "lbrn2";
 
 export type WebPage = "upgrade" | "manage" | "account" | "help" | "signup" | "home" | "privacy" | "terms";
 
@@ -66,18 +57,6 @@ export const ipc = {
   cancelSignIn: () => call<void>("cancel_sign_in"),
   signOut: () => call<void>("sign_out"),
   me: () => call<DesktopAccount>("me"),
-  /** The catalog with the newer products (Letters, Parametric) listed with the others. */
-  catalog: () => call<DCatalog>("catalog").then((c) => ({ ...c, products: [...c.products, ...(c.more ?? []).filter((m) => !c.products.some((p) => p.id === m.id))], more: [] })),
-  generate: (request: GenerateRequest) => call<Generated>("generate", { request }),
-  aiDesign: (request: AIDesignRequest) => call<AIDesign>("ai_design", { request }),
-  keepSvg: (svg: string, fileName: string) => call<number>("keep_svg", { svg, fileName }),
-  saveDesign: (designId: number) => call<{ path: string | null }>("save_design", { designId }),
-  exportDesign: (designId: number) => call<{ path: string | null }>("export_design", { designId }),
-  /** DXF, PDF or LightBurn, converted on the server from the design's SVG. */
-  exportDesignAs: (designId: number, format: ExportAs) => call<{ path: string | null }>("export_design_as", { designId, format }),
-  /** A picture for a generator, picked in the Windows dialog (null when closed). */
-  pickPicture: () => call<PickedPicture | null>("pick_picture"),
-  tracePicture: (request: TraceRequest) => call<TraceResponse>("trace_picture", { request }),
   revealFile: (path: string) => call<void>("reveal_file", { path }),
   openWeb: (page: WebPage) => call<void>("open_web", { page }),
   getPrefs: () => call<Prefs>("get_prefs"),
@@ -85,9 +64,6 @@ export const ipc = {
   setExportPrefs: (clearFolder: boolean, openAfterExport: boolean) => call<Prefs>("set_export_prefs", { clearFolder, openAfterExport }),
   chooseProjectFolder: () => call<Prefs>("choose_project_folder"),
   setProjectPrefs: (clearFolder: boolean, recentMax: number) => call<Prefs>("set_project_prefs", { clearFolder, recentMax }),
-  saveProject: (content: string, name: string, path: string | null) => call<ProjectSaved>("save_project", { content, name, path }),
-  saveProjectAs: (content: string, name: string) => call<ProjectSaved>("save_project_as", { content, name }),
-  openProject: (path: string | null) => call<OpenedProject | null>("open_project", { path }),
   /** Hands a project to the website view; returns the page to open there. */
   webOpenFile: (path: string) => call<string>("web_open_file", { path }),
   recentProjects: () => call<RecentProject[]>("recent_projects"),

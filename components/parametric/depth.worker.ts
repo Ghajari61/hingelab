@@ -47,7 +47,7 @@ let session: Promise<{ ort: typeof OrtT; s: OrtT.InferenceSession; ep: string }>
 function load(id: number) {
   session ??= (async () => {
     const url = "/ort/ort.webgpu.min.mjs";
-    const ort = (await import(/* webpackIgnore: true */ url)) as typeof OrtT;
+    const ort = (await import(/* webpackIgnore: true */ /* @vite-ignore */ url)) as typeof OrtT;
     ort.env.wasm.wasmPaths = "/ort/";
     ort.env.wasm.numThreads = self.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
     const model = await fetchModel(id);

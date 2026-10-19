@@ -1,4 +1,3 @@
-import "./harden";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { setPlatform } from "@hingelab/platform";

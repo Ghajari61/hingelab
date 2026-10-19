@@ -27,24 +27,6 @@ pub fn is_project_path(p: &Path) -> bool {
     p.extension().and_then(|e| e.to_str()).is_some_and(|e| OPEN_EXTS.iter().any(|x| x.eq_ignore_ascii_case(e)))
 }
 
-/// The path with an .oclc extension (a user may type a name without one, or another one).
-pub fn with_oclc_extension(p: PathBuf) -> PathBuf {
-    match p.extension().and_then(|e| e.to_str()) {
-        Some(e) if e.eq_ignore_ascii_case("oclc") => p,
-        _ => {
-            let mut s = p.into_os_string();
-            s.push(".oclc");
-            PathBuf::from(s)
-        }
-    }
-}
-
-/// "Gift box" → "Gift box.oclc", Windows-safe.
-pub fn project_file_name(name: &str) -> String {
-    let svg = crate::files::safe_file_name(name.trim_end_matches(".oclc"));
-    format!("{}.oclc", svg.trim_end_matches(".svg"))
-}
-
 /// How many files Recent keeps: the user's choice in Settings (3 to 30), `MAX_RECENT` when unset.
 pub fn recent_limit(n: usize) -> usize {
     if n == 0 { MAX_RECENT } else { n.clamp(3, 30) }
@@ -76,23 +58,6 @@ pub fn read_project(path: &Path) -> CmdResult<Vec<u8>> {
     Ok(bytes)
 }
 
-pub fn write_project(path: &Path, text: &str) -> CmdResult<()> {
-    if text.len() as u64 > MAX_PROJECT || !looks_like_project(text.as_bytes()) {
-        return Err(CmdError::new("invalid", "This design cannot be saved as a project."));
-    }
-    // Write next to the file, then replace it, so a failed save never leaves half a project.
-    let tmp = path.with_extension("oclc.saving");
-    let fail = |e: std::io::Error| {
-        let msg = if e.kind() == std::io::ErrorKind::PermissionDenied { "Windows did not allow saving there. Pick another folder." } else { "The project could not be saved." };
-        CmdError::new("io", msg)
-    };
-    std::fs::write(&tmp, text.as_bytes()).map_err(fail)?;
-    std::fs::rename(&tmp, path).map_err(|e| {
-        let _ = std::fs::remove_file(&tmp);
-        fail(e)
-    })
-}
-
 /// The project file among a launch's arguments (a double-clicked file), made absolute.
 pub fn project_arg<I: IntoIterator<Item = String>>(args: I, cwd: &Path) -> Option<PathBuf> {
     args.into_iter().skip(1).map(PathBuf::from).filter(|p| is_project_path(p)).map(|p| if p.is_absolute() { p } else { cwd.join(p) }).find(|p| p.is_file())
@@ -115,13 +80,6 @@ mod tests {
 
     #[test]
     fn names_and_paths() {
-        assert_eq!(project_file_name("Gift box"), "Gift box.oclc");
-        assert_eq!(project_file_name("Gift box.oclc"), "Gift box.oclc");
-        assert_eq!(project_file_name("a/b:c"), "a b c.oclc");
-        assert_eq!(project_file_name(""), "design.oclc");
-        assert_eq!(with_oclc_extension(PathBuf::from("C:/x/a")), PathBuf::from("C:/x/a.oclc"));
-        assert_eq!(with_oclc_extension(PathBuf::from("C:/x/a.OCLC")), PathBuf::from("C:/x/a.OCLC"));
-        assert_eq!(with_oclc_extension(PathBuf::from("C:/x/a.exe")), PathBuf::from("C:/x/a.exe.oclc"));
         assert!(is_project_path(Path::new("C:/x/a.oclc")));
         assert!(is_project_path(Path::new("C:/x/a.hingelab.json")));
         assert!(!is_project_path(Path::new("C:/x/a.svg")));
@@ -149,9 +107,8 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("hingelab-proj-{}", crate::api::now()));
         std::fs::create_dir_all(&dir).unwrap();
         let p = dir.join("a.oclc");
-        write_project(&p, "{\"app\":\"HingeLab\",\"params\":{}}").unwrap();
+        std::fs::write(&p, "{\"app\":\"HingeLab\",\"params\":{}}").unwrap();
         assert_eq!(read_project(&p).unwrap(), b"{\"app\":\"HingeLab\",\"params\":{}}");
-        assert!(write_project(&p, "not json").is_err());
         std::fs::write(dir.join("b.oclc"), "MZ").unwrap();
         assert!(read_project(&dir.join("b.oclc")).is_err());
         assert!(read_project(&dir.join("missing.oclc")).is_err());

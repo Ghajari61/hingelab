@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { platform, setPlatform, webPlatform, type Platform } from "..";
-import { editorPath, isEditorProduct, matchRoute, productFromPath } from "@hingelab/app/routes";
+import { editorPath, isEditorProduct, matchRoute, productFromPath, productHref } from "@hingelab/app/routes";
 
 /** Every implementation offers the whole interface. */
 function contract(p: Platform) {
@@ -48,5 +48,12 @@ describe("routes, the same on both platforms", () => {
     expect(matchRoute("/generators")).toEqual({ page: "generators" });
     expect(matchRoute("/projects")).toEqual({ page: "projects" });
     expect(matchRoute("/account")).toEqual({ page: "account" });
+  });
+
+  it("put a product's editor at /editor/<product> in the app and keep the website's address", () => {
+    expect(productHref("clock", "tauri")).toBe("/editor/clock");
+    expect(productHref("clock", "web")).toBe("/app/editor/local?p=clock");
+    expect(productHref(null, "web")).toBe("/app/editor/local");
+    expect(matchRoute("/app/editor/local")).toEqual({ page: "start" });
   });
 });

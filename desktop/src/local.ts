@@ -1,40 +1,17 @@
 /**
- * Preferences and lists kept on this computer (localStorage). Only harmless data: settings,
- * design parameters, small preview pictures and the last catalog. No tokens, no plan decisions, no SVG.
+ * The window's preferences and lists kept on this computer (localStorage). Only harmless data:
+ * settings, starred designs and the last account summary. No tokens, no plan decisions, no files.
+ * The shared editors keep their own autosaves, as on the website.
  */
 import { useCallback, useEffect, useState } from "react";
-import type { DCatalog, DesktopAccount } from "./ipc";
+import type { DesktopAccount } from "./ipc";
 
 export type Theme = "system" | "light" | "dark";
-export type Units = "mm" | "in";
-export type SheetTone = "plywood" | "grey" | "white" | "dark";
-export type Shade3D = "shaded" | "edges";
 
 export interface LocalPrefs {
   theme: Theme;
-  units: Units;
   autoCheckUpdates: boolean;
-  /** Open new designs with the last settings used for that product instead of its defaults. */
-  reuseLastSettings: boolean;
-  defaultProduct: string;
   sidebarCollapsed: boolean;
-  /** Colour of the sheet behind the preview (display only; the saved file is unchanged). */
-  sheetTone: SheetTone;
-  /** 10 mm grid drawn on the sheet. */
-  sheetGrid: boolean;
-  /** The workspace shows the assembled design in 3D instead of the sheet. */
-  view3d: boolean;
-  /** Four 3D views (Top, Front, Left, Perspective) rather than one. */
-  view3dQuad: boolean;
-  view3dShade: Shade3D;
-  /** Overall dimensions drawn on the 3D views. */
-  view3dDims: boolean;
-  /** Decimals in the 3D dimension labels (inches get one more). */
-  decimals: 0 | 1 | 2;
-  /** How designs open: as last time, on the sheet or in 3D. */
-  openIn: OpenIn;
-  /** Reset all settings asks first. */
-  confirmReset: boolean;
   /** Interface zoom, percent. */
   uiZoom: UiZoom;
   /** Menus and panels appear without animation. */
@@ -43,21 +20,10 @@ export interface LocalPrefs {
   openLast: boolean;
 }
 
-export type OpenIn = "last" | "2d" | "3d";
 export const UI_ZOOMS = [90, 100, 110, 125] as const;
 export type UiZoom = (typeof UI_ZOOMS)[number];
 
-export interface SavedDesign {
-  id: string;
-  product: string;
-  name: string;
-  params: Record<string, unknown>;
-  summary: string;
-  /** A small WebP data URL of the last preview. */
-  thumb?: string;
-  at: number;
-}
-
+/** A design or preset starred in versions before 1.1 (still listed and opened in Project files). */
 export interface Favorite {
   id: string;
   product: string;
@@ -69,19 +35,8 @@ export interface Favorite {
   at: number;
 }
 
-/** A sheet the user cuts often: its thickness and kerf, mm. */
-export interface MyMaterial {
-  id: string;
-  name: string;
-  T: number;
-  K: number;
-}
-
-const KEYS = { materials: "hl-materials-v1", prefs: "hl-prefs-v1", recent: "hl-recent-v1", favorites: "hl-favorites-v1", last: "hl-last-v1", catalog: "hl-catalog-v1", account: "hl-account-v1", locks: "hl-locks-v1" };
-export const DEFAULT_PREFS: LocalPrefs = { theme: "system", units: "mm", autoCheckUpdates: true, reuseLastSettings: true, defaultProduct: "hinge", sidebarCollapsed: false, sheetTone: "plywood", sheetGrid: true, view3d: false, view3dQuad: true, view3dShade: "shaded", view3dDims: true, decimals: 1, openIn: "last", confirmReset: true, uiZoom: 100, reduceMotion: false, openLast: false };
-const MAX_RECENT = 24;
-const MAX_ITEM = 300_000;
-const MAX_LIST = 3_500_000;
+const KEYS = { prefs: "hl-prefs-v1", favorites: "hl-favorites-v1", account: "hl-account-v1" };
+export const DEFAULT_PREFS: LocalPrefs = { theme: "system", autoCheckUpdates: true, sidebarCollapsed: false, uiZoom: 100, reduceMotion: false, openLast: false };
 
 function read<T>(key: string, fallback: T): T {
   try {
@@ -125,64 +80,11 @@ const EMPTY: never[] = [];
 export const usePrefs = () => {
   const [p, set] = useStored<LocalPrefs>(KEYS.prefs, DEFAULT_PREFS);
   const prefs = { ...DEFAULT_PREFS, ...p };
-  // Older versions also saved "wire".
-  if (prefs.view3dShade !== "edges") prefs.view3dShade = "shaded";
-  if (prefs.decimals !== 0 && prefs.decimals !== 2) prefs.decimals = 1;
-  if (prefs.openIn !== "2d" && prefs.openIn !== "3d") prefs.openIn = "last";
   if (!UI_ZOOMS.includes(prefs.uiZoom)) prefs.uiZoom = 100;
   return [prefs, set] as const;
 };
-export const useRecent = () => useStored<SavedDesign[]>(KEYS.recent, EMPTY);
 export const useFavorites = () => useStored<Favorite[]>(KEYS.favorites, EMPTY);
-export const useMyMaterials = () => useStored<MyMaterial[]>(KEYS.materials, EMPTY);
-export const MAX_MY_MATERIALS = 40;
 
-const NO_LOCKS: Record<string, string[]> = {};
-/** The settings Randomise keeps, per product. */
-export function useLocks(product: string | null) {
-  const [all, set] = useStored<Record<string, string[]>>(KEYS.locks, NO_LOCKS);
-  const list = product && Array.isArray(all[product]) ? all[product] : EMPTY;
-  const toggle = useCallback((key: string) => {
-    if (!product) return;
-    set((old) => {
-      const cur = Array.isArray(old[product]) ? old[product] : [];
-      return { ...old, [product]: cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key].slice(-200) };
-    });
-  }, [product, set]);
-  return { list: list as string[], has: (key: string) => list.includes(key as never), toggle };
-}
-
-/** The newest entries that fit in storage (`write` skips a list that is too large). */
-function fitList<T>(list: T[]): T[] {
-  let out = list;
-  while (out.length > 1 && JSON.stringify(out).length > MAX_LIST) out = out.slice(0, -1);
-  return out;
-}
-
-export function addRecent(list: SavedDesign[], d: Omit<SavedDesign, "id" | "at">): SavedDesign[] {
-  if (JSON.stringify(d.params).length > MAX_ITEM) return list;
-  const same = (x: SavedDesign) => x.product === d.product && x.name === d.name;
-  const prev = list.find(same);
-  return fitList([{ thumb: prev?.thumb, ...d, id: prev?.id ?? crypto.randomUUID(), at: Date.now() }, ...list.filter((x) => !same(x))].slice(0, MAX_RECENT));
-}
-
-export function setRecentThumb(list: SavedDesign[], product: string, name: string, thumb: string): SavedDesign[] {
-  return fitList(list.map((x) => (x.product === product && x.name === name ? { ...x, thumb } : x)));
-}
-
-/** Last settings per product. */
-export const lastParams = (product: string) => read<Record<string, Record<string, unknown>>>(KEYS.last, {})[product] ?? null;
-export function rememberParams(product: string, params: Record<string, unknown>) {
-  if (JSON.stringify(params).length > MAX_ITEM) return;
-  write(KEYS.last, { ...read<Record<string, unknown>>(KEYS.last, {}), [product]: params });
-}
-
-/** The last catalog and account, so the app opens instantly and offline. The server re-checks everything. */
-export const cachedCatalog = () => read<DCatalog | null>(KEYS.catalog, null);
-export const cacheCatalog = (c: DCatalog) => write(KEYS.catalog, c);
+/** The last account, so the window opens instantly and offline. The server re-checks everything. */
 export const cachedAccount = () => read<DesktopAccount | null>(KEYS.account, null);
 export const cacheAccount = (a: DesktopAccount | null) => (a ? write(KEYS.account, a) : localStorage.removeItem(KEYS.account));
-
-export function clearLocalAccountData() {
-  localStorage.removeItem(KEYS.account);
-}

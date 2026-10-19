@@ -1,4 +1,4 @@
-import { cpSync, createReadStream, existsSync, statSync } from "node:fs";
+import { cpSync, createReadStream, existsSync, readFileSync, statSync } from "node:fs";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
@@ -36,6 +36,26 @@ function sharedPublic(): Plugin {
 }
 
 /**
+ * Next.js server actions (`app/**\/actions.ts`) run on the website's server; in the app each one
+ * becomes a stub with the same name that answers "on the website", so no server code is bundled.
+ */
+function serverActionStubs(): Plugin {
+  const slash = (s: string) => s.replace(/\\/g, "/").toLowerCase();
+  const isAction = (id: string) => /\/app\/.*actions\.ts$/.test(slash(id)) && slash(id).startsWith(slash(repo));
+  return {
+    name: "hingelab-server-action-stubs",
+    enforce: "pre",
+    load(id) {
+      const file = id.split("?")[0];
+      if (!isAction(file)) return null;
+      const names = [...readFileSync(file, "utf8").matchAll(/export\s+async\s+function\s+(\w+)/g)].map((m) => m[1]);
+      const body = names.map((n) => `export async function ${n}() { return { ok: false, error: ONLINE }; }`).join("\n");
+      return `const ONLINE = "This is done on the HingeLab website. Open it from Online in the sidebar.";\n${body}\n`;
+    },
+  };
+}
+
+/**
  * The app's UI: the website's editors (packages/app, components/, lib/) and the Windows shell,
  * bundled with the window. No server code and no secrets: scripts/desktop/scan.mjs checks the output.
  */
@@ -43,7 +63,7 @@ export default defineConfig(({ mode }) => ({
   root: __dirname,
   base: "./",
   publicDir: false,
-  plugins: [react(), sharedPublic()],
+  plugins: [serverActionStubs(), react(), sharedPublic()],
   clearScreen: false,
   server: { port: 5174, strictPort: true, host: "localhost", fs: { allow: [repo] } },
   envPrefix: ["HINGELAB_PUBLIC_"],

@@ -35,7 +35,7 @@ let hbPromise: Promise<HarfBuzz> | null = null;
 /** HarfBuzz is copied to /hb by scripts/copy-wasm.js and loaded as a native ES module. */
 export function loadHarfBuzz(): Promise<HarfBuzz> {
   const url = "/hb/index.mjs";
-  hbPromise ??= import(/* webpackIgnore: true */ url) as Promise<HarfBuzz>;
+  hbPromise ??= import(/* webpackIgnore: true */ /* @vite-ignore */ url) as Promise<HarfBuzz>;
   hbPromise.catch(() => { hbPromise = null; });
   return hbPromise;
 }

@@ -28,10 +28,7 @@ use url::Url;
 
 use api::Api;
 use error::{CmdError, CmdResult};
-use files::{Design, Files, Prefs};
-
-/// Settings for one design are a few kB; custom outlines and traced pictures are larger.
-const MAX_REQUEST: usize = 1024 * 1024;
+use files::{Files, Prefs};
 
 struct AppState {
     api: Api,
@@ -101,102 +98,12 @@ fn cancel_sign_in() {
 async fn sign_out(app: AppHandle, state: State<'_, AppState>) -> CmdResult<()> {
     state.api.sign_out().await;
     web::sign_out(&app, &state);
-    let mut f = state.files.lock().unwrap();
-    f.last = None;
     Ok(())
 }
 
 #[tauri::command]
 async fn me(state: State<'_, AppState>) -> CmdResult<Value> {
     Ok(state.api.call(Method::GET, "/api/desktop/me", None, &[]).await?.1)
-}
-
-#[tauri::command]
-async fn catalog(state: State<'_, AppState>) -> CmdResult<Value> {
-    Ok(state.api.call(Method::GET, "/api/desktop/catalog", None, &[]).await?.1)
-}
-
-#[derive(Serialize)]
-struct Generated {
-    status: u16,
-    body: Value,
-}
-
-/// Builds a design on the server. A buildable design comes back with an id that Save and Export use.
-#[tauri::command]
-async fn generate(request: Value, state: State<'_, AppState>) -> CmdResult<Generated> {
-    if !request.is_object() || serde_json::to_vec(&request).map(|v| v.len()).unwrap_or(usize::MAX) > MAX_REQUEST {
-        return Err(CmdError::new("invalid", "These settings are too large."));
-    }
-    let (status, mut body) = state.api.call(Method::POST, "/api/desktop/generate", Some(&request), &[400, 403, 422]).await?;
-    if !body.get("product").is_some_and(|p| p.is_string()) {
-        let msg = body.get("message").and_then(|m| m.as_str()).unwrap_or("The request was not accepted.").to_string();
-        return Err(CmdError::new("invalid", msg).with_status(status));
-    }
-    let mut files = state.files.lock().unwrap();
-    files.last = None;
-    let svg = body.get("svg").and_then(|s| s.as_str()).filter(|s| status == 200 && files::looks_like_svg(s)).map(str::to_owned);
-    if let Some(svg) = svg {
-        files.next_id += 1;
-        let id = files.next_id;
-        let file_name = files::safe_file_name(body.get("fileName").and_then(|s| s.as_str()).unwrap_or("design"));
-        files.last = Some(Design { id, svg, file_name });
-        body["designId"] = json!(id);
-    }
-    Ok(Generated { status, body })
-}
-
-/// The AI designer's request: a description and a photo the UI shrank to 1024 px.
-const MAX_AI_REQUEST: usize = 1536 * 1024;
-
-/// A drawn design is drawn, checked and redrawn on the server, which may take up to 180 s.
-const AI_WAIT: std::time::Duration = std::time::Duration::from_secs(190);
-
-/// Asks the AI designer for a design. A product design comes back as settings (and the cut file's
-/// preview) that the workspace then opens and builds like any other design; a drawn design comes
-/// back as its finished cut file.
-#[tauri::command]
-async fn ai_design(request: Value, state: State<'_, AppState>) -> CmdResult<Value> {
-    if !request.is_object() || serde_json::to_vec(&request).map(|v| v.len()).unwrap_or(usize::MAX) > MAX_AI_REQUEST {
-        return Err(CmdError::new("invalid", "This photo is too large."));
-    }
-    let (status, body) = state.api.call_within(Method::POST, "/api/desktop/ai", Some(&request), &[400, 413, 429, 502, 503], Some(AI_WAIT)).await?;
-    if status != 200 || !body.get("product").is_some_and(|p| p.is_string()) {
-        let msg: String = body.get("message").and_then(|m| m.as_str()).unwrap_or("The design could not be made. Try again.").chars().take(300).collect();
-        let kind = match status {
-            429 => "rate_limited",
-            502 | 503 => "server",
-            _ => "invalid",
-        };
-        return Err(CmdError::new(kind, msg).with_status(status));
-    }
-    Ok(body)
-}
-
-/// Largest drawn design the AI page hands over for saving, bytes.
-const MAX_KEPT_SVG: usize = 8 * 1024 * 1024;
-
-/// Makes a drawn AI design (which has no workspace product to rebuild it) the one Save and Export
-/// write, and returns its id.
-#[tauri::command]
-fn keep_svg(svg: String, file_name: String, state: State<'_, AppState>) -> CmdResult<u64> {
-    if svg.len() > MAX_KEPT_SVG || !files::looks_like_svg(&svg) {
-        return Err(CmdError::new("invalid", "This design cannot be saved."));
-    }
-    let mut files = state.files.lock().unwrap();
-    files.next_id += 1;
-    let id = files.next_id;
-    files.last = Some(Design { id, svg, file_name: files::safe_file_name(&file_name) });
-    Ok(id)
-}
-
-fn design(state: &AppState, id: u64) -> CmdResult<Design> {
-    let files = state.files.lock().unwrap();
-    files.last.clone().filter(|d| d.id == id).ok_or_else(|| CmdError::new("not_found", "This design changed. Wait for the preview to update, then save again."))
-}
-
-async fn save_dialog(app: &AppHandle, file_name: &str, dir: Option<String>) -> Option<PathBuf> {
-    save_dialog_for(app, file_name, dir, "Save SVG", "SVG drawing", "svg").await
 }
 
 async fn save_dialog_for(app: &AppHandle, file_name: &str, dir: Option<String>, title: &str, filter: &str, ext: &str) -> Option<PathBuf> {
@@ -219,163 +126,6 @@ fn remember_saved(state: &AppState, path: &PathBuf) {
     let mut prefs = state.prefs.lock().unwrap();
     prefs.last_dir = path.parent().map(|p| p.to_string_lossy().into_owned());
     let _ = files::save_prefs(&state.prefs_dir, &prefs);
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Saved {
-    path: Option<String>,
-}
-
-/// Save As: the user picks the place in the Windows dialog.
-#[tauri::command]
-async fn save_design(design_id: u64, app: AppHandle, state: State<'_, AppState>) -> CmdResult<Saved> {
-    let d = design(&state, design_id)?;
-    let last_dir = state.prefs.lock().unwrap().last_dir.clone();
-    let Some(path) = save_dialog(&app, &d.file_name, last_dir).await else { return Ok(Saved { path: None }) };
-    let path = files::with_svg_extension(path);
-    files::write_svg(&path, &d.svg)?;
-    remember_saved(&state, &path);
-    Ok(Saved { path: Some(path.to_string_lossy().into_owned()) })
-}
-
-/// Export: straight into the export folder from Settings (or Save As when none is set).
-#[tauri::command]
-async fn export_design(design_id: u64, app: AppHandle, state: State<'_, AppState>) -> CmdResult<Saved> {
-    let d = design(&state, design_id)?;
-    let (dir, open_after) = {
-        let p = state.prefs.lock().unwrap();
-        (p.export_dir.clone().map(PathBuf::from).filter(|d| d.is_dir()), p.open_after_export)
-    };
-    let path = match dir {
-        Some(dir) => files::unique_in(&dir, &d.file_name),
-        None => {
-            let last_dir = state.prefs.lock().unwrap().last_dir.clone();
-            match save_dialog(&app, &d.file_name, last_dir).await {
-                Some(p) => files::with_svg_extension(p),
-                None => return Ok(Saved { path: None }),
-            }
-        }
-    };
-    files::write_svg(&path, &d.svg)?;
-    remember_saved(&state, &path);
-    if open_after {
-        let _ = app.opener().reveal_item_in_dir(&path);
-    }
-    Ok(Saved { path: Some(path.to_string_lossy().into_owned()) })
-}
-
-/// Largest design the server converts to another format, bytes (its request limit).
-const MAX_CONVERT: usize = 4 * 1024 * 1024;
-
-/// Export as DXF, PDF or LightBurn: the server converts the design's SVG (the one it made, held
-/// here by id) and the file goes to the export folder, or where the user picks when none is set.
-#[tauri::command]
-async fn export_design_as(design_id: u64, format: String, app: AppHandle, state: State<'_, AppState>) -> CmdResult<Saved> {
-    let Some((ext, filter)) = files::export_format(&format) else { return Err(CmdError::new("invalid", "Unknown file format.")) };
-    let d = design(&state, design_id)?;
-    if d.svg.len() > MAX_CONVERT {
-        return Err(CmdError::new("invalid", "This design is too large to convert. Export the SVG instead."));
-    }
-    let request = json!({ "svg": d.svg, "format": format, "fileName": d.file_name });
-    let (status, body) = state.api.call(Method::POST, "/api/desktop/convert", Some(&request), &[400, 413, 422]).await?;
-    let data = body.get("data").and_then(|s| s.as_str()).filter(|_| status == 200);
-    let Some(data) = data else {
-        let msg: String = body.get("message").and_then(|m| m.as_str()).unwrap_or("The file could not be made.").chars().take(300).collect();
-        return Err(CmdError::new("invalid", msg).with_status(status));
-    };
-    let bytes = if body.get("base64").and_then(|b| b.as_bool()) == Some(true) {
-        base64::engine::general_purpose::STANDARD.decode(data).map_err(|_| CmdError::new("invalid", "The file could not be made."))?
-    } else {
-        data.as_bytes().to_vec()
-    };
-    if !files::looks_like(&format, &bytes) {
-        return Err(CmdError::new("invalid", "The file could not be made."));
-    }
-    let file_name = files::renamed(&d.file_name, ext);
-    let (dir, open_after) = {
-        let p = state.prefs.lock().unwrap();
-        (p.export_dir.clone().map(PathBuf::from).filter(|d| d.is_dir()), p.open_after_export)
-    };
-    let path = match dir {
-        Some(dir) => files::unique_in(&dir, &file_name),
-        None => {
-            let last_dir = state.prefs.lock().unwrap().last_dir.clone();
-            let title = format!("Save {}", filter.split(' ').next().unwrap_or("file"));
-            match save_dialog_for(&app, &file_name, last_dir, &title, filter, ext).await {
-                Some(p) => files::with_extension_of(p, ext),
-                None => return Ok(Saved { path: None }),
-            }
-        }
-    };
-    files::write_bytes(&path, &bytes)?;
-    remember_saved(&state, &path);
-    if open_after {
-        let _ = app.opener().reveal_item_in_dir(&path);
-    }
-    Ok(Saved { path: Some(path.to_string_lossy().into_owned()) })
-}
-
-/// Largest picture file read for a generator, bytes.
-const MAX_PICTURE: u64 = 15 * 1024 * 1024;
-/// Largest SVG file read for a generator, bytes (the server's limit).
-const MAX_PICTURE_SVG: u64 = 2 * 1024 * 1024;
-/// The trace request: a grey picture of at most 600 × 600 px in base64, or an SVG file.
-const MAX_TRACE: usize = MAX_PICTURE_SVG as usize + 64 * 1024;
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Picture {
-    name: String,
-    /// The SVG file's text.
-    svg: Option<String>,
-    /// A photo or drawing: the file in base64 and its type, which the UI decodes and shrinks.
-    data: Option<String>,
-    mime: Option<String>,
-}
-
-/// A picture for a generator, picked in the Windows dialog. None when the dialog is closed.
-#[tauri::command]
-async fn pick_picture(app: AppHandle, state: State<'_, AppState>) -> CmdResult<Option<Picture>> {
-    let (tx, rx) = oneshot::channel();
-    let mut b = app.dialog().file().set_title("Choose a picture").add_filter("Pictures", &["jpg", "jpeg", "png", "webp", "bmp", "gif", "svg"]);
-    if let Some(w) = app.get_webview_window("main") {
-        b = b.set_parent(&w);
-    }
-    if let Some(d) = project_dir(&state) {
-        b = b.set_directory(d);
-    }
-    b.pick_file(move |p| {
-        let _ = tx.send(p.and_then(|p| p.into_path().ok()));
-    });
-    let Some(path) = rx.await.ok().flatten() else { return Ok(None) };
-    let Some(mime) = files::picture_type(&path) else { return Err(CmdError::new("invalid", "Choose a JPEG, PNG, WebP, BMP, GIF or SVG file.")) };
-    let size = std::fs::metadata(&path).map_err(|_| CmdError::new("io", "Could not read that file."))?.len();
-    let svg = mime == "image/svg+xml";
-    if size > if svg { MAX_PICTURE_SVG } else { MAX_PICTURE } {
-        return Err(CmdError::new("invalid", if svg { "That SVG is larger than 2 MB. Simplify it and try again." } else { "That picture is larger than 15 MB." }));
-    }
-    let bytes = std::fs::read(&path).map_err(|_| CmdError::new("io", "Could not read that file."))?;
-    let name = path.file_stem().map(|n| n.to_string_lossy().chars().take(80).collect()).unwrap_or_default();
-    if svg {
-        let text = String::from_utf8(bytes).map_err(|_| CmdError::new("invalid", "That SVG file is not text."))?;
-        return Ok(Some(Picture { name, svg: Some(text), data: None, mime: None }));
-    }
-    Ok(Some(Picture { name, svg: None, data: Some(base64::engine::general_purpose::STANDARD.encode(&bytes)), mime: Some(mime.to_string()) }))
-}
-
-/// Traces a picture the UI shrank (or an SVG file) on the server into a generator's outlines.
-#[tauri::command]
-async fn trace_picture(request: Value, state: State<'_, AppState>) -> CmdResult<Value> {
-    if !request.is_object() || serde_json::to_vec(&request).map(|v| v.len()).unwrap_or(usize::MAX) > MAX_TRACE {
-        return Err(CmdError::new("invalid", "This picture is too large."));
-    }
-    let (status, body) = state.api.call(Method::POST, "/api/desktop/trace", Some(&request), &[400, 413, 422]).await?;
-    if status != 200 || !body.get("levels").is_some_and(|l| l.is_string()) {
-        let msg: String = body.get("message").and_then(|m| m.as_str()).unwrap_or("The picture could not be traced.").chars().take(300).collect();
-        return Err(CmdError::new("invalid", msg).with_status(status));
-    }
-    Ok(body)
 }
 
 /// Shows a file saved in this session in Explorer (no other paths).
@@ -432,22 +182,6 @@ fn set_export_prefs(clear_folder: bool, open_after_export: bool, state: State<'_
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct ProjectSaved {
-    path: Option<String>,
-    name: Option<String>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct OpenedProject {
-    path: String,
-    name: String,
-    /// The file as text when it is a JSON project; None for a Studio (ZIP) project.
-    text: Option<String>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
 struct RecentProject {
     path: String,
     name: String,
@@ -500,21 +234,6 @@ fn set_project_prefs(clear_folder: bool, recent_max: usize, state: State<'_, App
     Ok(prefs.clone())
 }
 
-async fn project_save_dialog(app: &AppHandle, file_name: &str, dir: Option<String>) -> Option<PathBuf> {
-    let (tx, rx) = oneshot::channel();
-    let mut b = app.dialog().file().set_title("Save project").set_file_name(file_name).add_filter("HingeLab project", &["oclc"]);
-    if let Some(w) = app.get_webview_window("main") {
-        b = b.set_parent(&w);
-    }
-    if let Some(d) = dir {
-        b = b.set_directory(d);
-    }
-    b.save_file(move |p| {
-        let _ = tx.send(p.and_then(|p| p.into_path().ok()));
-    });
-    rx.await.ok().flatten().map(projects::with_oclc_extension)
-}
-
 async fn project_open_dialog(app: &AppHandle, dir: Option<String>) -> Option<PathBuf> {
     let (tx, rx) = oneshot::channel();
     let mut b = app.dialog().file().set_title("Open project").add_filter("HingeLab project", projects::OPEN_EXTS);
@@ -538,56 +257,6 @@ fn remember_project(state: &AppState, path: &Path) {
     let max = prefs.recent_max;
     projects::push_recent(&mut prefs.recent_files, path, max);
     let _ = files::save_prefs(&state.prefs_dir, &prefs);
-}
-
-async fn write_project_to(target: Option<PathBuf>, content: &str, name: &str, app: &AppHandle, state: &AppState) -> CmdResult<ProjectSaved> {
-    let target = match target {
-        Some(p) => p,
-        None => match project_save_dialog(app, &projects::project_file_name(name), project_dir(state)).await {
-            Some(p) => p,
-            None => return Ok(ProjectSaved { path: None, name: None }),
-        },
-    };
-    projects::write_project(&target, content)?;
-    remember_project(state, &target);
-    Ok(ProjectSaved { name: Some(file_name_of(&target)), path: Some(target.to_string_lossy().into_owned()) })
-}
-
-/// Save: writes over the design's project file when it was opened or saved in this session,
-/// otherwise asks where (like Save As).
-#[tauri::command]
-async fn save_project(content: String, name: String, path: Option<String>, app: AppHandle, state: State<'_, AppState>) -> CmdResult<ProjectSaved> {
-    let known = path.map(PathBuf::from).filter(|p| state.files.lock().unwrap().projects.contains(p));
-    write_project_to(known, &content, &name, &app, &state).await
-}
-
-/// Save As: always asks where.
-#[tauri::command]
-async fn save_project_as(content: String, name: String, app: AppHandle, state: State<'_, AppState>) -> CmdResult<ProjectSaved> {
-    write_project_to(None, &content, &name, &app, &state).await
-}
-
-/// Opens a project file: one from the Recent list or this session, or one picked in the dialog.
-#[tauri::command]
-async fn open_project(path: Option<String>, app: AppHandle, state: State<'_, AppState>) -> CmdResult<Option<OpenedProject>> {
-    let path = match path {
-        Some(p) => {
-            let p = PathBuf::from(p);
-            let known = state.files.lock().unwrap().projects.contains(&p) || state.prefs.lock().unwrap().recent_files.iter().any(|r| Path::new(r) == p);
-            if !known {
-                return Err(CmdError::new("not_found", "Open that file with File > Open."));
-            }
-            p
-        }
-        None => match project_open_dialog(&app, project_dir(&state)).await {
-            Some(p) => p,
-            None => return Ok(None),
-        },
-    };
-    let bytes = projects::read_project(&path)?;
-    remember_project(&state, &path);
-    let text = (!bytes.starts_with(b"PK")).then(|| String::from_utf8_lossy(bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes)).into_owned());
-    Ok(Some(OpenedProject { name: file_name_of(&path), path: path.to_string_lossy().into_owned(), text }))
 }
 
 /// Hands a project the app has no editor for (Letters, Parametric, Studio) to the website view,
@@ -728,15 +397,6 @@ pub fn run() {
             cancel_sign_in,
             sign_out,
             me,
-            catalog,
-            generate,
-            ai_design,
-            keep_svg,
-            save_design,
-            export_design,
-            export_design_as,
-            pick_picture,
-            trace_picture,
             reveal_file,
             open_web,
             get_prefs,
@@ -744,9 +404,6 @@ pub fn run() {
             set_export_prefs,
             choose_project_folder,
             set_project_prefs,
-            save_project,
-            save_project_as,
-            open_project,
             web_open_file,
             recent_projects,
             forget_recent,

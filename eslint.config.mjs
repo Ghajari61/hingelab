@@ -32,7 +32,13 @@ export default [
   },
   {
     // The shared app and platform packages never reach for a host directly.
-    files: ["packages/app/**", "packages/ui/**"],
+    files: [
+      "packages/app/**", "packages/ui/**",
+      // What packages/app renders: the start gallery and the product editors, on both platforms.
+      "components/editor/**", "components/generators/**", "components/letters/**", "components/parametric/**", "components/shell/**", "components/billing/**", "components/help/HelpContext.tsx",
+    ],
+    // The website's own wrappers (SSR-off loading, debug pages) stay Next.js components.
+    ignores: ["components/editor/EditorRoot.tsx", "components/letters/LettersDebugRoot.tsx", "components/parametric/ParametricDebugRoot.tsx"],
     rules: {
       "no-restricted-imports": ["error", { patterns: [{ group: ["next/*", "@tauri-apps/*"], message: "Shared code goes through @hingelab/platform." }] }],
     },

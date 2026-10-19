@@ -6,6 +6,7 @@ import { platform } from "@hingelab/platform";
 import { matchRoute, productHref } from "@hingelab/app/routes";
 import { AI_START_KEY } from "@/lib/ai/types";
 import { Sidebar, SignIn, Toasts, UpdateDialog, UpdateRequired, useModalOpen, type Route, type Toast } from "./components/Chrome";
+import { Crash } from "./components/Crash";
 import { Files } from "./components/Files";
 import { Help, Settings, Subscription } from "./components/Pages";
 import { isWebRoute, WEB_HOME, WebHost, type WebRequest, type WebRoute } from "./components/Web";
@@ -360,9 +361,11 @@ export function App() {
         {!online && route !== "editor" && <div className="dk offline-bar" role="status">You&apos;re offline. You can keep designing; exporting cut files and the online sections need a connection.</div>}
         <Keep on={route === "editor"} shell={false}>
           <div className="dk-editor">
-            <Suspense fallback={<div className="boot">Loading HingeLab…</div>}>
-              <Workspace key={editorKey} />
-            </Suspense>
+            <Crash onReset={() => setEditorKey((k) => k + 1)}>
+              <Suspense fallback={<div className="boot">Loading HingeLab…</div>}>
+                <Workspace key={editorKey} />
+              </Suspense>
+            </Crash>
           </div>
         </Keep>
         {seen.files && (
