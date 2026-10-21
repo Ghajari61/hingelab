@@ -29,6 +29,8 @@ import { DockColumn } from "@/components/shell/DockColumn";
 import { fitSummary } from "@/components/shell/SheetSection";
 import { arrangeLetters } from "@/lib/fit/letters";
 import { fabFromLetters } from "@/lib/fab/adapters";
+import { fabIssues } from "@/lib/fab/issues";
+import { validateFab } from "@/lib/fab/validate";
 import { fabStatus } from "@/lib/fab/model";
 import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
 import type { Preset } from "@/lib/presets";
@@ -204,7 +206,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   );
   const hingeWalls = deferred.mode === "box" && deferred.wallStyle === "hinge";
   const fontsOf = useCallback((id: string) => (font && font.id === id ? font : null), [font]);
-  const issues = useMemo(() => (ready && arranged ? lettersIssues(deferred, fontsOf, hb!, arranged) : []), [ready, arranged, deferred, fontsOf, hb]);
+  const issues = useMemo(() => (ready && arranged ? [...lettersIssues(deferred, fontsOf, hb!, arranged), ...fabIssues<LetterParams>(fab ? validateFab(fab) : [])] : []), [ready, arranged, deferred, fontsOf, hb, fab]);
 
   const viewApi = useCanvasView();
   viewApi.fitArgs.current = { bedW: params.bedW, bedH: params.bedH, layW: lay?.width ?? 0, layH: lay?.height ?? 0, sheets: arranged?.sheets };

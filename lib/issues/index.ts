@@ -20,6 +20,8 @@ export interface Issue<P> {
   fixes: Fix<P>[];
   /** Parts the issue is about (Parametric: Show selects them). */
   partIds?: string[];
+  /** Where on the layout (every sheet stacked, mm) the problem is, for Show to frame. */
+  at?: { x0: number; y0: number; x1: number; y1: number };
 }
 
 const RANK: Record<IssueLevel, number> = { error: 0, warn: 1, info: 2 };

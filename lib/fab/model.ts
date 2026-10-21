@@ -35,10 +35,22 @@ export interface FabPart {
   score: number;
   /** Engraved area's outline length, mm (a size for the job, not a time). */
   engrave: number;
+  /** Where it sits in the layout (every sheet stacked): its contours are moved by (ox, oy), mm. */
+  ox: number;
+  oy: number;
+  /** Its bounds in its own frame, mm. */
+  box: BBox;
+  /** Its contours in its own frame, when the product hands them over (shared, not copied). */
+  ops?: PartOps;
 }
 
 export interface FabSheet {
   index: number;
+  /** Its corner in the layout, mm. */
+  x: number;
+  y: number;
+  /** Holds a part larger than the sheet (already reported by the sheet check). */
+  oversize: boolean;
   w: number;
   h: number;
   stock: string;
@@ -120,7 +132,7 @@ export function fabModel<P extends { bbox: BBox }>(f: FabInput<P>): FabModel {
     cut += c; score += s; engrave += e; partArea += area;
     const sheet = f.sheets?.[si];
     const stock = f.stock?.(pt) ?? (sheet ? stockOfSheet(sheet, main) : main);
-    parts.push({ id: f.id(pt), name: f.name(pt), w: pt.bbox.x1 - pt.bbox.x0, h: pt.bbox.y1 - pt.bbox.y0, sheet: si, stock, cut: c, score: s, engrave: e });
+    parts.push({ id: f.id(pt), name: f.name(pt), w: pt.bbox.x1 - pt.bbox.x0, h: pt.bbox.y1 - pt.bbox.y0, sheet: si, stock, cut: c, score: s, engrave: e, ox: it.ox, oy: it.oy, box: pt.bbox, ...(o ? { ops: o } : {}) });
     if (si >= 0) {
       const u = used.get(si) ?? { w: 0, h: 0, n: 0 };
       const sx = sheet?.x ?? 0, sy = sheet?.y ?? 0, sw = sheet?.w ?? f.bed.w, sh = sheet?.h ?? f.bed.h;
@@ -134,7 +146,7 @@ export function fabModel<P extends { bbox: BBox }>(f: FabInput<P>): FabModel {
   const sheets: FabSheet[] = rects.map((r, i) => {
     const u = used.get(i) ?? { w: 0, h: 0, n: 0 };
     const on = parts.filter((p) => p.sheet === i);
-    return { index: i, w: r.w, h: r.h, stock: on[0]?.stock ?? stockOfSheet(r, main), parts: u.n, used: { w: u.w, h: u.h } };
+    return { index: i, x: r.x, y: r.y, oversize: /larger than the sheet/.test(r.label), w: r.w, h: r.h, stock: on[0]?.stock ?? stockOfSheet(r, main), parts: u.n, used: { w: u.w, h: u.h } };
   });
   const sheetArea = sheets.reduce((a, s) => a + s.w * s.h, 0);
   return {

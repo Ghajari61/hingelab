@@ -1,6 +1,9 @@
 "use client";
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
+import { fabFromParametric } from "@/lib/fab/adapters";
+import { fabIssues } from "@/lib/fab/issues";
+import { validateFab } from "@/lib/fab/validate";
 import { MATERIALS, polyD, r3, type LayerKey } from "@/lib/hinge";
 import {
   CLOCK_INSERTS, FORMULA_DEFAULTS, IMAGE_DEFAULTS, LEAF_CLOCK, PARAMETRIC_DEFAULTS, TEXT_DEFAULTS, finSpacingOf, mergeParametricParams,
@@ -199,7 +202,8 @@ export function ParametricDock({
     onSelect([parts[i].id]);
   };
 
-  const issues = parametricIssues(params, result);
+  const geometry = useMemo(() => (result ? fabIssues<ParametricParams>(validateFab(fabFromParametric(params, result))) : []), [params, result]);
+  const issues = [...parametricIssues(params, result), ...geometry];
   const serious = issues.some((i) => SERIOUS.includes(i.code as WarningCode));
   const applyFix = (fix: Fix<ParametricParams>) => onEdit((q) => { Object.assign(q, fix.apply(params)); }, true);
   const layerVis = (key: LayerKey) => onEdit((q) => { q.layers[key].vis = !q.layers[key].vis; }, true);

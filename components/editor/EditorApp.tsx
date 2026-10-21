@@ -14,6 +14,8 @@ import {
 import { arrangeHinge } from "@/lib/fit/hinge";
 import { hingeWithMaterial } from "@/lib/materials/apply";
 import { fabFromHinge } from "@/lib/fab/adapters";
+import { fabIssues } from "@/lib/fab/issues";
+import { validateFab } from "@/lib/fab/validate";
 import { fabStatus } from "@/lib/fab/model";
 import { autoFixAll, type Fix } from "@/lib/issues";
 import { explainHingeError, hingeIssues } from "@/lib/issues/hinge";
@@ -133,7 +135,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   }, [model, lay, built, baseText.ctx, nominalArr]);
   const fitSet = cleanFit(params.fit);
   const checked = useDeferredValue(params);
-  const issues = useMemo(() => hingeIssues(checked), [checked]);
+  const issues = useMemo(() => [...hingeIssues(checked), ...fabIssues<Params>(fab ? validateFab(fab) : [])], [checked, fab]);
 
   const shared = useSharedView(start, start?.name ?? "Hinge Box", (m) => toastMsg(m));
   useAutosave(params, units, onStatus, undefined, !cloud && !shared.viewing);

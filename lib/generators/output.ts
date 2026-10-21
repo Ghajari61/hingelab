@@ -15,6 +15,7 @@ import { offsetShapesXY } from "@/lib/materials/kerf";
 import { rotatePoint } from "@/lib/nest/outline";
 import { finLabel } from "@/lib/parametric/label";
 import { isImageDataURL, xmlCommentText } from "@/lib/security/svg";
+import { repairLayout, type RepairCount } from "@/lib/fab/repair";
 import { bboxOf, pathD } from "./geom";
 import { setPath } from "./path";
 import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, MAX_FEATURE, MAX_KERF, SHEET_EXTRAS, type BuildContext, type Contour, type GenBase, type GenImage, type GenOutput, type GenPart, type GeneratorDef, type JobExtras, type SheetExtras } from "./types";
@@ -75,7 +76,8 @@ export interface GenModel {
   out: GenOutput;
 }
 
-export type GenArranged<P> = Arranged<P, GenModel, CutPart>;
+/** `repaired`: what the clean-up removed, when it is on. */
+export type GenArranged<P> = Arranged<P, GenModel, CutPart> & { repaired?: RepairCount };
 
 /** A copy of the part turned by `angle` degrees about its origin (pictures cannot turn: such parts stay upright). */
 export function turnCutPart(pt: CutPart, angle: number): CutPart {
@@ -121,6 +123,7 @@ export function cleanExtras(x: unknown): SheetExtras {
   if (ky !== undefined) out.kerfY = ky;
   if (mf !== undefined) out.minFeature = mf;
   if (q.rotate === "half" || q.rotate === "none") out.rotate = q.rotate;
+  if (q.repair === true) out.repair = true;
   return out;
 }
 
@@ -240,7 +243,7 @@ export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, 
   const x = cleanExtras(p.sheet);
   const job = cleanJob(p.job);
   const mode = fit.mode === "sheets" && def.scale ? "sheets" : "auto";
-  const a = arrangeFit<P, GenModel, CutPart>({ mode, sheets: fit.sheets }, { w: p.bedW, h: p.bedH, gap: p.gap }, (s) => {
+  const a: GenArranged<P> = arrangeFit<P, GenModel, CutPart>({ mode, sheets: fit.sheets }, { w: p.bedW, h: p.bedH, gap: p.gap }, (s) => {
     const q = s === 1 || !def.scale ? p : def.scale(p, s);
     const out = buildBatch(def, q, ctx, job.names);
     if (out.error) return { params: q, result: { error: out.error } };
@@ -260,6 +263,11 @@ export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, 
     reserve: x.calibration ? CAL_STRIP : 0,
   });
   if (!a.lay || !a.sheets || "error" in a.result) return a;
+  if (x.repair) {
+    const r = repairLayout(a.lay);
+    a.lay = r.lay;
+    a.repaired = r.count;
+  }
   if (x.labels) {
     a.lay = { ...a.lay, items: a.lay.items.map((it) => ({ ...it, pt: { ...it.pt, score: [...it.pt.score, ...partLabel(it.pt)] } })) };
   }
@@ -315,7 +323,8 @@ export function genSVG<P extends GenBase>(def: GeneratorDef<P>, p: P, lay: Layou
     : lay.items.map((it) => it.pt.name).join(", ");
   const [kx, ky] = kerfOf(p);
   const kerf = kx === ky ? `kerf ${p.K} mm` : `kerf ${kx} mm across vertical edges and ${ky} mm across horizontal ones`;
-  const note = `HingeLab ${def.name}: ${p.name}. ${def.summary(p)}. Material ${p.T} mm, ${kerf} (compensated). Parts: ${parts}.${comment ? " " + comment : ""}`;
+  const tidy = cleanExtras(p.sheet).repair ? " Cut paths cleaned up (repeated points, empty shapes and lines cut twice removed)." : "";
+  const note = `HingeLab ${def.name}: ${p.name}. ${def.summary(p)}. Material ${p.T} mm, ${kerf} (compensated). Parts: ${parts}.${tidy}${comment ? " " + comment : ""}`;
   let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"${C.images.length ? ' xmlns:xlink="http://www.w3.org/1999/xlink"' : ""} width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">\n`;
   s += `<!-- ${xmlCommentText(esc(note))} -->\n`;
   const layer = (key: LayerKey, paths: string[], fill: boolean) => {

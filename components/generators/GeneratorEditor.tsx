@@ -34,6 +34,8 @@ import { getLoadedFont, loadHarfBuzz } from "@/components/letters/runtime";
 import { fontsForExport, useFontUploads } from "@/components/letters/useFontUploads";
 import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
 import { fabFromGenerator } from "@/lib/fab/adapters";
+import { genFabIssues } from "@/lib/fab/issues";
+import { validateFab } from "@/lib/fab/validate";
 import { fabStatus } from "@/lib/fab/model";
 import { autoFixAll, type Fix, type Issue } from "@/lib/issues";
 import type { Preset } from "@/lib/presets";
@@ -222,21 +224,24 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const [nominal, setNominal] = useState(false);
   const content = useMemo(() => (lay ? genContent(nominal ? nominalLayout(lay, cleanJob(params.job).mirror) : lay) : null), [lay, nominal, params.job]);
   // Show in a check: a frame round the parts it is about, until the design changes.
-  const [highlight, setHighlight] = useState<string[] | null>(null);
+  const [highlight, setHighlight] = useState<{ ids: string[]; at?: Issue<P>["at"] } | null>(null);
   useEffect(() => { setHighlight(null); }, [deferred]);
-  const highlightOverlay = useMemo(() => (highlight && lay ? partFrames(lay, highlight) : null), [highlight, lay]);
+  const highlightOverlay = useMemo(() => (highlight && lay ? partFrames(lay, highlight.ids, highlight.at) : null), [highlight, lay]);
   const photos = out ? out.parts.reduce((n, pt) => n + (pt.images?.length ?? 0), 0) : 0;
   const gated = out ? designGates(built as { sheet?: { nest?: unknown } }, photos, account.plan, flags) : [];
   const lock = [out && def.pro ? def.pro(built, out) : null, ...gated].filter(Boolean).join(" ") || null;
   const locked = !!lock && !hasPro(account.plan);
   const batchNote = batchLimitMessage(account.plan, designBatchCount(params), !account.configured);
+  const fab = useMemo(() => fabFromGenerator(def.id, params, arranged), [def.id, params, arranged]);
+  const geometry = useMemo(() => (fab ? validateFab(fab) : []), [fab]);
   const issues = useMemo<Issue<P>[]>(
     () => (out ? [
       ...def.check(deferred, out),
       ...sheetIssues(def, deferred, arranged),
+      ...genFabIssues(geometry, deferred, arranged.repaired),
       ...(locked && lock ? [{ code: "NEEDS_PRO", level: "info" as const, message: `${lock} You can design it freely; exporting needs Pro.`, fixes: [] }] : []),
     ] : []),
-    [def, deferred, out, arranged, locked, lock],
+    [def, deferred, out, arranged, locked, lock, geometry],
   );
   const layerKeys = useMemo<LayerKey[]>(() => {
     const k: LayerKey[] = ["outline"];
@@ -266,7 +271,8 @@ function GenEditor({ def, onProduct, onHome, start }: {
   function checkAll(q: P): Issue<P>[] {
     const a = arrangeGenerator(def, q, ctx);
     if ("error" in a.result) return [];
-    return [...def.check(q, a.result.out), ...sheetIssues(def, q, a)];
+    const m = fabFromGenerator(def.id, q, a);
+    return [...def.check(q, a.result.out), ...sheetIssues(def, q, a), ...genFabIssues(m ? validateFab(m) : [], q, a.repaired)];
   }
 
   function applyIssueFix(fix: Fix<P>) {
@@ -551,7 +557,6 @@ function GenEditor({ def, onProduct, onHome, start }: {
     toastMsg(lockSet.size ? "New random design; locked settings kept. Ctrl+Z undoes it." : "New random design. Ctrl+Z undoes it.");
   }
 
-  const fab = useMemo(() => fabFromGenerator(def.id, params, arranged), [def.id, params, arranged]);
   const fitInfo = arranged.fit;
   const fitSet = cleanFit(params.fit);
   const sheetsText = fitInfo ? `${fitInfo.sheets} sheet${fitInfo.sheets === 1 ? "" : "s"}` : "";
@@ -686,7 +691,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
             onBatch={() => { const l = gateLock("batch", account.plan, flags); if (l) setUpgrade(l); else setBatching(true); }}
             checks={<>
               {batchNote && <p className="note err" role="status">{batchNote} <button type="button" className="btn-ghost-sm" onClick={() => setUpgrade(batchNote)}>Upgrade</button></p>}
-              <IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} onShow={setHighlight} />
+              <IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} onShow={(ids, at) => setHighlight({ ids, at })} />
               {lay && <JobEstimate svg={localSVG} version={lay} sheets={arranged.sheets} material={params.material} units={units === "in" ? "in" : "mm"} />}
             </>}
           />
