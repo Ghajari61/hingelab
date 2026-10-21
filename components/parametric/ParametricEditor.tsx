@@ -1,5 +1,6 @@
 "use client";
 
+import { fabFromParametric } from "@/lib/fab/adapters";
 import { platform } from "@hingelab/platform";
 import { useShortcutKey } from "@/components/shell/useShortcutKey";
 import { keepSetup } from "@/lib/prefs/editor";
@@ -316,6 +317,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
   }, [params, srcFile, sourceReady]);
 
   const result = res?.result ?? null;
+  const fab = useMemo(() => (result ? fabFromParametric(params, result) : null), [params, result]);
   const partsById = useMemo(() => new Map((result?.parts ?? []).map((q) => [q.id, q])), [result]);
   const layout = useMemo(() => layoutSheets(result?.sheets ?? []), [result]);
   const content = useMemo<LayerContent | null>(() => {
@@ -801,7 +803,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
         x={cursor.x}
         y={cursor.y}
         zoom={zoom}
-        parts={result ? { count: result.stats.partCount, used: `${result.sheets.length} sheet${result.sheets.length === 1 ? "" : "s"}, ${Math.round(result.stats.materialUsage * 100)}%` } : null}
+        parts={fab ? { count: fab.parts.length, used: `${fab.sheets.length} sheet${fab.sheets.length === 1 ? "" : "s"}, ${Math.round(fab.totals.usage * 100)}%` } : null}
         fit={fit}
         saved={shared.viewing ? "Shared design, not saved" : file.status ?? saved}
       />

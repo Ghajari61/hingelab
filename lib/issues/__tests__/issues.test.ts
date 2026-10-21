@@ -79,9 +79,14 @@ describe("Hinge Box checks and fixes", () => {
   it("Auto-fix all clears every safe issue in one go and never loops", () => {
     const messy = hinge({ W: 420, D: 300, pitch: cutWidth(DEFAULTS) + 0.5, bedW: 300, bedH: 200 });
     const res = autoFixAll(messy, hingeIssues);
-    expect(res.applied.length).toBeGreaterThan(1);
+    expect(res.applied.length).toBeGreaterThanOrEqual(1);
+    // Auto-fix never resizes the product: it nests or splits instead (docs/AUDIT-FAB.md A2).
+    expect([res.params.W, res.params.D]).toEqual([420, 300]);
+    expect(res.params.fit?.mode).not.toBe("sheets");
     expect(res.remaining.filter((i) => i.level !== "info" && i.fixes.some((f) => f.safe))).toEqual([]);
-    expect(res.remaining.some((i) => i.code === "TOO_BIG" || i.code === "WEAK_BARS")).toBe(false);
+    expect(res.remaining.some((i) => i.code === "WEAK_BARS")).toBe(false);
+    // A box larger than any layout of its sheets stays too big: only a resize (never automatic) would fit it.
+    expect(res.remaining.filter((i) => i.code === "TOO_BIG").every((i) => i.fixes.every((f) => !f.safe || !/resize/i.test(f.label)))).toBe(true);
     // A design with nothing to fix stays as it is.
     const clean = autoFixAll(hinge({}), hingeIssues);
     expect(clean.params).toEqual(hinge({}));

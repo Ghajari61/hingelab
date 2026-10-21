@@ -158,14 +158,19 @@ const pid = (i: number) => String(i).padStart(4, "0");
 
 type Packer = (parts: CutPart[], s: SheetSpec) => Packed;
 
-/** Packs each material's parts on their own sheets (main first), tagging the sheets with the material. */
+/** The stock a part is cut from: the second material, or its own stock (a colour of card), else the main material. */
+export const stockKey = (pt: CutPart) => (pt.src.material === "second" ? "\u0001second" : pt.src.stock ?? "");
+
+/** Packs each stock's parts on their own sheets (main material first), tagging the sheets with the stock. */
 export function byMaterial(base: Packer): Packer {
   return (parts, s) => {
-    const second = parts.map((_, i) => i).filter((i) => parts[i].src.material === "second");
-    if (!second.length) return base(parts, s);
-    const main = parts.map((_, i) => i).filter((i) => parts[i].src.material !== "second");
+    const keys = [...new Set(parts.map(stockKey))];
+    if (keys.length < 2) return base(parts, s);
+    // The main material first, its own stocks in the order they appear, the second material last.
+    keys.sort((a, b) => (a === "" ? -1 : b === "" ? 1 : a.startsWith("\u0001") ? 1 : b.startsWith("\u0001") ? -1 : 0));
+    const groups = keys.map((k) => parts.map((_, i) => i).filter((i) => stockKey(parts[i]) === k));
     const out: Packed = { sheets: [], tooBig: [] };
-    for (const g of [main, second]) {
+    for (const g of groups) {
       if (!g.length) continue;
       const r = base(g.map((i) => parts[i]), s);
       const map = (id: string) => pid(g[Number(id)]);
@@ -217,13 +222,13 @@ export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, 
     const q = s === 1 || !def.scale ? p : def.scale(p, s);
     const out = buildBatch(def, q, ctx, job.names);
     if (out.error) return { params: q, result: { error: out.error } };
-    const mixed = out.parts.some((pt) => pt.material === "second");
+    const mixed = out.parts.some((pt) => pt.material === "second") || new Set(out.parts.map((pt) => pt.stock ?? "")).size > 1;
     const names = { main: out.materials?.main ?? `Main material ${q.T} mm`, second: out.materials?.second ?? "Second material" };
     const [kx, ky] = kerfOf(q);
     let parts = out.parts.map((pt) => {
       if (!mixed) return cutPart(pt, kx, ky);
       const two = pt.material === "second";
-      return { ...(two && out.materials?.secondK != null ? cutPart(pt, out.materials.secondK) : cutPart(pt, kx, ky)), tag: two ? names.second : names.main };
+      return { ...(two && out.materials?.secondK != null ? cutPart(pt, out.materials.secondK) : cutPart(pt, kx, ky)), tag: two ? names.second : pt.stock ?? names.main };
     });
     if (job.mirror) parts = parts.map(mirrorCutPart);
     return { params: q, result: { parts: x.copies > 1 ? copiesOf(parts, x.copies) : parts, out } };
@@ -284,7 +289,7 @@ export function genSVG<P extends GenBase>(def: GeneratorDef<P>, p: P, lay: Layou
   const tags = [...new Set(lay.items.map((it) => it.pt.tag).filter((t): t is string => !!t))];
   const untagged = lay.items.filter((it) => !it.pt.tag).map((it) => it.pt.name);
   const parts = tags.length > 1
-    ? tags.map((t) => `${t}: ${lay.items.filter((it) => it.pt.tag === t).map((it) => it.pt.name).join(", ")}`).join("; ") + " (each material on its own sheets)" + (untagged.length ? `; ${untagged.join(", ")}` : "")
+    ? tags.map((t) => `${t}: ${lay.items.filter((it) => it.pt.tag === t).map((it) => it.pt.name).join(", ")}`).join("; ") + " (each material or stock on its own sheets)" + (untagged.length ? `; ${untagged.join(", ")}` : "")
     : lay.items.map((it) => it.pt.name).join(", ");
   const [kx, ky] = kerfOf(p);
   const kerf = kx === ky ? `kerf ${p.K} mm` : `kerf ${kx} mm across vertical edges and ${ky} mm across horizontal ones`;
@@ -324,7 +329,9 @@ export function sheetIssues<P extends GenBase>(def: GeneratorDef<P>, p: P, arran
   const fit = arranged.fit;
   if (fit && !fit.fits && arranged.lay) {
     const fixes: Issue<P>["fixes"] = [];
-    if (def.scale) fixes.push({ id: "fit-1", label: "Fit to 1 sheet", safe: true, apply: (q) => ({ ...q, fit: { mode: "sheets", sheets: 1 } }) });
+    // Nesting keeps the design's size; resizing changes what the design is, so it is never a safe fix.
+    fixes.push({ id: "auto-sheets", label: "Nest on as many sheets as needed", safe: true, apply: (q) => ({ ...q, fit: { mode: "auto", sheets: 1 } }) });
+    if (def.scale) fixes.push({ id: "fit-1", label: "Resize to fit 1 sheet", safe: false, apply: (q) => ({ ...q, fit: { mode: "sheets", sheets: 1 } }) });
     fixes.push({ id: "big-sheet", label: "Use a 600 × 400 mm sheet", safe: false, apply: (q) => ({ ...q, bedW: Math.max(q.bedW, 600), bedH: Math.max(q.bedH, 400) }) });
     const big = arranged.lay.items.filter((it) => it.w > p.bedW + 1e-6 || it.h > p.bedH + 1e-6).map((it) => it.pt.src.id);
     out.push({ code: "TOO_BIG", level: "error", message: "A part is larger than the sheet.", fixes, ...(big.length ? { partIds: [...new Set(big)] } : {}) });

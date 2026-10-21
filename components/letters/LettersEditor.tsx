@@ -28,7 +28,8 @@ import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
 import { fitSummary } from "@/components/shell/SheetSection";
 import { arrangeLetters } from "@/lib/fit/letters";
-import { usedArea, usedText } from "@/lib/fit/arrange";
+import { fabFromLetters } from "@/lib/fab/adapters";
+import { fabStatus } from "@/lib/fab/model";
 import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
 import type { Preset } from "@/lib/presets";
 import { useMyPresets } from "@/components/shell/useMyPresets";
@@ -185,6 +186,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   const deferred = useDeferredValue(params);
   const ready = !!hb && !!font && font.id === deferred.fontId;
   const arranged = useMemo(() => (ready ? arrangeLetters(deferred, font!, hb!) : null), [ready, deferred, font, hb]);
+  const fab = useMemo(() => (arranged ? fabFromLetters(deferred, arranged) : null), [deferred, arranged]);
   const result = arranged?.result ?? null;
   /** The settings actually built: the design, shrunk when Fit is on. */
   const built = arranged?.params ?? deferred;
@@ -507,7 +509,12 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   const sheetProps = {
     info: fitInfo,
     size: `${built.sizeMode === "capHeight" ? "cap" : "total"} ${fmtLen(built.size, units)}${built.mode === "box" ? `, depth ${fmtLen(built.depth, units)}` : ""}`,
-    meta: fitSet.mode === "off" ? undefined : fitSet.mode === "auto" ? `Auto · ${sheetsText}` : `Fit · ${fitSet.sheets} sheet${fitSet.sheets === 1 ? "" : "s"}`,
+    original: `${params.sizeMode === "capHeight" ? "cap" : "total"} ${fmtLen(params.size, units)}${params.mode === "box" ? `, depth ${fmtLen(params.depth, units)}` : ""}`,
+    preview: font && hb ? (f: FitSettings) => {
+      const t = arrangeLetters({ ...params, fit: f }, font, hb);
+      return { scale: t.fit?.scale ?? 1, fits: !!t.fit?.fits, size: `${t.params.sizeMode === "capHeight" ? "cap" : "total"} ${fmtLen(t.params.size, units)}` };
+    } : undefined,
+    meta: fitSet.mode === "off" ? undefined : fitSet.mode === "auto" ? `Auto · ${sheetsText}` : `Resized · ${sheetsText}`,
     onSheet: (w: number, h: number) => patch({ bedW: w, bedH: h }, true),
     onFit: (f: FitSettings) => {
       patch({ fit: f }, true);
@@ -605,7 +612,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
         x={cursor.x}
         y={cursor.y}
         zoom={zoom}
-        parts={model && lay ? { count: model.parts.length, used: usedText(usedArea(lay, arranged?.sheets ?? null), (mm) => fmtLen(mm, units, true)) } : null}
+        parts={model && fab ? fabStatus(fab, (mm) => fmtLen(mm, units, true)) : null}
         fit={fit}
         saved={shared.viewing ? "Shared design, not saved" : file.status ?? saved}
       />

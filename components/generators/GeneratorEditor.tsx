@@ -33,7 +33,8 @@ import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 import { getLoadedFont, loadHarfBuzz } from "@/components/letters/runtime";
 import { fontsForExport, useFontUploads } from "@/components/letters/useFontUploads";
 import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
-import { usedArea, usedText } from "@/lib/fit/arrange";
+import { fabFromGenerator } from "@/lib/fab/adapters";
+import { fabStatus } from "@/lib/fab/model";
 import { autoFixAll, type Fix, type Issue } from "@/lib/issues";
 import type { Preset } from "@/lib/presets";
 import { generatorHelpMap } from "@/lib/generators/helpMap";
@@ -549,6 +550,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
     toastMsg(lockSet.size ? "New random design; locked settings kept. Ctrl+Z undoes it." : "New random design. Ctrl+Z undoes it.");
   }
 
+  const fab = useMemo(() => fabFromGenerator(def.id, params, arranged), [def.id, params, arranged]);
   const fitInfo = arranged.fit;
   const fitSet = cleanFit(params.fit);
   const sheetsText = fitInfo ? `${fitInfo.sheets} sheet${fitInfo.sheets === 1 ? "" : "s"}` : "";
@@ -562,7 +564,12 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const sheetProps = {
     info: fitInfo,
     size: out ? def.summary(built) : null,
-    meta: fitSet.mode === "off" ? undefined : fitSet.mode === "auto" ? `Auto · ${sheetsText}` : `Fit · ${fitSet.sheets} sheet${fitSet.sheets === 1 ? "" : "s"}`,
+    original: def.summary(params),
+    preview: (f: FitSettings) => {
+      const t = arrangeGenerator(def, { ...params, fit: f }, ctx);
+      return { scale: t.fit?.scale ?? 1, fits: !!t.fit?.fits, size: t.result && !("error" in t.result) ? def.summary(t.params) : null };
+    },
+    meta: fitSet.mode === "off" ? undefined : fitSet.mode === "auto" ? `Auto · ${sheetsText}` : `Resized · ${sheetsText}`,
     onSheet: (w: number, h: number) => replace({ ...params, bedW: w, bedH: h }, true),
     onFit: (f: FitSettings) => {
       replace({ ...params, fit: f }, true);
@@ -688,7 +695,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
         x={cursor.x}
         y={cursor.y}
         zoom={zoom}
-        parts={out && lay ? { count: lay.items.filter((it) => it.i >= 0).length, used: usedText(usedArea(lay, arranged.sheets), (mm) => fmtLen(mm, units, true)) } : null}
+        parts={out && fab ? fabStatus(fab, (mm) => fmtLen(mm, units, true)) : null}
         fit={fit}
         saved={shared.viewing ? "Shared design, not saved" : file.status ?? saved}
       />

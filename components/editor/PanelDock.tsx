@@ -13,7 +13,7 @@ import { HingeInspector } from "./HingeInspector";
 import type { CutStyle, Model } from "@/lib/hinge";
 import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
 import type { FitInfo } from "@/lib/fit/arrange";
-import { SheetSection } from "@/components/shell/SheetSection";
+import { SheetSection, type ResizePreview } from "@/components/shell/SheetSection";
 import { HelpMark } from "@/components/help/HelpContext";
 import { CheckField, ResetMark } from "./ResetMark";
 import type { Units } from "./format";
@@ -28,6 +28,10 @@ import { PIERCE_SHAPES, type PierceShape } from "@/lib/generators/windowShape";
 export interface SheetProps {
   info: FitInfo | null;
   size: string | null;
+  /** The product's size at its design size. */
+  original?: string | null;
+  /** What a resize to fit would give, before it is applied. */
+  preview?: (f: FitSettings) => ResizePreview;
   meta?: string;
   onSheet: (w: number, h: number) => void;
   onFit: (f: FitSettings) => void;
@@ -301,7 +305,7 @@ export function PanelDock({
       </Sec>
       <Sec title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "testStrip", "fit"])}>
         <SheetSection
-          bedW={params.bedW} bedH={params.bedH} fit={cleanFit(params.fit)} info={sheet.info} size={sheet.size}
+          bedW={params.bedW} bedH={params.bedH} fit={cleanFit(params.fit)} info={sheet.info} size={sheet.size} original={sheet.original} preview={sheet.preview}
           onSheet={sheet.onSheet} onFit={sheet.onFit}
         >
           <div className="grid2">{fields("secSheet")}</div>

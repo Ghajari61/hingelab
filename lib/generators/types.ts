@@ -152,6 +152,11 @@ export interface GenPart {
   tone?: number;
   /** Cut from the design's second material (packed on its own sheets). */
   material?: "main" | "second";
+  /**
+   * The stock it is cut from when parts of one material still need separate sheets: a colour of
+   * card for a blade cutter. Parts of different stocks never share a sheet.
+   */
+  stock?: string;
   /** Preview colour (thumbnails and 3D), e.g. gold mirror acrylic. */
   color?: string;
   /** The preview colour is paper or card, without a shine. */

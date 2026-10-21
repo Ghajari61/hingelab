@@ -278,7 +278,7 @@ export function GeneratorDock({
       </Sec>
       <Sec title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "fit", "sheet", "job"])}>
         <SheetSection
-          bedW={params.bedW} bedH={params.bedH} fit={cleanFit(params.fit)} info={sheet.info} size={sheet.size}
+          bedW={params.bedW} bedH={params.bedH} fit={cleanFit(params.fit)} info={sheet.info} size={sheet.size} original={sheet.original} preview={sheet.preview}
           onSheet={sheet.onSheet} onFit={sheet.onFit}
         >
           <div className="grid2">{SHEET_FIELDS.map((f) => num(f, params[f.id as "bedW"], defaults[f.id as "bedW"]))}</div>

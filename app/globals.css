@@ -318,3 +318,8 @@ select.sel:focus { border-color: var(--accent); outline: none; }
 .pe-pick { display: grid; gap: 3px; font-size: 11.5px; color: var(--fg-faint); }
 .textin.mono { font: 13px/1.4 var(--font-num); }
 .pe-units button { margin-inline-start: 6px; background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); border-radius: 4px; padding: 0 7px; cursor: pointer; font-size: 11.5px; }
+/* Resize to fit: what it does, before it applies. */
+.resize-card { display: grid; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2, transparent); font-size: 12.5px; }
+.resize-card p { margin: 0; }
+.resize-card .warn { color: var(--warn, #b45309); }
+.resize-actions { display: flex; gap: 6px; }

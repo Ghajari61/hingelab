@@ -148,8 +148,9 @@ export function hingeIssues(p: Params): HIssue[] {
       { id: "auto", label: "Use as many sheets as needed", safe: true, apply: (q: Params) => ({ ...q, fit: auto }) },
       { id: "split-auto", label: "Two halves on as many sheets as needed", safe: true, apply: (q: Params) => ({ ...q, split: 2, fit: auto }) },
       ...[1, 2, 3, 4].flatMap((n): Fix<Params>[] => [
-        { id: `fit${n}`, label: `Fit to ${n} sheet${n > 1 ? "s" : ""}`, safe: true, apply: (q) => ({ ...q, fit: sheets(n) }) },
-        { id: `split-fit${n}`, label: `Two halves, fitted to ${n} sheet${n > 1 ? "s" : ""}`, safe: true, apply: (q) => ({ ...q, split: 2, fit: sheets(n) }) },
+        // Resizing changes what the design is: never a safe fix.
+        { id: `fit${n}`, label: `Resize to fit ${n} sheet${n > 1 ? "s" : ""}`, safe: false, apply: (q) => ({ ...q, fit: sheets(n) }) },
+        { id: `split-fit${n}`, label: `Two halves, resized to fit ${n} sheet${n > 1 ? "s" : ""}`, safe: false, apply: (q) => ({ ...q, split: 2, fit: sheets(n) }) },
       ]),
     ].filter((f) => !(f.id === "turn" && p.bedW === p.bedH) && !(f.id.startsWith("split") && p.split !== 1)
       && !(f.id === `fit${fit.sheets}` && fit.mode === "sheets") && !(f.id === "auto" && fit.mode === "auto"));
