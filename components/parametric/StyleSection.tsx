@@ -15,7 +15,7 @@ type Edit = (f: (q: ParametricParams) => void, record: boolean) => void;
 const fieldSet = (id: string) => PARAM_FIELDS.find((f) => f.id === id)!.set;
 
 /** A range slider that edits live and records one undo step when it is let go. */
-function Slider({ label, value, def, min, max, step, show, onSet }: {
+export function Slider({ label, value, def, min, max, step, show, onSet }: {
   label: string; value: number; min: number; max: number; step: number;
   /** The default; a ↺ restores it while the value differs. */
   def?: number;

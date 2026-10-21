@@ -260,9 +260,35 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textKey]);
 
-  const fileOf = (p: ParametricParams) => (p.source.kind === "mesh" ? model : p.source.kind === "image" ? photo : p.source.kind === "text" && textFile?.key === textKey ? textFile : null);
+  // A wall-art picture's brightness map lives in memory only: a reload asks for the picture again.
+  const [patternPic, setPatternPic] = useState<StoredModel | null>(null);
+  const picPattern = params.source.kind === "pattern" && params.source.pattern === "image" ? params.source : null;
+  useEffect(() => {
+    if (!picPattern || patternPic?.name === picPattern.fileName) return;
+    replace({ ...params, source: { ...picPattern, pattern: "sine" } }, false);
+    toastMsg("The wall-art picture is not on this device. Load it again.");
+  }, [picPattern, patternPic, params, replace]);
+  async function loadPatternPicture(f: File) {
+    try {
+      const bmp = await createImageBitmap(f);
+      const k = Math.min(1, 512 / Math.max(bmp.width, bmp.height)), w = Math.max(2, Math.round(bmp.width * k)), h = Math.max(2, Math.round(bmp.height * k));
+      const cv = document.createElement("canvas");
+      cv.width = w; cv.height = h;
+      const g = cv.getContext("2d")!;
+      g.drawImage(bmp, 0, 0, w, h);
+      const { brightnessMap } = await import("@/lib/parametric/source/pattern");
+      const bytes = packDepth(brightnessMap(g.getImageData(0, 0, w, h).data, w, h));
+      setPatternPic({ name: f.name, key: `${f.name}:${f.size}:${f.lastModified}`, bytes });
+      edit((q) => { if (q.source.kind === "pattern") { q.source.pattern = "image"; q.source.fileName = f.name; } }, true);
+    } catch {
+      toastMsg("That picture could not be read. Try a JPEG or PNG.");
+    }
+  }
+  const fileOf = (p: ParametricParams) => (p.source.kind === "mesh" ? model : p.source.kind === "image" ? photo : p.source.kind === "text" && textFile?.key === textKey ? textFile
+    : p.source.kind === "pattern" && p.source.pattern === "image" ? patternPic : null);
   const srcFile = fileOf(params);
   const sourceReady = modelChecked && (params.source.kind === "text" ? !!srcFile
+    : params.source.kind === "pattern" ? params.source.pattern !== "image" || (!!srcFile && srcFile.name === params.source.fileName)
     : (params.source.kind !== "mesh" && params.source.kind !== "image") || (!!srcFile && srcFile.name === params.source.fileName));
 
   // Re-slice in the worker 250 ms after the last change; the previous result stays on screen meanwhile.
@@ -390,6 +416,20 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     return (result?.sheets ?? []).map((sh) => { const r = { x: 0, y, w: sh.width, h: sh.height }; y += sh.height + SHEET_SPACING; return r; });
   }, [result]);
   function exportZipNow() { void exportWith({ kind: "zip" }, `${base()}.zip`, "application/zip", () => exportZip(result!, params)); }
+  /** The assembled piece as a GLB model: Pro, like every export, and built here. */
+  async function exportGLBNow() {
+    if (!result?.parts.length) { toastMsg(error ? "Fix the settings before exporting" : "Still slicing"); return; }
+    if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and 3D models."); return; }
+    const lock = parametricLock(account.plan, params, result.stats.partCount);
+    if (lock) { setUpgrade(lock); return; }
+    try {
+      const [{ partsObject }, { glbOf }] = await Promise.all([import("./scene"), import("@/lib/parametric/mount")]);
+      const buf = await glbOf(partsObject(result, params.material.T));
+      offerFile(`${base()}.glb`, new Uint8Array(buf), "model/gltf-binary");
+    } catch {
+      toastMsg("The 3D model could not be written.");
+    }
+  }
   function exportSheetNow() {
     if (!ready()) return;
     void exportWith({ kind: "sheet", index: currentSheet }, `${base()}-${sheetFileName(currentSheet, result!.sheets.length)}`, "image/svg+xml", () => sheetSVG(result!, currentSheet, params));
@@ -748,6 +788,9 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
           onExportAll={exportAllNow}
           onExportDXF={() => void exportDXFNow()}
           onExportZip={exportZipNow}
+          onExportGLB={() => void exportGLBNow()}
+          onPatternPicture={(f) => void loadPatternPicture(f)}
+          patternPic={patternPic?.name ?? null}
           onGuide={guideNow}
           onResetSection={resetSection}
           onBrowse={() => setDesigns("gallery")}

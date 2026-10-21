@@ -13,8 +13,9 @@ import { serverManifold } from "@/lib/billing/serverManifold";
 import { parametricRequestError } from "@/lib/billing/validate";
 import { FRET_NAMES } from "@/lib/generators/fretwork";
 import { getPath, setPath } from "@/lib/generators/path";
-import { BOARD_PATTERN_KINDS } from "@/lib/parametric/backboard";
-import type { BoardPattern } from "@/lib/parametric/types";
+import { BOARD_PATTERN_KINDS, LUMBER, RAIL_DEFAULTS, cleanRails } from "@/lib/parametric/backboard";
+import { PATTERN_SOURCE_DEFAULTS, WALL_STYLES, WAVE_PATTERNS, type WallStyle, type WavePattern } from "@/lib/parametric/source/pattern";
+import type { BoardPattern, Lumber } from "@/lib/parametric/types";
 import { MATERIALS } from "@/lib/hinge";
 import { shapeText } from "@/lib/letters/shape";
 import { allSheetsSVG, computeParametric, LIBRARY, loadSource, packOutline, type ParametricParams, type SliceResult } from "@/lib/parametric";
@@ -61,7 +62,13 @@ function setSource(p: P, v: unknown) {
   if (s.startsWith("library:")) p.source = { kind: "library", id: s.slice(8) as Extract<P["source"], { kind: "library" }>["id"] };
   else if (s.startsWith("formula:")) p.source = clone(FORMULA_DEFAULTS[s.slice(8) as keyof typeof FORMULA_DEFAULTS]);
   else if (s === "text") p.source = clone(TEXT_DEFAULTS);
+  else if (s === "pattern") {
+    p.source = clone(PATTERN_SOURCE_DEFAULTS);
+    p.method = "parallel";
+    Object.assign(p.parallel, { axis: "X", backboard: "rails", fillEmptySlots: true, backboardMargin: 0, rails: p.parallel.rails ?? { ...RAIL_DEFAULTS } });
+  }
 }
+const isPattern = (p: P) => p.source.kind === "pattern";
 
 function numberSpec(pf: ParamField): Spec {
   const show = pf.sec === "text" ? (p: P) => isText(p) && (!pf.show || pf.show(p)) : pf.show;
@@ -89,6 +96,7 @@ function specs(): { id: string; title: string; help: string; specs: Spec[] }[] {
             kind: "choice", key: "shape", label: "Shape", shuffle: true,
             options: [
               ...LIBRARY.map((l) => ({ v: `library:${l.id}`, text: l.name, title: l.note })),
+              { v: "pattern", text: "Wall art (waves, ridges, noise)", title: "A wave or noise pattern cut as slats on rails" },
               ...Object.entries(SOURCE_NAMES).map(([v, text]) => ({ v, text, pro: true })),
             ],
           },
@@ -98,6 +106,14 @@ function specs(): { id: string; title: string; help: string; specs: Spec[] }[] {
         at({ kind: "choice", key: "source.font", label: "Font", options: FONTS_BY_STYLE.map((b) => ({ v: b.id, text: b.scripts.includes("arabic") ? `${b.name} (Persian)` : b.name })) }, isText),
         at({ kind: "choice", key: "source.profile", label: "Profile", options: [{ v: "flat", text: "Flat" }, { v: "rounded", text: "Rounded" }] }, isText),
         at({ kind: "text", key: "source.expression", label: "Formula", maxLength: 2000, help: "The shape as a formula of x and y (surface), h (turned shape) or theta and s (sunburst)." }, isFormula),
+        at({ kind: "choice", key: "source.pattern", label: "Pattern", shuffle: true, options: (Object.keys(WAVE_PATTERNS) as WavePattern[]).filter((k) => k !== "image").map((v) => ({ v, text: WAVE_PATTERNS[v] })), default: PATTERN_SOURCE_DEFAULTS.pattern }, isPattern),
+        at({ kind: "choice", key: "source.style", label: "Style", shuffle: true, options: (Object.keys(WALL_STYLES) as WallStyle[]).map((v) => ({ v, text: WALL_STYLES[v] })), default: PATTERN_SOURCE_DEFAULTS.style }, isPattern),
+        at({ kind: "number", key: "source.width", label: "Width", unit: "mm", min: 150, max: 1500, step: 10, default: PATTERN_SOURCE_DEFAULTS.width }, isPattern),
+        at({ kind: "number", key: "source.height", label: "Height", unit: "mm", min: 100, max: 1500, step: 10, default: PATTERN_SOURCE_DEFAULTS.height }, isPattern),
+        at({ kind: "number", key: "source.depth", label: "Depth", unit: "mm", min: 5, max: 200, step: 1, default: PATTERN_SOURCE_DEFAULTS.depth }, isPattern),
+        at({ kind: "number", key: "source.waves", label: "Waves", unit: "", min: 0.5, max: 12, step: 0.5, default: PATTERN_SOURCE_DEFAULTS.waves }, isPattern),
+        at({ kind: "number", key: "source.angle", label: "Direction", unit: "deg", min: -90, max: 90, step: 5, default: PATTERN_SOURCE_DEFAULTS.angle }, isPattern),
+        at({ kind: "number", key: "source.seed", label: "Seed", unit: "", min: 0, max: 99999, step: 1, int: true, default: PATTERN_SOURCE_DEFAULTS.seed }, isPattern),
         ...nums("formula"), ...nums("text"), ...nums("transform"),
       ],
     },
@@ -109,7 +125,9 @@ function specs(): { id: string; title: string; help: string; specs: Spec[] }[] {
           { v: "radial", text: "Radial fins", pro: true }, { v: "curveNormal", text: "Fins along a curve", pro: true }, { v: "folded", text: "Folded nets", pro: true },
         ] }),
         at({ kind: "choice", key: "parallel.axis", label: "Fins", options: [{ v: "X", text: "Upright" }, { v: "Y", text: "Level" }] }, method("parallel")),
-        at({ kind: "choice", key: "parallel.backboard", label: "Backboard", options: [{ v: "none", text: "None" }, { v: "plate", text: "Plate" }, { v: "slats", text: "Slats" }] }, method("parallel")),
+        at({ kind: "choice", key: "parallel.backboard", label: "Backboard", options: [{ v: "none", text: "None" }, { v: "plate", text: "Plate" }, { v: "slats", text: "Slats" }, { v: "rails", text: "Rails (lumber)" }] }, method("parallel")),
+        { f: { kind: "choice", key: "railLumber", label: "Lumber", options: (Object.keys(LUMBER) as Lumber[]).map((v) => ({ v, text: LUMBER[v].name })) }, virtual: true, get: (p) => cleanRails(p.parallel.rails).lumber, set: (p, v) => { p.parallel.rails = { ...cleanRails(p.parallel.rails), lumber: String(v) as Lumber }; }, show: (p) => p.method === "parallel" && p.parallel.backboard === "rails" },
+        { f: { kind: "choice", key: "railCount", label: "Rails", options: [{ v: "1", text: "One" }, { v: "2", text: "Two" }] }, virtual: true, get: (p) => String(cleanRails(p.parallel.rails).count), set: (p, v) => { p.parallel.rails = { ...cleanRails(p.parallel.rails), count: v === "1" ? 1 : 2 }; }, show: (p) => p.method === "parallel" && p.parallel.backboard === "rails" },
         at({ kind: "toggle", key: "parallel.fillEmptySlots", label: "Slats across the whole board" }, (p) => p.method === "parallel" && p.parallel.backboard === "slats"),
         { f: { kind: "choice", key: "boardPattern", label: "Board pattern", help: "A decorative pattern cut through the backboard's margin round the model.", options: [{ v: "none", text: "None" }, ...BOARD_PATTERN_KINDS.map((v) => ({ v, text: FRET_NAMES[v] }))] }, virtual: true, get: (p) => p.parallel.boardPattern?.kind ?? "none", set: (p, v) => {
           if (v === "none") delete p.parallel.boardPattern; else p.parallel.boardPattern = { cell: 16, bar: 3, ...p.parallel.boardPattern, kind: v as BoardPattern["kind"] };

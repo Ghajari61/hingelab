@@ -11,6 +11,9 @@ import type { CurveNormalParams, FormulaSpec, LibraryId, ModelUnits, ParametricP
 import { SHAPE_TARGETS, applyShape, contextOf } from "@/lib/parametric/shapes";
 import { BUNDLED_FONTS, fontInfo } from "@/lib/letters/fontList";
 import { ShapePicker } from "./ShapePicker";
+import { WallArtSection } from "./WallArtSection";
+import { PATTERN_SOURCE_DEFAULTS } from "@/lib/parametric/source/pattern";
+import { RAIL_DEFAULTS } from "@/lib/parametric/backboard";
 import { StyleSection } from "./StyleSection";
 import { RELIEF_LIBRARY } from "@/lib/parametric/source/reliefs";
 import { NumberField } from "@/components/editor/NumberField";
@@ -120,7 +123,14 @@ function PartDrawing({ part }: { part: Part }) {
 
 export function ParametricDock({
   params, result, error, busy, units, selected, fileName, photo, depthBusy, plan, locks, askUnits, textMissing = [], onEdit, onSelect, onImport, onImportPhoto, onUpgrade, onExportAll, onExportDXF, onExportSheet, onExportZip, onGuide, onResetSection, onBrowse,
+  onExportGLB, onPatternPicture, patternPic = null,
 }: {
+  /** The assembled piece as a GLB 3D model. */
+  onExportGLB?: () => void;
+  /** Load a picture for the wall-art "Your picture" pattern. */
+  onPatternPicture?: (f: File) => void;
+  /** That picture's name, when one is loaded on this device. */
+  patternPic?: string | null;
   /** Opens the design gallery. */
   onBrowse?: () => void;
   /** Characters of a Text source that its font does not have. */
@@ -194,7 +204,7 @@ export function ParametricDock({
   const applyFix = (fix: Fix<ParametricParams>) => onEdit((q) => { Object.assign(q, fix.apply(params)); }, true);
   const layerVis = (key: LayerKey) => onEdit((q) => { q.layers[key].vis = !q.layers[key].vis; }, true);
   const layerExp = (key: LayerKey, exp: boolean) => onEdit((q) => { q.layers[key].exp = exp; }, true);
-  const sourceMeta = kind === "library" ? LIBRARY.find((l) => l.id === src.id)?.name : kind === "mesh" || kind === "image" ? src.fileName : kind === "text" ? `“${src.text}”` : formula?.type === "revolution" ? "Turned formula" : formula?.type === "radial-profile" ? "Radial profile formula" : "Surface formula";
+  const sourceMeta = kind === "library" ? LIBRARY.find((l) => l.id === src.id)?.name : kind === "mesh" || kind === "image" ? src.fileName : kind === "text" ? `“${src.text}”` : kind === "pattern" ? "Wall art" : formula?.type === "revolution" ? "Turned formula" : formula?.type === "radial-profile" ? "Radial profile formula" : "Surface formula";
   const sourceLocked = (k: string) => parametricLocks(plan, { source: { kind: k }, method: "parallel" }).length > 0;
   const speed = cutSpeedOf(params.material.id, params.material.T);
   const hubCrowd = result?.warnings.find((w) => w.code === "FINS_COLLIDE_AT_HUB")?.data;
@@ -204,15 +214,25 @@ export function ParametricDock({
   return (
     <aside className="dock" aria-label="Panels">
       <StyleSection params={params} units={units} onEdit={onEdit} onBrowse={onBrowse} onReset={() => onResetSection("Style", [params.method])} />
-      <Sec title="Source" meta={params.method === "curveNormal" ? "Formulas only" : sourceMeta} startOpen onReset={() => onResetSection("Size and rotation", ["sourceSettings"])}>
+      {kind === "pattern" && params.method !== "curveNormal" && <WallArtSection params={params} result={result} units={units} onEdit={onEdit} onPicture={(f) => onPatternPicture?.(f)} picName={patternPic} />}
+      <Sec title="Source" meta={params.method === "curveNormal" ? "Formulas only" : sourceMeta} startOpen={kind !== "pattern"} onReset={() => onResetSection("Size and rotation", ["sourceSettings"])}>
         {params.method === "curveNormal" && <p className="note">Along a curve builds the fins from the formulas in Method; the model below is not used.</p>}
         <Choice label="Model from" value={kind} onPick={(v) => {
           if (v === "mesh") { if (fileName) onEdit((q) => { q.source = { kind: "mesh", fileName, units: "auto", upAxis: "Y" }; }, true); else fileRef.current?.click(); return; }
           if (v === "image") { if (photo) onEdit((q) => { q.source = { ...structuredClone(IMAGE_DEFAULTS), fileName: photo.name }; }, true); else photoRef.current?.click(); return; }
           if (v === "text") { onEdit((q) => { q.source = structuredClone(TEXT_DEFAULTS); }, true); return; }
+          if (v === "pattern") {
+            onEdit((q) => {
+              q.source = structuredClone(PATTERN_SOURCE_DEFAULTS);
+              q.method = "parallel";
+              Object.assign(q.parallel, { axis: "X", backboard: "rails", fillEmptySlots: true, backboardMargin: 0, spacing: Math.max(q.parallel.spacing ?? 0, 12), rails: q.parallel.rails ?? { ...RAIL_DEFAULTS } });
+            }, true);
+            return;
+          }
           onEdit((q) => { q.source = v === "library" ? { kind: "library", id: "abstract-head-cc0" } : structuredClone(FORMULA_DEFAULTS.heightfield); }, true);
         }} options={[
           { v: "library", text: "Library" },
+          { v: "pattern", text: "Wall art", title: "Waves, ridges, noise or your picture, cut as slats on rails" },
           { v: "mesh", text: "3D file", title: "Import an STL, OBJ or GLB model", locked: sourceLocked("mesh") },
           { v: "image", text: "Photo", title: "Turn a photo into a relief using estimated depth", locked: sourceLocked("image") },
           { v: "text", text: "Text", title: "Type a letter, word or name and slice it", locked: sourceLocked("text") },
@@ -622,6 +642,7 @@ export function ParametricDock({
           <button type="button" className="btn-auto" disabled={!result?.sheets.length} onClick={onExportDXF}>Export all sheets (DXF)</button>
           <button type="button" className="btn-auto" disabled={!result?.sheets.length} onClick={onExportZip}>Export all sheets (ZIP)</button>
           <button type="button" className="btn-auto" disabled={!result?.sheets.length} onClick={onExportSheet}>Export this sheet (SVG)</button>
+          {onExportGLB && <button type="button" className="btn-auto" disabled={!result?.parts.length} title="The assembled piece as a 3D model, for other 3D programs and AR viewers" onClick={onExportGLB}>Export 3D model (GLB)</button>}
           <button type="button" className="btn-auto" disabled={!result?.parts.length} onClick={onGuide}>Assembly guide</button>
         </div>
       </Sec>

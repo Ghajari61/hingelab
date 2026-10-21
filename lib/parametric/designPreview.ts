@@ -6,6 +6,7 @@
  */
 import { finSpacingOf } from "./defaults";
 import { compileFormula } from "./source/formula";
+import { patternValue } from "./source/pattern";
 import type { ParametricParams } from "./types";
 
 /** A segment in mm, y up. */
@@ -41,6 +42,17 @@ export function previewData(p: ParametricParams, n = 64): PreviewData | null {
   const s = p.source;
   try {
     if (p.method === "curveNormal") return curvePreview(p);
+    if (s.kind === "pattern" && s.pattern !== "image") {
+      // A wall-art pattern: its height field over the piece, the slats' lines across it.
+      const x0 = -s.width / 2, y0 = -s.height / 2;
+      const g = grid(x0, y0, s.width, s.height, n, (x, y) => s.base + s.depth * patternValue(s, (x - x0) / s.width, 1 - (y - y0) / s.height));
+      const step = finSpacingOf(p), segs: Seg[] = [];
+      if (p.method === "parallel") {
+        if (p.parallel.axis === "X") for (const x of stations(x0, x0 + s.width, step)) segs.push([x, y0, x, y0 + s.height]);
+        else for (const y of stations(y0, y0 + s.height, step)) segs.push([x0, y, x0 + s.width, y]);
+      }
+      return { kind: "field", x0, y0, w: s.width, h: s.height, ...g, segs, levels: null };
+    }
     if (s.kind !== "formula") return null;
     const vars: Record<string, number> = Object.fromEntries(Object.entries(s.variables).map(([k, v]) => [k, v.value]));
     if (s.type === "heightfield") {
