@@ -193,7 +193,10 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   const model = result && !("error" in result) ? result : null;
   const error = loadError ?? (result && "error" in result ? result.error : null);
   const lay = model ? arranged?.lay ?? null : null;
-  const content = useMemo(() => (lay ? letterLayerContent(lay, built) : null), [lay, built]);
+  // Nominal view: the same letters laid out without kerf (the files are always cut compensated).
+  const [nominal, setNominal] = useState(false);
+  const nominalArr = useMemo(() => (nominal && ready ? arrangeLetters({ ...deferred, K: 0 }, font!, hb!) : null), [nominal, ready, deferred, font, hb]);
+  const content = useMemo(() => (nominalArr?.lay ? letterLayerContent(nominalArr.lay, nominalArr.params) : lay ? letterLayerContent(lay, built) : null), [lay, built, nominalArr]);
   thumbSrc.current = { content, w: lay?.width ?? 0, h: lay?.height ?? 0 };
   const overlay = useMemo(
     () => (showZones && model?.box && lay ? zoneOverlay(model.box, (letter) => baseOffset(lay, letter)) : null),
@@ -574,7 +577,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
             onZoomCenter={viewApi.zoomCenter}
             onActual={() => viewApi.zoomCenter(PX_PER_MM / viewApi.viewRef.current.z)}
             onFit={() => viewApi.fit()}
-            tools={<ViewTools tool={tool} showGrid={showGrid} onTool={setTool} onGrid={() => setShowGrid((g) => !g)} />}
+            tools={<ViewTools tool={tool} showGrid={showGrid} onTool={setTool} onGrid={() => setShowGrid((g) => !g)} nominal={{ on: nominal, toggle: () => setNominal((v) => !v) }} />}
           />
         </section>
         </div>

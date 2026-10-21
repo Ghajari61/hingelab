@@ -84,12 +84,14 @@ export interface SheetExtras {
   kerfY?: number;
   /** Narrowest bar the material holds, mm; parts with thinner features are flagged (0: no check). */
   minFeature?: number;
+  /** Turns outline nesting may make (the material's grain): any, half turns only, or none (missing: any). */
+  rotate?: "any" | "half" | "none";
 }
 
 /** What a save without sheet extras means. */
 export const SHEET_EXTRAS: SheetExtras = { nest: "box", calibration: false, labels: false, copies: 1 };
 /** A new design's sheet extras: every key, so merging a save keeps the material ones. */
-export const SHEET_DEFAULTS: Required<SheetExtras> = { ...SHEET_EXTRAS, kerfXY: false, kerfY: 0.15, minFeature: 0 };
+export const SHEET_DEFAULTS: Required<Omit<SheetExtras, "rotate">> = { ...SHEET_EXTRAS, kerfXY: false, kerfY: 0.15, minFeature: 0 };
 export const MAX_KERF = 2;
 /** Only a guard against hand-made requests: no laser cuts anywhere near this thick. */
 export const MAX_THICKNESS = 100;

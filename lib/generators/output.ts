@@ -120,7 +120,29 @@ export function cleanExtras(x: unknown): SheetExtras {
   const ky = len(q.kerfY, MAX_KERF), mf = len(q.minFeature, MAX_FEATURE);
   if (ky !== undefined) out.kerfY = ky;
   if (mf !== undefined) out.minFeature = mf;
+  if (q.rotate === "half" || q.rotate === "none") out.rotate = q.rotate;
   return out;
+}
+
+/** The turns outline nesting may give a part, by the material's grain. */
+export const nestTurns = (x: SheetExtras): number[] => (x.rotate === "none" ? [0] : x.rotate === "half" ? [0, 180] : [0, 90, 180, 270]);
+
+/**
+ * The layout's parts at their nominal (design) size, before kerf: each rebuilt from its source and
+ * mirrored and turned as on the sheet, in the same place. For the canvas's Nominal view; files are
+ * always cut from the compensated parts.
+ */
+export function nominalLayout(lay: Layout<CutPart>, mirror = false): Layout<CutPart> {
+  return {
+    ...lay,
+    items: lay.items.map((it) => {
+      if (it.i < 0) return it;
+      let n = cutPart(it.pt.src, 0, 0);
+      if (mirror) n = mirrorCutPart(n);
+      if (it.pt.turned) n = turnCutPart(n, it.pt.turned);
+      return { ...it, pt: { ...it.pt, outline: n.outline, inner: n.inner } };
+    }),
+  };
 }
 
 /** The kerf across cuts along Y and along X. */
@@ -233,7 +255,7 @@ export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, 
     if (job.mirror) parts = parts.map(mirrorCutPart);
     return { params: q, result: { parts: x.copies > 1 ? copiesOf(parts, x.copies) : parts, out } };
   }, {
-    pack: byMaterial(x.nest === "outline" ? outlinePacker<CutPart>((pt) => (pt.images.length || pt.src.upright ? [0] : [0, 90, 180, 270]), boxPacker) : boxPacker),
+    pack: byMaterial(x.nest === "outline" ? outlinePacker<CutPart>((pt) => (pt.images.length || pt.src.upright ? [0] : nestTurns(x)), boxPacker) : boxPacker),
     turn: turnCutPart,
     reserve: x.calibration ? CAL_STRIP : 0,
   });

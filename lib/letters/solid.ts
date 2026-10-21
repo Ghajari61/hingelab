@@ -1,6 +1,7 @@
 /**
  * Solid mode: weld groups, optional bridges between the pieces of a group, kerf, and parts.
  */
+import { halfKerf } from "./kerf";
 import type { BBox } from "@/lib/hinge";
 import { MIN_PIECE_AREA, bboxOfContours, differenceShapes, dropSpecks, offsetShapes, pointInShape, shapeContours, signedArea, unionShapes } from "./polygon";
 import type { TextOutline } from "./shape";
@@ -238,7 +239,7 @@ export function solidParts(shapes: Shape[], names: string[], K: number): SolidPa
   const parts: SolidPart[] = [];
   const used = new Map<string, number>();
   shapes.forEach((s, i) => {
-    for (const o of dropSpecks(offsetShapes([s], K / 2), MIN_PIECE_AREA)) {
+    for (const o of dropSpecks(offsetShapes([s], halfKerf({ K })), MIN_PIECE_AREA)) {
       const base = names[i] || "Part";
       const k = (used.get(base) ?? 0) + 1;
       used.set(base, k);

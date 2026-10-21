@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { MATERIALS } from "@/lib/hinge/defaults";
 import {
   cleanMaterial, fromBuiltIn, importMaterials, LASER_OPS, loadMaterials, materialInfo, materialsFile, MATERIALS_EVENT, newMaterialId, RANGES, saveMaterials,
-  type LaserOp, type MaterialInfo, type UserMaterial,
+  type Grain, type LaserOp, type MaterialInfo, type RotatePolicy, type UserMaterial,
 } from "@/lib/materials/library";
 import { NumberField } from "@/components/editor/NumberField";
 import type { BaseField } from "@/components/editor/fields";
@@ -22,6 +22,18 @@ const FIELDS: (BaseField & { id: "T" | "kx" | "ky" | "minFeature" })[] = [
   { id: "ky", label: "Kerf Y", len: true, step: 0.01, min: RANGES.kerf[0], max: RANGES.kerf[1], help: "Kerf across cuts that run left to right. The same as Kerf X on most machines." },
   { id: "minFeature", label: "Min feature", len: true, step: 0.1, min: RANGES.minFeature[0], max: RANGES.minFeature[1], help: "The narrowest bar or tab this sheet holds; 0 leaves it unchecked." },
 ];
+
+const SPACING_FIELD: BaseField = { id: "mat-spacing", label: "Spacing", len: true, step: 0.5, min: RANGES.spacing[0], max: RANGES.spacing[1], help: "Space between parts on the sheet when this material is used." };
+const GRAIN: Record<Grain, string> = { none: "No grain (MDF, acrylic, card)", x: "Along the sheet's width", y: "Along the sheet's height" };
+const TURNS: Record<RotatePolicy, string> = { any: "Any turn", half: "Half turns only (keeps the grain)", none: "No turns" };
+
+/** What the user has measured, or that the values are still an estimate. */
+export function calibrationLine(m: Pick<UserMaterial, "calibration">, fmt: (v: number) => string): string {
+  const c = m.calibration;
+  if (!c) return "Not tested on your machine: these values are an estimate. Cut the calibration coupons to measure them.";
+  const got = [c.kx != null && `kerf ${fmt(c.kx)}${c.ky != null && c.ky !== c.kx ? ` / ${fmt(c.ky)}` : ""}`, c.clearance != null && `fit clearance ${fmt(c.clearance)}`, c.hingeRadius != null && `hinge bends to ${fmt(c.hingeRadius)} radius`].filter(Boolean);
+  return `Tested on your machine ${c.date.slice(0, 10)}${got.length ? `: ${got.join(", ")}` : ""}.`;
+}
 
 const laserText = (m: UserMaterial): LaserText => Object.fromEntries(LASER_OPS.map((op) => {
   const s = m.laser[op];
@@ -161,6 +173,29 @@ export default function MaterialsDialog({ selected, current, units, onUse, onClo
                     />
                   ))}
                 </div>
+                <div className="grid2">
+                  <label className="mats-name">Grain
+                    <select className="sel" value={draft.grain ?? "none"} onChange={(e) => { const grain = e.target.value as Grain; setDraft({ ...draft, grain, rotate: grain === "none" ? "any" : "half" }); }}>
+                      {(Object.keys(GRAIN) as Grain[]).map((g) => <option key={g} value={g}>{GRAIN[g]}</option>)}
+                    </select>
+                  </label>
+                  <label className="mats-name">Nesting may turn parts
+                    <select className="sel" value={draft.rotate ?? (draft.grain && draft.grain !== "none" ? "half" : "any")} onChange={(e) => setDraft({ ...draft, rotate: e.target.value as RotatePolicy })}>
+                      {(Object.keys(TURNS) as RotatePolicy[]).map((r) => <option key={r} value={r}>{TURNS[r]}</option>)}
+                    </select>
+                  </label>
+                </div>
+                <label className="chk">
+                  <input type="checkbox" checked={draft.spacing != null} onChange={(e) => { const { spacing: _drop, ...rest } = draft; setDraft(e.target.checked ? { ...rest, spacing: 3 } : rest); }} />
+                  Own part spacing (otherwise each design&apos;s)
+                </label>
+                {draft.spacing != null && (
+                  <NumberField
+                    field={SPACING_FIELD} value={draft.spacing} units={units} label={SPACING_FIELD.label} hidden={false} slider={false}
+                    onLive={(v) => setDraft((d) => (d ? { ...d, spacing: v } : d))} onCommit={(v) => setDraft((d) => (d ? { ...d, spacing: v } : d))}
+                  />
+                )}
+                <p className="note" role="status">{calibrationLine(draft, fmt)}</p>
                 <label className="mats-name">Bends like (Hinge Box stiffness)
                   <select className="sel" value={draft.like} onChange={(e) => setDraft({ ...draft, like: e.target.value })}>
                     <option value="custom">Not set (a generic sheet)</option>

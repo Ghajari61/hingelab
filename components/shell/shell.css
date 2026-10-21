@@ -93,6 +93,7 @@
 .canvas-hud .hud-tool { display: grid; place-items: center; }
 .canvas-hud .hud-tool[aria-pressed="true"] { background: var(--select); color: var(--select-ink); }
 .canvas-hud .hud-pct { min-width: 52px; }
+.canvas-hud .hud-tool.hud-text { width: auto; min-width: 72px; padding-inline: 8px; font-size: 12px; font-weight: 500; }
 .canvas-hud button { display: inline-grid; place-items: center; }
 .hud-sep { width: 1px; height: 18px; background: var(--line); margin-inline: 4px; }
 .sheet-rect { filter: drop-shadow(0 2px 8px rgba(20, 20, 30, .10)); }

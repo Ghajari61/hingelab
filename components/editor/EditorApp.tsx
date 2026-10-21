@@ -124,7 +124,13 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   const error = "error" in result ? explainHingeError(built, result.error) : null;
   const lay = model ? arranged.lay : null;
   const baseText = useBaseTextContext(built);
-  const content = useMemo(() => (model && lay ? layerContent(model, lay, built, baseText.ctx) : null), [model, lay, built, baseText.ctx]);
+  // Nominal view: the same design laid out without kerf (the files are always cut compensated).
+  const [nominal, setNominal] = useState(false);
+  const nominalArr = useMemo(() => (nominal ? arrangeHinge({ ...params, K: 0, Ky: 0 }) : null), [nominal, params]);
+  const content = useMemo(() => {
+    if (nominalArr?.lay && !("error" in nominalArr.result)) return layerContent(nominalArr.result, nominalArr.lay, nominalArr.params, baseText.ctx);
+    return model && lay ? layerContent(model, lay, built, baseText.ctx) : null;
+  }, [model, lay, built, baseText.ctx, nominalArr]);
   const fitSet = cleanFit(params.fit);
   const checked = useDeferredValue(params);
   const issues = useMemo(() => hingeIssues(checked), [checked]);
@@ -536,7 +542,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
             onZoomCenter={viewApi.zoomCenter}
             onActual={() => viewApi.zoomCenter(PX_PER_MM / viewApi.viewRef.current.z)}
             onFit={() => viewApi.fit()}
-            tools={<ViewTools tool={tool} showGrid={showGrid} onTool={setTool} onGrid={() => setShowGrid((g) => !g)} />}
+            tools={<ViewTools tool={tool} showGrid={showGrid} onTool={setTool} onGrid={() => setShowGrid((g) => !g)} nominal={{ on: nominal, toggle: () => setNominal((v) => !v) }} />}
           />
         </section>
         </div>

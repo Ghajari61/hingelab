@@ -2,6 +2,7 @@
  * Stencil mode: the text is cut out of a sheet. Counters (the material inside A, B, O, 8 …)
  * would fall out, so each gets one or two bridges across the letter stroke to the outside.
  */
+import { halfKerf } from "./kerf";
 import { MIN_PIECE_AREA, bboxOfContours, differenceShapes, dropSpecks, makeShape, offsetShapes, pointInContour, shapeContours, signedArea, unionShapes } from "./polygon";
 import { labelPoint } from "./solid";
 import type { Bridge, Contour, LetterIssue, LetterParams, Point, Shape, SolidPart } from "./types";
@@ -157,7 +158,7 @@ export function stencilSheet(shapes: Shape[], p: LetterParams, w: number): Stenc
   }
 
   const main = sheet[0] ?? makeShape(border, []);
-  const kerfed = dropSpecks(offsetShapes([main], p.K / 2), MIN_PIECE_AREA).sort((a, b) => b.area - a.area)[0] ?? main;
+  const kerfed = dropSpecks(offsetShapes([main], halfKerf(p)), MIN_PIECE_AREA).sort((a, b) => b.area - a.area)[0] ?? main;
   const lp = m >= 8 ? [(bb.x0 + bb.x1) / 2, bb.y1 + m / 2] as Point : labelPoint(kerfed);
   const part: SolidPart = {
     kind: "solid",

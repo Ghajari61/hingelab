@@ -39,7 +39,7 @@ import { autoFixAll, type Fix, type Issue } from "@/lib/issues";
 import type { Preset } from "@/lib/presets";
 import { generatorHelpMap } from "@/lib/generators/helpMap";
 import { GENERATOR_INFO, type GeneratorId } from "@/lib/generators/ids";
-import { arrangeGenerator, assemblySteps, genContent, genSVG, sheetIssues } from "@/lib/generators/output";
+import { arrangeGenerator, assemblySteps, cleanJob, genContent, genSVG, nominalLayout, sheetIssues } from "@/lib/generators/output";
 import { useArranged } from "./useArranged";
 import { partFrames } from "./highlight";
 import { NestChip, useNestWorker } from "./useNestWorker";
@@ -219,7 +219,8 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const built = arranged.params as P;
   const error = fontError ?? ("error" in arranged.result ? arranged.result.error : null);
   const lay = model ? arranged.lay : null;
-  const content = useMemo(() => (lay ? genContent(lay) : null), [lay]);
+  const [nominal, setNominal] = useState(false);
+  const content = useMemo(() => (lay ? genContent(nominal ? nominalLayout(lay, cleanJob(params.job).mirror) : lay) : null), [lay, nominal, params.job]);
   // Show in a check: a frame round the parts it is about, until the design changes.
   const [highlight, setHighlight] = useState<string[] | null>(null);
   useEffect(() => { setHighlight(null); }, [deferred]);
@@ -659,7 +660,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
               onZoomCenter={viewApi.zoomCenter}
               onActual={() => viewApi.zoomCenter(PX_PER_MM / viewApi.viewRef.current.z)}
               onFit={() => viewApi.fit()}
-              tools={<ViewTools tool={tool} showGrid={showGrid} onTool={setTool} onGrid={() => setShowGrid((g) => !g)} />}
+              tools={<ViewTools tool={tool} showGrid={showGrid} onTool={setTool} onGrid={() => setShowGrid((g) => !g)} nominal={{ on: nominal, toggle: () => setNominal((v) => !v) }} />}
             />
           </section>
         </div>

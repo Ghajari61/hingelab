@@ -3,6 +3,7 @@
  * Centres lie on the region where a hole of `holeDia` keeps `margin` from the inner wall face;
  * in a thin stroke that region is a sliver, so the holes follow the stroke's middle.
  */
+import { halfKerf } from "./kerf";
 import { dropSpecks, offsetShapes, shapeContours, signedArea } from "./polygon";
 import type { Contour, LetterParams, Point, Shape } from "./types";
 
@@ -48,4 +49,4 @@ export function marqueeCenters(shapes: Shape[], p: LetterParams): Point[] {
 
 /** Cut paths for the holes: the beam removes K/2 outside the path, so the path runs K/2 inside. */
 export const marqueeHoles = (centers: Point[], p: LetterParams): Contour[] =>
-  centers.map(c => circleHole(c, Math.max(0.1, p.marquee.holeDia / 2 - p.K / 2)));
+  centers.map(c => circleHole(c, Math.max(0.1, p.marquee.holeDia / 2 - halfKerf(p))));
