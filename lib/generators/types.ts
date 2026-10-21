@@ -170,6 +170,8 @@ export interface GenOutput {
   materials?: { main: string; second: string; secondK?: number };
   /** The parts are flat layers stacked face to face (thumbnails draw only what shows from the front). */
   stacked?: boolean;
+  /** The cut-out pattern's result: shapes made, and on how many parts (for the checks). */
+  pattern?: { shapes: number; parts: number; windowed: boolean };
 }
 
 /** Glyph outlines for a string, centred on (0, 0), y down; `height` is the cap height in mm. */

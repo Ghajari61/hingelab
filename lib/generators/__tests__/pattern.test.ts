@@ -43,7 +43,7 @@ describe("cut-out pattern", () => {
   // A design with the parts the pattern goes on (the default puzzle has no frame, and so on).
   const WITH_PARTS: Record<string, Record<string, unknown>> = {
     puzzle: { frame: { kind: "frame", border: 25 } },
-    qr: { output: { kind: "cutout" } },
+    qr: { output: { kind: "cutout" }, plate: { padding: 25 } },
     shadowbox: { box: { walls: true } },
   };
   it.each(WITH.map((g) => [g.id, g] as const))("%s: cuts the pattern, and None leaves it as it was", (id, def) => {

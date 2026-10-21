@@ -14,6 +14,8 @@ import { MOTIF_ART, cleanMotifArt, motifArtFields, motifFonts, type MotifArt } f
 import { motifRef } from "./motifRef";
 import { MOTIF_OPTIONS, isMotifKind, motif } from "./motifs";
 import type { BuildContext, Contour, FieldSpec, GenBase, GenOutput, GenPart, GeneratorDef, Pt, SectionSpec } from "./types";
+import type { Issue } from "@/lib/issues";
+import { placePoint, unplacePoint } from "./place";
 import { getPath } from "./path";
 import { fitArt } from "./util";
 
@@ -134,10 +136,10 @@ export function markShapes(mark: PierceMark, part: GenPart, holes: Contour[]) {
  * counters of letters stay solid; a large opening, like the inside of a border, is open again);
  * open cuts, scoring and pictures by their boxes.
  */
-export function patternArea(part: GenPart, edge: number, win: Contour | null, cell: number): Contour[] {
+export function patternArea(part: GenPart, edge: number, win: Contour | null, cell: number, solid: Contour[] = []): Contour[] {
   let area = offsetShapes([makeShape(part.outer, [])], -edge);
   if (win) area = intersectShapes(shapeContours(area), [win]);
-  const solid = unionShapes([...part.holes, ...(part.engrave ?? [])].filter((c) => c.length > 2), [], true)
+  const marks = unionShapes([...part.holes, ...(part.engrave ?? [])].filter((c) => c.length > 2), [], true)
     .map((s) => makeShape(s.outer, s.holes.filter((h) => Math.abs(signedArea(h)) > 4 * cell * cell)));
   const boxes = (part.images ?? []).map((im) => rect(im.x, im.y, im.w, im.h));
   // Open lines (scoring, slits) as a strip a millimetre each side.
@@ -149,7 +151,8 @@ export function patternArea(part: GenPart, edge: number, win: Contour | null, ce
     const q: Contour = [[ax - ex + nx, ay - ey + ny], [bx + ex + nx, by + ey + ny], [bx + ex - nx, by + ey - ny], [ax - ex - nx, ay - ey - ny]];
     strips.push(signedArea(q) < 0 ? q.reverse() : q);
   }
-  const block = [...shapeContours(offsetShapes(solid, 0.5)), ...boxes, ...strips];
+  const glued = solid.length ? shapeContours(offsetShapes(unionShapes(solid, [], false, true), 1)) : [];
+  const block = [...shapeContours(offsetShapes(marks, 0.5)), ...boxes, ...strips, ...glued];
   return block.length && area.length ? shapeContours(differenceShapes(shapeContours(area), block)) : shapeContours(area);
 }
 
@@ -157,18 +160,73 @@ export function patternArea(part: GenPart, edge: number, win: Contour | null, ce
  * The pattern on one part, `edge` mm clear of its outline, of what it carries, and of `keep`;
  * returns how many shapes it made. The window shape sits in the middle of the face inside the edge.
  */
-export function patternOn(pp: PatternParams, part: GenPart, edge: number, unit?: Contour[], keep: KeepOut[] = []): number {
+export function patternOn(pp: PatternParams, part: GenPart, edge: number, unit?: Contour[], keep: KeepOut[] = [], solid: Contour[] = []): number {
   if (pp.pattern === "none" || (pp.pattern === "motif" && !unit?.length)) return 0;
   const b = boxOf([part.outer]);
   const x0 = b.x0 + edge, y0 = b.y0 + edge, x1 = b.x1 - edge, y1 = b.y1 - edge;
   if (x1 - x0 < 4 || y1 - y0 < 4) return 0;
   const cell = Math.max(4, pp.cell);
   const win = windowShape(pp.shape, (x0 + x1) / 2, (y0 + y1) / 2, Math.min(x1 - x0, y1 - y0) * Math.min(100, Math.max(20, pp.size)) / 100);
-  const area = patternArea(part, edge, win, cell);
+  const area = patternArea(part, edge, win, cell, solid);
   if (!area.length) return 0;
   const holes = fretHoles({ kind: pp.pattern, cell, bar: Math.max(0.5, pp.bar), unit }, x0, y0, x1, y1, keep, (q) => pointInContour(q, part.outer), area);
   markShapes(pp.mark, part, holes);
   return holes.length;
+}
+
+/**
+ * Outlines of the other parts lying flat against `part` (glued on its face, or it on theirs), in
+ * `part`'s own coordinates: raised letters, an emblem, a front layer, a knob. The pattern leaves
+ * them solid, so nothing is cut under a glued part or shows through it.
+ */
+export function stackedOn(part: GenPart, parts: GenPart[], T: number): Contour[] {
+  if (!part.place) return [];
+  const tp = part.t ?? T, out: Contour[] = [];
+  for (const q of parts) {
+    if (q === part || !q.place || q.outer.length < 3 || q.pieces?.length) continue;
+    const to = (c: Contour) => c.map(([u, v]) => unplacePoint(part.place!, placePoint(q.place!, u, v, 0)));
+    const local = to(q.outer);
+    let hmin = Infinity, hmax = -Infinity;
+    for (const p of local) { hmin = Math.min(hmin, p[2]); hmax = Math.max(hmax, p[2]); }
+    // Parallel to the part and lying on its top face: glued there. A clock hand rides clear of it.
+    if (hmax - hmin > 0.5 || Math.abs(hmin - tp) > 0.25) continue;
+    const flat = (c: ReturnType<typeof to>): Contour => { const f = c.map((p) => [p[0], p[1]] as Pt); return signedArea(f) < 0 ? f.reverse() : f; };
+    // Only its solid area: a frame glued on leaves its window open.
+    out.push(...(q.holes.length ? shapeContours(differenceShapes([flat(local)], q.holes.map((h) => flat(to(h))))) : [flat(local)]));
+  }
+  return out;
+}
+
+/** "The pattern hardly shows": a shape window with too few shapes in it, and the fixes. */
+export function patternIssues<P>(p: P, out: GenOutput, base = "pattern"): Issue<P>[] {
+  const r = out.pattern, pp = getPath(p, base) as PatternParams | undefined;
+  if (!r || !pp || pp.pattern === "none" || !r.parts) return [];
+  const per = r.shapes / r.parts;
+  if (per >= SPARSE) return [];
+  const set = (patch: Partial<PatternParams>) => (q: P) => {
+    const cur = getPath(q, base) as PatternParams;
+    return setAt(q, base, { ...cur, ...patch });
+  };
+  return [{
+    code: "PATTERN_SPARSE", level: r.shapes === 0 ? "warn" : "info",
+    message: r.shapes === 0
+      ? "The pattern does not fit: no shape fits inside the edges and the part's own holes and marks. Make the pattern smaller, or the shape larger."
+      : `The pattern is large for its space: ${Math.round(per)} ${Math.round(per) === 1 ? "shape" : "shapes"} per part. A smaller pattern or a larger shape shows it better.`,
+    fixes: [
+      { id: "pattern-smaller", label: "Smaller pattern", safe: false, apply: set({ cell: Math.max(4, Math.round(pp.cell * 0.6 * 2) / 2), bar: Math.min(pp.bar, Math.max(1, pp.cell * 0.15)) }) },
+      ...(r.windowed && pp.size < 100 ? [{ id: "pattern-wider", label: "Larger shape", safe: false, apply: set({ size: Math.min(100, pp.size + 20) }) }] : []),
+    ],
+  }];
+}
+
+/** Fewer shapes per part than this, and the check suggests a smaller pattern. */
+const SPARSE = 6;
+
+/** A copy of `p` with `value` at the dotted path `key`. */
+function setAt<P>(p: P, key: string, value: unknown): P {
+  const [head, ...rest] = key.split(".");
+  const o = p as Record<string, unknown>;
+  return { ...o, [head]: rest.length ? setAt(o[head], rest.join("."), value) : value } as P;
 }
 
 /** The panel fields of a pattern under `base` (Boxes keeps its own section under "pierce"). */
@@ -199,7 +257,7 @@ export function patternArt(value: string): { d: string; fill?: boolean }[] {
  * the pattern applied after the build to the parts of the chosen target. `edge` is how far the
  * pattern stays from a part's outline (joints, slots and the rim), mm.
  */
-export function withPattern<P extends GenBase>(def: GeneratorDef<P>, targets: PatternTarget[], opts: { edge?: (p: P) => number; help?: string; barHelp?: string } = {}): GeneratorDef<P> {
+export function withPattern<P extends GenBase>(def: GeneratorDef<P>, targets: PatternTarget[], opts: { edge?: (p: P) => number; help?: string; barHelp?: string; keep?: (p: P, part: GenPart) => Contour[] } = {}): GeneratorDef<P> {
   type Q = P & { pattern: PatternParams };
   const pp = (p: P) => (p as Q).pattern ?? PATTERN_DEFAULTS;
   const edge = opts.edge ?? ((p: P) => Math.max(4, (p.T ?? 3) + pp(p).bar + 1));
@@ -222,11 +280,17 @@ export function withPattern<P extends GenBase>(def: GeneratorDef<P>, targets: Pa
       const unit = patternUnit(q, ctx);
       const chosen = q.on === "all" ? targets : targets.filter((t) => t.v === q.on);
       const e = edge(p);
-      let n = 0;
-      for (const part of out.parts) if (!part.pieces?.length && chosen.some((t) => t.match(part))) n += patternOn(q, part, e, unit);
+      let n = 0, on = 0;
+      for (const part of out.parts) {
+        if (part.pieces?.length || !chosen.some((t) => t.match(part))) continue;
+        n += patternOn(q, part, e, unit, [], [...stackedOn(part, out.parts, p.T ?? 3), ...(opts.keep?.(p, part) ?? [])]);
+        on++;
+      }
       const what = q.mark === "engrave" ? "engraved shapes" : q.mark === "score" ? "scored shapes" : "holes";
-      return { ...out, stats: [...out.stats, { label: "Pattern", value: q.pattern === "motif" && !unit ? "Waiting for the motif" : `${FRET_NAMES[q.pattern]}: ${n} ${what}` }] };
+      const waiting = q.pattern === "motif" && !unit;
+      return { ...out, ...(waiting ? {} : { pattern: { shapes: n, parts: on, windowed: q.shape !== "full" } }), stats: [...out.stats, { label: "Pattern", value: waiting ? "Waiting for the motif" : `${FRET_NAMES[q.pattern]}: ${n} ${what}` }] };
     },
+    check: (p, out) => [...def.check(p, out), ...patternIssues(p, out)],
   };
 }
 

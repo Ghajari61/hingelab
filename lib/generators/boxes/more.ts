@@ -309,11 +309,11 @@ function engraveLid(p: BoxesParams, kit: LidKit, all: GenPart[], art: Art) {
  * The pattern through the walls and the lid face. On the lid a label is left solid round the
  * engraving, in a double frame; a lift-off lid's lip becomes a frame so the holes stay open.
  */
-export function pierceBox(p: BoxesParams, parts: GenPart[], kit: LidKit, art: Art, lid: LidKind | "none"): { label: string; value: string }[] {
+export function pierceBox(p: BoxesParams, parts: GenPart[], kit: LidKit, art: Art, lid: LidKind | "none"): { label: string; value: string }[] & { summary?: GenOutput["pattern"] } {
   if (!pierced(p)) return [];
   const T = p.T, edge = T + Math.max(1, p.pierce.bar) + 1;
-  let walls = 0, top = 0;
-  if (pierceWalls(p)) for (const id of pierceWallIds(p, ["front", "back", "left", "right"])) { const w = parts.find((q) => q.id === id); if (w) walls += pierce(p, w, edge); }
+  let walls = 0, top = 0, on = 0;
+  if (pierceWalls(p)) for (const id of pierceWallIds(p, ["front", "back", "left", "right"])) { const w = parts.find((q) => q.id === id); if (w) { walls += pierce(p, w, edge); on++; } }
   if (pierceLid(p) && kit.face && lid !== "open" && lid !== "none") {
     const part = parts.find((q) => q.id === kit.face!.id);
     if (part) {
@@ -324,6 +324,7 @@ export function pierceBox(p: BoxesParams, parts: GenPart[], kit: LidKit, art: Ar
         part.engrave = [...(part.engrave ?? []), ...labelFrame(k)];
       }
       top = pierce(p, part, edge, keep);
+      on++;
       const lip = parts.find((q) => q.id === "lip");
       if (lip && top && pierceCuts(p)) {
         const xs = lip.outer.map((q) => q[0]), ys = lip.outer.map((q) => q[1]), w = Math.max(6, 2 * T);
@@ -333,7 +334,9 @@ export function pierceBox(p: BoxesParams, parts: GenPart[], kit: LidKit, art: Ar
     }
   }
   const what = p.pierce.mark === "engrave" ? "engraved shapes" : p.pierce.mark === "score" ? "scored shapes" : "holes";
-  return [{ label: "Pattern", value: `${FRET_NAMES[p.pierce.pattern]}: ${walls} ${what} in the walls, ${top} in the lid` }];
+  const stats: { label: string; value: string }[] & { summary?: GenOutput["pattern"] } = [{ label: "Pattern", value: `${FRET_NAMES[p.pierce.pattern]}: ${walls} ${what} in the walls, ${top} in the lid` }];
+  stats.summary = { shapes: walls + top, parts: on, windowed: p.pierce.shape !== "full" };
+  return stats;
 }
 
 const insideH = (p: BoxesParams, h: number, lid: LidKind | "none") => (p.joint.outside ? h : h + lidWalls(lid) * p.T);
@@ -351,6 +354,7 @@ export function buildBoxV2(p: BoxesParams, ctx: BuildContext): V2Output {
   const pattern = pierceBox(p, parts, kit, art, b.lid);
   return {
     parts,
+    ...(pattern.summary ? { pattern: pattern.summary } : {}),
     stats: [
       { label: "Outside", value: `${r1(W + 2 * sh.m)} × ${r1(D + 2 * sh.m)} × ${r1(kit.total)} mm` },
       { label: "Inside", value: `${r1(W - 2 * T)} × ${r1(D - 2 * T)} × ${r1(H - lidWalls(b.lid) * T)} mm` },
@@ -402,6 +406,7 @@ export function buildTrayV2(p: BoxesParams, ctx: BuildContext): V2Output {
   const pattern = pierceBox(p, parts, kit, art, t.lid);
   return {
     parts,
+    ...(pattern.summary ? { pattern: pattern.summary } : {}),
     stats: [
       { label: "Outside", value: `${r1(W + 2 * sh.m)} × ${r1(D + 2 * sh.m)} × ${r1(kit.total)} mm` },
       ...pattern,

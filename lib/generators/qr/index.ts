@@ -2,7 +2,7 @@ import { shapeContours } from "@/lib/letters/polygon";
 import { arc, circle, deg, ellipse, rect, roundedRect, stadium } from "../geom";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { fitArt, namedFile } from "../util";
-import { buildQr, moduleShapes, stencilHoles, type QrOutput } from "./build";
+import { buildQr, moduleShapes, stencilHoles, type QrOutput, CODE_AREA } from "./build";
 import { checkQr } from "./check";
 import { CONTENT_NAMES, qrMatrix } from "./encode";
 import { ECC_RECOVERY, QR_DEFAULTS, mergeQr, type ContentKind, type ModuleStyle, type QrParams } from "./params";
@@ -221,5 +221,9 @@ export { QR_DEFAULTS };
 
 /** The generator with the cut-out pattern (lib/generators/pattern.ts). */
 export const QR: GeneratorDef<QrParams> = withPattern(QR_BASE, [
+  { v: "plate", text: "Plate", match: byId("plate", "top") },
   { v: "back", text: "Backplate", match: byId("back") },
-], { help: "A decorative pattern on the backplate of a layered plate (never through the code itself, so it still scans)." });
+], {
+  help: "A decorative pattern in the plate's border, round the code: on the plate, or on a layered plate's top or backplate (showing through the top's openings). The code and its quiet zone stay solid, so it still scans; widen the border for more room.",
+  keep: (_p, part) => { const a = CODE_AREA.get(part); return a ? [a] : []; },
+});

@@ -13,6 +13,9 @@ import { HEART_PATH } from "../util";
 import { CONTENT_NAMES, qrMatrix, qrPayload, type QrMatrix } from "./encode";
 import { ECC_RECOVERY, type ModuleStyle, type QrParams } from "./params";
 
+/** The code area (with its quiet zone) of a plate this build made, for the cut-out pattern to avoid. */
+export const CODE_AREA = new WeakMap<GenPart, Contour>();
+
 export interface QrInfo {
   payload: string;
   version: number;
@@ -318,11 +321,16 @@ export function buildQr(p: QrParams, ctx: BuildContext): QrOutput {
   const T = p.T;
   const mv = (cs: Contour[]) => move(cs, dx, dy);
   const parts: GenPart[] = [];
+  // The code with its quiet zone and a module more, which a cut-out pattern must leave solid to scan.
+  const codeArea = mv([rect(qx - m, qy - m, W + 2 * m, W + 2 * m)])[0];
   if (out === "engrave") {
     parts.push({ id: "plate", name: "Plate", outer: mv([outer])[0], holes: mv(keyHoles), engrave: [...tagItem(mv(modules), "Code"), ...tagItem(mv(logo), "Logo"), ...tagItem(mv(label), "Label"), ...mv(ring)] });
+    CODE_AREA.set(parts[0], codeArea);
   } else if (out === "cutout") {
     parts.push({ id: "top", name: "Top plate", outer: mv([outer])[0], holes: mv([...keyHoles, ...modules, ...logo, ...label, ...ring]), place: { x: 0, y: 0, z: T } });
+    CODE_AREA.set(parts[0], codeArea);
     parts.push({ id: "back", name: "Backplate", outer: mv([outer])[0], holes: mv(keyHoles), tone: 0.25, place: { x: 0, y: 0, z: 0 } });
+    CODE_AREA.set(parts[1], codeArea);
   } else {
     parts.push({ id: "stencil", name: "Stencil", outer: mv([outer])[0], holes: mv([...keyHoles, ...modules, ...logo, ...label]) });
   }

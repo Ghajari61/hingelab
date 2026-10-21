@@ -2,6 +2,7 @@ import type { Issue } from "@/lib/issues";
 import type { BoxesOutput } from "./build";
 import { fingerCount } from "./joints";
 import type { BoxesParams } from "./params";
+import { patternIssues } from "../pattern";
 
 /** Narrowest tray compartment that still takes fingers, mm. */
 export const MIN_COMPARTMENT = 20;
@@ -162,5 +163,6 @@ export function checkBoxes(p: BoxesParams, out: BoxesOutput): Issue<BoxesParams>
       fixes: p[key].fontId === font ? [] : [{ id: "font", label: `Use ${persian ? "Vazirmatn" : "Fredoka"}`, safe: true, apply: (q) => ({ ...q, [key]: { ...q[key], fontId: font } }) }],
     });
   }
+  issues.push(...patternIssues(p, out, "pierce"));
   return issues;
 }
