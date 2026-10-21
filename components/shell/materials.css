@@ -16,6 +16,9 @@
 .modal.mats .mats-laser th { text-align: left; font-weight: 500; padding: 2px 4px; }
 .modal.mats .mats-laser td { padding: 2px 4px; }
 .modal.mats .mats-laser input { width: 100%; min-width: 0; }
+.modal.mats .mats-cal { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; display: grid; gap: 8px; }
+.modal.mats .mats-cal[open] { padding-bottom: 10px; }
+.modal.mats .mats-cal summary { cursor: pointer; font-size: 12px; font-weight: 500; }
 @media (max-width: 640px) {
   .modal.mats .mats-grid { grid-template-columns: 1fr; }
 }

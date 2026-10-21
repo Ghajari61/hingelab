@@ -11,6 +11,7 @@ import { NumberField } from "@/components/editor/NumberField";
 import type { BaseField } from "@/components/editor/fields";
 import type { Units } from "@/components/editor/format";
 import type { DesignMaterial } from "./MaterialPicker";
+import { CouponResults } from "./CouponResults";
 import "./materials.css";
 
 type LaserText = Record<LaserOp, { speed: string; power: string; passes: string }>;
@@ -196,6 +197,7 @@ export default function MaterialsDialog({ selected, current, units, onUse, onClo
                   />
                 )}
                 <p className="note" role="status">{calibrationLine(draft, fmt)}</p>
+                <CouponResults key={draft.id} draft={draft} onRecord={(m, note) => { setDraft(m); setMsg(note); }} />
                 <label className="mats-name">Bends like (Hinge Box stiffness)
                   <select className="sel" value={draft.like} onChange={(e) => setDraft({ ...draft, like: e.target.value })}>
                     <option value="custom">Not set (a generic sheet)</option>

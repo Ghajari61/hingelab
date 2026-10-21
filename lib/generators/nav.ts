@@ -116,6 +116,7 @@ export const CATALOGUE: CatalogueEntry[] = [
   fromGenerator("keyrack", "laser", "Home"),
   fromGenerator("tablenum", "laser", "Lettering"),
   fromGenerator("trophy", "laser", "Home"),
+  fromGenerator("calibration", "laser", "Tools"),
   {
     slug: "name-tunnel",
     name: "Name & logo tunnel",

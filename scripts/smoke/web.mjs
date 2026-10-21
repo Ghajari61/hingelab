@@ -3,7 +3,7 @@
 import { chromium } from "playwright";
 
 const base = process.argv[2] || "http://127.0.0.1:3200";
-const PRODUCTS = ["hinge", "letters", "parametric", "clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox"];
+const PRODUCTS = ["hinge", "letters", "parametric", "clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "calibration"];
 
 const browser = await chromium.launch();
 const failed = [];

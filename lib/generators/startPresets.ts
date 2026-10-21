@@ -13,6 +13,7 @@ import { TABLENUM_PRESETS } from "./tablenum/presets";
 import { TROPHY_PRESETS } from "./trophy/presets";
 import { TOPPER_PRESETS } from "./topper/presets";
 import { PAPERBOX_PRESETS } from "./paperbox/presets";
+import { CALIBRATION_PRESETS } from "./calibration/presets";
 import type { GeneratorId } from "./ids";
 import type { GenPreset } from "./types";
 
@@ -28,6 +29,7 @@ export const START_PRESETS: Record<GeneratorId, GenPreset<unknown>[]> = {
   trophy: TROPHY_PRESETS as GenPreset<unknown>[],
   shadowbox: [],
   paperbox: PAPERBOX_PRESETS as GenPreset<unknown>[],
+  calibration: CALIBRATION_PRESETS as GenPreset<unknown>[],
 };
 
 export interface LazyStart {

@@ -190,7 +190,7 @@ export function PanelDock({
         <p className="note">Drag a field label left or right to scrub its value. Hold Shift for bigger steps. Stretch shortens each hinge zone to make up for the cuts opening as the wall bends; raise it only if a test wall comes out too long.</p>
       </Sec>
       <Sec title="Bend Analysis" startOpen>
-        <AnalysisPanel model={model} error={error} units={units} />
+        <AnalysisPanel model={model} error={error} units={units} material={params.material} />
         {checks}
       </Sec>
       <Sec title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["tabW", "slotClr", "lidGap", "split", "baseRing", "baseRingW", "seamFingers"])}>
