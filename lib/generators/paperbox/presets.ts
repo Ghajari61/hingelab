@@ -16,6 +16,9 @@ const SHEETS: Record<string, [number, number]> = {
   "small-mailer": [900, 600], "jewelry-mailer": [900, 600], "book-mailer": [900, 600], "tshirt-mailer": [900, 700], "cosmetics-mailer": [900, 700], "subscription-box": [1300, 900],
   "pizza-box": [1000, 900], "cereal-box": [900, 700], "tissue-box": [900, 500], "rsc-small": [900, 450], "fol-carton": [1000, 650], "open-crate": [1150, 450],
   "counter-display": [600, 520], "chocolate-drawer": [700, 450], "hamper-tray": [600, 450], "cake-gable": [600, 450],
+  "cake-box": [900, 700], "cupcake-bakery": [800, 650], "pastry-box": [800, 600], "pie-box": [800, 700], "tart-box": [600, 500], "burger-box": [600, 600],
+  "sandwich-clamshell": [700, 600], "tea-hinged": [700, 600], "cosmetics-hinged": [800, 700], "lunch-carry": [800, 600], "wine-2": [1000, 700], "wine-4": [1000, 800],
+  "gift-bag": [900, 600], "small-bag": [700, 500], "ornament-insert": [700, 500], "jar-insert": [600, 500], "star-pyramid": [600, 500], "popcorn-cone": [600, 500],
 };
 
 const LIST: GenPreset<PaperBoxParams>[] = [
@@ -83,6 +86,40 @@ const LIST: GenPreset<PaperBoxParams>[] = [
   P("party-gable", "Party favour gable box", "Little carry box, 70 × 50 × 70 mm", "gable", 70, 50, 70, "350", { handleH: 28 }),
   P("counter-display", "Counter display", "Shop counter tray with a header, 220 × 160 × 90 mm", "display", 220, 160, 90, "eflute"),
   P("candy-display", "Candy display", "Small counter display, 180 × 120 × 70 mm", "display", 180, 120, 70, "400", { front: 30, header: 70 }),
+  // Polygons and favours
+  P("cube-favour", "Cube favour box", "Wedding or party favour, 60 mm cube", "cube", 60, 60, 60, "300"),
+  P("dice-box", "Dice gift box", "Small cube with dots on every side, 50 mm", "cube", 50, 50, 50, "300", {}, pat("all", "circles", 9, 3)),
+  P("pyramid-favour", "Pyramid favour box", "Four triangles to a point, 70 mm base × 80 mm", "pyramid", 70, 70, 80, "300"),
+  P("star-pyramid", "Starry pyramid", "Pyramid with stars cut in its sides, 90 mm base × 110 mm", "pyramid", 90, 90, 110, "300", {}, pat("all", "stars", 10, 2)),
+  P("chocolate-prism", "Chocolate bar prism", "Triangular box for a chocolate bar, 200 mm long, 40 mm sides", "prism", 200, 40, 0, "350"),
+  P("pen-prism", "Pen box prism", "Slim triangular box for a pen, 160 mm long, 28 mm sides", "prism", 160, 28, 0, "300"),
+  P("candy-cone", "Candy cone", "Paper cone for sweets, 80 mm across × 160 mm", "cone", 80, 80, 160, "250"),
+  P("popcorn-cone", "Popcorn cone", "Larger cone, 110 mm across × 200 mm", "cone", 110, 110, 200, "300"),
+  // Food and bakery
+  P("cake-box", "Cake box with window", "One-piece cake box, tab-locked corners and a lid window, 200 × 200 × 100 mm", "bakery", 200, 200, 100, "400"),
+  P("cupcake-bakery", "Cupcake box with window", "Bakery box for four cupcakes, 180 × 180 × 90 mm", "bakery", 180, 180, 90, "400", { lock: "hook" }),
+  P("pastry-box", "Pastry box", "Plain bakery box, no window, 250 × 150 × 70 mm", "bakery", 250, 150, 70, "400", { lidWindow: false }),
+  P("pie-box", "Pie box", "Shallow box with a round window and thumb notch, 230 × 230 × 50 mm", "pie", 230, 230, 50, "400"),
+  P("tart-box", "Tart box", "Small pie box, 140 × 140 × 40 mm", "pie", 140, 140, 40, "400"),
+  P("burger-box", "Burger box", "Clamshell with a front lock, 120 × 120 × 80 mm", "clamshell", 120, 120, 80, "400"),
+  P("sandwich-clamshell", "Sandwich clamshell", "Long clamshell for a sandwich, 180 × 100 × 70 mm", "clamshell", 180, 100, 70, "400", { lock: "hook" }),
+  P("noodle-pail", "Noodle takeout pail", "Chinese takeout box with handle holes, 80 × 65 × 90 mm", "takeout", 80, 65, 90, "400"),
+  P("favour-pail", "Party favour pail", "Little takeout pail, 55 × 45 × 60 mm", "takeout", 55, 45, 60, "350", { flare: 12 }),
+  // Lidded gift boxes
+  P("tea-hinged", "Tea gift box", "Glued tray with a hinged lid, 160 × 110 × 60 mm", "hinged-lid", 160, 110, 60, "400"),
+  P("jewelry-hinged", "Jewellery box, hinged lid", "Chipboard box with a lip lid and thumb notch, 100 × 80 × 40 mm", "hinged-lid", 100, 80, 40, "chip1", { lidFront: "lip", notch: true }),
+  P("cosmetics-hinged", "Cosmetics set box", "Hinged lid with a window, 200 × 140 × 60 mm", "hinged-lid", 200, 140, 60, "400", { lidWindow: true }),
+  // Carry, wine and bags
+  P("lunch-carry", "Lunch carry box", "Flat top with a handle, 160 × 90 × 110 mm", "carry", 160, 90, 110, "400"),
+  P("wine-2", "Two-bottle wine carrier", "Crash-lock bottom, handle and a divider, E-flute", "wine", 0, 0, 250, "eflute", { bottles: "2" }),
+  P("wine-4", "Four-bottle carrier", "Crossed dividers for four bottles, E-flute", "wine", 0, 0, 240, "eflute", { bottles: "4" }),
+  P("gift-bag", "Gift bag", "Kraft bag with a folded top band and rope holes, 200 × 90 × 250 mm", "bag", 200, 90, 250, "kraft300"),
+  P("small-bag", "Small favour bag", "Little paper bag, 120 × 60 × 160 mm", "bag", 120, 60, 160, "kraft300", { cuff: 25 }),
+  // Flat and inserts
+  P("cd-sleeve", "CD sleeve", "Card sleeve with a thumb notch, 125 × 125 mm", "cd-sleeve", 125, 1, 125, "250"),
+  P("voucher-envelope", "Gift voucher envelope", "Sleeve with a tuck flap, 170 × 1 × 90 mm", "cd-sleeve", 170, 1, 90, "250", { closure: "flap" }),
+  P("ornament-insert", "Ornament cell insert", "Six cells for baubles, 240 × 160 × 70 mm", "cell-insert", 240, 160, 70, "chip1", { cols: 3, rows: 2 }),
+  P("jar-insert", "Jar divider insert", "Four cells for jars, 160 × 160 × 80 mm", "cell-insert", 160, 160, 80, "chip1", { cols: 2, rows: 2 }),
 ];
 
 export const PAPERBOX_PRESETS: GenPreset<PaperBoxParams>[] = LIST.map((p) => (SHEETS[p.id] ? { ...p, params: { ...p.params, bedW: SHEETS[p.id][0], bedH: SHEETS[p.id][1] } } : p));

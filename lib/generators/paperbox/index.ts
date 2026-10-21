@@ -6,7 +6,7 @@
 import { listBoxStyles, buildBox, paperById, type BoxStyle, type ParamField } from "@/lib/paperbox";
 import type { FieldSpec, GeneratorDef, SectionSpec } from "../types";
 import { fitArt, namedFile } from "../util";
-import { motifFonts } from "../motifArt";
+import { motifArtFields, motifFonts } from "../motifArt";
 import { patternArt, patternFields } from "../pattern";
 import { FACE_TARGETS, WINDOW_SHAPES, type WindowShape } from "./decorate";
 import { buildPaperBox, type PaperBoxOutput } from "./build";
@@ -66,6 +66,9 @@ const sections: SectionSpec<PaperBoxParams>[] = [
       { kind: "choice", key: "window.shape", label: "Shape", show: (p) => p.window.on !== "none", help: "The window's shape.", options: (Object.keys(WINDOW_SHAPES) as WindowShape[]).map((v) => ({ v, text: WINDOW_SHAPES[v] })) },
       { kind: "number", key: "window.size", label: "Size", unit: "%", min: 15, max: 95, step: 1, show: (p) => p.window.on !== "none", help: "The window's size as a share of the face." },
       { kind: "number", key: "window.corner", label: "Corner radius", unit: "mm", min: 0, max: 100, step: 0.5, show: (p) => p.window.on !== "none" && p.window.shape === "rounded", help: "Rounds the window's corners." },
+      ...motifArtFields<PaperBoxParams>("window.shape", "window.art", (p) => p.window.on !== "none" && p.window.shape === "custom", () => true),
+      { kind: "number", key: "window.x", label: "Across", unit: "%", min: -100, max: 100, step: 1, show: (p) => p.window.on !== "none", help: "Moves the window left (-) or right (+) of the middle, into the room it leaves." },
+      { kind: "number", key: "window.y", label: "Up and down", unit: "%", min: -100, max: 100, step: 1, show: (p) => p.window.on !== "none", help: "Moves the window up (-) or down (+) from the middle." },
     ],
   },
   {

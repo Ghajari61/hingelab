@@ -169,7 +169,9 @@ export function assembled(parts: DielinePart[], poses: NonNullable<Dieline["pose
   for (const q of poses) {
     const s = stood.find((o) => o.part.id === q.part), base = stood.find((o) => o.part.id === q.on), BT = at.get(q.on);
     if (!s || !base || !BT) continue;
-    const F = q.flip ? rotation([0, 1, 0], Math.PI) : ID;
+    const [tx, ty, tz] = (q.turn ?? [0, 0, 0]).map((v) => (v * Math.PI) / 180);
+    const turn = compose(rotation([0, 0, 1], tz), compose(rotation([0, 1, 0], ty), rotation([1, 0, 0], tx)));
+    const F = compose(turn, q.flip ? rotation([0, 1, 0], Math.PI) : ID);
     const own = extent(s, F), under = extent(base, BT), [dx, dy, dz] = q.shift ?? [0, 0, 0];
     const z = q.top !== undefined ? under.z1 + q.top - own.z1 : under.z0 + (q.bottom ?? 0) - own.z0;
     at.set(q.part, compose([1, 0, 0, under.x - own.x + dx, 0, 1, 0, under.y - own.y + dy, 0, 0, 1, z + dz], F));

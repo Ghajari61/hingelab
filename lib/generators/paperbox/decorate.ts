@@ -8,12 +8,14 @@ import { intersectShapes, makeShape, offsetShapes, shapeContours } from "@/lib/l
 import type { Dieline, Face, Pt } from "@/lib/paperbox";
 import { tucked } from "@/lib/paperbox/fold";
 import { circle, pointInContour } from "../geom";
-import { patternOn, patternUnit, windowShape, type PatternParams, type PatternTarget, type PierceShape } from "../pattern";
+import { patternOn, patternTile, patternUnit, windowShape, type PatternParams, type PatternTarget, type PierceShape } from "../pattern";
+import { MOTIF_ART, cleanMotifArt, type MotifArt } from "../motifArt";
+import { pictureTile } from "../motifRef";
 import type { BuildContext, Contour, GenPart } from "../types";
 
-export type WindowShape = "rect" | "rounded" | "circle" | "oval" | "arch" | "heart" | "star" | "hexagon" | "diamond";
+export type WindowShape = "rect" | "rounded" | "circle" | "oval" | "arch" | "heart" | "star" | "hexagon" | "diamond" | "custom";
 export const WINDOW_SHAPES: Record<WindowShape, string> = {
-  rect: "Rectangle", rounded: "Rounded rectangle", circle: "Circle", oval: "Oval", arch: "Arch", heart: "Heart", star: "Star", hexagon: "Hexagon", diamond: "Diamond",
+  rect: "Rectangle", rounded: "Rounded rectangle", circle: "Circle", oval: "Oval", arch: "Arch", heart: "Heart", star: "Star", hexagon: "Hexagon", diamond: "Diamond", custom: "Your own shape",
 };
 
 export interface WindowParams {
@@ -24,8 +26,13 @@ export interface WindowParams {
   size: number;
   /** Corner radius of a rounded rectangle, mm. */
   corner: number;
+  /** Where it sits: % of the room left either side (-100 at the left or top edge, 100 at the right or bottom). */
+  x: number;
+  y: number;
+  /** Your own shape (a picture or SVG, traced): its outlines, kept to the window's size. */
+  art: MotifArt;
 }
-export const WINDOW_DEFAULTS: WindowParams = { on: "none", shape: "rounded", size: 60, corner: 6 };
+export const WINDOW_DEFAULTS: WindowParams = { on: "none", shape: "rounded", size: 60, corner: 6, x: 0, y: 0, art: { ...MOTIF_ART } };
 
 /** The faces a window or pattern can go on, by name. */
 export const FACE_TARGETS: (PatternTarget & { faces: RegExp })[] = [
@@ -43,6 +50,9 @@ export function cleanWindow(raw: unknown): WindowParams {
     shape: typeof r.shape === "string" && r.shape in WINDOW_SHAPES ? r.shape : WINDOW_DEFAULTS.shape,
     size: n(r.size, 15, 95, WINDOW_DEFAULTS.size),
     corner: n(r.corner, 0, 100, WINDOW_DEFAULTS.corner),
+    x: n(r.x, -100, 100, 0),
+    y: n(r.y, -100, 100, 0),
+    art: cleanMotifArt(r.art),
   };
 }
 
@@ -73,9 +83,17 @@ function roundedRect(x0: number, y0: number, x1: number, y1: number, r: number):
 
 /** The window's outline in the face's frame, inside `inner` (the face less its margin). */
 function windowOf(w: WindowParams, inner: Contour): Contour[] {
-  const b = bbox(inner), cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
-  const k = w.size / 100, bw = (b.x1 - b.x0) * k, bh = (b.y1 - b.y0) * k, s = Math.min(b.x1 - b.x0, b.y1 - b.y0) * k;
+  const b = bbox(inner), k = w.size / 100, bw = (b.x1 - b.x0) * k, bh = (b.y1 - b.y0) * k, s = Math.min(b.x1 - b.x0, b.y1 - b.y0) * k;
+  // Moved off the middle by x and y, into the room the window leaves.
+  const cx = (b.x0 + b.x1) / 2 + (((b.x1 - b.x0) - bw) / 2) * (w.x / 100), cy = (b.y0 + b.y1) / 2 + (((b.y1 - b.y0) - bh) / 2) * (w.y / 100);
   let c: Contour | null;
+  if (w.shape === "custom") {
+    const tile = pictureTile(w.art);
+    if (!tile) return [];
+    const f = Math.min(bw / tile.w, bh / tile.h), ox = cx - (tile.w * f) / 2, oy = cy - (tile.h * f) / 2;
+    const cs = tile.cs.map((q) => q.map(([x, y]) => [ox + x * f, oy + y * f] as Pt));
+    return intersectShapes(cs, [inner]).map((x) => x.outer);
+  }
   switch (w.shape) {
     case "rect": c = roundedRect(cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2, 0); break;
     case "rounded": c = roundedRect(cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2, w.corner); break;
@@ -98,7 +116,7 @@ function windowOf(w: WindowParams, inner: Contour): Contour[] {
  * `edge` is how far both stay inside a face's edges, mm.
  */
 export function decorate(d: Dieline, win: WindowParams, pp: PatternParams, t: number, ctx?: BuildContext): { label: string; value: string }[] {
-  const unit = pp.pattern !== "none" ? patternUnit(pp, ctx) : undefined;
+  const unit = pp.pattern !== "none" ? patternUnit(pp, ctx) : undefined, tile = patternTile(pp);
   const edge = Math.max(3, 2 * t + 1);
   let windows = 0, shapes = 0;
   for (const part of d.parts) {
@@ -118,14 +136,14 @@ export function decorate(d: Dieline, win: WindowParams, pp: PatternParams, t: nu
         const tmp: GenPart = { id: f.id, name: f.name, outer, holes: [...holes] };
         if (pp.mark === "engrave") tmp.engrave = [];
         if (pp.mark === "score") tmp.score = [];
-        shapes += patternOn(pp, tmp, edge, unit);
+        shapes += patternOn(pp, tmp, edge, unit, [], [], tile);
         const made = pp.mark === "engrave" ? tmp.engrave ?? [] : pp.mark === "score" ? tmp.score ?? [] : tmp.holes.slice(holes.length);
         for (const c of made) part.paths.push(pp.mark === "engrave" ? { type: "engrave", pts: c.map(fr.sheet), closed: true } : pp.mark === "score" ? { type: "crease", pts: c.map(fr.sheet), closed: false } : { type: "cut", pts: c.map(fr.sheet), closed: true });
       }
     }
   }
   const out: { label: string; value: string }[] = [];
-  if (win.on !== "none") out.push({ label: "Windows", value: windows ? `${windows} ${win.shape === "circle" ? "round" : WINDOW_SHAPES[win.shape].toLowerCase()} window${windows > 1 ? "s" : ""}` : "None fit: make the faces larger or the window smaller" });
-  if (pp.pattern !== "none") out.push({ label: "Pattern", value: pp.pattern === "motif" && !unit ? "Waiting for the motif" : `${shapes} ${pp.mark === "engrave" ? "engraved shapes" : pp.mark === "score" ? "scored shapes" : "holes"}` });
+  if (win.on !== "none") out.push({ label: "Windows", value: win.shape === "custom" && !win.art.levels ? "Waiting for your shape's picture" : windows ? `${windows} ${win.shape === "circle" ? "round" : win.shape === "custom" ? "custom" : WINDOW_SHAPES[win.shape].toLowerCase()} window${windows > 1 ? "s" : ""}` : "None fit: make the faces larger or the window smaller" });
+  if (pp.pattern !== "none") out.push({ label: "Pattern", value: pp.pattern === "motif" && !unit ? "Waiting for the motif" : pp.pattern === "tile" && !tile ? "Waiting for your tile's picture" : `${shapes} ${pp.mark === "engrave" ? "engraved shapes" : pp.mark === "score" ? "scored shapes" : "holes"}` });
   return out;
 }

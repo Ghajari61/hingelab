@@ -73,9 +73,9 @@ export interface Dieline {
    * How the folded parts sit together in 3D (parts not listed stand side by side): `part` centred
    * on `on`, turned over first when `flip`, its top `top` mm above the other's top (or its bottom
    * `bottom` mm above the other's bottom), then moved by `shift` (x along the length, y toward the
-   * viewer, z up).
+   * viewer, z up). `turn` (degrees about x, then y, then z) stands a flat part up: a divider.
    */
-  poses?: { part: string; on: string; flip?: boolean; top?: number; bottom?: number; shift?: [number, number, number] }[];
+  poses?: { part: string; on: string; flip?: boolean; turn?: [number, number, number]; top?: number; bottom?: number; shift?: [number, number, number] }[];
 }
 
 /** Parameters every style shares. Styles add their own. */
