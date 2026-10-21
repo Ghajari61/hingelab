@@ -1,4 +1,4 @@
-import { cleanPatternSource } from "./source/pattern";
+import { cleanPatternSource } from "./source/patternSpec";
 import { DEFAULTS as HINGE, MATERIALS, clone } from "@/lib/hinge";
 import type { FormulaSpec, ImageSource, ParametricParams, TextSource } from "./types";
 

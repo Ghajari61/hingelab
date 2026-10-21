@@ -3,7 +3,7 @@
  * Cut settings are starting points only; the Test & Calibration generator writes measured values
  * into the user's own copies.
  */
-import { MATERIALS } from "@/lib/hinge";
+import { MATERIALS } from "@/lib/hinge/defaults";
 
 export const STARTING_POINT_NOTE = "Starting point — run a test grid first";
 

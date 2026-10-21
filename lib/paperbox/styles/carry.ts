@@ -87,12 +87,13 @@ export const WINE = registerBoxStyle({
     const parts: DielinePart[] = [T.net.build("carrier", "Carrier", num(p, "bleed", 0))];
     const poses: NonNullable<Dieline["poses"]> = [];
     const hi = Math.min(num(p, "insertH", 0) || T.h * 0.66, T.h - 5), { l, w, t } = T;
+    // Each divider a board's thickness short of the walls at both ends, so it slides in.
     for (let i = 1; i < cols; i++) {
-      parts.push(divider(`across-${i}`, `Divider ${i}`, w, hi, t, Array.from({ length: rows - 1 }, (_, j) => ((j + 1) * w) / rows), "top", true));
+      parts.push(divider(`across-${i}`, `Divider ${i}`, w - 2 * t, hi, t, Array.from({ length: rows - 1 }, (_, j) => ((j + 1) * w) / rows - t), "top", true));
       poses.push({ part: `across-${i}`, on: "carrier", turn: [90, 0, 90], bottom: t, shift: [-l / 2 + (i * l) / cols, 0, 0] });
     }
     for (let j = 1; j < rows; j++) {
-      parts.push(divider(`along-${j}`, `Long divider ${j}`, l, hi, t, Array.from({ length: cols - 1 }, (_, i) => ((i + 1) * l) / cols), "bottom", true));
+      parts.push(divider(`along-${j}`, `Long divider ${j}`, l - 2 * t, hi, t, Array.from({ length: cols - 1 }, (_, i) => ((i + 1) * l) / cols - t), "bottom", true));
       poses.push({ part: `along-${j}`, on: "carrier", turn: [90, 0, 0], bottom: t, shift: [0, -w / 2 + (j * w) / rows, 0] });
     }
     return {

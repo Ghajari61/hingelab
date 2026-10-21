@@ -22,7 +22,7 @@ import { BASE_TEXT_FONT, BASE_TEXT_SIZE, MAX_BASE_TEXT } from "@/lib/hinge/baseT
 import { BUNDLED_FONTS } from "@/lib/letters/fontList";
 import { FRET_BUILT_IN, FRET_NAMES } from "@/lib/generators/fretwork";
 import { MOTIF_IDS, MOTIF_NAMES } from "@/lib/generators/motifs";
-import { PIERCE_SHAPES, type PierceShape } from "@/lib/generators/pattern";
+import { PIERCE_SHAPES, type PierceShape } from "@/lib/generators/windowShape";
 
 /** What the Sheet section needs from the editor: the fit result and the two setters. */
 export interface SheetProps {

@@ -114,7 +114,7 @@ export function WallArtSection({ params, result, units, onEdit, onPicture, picNa
         {thumbs.map(({ k, cells }) => (
           <button key={k} type="button" className="wa-thumb" aria-pressed={s.pattern === k} title={WAVE_PATTERNS[k]}
             onClick={() => { if (k === "image" && !picName) { picRef.current?.click(); return; } set((q) => { q.pattern = k; if (k === "image" && picName) q.fileName = picName; }, true); }}>
-            <svg viewBox={`0 0 18 ${Math.round((18 * 200) / 300)}`} aria-hidden>{cells.map((c, i) => <path key={i} d={c.d} fill={c.fill} />)}</svg>
+            <svg viewBox={`0 0 18 ${Math.round((18 * 200) / 300)}`} shapeRendering="crispEdges" aria-hidden>{cells.map((c, i) => <path key={i} d={c.d} fill={c.fill} />)}</svg>
             <span>{WAVE_PATTERNS[k]}</span>
           </button>
         ))}
@@ -122,7 +122,7 @@ export function WallArtSection({ params, result, units, onEdit, onPicture, picNa
       <input ref={picRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onPicture(f); e.target.value = ""; }} />
 
       <div className="wa-canvas">
-        <svg ref={svgRef} viewBox={`0 0 ${cols} ${rows}`} preserveAspectRatio="none" style={{ aspectRatio: `${s.width} / ${s.height}` }} role="img" aria-label="The pattern: light is deep. Drag the handles to shape it."
+        <svg ref={svgRef} viewBox={`0 0 ${cols} ${rows}`} preserveAspectRatio="none" shapeRendering="crispEdges" style={{ aspectRatio: `${s.width} / ${s.height}` }} role="img" aria-label="The pattern: light is deep. Drag the handles to shape it."
           onPointerMove={(e) => move(e, false)} onPointerUp={(e) => move(e, true)} onPointerDown={addOnCanvas}>
           {preview.map((c, i) => <path key={i} d={c.d} fill={c.fill} />)}
           {s.style === "shelf" && s.shelves.map((sh, i) => <rect key={`r${i}`} x={sh.x0 * cols} y={(sh.y - sh.h / 2) * rows} width={(sh.x1 - sh.x0) * cols} height={sh.h * rows} fill="none" stroke="#fff" strokeWidth={0.35} strokeDasharray="1 0.6" />)}

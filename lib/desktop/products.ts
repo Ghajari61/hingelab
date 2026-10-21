@@ -20,7 +20,7 @@ import { defaultRimWidth, isLidSlot, lidSlotSize } from "@/lib/hinge/lidSlot";
 import { SHEET_PRESETS } from "@/lib/studio/library";
 import { FRET_BUILT_IN, FRET_NAMES } from "@/lib/generators/fretwork";
 import { MOTIF_IDS, MOTIF_NAMES } from "@/lib/generators/motifs";
-import { PIERCE_SHAPES, type PierceShape } from "@/lib/generators/pattern";
+import { PIERCE_SHAPES, type PierceShape } from "@/lib/generators/windowShape";
 import { hingeTextContext } from "@/lib/billing/hingeText";
 import { applyStandardSize, insideText, STANDARD_SIZES, standardSizeOf } from "@/lib/hinge/standardSizes";
 import { BASE_TEXT_FONT, BASE_TEXT_SIZE, MAX_BASE_TEXT } from "@/lib/hinge/baseText";

@@ -8,7 +8,7 @@
 import { FORMULA_DEFAULTS, PARAMETRIC_DEFAULTS } from "./defaults";
 import { shapeExpression, type ShapeSpec } from "./shapes";
 import type { FormulaSpec, ParametricParams } from "./types";
-import { PATTERN_SOURCE_DEFAULTS, type PatternSource } from "./source/pattern";
+import { PATTERN_SOURCE_DEFAULTS, type PatternSource } from "./source/patternSpec";
 
 export type RecipeId = "waves" | "ripples" | "terrain" | "dunes" | "spiral" | "interference" | "bubbles" | "petals" | "sunburst" | "leaf-clock" | "wave-wall" | "organic-wall" | "shelf-wall" | "dune-wall";
 /** How a surface recipe is cut. Radial and clock recipes have their own method. */

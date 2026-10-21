@@ -11,7 +11,7 @@ import { BUNDLED_FONTS } from "@/lib/letters/fontList";
 import { FRET_NAMES } from "@/lib/generators/fretwork";
 import { isFretMotif, isFretShape } from "@/lib/hinge/fret";
 import { cleanBoardPattern, cleanRails } from "@/lib/parametric/backboard";
-import { cleanPatternSource } from "@/lib/parametric/source/pattern";
+import { cleanPatternSource } from "@/lib/parametric/source/patternSpec";
 import type { ParametricParams } from "@/lib/parametric";
 import { RELIEF_IDS } from "@/lib/parametric/source/reliefs";
 

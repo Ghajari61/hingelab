@@ -72,7 +72,7 @@ export interface Params {
   /** The library shape a motif pattern repeats (missing: heart). */
   fretMotif?: string;
   /** Fill each face, or only a shape in its middle (missing: the whole face). */
-  fretShape?: import("@/lib/generators/pattern").PierceShape;
+  fretShape?: import("@/lib/generators/windowShape").PierceShape;
   /** That shape's size, % of the face (missing: 70). */
   fretSize?: number;
   /** Cut the pattern through, engrave it, or score its outlines (missing: cut). */

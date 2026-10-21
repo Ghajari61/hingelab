@@ -9,7 +9,9 @@
  */
 import { differenceShapes, intersectShapes, makeShape, offsetShapes, shapeContours, signedArea, unionShapes } from "@/lib/letters/polygon";
 import { FRET_GRIDS, FRET_KINDS, FRET_NAMES, fretHoles, fretSample, type FretGrid, type FretKind, type FretTile, type KeepOut } from "./fretwork";
-import { circle, pointInContour, rect, regularPolygon } from "./geom";
+import { pointInContour, rect } from "./geom";
+import { PIERCE_SHAPES, windowShape, type PierceShape } from "./windowShape";
+export { PIERCE_SHAPES, windowShape, type PierceShape };
 import { MOTIF_ART, cleanMotifArt, motifArtFields, motifFonts, type MotifArt } from "./motifArt";
 import { motifRef, pictureTile } from "./motifRef";
 import { MOTIF_OPTIONS, isMotifKind, motif } from "./motifs";
@@ -19,9 +21,6 @@ import { placePoint, unplacePoint } from "./place";
 import { getPath } from "./path";
 import { fitArt } from "./util";
 
-/** The window the pattern fills: the whole face, or a shape in its middle. */
-export type PierceShape = "full" | "circle" | "heart" | "star" | "hexagon" | "diamond";
-export const PIERCE_SHAPES: Record<PierceShape, string> = { full: "Whole face", circle: "Circle", heart: "Heart", star: "Star", hexagon: "Hexagon", diamond: "Diamond" };
 /** The pattern cut through, engraved, or scored as outlines. */
 export type PierceMark = "cut" | "engrave" | "score";
 
@@ -74,35 +73,6 @@ export function cleanRepeat(r: { grid?: unknown; turn?: unknown }): { grid: Fret
     grid: typeof r.grid === "string" && r.grid in FRET_GRIDS ? (r.grid as FretGrid) : "auto",
     turn: typeof r.turn === "number" && Number.isFinite(r.turn) ? Math.min(180, Math.max(-180, Math.round(r.turn))) : 0,
   };
-}
-
-/** A shape of the given size (its width and height at most `s`) centred on (cx, cy), y down. */
-export function windowShape(shape: PierceShape, cx: number, cy: number, s: number): Contour | null {
-  const r = s / 2;
-  switch (shape) {
-    case "circle": return circle(cx, cy, r);
-    case "hexagon": return regularPolygon(6, r, 30, cx, cy);
-    case "diamond": return [[cx, cy - r], [cx + r * 0.75, cy], [cx, cy + r], [cx - r * 0.75, cy]];
-    case "star": {
-      const pts: Contour = [];
-      for (let i = 0; i < 10; i++) {
-        const a = -Math.PI / 2 + (Math.PI * i) / 5, R = i % 2 ? r * 0.45 : r;
-        pts.push([cx + R * Math.cos(a), cy + 0.06 * r + R * Math.sin(a)]);
-      }
-      return pts;
-    }
-    case "heart": {
-      // The classic heart curve (17 × 15.5 units across), its point down.
-      const k = s / 34, pts: Contour = [];
-      for (let i = 0; i < 96; i++) {
-        const t = (2 * Math.PI * i) / 96;
-        const x = 16 * Math.sin(t) ** 3, y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
-        pts.push([cx + x * k, cy - (y + 2.5) * k]);
-      }
-      return pts;
-    }
-    default: return null;
-  }
 }
 
 /**

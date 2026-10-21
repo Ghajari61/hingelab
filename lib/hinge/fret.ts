@@ -6,7 +6,7 @@
  */
 import { fretHoles, isFretKind, type FretSpec, type KeepOut } from "@/lib/generators/fretwork";
 import { MOTIF_IDS, motif } from "@/lib/generators/motifs";
-import { PIERCE_SHAPES, windowShape } from "@/lib/generators/pattern";
+import { PIERCE_SHAPES, windowShape } from "@/lib/generators/windowShape";
 import { coreDistance } from "./lidSlot";
 import { offsetPolyXY } from "./polygon";
 import type { Edge, Params, Point, WallPart } from "./types";

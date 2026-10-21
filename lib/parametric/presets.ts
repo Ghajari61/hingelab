@@ -2,7 +2,7 @@ import type { Preset } from "@/lib/presets";
 import { FORMULA_DEFAULTS, LEAF_CLOCK, PARAMETRIC_DEFAULTS, TEXT_DEFAULTS } from "./defaults";
 import type { ShapeId, ShapeSpec } from "./shapes";
 import type { FormulaSpec, LibraryId, ParametricParams } from "./types";
-import { PATTERN_SOURCE_DEFAULTS, type PatternSource } from "./source/pattern";
+import { PATTERN_SOURCE_DEFAULTS, type PatternSource } from "./source/patternSpec";
 
 export type ParametricCategory = "portraits" | "wall-art" | "nature" | "abstract" | "lamps" | "clocks" | "typography" | "radial" | "papercraft";
 
