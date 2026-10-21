@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.1.0",
-    "pub_date": "2026-10-19T17:26:20.727Z",
-    "notes": "HingeLab for Windows now runs the same editors as the website, on your computer: designs update as you type, also offline. One colour palette for cut, score and engrave; checks that point at their parts; press ? for shortcuts; exports straight to your folder. Free-form Studio, AI Studio and cloud projects open in the app's website view.",
+    "version": "1.2.0",
+    "pub_date": "2026-10-21T05:23:30.571Z",
+    "notes": "Patterns everywhere: the cut-out pattern on every part it fits, in Boxes, the Hinge Box, Letters, Parametric and the QR plate, plus your own seamless tile. Paper Box folds in 3D with a Fold slider, explode and mountain and valley creases, and has 14 new structures with 29 presets: pyramid, cube, prism, cone, bakery box, hinged lid, pie box, clamshell, takeout pail, carry box, wine carrier, paper bag, CD sleeve and cell inserts. Parametric wall art: wave, ridge, noise, ripple, mountain and attractor patterns as slat walls on 1x2 to 1x4 rails, with shelves, an organic edge, sheet and lumber estimates and GLB export.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.1.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm1nWmtVREJMUUdUeTN2eURuakoxS0ZFM2YvUDBRSGJRdTBqL2s5RjJ2S3hHdWFHOThuZDlzTHNJTGI3K1lVL2syYTFXa2VvZFpPOW8rQTJZN1NZYkFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyNDMwNTE1CWZpbGU6SGluZ2VMYWJfMS4xLjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMS4wCmhZUmRhT1VNU3BFU2ZWeDV0TmwzSnFwcDEyZmtjR0hMQkQxM2lFaTFZbXdJbXRXTitERklTMjNwWGhGQ2R6MzJ3eUkrL1N0TGwzcXVmdDVGUEtqekRRPT0K",
-        "size": 10023583,
-        "sha256": "db7734b216b38a22e8baaabad3a84f8c73d54e575bb4ff40b1a5ac3dd3d5c57d"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.2.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmpvbVFCUlc5S3hST2VhWnhkSzdLcVB6SjNaemZFU2djSTZlTFMvSmk0UHNiMWlha2E4S29vcUJjWkYxSjBmdzU0SW5rc0hqbXhBOWJiWUh0RXRVWFFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyNTU5OTM4CWZpbGU6SGluZ2VMYWJfMS4yLjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMi4wCnpwM2pRdzhkek8waTJiazVjU1hvdENoa2ZzOEwrNUY2cGlmNm5FdkQ3Z09xMG9idW14T0ZzTkx2bExhT2dmVWFuME5seEZWY2oxRDlpZDJtSG9nWURBPT0K",
+        "size": 10208117,
+        "sha256": "84e433d6e843b43af909ba2273b54e27dca45f8be30028b02250e671382b9cc1"
       }
     }
   }
