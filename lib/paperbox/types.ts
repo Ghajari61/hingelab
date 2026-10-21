@@ -45,6 +45,11 @@ export interface DielinePart {
   name: string;
   paths: DielinePath[];
   faces: Face[];
+  /**
+   * The assembled shape for 3D when it bends instead of folding flat (a pillow box): flat
+   * polygons in mm (x along the length, y toward the viewer, z up), drawn instead of the folded faces.
+   */
+  surface?: [number, number, number][][];
 }
 
 export interface Dieline {
@@ -56,6 +61,13 @@ export interface Dieline {
   /** Step-by-step assembly. */
   assembly: string[];
   warnings: string[];
+  /**
+   * How the folded parts sit together in 3D (parts not listed stand side by side): `part` centred
+   * on `on`, turned over first when `flip`, its top `top` mm above the other's top (or its bottom
+   * `bottom` mm above the other's bottom), then moved by `shift` (x along the length, y toward the
+   * viewer, z up).
+   */
+  poses?: { part: string; on: string; flip?: boolean; top?: number; bottom?: number; shift?: [number, number, number] }[];
 }
 
 /** Parameters every style shares. Styles add their own. */

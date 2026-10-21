@@ -89,7 +89,12 @@ export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D 
     const z = pl.z + explode * 30 * levels.indexOf(pl.z);
     const wrap = new THREE.Group();
     wrap.name = p.name;
-    if (pl.upright) wrap.position.set(pl.x, -z, -pl.y);
+    if (pl.m) {
+      // A folded face: the plan matrix, between the scene's axes (x, -y, z) and the part's (u, -v, h).
+      const m = pl.m, lift = explode * 30 * levels.indexOf(pl.z);
+      wrap.matrix.set(m[0], -m[1], m[2], m[3], -m[4], m[5], -m[6], -m[7], m[8], -m[9], m[10], m[11] + lift, 0, 0, 0, 1);
+      wrap.matrixAutoUpdate = false;
+    } else if (pl.upright) wrap.position.set(pl.x, -z, -pl.y);
     else wrap.position.set(pl.x, -pl.y, z);
     if (pl.yaw) wrap.rotation.z = -(pl.yaw * Math.PI) / 180;
     const stand = new THREE.Group();

@@ -13,6 +13,7 @@ import { buildBoxV2, buildDrawer, buildHex, buildInsert, buildMoney, buildStack,
 import { pierced } from "./pierce";
 import { buildBook } from "./book";
 import { DESIGN_NAMES, FIT_MM, FIT_NAMES, type BoxesParams } from "./params";
+import { patternUnit } from "../pattern";
 
 export interface BoxesInfo {
   /** Outside size of the finished piece, mm. */
@@ -324,6 +325,8 @@ const isV1Box = (p: BoxesParams) => (p.box.lid === "closed" || p.box.lid === "op
 
 export function buildBoxes(p: BoxesParams, ctx: BuildContext): BoxesOutput {
   if (!(p.T > 0)) return { parts: [], stats: [], error: "Set the material thickness." };
+  // A motif pattern's tile (a library shape, or the user's picture or words) for this build.
+  if (p.pierce.pattern === "motif") p = { ...p, pierce: { ...p.pierce, unit: patternUnit(p.pierce, ctx) } };
   const out = buildDesign(p, ctx);
   const d = FIT_MM[p.joint.fit] ?? 0;
   if (!d || out.error || !JOINTED.has(p.design)) return out;

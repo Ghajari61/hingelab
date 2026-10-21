@@ -5,6 +5,7 @@ import { MOTIF_ART, cleanMotifArt, type MotifArt } from "../motifArt";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 import { FRET_NAMES, type FretKind } from "../fretwork";
+import type { Contour } from "../types";
 
 export type Design = "box" | "tray" | "drawer" | "hex" | "insert" | "money" | "stack" | "book" | "sign" | "frame" | "stand" | "keys" | "bird";
 export type LidKind = "closed" | "open" | "liftoff" | "sliding" | "pin" | "inset";
@@ -18,11 +19,8 @@ export const FIT_MM: Record<JointFit, number> = { looser: -0.1, loose: -0.05, st
 export const FIT_NAMES: Record<JointFit, string> = { looser: "Looser", loose: "Loose", standard: "Standard", snug: "Snug", tight: "Tighter" };
 /** Faces that carry the cut-out pattern. */
 export type PierceOn = "both" | "walls" | "lid" | "front" | "front-lid";
-/** The window the pattern fills: the whole face, or a shape in its middle. */
-export type PierceShape = "full" | "circle" | "heart" | "star" | "hexagon" | "diamond";
-export const PIERCE_SHAPES: Record<PierceShape, string> = { full: "Whole face", circle: "Circle", heart: "Heart", star: "Star", hexagon: "Hexagon", diamond: "Diamond" };
-/** The pattern cut through, engraved, or scored as outlines. */
-export type PierceMark = "cut" | "engrave" | "score";
+export { PIERCE_SHAPES, type PierceMark, type PierceShape } from "../pattern";
+import { PIERCE_SHAPES, type PierceMark, type PierceShape } from "../pattern";
 
 export const DESIGN_NAMES: Record<Design, string> = {
   box: "Box", tray: "Tray", drawer: "Drawer box", hex: "Hexagon box", insert: "Divider insert", money: "Money box", stack: "Stacking trays", book: "Book box",
@@ -62,7 +60,13 @@ export interface BoxesParams extends GenBase {
   /** A box shaped like a book: one cover piece bends round a living-hinge spine. Sizes are outside. */
   book: { width: number; height: number; thickness: number; over: number };
   /** A decorative pattern cut through the walls and lid (or the book's cover). */
-  pierce: { pattern: FretKind; on: PierceOn; cell: number; bar: number; shape: PierceShape; size: number; mark: PierceMark };
+  pierce: {
+    pattern: FretKind; on: PierceOn; cell: number; bar: number; shape: PierceShape; size: number; mark: PierceMark;
+    /** The tile for a motif pattern: a library motif, "picture" or "text", and the user's own art. */
+    motif: string; art: MotifArt;
+    /** The motif tile as built (set for the build, never saved). */
+    unit?: Contour[];
+  };
 }
 
 export const BOXES_DEFAULTS: BoxesParams = {
@@ -93,7 +97,7 @@ export const BOXES_DEFAULTS: BoxesParams = {
   keys: { width: 220, height: 90, corner: 10, hooks: 4, reach: 35, text: "KEYS", fontId: "fredoka", size: 18 },
   bird: { width: 120, depth: 120, height: 150, pitch: 40, hole: 32, perch: false, overhang: 20 },
   book: { width: 120, height: 160, thickness: 50, over: 3 },
-  pierce: { pattern: "none", on: "both", cell: 16, bar: 3, shape: "full", size: 70, mark: "cut" },
+  pierce: { pattern: "none", on: "both", cell: 16, bar: 3, shape: "full", size: 70, mark: "cut", motif: "heart", art: { ...MOTIF_ART } },
 };
 
 export function mergeBoxes(raw: unknown): BoxesParams {
@@ -106,6 +110,9 @@ export function mergeBoxes(raw: unknown): BoxesParams {
   if (!(p.pierce.pattern in FRET_NAMES)) p.pierce.pattern = "none";
   if (!["walls", "lid", "front", "front-lid"].includes(p.pierce.on)) p.pierce.on = "both";
   if (!(p.pierce.shape in PIERCE_SHAPES)) p.pierce.shape = "full";
+  if (!isMotifKind(p.pierce.motif)) p.pierce.motif = "heart";
+  p.pierce.art = cleanMotifArt(p.pierce.art);
+  delete p.pierce.unit;
   if (p.pierce.mark !== "engrave" && p.pierce.mark !== "score") p.pierce.mark = "cut";
   if (!(p.joint.fit in FIT_MM)) p.joint.fit = "standard";
   return p;

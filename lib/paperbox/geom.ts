@@ -3,7 +3,7 @@
  * the outline cut as the union of all faces. Flaps are drawn in a local frame (their hinge along
  * x from 0 to w, the flap reaching toward +y) and placed on any edge of the net.
  */
-import { offsetShapes, shapeContours, unionShapes, makeShape } from "@/lib/letters/polygon";
+import { differenceShapes, offsetShapes, shapeContours, unionShapes, makeShape } from "@/lib/letters/polygon";
 import type { DielinePart, DielinePath, Face, Pt } from "./types";
 
 const add = (a: Pt, b: Pt): Pt => [a[0] + b[0], a[1] + b[1]];
@@ -72,8 +72,11 @@ export function glueFlap(w: number, d: number, taperDeg: number): Pt[] {
 export class Net {
   private polys: Pt[][] = [];
   private holes: Pt[][] = [];
+  private notches: Pt[][] = [];
   paths: DielinePath[] = [];
   faces: Face[] = [];
+  /** `oneWinding`: orient every face alike before joining them (flaps on any edge); the first styles predate it. */
+  constructor(private oneWinding = false) {}
 
   /** A rectangular face (panel) on the sheet. */
   panel(id: string, name: string, x: number, y: number, w: number, h: number, more: Partial<Face> = {}): Face {
@@ -114,10 +117,17 @@ export class Net {
   perforation(pts: Pt[]) { this.paths.push({ type: "perforation", pts, closed: false }); }
   /** A hole cut through (window, slot, hang hole). */
   hole(pts: Pt[]) { this.holes.push(pts); }
+  /** A shape added to the outline with no face of its own (a curved end). */
+  outline(pts: Pt[]) { this.polys.push(pts); }
+  /** A shape cut out of the outline where it crosses it (a thumb notch). */
+  notch(pts: Pt[]) { this.notches.push(pts); }
 
   /** The part: the outline (union of every face) and holes as cut paths, then creases and the rest; `bleed` adds the bleed line. */
   build(id: string, name: string, bleed = 0): DielinePart {
-    const shapes = unionShapes(this.polys);
+    // One winding for every face (when asked): a flap mirrored onto its edge would otherwise cancel the sliver that joins it.
+    const wind = (c: Pt[]) => c.reduce((a, q, i) => { const r = c[(i + 1) % c.length]; return a + q[0] * r[1] - r[0] * q[1]; }, 0);
+    const joined = unionShapes(this.oneWinding ? this.polys.map((c) => (wind(c) < 0 ? [...c].reverse() : c)) : this.polys);
+    const shapes = this.notches.length ? differenceShapes(shapeContours(joined), this.notches) : joined;
     const cuts: DielinePath[] = [];
     // Joins between faces can leave zero-width slivers in the union: those are not holes.
     const area = (c: Pt[]) => Math.abs(c.reduce((a, q, i) => { const r = c[(i + 1) % c.length]; return a + q[0] * r[1] - r[0] * q[1]; }, 0)) / 2;

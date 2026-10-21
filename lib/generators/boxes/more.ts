@@ -181,6 +181,8 @@ export interface LidKit {
   /** Lid face for the engraving: part id, outline, and the art centre on it. */
   face?: { id: string; outline: Contour; cx: number; cy: number; w: number; h: number };
   pinNeed?: number;
+  /** Areas of the lid face the pattern keeps solid (the inset lid's knob), in the face's frame. */
+  keep?: KeepOut[];
 }
 
 const LEDGE = 5;
@@ -288,6 +290,7 @@ export function lidKit(p: BoxesParams, kind: LidKind, W: number, D: number, H: n
         parts, ceiling: H - 2 * T, total: H + 2 * T,
         assembly: ["Glue the four ledges inside the walls one thickness below the top, so the lid sits flush.", "Glue the knob neck and knob together, then onto the lid."],
         face: { id: "lid", outline: lid, cx: Lw / 2, cy: art ? (Ld - 2 * kr - 12) / 2 : Ld / 2, w: Lw - 8, h: art ? Ld - 2 * kr - 16 : Ld - 8 },
+        keep: [{ x0: Lw / 2 - kr - 3, y0: ky - kr - 3, x1: Lw / 2 + kr + 3, y1: ky + kr + 3 }],
       };
     }
   }
@@ -311,10 +314,10 @@ export function pierceBox(p: BoxesParams, parts: GenPart[], kit: LidKit, art: Ar
   const T = p.T, edge = T + Math.max(1, p.pierce.bar) + 1;
   let walls = 0, top = 0;
   if (pierceWalls(p)) for (const id of pierceWallIds(p, ["front", "back", "left", "right"])) { const w = parts.find((q) => q.id === id); if (w) walls += pierce(p, w, edge); }
-  if (pierceLid(p) && kit.face && lid !== "inset" && lid !== "open" && lid !== "none") {
+  if (pierceLid(p) && kit.face && lid !== "open" && lid !== "none") {
     const part = parts.find((q) => q.id === kit.face!.id);
     if (part) {
-      const keep: KeepOut[] = [];
+      const keep: KeepOut[] = [...(kit.keep ?? [])];
       if (art.cs.length) {
         const k = labelBox(kit.face.cx, kit.face.cy, art.w, art.h);
         keep.push(k);

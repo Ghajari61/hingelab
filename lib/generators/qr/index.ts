@@ -7,6 +7,7 @@ import { checkQr } from "./check";
 import { CONTENT_NAMES, qrMatrix } from "./encode";
 import { ECC_RECOVERY, QR_DEFAULTS, mergeQr, type ContentKind, type ModuleStyle, type QrParams } from "./params";
 import { QR_PRESETS } from "./presets";
+import { byId, withPattern } from "../pattern";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const holds = (...k: ContentKind[]) => (p: QrParams) => k.includes(p.content.kind);
@@ -183,7 +184,7 @@ function scaleQr(p: QrParams, s: number): QrParams {
   };
 }
 
-export const QR: GeneratorDef<QrParams> = {
+const QR_BASE: GeneratorDef<QrParams> = {
   id: "qr",
   name: "QR Code",
   version: 1,
@@ -217,3 +218,8 @@ export const QR: GeneratorDef<QrParams> = {
 };
 
 export { QR_DEFAULTS };
+
+/** The generator with the cut-out pattern (lib/generators/pattern.ts). */
+export const QR: GeneratorDef<QrParams> = withPattern(QR_BASE, [
+  { v: "back", text: "Backplate", match: byId("back") },
+], { help: "A decorative pattern on the backplate of a layered plate (never through the code itself, so it still scans)." });

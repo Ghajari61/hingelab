@@ -29,7 +29,8 @@ describe("Paper Box generator", () => {
       const out = PAPERBOX.build(p, CTX);
       expect(out.error, pr.id).toBeUndefined();
       expect(out.parts.length).toBeGreaterThan(0);
-      for (const part of out.parts) expect(part.score!.length, pr.id).toBeGreaterThan(4);
+      // A sleeve folds three times and has its glue flap; every other part more.
+      for (const part of out.parts) expect(part.score!.length, pr.id).toBeGreaterThan(part.id === "sleeve" ? 3 : 4);
     }
     const p = PAPERBOX.merge(PAPERBOX.presets.find((x) => x.id === "tea-box")!.params);
     const svg = genSVG(PAPERBOX, p, arrangeGenerator(PAPERBOX, p, CTX).lay!);

@@ -56,8 +56,13 @@ function shade(hex: string, k: number) {
   return "#" + c.map((v) => v.toString(16).padStart(2, "0")).join("");
 }
 
+/** Parts as drawn in 3D: a part that bends (or folds) as its pieces. */
+const pieces3d = (out: GenOutput): (GenPart & { soft?: boolean })[] => out.parts.flatMap((p) => p.views3d?.length
+  ? p.views3d.map((v, i) => ({ ...p, id: `${p.id}-${i}`, outer: v.outer, holes: v.holes, cuts: undefined, score: undefined, engrave: v.engrave, place: v.place, views3d: undefined, soft: v.soft }))
+  : [p]);
+
 function projectedSVG(out: GenOutput, T: number, w: number, h: number): string {
-  const items = out.parts.map((p, i) => {
+  const items = pieces3d(out).map((p, i) => {
     const pl = p.place ?? { x: 0, y: 0, z: 0 };
     const t = p.t ?? T;
     const at = (c: Contour, hh: number) => c.map(([u, v]) => placePoint(pl, u, v, hh));
@@ -120,9 +125,11 @@ function projectedSVG(out: GenOutput, T: number, w: number, h: number): string {
   const tol = vb[2] / 260;
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${vb.join(" ")}">`;
   for (const d of items) {
-    const base = d.p.color ?? ((d.p.tone ?? 1) < 0.6 ? "#5A4130" : WOODS[d.i % WOODS.length]);
+    const base = d.p.color ?? ((d.p.tone ?? 1) < 0.6 ? "#5A4130" : WOODS[(d.p.soft ? 0 : d.i) % WOODS.length]);
+    const fill = shade(base, 0.86 + 0.16 * d.light);
+    if (d.p.soft) { s += `<path d="${d.face.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${fill}" stroke="${fill}" stroke-width="${sw}" stroke-linejoin="round"/>`; continue; }
     if (d.band.length) s += `<path d="${d.band.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${shade(base, 0.78)}" fill-rule="evenodd" stroke="${EDGE}" stroke-width="${sw}" stroke-linejoin="round"/>`;
-    s += `<path d="${d.face.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${shade(base, 0.86 + 0.16 * d.light)}" fill-rule="evenodd" stroke="${EDGE}" stroke-width="${sw}" stroke-linejoin="round"/>`;
+    s += `<path d="${d.face.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${fill}" fill-rule="evenodd" stroke="${EDGE}" stroke-width="${sw}" stroke-linejoin="round"/>`;
     if (d.cuts.length) s += `<path d="${d.cuts.map((c) => thumbD(c, false, tol)).join(" ")}" fill="none" stroke="${EDGE}" stroke-width="${sw}"/>`;
     if (d.engrave.length) s += `<path d="${d.engrave.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${INK}" fill-rule="evenodd"/>`;
   }
@@ -130,7 +137,7 @@ function projectedSVG(out: GenOutput, T: number, w: number, h: number): string {
 }
 
 export function assembledSVG(out: GenOutput, T: number, w = 300, h = 200): string {
-  if (out.parts.some((p) => p.place?.yaw || p.place?.tilt)) return projectedSVG(out, T, w, h);
+  if (out.parts.some((p) => p.place?.yaw || p.place?.tilt || p.place?.m || p.views3d?.some((v) => v.place.m))) return projectedSVG(out, T, w, h);
   const upright = out.parts.filter((p) => p.place?.upright);
   const bottom = upright.length ? Math.max(...upright.map((p) => bboxOf([p.outer]).y1)) : null;
   const order = [...out.parts].sort((a, b) => (a.place?.upright ? 1 : 0) - (b.place?.upright ? 1 : 0) || (a.place?.z ?? 0) - (b.place?.z ?? 0));

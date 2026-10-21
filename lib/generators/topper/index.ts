@@ -10,6 +10,7 @@ import { buildTopper, type TopperOutput } from "./build";
 import { checkTopper } from "./check";
 import { TOPPER_DEFAULTS, mergeTopper, type TopperParams } from "./params";
 import { TOPPER_PRESETS } from "./presets";
+import { byId, withPattern } from "../pattern";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const main = (p: TopperParams) => p.kit.kind !== "cupcake";
@@ -161,7 +162,7 @@ function scaleTopper(p: TopperParams, s: number): TopperParams {
 const KIT_NAMES = { topper: "Cake topper", cupcake: "Cupcake picks", set: "Party set" } as const;
 const STYLE_NAMES = { letters: "letters", outline: "outline", layered: "layered", plate: "plate" } as const;
 
-export const TOPPER: GeneratorDef<TopperParams> = {
+const TOPPER_BASE: GeneratorDef<TopperParams> = {
   id: "topper",
   name: "Cake Topper",
   version: 1,
@@ -201,3 +202,8 @@ export const TOPPER: GeneratorDef<TopperParams> = {
 };
 
 export { TOPPER_DEFAULTS };
+
+/** The generator with the cut-out pattern (lib/generators/pattern.ts). */
+export const TOPPER: GeneratorDef<TopperParams> = withPattern(TOPPER_BASE, [
+  { v: "topper", text: "Back layer", match: byId("topper") },
+], { help: "A decorative pattern cut through the topper's back layer round its words (or engraved or scored); the letters and sticks stay solid." });

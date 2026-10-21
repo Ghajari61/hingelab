@@ -123,12 +123,21 @@ export interface GenPart {
    * horizontal, 90 = upright); `yaw` turns it about the vertical (deg; 90 runs its x along +y on plan
    * with its thickness toward -x).
    */
-  place?: { x: number; y: number; z: number; rot?: number; upright?: boolean; tilt?: number; yaw?: number };
+  place?: {
+    x: number; y: number; z: number; rot?: number; upright?: boolean; tilt?: number; yaw?: number;
+    /**
+     * Any placement, for faces folded off other faces (a paper box): a row-major 3 × 4 matrix from
+     * the part's (u, v, through-thickness) to the plan (x, y toward the viewer, z up). When set, the
+     * other fields are ignored.
+     */
+    m?: number[];
+  };
   /**
    * A part that bends (a book cover round its spine) is drawn in 3D as these flat pieces instead,
    * each in its own frame and place; the cut file keeps the one part.
    */
-  views3d?: { outer: Contour; holes: Contour[]; engrave?: Contour[]; place: NonNullable<GenPart["place"]> }[];
+  /** `soft`: a piece of a curved surface, drawn without an outline of its own. */
+  views3d?: { outer: Contour; holes: Contour[]; engrave?: Contour[]; place: NonNullable<GenPart["place"]>; soft?: boolean }[];
   /** Thickness when it differs from the material (for example acrylic hands). */
   t?: number;
   /** Shade in 3D (1 = the material; lower is darker), for a contrasting layer. */

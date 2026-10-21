@@ -4,14 +4,17 @@
  * whole inside the region, so bars of at least `bar` mm stay between holes and round the edge;
  * shapes that would cross the region's edge or a kept area (a label, a knob) are left out.
  */
+import { differenceShapes, intersectShapes, makeShape, offsetShapes, shapeContours, signedArea, unionShapes } from "@/lib/letters/polygon";
 import { circle, regularPolygon } from "./geom";
+import { motif } from "./motifs";
 import type { Contour, Pt } from "./types";
 
-export type FretKind = "none" | "lattice" | "floral" | "quatrefoil" | "honeycomb" | "circles" | "stars" | "leaves";
+export type FretKind = "none" | "lattice" | "floral" | "quatrefoil" | "honeycomb" | "circles" | "stars" | "leaves" | "motif";
 
 export const FRET_NAMES: Record<FretKind, string> = {
   none: "None", lattice: "Diamond lattice", floral: "Floral rosettes", quatrefoil: "Moroccan quatrefoil",
   honeycomb: "Honeycomb", circles: "Circles", stars: "Stars", leaves: "Woven leaves",
+  motif: "A motif (yours or from the library)",
 };
 export const FRET_KINDS = Object.keys(FRET_NAMES) as FretKind[];
 export const isFretKind = (v: unknown): v is FretKind => typeof v === "string" && v in FRET_NAMES && v !== "none";
@@ -22,6 +25,8 @@ export interface FretSpec {
   cell: number;
   /** Narrowest wood left between holes, mm. */
   bar: number;
+  /** The tile for `kind: "motif"`: outlines centred on (0, 0) with their larger side 100. */
+  unit?: Contour[];
 }
 
 /** An axis-aligned area to keep solid. */
@@ -40,9 +45,9 @@ function lens(L: number, w: number): Contour {
 }
 
 /** Centres on a square or hexagon-packed grid covering the region, and the shapes at each (kept or dropped together). */
-function tiles(kind: FretKind, cell: number, bar: number, x0: number, y0: number, x1: number, y1: number): Contour[][] {
+function tiles(kind: FretKind, cell: number, bar: number, x0: number, y0: number, x1: number, y1: number, unit?: Contour[]): Contour[][] {
   const out: Contour[][] = [];
-  const hexGrid = kind === "floral" || kind === "honeycomb" || kind === "circles" || kind === "stars";
+  const hexGrid = kind === "floral" || kind === "honeycomb" || kind === "circles" || kind === "stars" || kind === "motif";
   // A rosette is two cells across, so its petals stay wide enough to cut.
   const dx = kind === "floral" ? 2 * cell : cell, dy = hexGrid ? dx * Math.sqrt(3) / 2 : dx;
   const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
@@ -51,7 +56,7 @@ function tiles(kind: FretKind, cell: number, bar: number, x0: number, y0: number
     for (let i = -nx; i <= nx; i++) {
       const odd = Math.abs(j) % 2 === 1;
       const x = cx + i * dx + (hexGrid && odd ? dx / 2 : 0), y = cy + j * dy;
-      out.push(shapeAt(kind, dx, bar, x, y, (i + j) % 2 === 0));
+      out.push(shapeAt(kind, dx, bar, x, y, (i + j) % 2 === 0, unit));
     }
   }
   if (kind === "lattice") {
@@ -61,8 +66,17 @@ function tiles(kind: FretKind, cell: number, bar: number, x0: number, y0: number
   return out;
 }
 
-function shapeAt(kind: FretKind, cell: number, bar: number, x: number, y: number, even: boolean): Contour[] {
+function shapeAt(kind: FretKind, cell: number, bar: number, x: number, y: number, even: boolean, unit?: Contour[]): Contour[] {
   switch (kind) {
+    case "motif": {
+      // The motif fills the cell less a bar across, and the row pitch (hexagonal rows, 0.866 cell) less
+      // a bar down; each outline is a hole (islands inside it would fall out).
+      if (!unit?.length) return [];
+      let w = 0, h = 0;
+      for (const c of unit) for (const [u, v] of c) { w = Math.max(w, Math.abs(u) * 2); h = Math.max(h, Math.abs(v) * 2); }
+      const s = Math.min((cell - bar) / Math.max(w, 1e-6), (cell * Math.sqrt(3) / 2 - bar) / Math.max(h, 1e-6));
+      return s * Math.max(w, h) > 1.5 ? unit.map((c) => c.map(([u, v]) => [x + u * s, y + v * s] as Pt)) : [];
+    }
     case "lattice": {
       const h = (cell - bar * Math.SQRT2) / 2;
       return h > 0.6 ? [[[x, y - h], [x + h, y], [x, y + h], [x - h, y]]] : [];
@@ -101,15 +115,40 @@ function shapeAt(kind: FretKind, cell: number, bar: number, x: number, y: number
 
 /**
  * The pattern's holes in the rectangle x0..x1 × y0..y1, kept `bar` mm clear of its edges and of
- * every keep-out area; `inside` can reject points too (a curved outline).
+ * every keep-out area; `inside` can reject points too (a curved outline). With `clip` (a window
+ * such as a star, or any area: outlines and their holes) the pattern is cut to it, a bar inside its
+ * edges and a bar clear of the keep-outs, so tiles are trimmed round a knob or a slot instead of
+ * dropped and the window's shape reads even a few repeats across; pieces too small or too thin to
+ * cut are dropped.
  */
-export function fretHoles(spec: FretSpec, x0: number, y0: number, x1: number, y1: number, keep: KeepOut[] = [], inside?: (q: Pt) => boolean): Contour[] {
+export function fretHoles(spec: FretSpec, x0: number, y0: number, x1: number, y1: number, keep: KeepOut[] = [], inside?: (q: Pt) => boolean, clip?: Contour | Contour[]): Contour[] {
   if (spec.kind === "none" || !(spec.cell > 0) || x1 - x0 < spec.cell * 0.6 || y1 - y0 < spec.cell * 0.6) return [];
   const bar = Math.max(0.5, spec.bar), cell = Math.max(spec.cell, bar * 2.5);
   const ok = (q: Pt) => q[0] >= x0 + bar && q[0] <= x1 - bar && q[1] >= y0 + bar && q[1] <= y1 - bar
     && !keep.some((k) => q[0] > k.x0 - bar && q[0] < k.x1 + bar && q[1] > k.y0 - bar && q[1] < k.y1 + bar)
     && (!inside || inside(q));
-  return tiles(spec.kind, cell, bar, x0, y0, x1, y1).filter((g) => g.length && g.every((c) => c.every(ok))).flat();
+  // A motif without its own tile repeats the library heart.
+  const unit = spec.kind === "motif" && !spec.unit?.length ? motif("heart", 100) : spec.unit;
+  const groups = tiles(spec.kind, cell, bar, x0, y0, x1, y1, unit);
+  if (!clip) return groups.filter((g) => g.length && g.every((c) => c.every(ok))).flat();
+  const region = typeof clip[0]?.[0] === "number" ? [clip as Contour] : (clip as Contour[]);
+  let area = unionShapes(region, [], true);
+  if (keep.length && area.length) area = differenceShapes(shapeContours(area), keep.map((k) => [[k.x0, k.y0], [k.x1, k.y0], [k.x1, k.y1], [k.x0, k.y1]] as Contour));
+  const win = shapeContours(offsetShapes(area, -bar));
+  if (!win.length) return [];
+  const within = (q: Pt) => q[0] >= x0 + bar && q[0] <= x1 - bar && q[1] >= y0 + bar && q[1] <= y1 - bar && (!inside || inside(q));
+  const minArea = Math.max(2 * bar * bar, 0.04 * cell * cell);
+  const out: Contour[] = [];
+  for (const g of groups) for (const c of g) {
+    // A sliver at the window's edge would burn away: keep pieces with some body (or half their hole).
+    const least = Math.min(minArea, 0.5 * Math.abs(signedArea(c)));
+    for (const s of intersectShapes([c], win)) {
+      if (Math.abs(signedArea(s.outer)) < least || !s.outer.every(within)) continue;
+      if (!offsetShapes([makeShape(s.outer, [])], -bar * 0.3).length) continue;
+      out.push(s.outer);
+    }
+  }
+  return out;
 }
 
 /** A small picture of a pattern for a picker, in a 40 mm square. */

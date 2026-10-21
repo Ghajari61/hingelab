@@ -14,6 +14,7 @@ import {
 import { centreOn, photoSpec } from "./photo";
 import { sampleArt } from "./picture";
 import { SHADOWBOX_PRESETS } from "./presets";
+import { byId, withPattern } from "../pattern";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
@@ -424,7 +425,7 @@ function railPreview(key: string, p: ShadowBoxParams, value: string): ShadowBoxP
   }
 }
 
-export const SHADOWBOX: GeneratorDef<ShadowBoxParams> = {
+const SHADOWBOX_BASE: GeneratorDef<ShadowBoxParams> = {
   id: "shadowbox",
   name: "Shadow Box",
   version: 1,
@@ -467,3 +468,8 @@ export const SHADOWBOX: GeneratorDef<ShadowBoxParams> = {
 };
 
 export { SHADOWBOX_DEFAULTS };
+
+/** The generator with the cut-out pattern (lib/generators/pattern.ts). */
+export const SHADOWBOX: GeneratorDef<ShadowBoxParams> = withPattern(SHADOWBOX_BASE, [
+  { v: "walls", text: "Box walls", match: byId("wall") },
+], { help: "A pattern cut through the walls of the box round the layers (light shines through it in a light box), or engraved or scored." });

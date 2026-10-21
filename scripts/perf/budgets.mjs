@@ -34,19 +34,21 @@ const LAZY_BUDGETS = {
   "Generator editor": { key: /Workspace\.tsx -> @\/components\/generators\/GeneratorEditor$/, kb: 45 },
   // Phase 2: code the shell used to carry for every editor (font list, randomise, pattern helpers)
   // now loads with the generators that use it, a few KB each; the shell lost 132 KB.
-  "Clock generator": { key: /registry\.ts -> \.\/clock$/, kb: 17 },
-  "Puzzle generator": { key: /registry\.ts -> \.\/puzzle$/, kb: 15 },
-  "QR Code generator": { key: /registry\.ts -> \.\/qr$/, kb: 25 },
+  // The Cut-out pattern on every generator (D193): the pattern, fretwork and motif code, about 12 KB,
+  // counted again in each generator's chunks (the browser downloads it once).
+  "Clock generator": { key: /registry\.ts -> \.\/clock$/, kb: 31 },
+  "Puzzle generator": { key: /registry\.ts -> \.\/puzzle$/, kb: 29 },
+  "QR Code generator": { key: /registry\.ts -> \.\/qr$/, kb: 38 },
   // Boxes version 2 (D109) added five designs and three lids: 10 → 25 KB. Your own motif (D169) +2 KB.
   // Phase 2 and D187 (joint fit, shaped and engraved patterns, six presets): 32 → 46 KB.
   "Boxes generator": { key: /registry\.ts -> \.\/boxes$/, kb: 46 },
-  "Cake Topper generator": { key: /registry\.ts -> \.\/topper$/, kb: 25 },
-  "Key Holder generator": { key: /registry\.ts -> \.\/keyrack$/, kb: 24 },
-  "Sign generator": { key: /registry\.ts -> \.\/sign$/, kb: 27 },
-  "Table Numbers generator": { key: /registry\.ts -> \.\/tablenum$/, kb: 26 },
-  "Trophy generator": { key: /registry\.ts -> \.\/trophy$/, kb: 25 },
+  "Cake Topper generator": { key: /registry\.ts -> \.\/topper$/, kb: 29 },
+  "Key Holder generator": { key: /registry\.ts -> \.\/keyrack$/, kb: 28 },
+  "Sign generator": { key: /registry\.ts -> \.\/sign$/, kb: 31 },
+  "Table Numbers generator": { key: /registry\.ts -> \.\/tablenum$/, kb: 30 },
+  "Trophy generator": { key: /registry\.ts -> \.\/trophy$/, kb: 29 },
   // Your picture (D160), photo looks (D161), the enclosure (D162), item tags (D173): 46 KB. Phase 2: 51 KB.
-  "Shadow Box generator": { key: /registry\.ts -> \.\/shadowbox$/, kb: 51 },
+  "Shadow Box generator": { key: /registry\.ts -> \.\/shadowbox$/, kb: 55 },
 };
 
 const gz = new Map();

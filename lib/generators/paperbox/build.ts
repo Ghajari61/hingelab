@@ -3,10 +3,22 @@
  * perforations (as dashes) on the inner-cut layer, creases and half cuts on the score layer.
  */
 import { cleanParams, getBoxStyle, type Dieline, type DielinePart, type Pt } from "@/lib/paperbox";
-import type { Contour, GenOutput, GenPart } from "../types";
+import { assembled, piece, tucked } from "@/lib/paperbox/fold";
+import type { BuildContext, Contour, GenOutput, GenPart } from "../types";
+import { decorate } from "./decorate";
 import type { PaperBoxParams } from "./params";
 
 export type PaperBoxOutput = GenOutput & { info?: { warnings: string[]; outer: [number, number, number]; inner: [number, number, number]; style: string } };
+
+const inside = (q: Pt, poly: Pt[]) => {
+  let r = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if (yi > q[1] !== yj > q[1] && q[0] < ((xj - xi) * (q[1] - yi)) / (yj - yi) + xi) r = !r;
+  }
+  return r;
+};
+const middle = (c: Pt[]): Pt => [c.reduce((a, q) => a + q[0], 0) / c.length, c.reduce((a, q) => a + q[1], 0) / c.length];
 
 const area = (c: Pt[]) => Math.abs(c.reduce((a, q, i) => { const r = c[(i + 1) % c.length]; return a + q[0] * r[1] - r[0] * q[1]; }, 0)) / 2;
 
@@ -35,6 +47,8 @@ export function dashes(pts: Pt[], cut: number, gap: number): Contour[] {
 
 export function toParts(d: Dieline, p: PaperBoxParams): GenPart[] {
   let x = 0;
+  // In 3D the box is shown folded: each face its own piece, turned about its creases.
+  const folded = assembled(d.parts, d.poses, p.T);
   return d.parts.map((dp: DielinePart) => {
     const closed = dp.paths.filter((q) => q.type === "cut" && q.closed);
     const outer = closed.reduce((a, b) => (area(b.pts) > area(a.pts) ? b : a), closed[0]);
@@ -51,24 +65,32 @@ export function toParts(d: Dieline, p: PaperBoxParams): GenPart[] {
       ...(dp.paths.some((q) => q.type === "engrave") ? { engrave: dp.paths.filter((q) => q.type === "engrave").map((q) => q.pts) } : {}),
       place: { x, y: 0, z: 0 },
     };
+    const holes = part.holes, engrave = part.engrave ?? [];
+    part.views3d = dp.surface ? dp.surface.map((P) => { const q = piece(P); return { outer: q.outer, holes: [], place: { x: 0, y: 0, z: 0, m: q.m }, soft: true }; }) : folded.filter((f) => f.part === dp && !tucked(f.face)).map(({ face, m }) => {
+      const own = (c: Pt[]) => inside(middle(c), face.poly);
+      const e = engrave.filter(own);
+      return { outer: face.poly, holes: holes.filter(own), ...(e.length ? { engrave: e } : {}), place: { x: 0, y: 0, z: 0, m } };
+    });
     x += w + 20;
     return part;
   });
 }
 
 /** Builds the chosen style with the shell's board thickness. */
-export function buildPaperBox(p: PaperBoxParams): PaperBoxOutput {
+export function buildPaperBox(p: PaperBoxParams, ctx?: BuildContext): PaperBoxOutput {
   const style = getBoxStyle(p.style);
   if (!style) return { parts: [], stats: [], error: `Unknown box style "${p.style}".` };
   if (!(p.T > 0)) return { parts: [], stats: [], error: "Set the board thickness." };
   const d = style.build(cleanParams(style, { ...p.styles[style.id], paper: "custom", thickness: p.T }));
   const r = (v: number) => Math.round(v * 10) / 10;
+  const extra = decorate(d, p.window, p.pattern, p.T, ctx);
   return {
     parts: toParts(d, p),
     stats: [
       { label: "Outside", value: `${d.outer.map(r).join(" × ")} mm` },
       { label: "Inside", value: `${d.inner.map(r).join(" × ")} mm` },
       { label: "Pieces", value: String(d.parts.length) },
+      ...extra,
     ],
     assembly: d.assembly,
     info: { warnings: d.warnings, outer: d.outer, inner: d.inner, style: style.id },

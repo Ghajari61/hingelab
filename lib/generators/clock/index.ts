@@ -5,6 +5,7 @@ import { buildClock, faceOutline, handOutline } from "./build";
 import { checkClock } from "./check";
 import { CLOCK_DEFAULTS, MOVEMENTS, mergeClock, type ClockParams, type MovementId } from "./params";
 import { CLOCK_PRESETS } from "./presets";
+import { byId, withPattern } from "../pattern";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const pointed = (p: ClockParams) => ["sunburst", "gear", "scallop", "flower"].includes(p.face.shape);
@@ -192,7 +193,7 @@ function scaleClock(p: ClockParams, s: number): ClockParams {
 }
 
 
-export const CLOCK: GeneratorDef<ClockParams> = {
+const CLOCK_BASE: GeneratorDef<ClockParams> = {
   id: "clock",
   name: "Clock",
   version: 1,
@@ -225,3 +226,10 @@ export const CLOCK: GeneratorDef<ClockParams> = {
 };
 
 export { CLOCK_DEFAULTS };
+
+/** The generator with the cut-out pattern (lib/generators/pattern.ts). */
+export const CLOCK: GeneratorDef<ClockParams> = withPattern(CLOCK_BASE, [
+  { v: "face", text: "Face", match: byId("face") },
+  { v: "back", text: "Back plate", match: byId("back") },
+  { v: "ring", text: "Ring", match: byId("ring") },
+], { edge: (p) => Math.max(4, ((p as { pattern?: { bar: number } }).pattern?.bar ?? 3) + 3), help: "A decorative pattern cut through the face (round the numerals and the hands' hole), the back plate or the ring, or engraved or scored." });
