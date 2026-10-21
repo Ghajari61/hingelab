@@ -61,7 +61,7 @@ export function hingeRequestError(p: Params): string | null {
   if (p.seamFingers !== undefined && typeof p.seamFingers !== "boolean") return "Invalid value for seamFingers.";
   if (p.baseText !== undefined && (typeof p.baseText !== "string" || p.baseText.length > MAX_BASE_TEXT || p.baseText.split("\n").length > MAX_BASE_LINES)) return `The text under the box is limited to ${MAX_BASE_TEXT} characters on ${MAX_BASE_LINES} lines.`;
   if (p.baseTextFont !== undefined && !BUNDLED_FONTS.some((f) => f.id === p.baseTextFont)) return "Invalid value for baseTextFont.";
-  if (p.fret !== undefined && !(p.fret in FRET_NAMES)) return "Invalid value for fret.";
+  if (p.fret !== undefined && (!(p.fret in FRET_NAMES) || p.fret === "tile")) return "Invalid value for fret.";
   if (p.fretOn !== undefined && !["both", "lid", "walls"].includes(p.fretOn)) return "Invalid value for fretOn.";
   if (p.fretMotif !== undefined && !isFretMotif(p.fretMotif)) return "Invalid value for fretMotif.";
   if (p.fretShape !== undefined && !isFretShape(p.fretShape)) return "Invalid value for fretShape.";

@@ -85,7 +85,7 @@ export function mergeLetterParams(partial?: Partial<LetterParams> | null): Lette
   return out;
 }
 
-const CUTOUT_KINDS = FRET_KINDS.filter((k): k is LetterCutout["kind"] => k !== "none" && k !== "motif");
+const CUTOUT_KINDS = FRET_KINDS.filter((k): k is LetterCutout["kind"] => k !== "none" && k !== "motif" && k !== "tile");
 /** Letter-box pattern kinds (a motif needs a tile, which letters do not pick). */
 export const LETTER_CUTOUT_KINDS: readonly LetterCutout["kind"][] = CUTOUT_KINDS;
 const num = (v: unknown, lo: number, hi: number, d: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);

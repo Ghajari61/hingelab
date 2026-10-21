@@ -20,7 +20,7 @@ export const FIT_NAMES: Record<JointFit, string> = { looser: "Looser", loose: "L
 /** Faces that carry the cut-out pattern. */
 export type PierceOn = "both" | "walls" | "lid" | "front" | "front-lid";
 export { PIERCE_SHAPES, type PierceMark, type PierceShape } from "../pattern";
-import { PIERCE_SHAPES, type PierceMark, type PierceShape } from "../pattern";
+import { PIERCE_SHAPES, cleanRepeat, type PierceMark, type PierceShape } from "../pattern";
 
 export const DESIGN_NAMES: Record<Design, string> = {
   box: "Box", tray: "Tray", drawer: "Drawer box", hex: "Hexagon box", insert: "Divider insert", money: "Money box", stack: "Stacking trays", book: "Book box",
@@ -66,6 +66,10 @@ export interface BoxesParams extends GenBase {
     motif: string; art: MotifArt;
     /** The motif tile as built (set for the build, never saved). */
     unit?: Contour[];
+    /** Your own tile for `pattern: "tile"`, set for the build. */
+    tile?: import("../fretwork").FretTile;
+    grid: import("../fretwork").FretGrid;
+    turn: number;
   };
 }
 
@@ -97,7 +101,7 @@ export const BOXES_DEFAULTS: BoxesParams = {
   keys: { width: 220, height: 90, corner: 10, hooks: 4, reach: 35, text: "KEYS", fontId: "fredoka", size: 18 },
   bird: { width: 120, depth: 120, height: 150, pitch: 40, hole: 32, perch: false, overhang: 20 },
   book: { width: 120, height: 160, thickness: 50, over: 3 },
-  pierce: { pattern: "none", on: "both", cell: 16, bar: 3, shape: "full", size: 70, mark: "cut", motif: "heart", art: { ...MOTIF_ART } },
+  pierce: { pattern: "none", on: "both", cell: 16, bar: 3, shape: "full", size: 70, mark: "cut", motif: "heart", art: { ...MOTIF_ART }, grid: "auto", turn: 0 },
 };
 
 export function mergeBoxes(raw: unknown): BoxesParams {
@@ -113,6 +117,8 @@ export function mergeBoxes(raw: unknown): BoxesParams {
   if (!isMotifKind(p.pierce.motif)) p.pierce.motif = "heart";
   p.pierce.art = cleanMotifArt(p.pierce.art);
   delete p.pierce.unit;
+  delete p.pierce.tile;
+  Object.assign(p.pierce, cleanRepeat(p.pierce));
   if (p.pierce.mark !== "engrave" && p.pierce.mark !== "score") p.pierce.mark = "cut";
   if (!(p.joint.fit in FIT_MM)) p.joint.fit = "standard";
   return p;

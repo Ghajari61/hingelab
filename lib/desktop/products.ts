@@ -18,7 +18,7 @@ import { clone, DEFAULTS, exportSVG, MATERIALS, mergeParams, type Params } from 
 import { HINGE_PRESETS, hingePresetParams, randomHingeBox } from "@/lib/hinge/presets";
 import { defaultRimWidth, isLidSlot, lidSlotSize } from "@/lib/hinge/lidSlot";
 import { SHEET_PRESETS } from "@/lib/studio/library";
-import { FRET_KINDS, FRET_NAMES } from "@/lib/generators/fretwork";
+import { FRET_BUILT_IN, FRET_NAMES } from "@/lib/generators/fretwork";
 import { MOTIF_IDS, MOTIF_NAMES } from "@/lib/generators/motifs";
 import { PIERCE_SHAPES, type PierceShape } from "@/lib/generators/pattern";
 import { hingeTextContext } from "@/lib/billing/hingeText";
@@ -128,7 +128,7 @@ function hingeProduct(): DProduct {
       { kind: "number", key: "divH", label: "Height (0 = full)", help: HINGE_FIELD_HELP.divH, unit: "mm", min: 0, max: 3000, step: 1, default: 0 },
     ],
     secFret: [
-      { kind: "choice", key: "fret", label: "Pattern", default: "none", options: FRET_KINDS.map((v) => ({ v, text: FRET_NAMES[v] })) },
+      { kind: "choice", key: "fret", label: "Pattern", default: "none", options: FRET_BUILT_IN.map((v) => ({ v, text: FRET_NAMES[v] })) },
       { kind: "choice", key: "fretOn", label: "Cut it in", default: "both", options: [{ v: "both", text: "Lid and walls" }, { v: "lid", text: "Lid" }, { v: "walls", text: "Walls" }] },
       { kind: "number", key: "fretCell", label: "Pattern size", help: HINGE_FIELD_HELP.fretCell, unit: "mm", min: 6, max: 80, step: 0.5, default: 16 },
       { kind: "number", key: "fretBar", label: "Bar width", help: HINGE_FIELD_HELP.fretBar, unit: "mm", min: 1, max: 15, step: 0.25, default: 3 },

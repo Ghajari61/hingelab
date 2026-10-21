@@ -49,14 +49,15 @@ export function cleanMotifArt(raw: unknown): MotifArt {
  * Panel fields for the user's motif, under a motif choice at `kindKey` whose settings live at `base`
  * (for example "motif.kind" and "motif.art"). `show` limits them further.
  */
-export function motifArtFields<P>(kindKey: string, base: string, show: (p: P) => boolean = () => true): FieldSpec<P>[] {
-  const kind = (p: P) => (show(p) ? String(getPath(p, kindKey)) : "");
+export function motifArtFields<P>(kindKey: string, base: string, show: (p: P) => boolean = () => true, picture?: (p: P) => boolean): FieldSpec<P>[] {
+  // `picture`: the choice needs the picture whatever the motif kind (your own tile).
+  const kind = (p: P) => (!show(p) ? "" : picture?.(p) ? "picture" : String(getPath(p, kindKey)));
   const art = (p: P) => getPath(p, base) as MotifArt;
   return [
     {
       kind: "image", key: `${base}.image`, aspectKey: `${base}.aspect`, trace: { levels: `${base}.levels`, name: `${base}.name` }, label: "Motif picture",
       show: (p) => kind(p) === "picture",
-      help: "A drawing, logo or photo (JPEG, PNG or WebP) or an SVG file; it is traced here, in your browser, into outlines that are engraved, scored or cut like the other motifs.",
+      help: "A drawing, logo or photo (JPEG, PNG or WebP) or an SVG file; it is traced here, in your browser, into outlines that are engraved, scored or cut like the other motifs. As your own tile, the picture's edges (an SVG's viewBox) are the repeat, so a seamless design joins up with its neighbours.",
     },
     {
       kind: "number", key: `${base}.cut`, label: "Picture level", unit: "%", min: 0, max: 100, step: 1,

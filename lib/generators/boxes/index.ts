@@ -10,6 +10,7 @@ import { hasArt } from "./more";
 import { BOXES_DEFAULTS, BOXES_VERSION, DESIGN_NAMES, FIT_NAMES, LID_NAMES, PIERCE_SHAPES, migrateBoxes, mergeBoxes, type BoxesParams, type Design, type JointFit, type LidKind, type PierceShape } from "./params";
 import { BOXES_PRESETS } from "./presets";
 import { FRET_KINDS, FRET_NAMES, fretSample } from "../fretwork";
+import { PATTERN_HELP, patternOptions, repeatFields } from "../pattern";
 
 const is = (...d: Design[]) => (p: BoxesParams) => d.includes(p.design);
 /** Designs with an engraved face: a lid, the cabinet top, or the money box's front. */
@@ -154,9 +155,10 @@ const sections: SectionSpec<BoxesParams>[] = [
     id: "pierce", title: "Cut-out pattern", open: false,
     help: "A decorative pattern cut right through the walls and the lid, such as a lattice, floral rosettes or Moroccan quatrefoils. Holes stay clear of the joints, and of a framed label round the lid's text.",
     fields: [
-      { kind: "choice", key: "pierce.pattern", shuffle: true, label: "Pattern", rail: true, help: "The shape of the holes; None leaves the panels plain. A motif repeats a shape from the library, or your own picture or words.", options: FRET_KINDS.map((v) => ({ v, text: FRET_NAMES[v] })) },
+      { kind: "choice", key: "pierce.pattern", shuffle: true, label: "Pattern", rail: true, help: PATTERN_HELP, options: patternOptions() },
       { kind: "choice", key: "pierce.motif", label: "Motif", show: (p) => p.pierce.pattern === "motif", help: "The shape that repeats: one from the library, a picture of yours (traced into outlines) or your own words.", options: MOTIF_OPTIONS.filter((o) => o.v !== "none") },
-      ...motifArtFields<BoxesParams>("pierce.motif", "pierce.art", (p) => p.pierce.pattern === "motif"),
+      ...motifArtFields<BoxesParams>("pierce.motif", "pierce.art", (p) => p.pierce.pattern === "motif" || p.pierce.pattern === "tile", (p) => p.pierce.pattern === "tile"),
+      ...repeatFields<BoxesParams>("pierce", (p) => p.pierce.pattern),
       { kind: "choice", key: "pierce.on", label: "Put it on", show: (p) => p.pierce.pattern !== "none", help: "The walls (a sign or key board, a frame's front, a stand's sides, the dividers), the lid (a book box's front cover, a bird house's roof, a cabinet's top), both, or only the front.", options: [{ v: "both", text: "Walls and lid" }, { v: "walls", text: "Walls" }, { v: "lid", text: "Lid" }, { v: "front", text: "Front" }, { v: "front-lid", text: "Front and lid" }] },
       { kind: "choice", key: "pierce.shape", label: "Shape", show: (p) => p.pierce.pattern !== "none", help: "Fill the whole face, or only a shape in its middle: a circle, heart, star, hexagon or diamond.", options: (Object.keys(PIERCE_SHAPES) as PierceShape[]).map((v) => ({ v, text: PIERCE_SHAPES[v] })) },
       { kind: "number", key: "pierce.size", label: "Shape size", unit: "%", min: 20, max: 100, step: 1, show: (p) => p.pierce.pattern !== "none" && p.pierce.shape !== "full", help: "The shape's size as a share of the face (inside the joints)." },

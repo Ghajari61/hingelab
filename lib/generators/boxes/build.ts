@@ -14,7 +14,7 @@ import { pierce, pierceLid, pierceWalls, pierced } from "./pierce";
 import { FRET_NAMES, type KeepOut } from "../fretwork";
 import { buildBook } from "./book";
 import { DESIGN_NAMES, FIT_MM, FIT_NAMES, type BoxesParams } from "./params";
-import { patternUnit } from "../pattern";
+import { patternTile, patternUnit } from "../pattern";
 
 export interface BoxesInfo {
   /** Outside size of the finished piece, mm. */
@@ -328,6 +328,7 @@ export function buildBoxes(p: BoxesParams, ctx: BuildContext): BoxesOutput {
   if (!(p.T > 0)) return { parts: [], stats: [], error: "Set the material thickness." };
   // A motif pattern's tile (a library shape, or the user's picture or words) for this build.
   if (p.pierce.pattern === "motif") p = { ...p, pierce: { ...p.pierce, unit: patternUnit(p.pierce, ctx) } };
+  if (p.pierce.pattern === "tile") p = { ...p, pierce: { ...p.pierce, tile: patternTile(p.pierce) } };
   const out = pierced(p) && !out0Pierced(p) ? piercePanels(p, buildDesign(p, ctx)) : buildDesign(p, ctx);
   const d = FIT_MM[p.joint.fit] ?? 0;
   if (!d || out.error || !JOINTED.has(p.design)) return out;

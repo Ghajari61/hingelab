@@ -19,7 +19,10 @@ export const pierceWallIds = (p: BoxesParams, all: string[]) => (p.pierce.on ===
 /** True when the pattern opens holes through the part (not engraved or scored). */
 export const pierceCuts = (p: BoxesParams) => p.pierce.mark !== "engrave" && p.pierce.mark !== "score";
 // A motif pattern without its tile yet (no picture, no words) makes no holes.
-const spec = (p: BoxesParams): FretSpec => ({ kind: p.pierce.pattern === "motif" && !p.pierce.unit?.length ? "none" : p.pierce.pattern, cell: Math.max(6, p.pierce.cell), bar: Math.max(1, p.pierce.bar), unit: p.pierce.unit });
+const spec = (p: BoxesParams): FretSpec => ({
+  kind: (p.pierce.pattern === "motif" && !p.pierce.unit?.length) || (p.pierce.pattern === "tile" && !p.pierce.tile) ? "none" : p.pierce.pattern,
+  cell: Math.max(6, p.pierce.cell), bar: Math.max(1, p.pierce.bar), unit: p.pierce.unit, tile: p.pierce.tile, grid: p.pierce.grid, turn: p.pierce.turn,
+});
 
 const boxOf = (c: Contour): KeepOut => {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -50,7 +53,7 @@ export function pierce(p: BoxesParams, part: GenPart, edge: number, keep: KeepOu
   const inner = { x0: b.x0 + edge, y0: b.y0 + edge, x1: b.x1 - edge, y1: b.y1 - edge };
   const inside = (q: [number, number]) => pointInContour(q, part.outer) && distToContour(q, part.outer) >= edge;
   const holes = p.pierce.shape === "full"
-    ? fretHoles(spec(p), b.x0, b.y0, b.x1, b.y1, [...keep, ...part.holes.map(boxOf)], inside)
+    ? fretHoles(spec(p), b.x0, b.y0, b.x1, b.y1, [...keep, ...part.holes.map(boxOf)], inside, p.pierce.pattern === "tile" ? shapeContours(offsetShapes([makeShape(part.outer, [])], -edge)) : undefined)
     : patternHoles(p, inner.x0, inner.y0, inner.x1, inner.y1, [...keep, ...part.holes.map(boxOf)], inside);
   markPattern(p, part, holes);
   return holes.length;

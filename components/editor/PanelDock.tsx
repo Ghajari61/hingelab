@@ -20,7 +20,7 @@ import type { Units } from "./format";
 import { applyStandardSize, insideText, STANDARD_GROUPS, STANDARD_SIZES, standardSizeOf } from "@/lib/hinge/standardSizes";
 import { BASE_TEXT_FONT, BASE_TEXT_SIZE, MAX_BASE_TEXT } from "@/lib/hinge/baseText";
 import { BUNDLED_FONTS } from "@/lib/letters/fontList";
-import { FRET_KINDS, FRET_NAMES } from "@/lib/generators/fretwork";
+import { FRET_BUILT_IN, FRET_NAMES } from "@/lib/generators/fretwork";
 import { MOTIF_IDS, MOTIF_NAMES } from "@/lib/generators/motifs";
 import { PIERCE_SHAPES, type PierceShape } from "@/lib/generators/pattern";
 
@@ -241,7 +241,7 @@ export function PanelDock({
       <Sec title="Cut-out pattern" meta={params.fret && params.fret !== "none" ? FRET_NAMES[params.fret] : undefined} onReset={() => onResetSection("Cut-out pattern", ["fret", "fretOn", "fretCell", "fretBar", "fretMotif", "fretShape", "fretSize", "fretMark"])}>
         <div className="rowlabel">Pattern</div>
         <select className="sel" aria-label="Cut-out pattern" value={params.fret ?? "none"} onChange={(e) => { const next: Params = { ...params, fret: e.target.value as Params["fret"] }; if (e.target.value === "none") { delete next.fret; delete next.fretOn; delete next.fretMotif; delete next.fretShape; delete next.fretSize; delete next.fretMark; } onPatch(next); }}>
-          {FRET_KINDS.map((k) => <option key={k} value={k}>{FRET_NAMES[k]}</option>)}
+          {FRET_BUILT_IN.map((k) => <option key={k} value={k}>{FRET_NAMES[k]}</option>)}
         </select>
         {params.fret && params.fret !== "none" ? (
           <>

@@ -11,7 +11,7 @@ import { coreDistance } from "./lidSlot";
 import { offsetPolyXY } from "./polygon";
 import type { Edge, Params, Point, WallPart } from "./types";
 
-export const hasFret = (p: Params) => isFretKind(p.fret);
+export const hasFret = (p: Params) => isFretKind(p.fret) && p.fret !== "tile";
 export const fretOnLid = (p: Params) => hasFret(p) && p.fretOn !== "walls";
 export const fretOnWalls = (p: Params) => hasFret(p) && p.fretOn !== "lid";
 export const FRET_CELL = 16;

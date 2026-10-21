@@ -149,7 +149,7 @@ export interface ParallelParams {
 }
 
 export interface BoardPattern {
-  kind: Exclude<import("@/lib/generators/fretwork").FretKind, "none" | "motif">;
+  kind: Exclude<import("@/lib/generators/fretwork").FretKind, "none" | "motif" | "tile">;
   /** Pattern repeat and narrowest wood between holes, mm. */
   cell: number;
   bar: number;

@@ -9,14 +9,24 @@ import { circle, regularPolygon } from "./geom";
 import { motif } from "./motifs";
 import type { Contour, Pt } from "./types";
 
-export type FretKind = "none" | "lattice" | "floral" | "quatrefoil" | "honeycomb" | "circles" | "stars" | "leaves" | "motif";
+export type FretKind = "none" | "lattice" | "floral" | "quatrefoil" | "honeycomb" | "circles" | "stars" | "leaves" | "motif" | "tile";
 
 export const FRET_NAMES: Record<FretKind, string> = {
   none: "None", lattice: "Diamond lattice", floral: "Floral rosettes", quatrefoil: "Moroccan quatrefoil",
   honeycomb: "Honeycomb", circles: "Circles", stars: "Stars", leaves: "Woven leaves",
   motif: "A motif (yours or from the library)",
+  tile: "Your own tile (seamless)",
 };
 export const FRET_KINDS = Object.keys(FRET_NAMES) as FretKind[];
+/** The kinds that need nothing of the user's: no tile picture (for products that cannot pick one). */
+export const FRET_BUILT_IN = FRET_KINDS.filter((k) => k !== "tile");
+
+/** How the motif or tile repeats: rows offset half a cell (the motif's default), a square grid, bricks, columns dropped half a cell, or mirrored neighbours. */
+export type FretGrid = "auto" | "square" | "brick" | "half" | "mirror";
+export const FRET_GRIDS: Record<FretGrid, string> = { auto: "Standard", square: "Square", brick: "Brick", half: "Half drop", mirror: "Mirrored" };
+
+/** A repeating tile: outlines in its own frame, 0..w × 0..h (the picture's edges, an SVG's viewBox). */
+export interface FretTile { cs: Contour[]; w: number; h: number }
 export const isFretKind = (v: unknown): v is FretKind => typeof v === "string" && v in FRET_NAMES && v !== "none";
 
 export interface FretSpec {
@@ -27,6 +37,12 @@ export interface FretSpec {
   bar: number;
   /** The tile for `kind: "motif"`: outlines centred on (0, 0) with their larger side 100. */
   unit?: Contour[];
+  /** The repeat for `kind: "tile"`; `cell` is its width. */
+  tile?: FretTile;
+  /** How a motif or tile repeats (missing: "auto"). */
+  grid?: FretGrid;
+  /** A motif turned by this many degrees (missing: 0). */
+  turn?: number;
 }
 
 /** An axis-aligned area to keep solid. */
@@ -45,8 +61,10 @@ function lens(L: number, w: number): Contour {
 }
 
 /** Centres on a square or hexagon-packed grid covering the region, and the shapes at each (kept or dropped together). */
-function tiles(kind: FretKind, cell: number, bar: number, x0: number, y0: number, x1: number, y1: number, unit?: Contour[]): Contour[][] {
+function tiles(kind: FretKind, cell: number, bar: number, x0: number, y0: number, x1: number, y1: number, unit?: Contour[], grid: FretGrid = "auto", turn = 0): Contour[][] {
   const out: Contour[][] = [];
+  if (kind === "motif" && grid !== "auto") return motifGrid(cell, bar, x0, y0, x1, y1, unit, grid, turn);
+  if (kind === "motif" && turn) unit = unit?.map((c) => turned(c, (turn * Math.PI) / 180));
   const hexGrid = kind === "floral" || kind === "honeycomb" || kind === "circles" || kind === "stars" || kind === "motif";
   // A rosette is two cells across, so its petals stay wide enough to cut.
   const dx = kind === "floral" ? 2 * cell : cell, dy = hexGrid ? dx * Math.sqrt(3) / 2 : dx;
@@ -64,6 +82,56 @@ function tiles(kind: FretKind, cell: number, bar: number, x0: number, y0: number
     for (let j = -ny; j <= ny; j++) for (let i = -nx; i <= nx; i++) out.push(shapeAt(kind, cell, bar, cx + (i + 0.5) * dx, cy + (j + 0.5) * dy, true));
   }
   return out;
+}
+
+/** The motif on a square, brick, half-drop or mirrored grid of `cell` squares. */
+function motifGrid(cell: number, bar: number, x0: number, y0: number, x1: number, y1: number, unit: Contour[] | undefined, grid: FretGrid, turn: number): Contour[][] {
+  if (!unit?.length) return [];
+  const u = turn ? unit.map((c) => turned(c, (turn * Math.PI) / 180)) : unit;
+  let w = 0, h = 0;
+  for (const c of u) for (const [a, b] of c) { w = Math.max(w, Math.abs(a) * 2); h = Math.max(h, Math.abs(b) * 2); }
+  const s = (cell - bar) / Math.max(w, h, 1e-6);
+  if (s * Math.max(w, h) <= 1.5) return [];
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const nx = Math.ceil((x1 - x0) / cell / 2) + 1, ny = Math.ceil((y1 - y0) / cell / 2) + 1;
+  const out: Contour[][] = [];
+  for (let j = -ny; j <= ny; j++) for (let i = -nx; i <= nx; i++) {
+    const x = cx + i * cell + (grid === "brick" && Math.abs(j) % 2 === 1 ? cell / 2 : 0);
+    const y = cy + j * cell + (grid === "half" && Math.abs(i) % 2 === 1 ? cell / 2 : 0);
+    const fx = grid === "mirror" && Math.abs(i) % 2 === 1 ? -1 : 1, fy = grid === "mirror" && Math.abs(j) % 2 === 1 ? -1 : 1;
+    out.push(u.map((c) => { const m = c.map(([a, b]) => [x + a * s * fx, y + b * s * fy] as Pt); return fx * fy < 0 ? m.reverse() : m; }));
+  }
+  return out;
+}
+
+/** Most outline points, and outlines, the tile's copies may have in all; a larger repeat keeps a fine tile within them. */
+const TILE_POINTS = 120_000;
+const TILE_SHAPES = 4000;
+
+/**
+ * The tile repeated over the rectangle with no seams: copies `cell` wide (and as tall as the tile's
+ * proportions), on the grid; shapes meeting across a seam join, then every shape shrinks by half a
+ * bar, so a full bar stays between neighbours. Outer outlines only (an island would fall out).
+ */
+function tileShapes(t: FretTile, cell: number, bar: number, x0: number, y0: number, x1: number, y1: number, grid: FretGrid): Contour[] {
+  if (!t.cs.length || !(t.w > 0) || !(t.h > 0)) return [];
+  const pts = t.cs.reduce((n, c) => n + c.length, 0);
+  let W = cell, H = (cell * t.h) / t.w;
+  const copies = (Math.ceil((x1 - x0) / W) + 2) * (Math.ceil((y1 - y0) / H) + 2);
+  const over = Math.max((copies * pts) / TILE_POINTS, (copies * t.cs.length) / TILE_SHAPES);
+  if (over > 1) { const k = Math.sqrt(over); W *= k; H *= k; }
+  const sx = W / t.w, sy = H / t.h, pos = t.cs.map((c) => (signedArea(c) < 0 ? c.slice().reverse() : c));
+  const all: Contour[] = [];
+  const i0 = Math.floor(x0 / W) - 1, i1 = Math.ceil(x1 / W) + 1, j0 = Math.floor(y0 / H) - 1, j1 = Math.ceil(y1 / H) + 1;
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+    const ox = i * W + (grid === "brick" && Math.abs(j) % 2 === 1 ? W / 2 : 0), oy = j * H + (grid === "half" && Math.abs(i) % 2 === 1 ? H / 2 : 0);
+    const fx = grid === "mirror" && Math.abs(i) % 2 === 1, fy = grid === "mirror" && Math.abs(j) % 2 === 1;
+    for (const c of pos) {
+      const m = c.map(([u, v]) => [ox + (fx ? t.w - u : u) * sx, oy + (fy ? t.h - v : v) * sy] as Pt);
+      all.push(fx !== fy ? m.reverse() : m);
+    }
+  }
+  return offsetShapes(unionShapes(all), -bar / 2).map((s) => s.outer);
 }
 
 function shapeAt(kind: FretKind, cell: number, bar: number, x: number, y: number, even: boolean, unit?: Contour[]): Contour[] {
@@ -129,7 +197,10 @@ export function fretHoles(spec: FretSpec, x0: number, y0: number, x1: number, y1
     && (!inside || inside(q));
   // A motif without its own tile repeats the library heart.
   const unit = spec.kind === "motif" && !spec.unit?.length ? motif("heart", 100) : spec.unit;
-  const groups = tiles(spec.kind, cell, bar, x0, y0, x1, y1, unit);
+  if (spec.kind === "tile" && !spec.tile) return [];
+  // A tile's shapes may join into one network across the whole face: cut it to the area, never drop it.
+  if (spec.kind === "tile" && !clip) clip = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+  const groups = spec.kind === "tile" ? tileShapes(spec.tile!, cell, bar, x0, y0, x1, y1, spec.grid ?? "auto").map((c) => [c]) : tiles(spec.kind, cell, bar, x0, y0, x1, y1, unit, spec.grid, spec.turn);
   if (!clip) return groups.filter((g) => g.length && g.every((c) => c.every(ok))).flat();
   const region = typeof clip[0]?.[0] === "number" ? [clip as Contour] : (clip as Contour[]);
   let area = unionShapes(region, [], true);
@@ -138,6 +209,10 @@ export function fretHoles(spec: FretSpec, x0: number, y0: number, x1: number, y1
   if (!win.length) return [];
   const within = (q: Pt) => q[0] >= x0 + bar && q[0] <= x1 - bar && q[1] >= y0 + bar && q[1] <= y1 - bar && (!inside || inside(q));
   const minArea = Math.max(2 * bar * bar, 0.04 * cell * cell);
+  if (spec.kind === "tile") {
+    // The tile's shapes never overlap: cut them all to the window at once.
+    return intersectShapes(groups.flat(), win).map((s) => s.outer).filter((c) => Math.abs(signedArea(c)) >= 2 * bar * bar && c.every(within));
+  }
   const out: Contour[] = [];
   for (const g of groups) for (const c of g) {
     // A sliver at the window's edge would burn away: keep pieces with some body (or half their hole).

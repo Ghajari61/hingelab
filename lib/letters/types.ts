@@ -137,7 +137,7 @@ export interface SolidPart {
 export type PartMark = LabelMark;
 
 export interface LetterCutout {
-  kind: Exclude<import("@/lib/generators/fretwork").FretKind, "none" | "motif">;
+  kind: Exclude<import("@/lib/generators/fretwork").FretKind, "none" | "motif" | "tile">;
   on: "lid" | "base" | "both";
   /** Pattern repeat and narrowest wood between holes, mm. */
   cell: number;

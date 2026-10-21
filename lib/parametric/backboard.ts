@@ -79,7 +79,7 @@ export function boardOutline(projectionModel: Contour[], slots: Contour[], margi
 }
 
 /** Backboard pattern kinds (a motif needs a tile, which this panel does not pick). */
-export const BOARD_PATTERN_KINDS = FRET_KINDS.filter((k): k is BoardPattern["kind"] => k !== "none" && k !== "motif");
+export const BOARD_PATTERN_KINDS = FRET_KINDS.filter((k): k is BoardPattern["kind"] => k !== "none" && k !== "motif" && k !== "tile");
 
 /** A saved or sent board pattern, or none for anything that is not one. */
 export function cleanBoardPattern(raw: unknown): BoardPattern | undefined {

@@ -8,10 +8,10 @@
  * holes after the build, on the parts the user picks. "None" (the default) leaves every part as it was.
  */
 import { differenceShapes, intersectShapes, makeShape, offsetShapes, shapeContours, signedArea, unionShapes } from "@/lib/letters/polygon";
-import { FRET_KINDS, FRET_NAMES, fretHoles, fretSample, type FretKind, type KeepOut } from "./fretwork";
+import { FRET_GRIDS, FRET_KINDS, FRET_NAMES, fretHoles, fretSample, type FretGrid, type FretKind, type FretTile, type KeepOut } from "./fretwork";
 import { circle, pointInContour, rect, regularPolygon } from "./geom";
 import { MOTIF_ART, cleanMotifArt, motifArtFields, motifFonts, type MotifArt } from "./motifArt";
-import { motifRef } from "./motifRef";
+import { motifRef, pictureTile } from "./motifRef";
 import { MOTIF_OPTIONS, isMotifKind, motif } from "./motifs";
 import type { BuildContext, Contour, FieldSpec, GenBase, GenOutput, GenPart, GeneratorDef, Pt, SectionSpec } from "./types";
 import type { Issue } from "@/lib/issues";
@@ -40,9 +40,13 @@ export interface PatternParams {
   /** The tile for `pattern: "motif"`: a library motif, "picture" or "text". */
   motif: string;
   art: MotifArt;
+  /** How a motif or your own tile repeats. */
+  grid: FretGrid;
+  /** A motif turned by this many degrees. */
+  turn: number;
 }
 
-export const PATTERN_DEFAULTS: PatternParams = { pattern: "none", on: "all", cell: 16, bar: 3, shape: "full", size: 70, mark: "cut", motif: "heart", art: { ...MOTIF_ART } };
+export const PATTERN_DEFAULTS: PatternParams = { pattern: "none", on: "all", cell: 16, bar: 3, shape: "full", size: 70, mark: "cut", motif: "heart", art: { ...MOTIF_ART }, grid: "auto", turn: 0 };
 
 /** A choice of parts for "Put it on". */
 export interface PatternTarget { v: string; text: string; match: (part: GenPart) => boolean }
@@ -60,6 +64,15 @@ export function cleanPattern(raw: unknown, targets: PatternTarget[]): PatternPar
     mark: r.mark === "engrave" || r.mark === "score" ? r.mark : "cut",
     motif: typeof r.motif === "string" && isMotifKind(r.motif) ? r.motif : "heart",
     art: cleanMotifArt(r.art),
+    ...cleanRepeat(r),
+  };
+}
+
+/** The repeat's grid and turn, checked; the standard grid and no turn otherwise. */
+export function cleanRepeat(r: { grid?: unknown; turn?: unknown }): { grid: FretGrid; turn: number } {
+  return {
+    grid: typeof r.grid === "string" && r.grid in FRET_GRIDS ? (r.grid as FretGrid) : "auto",
+    turn: typeof r.turn === "number" && Number.isFinite(r.turn) ? Math.min(180, Math.max(-180, Math.round(r.turn))) : 0,
   };
 }
 
@@ -96,6 +109,11 @@ export function windowShape(shape: PierceShape, cx: number, cy: number, s: numbe
  * The motif tile for `pattern: "motif"` (outer outlines only: an island inside a cut-out hole would
  * fall out), or undefined when there is none yet (no picture, no words, the font still loading).
  */
+/** Your own tile for `pattern: "tile"`, or undefined until its picture is traced. */
+export function patternTile(pp: Pick<PatternParams, "pattern" | "art">): FretTile | undefined {
+  return pp.pattern === "tile" ? pictureTile(pp.art) ?? undefined : undefined;
+}
+
 export function patternUnit(pp: Pick<PatternParams, "pattern" | "motif" | "art">, ctx?: BuildContext): Contour[] | undefined {
   if (pp.pattern !== "motif") return undefined;
   const { ref } = motifRef(pp.motif, pp.art, ctx);
@@ -160,8 +178,8 @@ export function patternArea(part: GenPart, edge: number, win: Contour | null, ce
  * The pattern on one part, `edge` mm clear of its outline, of what it carries, and of `keep`;
  * returns how many shapes it made. The window shape sits in the middle of the face inside the edge.
  */
-export function patternOn(pp: PatternParams, part: GenPart, edge: number, unit?: Contour[], keep: KeepOut[] = [], solid: Contour[] = []): number {
-  if (pp.pattern === "none" || (pp.pattern === "motif" && !unit?.length)) return 0;
+export function patternOn(pp: PatternParams, part: GenPart, edge: number, unit?: Contour[], keep: KeepOut[] = [], solid: Contour[] = [], tile?: FretTile): number {
+  if (pp.pattern === "none" || (pp.pattern === "motif" && !unit?.length) || (pp.pattern === "tile" && !tile)) return 0;
   const b = boxOf([part.outer]);
   const x0 = b.x0 + edge, y0 = b.y0 + edge, x1 = b.x1 - edge, y1 = b.y1 - edge;
   if (x1 - x0 < 4 || y1 - y0 < 4) return 0;
@@ -169,7 +187,7 @@ export function patternOn(pp: PatternParams, part: GenPart, edge: number, unit?:
   const win = windowShape(pp.shape, (x0 + x1) / 2, (y0 + y1) / 2, Math.min(x1 - x0, y1 - y0) * Math.min(100, Math.max(20, pp.size)) / 100);
   const area = patternArea(part, edge, win, cell, solid);
   if (!area.length) return 0;
-  const holes = fretHoles({ kind: pp.pattern, cell, bar: Math.max(0.5, pp.bar), unit }, x0, y0, x1, y1, keep, (q) => pointInContour(q, part.outer), area);
+  const holes = fretHoles({ kind: pp.pattern, cell, bar: Math.max(0.5, pp.bar), unit, tile, grid: pp.grid, turn: pp.turn }, x0, y0, x1, y1, keep, (q) => pointInContour(q, part.outer), area);
   markShapes(pp.mark, part, holes);
   return holes.length;
 }
@@ -234,15 +252,29 @@ export function patternFields<P>(base: string, targets: { v: string; text: strin
   const pk = (p: P) => getPath(p, `${base}.pattern`) as string;
   const on = (p: P) => pk(p) !== "none";
   return [
-    { kind: "choice", key: `${base}.pattern`, label: "Pattern", rail: true, shuffle: true, help: "The shape of the holes; None leaves the parts plain. A motif repeats a shape from the library, or your own picture or words.", options: FRET_KINDS.map((v) => ({ v, text: FRET_NAMES[v] })) },
+    { kind: "choice", key: `${base}.pattern`, label: "Pattern", rail: true, shuffle: true, help: PATTERN_HELP, options: patternOptions() },
     { kind: "choice", key: `${base}.motif`, label: "Motif", show: (p) => pk(p) === "motif", help: "The shape that repeats: one from the library, a picture of yours (traced into outlines) or your own words.", options: MOTIF_OPTIONS.filter((o) => o.v !== "none") },
-    ...motifArtFields<P>(`${base}.motif`, `${base}.art`, (p) => pk(p) === "motif"),
+    ...motifArtFields<P>(`${base}.motif`, `${base}.art`, (p) => pk(p) === "motif" || pk(p) === "tile", (p) => pk(p) === "tile"),
+    ...repeatFields<P>(base, pk),
     ...(targets && targets.length > 1 ? [{ kind: "choice" as const, key: `${base}.on`, label: "Put it on", show: on, help: help.on ?? "Which parts carry the pattern.", options: [{ v: "all", text: "All of them" }, ...targets.map((t) => ({ v: t.v, text: t.text }))] }] : []),
     { kind: "choice", key: `${base}.shape`, label: "Shape", show: on, help: "Fill the whole face, or only a shape in its middle: a circle, heart, star, hexagon or diamond.", options: (Object.keys(PIERCE_SHAPES) as PierceShape[]).map((v) => ({ v, text: PIERCE_SHAPES[v] })) },
     { kind: "number", key: `${base}.size`, label: "Shape size", unit: "%", min: 20, max: 100, step: 1, show: (p) => on(p) && getPath(p, `${base}.shape`) !== "full", help: "The shape's size as a share of the face." },
     { kind: "choice", key: `${base}.mark`, label: "Mark", show: on, help: "Cut the pattern through, engrave it, or score its outlines. Engraved and scored patterns keep the part closed and strong.", options: [{ v: "cut", text: "Cut out" }, { v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }] },
     { kind: "number", key: `${base}.cell`, label: "Pattern size", unit: "mm", min: 4, max: 120, step: 0.5, show: on, help: "How far the pattern repeats; larger shapes cut faster." },
     { kind: "number", key: `${base}.bar`, label: "Bar width", unit: "mm", min: 0.5, max: 20, step: 0.25, show: on, help: help.bar ?? "The narrowest material left between holes; keep it at least the material thickness for wood." },
+  ];
+}
+
+export const PATTERN_HELP = "The shape of the holes; None leaves the parts plain. A motif repeats a shape from the library, or your own picture or words; your own tile repeats a whole picture or SVG edge to edge, joined across the seams.";
+
+/** The pattern choices; your own tile needs a picture (Randomise leaves it alone). */
+export const patternOptions = () => FRET_KINDS.map((v) => ({ v, text: FRET_NAMES[v], ...(v === "tile" ? { input: "picture" as const, title: "Upload a picture or SVG; its edges are the repeat" } : {}) }));
+
+/** The grid and turn of a motif or your own tile. */
+export function repeatFields<P>(base: string, pk: (p: P) => string): FieldSpec<P>[] {
+  return [
+    { kind: "choice", key: `${base}.grid`, label: "Repeat", show: (p) => pk(p) === "motif" || pk(p) === "tile", help: "How the shapes repeat: the standard grid (offset rows for a motif, edge to edge for a tile), square, brick, half drop or mirrored neighbours.", options: (Object.keys(FRET_GRIDS) as FretGrid[]).map((v) => ({ v, text: FRET_GRIDS[v] })) },
+    { kind: "number", key: `${base}.turn`, label: "Turn", unit: "deg", min: -180, max: 180, step: 5, show: (p) => pk(p) === "motif", help: "Turns every motif by this angle." },
   ];
 }
 
@@ -277,18 +309,18 @@ export function withPattern<P extends GenBase>(def: GeneratorDef<P>, targets: Pa
       const out = def.build(p, ctx);
       const q = pp(p);
       if (out.error || q.pattern === "none" || !out.parts.length) return out;
-      const unit = patternUnit(q, ctx);
+      const unit = patternUnit(q, ctx), tile = patternTile(q);
       const chosen = q.on === "all" ? targets : targets.filter((t) => t.v === q.on);
       const e = edge(p);
       let n = 0, on = 0;
       for (const part of out.parts) {
         if (part.pieces?.length || !chosen.some((t) => t.match(part))) continue;
-        n += patternOn(q, part, e, unit, [], [...stackedOn(part, out.parts, p.T ?? 3), ...(opts.keep?.(p, part) ?? [])]);
+        n += patternOn(q, part, e, unit, [], [...stackedOn(part, out.parts, p.T ?? 3), ...(opts.keep?.(p, part) ?? [])], tile);
         on++;
       }
       const what = q.mark === "engrave" ? "engraved shapes" : q.mark === "score" ? "scored shapes" : "holes";
-      const waiting = q.pattern === "motif" && !unit;
-      return { ...out, ...(waiting ? {} : { pattern: { shapes: n, parts: on, windowed: q.shape !== "full" } }), stats: [...out.stats, { label: "Pattern", value: waiting ? "Waiting for the motif" : `${FRET_NAMES[q.pattern]}: ${n} ${what}` }] };
+      const waiting = (q.pattern === "motif" && !unit) || (q.pattern === "tile" && !tile);
+      return { ...out, ...(waiting ? {} : { pattern: { shapes: n, parts: on, windowed: q.shape !== "full" } }), stats: [...out.stats, { label: "Pattern", value: waiting ? (q.pattern === "tile" ? "Waiting for your tile's picture" : "Waiting for the motif") : `${FRET_NAMES[q.pattern]}: ${n} ${what}` }] };
     },
     check: (p, out) => [...def.check(p, out), ...patternIssues(p, out)],
   };
