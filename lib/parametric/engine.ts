@@ -2,6 +2,7 @@
  * Parametric engine: source mesh → planes → cleaned sections → parts → kerf → sheets.
  * manifold-3d is injected (the worker loads it from /manifold, tests from node_modules).
  */
+import { patternMesh } from "./source/pattern";
 import type { ManifoldToplevel, Manifold as ManifoldT } from "manifold-3d";
 import { staircaseProjection } from "./backboard";
 import { cutSpeedOf, estimateCutMinutes } from "./cutTime";
@@ -47,6 +48,7 @@ export async function loadSource(p: ParametricParams, file?: ArrayBuffer): Promi
     if (!file) throw new Error("The photo's depth map is missing. Load the photo again.");
     return prepareMesh(reliefFromDepth(unpackDepth(file), s), p.sourceSettings, { units: "mm", upAxis: "Y", anchor: "wall" });
   }
+  if (s.kind === "pattern") return prepareMesh(patternMesh(s, file), p.sourceSettings, { units: "mm", upAxis: "Y", anchor: "wall" });
   if (s.kind === "text") {
     if (!file) throw new Error("The text outline is not ready yet.");
     return prepareMesh(textMesh(unpackOutline(file), s), p.sourceSettings, { units: "mm", upAxis: "Y", anchor: "wall" });

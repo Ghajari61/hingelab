@@ -180,7 +180,7 @@ let cached: ReturnType<typeof specs> | null = null;
 const SPECS = () => (cached ??= specs());
 const specOf = (key: string) => SPECS().flatMap((s) => s.specs).find((s) => s.f.key === key) ?? null;
 
-const buildable = (p: P) => p.source.kind === "library" || p.source.kind === "formula" || p.source.kind === "text" || p.method === "curveNormal";
+const buildable = (p: P) => p.source.kind === "library" || p.source.kind === "formula" || p.source.kind === "text" || (p.source.kind === "pattern" && p.source.pattern !== "image") || p.method === "curveNormal";
 
 /** The default design, and versions of it where the fields of other shapes and methods apply. */
 function defaultDesigns(): P[] {

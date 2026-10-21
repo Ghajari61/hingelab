@@ -1,3 +1,4 @@
+import { cleanPatternSource } from "./source/pattern";
 import { DEFAULTS as HINGE, MATERIALS, clone } from "@/lib/hinge";
 import type { FormulaSpec, ImageSource, ParametricParams, TextSource } from "./types";
 
@@ -96,6 +97,7 @@ export function mergeParametricParams(partial?: Partial<ParametricParams> | null
   if (out.source.kind === "formula") out.source = { ...FORMULA_DEFAULTS[out.source.type], ...out.source };
   if (out.source.kind === "image") out.source = { ...IMAGE_DEFAULTS, ...out.source };
   if (out.source.kind === "text") out.source = { ...TEXT_DEFAULTS, ...out.source };
+  if (out.source.kind === "pattern") out.source = cleanPatternSource(out.source);
   return out;
 }
 

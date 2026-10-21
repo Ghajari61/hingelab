@@ -184,6 +184,8 @@ export function lettersLock(plan: Plan, p: { mode: string; text: string }): stri
 }
 
 const SOURCE_NAMES: Record<string, string> = { mesh: "Importing a 3D file", image: "Photo relief", text: "Text sculptures", formula: "Formula shapes" };
+/** Sources the Free plan may design with (export still needs Pro): library shapes and wall-art patterns. */
+const FREE_SOURCES = new Set(["library", "pattern"]);
 const METHOD_NAMES: Record<string, string> = { stacked: "Stacked layers", waffle: "Waffle", radial: "Radial fins", curveNormal: "Fins along a curve", folded: "Folded nets" };
 
 /**
@@ -194,7 +196,7 @@ const METHOD_NAMES: Record<string, string> = { stacked: "Stacked layers", waffle
 export function parametricLocks(plan: Plan, p: { source: { kind: string }; method: string }, partCount?: number): string[] {
   if (hasPro(plan)) return [];
   const out: string[] = [];
-  if (p.method !== "curveNormal" && p.source.kind !== "library") out.push(SOURCE_NAMES[p.source.kind] ?? "This source");
+  if (p.method !== "curveNormal" && !FREE_SOURCES.has(p.source.kind)) out.push(SOURCE_NAMES[p.source.kind] ?? "This source");
   if (p.method !== "parallel") out.push(METHOD_NAMES[p.method] ?? "This method");
   if (partCount !== undefined && partCount > FREE_PARAMETRIC_PARTS) out.push(`More than ${FREE_PARAMETRIC_PARTS} parts (this design has ${partCount})`);
   return out;

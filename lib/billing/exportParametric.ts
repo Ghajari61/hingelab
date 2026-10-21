@@ -42,7 +42,7 @@ export async function exportParametricForPlan(p: ParametricParams, what: Paramet
   if (!canExport(plan)) return { ok: false, status: 403, error: EXPORT_DENIED };
   const early = parametricLock(plan, p);
   if (early) return { ok: false, status: 403, error: early };
-  if (p.method !== "curveNormal" && (p.source.kind === "mesh" || p.source.kind === "image")) {
+  if (p.method !== "curveNormal" && (p.source.kind === "mesh" || p.source.kind === "image" || (p.source.kind === "pattern" && p.source.pattern === "image"))) {
     return { ok: false, status: 422, error: "Imported models and photos stay on your device, so they are exported in the browser." };
   }
   if (p.method !== "curveNormal" && p.source.kind === "text") {

@@ -63,7 +63,8 @@ export type SourceSpec =
     }
   | ImageSource
   | TextSource
-  | FormulaSpec;
+  | FormulaSpec
+  | import("./source/pattern").PatternSource;
 
 /**
  * Text to solid: shaped in the browser with HarfBuzz and the Letters fonts (Latin and Persian); the

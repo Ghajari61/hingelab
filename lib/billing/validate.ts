@@ -11,6 +11,7 @@ import { BUNDLED_FONTS } from "@/lib/letters/fontList";
 import { FRET_NAMES } from "@/lib/generators/fretwork";
 import { isFretMotif, isFretShape } from "@/lib/hinge/fret";
 import { cleanBoardPattern } from "@/lib/parametric/backboard";
+import { cleanPatternSource } from "@/lib/parametric/source/pattern";
 import type { ParametricParams } from "@/lib/parametric";
 import { RELIEF_IDS } from "@/lib/parametric/source/reliefs";
 
@@ -90,6 +91,9 @@ export function parametricRequestError(p: ParametricParams): string | null {
     if (s.detail !== undefined && !(Number.isInteger(s.detail) && s.detail >= 0 && s.detail <= 6)) return "Invalid shape detail.";
   } else if (s.kind === "formula") {
     if (typeof s.expression !== "string" || s.expression.length > MAX_EXPRESSION) return "Invalid formula.";
+  } else if (s.kind === "pattern") {
+    // Every number and list is clamped on merge; a source that cleans to something else was not one.
+    if (JSON.stringify(cleanPatternSource(s)) !== JSON.stringify(s)) return "Invalid wall-art pattern.";
   }
   if (p.parallel.boardPattern !== undefined && !cleanBoardPattern(p.parallel.boardPattern)) return "Invalid board pattern.";
   for (const f of [p.curveNormal.finLength, p.curveNormal.finHeight, p.curveNormal.twist]) {
