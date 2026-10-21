@@ -27,6 +27,7 @@ export const WARNING_TITLES: Partial<Record<WarningCode, string>> = {
   NO_JOINT: "Ribs without a joint",
   FINS_COLLIDE_AT_HUB: "Fins crowd the hub",
   FINS_COLLIDE: "Fins touch",
+  BOARD_PATTERN_EMPTY: "Board pattern does not fit",
 };
 
 export const SERIOUS: WarningCode[] = ["PART_TOO_BIG", "TOO_MANY_SHEETS", "TOO_MANY_PARTS", "NON_MANIFOLD", "FLOATING_PIECE", "METHOD_NOT_READY", "FINS_COLLIDE_AT_HUB", "FINS_COLLIDE"];

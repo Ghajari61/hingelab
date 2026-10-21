@@ -8,6 +8,7 @@ import { QR } from "../qr";
 import { CODE_AREA } from "../qr/build";
 import type { GenOutput, GenPart } from "../types";
 import { CTX } from "./ctx";
+import { ALL_GENERATORS } from "../all";
 
 const part = (id: string, w: number, h: number, place: GenPart["place"], t = 3): GenPart => ({ id, name: id, outer: rect(0, 0, w, h), holes: [], place, t });
 const inside = (c: GenPart["outer"], a: GenPart["outer"]) => {
@@ -79,5 +80,19 @@ describe("cut-out pattern: too coarse for its space", () => {
     };
     expect(run(30, "circle")).toHaveLength(1);
     expect(run(8, "full")).toHaveLength(0);
+  });
+});
+
+describe("cut-out pattern: more places", () => {
+  it.each([
+    ["clock", { stand: true }, "base", "base"],
+    ["tablenum", { build: { kind: "stand", double: true } }, "plate", "back-1"],
+  ] as const)("%s: on the %s", (id, raw, on, partId) => {
+    // A two-sided number stand's back plate takes the front plate's pattern, so the holes go through both.
+    const def = ALL_GENERATORS.find((g) => g.id === id)!;
+    const plain = def.build(def.merge(raw), CTX);
+    const out = def.build(def.merge({ ...raw, pattern: { pattern: "circles", on, cell: 8, bar: 2 } }), CTX);
+    const n = (o: typeof out) => o.parts.find((p) => p.id === partId)!.holes.length;
+    expect(n(out)).toBeGreaterThan(n(plain));
   });
 });

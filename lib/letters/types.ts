@@ -44,6 +44,8 @@ export interface LetterParams {
   stackIslands: boolean;
   islandArea: number;
   marquee: { enabled: boolean; holeDia: number; spacing: number; margin: number };
+  /** A decorative pattern cut through a letter box's lid, base or both (missing: none). */
+  cutout?: LetterCutout;
   /** null = bed width - 20. */
   wallMaxLength: number | null;
 
@@ -133,6 +135,14 @@ export interface SolidPart {
 
 /** A text mark engraved on a part (seam marks, panel numbers), part coordinates. */
 export type PartMark = LabelMark;
+
+export interface LetterCutout {
+  kind: Exclude<import("@/lib/generators/fretwork").FretKind, "none" | "motif">;
+  on: "lid" | "base" | "both";
+  /** Pattern repeat and narrowest wood between holes, mm. */
+  cell: number;
+  bar: number;
+}
 
 /** One unrolled living-hinge wall strip. x runs along the wall, y from the lid side (0) to the base side. */
 export interface StripPart {

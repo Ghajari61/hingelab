@@ -144,6 +144,15 @@ export interface ParallelParams {
   fillEmptySlots: boolean;
   /** Tab depth into the backboard, mm (null = backboard thickness). */
   finDepthBehind: number | null;
+  /** A decorative pattern cut through the backboard's margin round the model (missing: none). */
+  boardPattern?: BoardPattern;
+}
+
+export interface BoardPattern {
+  kind: Exclude<import("@/lib/generators/fretwork").FretKind, "none" | "motif">;
+  /** Pattern repeat and narrowest wood between holes, mm. */
+  cell: number;
+  bar: number;
 }
 
 export interface StackedParams {
@@ -338,7 +347,7 @@ export type WarningCode =
   | "NON_MANIFOLD" | "NON_MANIFOLD_SECTION" | "MIN_FEATURE_REMOVED" | "ISLAND_DROPPED" | "BRIDGE_ADDED" | "SHORT_FIN_DROPPED"
   | "DOWEL_CHAIN_SPLIT" | "CROSSING_TOO_SHORT" | "FINS_COLLIDE_AT_HUB" | "FINS_COLLIDE" | "PART_TOO_BIG" | "TOO_MANY_PARTS"
   | "SIMPLIFIED" | "METHOD_NOT_READY" | "FLOATING_PIECE" | "LABEL_SKIPPED" | "TOO_MANY_SHEETS" | "NO_TAB"
-  | "NO_DOWEL" | "NO_JOINT";
+  | "NO_DOWEL" | "NO_JOINT" | "BOARD_PATTERN_EMPTY";
 
 export interface Warning {
   code: WarningCode;

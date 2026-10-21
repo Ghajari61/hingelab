@@ -3,11 +3,12 @@
  * by walls along every outline and counter. Walls are living-hinge strips or flat panels.
  */
 import { bendAnalysis, cutWidth } from "@/lib/hinge";
-import { concaveRadiusOf, cornerRadiusOf, hingeParamsOf, wallHeightOf } from "./defaults";
+import { cleanCutout, concaveRadiusOf, cornerRadiusOf, hingeParamsOf, wallHeightOf } from "./defaults";
 import { facetContour, facetedWall } from "./facets";
 import { filletByContour, smoothShapes } from "./fillet";
 import { MIN_PIECE_AREA, differenceShapes, dropSpecks, makeShape, offsetShapes, pointInContour, pointInShape, shapeContours, signedArea, unionShapes } from "./polygon";
 import { marqueeCenters, marqueeHoles } from "./marquee";
+import { fretHoles, type KeepOut } from "@/lib/generators/fretwork";
 import { labelPoint } from "./solid";
 import { hingeWall } from "./strips";
 import type { BoxInfo, BoxLetterStat, Contour, LetterIssue, LetterParams, LetterPart, PanelPart, PartMark, PlatePart, Shape, StripPart, Wall } from "./types";
@@ -48,6 +49,8 @@ export function boxError(p: LetterParams): string | null {
  */
 function boxPlates(shapes: Shape[], name: string, p: LetterParams, slots: Contour[], marks: PartMark[], lights: Contour[], join: "round" | "miter", issues: LetterIssue[]): PlatePart[] {
   const out: PlatePart[] = [];
+  const pattern = { base: cutoutHoles(shapes, p, "base", slots, marks, lights), lid: cutoutHoles(shapes, p, "lid", slots, marks, lights) };
+  const patternOf = (label: string) => (label.includes("· base") ? pattern.base : label.includes("· lid") ? pattern.lid : []);
   // marquee light holes go through the face: the lid, or the base of an open box
   const lit = (label: string) => (p.lid === "open" ? label.includes("· base") : label.includes("· lid"));
   const make = (s: Shape, label: string, withSlots: boolean, withMarks: boolean): PlatePart => {
@@ -56,7 +59,7 @@ function boxPlates(shapes: Shape[], name: string, p: LetterParams, slots: Contou
       kind: "plate",
       name: label,
       outer: s.outer,
-      holes: lit(label) ? [...s.holes, ...lights.filter(h => pointInShape(centroid(h), s))] : s.holes,
+      holes: [...(lit(label) ? [...s.holes, ...lights.filter(h => pointInShape(centroid(h), s))] : s.holes), ...patternOf(label).filter(h => pointInShape(centroid(h), s))],
       slots: withSlots ? slots.filter(sl => pointInShape(centroid(sl), s)) : [],
       marks: withMarks ? marks.filter(m => pointInShape([m.x, m.y], s)) : [],
       label: { x: lp[0], y: lp[1], size: Math.max(2.5, Math.min(6, Math.sqrt(s.area) / 10)) },
@@ -77,6 +80,30 @@ function boxPlates(shapes: Shape[], name: string, p: LetterParams, slots: Contou
     else issues.push({ lvl: "warn", msg: `“${name}” is too narrow for a lid lip, so the lip was left out.` });
   }
   return out;
+}
+
+/**
+ * The cut-out pattern for a letter's base or lid (and its lip, which takes the same holes so they
+ * stay open): inside the walls (and the lip's edge) by a bar, clear of the tab slots, the labels
+ * and the light holes. Kerf-compensated.
+ */
+function cutoutHoles(shapes: Shape[], p: LetterParams, plate: "base" | "lid", slots: Contour[], marks: PartMark[], lights: Contour[]): Contour[] {
+  const c = cleanCutout(p.cutout);
+  if (!c || (c.on !== "both" && c.on !== plate) || (plate === "lid" && p.lid === "open")) return [];
+  const inset = p.T + (plate === "lid" && p.lid === "removable" ? p.T + p.lidGap : 0) + c.bar + 1;
+  const inner = dropSpecks(offsetShapes(shapes, -inset), MIN_PIECE_AREA);
+  if (!inner.length) return [];
+  const boxOf = (cs: Contour[], pad: number): KeepOut => {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const k of cs) for (const [x, y] of k) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    return { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad };
+  };
+  const keep = [...slots, ...(plate === (p.lid === "open" ? "base" : "lid") ? lights : [])].map((k) => boxOf([k], c.bar));
+  for (const m of marks) keep.push({ x0: m.x - 12, y0: m.y - 5, x1: m.x + 12, y1: m.y + 5 });
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const s of inner) { x0 = Math.min(x0, s.bbox.x0); y0 = Math.min(y0, s.bbox.y0); x1 = Math.max(x1, s.bbox.x1); y1 = Math.max(y1, s.bbox.y1); }
+  const holes = fretHoles({ kind: c.kind, cell: c.cell, bar: c.bar }, x0, y0, x1, y1, keep, (q) => inner.some((s) => pointInShape(q, s)));
+  return p.K > 0 ? holes.flatMap((h) => offsetShapes([makeShape(signedArea(h) < 0 ? [...h].reverse() : h, [])], -p.K / 2).map((s) => s.outer)) : holes;
 }
 
 /**

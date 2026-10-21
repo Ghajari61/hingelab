@@ -2,11 +2,12 @@
  * Backboard plate behind the fins (z from -T to 0). Board-local coordinates are (X, -Y) of model
  * space, so the drawing reads like the front view in SVG orientation; part-local z points to -Z.
  */
-import { bboxOfContours, makeShape, offsetShapes, pointInShape, shapeContours, unionShapes } from "@/lib/letters/polygon";
+import { bboxOfContours, differenceShapes, makeShape, offsetShapes, pointInShape, shapeContours, unionShapes } from "@/lib/letters/polygon";
+import { FRET_KINDS, fretHoles } from "@/lib/generators/fretwork";
 import { rect } from "./joints";
 import { finLabel, strokeText, textWidth } from "./label";
 import { simplifyClosed } from "./slice/clean";
-import type { Contour, Part, Plane, Point, Shape, Vec3 } from "./types";
+import type { BoardPattern, Contour, Part, Plane, Point, Shape, Vec3 } from "./types";
 
 export const BOARD_ID = "B1";
 
@@ -75,6 +76,36 @@ export function boardOutline(projectionModel: Contour[], slots: Contour[], margi
   if (all.length > 1) all = unionShapes([orient(hull(all.flatMap(s => s.outer)))]);
   const s = all.sort((a, b) => b.area - a.area)[0];
   return makeShape(simplifyClosed(s.outer, 0.05), s.holes.map(h => simplifyClosed(h, 0.05)));
+}
+
+/** Backboard pattern kinds (a motif needs a tile, which this panel does not pick). */
+export const BOARD_PATTERN_KINDS = FRET_KINDS.filter((k): k is BoardPattern["kind"] => k !== "none" && k !== "motif");
+
+/** A saved or sent board pattern, or none for anything that is not one. */
+export function cleanBoardPattern(raw: unknown): BoardPattern | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Partial<BoardPattern>;
+  if (!BOARD_PATTERN_KINDS.includes(r.kind as BoardPattern["kind"])) return undefined;
+  const num = (v: unknown, lo: number, hi: number, d: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
+  return { kind: r.kind!, cell: num(r.cell, 6, 80, 16), bar: num(r.bar, 1, 15, 3) };
+}
+
+/**
+ * The pattern's holes in a board's margin: a bar clear of the board's edge, its holes, the
+ * model's footprint and every slot and label, oriented as the board's holes.
+ */
+export function boardPatternHoles(board: Part, projectionModel: Contour[], pattern: BoardPattern): Contour[] {
+  const { bar } = pattern, edge = bar + 2;
+  const inner = offsetShapes([makeShape(board.shape.outer, board.shape.holes)], -edge);
+  const block = [
+    ...shapeContours(offsetShapes(unionShapes(projectionModel.map(c => orient(c.map(toBoard)))), bar + 1)),
+    ...shapeContours(offsetShapes(unionShapes([...board.innerCuts, ...board.engrave].filter(c => c.length > 2).map(orient)), bar + 1, "miter")),
+  ];
+  const area = block.length ? differenceShapes(shapeContours(inner), block) : inner;
+  if (!area.length) return [];
+  const b = bboxOfContours(area.map(s => s.outer));
+  const holes = fretHoles({ kind: pattern.kind, cell: pattern.cell, bar }, b.x0, b.y0, b.x1, b.y1, [], (q) => area.some(s => pointInShape(q, s)));
+  return holes.map(h => orient(h).slice().reverse());
 }
 
 /** Board extent along the plane axis U, for slats: [u0, u1] of the board rectangle. */

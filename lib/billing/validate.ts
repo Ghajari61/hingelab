@@ -9,6 +9,8 @@ import { honeyLattice } from "@/lib/hinge/hinge";
 import { MAX_BASE_LINES, MAX_BASE_TEXT } from "@/lib/hinge/baseText";
 import { BUNDLED_FONTS } from "@/lib/letters/fontList";
 import { FRET_NAMES } from "@/lib/generators/fretwork";
+import { isFretMotif, isFretShape } from "@/lib/hinge/fret";
+import { cleanBoardPattern } from "@/lib/parametric/backboard";
 import type { ParametricParams } from "@/lib/parametric";
 import { RELIEF_IDS } from "@/lib/parametric/source/reliefs";
 
@@ -24,7 +26,7 @@ const HINGE_ENUMS: Partial<Record<keyof Params, readonly string[]>> = {
 /** Settings added later: optional, but in range when present. */
 const HINGE_OPTIONAL: Partial<Record<keyof Params, [number, number]>> = {
   Ky: [0, 5], lidOver: [0, 100], lidHoleD: [0, 500], lidHoleW: [1, 200], gamma: [0.001, 1], minFeature: [0, 50], baseRingW: [3, 80],
-  divX: [0, 8], divY: [0, 8], divH: [0, 3000], baseTextSize: [1.5, 40], fretCell: [6, 80], fretBar: [1, 15],
+  divX: [0, 8], divY: [0, 8], divH: [0, 3000], baseTextSize: [1.5, 40], fretCell: [6, 80], fretBar: [1, 15], fretSize: [20, 100],
 };
 
 /** [min, max] per Hinge Box number; the minimums are the editor's, the maximums are generous. */
@@ -61,6 +63,9 @@ export function hingeRequestError(p: Params): string | null {
   if (p.baseTextFont !== undefined && !BUNDLED_FONTS.some((f) => f.id === p.baseTextFont)) return "Invalid value for baseTextFont.";
   if (p.fret !== undefined && !(p.fret in FRET_NAMES)) return "Invalid value for fret.";
   if (p.fretOn !== undefined && !["both", "lid", "walls"].includes(p.fretOn)) return "Invalid value for fretOn.";
+  if (p.fretMotif !== undefined && !isFretMotif(p.fretMotif)) return "Invalid value for fretMotif.";
+  if (p.fretShape !== undefined && !isFretShape(p.fretShape)) return "Invalid value for fretShape.";
+  if (p.fretMark !== undefined && !["cut", "engrave", "score"].includes(p.fretMark)) return "Invalid value for fretMark.";
   const around = p.shape === "cyl" ? Math.PI * p.dia : 2 * (p.W + (p.shape === "poly" ? p.W : p.D));
   const columns = around / p.pitch;
   const lattice = honeyLattice(p);
@@ -86,6 +91,7 @@ export function parametricRequestError(p: ParametricParams): string | null {
   } else if (s.kind === "formula") {
     if (typeof s.expression !== "string" || s.expression.length > MAX_EXPRESSION) return "Invalid formula.";
   }
+  if (p.parallel.boardPattern !== undefined && !cleanBoardPattern(p.parallel.boardPattern)) return "Invalid board pattern.";
   for (const f of [p.curveNormal.finLength, p.curveNormal.finHeight, p.curveNormal.twist]) {
     if (typeof f !== "string" || f.length > MAX_EXPRESSION) return "Invalid formula.";
   }

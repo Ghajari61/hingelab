@@ -2,7 +2,9 @@
 
 import { useState, type ReactNode } from "react";
 import { finSpacingOf, PARAMETRIC_DEFAULTS as D } from "@/lib/parametric/defaults";
-import type { ParametricParams } from "@/lib/parametric/types";
+import type { BoardPattern, ParametricParams } from "@/lib/parametric/types";
+import { BOARD_PATTERN_KINDS } from "@/lib/parametric/backboard";
+import { FRET_NAMES } from "@/lib/generators/fretwork";
 import { Sec } from "@/components/editor/PanelDock";
 import { CheckField, ResetMark } from "@/components/editor/ResetMark";
 import { fmtLen, type Units } from "@/components/editor/format";
@@ -99,6 +101,19 @@ export function StyleSection({ params, units, onEdit, onBrowse, onReset }: { par
         )}
         {p.parallel.backboard !== "none" && (
           <Slider label="Board margin" value={p.parallel.backboardMargin} def={D.parallel.backboardMargin} min={0} max={80} step={1} show={len} onSet={(v, r) => onEdit((q) => fieldSet("backboardMargin")(q, v), r)} />
+        )}
+        {p.parallel.backboard !== "none" && (
+          <label className="style-slider">
+            <span>Board pattern</span>
+            <select className="sel" aria-label="Board pattern" value={p.parallel.boardPattern?.kind ?? "none"}
+              onChange={(e) => onEdit((q) => { const k = e.target.value; if (k === "none") delete q.parallel.boardPattern; else q.parallel.boardPattern = { cell: 16, bar: 3, ...q.parallel.boardPattern, kind: k as BoardPattern["kind"] }; }, true)}>
+              <option value="none">None</option>
+              {BOARD_PATTERN_KINDS.map((k) => <option key={k} value={k}>{FRET_NAMES[k]}</option>)}
+            </select>
+          </label>
+        )}
+        {p.parallel.backboard !== "none" && p.parallel.boardPattern && (
+          <Slider label="Pattern size" value={p.parallel.boardPattern.cell} def={16} min={6} max={60} step={0.5} show={len} onSet={(v, r) => onEdit((q) => fieldSet("boardPatternCell")(q, v), r)} />
         )}
       </>
     );

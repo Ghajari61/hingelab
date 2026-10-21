@@ -3,8 +3,8 @@
  * tabs into a backboard (plate or slat board). Part-local coordinates are (u, w) of the plane
  * frame: the wall edge lies on y = 0 and tabs reach below it.
  */
-import { intersectShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
-import { backboardPart, boardOutline, boardRangeAlong, convexHull, slotFor, type BoardSlot } from "../backboard";
+import { intersectShapes, makeShape, shapeContours, unionShapes } from "@/lib/letters/polygon";
+import { backboardPart, boardOutline, boardPatternHoles, boardRangeAlong, cleanBoardPattern, convexHull, slotFor, type BoardSlot } from "../backboard";
 import { bridgeWidthOf, finSpacingOf, tabDepthOf } from "../defaults";
 import { finTabs, rect, tabRuleOf, withTabs } from "../joints";
 import { finLabel } from "../label";
@@ -141,6 +141,12 @@ export function sliceParallel(p: ParametricParams, ctx: ParallelContext): Method
     const outline = slatBoard ?? boardOutline(projection, slots.map(s => s.contour), p.parallel.backboardMargin, "plate");
     if (outline) {
       const board = backboardPart(outline, slots, T, p.labels.enabled);
+      const pattern = cleanBoardPattern(p.parallel.boardPattern);
+      if (pattern) {
+        const holes = boardPatternHoles(board.part, projection, pattern);
+        if (holes.length) board.part.shape = makeShape(board.part.shape.outer, [...board.part.shape.holes, ...holes]);
+        else warnings.push({ code: "BOARD_PATTERN_EMPTY", message: "The board pattern does not fit in the margin round the model. Widen the board margin or make the pattern smaller." });
+      }
       labelSkipped += board.skipped;
       parts.push(board.part);
       for (const part of parts) if (part.kind !== "backboard" && part.tabs?.length) part.neighbors.push(board.part.id);

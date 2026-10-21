@@ -21,6 +21,8 @@ import { applyStandardSize, insideText, STANDARD_GROUPS, STANDARD_SIZES, standar
 import { BASE_TEXT_FONT, BASE_TEXT_SIZE, MAX_BASE_TEXT } from "@/lib/hinge/baseText";
 import { BUNDLED_FONTS } from "@/lib/letters/fontList";
 import { FRET_KINDS, FRET_NAMES } from "@/lib/generators/fretwork";
+import { MOTIF_IDS, MOTIF_NAMES } from "@/lib/generators/motifs";
+import { PIERCE_SHAPES, type PierceShape } from "@/lib/generators/pattern";
 
 /** What the Sheet section needs from the editor: the fit result and the two setters. */
 export interface SheetProps {
@@ -236,9 +238,9 @@ export function PanelDock({
         <div className="grid2">{fields("secDiv")}</div>
         <p className="note">Dividers split the inside into compartments. They stand in slots in the base, lock together where they cross, and step up onto a support ring.</p>
       </Sec>
-      <Sec title="Cut-out pattern" meta={params.fret && params.fret !== "none" ? FRET_NAMES[params.fret] : undefined} onReset={() => onResetSection("Cut-out pattern", ["fret", "fretOn", "fretCell", "fretBar"])}>
+      <Sec title="Cut-out pattern" meta={params.fret && params.fret !== "none" ? FRET_NAMES[params.fret] : undefined} onReset={() => onResetSection("Cut-out pattern", ["fret", "fretOn", "fretCell", "fretBar", "fretMotif", "fretShape", "fretSize", "fretMark"])}>
         <div className="rowlabel">Pattern</div>
-        <select className="sel" aria-label="Cut-out pattern" value={params.fret ?? "none"} onChange={(e) => { const next: Params = { ...params, fret: e.target.value as Params["fret"] }; if (e.target.value === "none") { delete next.fret; delete next.fretOn; } onPatch(next); }}>
+        <select className="sel" aria-label="Cut-out pattern" value={params.fret ?? "none"} onChange={(e) => { const next: Params = { ...params, fret: e.target.value as Params["fret"] }; if (e.target.value === "none") { delete next.fret; delete next.fretOn; delete next.fretMotif; delete next.fretShape; delete next.fretSize; delete next.fretMark; } onPatch(next); }}>
           {FRET_KINDS.map((k) => <option key={k} value={k}>{FRET_NAMES[k]}</option>)}
         </select>
         {params.fret && params.fret !== "none" ? (
@@ -248,10 +250,27 @@ export function PanelDock({
                 <button key={v} type="button" aria-pressed={(params.fretOn ?? "both") === v} onClick={() => onPatch({ ...params, fretOn: v })}>{text}</button>
               ))}
             </div>
+            {params.fret === "motif" ? (
+              <>
+                <div className="rowlabel">Motif</div>
+                <select className="sel" aria-label="Pattern motif" value={params.fretMotif ?? "heart"} onChange={(e) => onPatch({ ...params, fretMotif: e.target.value })}>
+                  {MOTIF_IDS.map((id) => <option key={id} value={id}>{MOTIF_NAMES[id]}</option>)}
+                </select>
+              </>
+            ) : null}
+            <div className="rowlabel">Shape</div>
+            <select className="sel" aria-label="Pattern shape" value={params.fretShape ?? "full"} onChange={(e) => { const next: Params = { ...params, fretShape: e.target.value as PierceShape }; if (e.target.value === "full") { delete next.fretShape; delete next.fretSize; } onPatch(next); }}>
+              {(Object.keys(PIERCE_SHAPES) as PierceShape[]).map((k) => <option key={k} value={k}>{PIERCE_SHAPES[k]}</option>)}
+            </select>
+            <div className="iconseg full" role="group" aria-label="How the pattern is marked">
+              {([["cut", "Cut out"], ["engrave", "Engrave"], ["score", "Score"]] as const).map(([v, text]) => (
+                <button key={v} type="button" aria-pressed={(params.fretMark ?? "cut") === v} onClick={() => { const next: Params = { ...params, fretMark: v }; if (v === "cut") delete next.fretMark; onPatch(next); }}>{text}</button>
+              ))}
+            </div>
             <div className="grid2">{fields("secFret")}</div>
           </>
         ) : null}
-        <p className="note">A decorative pattern cut right through the lid and the wall&apos;s flat stretches, as on a pierced jewellery box or a lantern. Holes stay clear of the tabs, the hinge and the lid&apos;s opening.</p>
+        <p className="note">A decorative pattern on the lid and the wall&apos;s flat stretches, as on a pierced jewellery box or a lantern: cut through, engraved, or scored, over the whole face or in a shape. Holes stay clear of the tabs, the hinge and the lid&apos;s opening.</p>
       </Sec>
       <Sec title="Text under the box" meta={params.baseText?.trim() ? "On" : undefined} onReset={() => onResetSection("Text under the box", ["baseText", "baseTextSize", "baseTextFont"])}>
         <textarea

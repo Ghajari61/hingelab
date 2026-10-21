@@ -11,7 +11,10 @@ import { partsObject } from "@/components/parametric/scene";
 import { bundledFont, serverHarfBuzz } from "@/lib/billing/letterFonts";
 import { serverManifold } from "@/lib/billing/serverManifold";
 import { parametricRequestError } from "@/lib/billing/validate";
+import { FRET_NAMES } from "@/lib/generators/fretwork";
 import { getPath, setPath } from "@/lib/generators/path";
+import { BOARD_PATTERN_KINDS } from "@/lib/parametric/backboard";
+import type { BoardPattern } from "@/lib/parametric/types";
 import { MATERIALS } from "@/lib/hinge";
 import { shapeText } from "@/lib/letters/shape";
 import { allSheetsSVG, computeParametric, LIBRARY, loadSource, packOutline, type ParametricParams, type SliceResult } from "@/lib/parametric";
@@ -108,6 +111,9 @@ function specs(): { id: string; title: string; help: string; specs: Spec[] }[] {
         at({ kind: "choice", key: "parallel.axis", label: "Fins", options: [{ v: "X", text: "Upright" }, { v: "Y", text: "Level" }] }, method("parallel")),
         at({ kind: "choice", key: "parallel.backboard", label: "Backboard", options: [{ v: "none", text: "None" }, { v: "plate", text: "Plate" }, { v: "slats", text: "Slats" }] }, method("parallel")),
         at({ kind: "toggle", key: "parallel.fillEmptySlots", label: "Slats across the whole board" }, (p) => p.method === "parallel" && p.parallel.backboard === "slats"),
+        { f: { kind: "choice", key: "boardPattern", label: "Board pattern", help: "A decorative pattern cut through the backboard's margin round the model.", options: [{ v: "none", text: "None" }, ...BOARD_PATTERN_KINDS.map((v) => ({ v, text: FRET_NAMES[v] }))] }, virtual: true, get: (p) => p.parallel.boardPattern?.kind ?? "none", set: (p, v) => {
+          if (v === "none") delete p.parallel.boardPattern; else p.parallel.boardPattern = { cell: 16, bar: 3, ...p.parallel.boardPattern, kind: v as BoardPattern["kind"] };
+        }, show: (p) => p.method === "parallel" && p.parallel.backboard !== "none" },
         at({ kind: "choice", key: "stacked.axis", label: "Layers", options: [{ v: "Y", text: "Level" }, { v: "Z", text: "Against the wall" }] }, method("stacked")),
         at({ kind: "toggle", key: "stacked.dowels", label: "Dowel holes" }, method("stacked")),
         at({ kind: "toggle", key: "stacked.hollow", label: "Hollow layers" }, method("stacked")),

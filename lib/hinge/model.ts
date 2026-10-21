@@ -8,7 +8,7 @@ import { bendAnalysis } from "./analysis";
 import { r3 } from "./util";
 import { coreDistance, defaultRimWidth, isLidSlot, lidSlotSize, slotAlongY, slotOutline } from "./lidSlot";
 import { buildDividers, hasDividers } from "./dividers";
-import { fretOnLid, fretOnWalls, lidFret, wallFret } from "./fret";
+import { fretMarks, fretOnLid, fretOnWalls, lidFret, wallFret } from "./fret";
 
 const NUMS = ["W", "D", "H", "R", "dia", "T", "K", "slotW", "slit", "bridge", "pitch", "overrun", "tabW", "slotClr", "lidGap", "bedW", "bedH", "gap"] as const;
 
@@ -115,13 +115,14 @@ export function computeModel(input: Params): ComputeResult {
         // The labels move to the plain band at the edge, clear of the pattern.
         const clear = rad - Math.max(1, p.fretBar ?? 3) - 1;
         const band = (pt: PlatePart) => (pt.name === "LID" ? R + over : R - t - p.lidGap) - clear;
-        for (const q of [lid, lip]) if (q) Object.assign(q, { slots: [...q.slots, ...holes], rim: band(q) });
+        if (fretMarks(p)) Object.assign(lid, { [p.fretMark === "score" ? "score" : "engrave"]: holes, rim: band(lid) });
+        else for (const q of [lid, lip]) if (q) Object.assign(q, { slots: [...q.slots, ...holes], rim: band(q) });
       } else {
         issues.push({ lvl: "info", msg: "The lid is too small for this cut-out pattern. Make the pattern smaller or the box larger." });
       }
     }
   }
-  if (fretOnWalls(p)) for (const w of parts) if (w.kind === "wall" && !w.test && !w.divider) { const h = wallFret(p, w); if (h.length) w.holes = h; }
+  if (fretOnWalls(p)) for (const w of parts) if (w.kind === "wall" && !w.test && !w.divider) { const h = wallFret(p, w); if (h.length) w[fretMarks(p) ? (p.fretMark === "score" ? "score" : "engrave") : "holes"] = h; }
 
   if (div) { parts.push(...div.parts); issues.push(...div.issues); }
 
