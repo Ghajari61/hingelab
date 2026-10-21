@@ -25,7 +25,12 @@ export interface SvgOptions {
   styles?: Partial<Record<LineType, Partial<LineStyle>>>;
   /** Draw creases solid (some cutters read dashes as separate cuts). */
   solidCreases?: boolean;
+  /** Mountain creases on a layer of their own (valleys stay on the crease layer). */
+  folds?: boolean;
 }
+
+/** The mountain-fold layer, when creases are split by fold. */
+export const MOUNTAIN_STYLE: LineStyle = { color: "#8000FF", dash: "3 1.5 0.5 1.5", name: "Crease (mountain fold)", code: "07" };
 
 const f = (v: number) => (Math.round(v * 1000) / 1000).toString();
 
@@ -57,12 +62,23 @@ export function dielineSVG(d: Dieline, o: SvgOptions = {}): string {
   for (const type of LINE_TYPES) {
     if (o.layers && o.layers[type] === false) continue;
     const st = { ...LINE_STYLES[type], ...(o.styles?.[type] ?? {}) };
-    const ds = at.flatMap(({ part, dx, dy }) => part.paths.filter((p) => p.type === type).map((p) => pathD(p.pts, p.closed, dx, dy)));
-    if (!ds.length) continue;
-    const dash = st.dash && !(type === "crease" && o.solidCreases) ? ` stroke-dasharray="${st.dash}"` : "";
-    s += `<g id="${type}" inkscape:groupmode="layer" inkscape:label="${st.code} ${st.name}" fill="none" stroke="${st.color}" stroke-width="0.2"${dash}>\n`;
-    for (const dd of ds) s += `  <path d="${dd}"/>\n`;
-    s += `</g>\n`;
+    const split = o.folds && type === "crease";
+    const ds = at.flatMap(({ part, dx, dy }) => part.paths.filter((p) => p.type === type && !(split && p.fold === "mountain")).map((p) => pathD(p.pts, p.closed, dx, dy)));
+    if (ds.length) {
+      const dash = st.dash && !(type === "crease" && o.solidCreases) ? ` stroke-dasharray="${st.dash}"` : "";
+      const name = split ? "Crease (valley fold)" : st.name;
+      s += `<g id="${type}" inkscape:groupmode="layer" inkscape:label="${st.code} ${name}" fill="none" stroke="${st.color}" stroke-width="0.2"${dash}>\n`;
+      for (const dd of ds) s += `  <path d="${dd}"/>\n`;
+      s += `</g>\n`;
+    }
+    if (split) {
+      const ms = at.flatMap(({ part, dx, dy }) => part.paths.filter((p) => p.type === "crease" && p.fold === "mountain").map((p) => pathD(p.pts, p.closed, dx, dy)));
+      if (!ms.length) continue;
+      const m = MOUNTAIN_STYLE, dash = o.solidCreases ? "" : ` stroke-dasharray="${m.dash}"`;
+      s += `<g id="crease-mountain" inkscape:groupmode="layer" inkscape:label="${m.code} ${m.name}" fill="none" stroke="${m.color}" stroke-width="0.2"${dash}>\n`;
+      for (const dd of ms) s += `  <path d="${dd}"/>\n`;
+      s += `</g>\n`;
+    }
   }
   return s + `</svg>\n`;
 }

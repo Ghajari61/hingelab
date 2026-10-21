@@ -137,7 +137,15 @@ export interface GenPart {
    * each in its own frame and place; the cut file keeps the one part.
    */
   /** `soft`: a piece of a curved surface, drawn without an outline of its own. */
-  views3d?: { outer: Contour; holes: Contour[]; engrave?: Contour[]; place: NonNullable<GenPart["place"]>; soft?: boolean }[];
+  views3d?: {
+    outer: Contour; holes: Contour[]; engrave?: Contour[]; place: NonNullable<GenPart["place"]>; soft?: boolean;
+    /** Its placement matrix from flat (first) to folded (last), evenly spaced, for the fold slider. */
+    frames?: number[][];
+    /** How far it moves when the view is fully exploded, mm (x, y toward the viewer, z up). */
+    apart?: [number, number, number];
+    /** Creases on it, in its outline's frame; mountain folds drawn apart from valleys. */
+    creases?: { pts: Contour; mountain: boolean }[];
+  }[];
   /** Thickness when it differs from the material (for example acrylic hands). */
   t?: number;
   /** Shade in 3D (1 = the material; lower is darker), for a contrasting layer. */

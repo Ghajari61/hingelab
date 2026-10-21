@@ -13,6 +13,10 @@ export interface Scene3D {
   dispose: () => void;
   /** Settles when textures that load later (pictures) are in place. */
   ready?: Promise<unknown>;
+  /** Pulls the parts apart in place (0 = assembled, 1 = fully exploded), when the model can. */
+  explode?: (e: number) => void;
+  /** Folds a box in place (0 = the flat net, 1 = folded), when the model can. */
+  fold?: (amount: number) => void;
 }
 
 export interface FlatPart {

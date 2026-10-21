@@ -14,6 +14,8 @@ export interface DielinePath {
   type: LineType;
   pts: Pt[];
   closed: boolean;
+  /** A crease's fold seen from the printed side: a valley folds toward you, a mountain away. */
+  fold?: "mountain" | "valley";
 }
 
 /**
@@ -36,6 +38,12 @@ export interface Face {
   hinge?: [Pt, Pt];
   /** Fold angle when assembled, degrees (positive folds toward the viewer: the printed side out). */
   angle?: number;
+  /**
+   * A second crease it is joined on (a gusset, a crash-lock glue triangle): `parent2`'s edge. The
+   * face then spans its two creases as they fold, instead of turning about the first alone.
+   */
+  parent2?: string;
+  hinge2?: [Pt, Pt];
   /** A face that holds the print (the outside of the box). */
   printable?: boolean;
 }

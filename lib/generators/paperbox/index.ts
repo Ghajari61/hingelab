@@ -74,9 +74,10 @@ const sections: SectionSpec<PaperBoxParams>[] = [
     fields: patternFields<PaperBoxParams>("pattern", FACE_TARGETS, { on: "Which faces carry the pattern." }),
   },
   {
-    id: "lines", title: "Perforation", open: false,
-    help: "Perforated lines (tear strips) are cut as dashes.",
+    id: "lines", title: "Lines", open: false,
+    help: "Perforated lines (tear strips) are cut as dashes; mountain folds can be scored dash-dot so you can tell them from valley folds.",
     fields: [
+      { kind: "choice", key: "lines.mountain", label: "Mountain folds", help: "Valley folds fold toward you (the printed side up), mountain folds away. Score mountains dash-dot to tell them apart, or solid like the valleys.", options: [{ v: "solid", text: "Solid, like valleys" }, { v: "dashdot", text: "Dash-dot" }] },
       { kind: "number", key: "lines.perfCut", label: "Cut length", unit: "mm", min: 0.3, max: 10, step: 0.1, help: "Length of each cut dash." },
       { kind: "number", key: "lines.perfGap", label: "Gap length", unit: "mm", min: 0.3, max: 10, step: 0.1, help: "Uncut paper between dashes." },
     ],
