@@ -1,4 +1,4 @@
-import type { ExportLayer, LayerContent, Layers, Layout, Model, Params } from "./types";
+import type { ExportLayer, LayerContent, Layers, Layout, Model, Params, Point } from "./types";
 import { roundedPath, roundedPointsXY } from "./core";
 import { polyD } from "./polygon";
 import { colSegments, hingeCutPaths } from "./hinge";
@@ -18,6 +18,12 @@ export const EXPORT_LAYERS: ExportLayer[] = [
 /** Scored lines: marked on the surface, not cut through. Written only when a design has some. */
 export const SCORE_LAYER = { name: "Score lines", code: "05", color: "#FF8000", ui: "var(--l-score, #FF8000)" };
 
+/** A pattern engraved or scored on a part. */
+function marks(L: LayerContent, pt: { engrave?: Point[][]; score?: Point[][] }, ox: number, oy: number) {
+  if (pt.engrave?.length) (L.engrave ??= []).push(contoursD(pt.engrave, ox, oy));
+  for (const s of pt.score ?? []) (L.score ??= []).push(polyD(s, ox, oy));
+}
+
 /**
  * Path and label data in sheet coordinates, shared by the canvas and the SVG exporter. `ctx` shapes
  * the text under the box; without it (fonts still loading) the text is left out.
@@ -31,12 +37,14 @@ export function layerContent(model: Model, lay: Layout, p: Params, ctx?: BuildCo
       L.outline.push(d); L.fills.push(d);
       for (const c of pt.cols) L.hinge.push(...hingeCutPaths(c.x, colSegments(c.kind, model.hs, pt.hBody, p.bridge), pt.hBody, p, ox, oy));
       for (const h of pt.holes ?? []) L.slots.push(polyD(h, ox, oy));
+      marks(L, pt, ox, oy);
       if (pt.label) L.labels.push({ x: pt.label.x + ox, y: pt.label.y + oy, text: pt.name, size: pt.label.vertical ? clamp(pt.hBody / 11, 2.5, 5) : clamp(pt.hBody / 7, 3, 7), rot: pt.label.vertical ? -90 : 0 });
     } else {
       const d = pt.ek ? polyD(roundedPointsXY(pt.edges, pt.r, pt.ek[0], pt.ek[1]), ox, oy) : roundedPath(pt.edges, pt.r, ox, oy);
       L.outline.push(d); L.fills.push(d);
       for (const s of pt.slots) L.slots.push(polyD(s, ox, oy));
       if (pt.scoreR) (L.score ??= []).push(roundedPath(pt.edges, pt.scoreR, ox, oy));
+      marks(L, pt, ox, oy);
       const w = pt.bbox.x1 - pt.bbox.x0, h = pt.bbox.y1 - pt.bbox.y0;
       const size = pt.rim ? clamp(pt.rim * 0.45, 2, 5) : clamp(Math.min(w, h) / 9, 3, 8);
       const text = pt.name === "BASE" && ctx ? baseTextShape(p, pt.edges, model.R - p.T, ctx) : null;

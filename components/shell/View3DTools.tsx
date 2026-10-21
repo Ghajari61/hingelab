@@ -96,7 +96,7 @@ export function View3DTools({ v, flat = false, explodeLabel = "Explode", childre
  * The toolbar rendered from inside a 3D view (which loads lazily with three.js): it is placed in
  * the stage's Sheets / 3D bar, which hides it while the sheets are shown.
  */
-export function View3DBarTools(props: Omit<ToolsProps, "children">) {
+export function View3DBarTools(props: ToolsProps) {
   const probe = useRef<HTMLSpanElement>(null);
   const [bar, setBar] = useState<HTMLElement | null>(null);
   useLayoutEffect(() => { setBar(probe.current?.closest(".stage")?.querySelector<HTMLElement>(".view-bar") ?? null); }, []);

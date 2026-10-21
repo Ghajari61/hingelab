@@ -63,7 +63,8 @@ export type SourceSpec =
     }
   | ImageSource
   | TextSource
-  | FormulaSpec;
+  | FormulaSpec
+  | import("./source/patternSpec").PatternSource;
 
 /**
  * Text to solid: shaped in the browser with HarfBuzz and the Letters fonts (Latin and Persian); the
@@ -133,7 +134,7 @@ export interface ParallelParams {
   phase: number;
   /** Fins lower than this are left out (reported), mm. */
   minFinHeight: number;
-  backboard: "none" | "plate" | "slats";
+  backboard: "none" | "plate" | "slats" | "rails";
   /** Border of the backboard around the model, mm. */
   backboardMargin: number;
   /** Visible width of a slat; slats are cut on edge from the sheet, so this is T (kept for the brief's data model). */
@@ -144,6 +145,27 @@ export interface ParallelParams {
   fillEmptySlots: boolean;
   /** Tab depth into the backboard, mm (null = backboard thickness). */
   finDepthBehind: number | null;
+  /** A decorative pattern cut through the backboard's margin round the model (missing: none). */
+  boardPattern?: BoardPattern;
+  /** Backboard "rails": lumber screwed to the wall, notched into every slat (missing: the defaults). */
+  rails?: RailMount;
+}
+
+/** Nominal lumber: 1x2, 1x3 or 1x4 (19 mm thick; 38, 64 or 89 mm wide). */
+export type Lumber = "1x2" | "1x3" | "1x4";
+export interface RailMount {
+  lumber: Lumber;
+  /** One rail across the middle, or two. */
+  count: 1 | 2;
+  /** Room round the rail in each notch, mm. */
+  clearance: number;
+}
+
+export interface BoardPattern {
+  kind: Exclude<import("@/lib/generators/fretwork").FretKind, "none" | "motif" | "tile">;
+  /** Pattern repeat and narrowest wood between holes, mm. */
+  cell: number;
+  bar: number;
 }
 
 export interface StackedParams {
@@ -338,7 +360,7 @@ export type WarningCode =
   | "NON_MANIFOLD" | "NON_MANIFOLD_SECTION" | "MIN_FEATURE_REMOVED" | "ISLAND_DROPPED" | "BRIDGE_ADDED" | "SHORT_FIN_DROPPED"
   | "DOWEL_CHAIN_SPLIT" | "CROSSING_TOO_SHORT" | "FINS_COLLIDE_AT_HUB" | "FINS_COLLIDE" | "PART_TOO_BIG" | "TOO_MANY_PARTS"
   | "SIMPLIFIED" | "METHOD_NOT_READY" | "FLOATING_PIECE" | "LABEL_SKIPPED" | "TOO_MANY_SHEETS" | "NO_TAB"
-  | "NO_DOWEL" | "NO_JOINT";
+  | "NO_DOWEL" | "NO_JOINT" | "BOARD_PATTERN_EMPTY" | "NOTCH_DEEP" | "RAIL_NEAR_END";
 
 export interface Warning {
   code: WarningCode;

@@ -27,6 +27,7 @@ export const WARNING_TITLES: Partial<Record<WarningCode, string>> = {
   NO_JOINT: "Ribs without a joint",
   FINS_COLLIDE_AT_HUB: "Fins crowd the hub",
   FINS_COLLIDE: "Fins touch",
+  BOARD_PATTERN_EMPTY: "Board pattern does not fit",
 };
 
 export const SERIOUS: WarningCode[] = ["PART_TOO_BIG", "TOO_MANY_SHEETS", "TOO_MANY_PARTS", "NON_MANIFOLD", "FLOATING_PIECE", "METHOD_NOT_READY", "FINS_COLLIDE_AT_HUB", "FINS_COLLIDE"];
@@ -101,7 +102,7 @@ export function parametricIssues(p: ParametricParams, r: SliceResult | null, err
     g.data ??= w.data;
     groups.set(w.code, g);
   }
-  return [...groups].map(([code, g]) => {
+  return [...[...groups].map(([code, g]) => {
     const level: IssueLevel = SERIOUS.includes(code) ? "warn" : "info";
     const ids = [...new Set(g.ids)];
     const title = WARNING_TITLES[code];
@@ -111,5 +112,33 @@ export function parametricIssues(p: ParametricParams, r: SliceResult | null, err
       fixes: fixesFor(code, p, r, ids, g.data),
       partIds: ids.length ? ids : undefined,
     };
-  });
+  }), ...shelfIssues(p)];
+}
+
+/**
+ * A wave shelf only holds something when it spans at least two slats (its level tops make the
+ * shelf): narrower ones get a fix that widens them to three.
+ */
+export function shelfIssues(p: ParametricParams): PIssue[] {
+  const s = p.source;
+  if (s.kind !== "pattern" || s.style !== "shelf" || p.method !== "parallel") return [];
+  const pitch = finSpacingOf(p), narrow = s.shelves.map((sh, i) => ({ sh, i })).filter(({ sh }) => (sh.x1 - sh.x0) * s.width < 2 * pitch);
+  if (!narrow.length) return [];
+  return [{
+    code: "SHELF_NARROW", level: "warn",
+    message: `${narrow.length === 1 ? "A shelf spans" : `${narrow.length} shelves span`} fewer than two slats (${Math.round(pitch * 10) / 10} mm apart), so ${narrow.length === 1 ? "it does" : "they do"} not make a level shelf.`,
+    fixes: [{
+      id: "shelf-wider", label: "Widen to three slats", safe: true,
+      apply: (q) => {
+        const src = q.source;
+        if (src.kind !== "pattern") return q;
+        const need = (3 * finSpacingOf(q)) / src.width;
+        return { ...q, source: { ...src, shelves: src.shelves.map((sh) => {
+          if (sh.x1 - sh.x0 >= need) return sh;
+          const mid = (sh.x0 + sh.x1) / 2, x0 = Math.max(0, Math.min(1 - need, mid - need / 2));
+          return { ...sh, x0, x1: Math.min(1, x0 + need) };
+        }) } };
+      },
+    }],
+  }];
 }

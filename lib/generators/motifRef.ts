@@ -9,6 +9,7 @@ import { isMotifId, type MotifRef } from "./motifs";
 import { orient } from "./shapes";
 import { PIC_BOX, decodeContours, levelAt } from "./shadowbox/picPath";
 import type { BuildContext, Contour } from "./types";
+import type { FretTile } from "./fretwork";
 import { textBlock } from "./weld";
 
 /** Contours centred on (0, 0) with their larger side 100. */
@@ -26,6 +27,25 @@ function cached(key: string, make: () => Contour[]): MotifRef | null {
     cache.set(key, unit.length ? { unit } : null);
   }
   return cache.get(key)!;
+}
+
+const tiles = new Map<string, FretTile | null>();
+/**
+ * The user's picture as a repeating tile: its traced outlines in the picture's own frame, so the
+ * picture's edges (an SVG's viewBox) are the repeat. Null until a picture is traced.
+ */
+export function pictureTile(art: MotifArt): FretTile | null {
+  if (!art.levels) return null;
+  const key = `${art.cut}:${art.invert}:${art.aspect}:${art.levels}`;
+  if (!tiles.has(key)) {
+    if (tiles.size > 12) tiles.delete(tiles.keys().next().value!);
+    const levels = art.levels.split("|");
+    const a = art.aspect, w = a >= 1 ? PIC_BOX : PIC_BOX * a, h = a >= 1 ? PIC_BOX / a : PIC_BOX;
+    const lv = unionShapes(decodeContours(levels[levelAt(art.cut, levels.length)]), [], true);
+    const cs = art.invert ? shapeContours(differenceShapes([orient(rect(0, 0, w, h))], shapeContours(lv))) : shapeContours(lv);
+    tiles.set(key, cs.length ? { cs, w, h } : null);
+  }
+  return tiles.get(key)!;
 }
 
 /**

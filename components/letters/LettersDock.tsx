@@ -3,7 +3,9 @@
 import type { CutStyle, LayerKey, Pattern } from "@/lib/hinge";
 import type { MaterialInfo } from "@/lib/materials/library";
 import { MaterialPicker } from "@/components/shell/MaterialPicker";
-import { LETTER_DEFAULTS, bridgeWidthOf, cornerRadiusOf, wallMaxLengthOf, type LetterModel, type LetterParams } from "@/lib/letters";
+import { LETTER_CUTOUT_KINDS, LETTER_DEFAULTS, bridgeWidthOf, cleanCutout, cornerRadiusOf, wallMaxLengthOf, type LetterModel, type LetterParams } from "@/lib/letters";
+import { FRET_NAMES } from "@/lib/generators/fretwork";
+import type { LetterCutout } from "@/lib/letters/types";
 import { NumberField } from "@/components/editor/NumberField";
 import { LayersPanel } from "@/components/editor/LayersPanel";
 import { Sec, type SheetProps } from "@/components/editor/PanelDock";
@@ -84,6 +86,7 @@ export function LettersDock({
     />
   ));
   const missing = model?.shaped.missing ?? [];
+  const cutout = cleanCutout(params.cutout);
   const layerVis = (key: LayerKey) => onPatch({ layers: { ...params.layers, [key]: { ...params.layers[key], vis: !params.layers[key].vis } } }, true);
   const layerExp = (key: LayerKey, exp: boolean) => onPatch({ layers: { ...params.layers, [key]: { ...params.layers[key], exp } } }, true);
 
@@ -121,7 +124,7 @@ export function LettersDock({
         <p className="note">Letter spacing never separates letters that join, as in connected scripts. Thicken grows every stroke outward.</p>
       </Sec>
       {box ? (
-        <Sec title="Box" meta={params.wallStyle === "hinge" ? "Living hinge" : "Flat panels"} startOpen onReset={() => onResetSection("Box", ["depth", "minCornerRadius", "facetTol", "panelMin", "wallMaxLength", "islandArea", "smallIslands", "stackIslands", "marquee"])}>
+        <Sec title="Box" meta={params.wallStyle === "hinge" ? "Living hinge" : "Flat panels"} startOpen onReset={() => onResetSection("Box", ["depth", "minCornerRadius", "facetTol", "panelMin", "wallMaxLength", "islandArea", "smallIslands", "stackIslands", "marquee", "cutout"])}>
           <div className="grid2">{fields("box")}</div>
           {hinge && (
             <CheckField
@@ -145,6 +148,26 @@ export function LettersDock({
             Marquee light holes in the {params.lid === "open" ? "base" : "lid"}
           </CheckField>
           {params.marquee.enabled && <div className="grid2">{fields("marquee")}</div>}
+          <div className="rowlabel">Cut-out pattern<ResetMark label="Cut-out pattern" show={!!cutout} to="None" onReset={() => onPatch({ cutout: undefined }, true)} /></div>
+          <select className="sel" aria-label="Cut-out pattern" value={cutout?.kind ?? "none"} onChange={(e) => onPatch({ cutout: e.target.value === "none" ? undefined : { ...(cutout ?? { on: "both", cell: 16, bar: 3 }), kind: e.target.value as LetterCutout["kind"] } }, true)}>
+            <option value="none">None</option>
+            {LETTER_CUTOUT_KINDS.map((k) => <option key={k} value={k}>{FRET_NAMES[k]}</option>)}
+          </select>
+          {cutout && (
+            <>
+              <Choice label="Put it on" value={cutout.on} def="both" onPick={(v) => onPatch({ cutout: { ...cutout, on: v } }, true)} options={[
+                { v: "both", text: "Lid and base" },
+                { v: "lid", text: "Lid", title: "Light shines out through a lit letter's lid" },
+                { v: "base", text: "Base" },
+              ]} />
+              <div className="grid2">
+                <NumberField field={{ id: "cutoutCell", label: "Pattern size", len: true, step: 0.5, min: 6, max: 80 }} value={cutout.cell} defaultValue={16} units={units} label="Pattern size" hidden={false}
+                  onLive={(v) => onPatch({ cutout: { ...cutout, cell: v } }, false)} onCommit={(v) => onPatch({ cutout: { ...cutout, cell: v } }, true)} />
+                <NumberField field={{ id: "cutoutBar", label: "Bar width", len: true, step: 0.25, min: 1, max: 15 }} value={cutout.bar} defaultValue={3} units={units} label="Bar width" hidden={false}
+                  onLive={(v) => onPatch({ cutout: { ...cutout, bar: v } }, false)} onCommit={(v) => onPatch({ cutout: { ...cutout, bar: v } }, true)} />
+              </div>
+            </>
+          )}
           <p className="note">
             {hinge
               ? "Each outline and counter gets one bendable wall strip. Sharp corners are rounded to the corner radius so the hinge can follow them; seams land on flat stretches."

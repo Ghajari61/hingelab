@@ -10,6 +10,7 @@ import { buildSign, type SignOutput } from "./build";
 import { checkSign } from "./check";
 import { SIGN_DEFAULTS, mergeSign, type SignParams } from "./params";
 import { SIGN_PRESETS } from "./presets";
+import { byId, withPattern } from "../pattern";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const boarded = (p: SignParams) => p.style.kind !== "word" && p.style.kind !== "neon";
@@ -147,7 +148,7 @@ function scaleSign(p: SignParams, s: number): SignParams {
 
 const BUILD_NAMES = { engraved: "Engraved", layered: "Layered", word: "Cut-out word", inlay: "Inlay", neon: "Neon-look", stencil: "Stencil" } as const;
 
-export const SIGN: GeneratorDef<SignParams> = {
+const SIGN_BASE: GeneratorDef<SignParams> = {
   id: "sign",
   name: "Sign",
   version: 1,
@@ -187,3 +188,9 @@ export const SIGN: GeneratorDef<SignParams> = {
 };
 
 export { SIGN_DEFAULTS };
+
+/** The generator with the cut-out pattern (lib/generators/pattern.ts). */
+export const SIGN: GeneratorDef<SignParams> = withPattern(SIGN_BASE, [
+  { v: "board", text: "Board", match: byId("board") },
+  { v: "base", text: "Stand base", match: byId("base") },
+], { help: "A decorative pattern round the sign's text, or on its stand, cut through, engraved or scored." });

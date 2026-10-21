@@ -23,9 +23,9 @@ function textFile(font: string, text: string, size: number, letterSpacing: numbe
 }
 
 describe("parametric design library", () => {
-  it("has 45–60 designs, each in a known category, with every category used", () => {
+  it("has 45–75 designs, each in a known category, with every category used", () => {
     expect(PARAMETRIC_PRESETS.length).toBeGreaterThanOrEqual(45);
-    expect(PARAMETRIC_PRESETS.length).toBeLessThanOrEqual(60);
+    expect(PARAMETRIC_PRESETS.length).toBeLessThanOrEqual(75);
     const cats = new Set(PARAMETRIC_CATEGORIES.map((c) => c.id));
     for (const pr of PARAMETRIC_PRESETS) expect(cats.has(pr.category), pr.id).toBe(true);
     for (const c of cats) expect(PARAMETRIC_PRESETS.some((pr) => pr.category === c), c).toBe(true);

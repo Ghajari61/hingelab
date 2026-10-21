@@ -14,6 +14,8 @@ export interface DielinePath {
   type: LineType;
   pts: Pt[];
   closed: boolean;
+  /** A crease's fold seen from the printed side: a valley folds toward you, a mountain away. */
+  fold?: "mountain" | "valley";
 }
 
 /**
@@ -36,6 +38,12 @@ export interface Face {
   hinge?: [Pt, Pt];
   /** Fold angle when assembled, degrees (positive folds toward the viewer: the printed side out). */
   angle?: number;
+  /**
+   * A second crease it is joined on (a gusset, a crash-lock glue triangle): `parent2`'s edge. The
+   * face then spans its two creases as they fold, instead of turning about the first alone.
+   */
+  parent2?: string;
+  hinge2?: [Pt, Pt];
   /** A face that holds the print (the outside of the box). */
   printable?: boolean;
 }
@@ -45,6 +53,11 @@ export interface DielinePart {
   name: string;
   paths: DielinePath[];
   faces: Face[];
+  /**
+   * The assembled shape for 3D when it bends instead of folding flat (a pillow box): flat
+   * polygons in mm (x along the length, y toward the viewer, z up), drawn instead of the folded faces.
+   */
+  surface?: [number, number, number][][];
 }
 
 export interface Dieline {
@@ -56,6 +69,13 @@ export interface Dieline {
   /** Step-by-step assembly. */
   assembly: string[];
   warnings: string[];
+  /**
+   * How the folded parts sit together in 3D (parts not listed stand side by side): `part` centred
+   * on `on`, turned over first when `flip`, its top `top` mm above the other's top (or its bottom
+   * `bottom` mm above the other's bottom), then moved by `shift` (x along the length, y toward the
+   * viewer, z up). `turn` (degrees about x, then y, then z) stands a flat part up: a divider.
+   */
+  poses?: { part: string; on: string; flip?: boolean; turn?: [number, number, number]; top?: number; bottom?: number; shift?: [number, number, number] }[];
 }
 
 /** Parameters every style shares. Styles add their own. */

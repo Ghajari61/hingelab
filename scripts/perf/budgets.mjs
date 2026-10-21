@@ -24,7 +24,8 @@ const PAGE_BUDGETS = { "/": 150 };
 const LAZY_BUDGETS = {
   // Phase 2 (D189): supabase-js and opentype.js (the font parser, needed only when text is shaped)
   // left the shell: 286 KB measured → 154 KB; the budget stays at 162 for headroom.
-  "Editor shell + Hinge Box": { key: /EditorRoot\.tsx -> \.\/Workspace$/, kb: 162 },
+  // The Hinge Box's pattern motif, shape and mark (D193): 162 → 166.5 KB measured; 169 for headroom.
+  "Editor shell + Hinge Box": { key: /EditorRoot\.tsx -> \.\/Workspace$/, kb: 169 },
   // Phase 2: 145 → 45 KB (32.7 measured; the letters engine itself is shared with the shell's text).
   "Letters editor": { key: /Workspace\.tsx -> @\/components\/letters\/LettersEditor$/, kb: 45 },
   // Phase 2: three.js loads as its own chunk (the 3D view) instead of inside the editor: 330 → 70 KB.
@@ -34,19 +35,22 @@ const LAZY_BUDGETS = {
   "Generator editor": { key: /Workspace\.tsx -> @\/components\/generators\/GeneratorEditor$/, kb: 45 },
   // Phase 2: code the shell used to carry for every editor (font list, randomise, pattern helpers)
   // now loads with the generators that use it, a few KB each; the shell lost 132 KB.
-  "Clock generator": { key: /registry\.ts -> \.\/clock$/, kb: 17 },
-  "Puzzle generator": { key: /registry\.ts -> \.\/puzzle$/, kb: 15 },
-  "QR Code generator": { key: /registry\.ts -> \.\/qr$/, kb: 25 },
+  // The Cut-out pattern on every generator (D193): the pattern, fretwork and motif code, about 12 KB,
+  // counted again in each generator's chunks (the browser downloads it once). Your own tile, the
+  // repeat grids, glued-part keep-outs and the sparse check (D193, D194) added about 1-2 KB each.
+  "Clock generator": { key: /registry\.ts -> \.\/clock$/, kb: 33 },
+  "Puzzle generator": { key: /registry\.ts -> \.\/puzzle$/, kb: 31 },
+  "QR Code generator": { key: /registry\.ts -> \.\/qr$/, kb: 40 },
   // Boxes version 2 (D109) added five designs and three lids: 10 → 25 KB. Your own motif (D169) +2 KB.
   // Phase 2 and D187 (joint fit, shaped and engraved patterns, six presets): 32 → 46 KB.
-  "Boxes generator": { key: /registry\.ts -> \.\/boxes$/, kb: 46 },
-  "Cake Topper generator": { key: /registry\.ts -> \.\/topper$/, kb: 25 },
-  "Key Holder generator": { key: /registry\.ts -> \.\/keyrack$/, kb: 24 },
-  "Sign generator": { key: /registry\.ts -> \.\/sign$/, kb: 27 },
-  "Table Numbers generator": { key: /registry\.ts -> \.\/tablenum$/, kb: 26 },
-  "Trophy generator": { key: /registry\.ts -> \.\/trophy$/, kb: 25 },
+  "Boxes generator": { key: /registry\.ts -> \.\/boxes$/, kb: 50 },
+  "Cake Topper generator": { key: /registry\.ts -> \.\/topper$/, kb: 31 },
+  "Key Holder generator": { key: /registry\.ts -> \.\/keyrack$/, kb: 30 },
+  "Sign generator": { key: /registry\.ts -> \.\/sign$/, kb: 33 },
+  "Table Numbers generator": { key: /registry\.ts -> \.\/tablenum$/, kb: 32 },
+  "Trophy generator": { key: /registry\.ts -> \.\/trophy$/, kb: 31 },
   // Your picture (D160), photo looks (D161), the enclosure (D162), item tags (D173): 46 KB. Phase 2: 51 KB.
-  "Shadow Box generator": { key: /registry\.ts -> \.\/shadowbox$/, kb: 51 },
+  "Shadow Box generator": { key: /registry\.ts -> \.\/shadowbox$/, kb: 55 },
 };
 
 const gz = new Map();

@@ -10,6 +10,7 @@ export type V3 = [number, number, number];
 const D2R = Math.PI / 180;
 
 export function placePoint(pl: Place, u: number, v: number, h: number): V3 {
+  if (pl.m) { const m = pl.m; return [m[0] * u + m[1] * v + m[2] * h + m[3], m[4] * u + m[5] * v + m[6] * h + m[7], m[8] * u + m[9] * v + m[10] * h + m[11]]; }
   let x = u, y = -v, z = h;
   if (pl.rot) {
     const r = -pl.rot * D2R;
@@ -26,8 +27,16 @@ export function placePoint(pl: Place, u: number, v: number, h: number): V3 {
   return pl.upright ? [x + pl.x, -(y - pl.z), z - pl.y] : [x + pl.x, -(y - pl.y), z + pl.z];
 }
 
+/** The inverse of a placement matrix (rotation and offset). */
+function unMatrix(m: number[], P: V3): V3 {
+  const d: V3 = [P[0] - m[3], P[1] - m[7], P[2] - m[11]];
+  // A rotation's inverse is its transpose.
+  return [m[0] * d[0] + m[4] * d[1] + m[8] * d[2], m[1] * d[0] + m[5] * d[1] + m[9] * d[2], m[2] * d[0] + m[6] * d[1] + m[10] * d[2]];
+}
+
 /** The inverse of placePoint. */
 export function unplacePoint(pl: Place, P: V3): V3 {
+  if (pl.m) return unMatrix(pl.m, P);
   let x: number, y: number, z: number;
   if (pl.upright) [x, y, z] = [P[0] - pl.x, -P[1] + pl.z, P[2] + pl.y];
   else [x, y, z] = [P[0] - pl.x, -P[1] + pl.y, P[2] - pl.z];

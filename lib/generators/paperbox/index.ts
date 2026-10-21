@@ -6,6 +6,9 @@
 import { listBoxStyles, buildBox, paperById, type BoxStyle, type ParamField } from "@/lib/paperbox";
 import type { FieldSpec, GeneratorDef, SectionSpec } from "../types";
 import { fitArt, namedFile } from "../util";
+import { motifArtFields, motifFonts } from "../motifArt";
+import { patternArt, patternFields } from "../pattern";
+import { FACE_TARGETS, WINDOW_SHAPES, type WindowShape } from "./decorate";
 import { buildPaperBox, type PaperBoxOutput } from "./build";
 import { mergePaperBox, PAPER_OPTIONS, PAPERBOX_DEFAULTS, PAPERBOX_VERSION, SHELL_KEYS, type PaperBoxParams } from "./params";
 import { PAPERBOX_PRESETS } from "./presets";
@@ -56,9 +59,28 @@ const sections: SectionSpec<PaperBoxParams>[] = [
   },
   ...styleSections(),
   {
-    id: "lines", title: "Perforation", open: false,
-    help: "Perforated lines (tear strips) are cut as dashes.",
+    id: "window", title: "Window", open: false,
+    help: "A window cut in the faces you choose, to show what is inside (glue clear film behind it).",
     fields: [
+      { kind: "choice", key: "window.on", label: "Window on", help: "Which faces get a window; None leaves them closed.", options: [{ v: "none", text: "None" }, ...FACE_TARGETS.map((t) => ({ v: t.v, text: t.text })), { v: "all", text: "Every outside face" }] },
+      { kind: "choice", key: "window.shape", label: "Shape", show: (p) => p.window.on !== "none", help: "The window's shape.", options: (Object.keys(WINDOW_SHAPES) as WindowShape[]).map((v) => ({ v, text: WINDOW_SHAPES[v] })) },
+      { kind: "number", key: "window.size", label: "Size", unit: "%", min: 15, max: 95, step: 1, show: (p) => p.window.on !== "none", help: "The window's size as a share of the face." },
+      { kind: "number", key: "window.corner", label: "Corner radius", unit: "mm", min: 0, max: 100, step: 0.5, show: (p) => p.window.on !== "none" && p.window.shape === "rounded", help: "Rounds the window's corners." },
+      ...motifArtFields<PaperBoxParams>("window.shape", "window.art", (p) => p.window.on !== "none" && p.window.shape === "custom", () => true),
+      { kind: "number", key: "window.x", label: "Across", unit: "%", min: -100, max: 100, step: 1, show: (p) => p.window.on !== "none", help: "Moves the window left (-) or right (+) of the middle, into the room it leaves." },
+      { kind: "number", key: "window.y", label: "Up and down", unit: "%", min: -100, max: 100, step: 1, show: (p) => p.window.on !== "none", help: "Moves the window up (-) or down (+) from the middle." },
+    ],
+  },
+  {
+    id: "pattern", title: "Cut-out pattern", open: false,
+    help: "A decorative pattern cut through the faces you choose (or engraved or scored), face by face so it never crosses a fold, clear of the edges and any window.",
+    fields: patternFields<PaperBoxParams>("pattern", FACE_TARGETS, { on: "Which faces carry the pattern." }),
+  },
+  {
+    id: "lines", title: "Lines", open: false,
+    help: "Perforated lines (tear strips) are cut as dashes; mountain folds can be scored dash-dot so you can tell them from valley folds.",
+    fields: [
+      { kind: "choice", key: "lines.mountain", label: "Mountain folds", help: "Valley folds fold toward you (the printed side up), mountain folds away. Score mountains dash-dot to tell them apart, or solid like the valleys.", options: [{ v: "solid", text: "Solid, like valleys" }, { v: "dashdot", text: "Dash-dot" }] },
       { kind: "number", key: "lines.perfCut", label: "Cut length", unit: "mm", min: 0.3, max: 10, step: 0.1, help: "Length of each cut dash." },
       { kind: "number", key: "lines.perfGap", label: "Gap length", unit: "mm", min: 0.3, max: 10, step: 0.1, help: "Uncut paper between dashes." },
     ],
@@ -67,6 +89,7 @@ const sections: SectionSpec<PaperBoxParams>[] = [
 
 /** A rail card: the style's flat net, from its own defaults. */
 function art(key: string, v: string): { d: string; fill?: boolean }[] {
+  if (key === "pattern.pattern") return patternArt(v);
   if (key !== "style") return [];
   try {
     const d = buildBox(v, {});
@@ -86,7 +109,8 @@ export const PAPERBOX: GeneratorDef<PaperBoxParams> = {
   merge: mergePaperBox,
   sections,
   presets: PAPERBOX_PRESETS,
-  build: (p) => buildPaperBox(p),
+  build: (p, ctx) => buildPaperBox(p, ctx),
+  fonts: (p) => (p.pattern.pattern === "motif" ? motifFonts(p.pattern.motif, p.pattern.art) : []),
   check: (p, out) => ((out as PaperBoxOutput).info?.warnings ?? []).map((m, i) => ({ code: `PAPERBOX_${i}`, level: "warn" as const, message: m, fixes: [] })),
   art,
   fileName: (p) => namedFile("paperbox", p.name, p.style),

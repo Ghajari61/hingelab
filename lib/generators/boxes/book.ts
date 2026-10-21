@@ -64,7 +64,7 @@ export function buildBook(p: BoxesParams, ctx: BuildContext): V2Output {
   const patternScore: Contour[] = [];
   if (pierced(p)) {
     const m = Math.max(5, p.pierce.bar + 3);
-    const fh = p.pierce.shape === "full" ? fretHoles({ kind: p.pierce.pattern, cell: Math.max(6, p.pierce.cell), bar: Math.max(1, p.pierce.bar) }, fx + 2, m, fx + Lc - m, Hc - m, keep) : patternHoles(p, fx + 2, m, fx + Lc - m, Hc - m, keep);
+    const fh = p.pierce.shape === "full" ? fretHoles({ kind: p.pierce.pattern === "motif" && !p.pierce.unit?.length ? "none" : p.pierce.pattern, cell: Math.max(6, p.pierce.cell), bar: Math.max(1, p.pierce.bar), unit: p.pierce.unit }, fx + 2, m, fx + Lc - m, Hc - m, keep) : patternHoles(p, fx + 2, m, fx + Lc - m, Hc - m, keep);
     if (p.pierce.mark === "engrave") engrave.push(...fh);
     else if (p.pierce.mark === "score") patternScore.push(...fh);
     else holes.push(...fh);

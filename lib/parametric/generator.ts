@@ -8,8 +8,9 @@
 import { FORMULA_DEFAULTS, PARAMETRIC_DEFAULTS } from "./defaults";
 import { shapeExpression, type ShapeSpec } from "./shapes";
 import type { FormulaSpec, ParametricParams } from "./types";
+import { PATTERN_SOURCE_DEFAULTS, type PatternSource } from "./source/patternSpec";
 
-export type RecipeId = "waves" | "ripples" | "terrain" | "dunes" | "spiral" | "interference" | "bubbles" | "petals" | "sunburst" | "leaf-clock";
+export type RecipeId = "waves" | "ripples" | "terrain" | "dunes" | "spiral" | "interference" | "bubbles" | "petals" | "sunburst" | "leaf-clock" | "wave-wall" | "organic-wall" | "shelf-wall" | "dune-wall";
 /** How a surface recipe is cut. Radial and clock recipes have their own method. */
 export type BuildAs = "fins" | "slats" | "horizontal" | "layers" | "waffle";
 
@@ -36,7 +37,7 @@ export interface Recipe {
   id: RecipeId;
   name: string;
   blurb: string;
-  kind: "surface" | "radial" | "curve";
+  kind: "surface" | "radial" | "curve" | "wall";
   knobs: Knob[];
   defaults: Record<string, number>;
 }
@@ -109,7 +110,22 @@ export const RECIPES: Recipe[] = [
     ],
     defaults: { fins: 56, guide: 120, length: 90, waves: 0, depth: 0.2, twist: 12, outline: 1 },
   },
+  ...wallRecipes(),
 ];
+
+/** Wall-art recipes: a pattern source cut as slats on lumber rails (or a slat board). */
+function wallRecipes(): Recipe[] {
+  const W: Knob = { id: "width", label: "Width", min: 300, max: 700, step: 10, unit: "mm" };
+  const D: Knob = { id: "depth", label: "Depth", min: 20, max: 90, step: 1, unit: "mm" };
+  const S: Knob = { id: "spacing", label: "Slat spacing", min: 9, max: 18, step: 0.5, unit: "mm" };
+  const waves: Knob = { id: "waves", label: "Waves", min: 1, max: 8, step: 0.5 };
+  return [
+    { id: "wave-wall", name: "Wave wall", blurb: "Slats on rails, a sine swell across them", kind: "wall", knobs: [W, D, waves, { id: "angle", label: "Angle", min: -60, max: 60, step: 5, unit: "°" }, { id: "cross", label: "Cross wave", min: 0, max: 60, step: 5, unit: "%" }, S], defaults: { width: 500, depth: 55, waves: 3, angle: 10, cross: 20, spacing: 13 } },
+    { id: "organic-wall", name: "Organic edge", blurb: "Its top and bottom follow the wave", kind: "wall", knobs: [W, D, waves, { id: "edge", label: "Edge", min: 10, max: 45, step: 1, unit: "%" }, S], defaults: { width: 520, depth: 50, waves: 2.5, edge: 30, spacing: 13 } },
+    { id: "shelf-wall", name: "Wave shelf", blurb: "A wave with a level shelf set into it", kind: "wall", knobs: [W, D, waves, { id: "shelf", label: "Shelf width", min: 20, max: 70, step: 5, unit: "%" }, S], defaults: { width: 560, depth: 60, waves: 2, shelf: 40, spacing: 13 } },
+    { id: "dune-wall", name: "Dune noise", blurb: "Rolling Perlin noise, a different landscape every seed", kind: "wall", knobs: [W, D, { id: "scale", label: "Feature size", min: 60, max: 300, step: 10, unit: "mm" }, { id: "octaves", label: "Detail", min: 1, max: 5, step: 1 }, S], defaults: { width: 480, depth: 45, scale: 150, octaves: 3, spacing: 12 } },
+  ];
+}
 
 export const recipeOf = (id: RecipeId): Recipe => RECIPES.find((r) => r.id === id) ?? RECIPES[0];
 
@@ -227,6 +243,17 @@ function surfaceDesign(d: Design, r: () => number): Partial<ParametricParams> {
   }
 }
 
+function wallDesign(d: Design, r: () => number): Partial<ParametricParams> {
+  const k = d.knobs, w = k.width, h = Math.round(w * 0.62);
+  const base: PatternSource = { ...PATTERN_SOURCE_DEFAULTS, width: w, height: h, depth: k.depth, seed: d.seed % 100_000 };
+  const source: PatternSource = d.recipe === "organic-wall" ? { ...base, style: "organic", waves: k.waves, edge: k.edge, angle: Math.round((r() - 0.5) * 30) }
+    : d.recipe === "shelf-wall" ? { ...base, style: "shelf", waves: k.waves, shelves: [{ x0: 0.5 - k.shelf / 200, x1: 0.5 + k.shelf / 200, y: 0.35 + 0.3 * r(), h: 0.07, level: 0.85 }] }
+    : d.recipe === "dune-wall" ? { ...base, pattern: "perlin", scale: k.scale, octaves: Math.round(k.octaves) }
+    : { ...base, waves: k.waves, angle: k.angle, cross: k.cross };
+  const parallel = { ...PARAMETRIC_DEFAULTS.parallel, spacing: k.spacing, backboard: (d.buildAs === "fins" ? "rails" : "slats") as "rails" | "slats", fillEmptySlots: true, slatDepth: 10, backboardMargin: 0 };
+  return { source, method: "parallel", parallel, material: { ...PARAMETRIC_DEFAULTS.material, id: "birch6", T: 6, K: 0.2 } };
+}
+
 function radialDesign(d: Design, r: () => number): Partial<ParametricParams> {
   const k = d.knobs, r0 = PARAMETRIC_DEFAULTS.radial.innerRadius, L = k.radius - r0;
   const rr = (lo: number, hi: number) => lo + (hi - lo) * r();
@@ -279,13 +306,13 @@ export function designParams(d: Design): Partial<ParametricParams> {
   for (const knob of recipe.knobs) k[knob.id] = snap(knob, d.knobs[knob.id] ?? recipe.defaults[knob.id]);
   const fixed: Design = { ...d, knobs: k };
   const r = rng(d.seed);
-  const body = recipe.kind === "surface" ? surfaceDesign(fixed, r) : recipe.kind === "radial" ? radialDesign(fixed, r) : curveDesign(fixed, r);
+  const body = recipe.kind === "surface" ? surfaceDesign(fixed, r) : recipe.kind === "wall" ? wallDesign(fixed, r) : recipe.kind === "radial" ? radialDesign(fixed, r) : curveDesign(fixed, r);
   return { name: designName(fixed), ...body };
 }
 
 export function designName(d: Design): string {
   const recipe = recipeOf(d.recipe);
-  const how = recipe.kind === "surface" ? ` ${BUILD_AS.find((b) => b.id === d.buildAs)?.name.toLowerCase() ?? "fins"}` : "";
+  const how = recipe.kind === "surface" ? ` ${BUILD_AS.find((b) => b.id === d.buildAs)?.name.toLowerCase() ?? "fins"}` : recipe.kind === "wall" ? (d.buildAs === "fins" ? " on rails" : " slat wall") : "";
   return `${recipe.name}${how} #${d.seed}`;
 }
 

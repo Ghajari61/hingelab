@@ -8,10 +8,13 @@ import { registerBoxStyle } from "../registry";
 import { BASE_DEFAULTS, boardGroup, num, sizeGroup, thick } from "../schema";
 import type { BoxParams, Dieline, DielinePart } from "../types";
 
-/** An open tray whose base panel is l × w with walls h: corner tabs on the front and back walls. */
-export function tray(name: string, id: string, l: number, w: number, h: number, bleed: number, tabTaper = 25): DielinePart {
-  const net = new Net(), tab = Math.min(18, w / 3, h * 1.2);
-  net.panel("base", "Base", 0, 0, l, w, { printable: true });
+/**
+ * An open tray whose base panel is l × w with walls h: corner tabs on the front and back walls.
+ * `base` names the base face (a lid's is its Top); `more` adds cuts before the net is built.
+ */
+export function tray(name: string, id: string, l: number, w: number, h: number, bleed: number, tabTaper = 25, opts: { base?: string; more?: (net: Net) => void; oneWinding?: boolean } = {}): DielinePart {
+  const net = new Net(opts.oneWinding), tab = Math.min(18, w / 3, h * 1.2);
+  net.panel("base", opts.base ?? "Base", 0, 0, l, w, { printable: true });
   net.panel("front", "Front wall", 0, w, l, h, { parent: "base", hinge: [[0, w], [l, w]], angle: 90, printable: true });
   net.panel("back", "Back wall", 0, -h, l, h, { parent: "base", hinge: [[0, 0], [l, 0]], angle: 90, printable: true });
   net.panel("left", "Left wall", -h, 0, h, w, { parent: "base", hinge: [[0, 0], [0, w]], angle: 90, printable: true });
@@ -22,6 +25,7 @@ export function tray(name: string, id: string, l: number, w: number, h: number, 
     net.flap(`${wall}-tab-l`, "Glue tab", edge([0, y1], [0, y0], [1, (y0 + y1) / 2]), glueFlap(h, tab, tabTaper), { parent: wall });
     net.flap(`${wall}-tab-r`, "Glue tab", edge([l, y0], [l, y1], [l - 1, (y0 + y1) / 2]), glueFlap(h, tab, tabTaper), { parent: wall });
   }
+  opts.more?.(net);
   return net.build(id, name, bleed);
 }
 
@@ -44,8 +48,10 @@ export const TWO_PIECE = registerBoxStyle({
     const bleed = num(p, "bleed", 0);
     return {
       style: "two-piece",
-      parts: [tray("Base", "base", base.l, base.w, base.h, bleed), tray("Lid", "lid", lid.l, lid.w, lid.h, bleed)],
+      parts: [tray("Base", "base", base.l, base.w, base.h, bleed), tray("Lid", "lid", lid.l, lid.w, lid.h, bleed, 25, { base: "Top" })],
       outer: [lid.outer[0], lid.outer[1], base.outer[2] + t], inner: base.inner, warnings,
+      // In 3D: the lid turned over, lifted a little off the base.
+      poses: [{ part: "lid", on: "base", flip: true, top: t + lid.h * 0.6 }],
       assembly: [
         "Crease every fold line.",
         "Base: fold the four walls up; glue each corner tab inside the side wall next to it.",

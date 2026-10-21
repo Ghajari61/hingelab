@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { distToContour, pointInContour } from "../geom";
-import { FRET_KINDS, fretHoles } from "../fretwork";
+import { FRET_BUILT_IN, fretHoles } from "../fretwork";
 import { arrangeGenerator, genSVG } from "../output";
 import { generatorScene } from "../scene3d";
 import { BOXES } from "../boxes";
@@ -18,7 +18,7 @@ function minGap(a: Contour, b: Contour) {
 }
 
 describe("cut-out patterns", () => {
-  it.each(FRET_KINDS.filter((k) => k !== "none"))("%s keeps every hole inside, a bar from the edge and from its neighbours", (kind) => {
+  it.each(FRET_BUILT_IN.filter((k) => k !== "none"))("%s keeps every hole inside, a bar from the edge and from its neighbours", (kind) => {
     const bar = 2.5, holes = fretHoles({ kind, cell: 14, bar }, 0, 0, 120, 90);
     expect(holes.length).toBeGreaterThan(8);
     for (const c of holes) for (const [x, y] of c) {

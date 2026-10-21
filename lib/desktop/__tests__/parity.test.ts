@@ -157,7 +157,11 @@ describe("desktop pictures in generators", () => {
   it("lists grey and traced pictures, never colour photos", async () => {
     const c = await desktopCatalog();
     const pics = (id: string) => c.products.find((p) => p.id === id)!.sections.flatMap((s) => s.pictures ?? []);
-    expect(pics("puzzle")).toEqual([expect.objectContaining({ key: "engrave.image", mode: "grey", aspectKey: "engrave.aspect" })]);
+    // The engraved photo, and the cut-out pattern's own motif (a traced picture).
+    expect(pics("puzzle")).toEqual([
+      expect.objectContaining({ key: "engrave.image", mode: "grey", aspectKey: "engrave.aspect" }),
+      expect.objectContaining({ key: "pattern.art.image", mode: "trace" }),
+    ]);
     const sb = pics("shadowbox");
     expect(sb.find((f) => f.key === "picture.image")).toMatchObject({ mode: "trace", levels: "picture.levels", name: "picture.name" });
     expect(sb.some((f) => f.key === "photo.image")).toBe(false);

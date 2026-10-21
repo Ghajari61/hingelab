@@ -10,6 +10,7 @@ import { buildTablenum, type TablenumOutput } from "./build";
 import { checkTablenum } from "./check";
 import { MAX_TABLES, TABLENUM_DEFAULTS, mergeTablenum, tableList, type TablenumParams } from "./params";
 import { TABLENUM_PRESETS } from "./presets";
+import { byId, withPattern } from "../pattern";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const stand = (p: TablenumParams) => p.build.kind === "stand";
@@ -156,7 +157,7 @@ function scaleTablenum(p: TablenumParams, s: number): TablenumParams {
 
 const BUILD_NAMES = { stand: "stands", tent: "tent cards", plaque: "plaques" } as const;
 
-export const TABLENUM: GeneratorDef<TablenumParams> = {
+const TABLENUM_BASE: GeneratorDef<TablenumParams> = {
   id: "tablenum",
   name: "Table Numbers",
   version: 1,
@@ -193,3 +194,10 @@ export const TABLENUM: GeneratorDef<TablenumParams> = {
 };
 
 export { TABLENUM_DEFAULTS };
+
+/** The generator with the cut-out pattern (lib/generators/pattern.ts). */
+export const TABLENUM: GeneratorDef<TablenumParams> = withPattern(TABLENUM_BASE, [
+  { v: "plate", text: "Plates", match: byId("plate") },
+  { v: "base", text: "Bases", match: byId("base") },
+  { v: "card", text: "Tent cards", match: byId("card") },
+], { help: "A decorative pattern round the numbers on every plate, on the bases or the tent cards." });

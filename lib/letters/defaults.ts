@@ -1,7 +1,8 @@
+import { FRET_KINDS } from "@/lib/generators/fretKinds";
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { bendAnalysis } from "@/lib/hinge/analysis";
 import type { Params } from "@/lib/hinge";
-import type { LetterParams } from "./types";
+import type { LetterCutout, LetterParams } from "./types";
 
 export const LETTER_DEFAULTS: LetterParams = {
   name: "Untitled letters",
@@ -75,10 +76,25 @@ export function retiredLetterSample(p: { name?: string; text?: string } | null |
 export function mergeLetterParams(partial?: Partial<LetterParams> | null): LetterParams {
   const base = clone(LETTER_DEFAULTS);
   if (!partial) return base;
-  return Object.assign(base, partial, {
+  const out = Object.assign(base, partial, {
     layers: Object.assign(clone(LETTER_DEFAULTS.layers), partial.layers || {}),
     marquee: Object.assign(clone(LETTER_DEFAULTS.marquee), partial.marquee || {}),
   });
+  const cut = cleanCutout(partial.cutout);
+  if (cut) out.cutout = cut; else delete out.cutout;
+  return out;
+}
+
+const CUTOUT_KINDS = FRET_KINDS.filter((k): k is LetterCutout["kind"] => k !== "none" && k !== "motif" && k !== "tile");
+/** Letter-box pattern kinds (a motif needs a tile, which letters do not pick). */
+export const LETTER_CUTOUT_KINDS: readonly LetterCutout["kind"][] = CUTOUT_KINDS;
+const num = (v: unknown, lo: number, hi: number, d: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
+/** A saved or sent pattern, or none for anything that is not one. */
+export function cleanCutout(raw: unknown): LetterCutout | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Partial<LetterCutout>;
+  if (!CUTOUT_KINDS.includes(r.kind as LetterCutout["kind"])) return undefined;
+  return { kind: r.kind!, on: r.on === "lid" || r.on === "base" ? r.on : "both", cell: num(r.cell, 6, 80, 16), bar: num(r.bar, 1, 15, 3) };
 }
 
 /** Feature size below which strokes get a warning. */

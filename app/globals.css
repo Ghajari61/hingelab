@@ -279,6 +279,17 @@ select.sel:focus { border-color: var(--accent); outline: none; }
 .style-slider { display: grid; grid-template-columns: 86px minmax(0, 1fr) 58px 18px; align-items: center; gap: 8px; font-size: 12px; color: var(--fg-dim); }
 .style-slider input { width: 100%; accent-color: var(--accent); }
 .style-slider output { text-align: end; color: var(--fg); font-variant-numeric: tabular-nums; }
+/* Wall art: pattern pictures, the live pattern with its handles, recipes. */
+.wa-patterns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.wa-thumb { display: grid; gap: 3px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2, transparent); color: var(--fg-dim); font: inherit; font-size: 10.5px; line-height: 1.15; cursor: pointer; text-align: center; }
+.wa-thumb svg { width: 100%; height: auto; border-radius: 5px; display: block; }
+.wa-thumb[aria-pressed="true"] { border-color: var(--accent); color: var(--fg); box-shadow: 0 0 0 1px var(--accent) inset; }
+.wa-canvas { margin: 6px 0 4px; }
+.wa-canvas svg { width: 100%; height: auto; max-height: 260px; border-radius: 8px; border: 1px solid var(--line); touch-action: none; display: block; }
+.wa-canvas circle:focus-visible { outline: none; stroke: var(--accent); stroke-width: 0.8; }
+.wa-row, .wa-recipes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 8px; }
+.wa-recipes .btn-auto { display: inline-flex; align-items: center; gap: 4px; }
+.wa-estimate { margin-top: 8px; }
 .pe-pro button { margin-inline-start: 6px; background: none; border: 0; padding: 0; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
 .pe-legend { position: absolute; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 8px; background: var(--hud-bg); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-2); padding: 6px 10px; font-size: 12px; color: var(--fg-dim); }
 .pe-legend-bar { width: 120px; height: 10px; border-radius: 3px; background: linear-gradient(90deg, #2f6bff, #2fd0c0, #f5d33a, #ff3b2f); }

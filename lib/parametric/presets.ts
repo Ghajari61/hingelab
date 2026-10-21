@@ -2,6 +2,7 @@ import type { Preset } from "@/lib/presets";
 import { FORMULA_DEFAULTS, LEAF_CLOCK, PARAMETRIC_DEFAULTS, TEXT_DEFAULTS } from "./defaults";
 import type { ShapeId, ShapeSpec } from "./shapes";
 import type { FormulaSpec, LibraryId, ParametricParams } from "./types";
+import { PATTERN_SOURCE_DEFAULTS, type PatternSource } from "./source/patternSpec";
 
 export type ParametricCategory = "portraits" | "wall-art" | "nature" | "abstract" | "lamps" | "clocks" | "typography" | "radial" | "papercraft";
 
@@ -37,6 +38,14 @@ const fins = (over: Partial<ParametricParams["parallel"]>): ParametricParams["pa
 const SLAT_WALL: Partial<ParametricParams["parallel"]> = { backboard: "slats", fillEmptySlots: true, slatDepth: 8, backboardMargin: 10 };
 const stack = (over: Partial<ParametricParams["stacked"]>): ParametricParams["stacked"] => ({ ...PARAMETRIC_DEFAULTS.stacked, ...over });
 const radial = (over: Partial<ParametricParams["radial"]>): ParametricParams["radial"] => ({ ...PARAMETRIC_DEFAULTS.radial, ...over });
+/** Wall art: a pattern source, cut as slats on lumber rails (or a slat board) from 6 mm birch. */
+const BIRCH6: ParametricParams["material"] = { ...PARAMETRIC_DEFAULTS.material, id: "birch6", T: 6, K: 0.2 };
+const wallArt = (src: Partial<PatternSource>, over: Partial<ParametricParams["parallel"]> = {}, material = BIRCH6): Partial<ParametricParams> => ({
+  source: { ...PATTERN_SOURCE_DEFAULTS, resolution: 120, ...src },
+  method: "parallel",
+  parallel: fins({ backboard: "rails", fillEmptySlots: true, backboardMargin: 0, slatDepth: 10, spacing: 13, rails: { lumber: "1x2", count: 2, clearance: 0.5 }, ...over }),
+  material,
+});
 const folded = (faces: number): Partial<ParametricParams> => ({ method: "folded", folded: { ...PARAMETRIC_DEFAULTS.folded, faces }, material: CARD });
 const surface = (expression: string, w = 220, h = 160, base = 6): FormulaSpec => ({ ...FORMULA_DEFAULTS.heightfield, expression, domain: { x: [-w / 2, w / 2], y: [-h / 2, h / 2] }, base });
 const burst = (expression: string, r0 = 20, r1 = 120): FormulaSpec => ({ ...FORMULA_DEFAULTS["radial-profile"], expression, domain: { x: [r0, r1], y: [0, 0] } });
@@ -135,6 +144,18 @@ export const PARAMETRIC_PRESETS: ParametricPreset[] = [
     name: "Puffy heart", note: "A heart in fins on a heart-shaped plate",
     params: { name: "Puffy heart", source: lib("heart"), parallel: fins({ spacing: 8 }) },
   },
+  { id: "wa-ocean-swell", category: "wall-art", tags: ["wave", "slats", "rails", "laserburn"], name: "Ocean swell on rails", note: "Sine swell across 6 mm slats on two 1x2 rails", params: { name: "Ocean swell on rails", ...wallArt({ width: 560, height: 360, depth: 55, waves: 3, angle: 12, cross: 25 }) } },
+  { id: "wa-diagonal-dunes", category: "wall-art", tags: ["wave", "diagonal", "dunes"], name: "Diagonal dunes", note: "Waves at 35° on a slat board", params: { name: "Diagonal dunes", ...wallArt({ width: 520, height: 340, depth: 45, waves: 4, angle: 35, cross: 0 }, { backboard: "slats", backboardMargin: 10 }) } },
+  { id: "wa-ridge-river", category: "wall-art", tags: ["ridge", "curve", "river"], name: "River ridge", note: "A crest that winds along your curve", params: { name: "River ridge", ...wallArt({ pattern: "ridge", width: 600, height: 360, depth: 60, ridgeWidth: 22 }) } },
+  { id: "wa-topography", category: "wall-art", tags: ["noise", "perlin", "terrain", "topography"], name: "Topography", note: "Rolling Perlin noise, like a contour map", params: { name: "Topography", ...wallArt({ pattern: "perlin", width: 540, height: 360, depth: 50, scale: 160, octaves: 4, seed: 42 }) } },
+  { id: "wa-ripple-pond", category: "wall-art", tags: ["ripple", "rings", "water"], name: "Ripple pond", note: "Rings spreading from a point you place", params: { name: "Ripple pond", ...wallArt({ pattern: "ripple", width: 500, height: 380, depth: 40, waves: 3, center: [0.42, 0.45] }) } },
+  { id: "wa-mountains", category: "wall-art", tags: ["mountain", "range", "landscape", "organic"], name: "Mountain range", note: "A ridged skyline whose top follows the peaks", params: { name: "Mountain range", ...wallArt({ pattern: "mountain", style: "organic", width: 620, height: 340, depth: 60, edge: 22, scale: 180, seed: 9 }) } },
+  { id: "wa-push-pull", category: "wall-art", tags: ["attractor", "points", "bubbles"], name: "Push and pull", note: "Points that push the surface out or pull it in", params: { name: "Push and pull", ...wallArt({ pattern: "attractors", width: 480, height: 360, depth: 50, scale: 110, points: [{ x: 0.28, y: 0.4, s: 1 }, { x: 0.7, y: 0.3, s: 0.7 }, { x: 0.58, y: 0.72, s: -0.8 }] }) } },
+  { id: "wa-organic-swell", category: "wall-art", tags: ["organic", "edge", "wave"], name: "Organic edge swell", note: "The top and bottom ride the wave", params: { name: "Organic edge swell", ...wallArt({ style: "organic", width: 560, height: 380, depth: 50, waves: 2.5, edge: 30 }) } },
+  { id: "wa-wave-shelf", category: "wall-art", tags: ["shelf", "wave", "functional"], name: "Wave shelf", note: "A level shelf set into a wave, for a plant or a photo", params: { name: "Wave shelf", ...wallArt({ style: "shelf", width: 600, height: 400, depth: 70, waves: 2, shelves: [{ x0: 0.3, x1: 0.7, y: 0.45, h: 0.07, level: 0.9 }] }) } },
+  { id: "wa-double-shelf", category: "wall-art", tags: ["shelf", "wave", "functional"], name: "Two-shelf wave", note: "Two level shelves at different heights", params: { name: "Two-shelf wave", ...wallArt({ style: "shelf", width: 640, height: 440, depth: 70, waves: 2.5, shelves: [{ x0: 0.1, x1: 0.45, y: 0.32, h: 0.07, level: 0.85 }, { x0: 0.55, x1: 0.9, y: 0.68, h: 0.07, level: 0.85 }] }) } },
+  { id: "wa-tall-wave", category: "wall-art", tags: ["tall", "narrow", "wave"], name: "Tall wave panel", note: "A narrow upright wave on one 1x3 rail", params: { name: "Tall wave panel", ...wallArt({ width: 280, height: 560, depth: 45, waves: 2, angle: 80, cross: 15 }, { rails: { lumber: "1x3", count: 1, clearance: 0.5 } }) } },
+  { id: "wa-quarter-inch", category: "wall-art", tags: ["1/4 inch", "plywood", "rails"], name: "Quarter-inch wave", note: "1/4\" birch slats on two 1x4 rails", params: { name: "Quarter-inch wave", ...wallArt({ width: 600, height: 400, depth: 60, waves: 2.5, angle: -15, cross: 30 }, { spacing: 14, rails: { lumber: "1x4", count: 2, clearance: 0.5 } }, { ...BIRCH6, id: "birch14", T: 6.35 }) } },
   {
     id: "star-fins", category: "wall-art", tags: ["star", "geometric"],
     name: "Ridged star", note: "Five ridged arms in horizontal fins",

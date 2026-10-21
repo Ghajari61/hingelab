@@ -10,6 +10,7 @@ import { buildKeyrack, hookProfile, type KeyrackOutput } from "./build";
 import { checkKeyrack } from "./check";
 import { KEYRACK_DEFAULTS, mergeKeyrack, type HookProfile, type KeyrackParams } from "./params";
 import { KEYRACK_PRESETS } from "./presets";
+import { byId, withPattern } from "../pattern";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const hooked = (p: KeyrackParams) => p.hooks.style === "hook";
@@ -122,7 +123,7 @@ function scaleKeyrack(p: KeyrackParams, s: number): KeyrackParams {
 
 const HOOK_NAMES = { hook: "hooks", peg: "pegs", screw: "cup hooks" } as const;
 
-export const KEYRACK: GeneratorDef<KeyrackParams> = {
+const KEYRACK_BASE: GeneratorDef<KeyrackParams> = {
   id: "keyrack",
   name: "Key Holder",
   version: 1,
@@ -155,3 +156,9 @@ export const KEYRACK: GeneratorDef<KeyrackParams> = {
 };
 
 export { KEYRACK_DEFAULTS };
+
+/** The generator with the cut-out pattern (lib/generators/pattern.ts). */
+export const KEYRACK: GeneratorDef<KeyrackParams> = withPattern(KEYRACK_BASE, [
+  { v: "board", text: "Board", match: byId("board") },
+  { v: "shelf", text: "Shelf", match: byId("shelf") },
+], { help: "A decorative pattern cut through the board (round the text and the hooks' slots) or the shelf, or engraved or scored." });

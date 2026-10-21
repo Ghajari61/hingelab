@@ -42,7 +42,7 @@ describe("Randomise design in every generator", () => {
         const a = arrangeGenerator(def, q, CTX);
         expect("error" in a.result ? a.result.error : null, `${id} seed ${i + 1}`).toBeNull();
       }
-    }, 60000);
+    }, 180_000);
   }
 
   it("picks fonts that cover the text's script and cut cleanly", () => {

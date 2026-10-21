@@ -133,7 +133,7 @@ function scalePuzzle(p: PuzzleParams, s: number): PuzzleParams {
   };
 }
 
-export const PUZZLE: GeneratorDef<PuzzleParams> = {
+const PUZZLE_BASE: GeneratorDef<PuzzleParams> = {
   id: "puzzle",
   name: "Puzzle",
   version: 1,
@@ -175,3 +175,10 @@ export const PUZZLE: GeneratorDef<PuzzleParams> = {
 };
 
 export { PUZZLE_DEFAULTS };
+import { byId, withPattern } from "../pattern";
+
+/** The generator with the cut-out pattern (lib/generators/pattern.ts). */
+export const PUZZLE: GeneratorDef<PuzzleParams> = withPattern(PUZZLE_BASE, [
+  { v: "frame", text: "Frame", match: byId("frame") },
+  { v: "base", text: "Tray base", match: byId("base") },
+], { help: "A decorative pattern on the frame round the puzzle or on the tray's base (never through the pieces)." });

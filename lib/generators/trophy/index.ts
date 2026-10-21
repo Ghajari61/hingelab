@@ -8,6 +8,7 @@ import { buildTrophy, emblemShape, type TrophyOutput } from "./build";
 import { checkTrophy } from "./check";
 import { EMBLEMS, TROPHY_DEFAULTS, mergeTrophy, type Emblem, type TrophyParams } from "./params";
 import { TROPHY_PRESETS } from "./presets";
+import { byId, withPattern } from "../pattern";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const EMBLEM_NAMES: Record<Emblem, string> = { star: "Star", cup: "Cup", shield: "Shield", medal: "Medal", flame: "Flame", laurel: "Laurel", motif: "Motif", custom: "Custom" };
@@ -114,7 +115,7 @@ function scaleTrophy(p: TrophyParams, s: number): TrophyParams {
   };
 }
 
-export const TROPHY: GeneratorDef<TrophyParams> = {
+const TROPHY_BASE: GeneratorDef<TrophyParams> = {
   id: "trophy",
   name: "Trophy",
   version: 1,
@@ -148,3 +149,9 @@ export const TROPHY: GeneratorDef<TrophyParams> = {
 };
 
 export { TROPHY_DEFAULTS };
+
+/** The generator with the cut-out pattern (lib/generators/pattern.ts). */
+export const TROPHY: GeneratorDef<TrophyParams> = withPattern(TROPHY_BASE, [
+  { v: "figure", text: "Figure", match: byId("figure") },
+  { v: "tier", text: "Base tiers", match: byId("tier") },
+], { help: "A decorative pattern on the trophy's figure (round its emblem and text) or its base tiers." });

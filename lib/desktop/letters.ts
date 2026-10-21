@@ -9,12 +9,13 @@ import { MAX_EXPORT_TEXT } from "@/lib/billing/exportLetters";
 import { bundledFont, serverHarfBuzz } from "@/lib/billing/letterFonts";
 import { HINGE_RANGES } from "@/lib/billing/validate";
 import { arrangeLetters } from "@/lib/fit/letters";
+import { FRET_NAMES } from "@/lib/generators/fretwork";
 import { getPath, setPath } from "@/lib/generators/path";
 import { HINGE_FIELD_HELP } from "@/lib/help/fieldHelp";
 import { MATERIALS } from "@/lib/hinge";
 import { autoFixAll } from "@/lib/issues";
 import { fontFor, lettersIssues, type FontSource } from "@/lib/issues/letters";
-import { exportLetterSVG, fontInfo, LETTER_DEFAULTS, mergeLetterParams, type LetterModel, type LetterParams, type LoadedFont } from "@/lib/letters";
+import { cleanCutout, exportLetterSVG, fontInfo, LETTER_CUTOUT_KINDS, LETTER_DEFAULTS, mergeLetterParams, type LetterModel, type LetterParams, type LoadedFont } from "@/lib/letters";
 import { LETTER_PRESETS } from "@/lib/letters/presets";
 import { randomLetterStyle } from "@/lib/letters/randomStyle";
 import { buildLetterScene } from "@/lib/letters/scene3d";
@@ -79,6 +80,10 @@ export function lettersProduct(): DProduct {
         { kind: "toggle", key: "stackIslands", label: "Stack to full height", help: "Cut each small piece enough times to glue into a stack as tall as the box." },
         { kind: "toggle", key: "marquee.enabled", label: "Marquee light holes", help: "Round holes in the lid (or the base of an open tray) for bulbs." },
         ...nums("marquee"),
+        { kind: "choice", key: "cutout.kind", label: "Cut-out pattern", help: "A decorative pattern cut through the lid, the base or both, inside the walls and clear of the slots and light holes.", options: [{ v: "none", text: "None" }, ...LETTER_CUTOUT_KINDS.map((v) => ({ v, text: FRET_NAMES[v] }))], default: "none" },
+        { kind: "choice", key: "cutout.on", label: "Put it on", options: [{ v: "both", text: "Lid and base" }, { v: "lid", text: "Lid" }, { v: "base", text: "Base" }], default: "both" },
+        { kind: "number", key: "cutout.cell", label: "Pattern size", unit: "mm", min: 6, max: 80, step: 0.5, default: 16 },
+        { kind: "number", key: "cutout.bar", label: "Bar width", unit: "mm", min: 1, max: 15, step: 0.25, default: 3 },
       ],
     },
     {
@@ -116,6 +121,7 @@ function lettersForm(p: LetterParams): DForm {
   if (!box) hidden.push("wallStyle", "lid");
   if (p.smallIslands !== "flat") hidden.push("stackIslands");
   if (!p.marquee.enabled) hidden.push(...Object.values(MARQUEE_KEYS).map((k) => `marquee.${k}`));
+  if (!cleanCutout(p.cutout)) hidden.push("cutout.on", "cutout.cell", "cutout.bar");
   if (p.mode !== "stencil") hidden.push("bridgesPerIsland");
   if (p.mode !== "solid") hidden.push("weldDots");
   const hiddenSections = [...(box ? ["solid"] : ["box", "joints"]), ...(box && p.wallStyle === "hinge" ? [] : ["hinge"])];

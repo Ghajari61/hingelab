@@ -291,3 +291,14 @@ describe("QR export", () => {
     for (const o of top.outline.slice(1)) expect(pointInContour(o[0], top.outline[0])).toBe(true);
   });
 });
+
+describe("QR with a cut-out pattern", () => {
+  it("the pattern goes round the code and its quiet zone, so the code still decodes", () => {
+    for (const [output, mark] of [["cutout", "cut"], ["engrave", "engrave"]] as const) {
+      const p = QR.merge({ output: { kind: output }, plate: { padding: 25 }, pattern: { pattern: "circles", cell: 8, bar: 2, mark } });
+      const out = QR.build(p, CTX) as QrOutput;
+      expect(out.pattern?.shapes, output).toBeGreaterThan(10);
+      expect(decode(out), output).toBe(out.info!.payload);
+    }
+  });
+});

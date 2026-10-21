@@ -10,9 +10,11 @@ import { tagItem } from "../items";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { boxPanels, fingerCount } from "./joints";
 import { buildBoxV2, buildDrawer, buildHex, buildInsert, buildMoney, buildStack, buildTrayV2, hasArt } from "./more";
-import { pierced } from "./pierce";
+import { pierce, pierceLid, pierceWalls, pierced } from "./pierce";
+import { FRET_NAMES, type KeepOut } from "../fretwork";
 import { buildBook } from "./book";
 import { DESIGN_NAMES, FIT_MM, FIT_NAMES, type BoxesParams } from "./params";
+import { patternTile, patternUnit } from "../pattern";
 
 export interface BoxesInfo {
   /** Outside size of the finished piece, mm. */
@@ -324,10 +326,68 @@ const isV1Box = (p: BoxesParams) => (p.box.lid === "closed" || p.box.lid === "op
 
 export function buildBoxes(p: BoxesParams, ctx: BuildContext): BoxesOutput {
   if (!(p.T > 0)) return { parts: [], stats: [], error: "Set the material thickness." };
-  const out = buildDesign(p, ctx);
+  // A motif pattern's tile (a library shape, or the user's picture or words) for this build.
+  if (p.pierce.pattern === "motif") p = { ...p, pierce: { ...p.pierce, unit: patternUnit(p.pierce, ctx) } };
+  if (p.pierce.pattern === "tile") p = { ...p, pierce: { ...p.pierce, tile: patternTile(p.pierce) } };
+  const out = pierced(p) && !out0Pierced(p) ? piercePanels(p, buildDesign(p, ctx)) : buildDesign(p, ctx);
   const d = FIT_MM[p.joint.fit] ?? 0;
   if (!d || out.error || !JOINTED.has(p.design)) return out;
   return { ...out, parts: out.parts.map((pt) => fitPart(pt, d / 2)), stats: [...out.stats, { label: "Fit", value: `${FIT_NAMES[p.joint.fit]} (${d > 0 ? "+" : ""}${d} mm on every joint)` }] };
+}
+
+/** Designs that place their own pattern (round the lid's label and so on). */
+const out0Pierced = (p: BoxesParams) => p.design === "box" || p.design === "tray" || p.design === "book";
+
+/**
+ * The pattern's panels for the other designs, by part id: the walls, the lid (or what stands for
+ * it: a roof, a cabinet top) and the front. Ids ending in "*" match every tier or drawer.
+ */
+const PANELS: Partial<Record<BoxesParams["design"], { walls: string[]; lid: string[]; front: string[] }>> = {
+  hex: { walls: ["wall*"], lid: ["lid"], front: ["wall1"] },
+  stack: { walls: ["t*-front", "t*-back", "t*-left", "t*-right"], lid: ["lid"], front: ["t*-front"] },
+  drawer: { walls: ["cab-left", "cab-right", "cab-back", "d*-front"], lid: ["cab-top"], front: ["d*-front"] },
+  money: { walls: ["front", "back", "left", "right"], lid: ["top"], front: ["front"] },
+  bird: { walls: ["front", "back", "left", "right"], lid: ["roof-l", "roof-r"], front: ["front"] },
+  stand: { walls: ["side-l", "side-r"], lid: [], front: ["side-l", "side-r"] },
+  keys: { walls: ["plate"], lid: [], front: ["plate"] },
+  sign: { walls: ["plate"], lid: [], front: ["plate"] },
+  insert: { walls: ["div*"], lid: [], front: ["div*"] },
+  frame: { walls: ["front"], lid: [], front: ["front"] },
+};
+const matches = (id: string, pats: string[]) => pats.some((q) => {
+  const [a, b = ""] = q.split("*");
+  return q.includes("*") ? id.startsWith(a) && id.endsWith(b) && id.length >= a.length + b.length : id === q;
+});
+
+/** The pattern on the design's panels, clear of each part's holes and engraved text. */
+function piercePanels(p: BoxesParams, out: BoxesOutput): BoxesOutput {
+  const set = PANELS[p.design];
+  if (!set || out.error) return out;
+  const ids = new Set<string>();
+  const wallOnly = p.pierce.on === "front" || p.pierce.on === "front-lid";
+  if (pierceWalls(p)) for (const pt of out.parts) if (matches(pt.id, wallOnly ? set.front : set.walls)) ids.add(pt.id);
+  if (pierceLid(p)) for (const pt of out.parts) if (matches(pt.id, set.lid)) ids.add(pt.id);
+  const edge = p.T + Math.max(1, p.pierce.bar) + 1;
+  let shapes = 0, on = 0;
+  const parts = out.parts.map((pt) => {
+    if (!ids.has(pt.id)) return pt;
+    const q: GenPart = { ...pt, holes: [...pt.holes], engrave: pt.engrave ? [...pt.engrave] : undefined, score: pt.score ? [...pt.score] : undefined };
+    const keep: KeepOut[] = [];
+    if (pt.engrave?.length) {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const c of pt.engrave) for (const [x, y] of c) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+      keep.push({ x0: x0 - 4, y0: y0 - 4, x1: x1 + 4, y1: y1 + 4 });
+    }
+    shapes += pierce(p, q, edge, keep);
+    on++;
+    return q;
+  });
+  const what = p.pierce.mark === "engrave" ? "engraved shapes" : p.pierce.mark === "score" ? "scored shapes" : "holes";
+  return {
+    ...out, parts,
+    stats: [...out.stats, { label: "Pattern", value: `${FRET_NAMES[p.pierce.pattern]}: ${shapes} ${what} on ${on} ${on === 1 ? "panel" : "panels"}` }],
+    pattern: { shapes, parts: on, windowed: p.pierce.shape !== "full" },
+  };
 }
 
 /** Designs whose parts lock together with fingers, tabs or slots (the fit setting applies to them). */

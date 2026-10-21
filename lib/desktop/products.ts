@@ -18,7 +18,9 @@ import { clone, DEFAULTS, exportSVG, MATERIALS, mergeParams, type Params } from 
 import { HINGE_PRESETS, hingePresetParams, randomHingeBox } from "@/lib/hinge/presets";
 import { defaultRimWidth, isLidSlot, lidSlotSize } from "@/lib/hinge/lidSlot";
 import { SHEET_PRESETS } from "@/lib/studio/library";
-import { FRET_KINDS, FRET_NAMES } from "@/lib/generators/fretwork";
+import { FRET_BUILT_IN, FRET_NAMES } from "@/lib/generators/fretwork";
+import { MOTIF_IDS, MOTIF_NAMES } from "@/lib/generators/motifs";
+import { PIERCE_SHAPES, type PierceShape } from "@/lib/generators/windowShape";
 import { hingeTextContext } from "@/lib/billing/hingeText";
 import { applyStandardSize, insideText, STANDARD_SIZES, standardSizeOf } from "@/lib/hinge/standardSizes";
 import { BASE_TEXT_FONT, BASE_TEXT_SIZE, MAX_BASE_TEXT } from "@/lib/hinge/baseText";
@@ -126,10 +128,14 @@ function hingeProduct(): DProduct {
       { kind: "number", key: "divH", label: "Height (0 = full)", help: HINGE_FIELD_HELP.divH, unit: "mm", min: 0, max: 3000, step: 1, default: 0 },
     ],
     secFret: [
-      { kind: "choice", key: "fret", label: "Pattern", default: "none", options: FRET_KINDS.map((v) => ({ v, text: FRET_NAMES[v] })) },
+      { kind: "choice", key: "fret", label: "Pattern", default: "none", options: FRET_BUILT_IN.map((v) => ({ v, text: FRET_NAMES[v] })) },
       { kind: "choice", key: "fretOn", label: "Cut it in", default: "both", options: [{ v: "both", text: "Lid and walls" }, { v: "lid", text: "Lid" }, { v: "walls", text: "Walls" }] },
       { kind: "number", key: "fretCell", label: "Pattern size", help: HINGE_FIELD_HELP.fretCell, unit: "mm", min: 6, max: 80, step: 0.5, default: 16 },
       { kind: "number", key: "fretBar", label: "Bar width", help: HINGE_FIELD_HELP.fretBar, unit: "mm", min: 1, max: 15, step: 0.25, default: 3 },
+      { kind: "choice", key: "fretMotif", label: "Motif", default: "heart", options: MOTIF_IDS.map((v) => ({ v, text: MOTIF_NAMES[v] })) },
+      { kind: "choice", key: "fretShape", label: "Shape", default: "full", options: (Object.keys(PIERCE_SHAPES) as PierceShape[]).map((v) => ({ v, text: PIERCE_SHAPES[v] })) },
+      { kind: "number", key: "fretSize", label: "Shape size", unit: "%", min: 20, max: 100, step: 1, default: 70 },
+      { kind: "choice", key: "fretMark", label: "Mark", default: "cut", options: [{ v: "cut", text: "Cut out" }, { v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }] },
     ],
     secText: [
       { kind: "text", key: "baseText", label: "Text under the box", help: "Engraved in the middle of the base: a company name, phone number or message. One line per line.", placeholder: "Company name\nPhone 0912 000 0000", multiline: true, maxLength: MAX_BASE_TEXT },
@@ -169,7 +175,15 @@ export function hingeForm(p: Params): DForm {
   if (!isLidSlot(opening) && opening !== "rim") hidden.push("lidHoleW");
   const values: Record<string, unknown> = { bed: bedPresetId(p.bedW, p.bedH), standard: standardSizeOf(p) || "custom" };
   if (!p.baseText?.trim()) hidden.push("baseTextSize", "baseTextFont");
-  if (!p.fret || p.fret === "none") hidden.push("fretOn", "fretCell", "fretBar");
+  if (!p.fret || p.fret === "none") hidden.push("fretOn", "fretCell", "fretBar", "fretMotif", "fretShape", "fretSize", "fretMark");
+  else {
+    if (p.fret !== "motif") hidden.push("fretMotif");
+    if (!p.fretShape || p.fretShape === "full") hidden.push("fretSize");
+  }
+  if (p.fretMotif == null) values.fretMotif = "heart";
+  if (p.fretShape == null) values.fretShape = "full";
+  if (p.fretSize == null) values.fretSize = 70;
+  if (p.fretMark == null) values.fretMark = "cut";
   if (p.fret == null) values.fret = "none";
   if (p.fretOn == null) values.fretOn = "both";
   if (p.fretCell == null) values.fretCell = 16;

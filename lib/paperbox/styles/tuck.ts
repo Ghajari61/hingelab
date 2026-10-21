@@ -23,10 +23,13 @@ export interface TubeLayout {
   warnings: string[];
 }
 
-/** The four panels and the glue flap. Glue left: [back][side A][front][side B]; right: [side A][front][side B][back]. */
-export function tube(p: BoxParams): TubeLayout {
+/**
+ * The four panels and the glue flap. Glue left: [back][side A][front][side B]; right: [side A][front][side B][back].
+ * `oneWinding` joins flaps on any edge (see Net); the tuck styles build without it, as they always have.
+ */
+export function tube(p: BoxParams, oneWinding = false): TubeLayout {
   const t = thick(p), { l, w, h, inner, outer } = panelSizes(p.L, p.W, p.H, p.dims === "outer" ? "outer" : "inner", t);
-  const net = new Net(), warnings: string[] = [];
+  const net = new Net(oneWinding), warnings: string[] = [];
   const g = Math.min(num(p, "glueW", 15), w - 1, l - 1), taper = num(p, "glueTaper", 15);
   const right = p.gluePos === "right";
   const order = right ? ["sideA", "front", "sideB", "back"] : ["back", "sideA", "front", "sideB"];
@@ -73,7 +76,7 @@ export function tuckEnd(T: TubeLayout, p: BoxParams, f: Face, end: "top" | "bott
   }
 }
 
-const tuckFields: ParamField[] = [
+export const tuckFields: ParamField[] = [
   { key: "tuckLen", label: "Tuck length", kind: "length", min: 0, max: 200, step: 0.5, help: "Leave it at 0 to size it to the box." },
   { key: "tuckR", label: "Tuck corner radius", kind: "length", min: 0, max: 40, step: 0.5 },
   { key: "slitLock", label: "Slit locks", kind: "toggle", help: "Short cuts at the ends of the tuck's fold; the tuck clicks shut and stays." },

@@ -10,6 +10,7 @@ import { hasArt } from "./more";
 import { BOXES_DEFAULTS, BOXES_VERSION, DESIGN_NAMES, FIT_NAMES, LID_NAMES, PIERCE_SHAPES, migrateBoxes, mergeBoxes, type BoxesParams, type Design, type JointFit, type LidKind, type PierceShape } from "./params";
 import { BOXES_PRESETS } from "./presets";
 import { FRET_KINDS, FRET_NAMES, fretSample } from "../fretwork";
+import { PATTERN_HELP, patternOptions, repeatFields } from "../pattern";
 
 const is = (...d: Design[]) => (p: BoxesParams) => d.includes(p.design);
 /** Designs with an engraved face: a lid, the cabinet top, or the money box's front. */
@@ -151,11 +152,14 @@ const sections: SectionSpec<BoxesParams>[] = [
     ],
   },
   {
-    id: "pierce", title: "Cut-out pattern", open: false, show: is("box", "tray", "book"),
+    id: "pierce", title: "Cut-out pattern", open: false,
     help: "A decorative pattern cut right through the walls and the lid, such as a lattice, floral rosettes or Moroccan quatrefoils. Holes stay clear of the joints, and of a framed label round the lid's text.",
     fields: [
-      { kind: "choice", key: "pierce.pattern", shuffle: true, label: "Pattern", rail: true, help: "The shape of the holes; None leaves the panels plain.", options: FRET_KINDS.map((v) => ({ v, text: FRET_NAMES[v] })) },
-      { kind: "choice", key: "pierce.on", label: "Put it on", show: (p) => p.pierce.pattern !== "none", help: "The walls, the lid (the front cover of a book box), both, or only the front wall.", options: [{ v: "both", text: "Walls and lid" }, { v: "walls", text: "Walls" }, { v: "lid", text: "Lid" }, { v: "front", text: "Front" }, { v: "front-lid", text: "Front and lid" }] },
+      { kind: "choice", key: "pierce.pattern", shuffle: true, label: "Pattern", rail: true, help: PATTERN_HELP, options: patternOptions() },
+      { kind: "choice", key: "pierce.motif", label: "Motif", show: (p) => p.pierce.pattern === "motif", help: "The shape that repeats: one from the library, a picture of yours (traced into outlines) or your own words.", options: MOTIF_OPTIONS.filter((o) => o.v !== "none") },
+      ...motifArtFields<BoxesParams>("pierce.motif", "pierce.art", (p) => p.pierce.pattern === "motif" || p.pierce.pattern === "tile", (p) => p.pierce.pattern === "tile"),
+      ...repeatFields<BoxesParams>("pierce", (p) => p.pierce.pattern),
+      { kind: "choice", key: "pierce.on", label: "Put it on", show: (p) => p.pierce.pattern !== "none", help: "The walls (a sign or key board, a frame's front, a stand's sides, the dividers), the lid (a book box's front cover, a bird house's roof, a cabinet's top), both, or only the front.", options: [{ v: "both", text: "Walls and lid" }, { v: "walls", text: "Walls" }, { v: "lid", text: "Lid" }, { v: "front", text: "Front" }, { v: "front-lid", text: "Front and lid" }] },
       { kind: "choice", key: "pierce.shape", label: "Shape", show: (p) => p.pierce.pattern !== "none", help: "Fill the whole face, or only a shape in its middle: a circle, heart, star, hexagon or diamond.", options: (Object.keys(PIERCE_SHAPES) as PierceShape[]).map((v) => ({ v, text: PIERCE_SHAPES[v] })) },
       { kind: "number", key: "pierce.size", label: "Shape size", unit: "%", min: 20, max: 100, step: 1, show: (p) => p.pierce.pattern !== "none" && p.pierce.shape !== "full", help: "The shape's size as a share of the face (inside the joints)." },
       { kind: "choice", key: "pierce.mark", label: "Mark", show: (p) => p.pierce.pattern !== "none", help: "Cut the pattern through, engrave it, or score its outlines. Engraved and scored patterns keep the box closed and strong.", options: [{ v: "cut", text: "Cut out" }, { v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }] },
@@ -342,6 +346,9 @@ function fileTail(p: BoxesParams): string {
   }
 }
 
+/** Fonts the design's own text and engraving use. */
+const boxFonts = (p: BoxesParams): string[] => (p.design === "sign" && p.sign.text.trim() ? [p.sign.fontId] : p.design === "keys" && p.keys.text.trim() ? [p.keys.fontId] : engraved(p) && hasArt(p) ? [...(p.engrave.text.trim() ? [p.engrave.fontId] : []), ...motifFonts(p.engrave.motif, p.engrave.art)] : []);
+
 export const BOXES: GeneratorDef<BoxesParams> = {
   id: "boxes",
   name: "Boxes",
@@ -353,7 +360,7 @@ export const BOXES: GeneratorDef<BoxesParams> = {
   presets: BOXES_PRESETS,
   build: buildBoxes,
   check: (p, out) => checkBoxes(p, out as BoxesOutput),
-  fonts: (p) => (p.design === "sign" && p.sign.text.trim() ? [p.sign.fontId] : p.design === "keys" && p.keys.text.trim() ? [p.keys.fontId] : engraved(p) && hasArt(p) ? [...(p.engrave.text.trim() ? [p.engrave.fontId] : []), ...motifFonts(p.engrave.motif, p.engrave.art)] : []),
+  fonts: (p) => [...(p.pierce.pattern === "motif" ? motifFonts(p.pierce.motif, p.pierce.art) : []), ...boxFonts(p)],
   art,
   batch: (p) => (p.design === "sign" ? "sign.text" : p.design === "keys" ? "keys.text" : engraved(p) ? "engrave.text" : null),
   fileName: (p) => namedFile(p.design === "bird" ? "birdhouse" : p.design, p.name, fileTail(p)),

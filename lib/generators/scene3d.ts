@@ -32,6 +32,47 @@ function itemMesh(mesh: THREE.Mesh, look: THREE.MeshStandardMaterial): THREE.Mes
   return mesh;
 }
 
+type View = NonNullable<GenPart["views3d"]>[number];
+type Shown = GenPart & { frames?: View["frames"]; apart?: View["apart"]; creases?: View["creases"] };
+
+/** A folded face's matrix at fold `a` (0..1), between its two nearest frames. */
+function frameAt(frames: number[][], a: number): number[] {
+  const n = frames.length - 1, x = Math.min(1, Math.max(0, a)) * n, i = Math.min(n - 1, Math.floor(x)), f = x - i;
+  if (n < 1) return frames[0];
+  return frames[i].map((v, k) => v + (frames[i + 1][k] - v) * f);
+}
+
+/** A plan matrix (x right, y toward the viewer, z up) on a wrap in the scene's axes (x, -y, z), moved by `d`. */
+function placeWrap(wrap: THREE.Object3D, m: number[], d: [number, number, number] = [0, 0, 0]) {
+  wrap.matrix.set(m[0], -m[1], m[2], m[3] + d[0], -m[4], m[5], -m[6], -(m[7] + d[1]), m[8], -m[9], m[10], m[11] + d[2], 0, 0, 0, 1);
+  wrap.matrixAutoUpdate = false;
+  wrap.matrixWorldNeedsUpdate = true;
+}
+
+const VALLEY = new THREE.LineBasicMaterial({ color: "#2a1d12", transparent: true, opacity: 0.85 });
+const MOUNTAIN = new THREE.LineBasicMaterial({ color: "#6b3fd6", transparent: true, opacity: 0.95 });
+VALLEY.userData.shared = MOUNTAIN.userData.shared = true;
+
+/** Creases on a folded face, on both sides of the board. */
+function creaseLines(cs: { pts: Contour; mountain: boolean }[], t: number, name: string): THREE.Group {
+  const g = new THREE.Group();
+  g.name = name;
+  for (const mountain of [false, true]) {
+    const pos: number[] = [];
+    for (const { pts, mountain: m } of cs) if (m === mountain) for (let i = 0; i + 1 < pts.length; i++) for (const z of [t + 0.06, -0.06]) pos.push(pts[i][0], -pts[i][1], z, pts[i + 1][0], -pts[i + 1][1], z);
+    if (!pos.length) continue;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    const lines = new THREE.LineSegments(geo, mountain ? MOUNTAIN : VALLEY);
+    lines.name = `${name} ${mountain ? "mountain" : "valley"}`;
+    lines.userData.keepMaterial = true;
+    lines.userData.noMeasure = true;
+    lines.raycast = () => {};
+    g.add(lines);
+  }
+  return g;
+}
+
 /** Scored outlines as lines at height z (y-down contours). */
 function scoreLines(cs: Contour[], z: number, name: string): THREE.LineSegments {
   const pos: number[] = [];
@@ -75,13 +116,20 @@ function pictureSkin(im: GenImage, z: number, name: string, loads: Promise<void>
   return mesh;
 }
 
-export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D {
+export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1): Scene3D {
   const inner = new THREE.Group();
   const loads: Promise<void>[] = [];
   // A part that bends is drawn as its flat pieces, each where it sits.
-  const parts: GenPart[] = out.parts.flatMap((p) => p.views3d?.length
-    ? p.views3d.map((v, i) => ({ ...p, id: `${p.id}-${i}`, outer: v.outer, holes: v.holes, cuts: undefined, score: undefined, engrave: v.engrave, images: undefined, pieces: undefined, place: v.place, views3d: undefined }))
+  const parts: Shown[] = out.parts.flatMap((p) => p.views3d?.length
+    ? p.views3d.map((v, i) => ({ ...p, id: `${p.id}-${i}`, outer: v.outer, holes: v.holes, cuts: undefined, score: undefined, engrave: v.engrave, images: undefined, pieces: undefined, place: v.place, views3d: undefined, frames: v.frames, apart: v.apart, creases: v.creases }))
     : [p]);
+  // Folding faces: placed from their frames, so the fold and explode move them in place.
+  const folding: { wrap: THREE.Object3D; frames: number[][]; apart: [number, number, number] }[] = [];
+  let at = { fold, explode };
+  const place = () => {
+    for (const f of folding) placeWrap(f.wrap, frameAt(f.frames, at.fold), [f.apart[0] * at.explode, f.apart[1] * at.explode, f.apart[2] * at.explode]);
+    inner.updateMatrixWorld(true);
+  };
   const levels = [...new Set(parts.map((p) => p.place?.z ?? 0))].sort((a, b) => a - b);
   parts.forEach((p) => {
     const pl = p.place ?? { x: 0, y: 0, z: 0 };
@@ -89,7 +137,12 @@ export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D 
     const z = pl.z + explode * 30 * levels.indexOf(pl.z);
     const wrap = new THREE.Group();
     wrap.name = p.name;
-    if (pl.upright) wrap.position.set(pl.x, -z, -pl.y);
+    if (p.frames?.length) folding.push({ wrap, frames: p.frames, apart: p.apart ?? [0, 0, 0] });
+    else if (pl.m) {
+      // A folded face: the plan matrix, between the scene's axes (x, -y, z) and the part's (u, -v, h).
+      const a = p.apart ?? [0, 0, 30 * levels.indexOf(pl.z)];
+      placeWrap(wrap, pl.m, [a[0] * explode, a[1] * explode, a[2] * explode]);
+    } else if (pl.upright) wrap.position.set(pl.x, -z, -pl.y);
     else wrap.position.set(pl.x, -pl.y, z);
     if (pl.yaw) wrap.rotation.z = -(pl.yaw * Math.PI) / 180;
     const stand = new THREE.Group();
@@ -157,10 +210,24 @@ export function generatorScene(out: GenOutput, T: number, explode = 0): Scene3D 
       if (m && item) delete m.userData.noPick;
       if (m) spin.add(m);
     }
+    if (p.creases?.length) spin.add(creaseLines(p.creases, t, `${p.name} creases`));
     stand.add(spin);
     wrap.add(stand);
     inner.add(wrap);
   });
+  if (!folding.length) {
+    const scene = finishScene(inner);
+    return loads.length ? { ...scene, ready: Promise.all(loads) } : scene;
+  }
+  // Framed and centred on the folded box, so folding and exploding keep the box in its place.
+  at = { fold: 1, explode: 0 };
+  place();
   const scene = finishScene(inner);
-  return loads.length ? { ...scene, ready: Promise.all(loads) } : scene;
+  at = { fold, explode };
+  place();
+  const hooks = {
+    fold: (a: number) => { at = { ...at, fold: a }; place(); },
+    explode: (e: number) => { at = { ...at, explode: e }; place(); },
+  };
+  return { ...scene, ...hooks, ...(loads.length ? { ready: Promise.all(loads) } : {}) };
 }

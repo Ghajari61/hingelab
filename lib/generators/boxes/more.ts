@@ -181,6 +181,8 @@ export interface LidKit {
   /** Lid face for the engraving: part id, outline, and the art centre on it. */
   face?: { id: string; outline: Contour; cx: number; cy: number; w: number; h: number };
   pinNeed?: number;
+  /** Areas of the lid face the pattern keeps solid (the inset lid's knob), in the face's frame. */
+  keep?: KeepOut[];
 }
 
 const LEDGE = 5;
@@ -288,6 +290,7 @@ export function lidKit(p: BoxesParams, kind: LidKind, W: number, D: number, H: n
         parts, ceiling: H - 2 * T, total: H + 2 * T,
         assembly: ["Glue the four ledges inside the walls one thickness below the top, so the lid sits flush.", "Glue the knob neck and knob together, then onto the lid."],
         face: { id: "lid", outline: lid, cx: Lw / 2, cy: art ? (Ld - 2 * kr - 12) / 2 : Ld / 2, w: Lw - 8, h: art ? Ld - 2 * kr - 16 : Ld - 8 },
+        keep: [{ x0: Lw / 2 - kr - 3, y0: ky - kr - 3, x1: Lw / 2 + kr + 3, y1: ky + kr + 3 }],
       };
     }
   }
@@ -306,21 +309,22 @@ function engraveLid(p: BoxesParams, kit: LidKit, all: GenPart[], art: Art) {
  * The pattern through the walls and the lid face. On the lid a label is left solid round the
  * engraving, in a double frame; a lift-off lid's lip becomes a frame so the holes stay open.
  */
-export function pierceBox(p: BoxesParams, parts: GenPart[], kit: LidKit, art: Art, lid: LidKind | "none"): { label: string; value: string }[] {
+export function pierceBox(p: BoxesParams, parts: GenPart[], kit: LidKit, art: Art, lid: LidKind | "none"): { label: string; value: string }[] & { summary?: GenOutput["pattern"] } {
   if (!pierced(p)) return [];
   const T = p.T, edge = T + Math.max(1, p.pierce.bar) + 1;
-  let walls = 0, top = 0;
-  if (pierceWalls(p)) for (const id of pierceWallIds(p, ["front", "back", "left", "right"])) { const w = parts.find((q) => q.id === id); if (w) walls += pierce(p, w, edge); }
-  if (pierceLid(p) && kit.face && lid !== "inset" && lid !== "open" && lid !== "none") {
+  let walls = 0, top = 0, on = 0;
+  if (pierceWalls(p)) for (const id of pierceWallIds(p, ["front", "back", "left", "right"])) { const w = parts.find((q) => q.id === id); if (w) { walls += pierce(p, w, edge); on++; } }
+  if (pierceLid(p) && kit.face && lid !== "open" && lid !== "none") {
     const part = parts.find((q) => q.id === kit.face!.id);
     if (part) {
-      const keep: KeepOut[] = [];
+      const keep: KeepOut[] = [...(kit.keep ?? [])];
       if (art.cs.length) {
         const k = labelBox(kit.face.cx, kit.face.cy, art.w, art.h);
         keep.push(k);
         part.engrave = [...(part.engrave ?? []), ...labelFrame(k)];
       }
       top = pierce(p, part, edge, keep);
+      on++;
       const lip = parts.find((q) => q.id === "lip");
       if (lip && top && pierceCuts(p)) {
         const xs = lip.outer.map((q) => q[0]), ys = lip.outer.map((q) => q[1]), w = Math.max(6, 2 * T);
@@ -330,7 +334,9 @@ export function pierceBox(p: BoxesParams, parts: GenPart[], kit: LidKit, art: Ar
     }
   }
   const what = p.pierce.mark === "engrave" ? "engraved shapes" : p.pierce.mark === "score" ? "scored shapes" : "holes";
-  return [{ label: "Pattern", value: `${FRET_NAMES[p.pierce.pattern]}: ${walls} ${what} in the walls, ${top} in the lid` }];
+  const stats: { label: string; value: string }[] & { summary?: GenOutput["pattern"] } = [{ label: "Pattern", value: `${FRET_NAMES[p.pierce.pattern]}: ${walls} ${what} in the walls, ${top} in the lid` }];
+  stats.summary = { shapes: walls + top, parts: on, windowed: p.pierce.shape !== "full" };
+  return stats;
 }
 
 const insideH = (p: BoxesParams, h: number, lid: LidKind | "none") => (p.joint.outside ? h : h + lidWalls(lid) * p.T);
@@ -348,6 +354,7 @@ export function buildBoxV2(p: BoxesParams, ctx: BuildContext): V2Output {
   const pattern = pierceBox(p, parts, kit, art, b.lid);
   return {
     parts,
+    ...(pattern.summary ? { pattern: pattern.summary } : {}),
     stats: [
       { label: "Outside", value: `${r1(W + 2 * sh.m)} × ${r1(D + 2 * sh.m)} × ${r1(kit.total)} mm` },
       { label: "Inside", value: `${r1(W - 2 * T)} × ${r1(D - 2 * T)} × ${r1(H - lidWalls(b.lid) * T)} mm` },
@@ -399,6 +406,7 @@ export function buildTrayV2(p: BoxesParams, ctx: BuildContext): V2Output {
   const pattern = pierceBox(p, parts, kit, art, t.lid);
   return {
     parts,
+    ...(pattern.summary ? { pattern: pattern.summary } : {}),
     stats: [
       { label: "Outside", value: `${r1(W + 2 * sh.m)} × ${r1(D + 2 * sh.m)} × ${r1(kit.total)} mm` },
       ...pattern,

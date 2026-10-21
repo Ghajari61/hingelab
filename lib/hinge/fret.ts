@@ -5,17 +5,31 @@
  * opening, the hinge cuts, the wall's edges and its label.
  */
 import { fretHoles, isFretKind, type FretSpec, type KeepOut } from "@/lib/generators/fretwork";
+import { MOTIF_IDS, motif } from "@/lib/generators/motifs";
+import { PIERCE_SHAPES, windowShape } from "@/lib/generators/windowShape";
 import { coreDistance } from "./lidSlot";
 import { offsetPolyXY } from "./polygon";
 import type { Edge, Params, Point, WallPart } from "./types";
 
-export const hasFret = (p: Params) => isFretKind(p.fret);
+export const hasFret = (p: Params) => isFretKind(p.fret) && p.fret !== "tile";
 export const fretOnLid = (p: Params) => hasFret(p) && p.fretOn !== "walls";
 export const fretOnWalls = (p: Params) => hasFret(p) && p.fretOn !== "lid";
 export const FRET_CELL = 16;
 export const FRET_BAR = 3;
 
-const spec = (p: Params): FretSpec => ({ kind: isFretKind(p.fret) ? p.fret : "none", cell: Math.max(6, p.fretCell ?? FRET_CELL), bar: Math.max(1, p.fretBar ?? FRET_BAR) });
+export const fretMarks = (p: Params) => p.fretMark === "engrave" || p.fretMark === "score";
+export const isFretMotif = (id: unknown): id is string => typeof id === "string" && (MOTIF_IDS as readonly string[]).includes(id);
+export const isFretShape = (v: unknown) => typeof v === "string" && v in PIERCE_SHAPES;
+
+const unitOf = (p: Params) => p.fret === "motif" && p.fretMotif && isFretMotif(p.fretMotif)
+  ? motif(p.fretMotif as never, 100)
+  : undefined;
+const spec = (p: Params): FretSpec => ({ kind: isFretKind(p.fret) ? p.fret : "none", cell: Math.max(6, p.fretCell ?? FRET_CELL), bar: Math.max(1, p.fretBar ?? FRET_BAR), unit: unitOf(p) });
+/** The window for the area x0..x1 × y0..y1, or none to fill it. */
+const win = (p: Params, x0: number, y0: number, x1: number, y1: number) =>
+  p.fretShape && p.fretShape !== "full" ? windowShape(p.fretShape, (x0 + x1) / 2, (y0 + y1) / 2, (Math.min(x1 - x0, y1 - y0) * Math.min(100, Math.max(20, p.fretSize ?? 70))) / 100) ?? undefined : undefined;
+/** Cut holes are kerf-compensated; engraved and scored marks are drawn at size. */
+const finish = (p: Params, cs: Point[][]) => (fretMarks(p) ? cs : cs.map((c) => inset(c, p.K, p.Ky ?? p.K)));
 
 /** A hole shrunk by half the kerf all round, so it comes out at its drawn size. */
 function inset(pts: Point[], kx: number, ky: number): Point[] {
@@ -36,8 +50,9 @@ export function lidFret(p: Params, edges: Edge[], rad: number, existing: Point[]
   if (clear <= 0) return [];
   const xs = edges.flatMap((e) => [e.p0[0], e.p1[0]]), ys = edges.flatMap((e) => [e.p0[1], e.p1[1]]);
   const x0 = Math.min(...xs) - rad, x1 = Math.max(...xs) + rad, y0 = Math.min(...ys) - rad, y1 = Math.max(...ys) + rad;
-  const holes = fretHoles(s, x0, y0, x1, y1, existing.map(boxOf), (q) => coreDistance(edges, q) <= clear);
-  return holes.map((c) => inset(c, p.K, p.Ky ?? p.K));
+  const c = rad - clear;
+  const holes = fretHoles(s, x0, y0, x1, y1, existing.map(boxOf), (q) => coreDistance(edges, q) <= clear, win(p, x0 + c, y0 + c, x1 - c, y1 - c));
+  return finish(p, holes);
 }
 
 /**
@@ -62,6 +77,6 @@ export function wallFret(p: Params, w: WallPart): Point[][] {
     keep.push({ x0: w.label.x - half, y0: w.label.y - size, x1: w.label.x + half, y1: w.label.y + size });
   }
   const out: Point[][] = [];
-  for (const [a, b] of flats) if (b - a > s.cell) out.push(...fretHoles(s, a, gapY, b, w.hBody - gapY, keep));
-  return out.map((c) => inset(c, p.K, p.Ky ?? p.K));
+  for (const [a, b] of flats) if (b - a > s.cell) out.push(...fretHoles(s, a, gapY, b, w.hBody - gapY, keep, undefined, win(p, a, gapY, b, w.hBody - gapY)));
+  return finish(p, out);
 }
