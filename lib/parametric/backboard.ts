@@ -7,7 +7,7 @@ import { FRET_KINDS, fretHoles } from "@/lib/generators/fretwork";
 import { rect } from "./joints";
 import { finLabel, strokeText, textWidth } from "./label";
 import { simplifyClosed } from "./slice/clean";
-import type { BoardPattern, Contour, Part, Plane, Point, Shape, Vec3 } from "./types";
+import type { BoardPattern, Contour, Lumber, Part, Plane, Point, RailMount, Shape, Vec3 } from "./types";
 
 export const BOARD_ID = "B1";
 
@@ -106,6 +106,27 @@ export function boardPatternHoles(board: Part, projectionModel: Contour[], patte
   const b = bboxOfContours(area.map(s => s.outer));
   const holes = fretHoles({ kind: pattern.kind, cell: pattern.cell, bar }, b.x0, b.y0, b.x1, b.y1, [], (q) => area.some(s => pointInShape(q, s)));
   return holes.map(h => orient(h).slice().reverse());
+}
+
+/** Lumber sizes, mm: thickness off the wall and width along the slats. */
+export const LUMBER: Record<Lumber, { t: number; w: number; name: string }> = {
+  "1x2": { t: 19, w: 38, name: "1x2 (19 × 38 mm)" }, "1x3": { t: 19, w: 64, name: "1x3 (19 × 64 mm)" }, "1x4": { t: 19, w: 89, name: "1x4 (19 × 89 mm)" },
+};
+export const RAIL_DEFAULTS: RailMount = { lumber: "1x2", count: 2, clearance: 0.5 };
+export function cleanRails(raw: unknown): RailMount {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Partial<RailMount>;
+  return {
+    lumber: typeof r.lumber === "string" && r.lumber in LUMBER ? r.lumber : RAIL_DEFAULTS.lumber,
+    count: r.count === 1 ? 1 : 2,
+    clearance: typeof r.clearance === "number" && Number.isFinite(r.clearance) ? Math.min(3, Math.max(0, r.clearance)) : RAIL_DEFAULTS.clearance,
+  };
+}
+
+/** Where the rails cross the slats, along u: one across the middle, or two at a fifth from each end. */
+export function railSpans(u0: number, u1: number, m: RailMount): [number, number][] {
+  const w = LUMBER[m.lumber].w + 2 * m.clearance, L = u1 - u0;
+  const mids = m.count === 1 ? [u0 + L / 2] : [u0 + L * 0.22, u0 + L * 0.78];
+  return mids.map((c) => [c - w / 2, c + w / 2] as [number, number]);
 }
 
 /** Board extent along the plane axis U, for slats: [u0, u1] of the board rectangle. */

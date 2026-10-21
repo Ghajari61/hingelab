@@ -10,7 +10,7 @@ import { MAX_BASE_LINES, MAX_BASE_TEXT } from "@/lib/hinge/baseText";
 import { BUNDLED_FONTS } from "@/lib/letters/fontList";
 import { FRET_NAMES } from "@/lib/generators/fretwork";
 import { isFretMotif, isFretShape } from "@/lib/hinge/fret";
-import { cleanBoardPattern } from "@/lib/parametric/backboard";
+import { cleanBoardPattern, cleanRails } from "@/lib/parametric/backboard";
 import { cleanPatternSource } from "@/lib/parametric/source/pattern";
 import type { ParametricParams } from "@/lib/parametric";
 import { RELIEF_IDS } from "@/lib/parametric/source/reliefs";
@@ -96,6 +96,8 @@ export function parametricRequestError(p: ParametricParams): string | null {
     if (JSON.stringify(cleanPatternSource(s)) !== JSON.stringify(s)) return "Invalid wall-art pattern.";
   }
   if (p.parallel.boardPattern !== undefined && !cleanBoardPattern(p.parallel.boardPattern)) return "Invalid board pattern.";
+  if (!["none", "plate", "slats", "rails"].includes(p.parallel.backboard)) return "Invalid backboard.";
+  if (p.parallel.rails !== undefined && JSON.stringify(cleanRails(p.parallel.rails)) !== JSON.stringify(p.parallel.rails)) return "Invalid rails.";
   for (const f of [p.curveNormal.finLength, p.curveNormal.finHeight, p.curveNormal.twist]) {
     if (typeof f !== "string" || f.length > MAX_EXPRESSION) return "Invalid formula.";
   }

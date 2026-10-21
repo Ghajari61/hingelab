@@ -27,6 +27,7 @@ export const CUT_SPEEDS: Record<string, CutSpeed> = {
   bass3: { cut: 16, passes: 1, engrave: 160 },
   walnut3: { cut: 11, passes: 1, engrave: 150 },
   birch6: { cut: 5, passes: 1, engrave: 150 },
+  birch14: { cut: 4.5, passes: 1, engrave: 150 },
   mdf6: { cut: 4, passes: 1, engrave: 150 },
   acr2: { cut: 12, passes: 1, engrave: 120 },
   acr5: { cut: 4, passes: 1, engrave: 120 },
