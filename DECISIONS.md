@@ -1510,3 +1510,35 @@ Decisions taken while building Phase 1 of D186, without asking, as the brief ask
 - **`npm run smoke:web`** opens all 14 products on the production build at desktop and phone width; `docs/SMOKE-TEST.md` lists the automated checks with their results and the steps that need a person.
 - **Release 1.1.0.** The Windows app changed from a separate interface over server-built designs to the website's editors on the computer, so the minor version moves. `minimumVersion` stays 1.0.0: older apps keep working against the unchanged `/api/desktop/*` routes and are offered the update. The site is deployed before the manifest offers 1.1.0, because the new app exports through `/api/export` with its token.
 - **The landing's inner-cut green** was `#00B400`; it is the export colour `#00E000` now, as everywhere else.
+
+## D193. The cut-out pattern everywhere it fits, and your own tile
+
+- **Where it goes.** Every generator part that can carry a pattern now takes one: the Boxes designs that had none (hex box, stacking trays, drawer box and cabinet, money box, bird house, phone stand, key holder, desk sign, divider insert, photo frame), the clock's stand base, the Hinge Box (motif, window shape and size, and cut, engrave or score), Letters lids and bases, and the Parametric backboard's margin. A two-sided table-number stand already copied the front plate's pattern onto its back plate, so it did not need a target of its own.
+- **What stays solid.** A part glued flat on the target's top face (a raised plaque, a front layer, a frame) keeps the pattern out from under it; a frame keeps its window open, and parts riding clear of the face (clock hands) do not count. The QR pattern goes on the plate (or a layered plate's top or backplate) round the code, and the code and its quiet zone stay solid: a test decodes it with jsQR. A Boxes inset lid takes the pattern round its knob.
+- **Too coarse.** A pattern with fewer than six shapes per part raises "The pattern is large for its space" (a warning when nothing fits), with two fixes: a smaller pattern, or a larger window shape.
+- **Your own tile.** The new kind "Your own tile (seamless)" repeats a traced picture or SVG edge to edge: the picture's frame (an SVG's viewBox) is the repeat, copies join across the seams, then every shape shrinks by half a bar so a bar always separates neighbours. Square, brick, half-drop and mirrored grids; a joined network is cut to the face instead of dropped. A cap on points and outlines repeats a very fine tile larger rather than stall the build. Randomise never picks it (it needs a picture). Motifs gain the same grids and a turn. Products that cannot pick a picture (the Hinge Box, Letters, the Parametric backboard) do not offer it.
+- **Weight.** The kind names, grids and window shapes live in small modules of their own, so the start screen no longer pulls the pattern code (it had: 225 → 189 KB first load). Generator chunks grew 1-2 KB each and the Hinge Box editor 4.5 KB; the budgets were re-based.
+
+## D194. Paper Box folds in 3D
+
+- **Fold slider.** The 3D view of a Paper Box has a Fold slider, 0 % (the flat net) to 100 % (the folded box, where it opens). Each face carries its placement at 21 fold amounts; the view blends the two nearest, so folding and exploding move the faces in place without a rebuild, and the data travels to the Windows app as it is (which shows the folded box and its explode). The bottom keeps its folded place while the rest turn about their creases.
+- **Explode** now separates a Paper Box: a lid lifts, a sleeve slides off, and every face moves out from the box's middle.
+- **Creases in 3D.** Creases are drawn on both sides of every face, valleys and mountains in their own colours.
+- **Mountain and valley.** Creases are marked from the fold of the face they hinge (as drawn, a valley folds toward you). The dieline SVG can put mountains on their own layer; the Lines section can score mountain folds dash-dot so a cutter's file tells them apart (solid by default, so existing files are unchanged).
+- **Two creases.** A face can hinge on a second crease (gussets, crash-lock glue triangles): it spans both creases as they fold. Poses gain a turn, so dividers stand up inside a carrier or a tray.
+
+## D195. Paper Box: Pacdora's common structures
+
+- Fourteen new styles: cube favour box, pyramid, triangle prism, candy cone (rolled, drawn curved in 3D), bakery box (tab-locked corners, an optional lid window), hinged-lid box, pie box, clamshell (burger) box, Chinese takeout pail (flared walls, folding top, handle holes), carry box with a handle, wine carrier with a partition insert, paper bag (gussets, block bottom, folded top band, rope holes), CD / envelope sleeve, and a cell divider insert.
+- **Locks** (tab and slot, hook, friction tuck) are shared helpers, so styles build them alike.
+- **Windows**: your own shape (a traced picture or SVG) and a position on the face.
+- **Presets**: 29 more (cosmetics, jewellery, food and bakery, wine, gift, bags, inserts), 84 in all, each with its thumbnail.
+
+## D196. Parametric wall art (LaserBurn-style slat walls)
+
+- **Pattern source.** "Wall art" is a new source: sine waves (count, direction, cross wave, amplitude), a ridge that follows a curve you draw, Perlin noise, a radial ripple, a mountain ridge, attractor points that push or pull, or your picture's brightness. It makes a relief with a flat back, so slicing, numbering, nesting, labels, the 3D view and the cut files work unchanged. Free to design, like library shapes; export needs Pro. The server rebuilds every pattern except a picture (which stays on the device and exports in the browser, like photos).
+- **Styles.** Wave relief (a full rectangle), organic edge (the top and bottom follow the wave), wave shelf (flat, level shelves set into the wave; a check flags a shelf narrower than two slats and widens it to three).
+- **Rails.** A new backboard, "Rails": 1x2, 1x3 or 1x4 lumber (19 × 38, 64 or 89 mm), one rail or two, notched into every slat with a clearance; the slats stand at least 6 mm deeper than the rail so no notch cuts one in two. Warnings for that and for a rail near the slats' ends. It applies only when chosen, so the sphere-parallel snapshot is unchanged.
+- **Sizes and outputs.** Thickness quick picks 3 mm, 6 mm and 1/4" (a new 6.35 mm Baltic birch) or custom; an estimate in words ("~7 sheets of 600 × 400 mm"), the rails' length, wall screws and pins; the assembly guide for rails; the assembled piece as a GLB model (three.js's exporter, loaded on demand, Pro like every export).
+- **Panel.** A guided Wall art panel: style, pattern pictures, a live preview with handles for the curve, the points, the ripple's centre and the shelves, recipes and Shuffle, size, mounting. Generate has four wall-art recipes; twelve presets join the gallery (the preset cap rose from 60 to 75).
+- **Release 1.2.0.** New features across products and an additive change to the saved settings (optional keys only), so the minor version moves; `minimumVersion` stays 1.0.0.

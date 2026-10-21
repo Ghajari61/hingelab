@@ -4,13 +4,13 @@ Run before a release. The automated checks come first; the rest needs a person, 
 
 ## Automated
 
-| Check | Command | Result on 19 Oct 2026 (redesign phase 5) |
+| Check | Command | Result on 21 Oct 2026 (1.2.0) |
 |---|---|---|
-| Unit, golden and geometry tests (every generator, every preset, exports in SVG, DXF, PDF and LightBurn, kerf, checks and fixes, batches, `.oclc` files, plans, the updater manifest) | `npm test` | 2,464 passed, 33 skipped (they need the local Supabase stack) |
-| Types and lint | `npm run typecheck`, `npm run lint` | clean (lint: 0 errors, 28 warnings) |
+| Unit, golden and geometry tests (every generator, every preset, exports in SVG, DXF, PDF and LightBurn, kerf, checks and fixes, batches, `.oclc` files, plans, the updater manifest) | `npm test` | 2,615 passed, 33 skipped (they need the local Supabase stack) |
+| Types and lint | `npm run typecheck`, `npm run lint` | clean (lint: 0 errors, 68 warnings) |
 | Website production build and JS budgets | `NEXT_DIST_DIR=.next-build npx next build`, `node scripts/perf/budgets.mjs` | built; all budgets met |
 | Every product's editor renders, desktop and phone width | `npm run smoke:web` (on `next start`) | 14 products × 2 widths |
-| Accessibility (WCAG 2.1 A and AA, contrast included) | `npm run a11y` (on `next start`) | no serious or critical problems on 8 pages × 2 widths |
+| Accessibility (WCAG 2.1 A and AA, contrast included) | `npm run a11y` (on `next start`) | no serious or critical problems on 8 pages × 2 widths, the editors included |
 | The Windows UI bundle under the window's CSP (start gallery, Hinge Box, Letters with HarfBuzz, Boxes, Shadow Box in the build worker, Clock fonts, Parametric with Manifold and three.js) | `npm run desktop:ui:build`, `npm run desktop:smoke` | 7 of 7; the test fails when `'wasm-unsafe-eval'` is removed from the CSP, as it should |
 | Rust core: allow-lists for API paths, external pages, file names; project files; prefs | `cargo test --manifest-path desktop/src-tauri/Cargo.toml` | 19 passed |
 | Windows installer: build, minisign signature, secret and server-code scan, no local paths | `npm run desktop:build` | passed; Authenticode skipped (not configured, see docs/SIGNING.md) |
@@ -27,6 +27,15 @@ Run before a release. The automated checks come first; the rest needs a person, 
 7. File › Save project, then File › Open it again; open the same `.oclc` in the Windows app.
 8. Phone (390 px): the canvas on top, settings in the sheet below; a generator's three-step flow.
 
+
+## By hand: 1.2.0
+
+1. Boxes: pick a bird house and a money box, set a pattern on both: holes on the walls and the roof, none through the entrance, the vents or the coin slot. A tray with an inset knob lid: holes round the knob. A large pattern in a small star window: the check offers "Smaller pattern".
+2. QR Code: widen the border, add a pattern: it stays out of the code and its quiet zone; scan the plate with a phone.
+3. Your own tile: Sign, Pattern "Your own tile", upload a seamless SVG: the shapes join across the seams; try Brick and Mirrored.
+4. Hinge Box: Cut-out pattern "Motif", choose Star (not a heart), a Circle shape, Mark Engrave: the file has an engrave layer, no extra cuts.
+5. Paper Box: Bakery box in 3D: drag Fold from 100 % to 0 % and back, then Explode; Wine carrier (four bottles): the dividers stand inside. Lines "Mountain folds: Dash-dot": the gable box's handle creases come out dashed.
+6. Parametric: Source "Wall art": change the pattern, drag a ridge curve's points, add an attractor, add a shelf; Mounting "Rails" with 1x4: every slat has two notches; the estimate lists sheets, rails and screws. With Pro: Export 3D model (GLB) opens in Windows 3D Viewer or Blender.
 ## By hand (Windows app)
 
 1. Install the new version over the old one; the app opens signed in.
