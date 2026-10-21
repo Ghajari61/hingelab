@@ -8,11 +8,12 @@ import { MACHINE_PROFILES, machineById } from "@/lib/studio/library";
 export const EXPORT_FORMATS = ["svg", "dxf", "pdf", "lbrn2"] as const;
 export type ExportFormat = (typeof EXPORT_FORMATS)[number];
 
-export const FORMAT_INFO: Record<ExportFormat, { name: string; ext: string; mime: string; about: string }> = {
-  svg: { name: "SVG", ext: "svg", mime: "image/svg+xml", about: "Layered by colour for LightBurn, xTool Creative Space, Glowforge and Inkscape." },
-  dxf: { name: "DXF", ext: "dxf", mime: "application/dxf", about: "R12 for CAD programs and older laser software. Pictures cannot go in a DXF." },
-  pdf: { name: "PDF", ext: "pdf", mime: "application/pdf", about: "Vector lines at actual size, one page per sheet, for printing or for software that imports PDF." },
-  lbrn2: { name: "LightBurn", ext: "lbrn2", mime: "application/xml", about: "A LightBurn project with one layer per cut type. Text and pictures are left out: import the SVG for those." },
+/** `order`: what the format can make the laser software do about the cut order. */
+export const FORMAT_INFO: Record<ExportFormat, { name: string; ext: string; mime: string; about: string; order: string }> = {
+  svg: { name: "SVG", ext: "svg", mime: "image/svg+xml", about: "Layered by colour for LightBurn, xTool Creative Space, Glowforge and Inkscape.", order: "The layers are written engrave, score, inner cuts, outline, but an SVG cannot make the software keep that order: check that inner cuts run before outlines." },
+  dxf: { name: "DXF", ext: "dxf", mime: "application/dxf", about: "R12 for CAD programs and older laser software. Pictures cannot go in a DXF.", order: "A DXF keeps each cut type on its own layer and colour but has no cut order: set inner cuts before outlines in your laser software." },
+  pdf: { name: "PDF", ext: "pdf", mime: "application/pdf", about: "Vector lines at actual size, one page per sheet, for printing or for software that imports PDF.", order: "A PDF has no cut order: set inner cuts before outlines in your laser software." },
+  lbrn2: { name: "LightBurn", ext: "lbrn2", mime: "application/xml", about: "A LightBurn project with one layer per cut type. Text and pictures are left out: import the SVG for those.", order: "LightBurn follows the order in the file: engrave, score, inner cuts, then outlines (layer priority)." },
 };
 
 export const CUSTOM_MACHINE = "custom";

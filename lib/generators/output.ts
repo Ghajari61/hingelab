@@ -290,20 +290,21 @@ export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, 
 export interface SheetImage { href: string; x: number; y: number; w: number; h: number; clip?: string; flip?: boolean }
 /** SVG transform that mirrors a picture in place. */
 export const flipTransform = (im: SheetImage) => `translate(${r3(2 * im.x + im.w)} 0) scale(-1 1)`;
-export type GenContent = LayerContent & { engrave: string[]; images: SheetImage[] };
+/** `own`: the layout item each path of a layer came from, in order. */
+export type GenContent = LayerContent & { engrave: string[]; images: SheetImage[]; own: Record<"outline" | "slots" | "hinge" | "engrave", number[]> };
 
 /** Canvas layers plus the engraved fills and pictures, in sheet coordinates. */
 export function genContent(lay: Layout<CutPart>): GenContent {
-  const L: GenContent = { outline: [], slots: [], hinge: [], labels: [], fills: [], engrave: [], images: [] };
-  for (const { pt, ox, oy } of lay.items) {
-    for (const c of pt.outline) L.outline.push(pathD(c, true, ox, oy));
-    for (const c of pt.inner) L.slots.push(pathD(c, true, ox, oy));
-    for (const c of pt.cuts) L.slots.push(pathD(c, false, ox, oy));
-    for (const c of pt.score) L.hinge.push(pathD(c, false, ox, oy));
+  const L: GenContent = { outline: [], slots: [], hinge: [], labels: [], fills: [], engrave: [], images: [], own: { outline: [], slots: [], hinge: [], engrave: [] } };
+  lay.items.forEach(({ pt, ox, oy }, k) => {
+    for (const c of pt.outline) { L.outline.push(pathD(c, true, ox, oy)); L.own.outline.push(k); }
+    for (const c of pt.inner) { L.slots.push(pathD(c, true, ox, oy)); L.own.slots.push(k); }
+    for (const c of pt.cuts) { L.slots.push(pathD(c, false, ox, oy)); L.own.slots.push(k); }
+    for (const c of pt.score) { L.hinge.push(pathD(c, false, ox, oy)); L.own.hinge.push(k); }
     L.fills.push([...pt.outline, ...pt.inner].map((c) => pathD(c, true, ox, oy)).join(" "));
-    if (pt.engrave.length) L.engrave.push(pt.engrave.map((c) => pathD(c, true, ox, oy)).join(" "));
+    if (pt.engrave.length) { L.engrave.push(pt.engrave.map((c) => pathD(c, true, ox, oy)).join(" ")); L.own.engrave.push(k); }
     for (const im of pt.images) if (!im.only3d && isImageDataURL(im.href)) L.images.push({ href: im.href, x: r3(im.x + ox), y: r3(im.y + oy), w: r3(im.w), h: r3(im.h), clip: im.clip ? pathD(im.clip, true, ox, oy) : undefined, ...(im.flip ? { flip: true } : {}) });
-  }
+  });
   return L;
 }
 
@@ -311,9 +312,11 @@ const esc = (s: string) => s.replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt
 
 /**
  * One SVG for all sheets (stacked as on the canvas), in mm, one Inkscape layer per cut type in the
- * order a laser should run them: engrave, score, inner cuts, outline.
+ * order a laser should run them: engrave, score, inner cuts, outline. Given the sheets (the app's
+ * exports), every path also says which part it belongs to (data-part) and which sheet it is on
+ * (data-sheet, from 1); without them the file is the plain one the golden files hold.
  */
-export function genSVG<P extends GenBase>(def: GeneratorDef<P>, p: P, lay: Layout<CutPart>, comment = ""): string {
+export function genSVG<P extends GenBase>(def: GeneratorDef<P>, p: P, lay: Layout<CutPart>, comment = "", sheets?: { x: number; y: number; w: number; h: number }[] | null): string {
   const W = r3(lay.width), H = r3(lay.height);
   const C = genContent(lay);
   const tags = [...new Set(lay.items.map((it) => it.pt.tag).filter((t): t is string => !!t))];
@@ -327,13 +330,18 @@ export function genSVG<P extends GenBase>(def: GeneratorDef<P>, p: P, lay: Layou
   const note = `HingeLab ${def.name}: ${p.name}. ${def.summary(p)}. Material ${p.T} mm, ${kerf} (compensated). Parts: ${parts}.${tidy}${comment ? " " + comment : ""}`;
   let s = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"${C.images.length ? ' xmlns:xlink="http://www.w3.org/1999/xlink"' : ""} width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">\n`;
   s += `<!-- ${xmlCommentText(esc(note))} -->\n`;
-  const layer = (key: LayerKey, paths: string[], fill: boolean) => {
+  const tagOf = lay.items.map((it) => {
+    if (!sheets?.length) return "";
+    const si = sheets.findIndex((r) => it.oy + it.pt.bbox.y0 >= r.y - 1e-6 && it.oy + it.pt.bbox.y0 <= r.y + r.h + 1e-6);
+    return ` data-part="${esc(it.pt.src.id)}"${si >= 0 ? ` data-sheet="${si + 1}"` : ""}`;
+  });
+  const layer = (key: LayerKey, paths: string[], fill: boolean, own: number[] = []) => {
     if (!p.layers[key].exp || !paths.length) return;
     const def = EXPORT_LAYERS.find((l) => l.key === key)!;
     s += fill
       ? `<g id="${key}" inkscape:groupmode="layer" inkscape:label="${def.code} ${GEN_LAYER_NAMES[key]}" fill="${def.color}" fill-rule="evenodd" stroke="none">\n`
       : `<g id="${key}" inkscape:groupmode="layer" inkscape:label="${def.code} ${GEN_LAYER_NAMES[key]}" fill="none" stroke="${def.color}" stroke-width="0.1">\n`;
-    for (const d of paths) s += `  <path d="${d}"/>\n`;
+    paths.forEach((d, k) => { s += `  <path d="${d}"${own[k] != null ? tagOf[own[k]] : ""}/>\n`; });
     s += `</g>\n`;
   };
   if (p.layers.labels.exp && C.images.length) {
@@ -347,10 +355,10 @@ export function genSVG<P extends GenBase>(def: GeneratorDef<P>, p: P, lay: Layou
     });
     s += `</g>\n`;
   }
-  layer("labels", C.engrave, true);
-  layer("hinge", C.hinge, false);
-  layer("slots", C.slots, false);
-  layer("outline", C.outline, false);
+  layer("labels", C.engrave, true, C.own.engrave);
+  layer("hinge", C.hinge, false, C.own.hinge);
+  layer("slots", C.slots, false, C.own.slots);
+  layer("outline", C.outline, false, C.own.outline);
   return s + `</svg>\n`;
 }
 

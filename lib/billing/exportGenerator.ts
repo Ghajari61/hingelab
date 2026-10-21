@@ -71,5 +71,5 @@ export async function exportGeneratorForPlan(id: unknown, raw: unknown, plan: Pl
   if (out.missing?.length) return { ok: false, status: 422, error: "The font is missing some characters. Pick another font, then export." };
   const lock = def.pro?.(a.params, out) ?? null;
   if (lock && !hasPro(plan)) return { ok: false, status: 403, error: lock };
-  return { ok: true, svg: genSVG(def, a.params, a.lay), fileName: def.fileName(a.params) + ".svg" };
+  return { ok: true, svg: genSVG(def, a.params, a.lay, "", a.sheets), fileName: def.fileName(a.params) + ".svg" };
 }

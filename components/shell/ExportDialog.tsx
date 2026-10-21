@@ -124,6 +124,7 @@ export default function ExportDialog({ getSVG, localSVG, sheets, size, base, uni
             </div>
           </div>
           <p className="exp-about">{fmt.about}</p>
+          <p className="exp-about">{fmt.order}</p>
           {locked && <p className="exp-check warn" role="status">{locked} <a href="/app/billing" target="_blank" rel="noopener">See Pro</a></p>}
 
           {many && (

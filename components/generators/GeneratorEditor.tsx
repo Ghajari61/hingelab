@@ -293,7 +293,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       .catch(() => setModal({ type: "code", name: filename, data }));
   }
 
-  const localSVG = () => (lay && out && !out.notice ? genSVG(def, built, lay) : null);
+  const localSVG = () => (lay && out && !out.notice ? genSVG(def, built, lay, "", arranged.sheets) : null);
 
   async function exportedSVG(): Promise<string | null> {
     if (!lay || !out) { toastMsg(error ? "Fix the settings before exporting" : "Still loading"); return null; }
@@ -303,7 +303,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
     const over = batchLimitMessage(account.plan, designBatchCount(params), !account.configured);
     if (over) { setUpgrade(over); return null; }
     if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return null; }
-    if (!lock || !account.configured) return genSVG(def, built, lay);
+    if (!lock || !account.configured) return genSVG(def, built, lay, "", arranged.sheets);
     if (locked) { setUpgrade(lock); return null; }
     // A Pro design: the server checks the plan and builds it again.
     try {
@@ -584,7 +584,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
   };
   const zoom = Math.round(viewApi.view.z / PX_PER_MM * 100) + "%";
   const notice = !error && out?.notice ? out.notice : !error && !lay ? "Loading…" : null;
-  const phoneSVG = useMemo(() => (phoneFlow.phone && lay && out && !out.notice ? genSVG(def, built, lay) : null), [phoneFlow.phone, def, built, lay, out]);
+  const phoneSVG = useMemo(() => (phoneFlow.phone && lay && out && !out.notice ? genSVG(def, built, lay, "", arranged.sheets) : null), [phoneFlow.phone, def, built, lay, out, arranged.sheets]);
 
   if (phoneFlow.phone) {
     return (
