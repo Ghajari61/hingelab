@@ -1,3 +1,8 @@
+## 1.6.0 — GitHub sync (25 Oct 2026)
+
+- Website and Windows installer include the latest UI redesign and whole-app changes from GitHub PRs #6 and #7.
+- This packaging release was built without additional tests or code review, as requested.
+
 ## Unreleased — Review, motifs and fixes
 
 - Twelve detailed motifs that cut in one piece: mandala, girih star, compass rose, tree of life, Celtic knot, lotus, olive branch, anchor, mountains, fleur-de-lis, dreamcatcher and paisley. They appear in every motif picker (signs, toppers, table numbers, trophies, key holders), with ten new ready-made designs built on them.
