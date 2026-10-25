@@ -1,3 +1,11 @@
+## Unreleased — Letters keep their corners
+
+- Letter Box with living-hinge walls now keeps the letter's sharp corners (Corners: Keep, the new default). The wall is split into a strip per stretch between corners, the strips meet at each corner with a lap or butt joint, and the hinge cuts only where the letter actually curves. Before, every letter was rounded with a corner radius as large as the hinge's bend limit (about R 10–12 mm), which blunted serifs and stems and could round thin parts away entirely.
+- Corners: Round off keeps the old behaviour (one strip per outline, Corner R).
+- Strip ends carry matching joint numbers, and the base engraves the same numbers at each corner. Sharp kinks under 35° become a gentle bend instead of a joint where the outline allows.
+- Fixes found in the review: hinge tabs could overlap the start of a curve by up to half a tab; tight curves next to a corner were left uncut.
+- A letter that is too narrow for two walls along its corners falls back to rounded corners, with a warning.
+
 ## 1.4.0 — Windows workflow update (25 Oct 2026)
 
 - Windows installer updated from the published main branch, including the shared seven-step workflow, Simple/Advanced controls and adjustable settings panels.

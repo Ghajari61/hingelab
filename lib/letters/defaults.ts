@@ -21,6 +21,7 @@ export const LETTER_DEFAULTS: LetterParams = {
   depth: 60,
   lid: "removable",
   wallStyle: "hinge",
+  corners: "joint",
   facetTol: 1,
   panelMin: 15,
   minCornerRadius: "auto",
@@ -80,6 +81,7 @@ export function mergeLetterParams(partial?: Partial<LetterParams> | null): Lette
     layers: Object.assign(clone(LETTER_DEFAULTS.layers), partial.layers || {}),
     marquee: Object.assign(clone(LETTER_DEFAULTS.marquee), partial.marquee || {}),
   });
+  if (out.corners !== "round") out.corners = "joint";
   const cut = cleanCutout(partial.cutout);
   if (cut) out.cutout = cut; else delete out.cutout;
   return out;
@@ -130,8 +132,21 @@ export const wallMaxLengthOf = (p: LetterParams) => p.wallMaxLength ?? p.bedW - 
 export function cornerRadiusOf(p: LetterParams) {
   if (typeof p.minCornerRadius === "number") return p.minCornerRadius;
   if (p.wallStyle === "faceted") return 0;
+  if (cornersKept(p)) return bendRadiusOf(p);
   return bendAnalysis(hingeParamsOf(p), wallHeightOf(p), 1).rMin * 1.3 + p.T / 2;
 }
+
+/** Hinge walls that keep the letter's corners (break the wall there) instead of rounding the letter. */
+export const cornersKept = (p: LetterParams) => p.mode === "box" && p.wallStyle === "hinge" && p.corners !== "round";
+
+/** The tightest curve a hinge strip bends around comfortably: 1.25 × the lattice's bend radius (the "ok" verdict). */
+export const bendRadiusOf = (p: LetterParams) => bendAnalysis(hingeParamsOf(p), wallHeightOf(p), 1).rMin * 1.25;
+
+/** Where a hinge wall must break into a corner: just above the lattice's bend radius. */
+export const bendLimitOf = (p: LetterParams) => bendAnalysis(hingeParamsOf(p), wallHeightOf(p), 1).rMin * 1.05;
+
+/** Shortest wall strip between two corners, mm. */
+export const minPieceOf = (p: LetterParams) => Math.max(3 * p.T, 8);
 
 /**
  * Radius for concave corners and counters. The wall stands on the material side, so its centerline
