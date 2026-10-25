@@ -18,6 +18,8 @@ export interface Preferences {
   /** Theme of the Studio editor only (dark by default, like Illustrator and CorelDRAW). */
   editorTheme: Theme;
   accent: Accent;
+  /** Set once the user picks an accent; until then purple applies, even over an old saved default ("blue"). */
+  accentChosen: boolean;
   units: Units;
   shortcutSet: ShortcutSet;
   laser: LaserType;
@@ -37,7 +39,7 @@ export interface Preferences {
 }
 
 export const DEFAULT_PREFS: Preferences = {
-  theme: "light", themeChosen: false, editorTheme: "dark", accent: "blue", units: "mm", shortcutSet: "hingelab", laser: "co2",
+  theme: "light", themeChosen: false, editorTheme: "dark", accent: "violet", accentChosen: false, units: "mm", shortcutSet: "hingelab", laser: "co2",
   machineId: DEFAULT_MACHINE, materialId: DEFAULT_MATERIAL, showStartScreen: true,
   onboarded: false, tourDone: false, dismissed: [], recentGenerators: [], offsetStep: 1, snapAngle: 15, editor: DEFAULT_EDITOR_PREFS,
 };
@@ -52,7 +54,8 @@ export function normalizePrefs(raw: unknown): Preferences {
     theme: r.themeChosen === true ? pick(r.theme, ["dark", "darker", "light", "system"] as const, d.theme) : d.theme,
     themeChosen: r.themeChosen === true,
     editorTheme: pick(r.editorTheme, ["dark", "darker", "light", "system"] as const, d.editorTheme),
-    accent: pick(r.accent, ["blue", "violet", "teal", "orange"] as const, d.accent),
+    accent: r.accentChosen === true ? pick(r.accent, ["blue", "violet", "teal", "orange"] as const, d.accent) : d.accent,
+    accentChosen: r.accentChosen === true,
     units: isUnits(r.units) ? r.units : d.units,
     shortcutSet: pick(r.shortcutSet, ["hingelab", "corel", "lightburn", "inkscape"] as const, d.shortcutSet),
     laser: pick(r.laser, ["co2", "diode", "fiber"] as const, d.laser),

@@ -1576,3 +1576,12 @@ A review of Letters (Letter Box, living-hinge walls) against laser marquee-lette
 - **Measured** on 10 bundled fonts × 4 texts × 60/100/150 mm (84 cases): warnings that a letter lost part of its shape (rounded off, counter filled or too small for a wall, rounded instead) fell from 371 to 74; zones bending tighter than the hinge stayed about the same (11 round, 12 kept). The cost is more parts: 3344 strips against 508, since each stretch between corners is its own strip, and many short straight strips have no tab (they are held by the joints and glue). 41 letters, mostly scripts and thin fonts at 60 mm, fall back to rounding. Bebas Neue "Sam" at 150 mm builds with no warning.
 - **UI.** Box section: Corners (Keep / Round off) for living-hinge walls; Corner R and "Corner radius follows the hinge" only show when rounding. Same in the desktop panel.
 
+## D200. A new look: purple, warm neutrals and pictures
+
+The editor already had the layout of a design tool (tools left, canvas centre, properties right, floating view switch and toolbar), so the redesign keeps it and changes the look, following a Figma-style mockup with xTool-style picture choices that the owner approved.
+
+- **Colour.** Purple (#5B4BDB on light, #9D8CF9 with dark ink on the dark themes) is the default accent and also the primary and selection colour, which were near-black before. The other accents stay as options. A new `accentChosen` preference works like `themeChosen`: an accent saved before anyone chose one (every saved "blue") gives way to purple; a choice made in Settings sticks.
+- **Neutrals.** The light theme's surfaces move from lavender-grey to warm paper (#F4F2EE pasteboard, #1D1B18 text, warm lines and shadows). Dark themes keep their surfaces. Brand gradient: purple, violet, orchid (no mint). Calls to action use the accent instead of peach.
+- **Pictures.** Product and generator cards show the preset pictures the presets already ship (public/presets, public/templates/thumbs), drawn with shading and depth: `CatalogueEntry.picture` and `COLLECTIONS[].picture` come from the preset each card opens (a test checks every file exists), the app's product tiles and the Studio home cards map each product to a featured preset. The blank canvas keeps its line drawing.
+- **Not changed.** Layout, panels, the seven-step navigator, laser layer colours and every product's geometry. A Figma-style parts list in the left panel was in the mockup and is left for a later change, since each editor keeps its own part model.
+

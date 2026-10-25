@@ -1,5 +1,7 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CATALOGUE, COMMUNITY, LEARN, MAKE } from "../nav";
+import { CATALOGUE, COLLECTIONS, COMMUNITY, LEARN, MAKE } from "../nav";
 
 describe("public catalogue", () => {
   it("uses unique slugs and in-app links", () => {
@@ -9,6 +11,15 @@ describe("public catalogue", () => {
       expect(c.href.startsWith("/app/editor/local") || c.href.startsWith("/home")).toBe(true);
       expect(c.blurb.length).toBeGreaterThan(10);
     }
+  });
+
+  it("gives every card that opens a design a picture that exists", () => {
+    for (const c of CATALOGUE) {
+      if (c.slug === "photo-layers" || c.slug === "engrave-prep") { expect(c.picture).toBeNull(); continue; }
+      expect(c.picture, c.slug).toMatch(/^\/presets\/[a-z]+\/[a-z0-9-]+\.svg$/);
+      expect(existsSync(join(process.cwd(), "public", c.picture!)), c.picture!).toBe(true);
+    }
+    for (const c of COLLECTIONS) expect(existsSync(join(process.cwd(), "public", c.picture ?? "-")), `${c.slug}: ${c.picture}`).toBe(true);
   });
 
   it("keeps the three menus on this site", () => {
