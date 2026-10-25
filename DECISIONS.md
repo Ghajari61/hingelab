@@ -1552,3 +1552,13 @@ Decisions taken while building Phase 1 of D186, without asking, as the brief ask
 - Render the first-run tour in a body portal so transformed desktop containers cannot clip it.
 - Rename My boxes to Projects. Search and product/storage filters combine account projects with existing generator autosaves. Local entries are explicitly labelled latest device drafts, not falsely represented as named cloud projects or versioned backups. No local assets are uploaded by listing them.
 - Defer new storage schemas, recovery snapshots, region/height-map engines and production packages to separately scoped work. UI labels do not claim those features exist.
+
+## D198. Pop-up fixes
+
+A review of the merged Pop-up (rendering every preset, building every outline in bowl and tower form) found these, fixed together:
+
+- **Ribs in pieces.** A rib's top was drawn for one side of the centre and mirrored to the other, and its spine was only 15% of a small base height, so ring grooves and the half-lap cut through it: the heart's two ribs came out in 14 pieces, the snowflake tree, bread basket, pyramid, five-point star and triangle in 2 or 3. A rib is now a union of one block per ring on each side (each side from its own crossings) on a spine at least three slot heights deep (`ribFoot`); the hub moves with it. Every rib is one part.
+- **Tiered stands were bowls.** The height formula turned only towers and hanging forms over; a tiered stand now rises to its centre too. The stepped (pagoda) profile gave k tiers k + 1 levels (the rim alone at the bottom); it now gives k, the first holding the centre and the last the rim.
+- **Preset cards drawn flat.** 3D pieces had frames but no `place.m`, so thumbnails of designs without upright parts (every hanging one) fell back to a front view that ignores heights. Pieces now carry their open placement.
+- **Supports and bridges.** With ribs, a post or knotted cords, the support sets every ring's height, so the bridge lands only hold the rings while cutting: the assembly says to snap them once the rings are seated, an info note says so, and the strain and "needs independent support" warnings apply only when nothing sets the heights (handles, tilt). Cords list the knot spacing from ring to ring. Before this, 17 of the 27 presets opened with a warning about their own design.
+- **Proportions.** Many presets kept the defaults (a 240 mm sheet, 32 mm deep), so the trees, pyramid and pagoda were nearly flat. Towers, tiered stands, pendants, the table shade, ornaments, bauble, plant holder and mobile have heights to suit their names; the table shade hangs on cords and the plant holder is a bowl on cords.
