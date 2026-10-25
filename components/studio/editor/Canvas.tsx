@@ -1108,7 +1108,7 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
         const l = locate(base.root, dr.ref.id);
         if (!l) return;
         if (dr.part === "node") {
-          let want = { x: dr.at.x + p.x - dr.start.x, y: dr.at.y + p.y - dr.start.y };
+          const want = { x: dr.at.x + p.x - dr.start.x, y: dr.at.y + p.y - dr.start.y };
           if (e.shiftKey) { if (Math.abs(want.x - dr.at.x) > Math.abs(want.y - dr.at.y)) want.y = dr.at.y; else want.x = dr.at.x; }
           let q = want, snapLines: SnapLine[] = [];
           if (!e.ctrlKey) {

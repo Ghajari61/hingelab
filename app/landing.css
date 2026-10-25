@@ -202,7 +202,17 @@ html:has(.landing), body:has(> .landing) { height: auto; overflow: visible; }
 .check { display: inline-block; flex: none; width: 22px; height: 22px; padding: 5px; box-sizing: content-box; border-radius: 999px; background: color-mix(in srgb, var(--success) 16%, transparent); color: var(--success); vertical-align: middle; }
 .pricing-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
-.faq-list { max-width: 860px; display: grid; gap: 10px; }
+.faq { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: 0 clamp(24px, 5vw, 72px); align-items: start; }
+.faq .band-head { position: sticky; top: 96px; margin-bottom: 0; }
+.faq-list { display: grid; gap: 10px; }
+@media (max-width: 860px) { .faq { grid-template-columns: minmax(0, 1fr); } .faq .band-head { position: static; margin-bottom: 24px; } }
+.motif-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
+.motif-grid a { display: grid; justify-items: center; gap: 10px; padding: 18px 12px 14px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow-1); color: var(--fg); text-decoration: none; font-weight: 600; font-size: 14px; transition: transform var(--dur-med) var(--ease-out), box-shadow var(--dur-med), border-color var(--dur-med); }
+.motif-grid a:hover { transform: translateY(-3px); box-shadow: var(--shadow-2); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.motif-grid svg { width: 100%; max-width: 120px; aspect-ratio: 1; filter: drop-shadow(1.5px 2.5px 0 var(--wood-side)) drop-shadow(0 6px 8px rgba(60, 40, 20, .18)); }
+.motif-grid path { fill: var(--wood-face); stroke: var(--wood-edge); stroke-width: .5; }
+@media (max-width: 1000px) { .motif-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .motif-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .faq details { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 0 22px; transition: box-shadow var(--dur-med); }
 .faq details[open] { box-shadow: var(--shadow-2); }
 .faq summary { cursor: pointer; padding: 18px 0; font-size: 17px; font-weight: 600; color: var(--fg); list-style: none; display: flex; justify-content: space-between; gap: 16px; }

@@ -6,7 +6,7 @@ import { keepSetup } from "@/lib/prefs/editor";
 import { editorPrefs } from "@/lib/prefs/editorStore";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { clientOnly } from "@hingelab/ui/lazy";
-import { autoFit, clone, MATERIALS } from "@/lib/hinge";
+import { autoFit, clone } from "@/lib/hinge";
 import {
   baseOffset, exportLetterSVG, hingeParamsOf, LETTER_DEFAULTS,
   letterLayerContent, mergeLetterParams, retiredLetterSample, wallHeightOf, zoneOverlay,

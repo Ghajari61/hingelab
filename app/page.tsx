@@ -19,7 +19,19 @@ import { desktopRelease } from "@/lib/site/release";
 import { siteProducts, totalPresets, type SiteIcon } from "@/lib/site/products";
 import { GALLERY, heroParams, isProSample, sheetFor } from "@/lib/site/samples";
 import { SITE_DESCRIPTION } from "@/lib/site/config";
+import { motif, MOTIF_NAMES, type MotifId } from "@/lib/generators/motifs";
 import "./landing.css";
+
+
+/** Detailed motifs shown on the landing page, drawn from the same geometry the generators cut. */
+const SHOWCASE: { id: MotifId; preset: string }[] = [
+  { id: "mandala", preset: "sign&preset=mandala-welcome" }, { id: "girih", preset: "trophy&preset=girih-award" },
+  { id: "treeoflife", preset: "trophy&preset=tree-of-life-award" }, { id: "compass", preset: "tablenum&preset=compass-voyage" },
+  { id: "mountains", preset: "sign&preset=lake-house" }, { id: "lotus", preset: "topper&preset=lotus-namaste" },
+  { id: "triquetra", preset: "sign" }, { id: "fleur", preset: "sign" }, { id: "dreamcatcher", preset: "sign" },
+  { id: "anchor", preset: "keyrack&preset=harbour-keys" }, { id: "olive", preset: "tablenum&preset=olive-grove" }, { id: "paisley", preset: "sign&preset=paisley-home" },
+];
+const motifPath = (id: MotifId) => motif(id, 88, 50, 50).map((c) => "M" + c.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join("L") + "Z").join("");
 
 export const metadata: Metadata = {
   title: { absolute: "HingeLab: laser-cut generators for boxes, toppers, signs and more" },
@@ -125,7 +137,7 @@ export default async function HomePage() {
           <div className="mosaic" aria-hidden="true">
             {mosaic.map((p, i) => (
               <span key={p.id} className={`m-card m${i}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+                { }
                 <img src={p.picture} alt="" width={300} height={200} loading={i < 4 ? "eager" : "lazy"} fetchPriority={i === 0 ? "high" : undefined} decoding={i < 4 ? "sync" : "async"} />
                 <b>{p.name}</b>
               </span>
@@ -150,7 +162,7 @@ export default async function HomePage() {
                 <li key={p.id}>
                   <Link href={p.href} className="product">
                     <span className="p-pic">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      { }
                       <img src={p.picture} alt="" width={300} height={200} loading="lazy" />
                     </span>
                     <span className="p-body">
@@ -174,6 +186,23 @@ export default async function HomePage() {
             {OCCASIONS.map((o) => (
               <li key={o.name}>
                 <Link href={`/app/editor/local?p=topper&preset=${o.preset}`}><o.icon size={20} aria-hidden="true" />{o.name}</Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section id="motifs" className="band motifs">
+          <div className="band-head">
+            <h2>Detailed motifs that cut in one piece</h2>
+            <p>Mandalas, girih stars, a tree of life and more, built so every part stays joined. Use them on signs, toppers, table numbers, trophies and key holders.</p>
+          </div>
+          <ul className="motif-grid">
+            {SHOWCASE.map((m) => (
+              <li key={m.id}>
+                <Link href={m.preset.includes("&preset=") ? `/app/editor/local?p=${m.preset}` : `/generators/${m.preset}`} aria-label={`${MOTIF_NAMES[m.id]}: ${m.preset.includes("&preset=") ? "open a design with it" : "see the generator"}`}>
+                  <svg viewBox="0 0 100 100" aria-hidden="true"><path d={motifPath(m.id)} fillRule="evenodd" /></svg>
+                  <span>{MOTIF_NAMES[m.id]}</span>
+                </Link>
               </li>
             ))}
           </ul>
@@ -224,9 +253,9 @@ export default async function HomePage() {
           <ul className="landing-gallery">
             {gallery.map((g, i) => (
               <li key={g.title}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+                { }
                 <img className="g-box" src={`/landing-art/box-${i}.svg`} alt="" width={280} height={186} loading="lazy" decoding="async" />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+                { }
                 <img className="g-sheet" src={`/landing-art/sheet-${i}.svg`} alt={`Cut file: ${g.sheet.content.outline.length} parts`} width={560} height={280} loading="lazy" decoding="async" />
                 <h3>{g.title}{isProSample(g.params) && <span className="pro-tag">Pro</span>}</h3>
                 <p>{g.note}</p>
@@ -258,7 +287,7 @@ export default async function HomePage() {
                 <span className="d-side" />
                 <span className="d-grid">
                   {products.slice(3, 9).map((p) => (
-                    // eslint-disable-next-line @next/next/no-img-element
+                     
                     <img key={p.id} src={p.picture} alt="" width={150} height={100} loading="lazy" />
                   ))}
                 </span>
@@ -302,7 +331,7 @@ export default async function HomePage() {
         </section>
 
         <section id="faq" className="band faq">
-          <div className="band-head"><h2>Questions</h2></div>
+          <div className="band-head"><h2>Questions</h2><p>Anything else? The guides cover materials, kerf, every generator and export.</p><p><Link href="/help" className="btn-ghost">Read the guides<ArrowRight size={16} aria-hidden="true" /></Link></p></div>
           <div className="faq-list">
             {FAQ.map((f) => (
               <details key={f.q}>

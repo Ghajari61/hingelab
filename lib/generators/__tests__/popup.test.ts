@@ -12,7 +12,7 @@ import {POPUP_PRESETS} from '../popup/presets';
 import {CTX} from './ctx';
 import {arrangeGenerator,genSVG} from '../output';
 import {createHash} from 'node:crypto';
-import {signedArea,parsePathData} from '../geom';
+import {signedArea} from '../geom';
 const finite=(c:number[][])=>c.every(p=>p.length===2&&p.every(Number.isFinite));
 function crosses(c:number[][]){const orient=(a:number[],b:number[],d:number[])=>(b[0]-a[0])*(d[1]-a[1])-(b[1]-a[1])*(d[0]-a[0]);for(let i=0;i<c.length;i++)for(let j=i+2;j<c.length;j++){if(i===0&&j===c.length-1)continue;const a=c[i],b=c[(i+1)%c.length],d=c[j],e=c[(j+1)%c.length];if(orient(a,b,d)*orient(a,b,e)<-1e-8&&orient(d,e,a)*orient(d,e,b)<-1e-8)return true;}return false;}
 describe('Pop-up preset cut files',()=>{for(const pr of POPUP_PRESETS)it(pr.name,()=>{const p=POPUP.merge(pr.params),out=POPUP.build(p,CTX);expect(out.error).toBeUndefined();expect(out.notice).toBeUndefined();expect(out.parts.length).toBeGreaterThan(0);for(const pt of out.parts)for(const c of [pt.outer,...pt.holes]){expect(finite(c)).toBe(true);expect(Math.abs(signedArea(c))).toBeGreaterThan(0);expect(crosses(c),pt.id).toBe(false);}const a=arrangeGenerator(POPUP,p,CTX);expect(a.lay).toBeTruthy();const svg=genSVG(POPUP,p,a.lay!);expect(svg).not.toMatch(/NaN|Infinity/);expect(svg).toContain('mm');expect(createHash('sha256').update(svg).digest('hex')).toMatchSnapshot();},20000);});

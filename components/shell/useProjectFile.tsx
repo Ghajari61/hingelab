@@ -66,7 +66,7 @@ export function useProjectFile({ section, params, fileBase, write, load, toast, 
     if (!pending.current) return;
     pending.current = false;
     savedSnap.current = snap;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [snap, tick]);
 
   // Loaded early so Open… still runs inside the click that asked for it.

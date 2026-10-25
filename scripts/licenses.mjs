@@ -36,7 +36,7 @@ export function parseSpdx(expr) {
   const atom = () => {
     const t = toks[i++];
     if (t === "(") { const e = or(); i++; return e; }
-    let id = ALIASES[t] ?? t.replace(/\+$/, "");
+    const id = ALIASES[t] ?? t.replace(/\+$/, "");
     if (toks[i] === "WITH") { const ex = toks[i + 1]; i += 2; return { id, ex }; }
     return { id };
   };

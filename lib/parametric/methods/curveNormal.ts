@@ -10,7 +10,7 @@ import { finLabel } from "../label";
 import { cleanSection } from "../slice/clean";
 import { placementOf } from "../slice/planes";
 import { compileFormula } from "../source/formula";
-import type { BoundaryCurve, Contour, CurveNormalParams, GuideCurve, ParametricParams, Part, Plane, Point, Vec3, Warning } from "../types";
+import type { BoundaryCurve, Contour, CurveNormalParams, ParametricParams, Part, Plane, Point, Vec3, Warning } from "../types";
 import { cross, dot, finId, idRange, partsBounds, type MethodOut } from "./common";
 import { arcTable, guideAt } from "./guide";
 import { circle } from "./stacked";

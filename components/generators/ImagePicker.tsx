@@ -61,7 +61,7 @@ export function ImagePicker({ label, value, color = false, onPick, onClear, onTr
       <div className="rowlabel">{label}</div>
       {value ? (
         <div className="gen-image-row">
-          {/* eslint-disable-next-line @next/next/no-img-element -- a local data URL */}
+          { }
           <img src={value} alt={label} />
           <div className="gen-image-acts">
             {name && <span className="gen-image-name" title={name}>{name}</span>}
