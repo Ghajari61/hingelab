@@ -25,7 +25,8 @@ const LAZY_BUDGETS = {
   // Phase 2 (D189): supabase-js and opentype.js (the font parser, needed only when text is shaped)
   // left the shell: 286 KB measured → 154 KB; the budget stays at 162 for headroom.
   // The Hinge Box's pattern motif, shape and mark (D193): 162 → 166.5 KB measured; 169 for headroom.
-  "Editor shell + Hinge Box": { key: /EditorRoot\.tsx -> \.\/Workspace$/, kb: 169 },
+  // The Pop-up generator's start presets and info (D197): 169.8 KB measured; 172 for headroom.
+  "Editor shell + Hinge Box": { key: /EditorRoot\.tsx -> \.\/Workspace$/, kb: 172 },
   // Phase 2: 145 → 45 KB (32.7 measured; the letters engine itself is shared with the shell's text).
   "Letters editor": { key: /Workspace\.tsx -> @\/components\/letters\/LettersEditor$/, kb: 45 },
   // Phase 2: three.js loads as its own chunk (the 3D view) instead of inside the editor: 330 → 70 KB.
