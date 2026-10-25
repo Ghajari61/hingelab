@@ -4,7 +4,8 @@
  */
 import { halfKerf } from "./kerf";
 import { bendAnalysis, cutWidth } from "@/lib/hinge";
-import { cleanCutout, concaveRadiusOf, cornerRadiusOf, hingeParamsOf, wallHeightOf } from "./defaults";
+import { bendLimitOf, bendRadiusOf, cleanCutout, concaveRadiusOf, cornerRadiusOf, cornersKept, hingeParamsOf, minPieceOf, wallHeightOf } from "./defaults";
+import { cornerPath, jointedWall, type CorneredPath } from "./corners";
 import { facetContour, facetedWall } from "./facets";
 import { filletByContour, smoothShapes } from "./fillet";
 import { MIN_PIECE_AREA, differenceShapes, dropSpecks, makeShape, offsetShapes, pointInContour, pointInShape, shapeContours, signedArea, unionShapes } from "./polygon";
@@ -139,6 +140,46 @@ function panelCounters(F: Shape, original: Shape, p: LetterParams, name: string,
   return { shape, panelHoles };
 }
 
+/** Pieces and holes of a shape set, to compare topology. */
+const topo = (s: Shape[]) => `${s.length}:${s.reduce((n, x) => n + x.holes.length, 0)}`;
+
+/**
+ * A letter whose hinge walls keep its corners: every outline and counter centerline is broken at
+ * its corners (lib/letters/corners.ts). Counters too close to the outline (or to each other) for
+ * two walls back to back are filled. Null when the letter itself is too thin for walls, so the
+ * caller rounds it instead.
+ */
+function keptCorners(shape: Shape, p: LetterParams) {
+  const T = p.T;
+  const ok = (s: Shape) => {
+    const c = smoothShapes(dropSpecks(offsetShapes([s], -T / 2), MIN_PIECE_AREA));
+    const web = dropSpecks(offsetShapes([s], -T), MIN_PIECE_AREA);
+    return c.length === 1 && topo(c) === topo([s]) && topo(web) === topo([s]) ? c[0] : null;
+  };
+  let s = shape, filled = 0;
+  let center = ok(s);
+  // fill the smallest counters until two walls fit everywhere
+  const holes = [...shape.holes].sort((a, b) => Math.abs(signedArea(a)) - Math.abs(signedArea(b)));
+  while (!center && holes.length) {
+    holes.shift();
+    filled++;
+    s = makeShape(shape.outer, shape.holes.filter(h => holes.includes(h)), shape.group);
+    center = ok(s);
+  }
+  if (!center) return null;
+  const rLimit = bendLimitOf(p), rBend = bendRadiusOf(p), minPiece = minPieceOf(p), tol = Math.max(0.5, p.facetTol);
+  // concave corners may cut into the stroke by up to maxThin; where that leaves too little room for
+  // the two walls, try again with shallower ones
+  for (const maxThin of [T]) {
+    const paths: { cp: CorneredPath; hole: boolean }[] = [{ cp: cornerPath(center.outer, rLimit, minPiece, tol, rBend, maxThin), hole: false }];
+    for (const h of center.holes) paths.push({ cp: cornerPath(h, rLimit, minPiece, tol, rBend, maxThin), hole: true });
+    // the plates follow the new centerlines; any crossing they make shows up as a changed topology
+    const plate = dropSpecks(unionShapes(shapeContours(offsetShapes([makeShape(paths[0].cp.pts, paths.slice(1).map(x => x.cp.pts))], T / 2, "miter"))), MIN_PIECE_AREA);
+    if (topo(plate) === topo([center]) && topo(dropSpecks(offsetShapes(plate, -T), MIN_PIECE_AREA)) === topo(plate)) return { paths, plate, filled };
+  }
+  return null;
+}
+
 export function letterBoxes(letters: BoxLetter[], p: LetterParams): BoxResult {
   const issues: LetterIssue[] = [];
   const hp = hingeParamsOf(p);
@@ -163,6 +204,48 @@ export function letterBoxes(letters: BoxLetter[], p: LetterParams): BoxResult {
   };
 
   for (const L of letters) {
+    const kept = hinge && cornersKept(p) ? keptCorners(L.shape, p) : null;
+    if (kept) {
+      const name = unique(L.name);
+      if (kept.filled) issues.push({ lvl: "warn", msg: `${kept.filled === 1 ? "A counter" : `${kept.filled} counters`} of “${name}” ${kept.filled === 1 ? "is" : "are"} too close to the outline for two walls, so ${kept.filled === 1 ? "it was" : "they were"} filled. Use a larger size or a thinner material.` });
+      const before = walls.length;
+      const slots: Contour[] = [];
+      const marks: PartMark[] = [];
+      let seamNo = 1, holeNo = 0;
+      for (const { cp, hole } of kept.paths) {
+        const label = hole ? `hole ${++holeNo}` : "outer";
+        if (!cp.joints.length) {
+          const w = hingeWall(cp.pts, { letter: name, contour: label, p, hp, hBody, topTabs, rMin, seamNo });
+          seamNo += w.seamCount;
+          wallParts.push(...w.parts); walls.push(w.wall); slots.push(...w.wall.slots); issues.push(...w.issues);
+          continue;
+        }
+        const w = jointedWall(cp, { letter: name, contour: label, p, hp, hBody, topTabs, rMin, seamNo });
+        seamNo += w.seamCount;
+        wallParts.push(...w.parts); walls.push(w.wall); slots.push(...w.wall.slots); marks.push(...w.marks); issues.push(...w.issues);
+      }
+      const plateShapes = kept.plate;
+      filleted.push(...plateShapes);
+      const lightCenters = p.marquee.enabled ? marqueeCenters(plateShapes, p) : [];
+      if (p.marquee.enabled && !lightCenters.length) issues.push({ lvl: "warn", msg: `“${name}” is too narrow for ${r1(p.marquee.holeDia)} mm light holes with a ${r1(p.marquee.margin)} mm margin. Use smaller holes, a smaller margin or a larger size.` });
+      lights += lightCenters.length;
+      plates.push(...boxPlates(plateShapes, name, p, slots, marks, marqueeHoles(lightCenters, p), "miter", issues));
+      const mine = walls.slice(before);
+      const curves = mine.flatMap(w => w.zones.filter(z => z.kind === "curve" && !z.splice));
+      const rank = { ok: 0, tight: 1, crack: 2 } as const;
+      stats.push({
+        letter: name,
+        perimeter: mine.reduce((s, w) => s + w.length, 0),
+        strips: mine.reduce((s, w) => s + w.pieceLengths.length, 0),
+        panels: 0,
+        zones: curves.length,
+        rTight: curves.reduce((r, z) => Math.min(r, z.rTight), Infinity),
+        verdict: curves.reduce<BoxLetterStat["verdict"]>((v, z) => (z.verdict && (!v || rank[z.verdict] > rank[v]) ? z.verdict : v), null),
+        lights: lightCenters.length,
+      });
+      continue;
+    }
+    if (hinge && cornersKept(p)) issues.push({ lvl: "warn", msg: `“${L.name}” has spots too narrow for walls along its corners, so it is rounded instead. Use a larger size, Thicken or a thinner material.` });
     const fr = filletByContour([L.shape], rCorner, hinge ? 2 * p.T : 0, concaveRadiusOf(p));
     if (!fr.shapes.length) {
       issues.push({ lvl: "warn", msg: `“${L.name}” has strokes narrower than twice the corner radius (R ${r1(rCorner)} mm), so a wall cannot follow it and it was left out. Use a larger size, Thicken, a longer slit for a smaller radius, or Flat panels.` });

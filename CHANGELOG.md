@@ -1,14 +1,25 @@
+## 1.5.0 — Letters keep their corners (25 Oct 2026)
+
+- Letter Box with living-hinge walls now keeps the letter's sharp corners (Corners: Keep, the new default). The wall is split into a strip per stretch between corners, the strips meet at each corner with a lap or butt joint, and the hinge cuts only where the letter actually curves. Before, every letter was rounded with a corner radius as large as the hinge's bend limit (about R 10–12 mm), which blunted serifs and stems and could round thin parts away entirely.
+- Corners: Round off keeps the old behaviour (one strip per outline, Corner R).
+- Strip ends carry matching joint numbers, and the base engraves the same numbers at each corner. Sharp kinks under 35° become a gentle bend instead of a joint where the outline allows.
+- Fixes found in the review: hinge tabs could overlap the start of a curve by up to half a tab; tight curves next to a corner were left uncut.
+- A letter that is too narrow for two walls along its corners falls back to rounded corners, with a warning.
+
+- Split walls now omit base slots when the matching tab is removed at a sheet seam. Ten regression cases cover different maximum strip lengths.
+- Website and Windows installer updated together; earlier installers remain available.
+
 ## 1.4.0 — Windows workflow update (25 Oct 2026)
 
 - Windows installer updated from the published main branch, including the shared seven-step workflow, Simple/Advanced controls and adjustable settings panels.
 - Includes the latest Pop-up fixes for whole ribs, tiered stands, support heights and all 27 editable presets.
 - Keeps the existing updater identity and project format; version 1.3.0 remains available for rollback.
 
-## 1.3.0 — Pop-up (unreleased)
+## 1.3.0 — Pop-up
 
 - Pop-up generator with connected ring/spiral designs, editable profiles, 27 presets, shared laser exports and flat/open preview.
 - Pop-up fixes: ribs stay one piece on hearts, pumpkins, snowflakes, stars and odd polygons; tiered stands rise to their centre and k tiers make k levels; preset cards show the open form; towers, stands and shades have realistic heights; ribs, posts and knotted cords set every ring's height, so the bridges are snapped instead of warning about strain, and cords list their knot spacing.
-- Windows release preparation; not published.
+- Windows 1.3.0 installer published; superseded by later releases.
 - Shared design-to-export workflow, Simple/Advanced settings, resizable/collapsible panels and a visible first-run tour.
 - Projects search and product/storage filters, including existing device-only generator drafts.
 

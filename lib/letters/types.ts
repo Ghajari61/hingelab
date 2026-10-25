@@ -34,6 +34,12 @@ export interface LetterParams {
   depth: number;
   lid: Lid;
   wallStyle: WallStyle;
+  /**
+   * Living-hinge walls: "joint" keeps the letter's corners and breaks the wall there (a strip per
+   * stretch between corners); "round" rounds the letter so one strip bends all the way round it
+   * (strokes narrower than twice the corner radius are lost). Missing: "joint".
+   */
+  corners?: "joint" | "round";
   /** Faceted walls: the outline is approximated by flat panels at most this far from it, mm. */
   facetTol: number;
   /** Faceted walls: shortest panel, mm. */
@@ -205,7 +211,7 @@ export interface Joint {
   s: number;
   /** Signed turn in degrees. */
   turn: number;
-  kind: "finger" | "butt";
+  kind: "finger" | "butt" | "lap";
 }
 
 /** One closed wall around one contour (an outer outline or a counter). */

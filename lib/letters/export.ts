@@ -89,7 +89,7 @@ export function zoneOverlay(box: BoxInfo, place: (letter: string) => [number, nu
       for (const s of w.seams) paths.push({ d: dot(at(s), 1.6), color: ZONE_COLORS.seam, width: 2 });
     } else {
       paths.push({ d: line([...c, c[0]]), color: ZONE_COLORS.flat, width: 1.5 });
-      for (const j of w.joints) paths.push({ d: dot(at(j.s), 1.2), color: j.kind === "finger" ? ZONE_COLORS.ok : ZONE_COLORS.tight, width: 2 });
+      for (const j of w.joints) paths.push({ d: dot(at(j.s), 1.2), color: j.kind === "butt" ? ZONE_COLORS.tight : ZONE_COLORS.ok, width: 2 });
     }
   }
   return paths;

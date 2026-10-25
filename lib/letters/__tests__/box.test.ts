@@ -204,10 +204,10 @@ describe("curvature", () => {
   });
 });
 
-describe("letter box (living-hinge walls): tests 1-7", () => {
+describe("letter box (living-hinge walls, corners rounded): tests 1-7", () => {
   for (const text of TEXTS) for (const lid of LIDS) for (const cutStyle of CUTS) {
     it(`${text} · ${lid} lid · ${cutStyle}`, () => {
-      const p = params(text, { lid, cutStyle });
+      const p = params(text, { lid, cutStyle, corners: "round" });
       const m = boxModel(p);
       const box = m.box!;
       const f = 1 + p.stretch / 100;
@@ -353,19 +353,20 @@ describe("letter box (flat-panel walls)", () => {
   });
 });
 
-describe("letter box counters (living-hinge walls)", () => {
+describe("letter box counters (living-hinge walls, corners rounded)", () => {
+  const rounded = (text: string) => params(text, { corners: "round" });
   const holesOf = (m: LetterModel) => m.box!.filleted.reduce((n, s) => n + s.holes.length, 0);
 
   it("counters wide enough for the concave radius keep a hinge wall", () => {
     for (const text of ["6", "9", "ه", "م", "و"]) {
-      const m = boxModel(params(text));
+      const m = boxModel(rounded(text));
       expect(holesOf(m), text).toBe(1);
       expect(m.box!.walls.filter(w => w.contour.startsWith("hole")).every(w => w.style === "hinge"), text).toBe(true);
     }
   });
 
   it("the stroke between a counter and the outline stays, so the letter keeps its shape", () => {
-    const p = { ...params("A"), fontId: "vazirmatn", size: 100 };
+    const p = { ...rounded("A"), fontId: "vazirmatn", size: 100 };
     const solid = computeLetterModel({ ...p, mode: "solid" }, vazir, hb);
     const box = computeLetterModel(p, vazir, hb);
     if ("error" in solid || "error" in box) throw new Error("model error");
@@ -381,7 +382,7 @@ describe("letter box counters (living-hinge walls)", () => {
 
   // A: the counter is too small; e: the bar is too thin to keep and the eye too small to bend around
   for (const text of ["A", "e"]) it(`${text}: a counter too small to bend around gets flat panels and stays a hole in the base`, () => {
-    const m = boxModel(params(text));
+    const m = boxModel(rounded(text));
     const panelWalls = m.box!.walls.filter(w => w.style === "faceted");
     expect(panelWalls.length).toBe(1);
     expect(panelWalls[0].contour).toBe("hole 1");
@@ -395,6 +396,95 @@ describe("letter box counters (living-hinge walls)", () => {
     expect(base.holes.length).toBe(1);
     expect(m.box!.letters[0].panels).toBe(panels.length);
     expect(m.issues.some(i => i.lvl === "info" && i.msg.includes("flat panels"))).toBe(true);
+  });
+});
+
+describe("letter box (living-hinge walls, corners kept)", () => {
+  const bebasFile = readFileSync(join(process.cwd(), "public/fonts/BebasNeue-Regular.ttf"));
+  const bebas = loadFont(hb, "bebas-neue", "Bebas Neue", bebasFile.buffer.slice(bebasFile.byteOffset, bebasFile.byteOffset + bebasFile.byteLength) as ArrayBuffer);
+  /** Vertex turns over 168° are folds: the path doubles back on itself. */
+  const folds = (c: Contour) => c.filter((b, i) => {
+    const a = c[(i - 1 + c.length) % c.length], d = c[(i + 1) % c.length];
+    let t = Math.atan2(d[1] - b[1], d[0] - b[0]) - Math.atan2(b[1] - a[1], b[0] - a[0]);
+    while (t > Math.PI) t -= 2 * Math.PI;
+    while (t < -Math.PI) t += 2 * Math.PI;
+    return Math.abs(t) > (168 * Math.PI) / 180;
+  }).length;
+
+  it("is the default for living-hinge walls", () => {
+    expect(LETTER_DEFAULTS.corners).toBe("joint");
+    expect(boxModel(params("L")).box!.walls[0].joints.length).toBeGreaterThan(0);
+  });
+
+  for (const text of ["L", "A", "S", "B", "e", "8", "Sam", "HingeLab", "سام", "۱۲۳"]) for (const lid of ["open", "removable"] as const) {
+    it(`${text} · ${lid} lid: corners kept, pieces whole, slots on the walls, plates simple`, () => {
+      const p = params(text, { lid, size: 120 });
+      const m = boxModel(p);
+      const box = m.box!;
+      const a = p.tabW;
+      for (const w of box.walls) {
+        if (w.style === "faceted") continue;
+        const strips = stripsOf(m, w);
+        expect(strips.length, `${w.letter} · ${w.contour}`).toBe(w.pieceLengths.length);
+        // a wall broken at its corners: one strip per stretch between joints (longer ones split at flats)
+        if (w.joints.length) expect(strips.length).toBeGreaterThanOrEqual(w.joints.length);
+        expect(folds(w.centerline), `${w.letter} · ${w.contour}`).toBe(0);
+        for (const j of w.joints) expect(["lap", "butt"]).toContain(j.kind);
+        // pieces are long enough to handle
+        for (const len of w.pieceLengths) expect(len, `${w.letter} · ${w.contour}`).toBeGreaterThan(5);
+        expect(Math.abs(w.zones.reduce((s, z) => s + z.s1 - z.s0, 0) - w.length)).toBeLessThan(1e-6);
+        expect(strips.reduce((s, st) => s + st.tabs.length, 0)).toBe(w.slots.length);
+        expect(w.tabs.length).toBe(w.slots.length);
+        for (const sl of w.slots) expect(distToPolyline(centroid(sl), w.centerline)).toBeLessThan(1e-6);
+        for (const st of strips) for (const c of st.cols) for (const t of st.tabs) expect(Math.abs(c.x - t) - a / 2).toBeGreaterThanOrEqual(1.5 - 1e-6);
+        for (const t of w.tabs) for (const z of w.zones.filter(z => z.kind === "curve")) expect(t + a / 2 <= z.s0 + 1e-6 || t - a / 2 >= z.s1 - 1e-6).toBe(true);
+        for (const st of strips) {
+          const comps = stripComponents(st, p);
+          expect(comps.slice(1).every(n => n < 0.05 * 144), `${st.name}: ${comps.slice(0, 4).join(", ")}`).toBe(true);
+        }
+      }
+      const plates = m.parts.filter((pt): pt is PlatePart => pt.kind === "plate");
+      for (const pt of plates) {
+        expect(signedArea(pt.outer)).toBeGreaterThan(0);
+        expect(simplePolygons([pt.outer, ...pt.holes])).toBe(true);
+        const shape = makeShape(pt.outer, pt.holes);
+        for (const sl of pt.slots) expect(sl.every(q => pointInShape(q, shape))).toBe(true);
+      }
+      expect(plates.some(pt => pt.name.includes("lid"))).toBe(lid !== "open");
+    });
+  }
+
+  it("the letters keep their shape: the base matches the glyph outline", () => {
+    for (const text of ["L", "E", "Sam"]) {
+      const p = { ...params(text), fontId: "bebas-neue", size: 150 };
+      const m = computeLetterModel(p, bebas, hb);
+      if ("error" in m) throw new Error(m.error);
+      const glyph = m.shapes.reduce((s, x) => s + Math.abs(signedArea(x.outer)), 0);
+      const bases = m.parts.filter((pt): pt is PlatePart => pt.kind === "plate" && / · base( \d+)?$/.test(pt.name));
+      const base = bases.reduce((s, pt) => s + Math.abs(signedArea(pt.outer)), 0);
+      // the base reaches baseRim past the outer walls; its outline still follows the glyph closely
+      expect(Math.abs(base / glyph - 1), text).toBeLessThan(0.08);
+    }
+  });
+
+  it("Bebas Neue “Sam” at 150 mm keeps every corner with no warnings", () => {
+    const p = { ...params("Sam"), fontId: "bebas-neue", size: 150, lid: "removable" as const };
+    const m = computeLetterModel(p, bebas, hb);
+    if ("error" in m) throw new Error(m.error);
+    expect(m.issues.filter(i => i.lvl === "warn").map(i => i.msg)).toEqual([]);
+    for (const w of m.box!.walls) expect(w.zones.every(z => z.verdict !== "crack"), `${w.letter} · ${w.contour}`).toBe(true);
+    expect(m.box!.walls.reduce((n, w) => n + w.joints.length, 0)).toBeGreaterThan(10);
+  });
+
+  it("a letter too narrow for walls along its corners is rounded instead, with a warning", () => {
+    const m = boxModel(params("Sam", { size: 30 }));
+    expect(m.issues.some(i => i.msg.includes("rounded instead"))).toBe(true);
+  });
+
+  it("Round off gives the old one-strip-per-outline walls", () => {
+    const m = boxModel(params("L", { corners: "round" }));
+    expect(m.box!.walls.every(w => w.joints.length === 0)).toBe(true);
+    expect(m.parts.filter(pt => pt.kind === "strip").length).toBe(1);
   });
 });
 

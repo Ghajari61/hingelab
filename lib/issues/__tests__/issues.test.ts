@@ -114,7 +114,7 @@ describe("Letters checks and fixes", () => {
     let found: LetterParams | null = null;
     for (const size of [150, 200, 120]) for (const minCornerRadius of [15, 20, 25, 10]) for (const pitch of [3, 2.6]) {
       if (found) break;
-      const p = letters({ text: "S", mode: "box", wallStyle: "hinge", size, minCornerRadius, pitch, slit: 12, bridge: 3 });
+      const p = letters({ text: "S", mode: "box", wallStyle: "hinge", corners: "round", size, minCornerRadius, pitch, slit: 12, bridge: 3 });
       if (check(p).some((i) => i.code === "BEND" && i.fixes.length)) found = p;
     }
     expect(found).not.toBeNull();
