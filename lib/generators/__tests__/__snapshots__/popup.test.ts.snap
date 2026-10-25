@@ -1,0 +1,35 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`pop-up > every preset's cut file stays the same 1`] = `
+{
+  "bell-pendant": "573ec447b1fd30cc 46 kB",
+  "bread-basket": "4f32515e5a345b0c 37 kB",
+  "classic-bowl": "c06173fcae90c8e2 35 kB",
+  "cupcake-tower": "4588a8c601dbf18c 54 kB",
+  "eid-sweets": "29c5a93e7baf466b 187 kB",
+  "heart-basket": "1e90ea5c0e4dd1ff 149 kB",
+  "hexagon-fruit-basket": "20d9efd285750076 167 kB",
+  "mandala-catchall": "ce490247928a9a07 133 kB",
+  "monogram-bowl": "48616bdd5cd74086 96 kB",
+  "nursery-mobile": "329228b178c50416 156 kB",
+  "nut-bowl": "a5dc8c7ebce6fb93 26 kB",
+  "pagoda": "bd8217f6442b5462 169 kB",
+  "plant-hanger": "a04b2271c3e8dcda 29 kB",
+  "pumpkin-basket": "d0ab1ab6d0cd9fe1 151 kB",
+  "pyramid": "a011994408ab61da 140 kB",
+  "ramadan-dates": "61a199a29e6ffe66 173 kB",
+  "saw-bowl": "bc7189110f904b2f 27 kB",
+  "snowflake-bauble": "247e74af529703e9 61 kB",
+  "snowflake-tree": "176c29e762189119 160 kB",
+  "spiral-ornament": "10331e61602aacce 99 kB",
+  "spiral-pendant": "4994c610ac764f36 57 kB",
+  "spiral-tree": "3a7b7d9b61592524 42 kB",
+  "spiral-trivet-bowl": "50e3e3b6225fde55 31 kB",
+  "spring-tray": "004eab69d4ee7697 194 kB",
+  "table-shade": "2ac933fe37df95b5 36 kB",
+  "tealight-holder": "0802d0d7e5de52f2 23 kB",
+  "two-tier-stand": "5495a136ecdd0662 40 kB",
+  "vase-sleeve": "7924820874542850 24 kB",
+  "wedding-favour": "d49f5e2edc078645 38 kB",
+}
+`;
