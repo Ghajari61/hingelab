@@ -433,7 +433,10 @@ export function jointedWall(cp: CorneredPath, o: JointedWallOptions): JointedWal
     cutsX.push(w);
     for (let q = 0; q + 1 < cutsX.length; q++) {
       const x0 = cutsX[q], x1 = cutsX[q + 1], pw = x1 - x0;
-      const myTabs = tabX.filter(t => t - a / 2 > x0 + 1 && t + a / 2 < x1 - 1).map(t => t - x0);
+      const tabIndices = tabX.flatMap((t, i) => t - a / 2 > x0 + 1 && t + a / 2 < x1 - 1 ? [i] : []);
+      const myTabs = tabIndices.map(i => tabX[i] - x0);
+      // The base must only receive slots for tabs that survive this strip split.
+      tabs.push(...tabIndices.map(i => s0 + tabS[i]));
       const myCols = cols.filter(c => c.x > x0 + edgeMargin && c.x < x1 - edgeMargin).map(c => ({ x: c.x - x0, kind: c.kind }));
       const wo = wallOutline(pw, hBody, o.topTabs ? myTabs : [], myTabs, myCols, hp, hs);
       const no = o.seamNo + k;
@@ -461,7 +464,7 @@ export function jointedWall(cp: CorneredPath, o: JointedWallOptions): JointedWal
       }
       zones.push(zz);
     }
-    tabs.push(...tabS.map(s => s0 + s));
+
 
     // the joint number on the base, beside the corner on the material side
     const c = loop.at(s0), d = loop.tangent(s0 + 0.01);

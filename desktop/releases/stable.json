@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.4.0",
-    "pub_date": "2026-10-25T17:28:19.587Z",
-    "notes": "Updated Windows workflow: seven design-to-export steps, Simple/Advanced settings, resizable panels, and latest Pop-up rib, support, tiered-stand and preset improvements.",
+    "version": "1.5.0",
+    "pub_date": "2026-10-25T18:52:28.824Z",
+    "notes": "Letter boxes preserve sharp corners with numbered lap/butt wall joints. Choose Keep or Round off. Split walls now keep base slots matched to surviving tabs. Includes all published workflow and Pop-up improvements.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.4.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnF6cUkwSHJxNFpwSmdoVFNuamVkS1VSQnhHa0lqRHkzVU9CT3JXVk9SRUhNM2k4UEYxQVpJZTBZVTFpaXpxakl0OUdnZjBlVWtycWk3N2gxeW14RHdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTQ5MjY5CWZpbGU6SGluZ2VMYWJfMS40LjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuNC4wCmJ4L1lHYXJmdDlYaEYxMS83Q2RQc3VQcXpsZTZ1SzNDd3JKYk96UXExM01nZGZWMWpHTEhJZDBhVDB0cFJ6K1BBc3RIQ2xqNWNnSDBPcDYyYVkrbUFRPT0K",
-        "size": 10433781,
-        "sha256": "6250f5c70469c3f31cafc837e2b5e04c77940684f5e8ef3c4584780a21871765"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.5.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmpjL24rSFU0aXV2QloySW1SbzRTRTFuamRrc2o3aXJKam1oTmgyRnZFSDdUK1pvRTlQMFpFSUh6OW1uL2d3VVdGcWJuSFN5ZlZvcWNoMlJ4eGFJc3d3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTU0MzI5CWZpbGU6SGluZ2VMYWJfMS41LjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuNS4wCmNsRmY4aGcvRnhnNms5bmlYS01UdDFUKzZNK2xEY3FITy9EN0V5TEZtYndRQ1p4ZVZTNHBSaVNkb2ZIbTlnMWwrWnFzOWFGWk5XcEFNWVRGQWdUeUJnPT0K",
+        "size": 10439304,
+        "sha256": "6eaaaab178373296538a93ca79e26505f3fc3f8bbd58aca026780a8764d55fe8"
       }
     }
   }
