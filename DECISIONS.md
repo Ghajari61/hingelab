@@ -1542,3 +1542,13 @@ Decisions taken while building Phase 1 of D186, without asking, as the brief ask
 - **Sizes and outputs.** Thickness quick picks 3 mm, 6 mm and 1/4" (a new 6.35 mm Baltic birch) or custom; an estimate in words ("~7 sheets of 600 × 400 mm"), the rails' length, wall screws and pins; the assembly guide for rails; the assembled piece as a GLB model (three.js's exporter, loaded on demand, Pro like every export).
 - **Panel.** A guided Wall art panel: style, pattern pictures, a live preview with handles for the curve, the points, the ripple's centre and the shelves, recipes and Shuffle, size, mounting. Generate has four wall-art recipes; twelve presets join the gallery (the preset cap rose from 60 to 75).
 - **Release 1.2.0.** New features across products and an additive change to the saved settings (optional keys only), so the minor version moves; `minimumVersion` stays 1.0.0.
+
+## D197. Shared workflow controls and honest project storage labels
+
+- Scope: web/Windows shared editor UI only. Keep mm, geometry, kerf, saved design values and backend authorization unchanged. No deployment or EXE release.
+- Complete the existing section metadata and preference groundwork with a shared seven-step navigator: Design, Dimensions, Material, Construction, Layout, Validation, Export. A step opens and focuses its existing section; unavailable steps remain explicit. This is navigation, not a certification or a forced linear wizard.
+- Advanced remains the default for older settings. Simple hides marked fine-tuning controls without resetting values; changed hidden fields receive a reveal notice. Calibration stays fully visible.
+- Settings panels collapse and resize on desktop, with a keyboard-operated separator, bounded widths and persisted preferences. Small screens use their responsive width. Export controls wrap rather than overflowing narrow panels.
+- Render the first-run tour in a body portal so transformed desktop containers cannot clip it.
+- Rename My boxes to Projects. Search and product/storage filters combine account projects with existing generator autosaves. Local entries are explicitly labelled latest device drafts, not falsely represented as named cloud projects or versioned backups. No local assets are uploaded by listing them.
+- Defer new storage schemas, recovery snapshots, region/height-map engines and production packages to separately scoped work. UI labels do not claim those features exist.

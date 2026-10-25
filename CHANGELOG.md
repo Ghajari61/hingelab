@@ -2,6 +2,8 @@
 
 - Pop-up generator with connected ring/spiral designs, editable profiles, 27 presets, shared laser exports and flat/open preview.
 - Windows release preparation; not published.
+- Shared design-to-export workflow, Simple/Advanced settings, resizable/collapsible panels and a visible first-run tour.
+- Projects search and product/storage filters, including existing device-only generator drafts.
 
 # Changelog
 
