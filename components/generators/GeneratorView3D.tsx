@@ -65,8 +65,8 @@ export default function GeneratorView3D({ out, lay, T, material, units, frameKey
     >
       <View3DBarTools v={v} flat>
         {folds && !flat && (
-          <label className="v3-explode" title="Fold the box: 0 % is the flat net, 100 % the folded box">Fold
-            <input type="range" min={0} max={1} step={0.01} value={fold} aria-label="Fold" aria-valuetext={`${Math.round(fold * 100)} %`} onChange={(e) => setFold(parseFloat(e.target.value))} />
+          <label className="v3-explode" title="0 % is flat, 100 % is the assembled target">{edit?.def.id === 'popup' ? 'Open ↔ flat' : 'Fold'}
+            <input type="range" min={0} max={1} step={0.01} value={fold} aria-label={edit?.def.id === 'popup' ? 'Open pop-up' : 'Fold'} aria-valuetext={`${Math.round(fold * 100)} %`} onChange={(e) => setFold(parseFloat(e.target.value))} />
           </label>
         )}
       </View3DBarTools>

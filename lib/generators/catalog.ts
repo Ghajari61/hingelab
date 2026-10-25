@@ -23,6 +23,7 @@ export interface GeneratorMeta {
 }
 
 export const GENERATORS: GeneratorMeta[] = [
+  { id: "popup", n: 15, name: "Pop-up", category: "Home", plan: "pro", opens: { editor: "/app/editor/local?p=popup" }, blurb: "One flat piece that lifts into a bowl, basket, tree, lampshade or ornament." },
   { id: "hinge-box", n: 1, name: "Hinge Box", category: "Boxes", plan: "pro", opens: { editor: "/app/editor/local?p=hinge" }, blurb: "Living-hinge boxes: rounded, pill, polygon or cylinder, with lids." },
   { id: "hinged-cover", n: 2, name: "Hinged Cover", category: "Hinges", plan: "pro", opens: { templates: "/templates?c=Living+hinges" }, blurb: "Journal, folder and menu covers with a flexible spine." },
   { id: "letters", n: 3, name: "Letters", category: "Lettering", plan: "pro", opens: { editor: "/app/editor/local?p=letters" }, blurb: "Letter boxes, solid and stencil letters in any script." },

@@ -1,5 +1,7 @@
 "use client";
 
+import {PopupTools} from '@/components/popup/PopupTools';
+import type {PopupParams} from '@/lib/generators/popup/params';
 import { platform } from "@hingelab/platform";
 import { useShortcutKey } from "@/components/shell/useShortcutKey";
 import { keepSetup } from "@/lib/prefs/editor";
@@ -592,8 +594,9 @@ function GenEditor({ def, onProduct, onHome, start }: {
         <PhoneFlow
           name={def.name} summary={def.summary(out ? built : params)} presets={def.presets} thumb={(pr) => `/presets/${def.id}/${pr.id}.svg`}
           current={lastPreset} onPreset={applyPreset}
-          fields={
-            <GeneratorDock
+          fields={<>
+            {def.id === 'popup' && <PopupTools params={params as unknown as PopupParams} onApply={p => replace(p as unknown as P, true)} />}
+          <GeneratorDock
               simple def={def} params={params} defaults={defaults} out={out} units={units} layerKeys={layerKeys} onSet={setField}
               onApply={(next) => replace(next, true)} onMaterial={(mid, info) => replace(genWithMaterial(params, mid, info), true)}
               fonts={{
@@ -602,7 +605,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
                 onDelete: async (id) => { if (await fontFiles.remove(id)) replace(withoutFont(params, id), true); },
               }}
               onResetSection={resetSection} sheet={sheetProps} checks={null}
-            />
+            /></>
           }
           svg={phoneSVG} status={error ? `Fix this in the full editor: ${error}` : notice} nesting={nesting} assembly={assemblySteps(out?.assembly, params.gap)}
           onSVG={() => void exportNow()} onDXF={() => void exportDXFNow()} onFull={phoneFlow.full} onHome={onHome}
@@ -670,6 +673,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
           </section>
         </div>
         <DockColumn onExport={exportNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export as DXF (R12, mm)", run: () => void exportDXFNow() }, { label: "More…", title: "PDF, LightBurn, one file per sheet, mirror, and a check against your machine's bed (Ctrl+Shift+E)", run: openExport }]} units={units} onUnits={setUnits} onResetAll={resetAll} inert={shared.viewing}>
+          {def.id === 'popup' && <PopupTools params={params as unknown as PopupParams} onApply={p => replace(p as unknown as P, true)} />}
           <GeneratorDock
             def={def}
             locks={canShuffle ? locks : undefined}

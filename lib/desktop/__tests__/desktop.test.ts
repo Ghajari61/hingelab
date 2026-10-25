@@ -136,7 +136,7 @@ describe("desktop versions and releases", () => {
 describe("desktop catalog", () => {
   it("lists every product as plain JSON with no code in it", async () => {
     const c = await desktopCatalog();
-    expect(c.products.map((p) => p.id)).toEqual(["hinge", "clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "calibration"]);
+    expect(c.products.map((p) => p.id)).toEqual(["hinge", "clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "calibration", "popup"]);
     expect(JSON.parse(JSON.stringify(c))).toEqual(c);
     const text = JSON.stringify(c);
     expect(text).not.toMatch(/=>|function\s*\(/);
