@@ -29,22 +29,22 @@
   --radius-sm: 8px;
   --radius: 10px;
   --radius-lg: 14px;
-  --side: #161a30;
-  --side-ink: #d3d6ee;
-  --side-dim: #8f94b8;
-  --side-hover: #20253f;
-  --side-active: #2a3054;
+  --side: #1A1530;
+  --side-ink: #DCD6F2;
+  --side-dim: #9A92BE;
+  --side-hover: #251E40;
+  --side-active: #312857;
   --chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b8fae' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  --art-bg: radial-gradient(120% 120% at 20% 0%, #ffffff 0%, #eef0fa 55%, #e6e8f5 100%);
+  --art-bg: radial-gradient(120% 120% at 20% 0%, #ffffff 0%, #F3F0EB 55%, #EAE6DF 100%);
 }
 
 :root[data-theme="dark"] .dk {
-  --side: #10132a;
-  --side-ink: #ccd0ec;
-  --side-dim: #8287ab;
-  --side-hover: #1a1e38;
-  --side-active: #252a4e;
-  --art-bg: radial-gradient(120% 120% at 20% 0%, #2c2f52 0%, #1f2140 70%);
+  --side: #120E24;
+  --side-ink: #D0CAEC;
+  --side-dim: #8B84AE;
+  --side-hover: #1D1838;
+  --side-active: #2A224E;
+  --art-bg: radial-gradient(120% 120% at 20% 0%, #2E2852 0%, #1F1A40 70%);
 }
 
 .dk * { box-sizing: border-box; }
@@ -89,7 +89,7 @@ html, body, #root { height: 100%; margin: 0; }
 /* Once opened, native pages stay mounted (hidden) so leaving and coming back keeps their work. */
 .keep-pane { flex: 1; min-height: 0; min-width: 0; display: none; flex-direction: column; }
 .keep-pane.is-on { display: flex; }
-.dk .sidebar { background: radial-gradient(260px 220px at 0% 0%, rgba(124, 127, 247, 0.16), transparent 70%), radial-gradient(240px 260px at 100% 100%, rgba(20, 184, 166, 0.08), transparent 70%), var(--side); color: var(--side-ink); display: flex; flex-direction: column; padding: 14px 10px; min-width: 0; overflow: hidden; border-right: 1px solid rgba(255, 255, 255, 0.04); }
+.dk .sidebar { background: radial-gradient(260px 220px at 0% 0%, rgba(139, 92, 246, 0.18), transparent 70%), radial-gradient(240px 260px at 100% 100%, rgba(194, 107, 234, 0.08), transparent 70%), var(--side); color: var(--side-ink); display: flex; flex-direction: column; padding: 14px 10px; min-width: 0; overflow: hidden; border-right: 1px solid rgba(255, 255, 255, 0.04); }
 .dk .brand { display: flex; align-items: center; gap: 10px; padding: 4px 4px 18px 10px; font: 600 16px var(--font-display); color: #fff; }
 .dk .side-toggle { margin-left: auto; flex: none; display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 6px; background: none; color: var(--side-dim); cursor: pointer; }
 .dk .side-toggle:hover { background: var(--side-hover); color: #fff; }
@@ -211,7 +211,7 @@ html, body, #root { height: 100%; margin: 0; }
 .dk option { background: var(--panel); color: var(--ink); }
 
 /* ---------- sign-in and blocking screens ---------- */
-.dk .signin { height: 100%; display: grid; place-items: center; background: radial-gradient(600px 400px at 20% 10%, rgba(91, 95, 239, 0.45), transparent 70%), radial-gradient(500px 400px at 90% 90%, rgba(20, 184, 166, 0.25), transparent 70%), linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 38px 38px, linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 38px 38px, var(--side); position: relative; }
+.dk .signin { height: 100%; display: grid; place-items: center; background: radial-gradient(600px 400px at 20% 10%, rgba(91, 75, 219, 0.45), transparent 70%), radial-gradient(500px 400px at 90% 90%, rgba(194, 107, 234, 0.22), transparent 70%), linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 38px 38px, linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 38px 38px, var(--side); position: relative; }
 .dk .signin-card { width: min(440px, calc(100% - 40px)); display: grid; justify-items: center; gap: 14px; text-align: center; padding: 36px 34px 28px; border-radius: 20px; background: var(--panel); box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35); }
 .dk .signin-card h1 { font-size: 22px; }
 .dk .signin-card > p { color: var(--ink-2); }

@@ -25,8 +25,15 @@ export default async function GeneratorLanding({ params }: { params: Promise<{ s
   const articles = faq.length ? faq : general;
   return (
     <PageShell title={item.name} lede={item.blurb}>
-      <p><Link className="btn-primary" href={item.href}>Open generator</Link></p>
-      <p><BookmarkButton slug={item.slug} /></p>
+      {item.picture && (
+        <p className="gen-hero">
+          <img src={item.picture} alt={`${item.name}: a ready-made design`} width={600} height={400} />
+        </p>
+      )}
+      <div className="gen-actions">
+        <Link className="btn-primary" href={item.href}>Open generator</Link>
+        <BookmarkButton slug={item.slug} />
+      </div>
       <p>{item.plan === "pro" ? "Pro is required to save and export this generator. Free can preview it." : "Free can preview this generator. Saving and exporting still need Pro."}</p>
       {item.presetCount != null && <p>{item.presetCount} built-in presets.</p>}
       {item.presets.length > 0 && (

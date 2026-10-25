@@ -18,6 +18,13 @@ import { START_LAZY, START_PRESETS, type LazyStart } from "@/lib/generators/star
 import { hingeLocks, lettersLock, parametricLocks } from "@/lib/plans";
 import type { Preset } from "@/lib/presets";
 
+
+/** The 3D-shaded preset pictures on the three product tiles. */
+const CORE_PICTURE: Record<(typeof CORE_PRODUCTS)[number], string> = {
+  hinge: "/presets/hinge/gift-box.svg",
+  letters: "/presets/letters/hello-sign.svg",
+  parametric: "/presets/parametric/head-stack.svg",
+};
 export const PRODUCT_KEYS: Record<Product, string> = {
   hinge: HINGE_KEY, letters: "hingelab-letters-v2", parametric: "hingelab-parametric-v1",
   ...(Object.fromEntries(GENERATOR_IDS.map((id) => [id, GENERATOR_INFO[id].storageKey])) as Record<(typeof GENERATOR_IDS)[number], string>),
@@ -107,7 +114,7 @@ export function StartGallery({ onPick }: { onPick: (choice: StartChoice) => void
         <div className="start-products">
           {CORE_PRODUCTS.map((k) => (
             <button key={k} type="button" className="start-tile" onClick={() => onPick({ product: k })}>
-              <span className="ico" aria-hidden>{PRODUCT_INFO[k].icon}</span>
+              <span className="pic" aria-hidden><img src={CORE_PICTURE[k]} alt="" width={300} height={200} /></span>
               <span className="nm">{PRODUCT_INFO[k].name}</span>
               <span className="bl">{BLURB[k]}</span>
               <span className="go">{go(k)}<ArrowRight size={14} aria-hidden /></span>

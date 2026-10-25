@@ -12,6 +12,7 @@ export default function CollectionsPage() {
       <div className="ia-grid">
         {COLLECTIONS.map((c) => (
           <Link key={c.slug} className="ia-card" href={c.href}>
+            {c.picture ? <span className="ia-pic"><img src={c.picture} alt="" width={300} height={200} loading="lazy" /></span> : <span className="ia-pic ia-pic-none" aria-hidden="true" />}
             <b>{c.name}</b>
             <p>{c.blurb}</p>
           </Link>

@@ -1,3 +1,10 @@
+## Unreleased — New look
+
+- Purple is HingeLab's colour: buttons, selection and links across the website, the editors and the Windows app. Everyone starts on purple; an accent picked in Settings still wins (Settings › Accent now lists Purple first).
+- Warm paper neutrals replace the lavender-grey surfaces, so panels and the canvas sit well beside the wood pictures. Laser layer colours are unchanged.
+- Pictures instead of icons: the app's start screen, the Studio home, the Generators catalogue, each generator's page and Collections show the 3D-shaded drawing of a ready-made design.
+- Fixed: the "Open generator" button on generator pages had purple text on a purple button.
+
 ## 1.5.0 — Letters keep their corners (25 Oct 2026)
 
 - Letter Box with living-hinge walls now keeps the letter's sharp corners (Corners: Keep, the new default). The wall is split into a strip per stretch between corners, the strips meet at each corner with a lap or butt joint, and the hinge cuts only where the letter actually curves. Before, every letter was rounded with a corner radius as large as the hinge's bend limit (about R 10–12 mm), which blunted serifs and stems and could round thin parts away entirely.

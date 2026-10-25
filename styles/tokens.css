@@ -1,41 +1,41 @@
 /* HingeLab design tokens (spec §15): the one source for colours, type, radii, spacing, motion and
-   elevation. Themes: light (default, D80), dark, darker; accents: blue, violet, teal, orange.
+   elevation. Themes: light (default, D80), dark, darker; accents: violet (default, D200), blue, teal, orange.
    The short legacy names at the bottom keep the single-product editors on the same tokens. */
 
-/* "Lagoon": calm indigo with mint and peach, on surfaces with a faint lavender tint. */
+/* "Workshop": warm paper neutrals that sit well beside wood, with one purple for actions and selection. */
 :root,
 :root[data-theme="light"] {
-  --surface-pasteboard: #F2F3FA;
+  --surface-pasteboard: #F4F2EE;
   --surface-chrome: #FFFFFF;
   --surface-panel: #FFFFFF;
-  --surface-raised: #F5F6FC;
-  --surface-field: #F3F4FA;
-  --surface-overlay: rgba(29, 33, 64, 0.32);
+  --surface-raised: #F8F6F3;
+  --surface-field: #F3F1ED;
+  --surface-overlay: rgba(32, 26, 18, 0.32);
   --surface-sheet: #FFFFFF;
-  --surface-hover: #EDEFF8;
-  --line-strong: #CCD0E2;
-  --line: #E2E5F0;
-  --line-soft: #ECEEF6;
-  --text-primary: #1D2136;
-  --text-secondary: #575D78;
-  --text-disabled: #9A9FB5;
-  --canvas-grid: #D8DBE8;
-  --canvas-bg: radial-gradient(120% 90% at 50% 35%, #FCFCFF 0%, #F0F1F9 60%, #E6E8F3 100%);
-  --sheet-edge: #C8CBDB;
-  --hud-bg: rgba(255, 255, 255, 0.94);
-  --select: #1D2136;
-  --select-ink: #FFFFFF;
-  --select-soft: #EDEFF8;
-  --primary: #1D2136;
-  --primary-hi: #343A55;
-  --primary-ink: #FFFFFF;
-  --error-bg: #FDEEF0;
+  --surface-hover: #EFECE7;
+  --line-strong: #D5CFC5;
+  --line: #E6E1D9;
+  --line-soft: #EFEBE5;
+  --text-primary: #1D1B18;
+  --text-secondary: #5A554D;
+  --text-disabled: #A39C90;
+  --canvas-grid: #DCD6CB;
+  --canvas-bg: radial-gradient(120% 90% at 50% 35%, #FDFCFA 0%, #F3F0EB 60%, #EAE6DF 100%);
+  --sheet-edge: #CFC8BC;
+  --hud-bg: rgba(255, 255, 255, 0.95);
+  --select: var(--accent);
+  --select-ink: var(--accent-ink);
+  --select-soft: var(--accent-soft);
+  --primary: var(--accent);
+  --primary-hi: var(--accent-hi);
+  --primary-ink: var(--accent-ink);
+  --error-bg: #FCEDEE;
   --error-ink: #B4233C;
-  --notice-bg: #EEF2FE;
-  --notice-ink: #2F3F8F;
-  --shadow-1: 0 1px 2px rgba(40, 44, 96, 0.06), 0 1px 3px rgba(40, 44, 96, 0.04);
-  --shadow-2: 0 12px 28px -10px rgba(60, 64, 150, 0.18), 0 2px 6px rgba(40, 44, 96, 0.05);
-  --shadow-3: 0 28px 64px -16px rgba(60, 64, 150, 0.26), 0 6px 14px rgba(40, 44, 96, 0.06);
+  --notice-bg: #F1EEFD;
+  --notice-ink: #3B2FA8;
+  --shadow-1: 0 1px 2px rgba(60, 44, 24, 0.06), 0 1px 3px rgba(60, 44, 24, 0.04);
+  --shadow-2: 0 12px 28px -10px rgba(60, 44, 24, 0.16), 0 2px 6px rgba(60, 44, 24, 0.05);
+  --shadow-3: 0 28px 64px -16px rgba(60, 44, 24, 0.24), 0 6px 14px rgba(60, 44, 24, 0.06);
   color-scheme: light;
 }
 
@@ -58,16 +58,16 @@
   --canvas-bg: radial-gradient(120% 90% at 50% 35%, #1D2134 0%, #141726 70%);
   --sheet-edge: #4A4440;
   --hud-bg: rgba(32, 36, 54, 0.94);
-  --select: #E7E9F4;
-  --select-ink: #141726;
-  --select-soft: #262B40;
-  --primary: #E7E9F4;
-  --primary-hi: #FFFFFF;
-  --primary-ink: #141726;
+  --select: var(--accent);
+  --select-ink: var(--accent-ink);
+  --select-soft: var(--accent-soft);
+  --primary: #6D5AE8;
+  --primary-hi: #7C6AF2;
+  --primary-ink: #FFFFFF;
   --error-bg: #3A1F2A;
   --error-ink: #F6B6C2;
-  --notice-bg: #1E2746;
-  --notice-ink: #BCCBF7;
+  --notice-bg: #252046;
+  --notice-ink: #CBC2FA;
   --shadow-1: 0 1px 2px rgba(0, 0, 10, 0.4);
   --shadow-2: 0 10px 26px -8px rgba(0, 0, 10, 0.55);
   --shadow-3: 0 22px 50px -12px rgba(0, 0, 10, 0.65);
@@ -93,33 +93,34 @@
   --canvas-bg: #0C0E18;
   --sheet-edge: #3A3530;
   --hud-bg: rgba(24, 27, 42, 0.94);
-  --select: #D9DCEA;
-  --select-ink: #0C0E18;
-  --select-soft: #1E2233;
-  --primary: #D9DCEA;
-  --primary-hi: #FFFFFF;
-  --primary-ink: #0C0E18;
+  --select: var(--accent);
+  --select-ink: var(--accent-ink);
+  --select-soft: var(--accent-soft);
+  --primary: #6D5AE8;
+  --primary-hi: #7C6AF2;
+  --primary-ink: #FFFFFF;
   --error-bg: #3A1F2A;
   --error-ink: #F6B6C2;
-  --notice-bg: #1E2746;
-  --notice-ink: #BCCBF7;
+  --notice-bg: #252046;
+  --notice-ink: #CBC2FA;
   --shadow-1: 0 1px 2px rgba(0, 0, 10, 0.4);
   --shadow-2: 0 10px 26px -8px rgba(0, 0, 10, 0.55);
   --shadow-3: 0 22px 50px -12px rgba(0, 0, 10, 0.65);
   color-scheme: dark;
 }
 
-:root,
 :root[data-accent="blue"] { --accent: #7C7FF7; --accent-hi: #A0A3FA; --accent-ink: #FFFFFF; --accent-soft: rgba(124, 127, 247, 0.18); }
-:root[data-accent="violet"] { --accent: #8B5CF6; --accent-hi: #A07BF8; --accent-ink: #FFFFFF; --accent-soft: rgba(139, 92, 246, 0.16); }
+/* Purple is HingeLab's colour and the default (no data-accent). Dark themes take a lighter purple with dark ink. */
+:root,
+:root[data-accent="violet"] { --accent: #9D8CF9; --accent-hi: #B3A6FB; --accent-ink: #15122A; --accent-soft: rgba(157, 140, 249, 0.18); }
 :root[data-accent="teal"] { --accent: #14A39A; --accent-hi: #2BBDB3; --accent-ink: #FFFFFF; --accent-soft: rgba(20, 163, 154, 0.16); }
 :root[data-accent="orange"] { --accent: #E07A1F; --accent-hi: #F08E35; --accent-ink: #FFFFFF; --accent-soft: rgba(224, 122, 31, 0.16); }
 /* Light theme needs darker accents for 4.5:1 text contrast on white. */
 :root:not([data-theme="dark"]):not([data-theme="darker"]):not([data-accent]),
+:root:not([data-theme="dark"]):not([data-theme="darker"])[data-accent="violet"] { --accent: #5B4BDB; --accent-hi: #4B3BC6; --accent-ink: #FFFFFF; --accent-soft: rgba(91, 75, 219, 0.11); }
 :root:not([data-theme="dark"]):not([data-theme="darker"])[data-accent="blue"] { --accent: #5558E3; --accent-hi: #4447CC; --accent-soft: rgba(85, 88, 227, 0.10); }
-:root:not([data-theme="dark"]):not([data-theme="darker"])[data-accent="violet"] { --accent: #7445E0; --accent-hi: #8257EC; --accent-soft: rgba(116, 69, 224, 0.12); }
-:root:not([data-theme="dark"]):not([data-theme="darker"])[data-accent="teal"] { --accent: #0B7F78; --accent-hi: #109189; --accent-soft: rgba(11, 127, 120, 0.12); }
-:root:not([data-theme="dark"]):not([data-theme="darker"])[data-accent="orange"] { --accent: #B85D0E; --accent-hi: #C96A16; --accent-soft: rgba(184, 93, 14, 0.12); }
+:root:not([data-theme="dark"]):not([data-theme="darker"])[data-accent="teal"] { --accent: #0B7F78; --accent-hi: #0A6E68; --accent-soft: rgba(11, 127, 120, 0.12); }
+:root:not([data-theme="dark"]):not([data-theme="darker"])[data-accent="orange"] { --accent: #B85D0E; --accent-hi: #A1500B; --accent-soft: rgba(184, 93, 14, 0.12); }
 
 :root {
   --success: #1FA885;
@@ -132,16 +133,16 @@
   --teal: #14B8A6;
   --teal-ink: #0F766E;
   --teal-soft: rgba(20, 184, 166, 0.14);
-  /* Brand: indigo, soft lilac and mint, for the logo mark, hero highlights and the main call to action. */
-  --brand-1: #5B5FEF;
-  --brand-2: #8B6CF6;
-  --brand-3: #14B8A6;
+  /* Brand: purple to violet to orchid, for the logo mark, hero highlights and the main call to action. */
+  --brand-1: #5B4BDB;
+  --brand-2: #8B5CF6;
+  --brand-3: #C26BEA;
   --brand-grad: linear-gradient(135deg, var(--brand-1) 0%, var(--brand-2) 55%, var(--brand-3) 100%);
-  --brand-grad-soft: linear-gradient(135deg, rgba(91, 95, 239, 0.10), rgba(139, 108, 246, 0.08) 55%, rgba(20, 184, 166, 0.09));
-  /* The one warm call to action (peach). */
-  --cta: #EE7445;
-  --cta-hi: #F38A60;
-  --cta-ink: #FFFFFF;
+  --brand-grad-soft: linear-gradient(135deg, rgba(91, 75, 219, 0.10), rgba(139, 92, 246, 0.08) 55%, rgba(194, 107, 234, 0.08));
+  /* Calls to action share the purple (text links and buttons). */
+  --cta: var(--accent);
+  --cta-hi: var(--accent-hi);
+  --cta-ink: var(--accent-ink);
   /* A gentle lift on buttons and cards. */
   --lift: translateY(-1px);
   --glow: 0 8px 20px -8px color-mix(in srgb, var(--accent) 65%, transparent);
@@ -194,6 +195,11 @@
   --err: var(--danger);
   --sheet: var(--surface-sheet);
   --wood: #C9A36A;
+  /* Wood shades for the drawn 3D pictures (choice tiles, product cards). */
+  --wood-top: #F6E3C3;
+  --wood-face: #E3BC86;
+  --wood-side: #B98146;
+  --wood-edge: #9C6A35;
   /* Laser operations: the cut files' colours (packages/ui/src/ops.ts; a test keeps them equal). */
   --l-outline: #FF0000;
   --l-slots: #00E000;
