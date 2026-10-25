@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { localGeneratorDrafts } from "@/lib/projects/localDrafts";
+import { GENERATOR_IDS, GENERATOR_INFO } from "@/lib/generators/ids";
 import { NEW_LABEL, PRODUCT_LABEL, thumbnailURL, type ProductId } from "@/lib/projects";
 import type { ProjectSummary } from "@/lib/projects/repo";
 import { detectProject, OPEN_ACCEPT } from "@/lib/projects/file";
@@ -20,7 +22,7 @@ function ago(iso: string | null) {
 
 type Dialog = { type: "rename"; p: ProjectSummary; name: string } | { type: "delete"; p: ProjectSummary } | null;
 
-/** "My boxes": the user's cloud projects with Open / Duplicate / Rename / Delete. */
+/** Account projects and existing generator drafts, with explicit storage scope. */
 export function ProjectsHome({ projects, products, localOnly = [], limit = Infinity }: {
   projects: ProjectSummary[];
   products: ProductId[];
@@ -34,6 +36,38 @@ export function ProjectsHome({ projects, products, localOnly = [], limit = Infin
   const [error, setError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<Dialog>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const dialogOpen = dialog !== null;
+  useEffect(() => {
+    if (!dialogOpen) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const modal = modalRef.current;
+    modal?.querySelector<HTMLElement>("input, button")?.focus();
+    const key = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); setDialog(null); }
+      if (event.key !== "Tab" || !modal) return;
+      const nodes = [...modal.querySelectorAll<HTMLElement>("button:not(:disabled), input, a[href], [tabindex='0']")];
+      const first = nodes[0], last = nodes[nodes.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener("keydown", key);
+    return () => { document.removeEventListener("keydown", key); previous?.focus(); };
+  }, [dialogOpen]);
+  const [query, setQuery] = useState("");
+  const [product, setProduct] = useState("all");
+  const [storage, setStorage] = useState("all");
+  const [drafts, setDrafts] = useState<ReturnType<typeof localGeneratorDrafts>>([]);
+  useEffect(() => {
+    const read = () => setDrafts(localGeneratorDrafts((key) => localStorage.getItem(key)));
+    read();
+    window.addEventListener("storage", read);
+    window.addEventListener("focus", read);
+    return () => { window.removeEventListener("storage", read); window.removeEventListener("focus", read); };
+  }, []);
+  const matches = (name: string, kind: string) => (product === "all" || kind === product) && name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+  const visible = storage === "local" ? [] : projects.filter((p) => matches(`${p.name} ${PRODUCT_LABEL[p.product]}`, p.product));
+  const local = storage === "account" ? [] : drafts.filter((p) => matches(p.name, p.product));
 
   function act(fn: () => Promise<{ ok: true; id?: string } | { ok: false; error: string }>, open = false) {
     setError(null);
@@ -48,7 +82,7 @@ export function ProjectsHome({ projects, products, localOnly = [], limit = Infin
   return (
     <main className="boxes">
       <div className="boxes-head">
-        <h1>My boxes</h1>
+          <h1>Projects</h1>
         <div className="boxes-actions">
           <button type="button" className="btn-ghost" onClick={() => fileRef.current?.click()} disabled={pending}>Open project file…</button>
           {products.map((pr, i) => (
@@ -80,14 +114,26 @@ export function ProjectsHome({ projects, products, localOnly = [], limit = Infin
           <Link href="/app/billing">Upgrade to Pro for unlimited projects</Link>
         </p>
       )}
-      {error && <p className="auth-msg err" role="alert">{error}</p>}
-      {projects.length === 0 ? (
+        <div className="project-filters" role="search" aria-label="Find projects">
+          <label>Search<input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Project name or product" /></label>
+          <label>Product<select aria-label="Product" value={product} onChange={(e) => setProduct(e.target.value)}>
+            <option value="all">All products</option>
+            {products.map((id) => <option key={id} value={id}>{PRODUCT_LABEL[id]}</option>)}
+            {GENERATOR_IDS.map((id) => <option key={id} value={id}>{GENERATOR_INFO[id].name}</option>)}
+          </select></label>
+          <label>Saved in<select aria-label="Saved in" value={storage} onChange={(e) => setStorage(e.target.value)}><option value="all">Account and this device</option><option value="account">Account</option><option value="local">This device</option></select></label>
+          <button type="button" className="btn-ghost" onClick={() => { setQuery(""); setProduct("all"); setStorage("all"); }}>Clear filters</button>
+        </div>
+        <p className="project-count" role="status">{visible.length + local.length} results · Device drafts stay in this browser. Save a project file to keep a separate copy.</p>
+        {error && <p className="auth-msg err" role="alert">{error}</p>}
+        {visible.length + local.length === 0 ? (
         <div className="boxes-empty">
-          <p>No projects yet. Start a box, or open a project file (<code>.oclc</code>) you saved earlier.</p>
+            <p>{projects.length || drafts.length ? "No matching projects. Try another search or clear the filters." : "No projects yet. Start a design, or open a project file (.oclc) you saved earlier."}</p>
+            <Link href="/app/editor/local">Start a design</Link>
         </div>
       ) : (
         <ul className="boxes-grid">
-          {projects.map((p) => (
+            {visible.map((p) => (
             <li key={p.id} className="box-card">
               <Link href={`/app/editor/${p.id}`} className="box-thumb" aria-label={`Open ${p.name}`}>
                 {p.thumbnail_svg ? <img src={thumbnailURL(p.thumbnail_svg)} alt="" /> : <span className="box-thumb-empty">No preview yet</span>}
@@ -95,6 +141,7 @@ export function ProjectsHome({ projects, products, localOnly = [], limit = Infin
               <div className="box-meta">
                 <Link href={`/app/editor/${p.id}`} className="box-name">{p.name}</Link>
                 <span>{PRODUCT_LABEL[p.product]} · edited {ago(p.updated_at)}</span>
+                  <span className="project-storage">Account</span>
               </div>
               <div className="box-btns">
                 <Link href={`/app/editor/${p.id}`}>Open</Link>
@@ -104,13 +151,18 @@ export function ProjectsHome({ projects, products, localOnly = [], limit = Infin
               </div>
             </li>
           ))}
+            {local.map((p) => <li className="box-card" key={`local-${p.product}`}>
+              <Link href={p.href} className="box-thumb" aria-label={`Open ${p.name}`}><span className="box-thumb-empty">{GENERATOR_INFO[p.product].name}</span></Link>
+              <div className="box-meta"><Link className="box-name" href={p.href}>{p.name}</Link><span className="project-storage">This device · latest autosave</span></div>
+              <div className="box-btns"><Link href={p.href}>Continue editing</Link></div>
+            </li>)}
         </ul>
       )}
 
       {dialog && (
         <div className="modal-back" onClick={() => setDialog(null)}>
-          <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            <header>
+          <div ref={modalRef} className="modal" role="dialog" aria-modal="true" aria-labelledby="project-dialog-title" onClick={(e) => e.stopPropagation()}>
+            <header id="project-dialog-title">
               {dialog.type === "rename" ? "Rename project" : "Delete project"}
               <button type="button" aria-label="Close" onClick={() => setDialog(null)}>×</button>
             </header>
@@ -128,12 +180,14 @@ export function ProjectsHome({ projects, products, localOnly = [], limit = Infin
                   className="rename-input"
                   autoFocus
                   maxLength={200}
+                  aria-label="Project name"
+                  required
                   value={dialog.name}
                   onChange={(e) => setDialog({ ...dialog, name: e.target.value })}
                 />
                 <div className="rename-row">
                   <button type="button" className="btn-ghost" onClick={() => setDialog(null)}>Cancel</button>
-                  <button type="submit" className="btn-primary">Rename</button>
+                  <button type="submit" className="btn-primary" disabled={!dialog.name.trim()}>Rename</button>
                 </div>
               </form>
             ) : (

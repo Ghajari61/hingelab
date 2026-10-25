@@ -312,3 +312,10 @@ button.ai-lib-drop:hover:not(:disabled), .ai-lib-drop-btn:hover:not(:disabled) {
   .site-header .site-cta { gap: 8px; }
 }
 @media (max-width: 400px) { .site-header .site-logo-word { display: none; } }
+
+.project-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding: 16px 0; }
+.project-filters label { display: grid; gap: 6px; font-size: 12px; color: var(--fg-dim); flex: 1 1 170px; }
+.project-filters label:first-child { flex-grow: 2; }
+.project-filters input, .project-filters select { min-width: 0; width: 100%; min-height: 38px; padding: 8px 10px; color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+.project-count { font-size: 13px; line-height: 1.5; color: var(--fg-dim); margin: 0 0 16px; }
+.box-meta .project-storage { width: fit-content; border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; margin-block: 5px; color: var(--fg); }

@@ -6,7 +6,7 @@ import { hasPro, planOf, projectLimit } from "@/lib/plans";
 import { AppHeader } from "@/components/site/AppHeader";
 import { ProjectsHome } from "@/components/projects/ProjectsHome";
 
-export const metadata: Metadata = { title: "My boxes · HingeLab" };
+export const metadata: Metadata = { title: "Projects · HingeLab" };
 
 export default async function MyBoxesPage() {
   const session = await getUser();
