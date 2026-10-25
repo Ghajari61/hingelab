@@ -75,6 +75,7 @@ export function lettersProduct(): DProduct {
     {
       id: "box", title: "Box", help: "Depth, corners and the small pieces of a letter box.",
       fields: [
+        { kind: "choice", key: "corners", label: "Corners", help: "Keep the letter's sharp corners (the wall is split into strips that meet at each corner), or round them so one strip bends all the way round.", options: [{ v: "joint", text: "Keep", title: "Strips meet at each corner" }, { v: "round", text: "Round off", title: "One strip per outline, corners rounded" }] },
         ...nums("box"),
         { kind: "choice", key: "smallIslands", label: "Small pieces", help: "Dots and accents too small to box.", options: [{ v: "flat", text: "Cut flat", title: "Cut them as flat pieces to glue on top of the lid" }, { v: "drop", text: "Leave out" }] },
         { kind: "toggle", key: "stackIslands", label: "Stack to full height", help: "Cut each small piece enough times to glue into a stack as tall as the box." },
@@ -119,6 +120,7 @@ function lettersForm(p: LetterParams): DForm {
   for (const f of LETTER_FIELDS) if (f.show && !f.show(p)) hidden.push(keyOf(f));
   const box = p.mode === "box";
   if (!box) hidden.push("wallStyle", "lid");
+  if (!box || p.wallStyle !== "hinge") hidden.push("corners");
   if (p.smallIslands !== "flat") hidden.push("stackIslands");
   if (!p.marquee.enabled) hidden.push(...Object.values(MARQUEE_KEYS).map((k) => `marquee.${k}`));
   if (!cleanCutout(p.cutout)) hidden.push("cutout.on", "cutout.cell", "cutout.bar");

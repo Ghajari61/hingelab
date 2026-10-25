@@ -124,9 +124,15 @@ export function LettersDock({
         <p className="note">Letter spacing never separates letters that join, as in connected scripts. Thicken grows every stroke outward.</p>
       </Sec>
       {box ? (
-        <Sec step="dimensions" title="Box" meta={params.wallStyle === "hinge" ? "Living hinge" : "Flat panels"} startOpen onReset={() => onResetSection("Box", ["depth", "minCornerRadius", "facetTol", "panelMin", "wallMaxLength", "islandArea", "smallIslands", "stackIslands", "marquee", "cutout"])}>
-          <div className="grid2">{fields("box")}</div>
+        <Sec step="dimensions" title="Box" meta={params.wallStyle === "hinge" ? "Living hinge" : "Flat panels"} startOpen onReset={() => onResetSection("Box", ["depth", "corners", "minCornerRadius", "facetTol", "panelMin", "wallMaxLength", "islandArea", "smallIslands", "stackIslands", "marquee", "cutout"])}>
           {hinge && (
+            <Choice label="Corners" value={params.corners ?? "joint"} def={LETTER_DEFAULTS.corners ?? "joint"} onPick={(v) => onPatch({ corners: v }, true)} options={[
+              { v: "joint", text: "Keep", title: "Keep the letter's corners sharp: the wall is split into strips that meet at each corner" },
+              { v: "round", text: "Round off", title: "Round the corners so one strip bends all the way round each outline" },
+            ]} />
+          )}
+          <div className="grid2">{fields("box")}</div>
+          {hinge && params.corners === "round" && (
             <CheckField
               label="Corner radius follows the hinge" checked={params.minCornerRadius === "auto"} def={LETTER_DEFAULTS.minCornerRadius === "auto"}
               onChange={(on) => onPatch({ minCornerRadius: on ? "auto" : cornerRadiusOf(params) }, true)}
