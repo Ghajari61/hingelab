@@ -903,4 +903,39 @@ export const ARTICLES: HelpArticle[] = [
     ],
     related: ["parametric-method", "parametric-analysis"],
   },
+  {
+    slug: "popup-guide", product: "popup", title: "How to make a pop-up bowl, tree or lampshade",
+    summary: "Choosing the form, the ring width and what holds it open, then cutting, testing the fit and putting it together.",
+    keywords: ["collapsible bowl", "collapsible basket", "spiral bowl", "pop-up tree", "spiral lampshade", "ring width", "slotted arms", "bridges", "scroll saw"],
+    images: [
+      { src: "/presets/popup/classic-bowl.svg", alt: "A pop-up bowl on four slotted arms" },
+      { src: "/presets/popup/spiral-tree.svg", alt: "A spiral Christmas tree with a star" },
+    ],
+    blocks: [
+      { h: "Pick the form" },
+      { p: "Start from a preset close to what you want, or pick a form: Bowl drops in the middle, Tower rises to a point, Hanging drops from its centre like a shade, Sleeve rises round a jar and Tiered stand has flat levels. The side curve sets the shape between the centre and the rim; Turn over flips any of them." },
+      { h: "Choose the ring width" },
+      { list: [
+        "Keep every ring at least one and a half times as wide as the material is thick: 4.5 mm in 3 mm plywood, 9 mm in 6 mm. The Rings stat shows the narrowest one.",
+        "Fewer rings are wider and stronger; more rings give a smoother form.",
+        "Rings that follow a star or flower outline are narrowest at its inner corners; Round rings keep an even width inside any outline.",
+        "Even slopes narrows the rings where the form is steep, so a tall tower's rings overlap about as much as a shallow bowl's.",
+      ] },
+      { h: "What holds it open" },
+      { list: [
+        "Slotted arms stand under the form with a step for every ring. Each step has a tab that goes up through its ring's slot, so the form sets exactly to the curve and cannot slip. Two arms can rise above a bowl's rim as handles.",
+        "Cords hold a hanging shade or ornament: thread one through each line of holes from the centre out and knot it under each ring at the spacing shown in the stats.",
+        "The scroll-saw cut is for thick boards cut by hand: the saw table is tilted so each ring wedges on the next. The stats give the tilt; keep the drop per ring under about half the board's thickness.",
+      ] },
+      { h: "Test the fit, then cut" },
+      { list: [
+        "Cut one arm and the centre on a scrap first. The tab should push into its slot by hand and stay put; raise Slot clearance if it is tight.",
+        "Bridges keep the rings in the sheet while cutting and posting. Snap them from the back with a craft knife before lifting.",
+        "Use the Open slider in the 3D view to see the form between flat and fully open.",
+      ] },
+      { h: "Lamps" },
+      { p: "Lamp holder adds a hole for an E14 or E27 holder's ring in the centre. Use an LED bulb of 7 W or less in a wooden shade and keep it clear of the rings." },
+    ],
+    related: ["popup", "popup-tips", "view-3d", "checks-and-fixes"],
+  },
 ];
