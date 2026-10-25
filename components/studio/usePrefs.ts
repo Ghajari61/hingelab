@@ -21,6 +21,7 @@ export function usePrefs(): [Preferences, (patch: Partial<Preferences> | ((p: Pr
     const prev = loadPrefs();
     const next = typeof patch === "function" ? patch(prev) : { ...prev, ...patch };
     if (next.theme !== prev.theme) next.themeChosen = true;
+    if (next.accent !== prev.accent) next.accentChosen = true;
     savePrefs(next);
   }, []);
   return [prefs, update, ready];

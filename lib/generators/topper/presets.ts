@@ -102,4 +102,12 @@ export const TOPPER_PRESETS: GenPreset<TopperParams>[] = [
     id: "oh-baby-stroller", name: "Oh baby", note: "Baby shower topper with a pram beside the words",
     params: { name: "Oh baby topper", text: { text: "Oh Baby", fontId: "fredoka", size: 30 }, motif: { kind: "stroller", place: "left", size: 32, gap: -2 }, style: { kind: "letters" } },
   },
+  {
+    id: "anchor-ahoy", name: "Ahoy anchor", note: "Nautical baby shower topper with an anchor",
+    params: { name: "Ahoy topper", text: { text: "Ahoy!", fontId: "alfa-slab-one", size: 32 }, motif: { kind: "anchor", place: "above", size: 38, gap: -3 }, style: { kind: "letters" } },
+  },
+  {
+    id: "lotus-namaste", name: "Lotus", note: "Lotus over a flowing script word",
+    params: { name: "Lotus topper", text: { text: "Namaste", fontId: "great-vibes", size: 32 }, motif: { kind: "lotus", place: "above", size: 38, gap: -4 }, style: { kind: "letters" } },
+  },
 ];

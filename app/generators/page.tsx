@@ -33,6 +33,7 @@ export default async function GeneratorsPage({ searchParams }: { searchParams: P
       <div className="ia-grid">
         {items.map((c) => (
           <Link key={c.slug} className="ia-card" href={`/generators/${c.slug}`}>
+            {c.picture ? <span className="ia-pic"><img src={c.picture} alt="" width={300} height={200} loading="lazy" /></span> : <span className="ia-pic ia-pic-none" aria-hidden="true" />}
             <span className="ia-chip">{c.plan === "pro" ? "PRO" : "FREE PREVIEW"}{c.presetCount != null ? ` · ${c.presetCount} presets` : ""}</span>
             <b>{c.name}</b>
             <p>{c.blurb}</p>

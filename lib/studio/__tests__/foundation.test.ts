@@ -127,7 +127,10 @@ describe("preferences", () => {
   it("normalises anything into valid preferences", () => {
     expect(normalizePrefs(null)).toEqual(DEFAULT_PREFS);
     const p = normalizePrefs({ theme: "light", units: "in", accent: "pink", machineId: "nope", recentGenerators: [{ id: "tray", at: NOW }, 4] });
-    expect(p).toMatchObject({ theme: "light", units: "in", accent: "blue", machineId: DEFAULT_PREFS.machineId });
+    expect(p).toMatchObject({ theme: "light", units: "in", accent: "violet", machineId: DEFAULT_PREFS.machineId });
+    // an accent saved before accents were chosen (the old default) gives way to purple; a chosen one stays
+    expect(normalizePrefs({ accent: "blue" }).accent).toBe("violet");
+    expect(normalizePrefs({ accent: "teal", accentChosen: true }).accent).toBe("teal");
     expect(p.recentGenerators).toEqual([{ id: "tray", at: NOW }]);
     const q = noteGeneratorUse(noteGeneratorUse(p, "jigsaw", "2026-10-11"), "tray", "2026-10-12");
     expect(q.recentGenerators.map((r) => r.id)).toEqual(["tray", "jigsaw"]);

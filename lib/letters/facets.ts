@@ -54,7 +54,7 @@ export function facetContour(c: Contour, tol: number, minLen: number): Contour {
   c.forEach((p, i) => { if (segLen(c[0], p) > segLen(c[0], c[far])) far = i; });
   const A = dpIndices(c.slice(0, far + 1), tol);
   const B = dpIndices([...c.slice(far), c[0]], tol).map(i => i + far);
-  let q: Point[] = [...A, ...B.slice(1, -1)].map(i => c[i]);
+  const q: Point[] = [...A, ...B.slice(1, -1)].map(i => c[i]);
 
   const perim = q.reduce((s, p, i) => s + segLen(p, q[(i + 1) % q.length]), 0);
   const minEff = Math.min(minLen, perim / 6);
@@ -114,7 +114,7 @@ export function facetedWall(poly: Contour, o: FacetOptions): FacetResult {
   const ys = Array.from({ length: nf + 1 }, (_, k) => (hBody * k) / nf);
   const butt = (i: number, l: number) => Math.min((T / 2) * Math.tan((Math.abs(turns[i]) * Math.PI) / 360), Math.max(0, l / 2 - 1));
   if (turns.some((t, i) => !finger[i] && Math.abs(t) > SHARP_TURN)) {
-    issues.push({ lvl: "warn", msg: `“${o.letter}” (${o.contour}) has corners sharper than ${180 - SHARP_TURN}°, where flat panels leave a gap. Fill it with glue${p.wallStyle === "hinge" ? "" : ", or use living-hinge walls"}.` });
+    issues.push({ lvl: "info", msg: `“${o.letter}” (${o.contour}) has corners sharper than ${180 - SHARP_TURN}°, where flat panels leave a gap. Fill it with glue${p.wallStyle === "hinge" ? "" : ", or use living-hinge walls"}.` });
   }
 
   const parts: PanelPart[] = [];

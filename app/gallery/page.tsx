@@ -29,7 +29,7 @@ export default async function GalleryPage({ searchParams }: { searchParams: Prom
               <ul className="gal-grid">
                 {r.items.map((it) => (
                   <li key={it.id} className="gal-card">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    { }
                     <img src={thumbnailURL(it.thumbnail)} alt={`Preview of ${it.name}`} width={320} height={240} loading="lazy" />
                     <div className="gal-meta">
                       <b dir="auto">{it.name}</b>

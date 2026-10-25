@@ -15,7 +15,7 @@ export function HelpArticleView({ article, linkBase = "/help/" }: { article: Hel
         <div className={`help-figs n${Math.min(article.images.length, 3)}`}>
           {article.images.map((img) => (
             <figure key={img.src}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- static SVG figures and screenshots */}
+              { }
               <img src={img.src} alt={img.alt} loading="lazy" />
               {img.caption && <figcaption>{img.caption}</figcaption>}
             </figure>

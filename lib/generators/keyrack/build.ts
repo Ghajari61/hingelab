@@ -131,10 +131,17 @@ export function buildKeyrack(p: KeyrackParams, ctx: BuildContext): KeyrackOutput
 
   // Wall mounting.
   if (p.mount.kind !== "none") {
-    const my = (H * p.mount.y) / 100;
-    for (const mx of [W * 0.18, W * 0.82]) {
+    // Both holes at the same height so the board hangs level; on a roof, cloud or other shaped top the
+    // pair slides down (then inward) from the asked height until each hole sits wholly in the board.
+    const fits = (mx: number, my: number) => [[0, -7], [0, 10], [-6, 0], [6, 0], [-5, 7], [5, 7]].every(([dx, dy]) => inside([mx + dx, my + dy]));
+    let my = (H * p.mount.y) / 100, xs2 = [W * 0.18, W * 0.82];
+    search: for (const inset of [0, 0.05, 0.1, 0.15]) {
+      const tryXs = [W * (0.18 + inset), W * (0.82 - inset)];
+      for (let y = my; y <= H * 0.55; y += 1) if (tryXs.every((x) => fits(x, y))) { my = y; xs2 = tryXs; break search; }
+    }
+    for (const mx of xs2) {
       holes.push(p.mount.kind === "keyhole" ? keyhole(mx, my) : circle(mx, my, 2.5));
-      if (!inside([mx, my - 6]) || !inside([mx, my + 9])) outside.push("Wall-mount hole");
+      if (!fits(mx, my)) outside.push("Wall-mount hole");
     }
   }
 

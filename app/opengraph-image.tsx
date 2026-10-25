@@ -31,7 +31,7 @@ export default function OpengraphImage() {
     (
       <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", background: "#161616", padding: 60, color: "#E3E3E3" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 18, fontSize: 34, fontWeight: 700 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          { }
           <img src={LOGO} width={52} height={52} alt="" />
           HingeLab
         </div>
@@ -39,7 +39,7 @@ export default function OpengraphImage() {
           Laser-ready boxes, toppers, signs and trophies in seconds
         </div>
         <div style={{ display: "flex", marginTop: "auto" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          { }
           <img src={url} width={Math.round(imgH * ratio)} height={Math.round(imgH)} alt="" />
         </div>
       </div>

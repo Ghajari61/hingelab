@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BookmarkButton } from "@/components/site/BookmarkButton";
 import { PageShell } from "@/components/site/PageShell";
-import { catalogueBySlug, CATALOGUE } from "@/lib/generators/nav";
+import { catalogueBySlug, CATALOGUE, pictureOf } from "@/lib/generators/nav";
 import { ARTICLES } from "@/lib/help/articles";
 import "../../landing.css";
 
@@ -25,15 +25,36 @@ export default async function GeneratorLanding({ params }: { params: Promise<{ s
   const articles = faq.length ? faq : general;
   return (
     <PageShell title={item.name} lede={item.blurb}>
-      <p><Link className="btn-primary" href={item.href}>Open generator</Link></p>
-      <p><BookmarkButton slug={item.slug} /></p>
-      <p>{item.plan === "pro" ? "Pro is required to save and export this generator. Free can preview it." : "Free can preview this generator. Saving and exporting still need Pro."}</p>
-      {item.presetCount != null && <p>{item.presetCount} built-in presets.</p>}
+      <div className="gen-top">
+        <div className="gen-top-copy">
+          <div className="gen-actions">
+            <Link className="btn-primary btn-lg" href={item.href}>Open generator</Link>
+            <BookmarkButton slug={item.slug} />
+          </div>
+          <p>{item.plan === "pro" ? "Pro is required to save and export this generator. Free can preview it." : "Free can preview this generator. Saving and exporting still need Pro."}</p>
+          {item.presetCount != null && <p>{item.presetCount} built-in presets.</p>}
+        </div>
+        {item.picture && (
+          <p className="gen-hero">
+            <img src={item.picture} alt={`${item.name}: a ready-made design`} width={600} height={400} />
+          </p>
+        )}
+      </div>
       {item.presets.length > 0 && (
         <>
           <h2>Presets</h2>
-          <ul>
-            {item.presets.map((p) => <li key={p.id}><Link href={p.href}>{p.name}</Link></li>)}
+          <ul className="ia-grid gen-presets">
+            {item.presets.map((p) => {
+              const pic = pictureOf(p.href);
+              return (
+                <li key={p.id}>
+                  <Link className="ia-card" href={p.href}>
+                    {pic ? <span className="ia-pic"><img src={pic} alt="" width={300} height={200} loading="lazy" /></span> : <span className="ia-pic ia-pic-none" aria-hidden="true" />}
+                    <b>{p.name}</b>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </>
       )}

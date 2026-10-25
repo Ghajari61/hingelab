@@ -14,6 +14,7 @@ export const MOTIF_IDS = [
   "lantern", "mosque", "cap", "feet", "stroller", "paw", "tree",
   "snowflake", "laurel", "flame", "cup", "gift", "cake", "cupcake", "flower", "butterfly", "note", "bell",
   "key", "house", "sun", "cloud", "infinity", "leaf", "gem",
+  "mandala", "girih", "compass", "treeoflife", "triquetra", "lotus", "olive", "anchor", "mountains", "fleur", "dreamcatcher", "paisley",
 ] as const;
 export type MotifId = (typeof MOTIF_IDS)[number];
 
@@ -25,6 +26,8 @@ export const MOTIF_NAMES: Record<MotifId, string> = {
   tree: "Christmas tree", snowflake: "Snowflake", laurel: "Laurel wreath", flame: "Flame", cup: "Trophy cup",
   gift: "Gift", cake: "Cake", cupcake: "Cupcake", flower: "Flower", butterfly: "Butterfly", note: "Music note",
   bell: "Bell", key: "Key", house: "House", sun: "Sun", cloud: "Cloud", infinity: "Infinity", leaf: "Leaf", gem: "Diamond",
+  mandala: "Mandala", girih: "Girih star", compass: "Compass rose", treeoflife: "Tree of life", triquetra: "Celtic knot", lotus: "Lotus",
+  olive: "Olive branch", anchor: "Anchor", mountains: "Mountains", fleur: "Fleur-de-lis", dreamcatcher: "Dreamcatcher", paisley: "Paisley",
 };
 
 export const isMotifId = (v: unknown): v is MotifId => typeof v === "string" && (MOTIF_IDS as readonly string[]).includes(v);
@@ -75,6 +78,35 @@ function cubic(p0: Pt, p1: Pt, p2: Pt, p3: Pt, n = 20): Contour {
     out.push([u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0], u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]]);
   }
   return out;
+}
+
+
+/** A petal pointing outward at angle `deg`, its base `r0` from the centre. */
+const petal = (r0: number, deg: number, L: number, W: number) => at(leaf(L, W), r0 * Math.cos((deg * Math.PI) / 180), r0 * Math.sin((deg * Math.PI) / 180), deg);
+/** A ring of width w at radius r (outer and inner circles, for a Piece's add and sub). */
+const ringOf = (r: number, w: number, cx = 0, cy = 0): Piece => ({ add: [circle(cx, cy, r + w / 2)], sub: [circle(cx, cy, r - w / 2)] });
+/** The contour scaled by s about (cx, cy). */
+const scaleAbout = (c: Contour, s: number, cx: number, cy: number) => transform(c, { x: cx * (1 - s), y: cy * (1 - s), sx: s, sy: s });
+/** A closed curve from a start point and cubic segments [c1, c2, end]. */
+function curve(start: Pt, segs: [Pt, Pt, Pt][]): Contour {
+  const out: Contour = [start];
+  let p = start;
+  for (const [c1, c2, e] of segs) { out.push(...cubic(p, c1, c2, e)); p = e; }
+  return out;
+}
+/** The parts of circle i that lie inside at least one of the other circles, as polylines. */
+function knotArcs(cs: { x: number; y: number; r: number }[], i: number, n = 240): Pt[][] {
+  const c = cs[i], runs: Pt[][] = [];
+  let cur: Pt[] = [];
+  const inside = (q: Pt) => cs.some((o, j) => j !== i && Math.hypot(q[0] - o.x, q[1] - o.y) < o.r);
+  let start = 0;
+  for (let k = 0; k < n; k++) { const a = (TAU * k) / n; if (!inside([c.x + c.r * Math.cos(a), c.y + c.r * Math.sin(a)])) { start = k; break; } }
+  for (let k = 0; k <= n; k++) {
+    const a = (TAU * (start + k)) / n, q: Pt = [c.x + c.r * Math.cos(a), c.y + c.r * Math.sin(a)];
+    if (inside(q)) cur.push(q); else if (cur.length) { runs.push(cur); cur = []; }
+  }
+  if (cur.length) runs.push(cur);
+  return runs;
 }
 
 const heart = (x: number, y: number, s: number) => transform(heartCurve(), { x, y, sx: s, sy: s });
@@ -224,6 +256,124 @@ const BUILD: Record<MotifId, () => Piece[]> = {
   },
   leaf: () => [{ add: [at(leaf(96, 44), -34, 34, -45), stadium(-34, 34, -46, 46, 4)], sub: [stadium(-20, 20, 16, -16, 2)] }],
   gem: () => [{ add: [poly([[-30, -22], [30, -22], [46, -6], [0, 40], [-46, -6]])], sub: [poly([[-10, -16], [10, -16], [16, -8], [0, 24], [-16, -8]])] }],
+  mandala: () => {
+    const inner: Contour[] = [], holes: Contour[] = [], outer: Contour[] = [];
+    for (let k = 0; k < 8; k++) { inner.push(petal(8, k * 45, 24, 13)); holes.push(petal(13, k * 45, 13, 4.6)); }
+    for (let k = 0; k < 16; k++) outer.push(petal(27, k * 22.5 + 11.25, 19, 8.5));
+    return [
+      { add: [circle(0, 0, 10), ...inner], sub: [circle(0, 0, 4), ...holes] },
+      ringOf(29, 3), ringOf(45.5, 3.4), { add: outer },
+    ];
+  },
+  girih: () => {
+    const turn = (c: Contour) => transform(c, { rot: 22.5 });
+    const spokes: Contour[] = [];
+    for (let k = 0; k < 8; k++) { const a = (k * TAU) / 8 - Math.PI / 2; spokes.push(stadium(6 * Math.cos(a), 6 * Math.sin(a), 44 * Math.cos(a), 44 * Math.sin(a), 2.6)); }
+    return [
+      { add: [starPolygon(8, 50, 0.62)], sub: [starPolygon(8, 42, 0.62)] },
+      { add: [turn(starPolygon(8, 33, 0.6))], sub: [turn(starPolygon(8, 27, 0.6))] },
+      ringOf(13, 3), { add: [circle(0, 0, 5)] }, { add: spokes },
+    ];
+  },
+  compass: () => {
+    const pts: Contour[] = [], shade: Contour[] = [];
+    for (let k = 0; k < 4; k++) {
+      const r = (c: Contour) => transform(c, { rot: 90 * k });
+      pts.push(r(poly([[0, -50], [9, -9], [0, 0], [-9, -9]])));
+      shade.push(r(poly([[-1.4, -41], [-1.4, -8], [-7, -9.6]])));
+      pts.push(transform(poly([[0, -32], [6, -6], [0, 0], [-6, -6]]), { rot: 90 * k + 45 }));
+    }
+    return [{ add: pts, sub: shade }, ringOf(31, 3), { add: [circle(0, 0, 6.5)], sub: [circle(0, 0, 2.6)] }];
+  },
+  treeoflife: () => {
+    const twigs: Pt[][] = [
+      [[0, 6], [-10, -6], [-24, -14], [-36, -22]], [[0, 6], [-6, -12], [-12, -28], [-16, -40]], [[0, 6], [0, -22], [0, -43]],
+      [[-10, -6], [-22, 0], [-38, 0]], [[-6, -12], [-24, -26], [-30, -34]],
+    ];
+    const all = [...twigs, ...twigs.map((t) => t.map(([x, y]) => [-x, y] as Pt))];
+    const leaves: Contour[] = [];
+    for (const t of all) for (const [i, q] of t.entries()) if (i > 0) leaves.push(circle(q[0], q[1], i === t.length - 1 ? 5.4 : 4));
+    const roots: Pt[][] = [[[0, 38], [-12, 42], [-26, 46]], [[0, 38], [-6, 44], [-12, 50]], [[0, 38], [-18, 36], [-36, 36]]];
+    return [
+      ringOf(47, 4),
+      { add: [poly([[-7, 42], [7, 42], [4, 4], [-4, 4]]), ...all.flatMap((t) => band(t, 3.2)), ...leaves, ...roots.flatMap((r) => [...band(r, 3), ...band(r.map(([x, y]) => [-x, y] as Pt), 3)])] },
+    ];
+  },
+  triquetra: () => {
+    const R = 36, d = R / Math.sqrt(3);
+    // one loop points up, the others down-left and down-right
+    const cs = [0, 1, 2].map((k) => { const a = Math.PI / 2 + (k * TAU) / 3; return { x: d * Math.cos(a), y: d * Math.sin(a), r: R }; });
+    const lines = cs.flatMap((_, i) => knotArcs(cs, i));
+    return [{ add: lines.flatMap((l) => band(l, 5)) }, ringOf(14, 3.2)];
+  },
+  lotus: () => {
+    const base: Pt = [0, 26];
+    const pet = (deg: number, L: number, W: number) => at(leaf(L, W), base[0], base[1], -90 + deg);
+    const add = [pet(0, 62, 26), pet(-30, 52, 22), pet(30, 52, 22), pet(-62, 42, 18), pet(62, 42, 18)];
+    const sub = [at(leaf(34, 8), 0, 18, -90), at(leaf(28, 6.5), -4, 20, -120), at(leaf(28, 6.5), 4, 20, -60)];
+    return [{ add, sub }, { add: [roundedRect(-44, 28, 88, 6, 3), roundedRect(-30, 37, 60, 5, 2.5), roundedRect(-16, 45, 32, 4, 2), rect(-2, 20, 4, 28)] }];
+  },
+  olive: () => {
+    const stem: Pt[] = [[-44, 44], ...cubic([-44, 44], [-20, 20], [0, 0], [36, -44])];
+    const leaves: Contour[] = [], fruit: Contour[] = [];
+    for (let k = 2; k < stem.length - 1; k += 3) {
+      const [x, y] = stem[k], [x2, y2] = stem[k + 1], dir = (Math.atan2(y2 - y, x2 - x) * 180) / Math.PI;
+      leaves.push(at(leaf(24, 8), x, y, dir - 42), at(leaf(24, 8), x, y, dir + 42));
+      if (k % 6 === 2) fruit.push(at(ellipse(0, 0, 5, 6.5), x + 10, y + 6, 20));
+    }
+    return [{ add: [...band(stem, 3.4), ...leaves, ...fruit, at(leaf(20, 7), 36, -44, -50)] }];
+  },
+  anchor: () => [
+    { add: [circle(0, -42, 8.5)], sub: [circle(0, -42, 4.2)] },
+    {
+      add: [rect(-4, -34, 8, 72), roundedRect(-24, -26, 48, 7, 3.5), ...band(arc(0, 6, 34, 0.12 * Math.PI, 0.88 * Math.PI), 7),
+        poly([[25, 15], [44, 2], [37, 24]]), poly([[-25, 15], [-44, 2], [-37, 24]]), poly([[-7, 36], [7, 36], [0, 48]])],
+    },
+  ],
+  mountains: () => {
+    const g0 = Math.asin(20 / 45);
+    const ground: Contour = [[-40.4, 20], ...arc(0, 0, 45.5, Math.PI - g0, g0).reverse(), [40.4, 20]];
+    const range = poly([[-41, 22], [-41, 12], [-20, -16], [-8, 0], [8, -32], [26, -6], [41, 12], [41, 22]]);
+    const pine = (x: number, y: number, s: number) => poly([[x, y - 13 * s], [x + 5 * s, y - 5 * s], [x + 3 * s, y - 5 * s], [x + 7 * s, y + 2 * s], [x + 1.2 * s, y + 2 * s], [x + 1.2 * s, y + 6 * s], [x - 1.2 * s, y + 6 * s], [x - 1.2 * s, y + 2 * s], [x - 7 * s, y + 2 * s], [x - 3 * s, y - 5 * s], [x - 5 * s, y - 5 * s]]);
+    const snow = [poly([[8, -32], [14.5, -22], [11, -24], [8, -20], [5, -24], [2, -22]]), poly([[-20, -16], [-15.5, -9], [-18, -10.5], [-20, -8], [-22, -10.5], [-24.5, -9]])];
+    const river = band([[4, 22], [-4, 28], [6, 34], [-2, 42]], 3);
+    return [ringOf(46, 4), { add: [ground, range], sub: [...snow, pine(-29, 30, 0.95), pine(-17, 34, 0.75), pine(26, 26, 1.1), pine(18, 32, 0.75), ...river] }, { add: [circle(-28.5, -26.5, 8)] }];
+  },
+  fleur: () => {
+    const centre = curve([0, -50], [[[16, -32], [13, -6], [0, 8]], [[-13, -6], [-16, -32], [0, -50]]]);
+    const side = curve([4, 2], [[[10, -24], [34, -36], [42, -14]], [[44, -5], [37, 2], [30, -1]], [[26, -11], [18, -6], [8, 12]]]);
+    const foot = curve([4, 16], [[[20, 18], [27, 30], [22, 42]], [[18, 35], [12, 27], [3, 22]]]);
+    const drop = curve([0, 13], [[[7, 25], [7, 35], [0, 44]], [[-7, 35], [-7, 25], [0, 13]]]);
+    return [{
+      add: [centre, side, mirror(side), roundedRect(-28, 7, 56, 9, 3), foot, mirror(foot), drop],
+      sub: [scaleAbout(centre, 0.42, 0, -22), circle(0, 11.5, 2.2), circle(-14, 11.5, 2), circle(14, 11.5, 2)],
+    }];
+  },
+  dreamcatcher: () => {
+    const cy = -18, R = 30, n = 7, web: Pt[] = [];
+    for (let k = 0; k < n; k++) { const a = -Math.PI / 2 + (k * TAU) / n; web.push([R * 0.94 * Math.cos(a), cy + R * 0.94 * Math.sin(a)]); }
+    const strands: Contour[] = [];
+    for (let k = 0; k < n; k++) strands.push(...band([web[k], web[(k + 3) % n]], 2.2));
+    const feather = (x: number, top: number, L: number) => ({
+      add: [...band([[x, cy + Math.sqrt(R * R - x * x) - 1.5], [x, top]], 2.2), at(leaf(L, L * 0.38), x, top, 90), circle(x, top - 2, 2.8)],
+      sub: [stadium(x - 3.6, top + L * 0.35, x - 1.2, top + L * 0.48, 1.3), stadium(x + 3.6, top + L * 0.55, x + 1.2, top + L * 0.68, 1.3)],
+    });
+    return [ringOf(R, 4, 0, cy), { add: strands }, feather(-18, cy + R + 8, 26), feather(0, cy + R + 14, 30), feather(18, cy + R + 8, 26)];
+  },
+  paisley: () => {
+    const outer = curve([0, 42], [[[-36, 42], [-42, 2], [-22, -22]], [[-8, -40], [14, -48], [27, -40]], [[36, -35], [32, -24], [23, -27]], [[30, -8], [38, 22], [0, 42]]]);
+    const cx = -4, cy = 6;
+    // bridges between the outer and inner bands, and a stem from the inner band to the core, so the motif cuts as one piece
+    const dots: Contour[] = [];
+    const o = scaleAbout(outer, 0.9, cx, cy), q = scaleAbout(outer, 0.72, cx, cy);
+    for (let k = 4; k < o.length; k += 9) dots.push(stadium(o[k][0], o[k][1], q[k][0], q[k][1], 3));
+    return [
+      { add: [outer], sub: [scaleAbout(outer, 0.88, cx, cy)] },
+      { add: [scaleAbout(outer, 0.74, cx, cy)], sub: [scaleAbout(outer, 0.6, cx, cy)] },
+      { add: dots },
+      { add: [scaleAbout(outer, 0.34, cx, cy + 6), stadium(cx, cy + 12, cx, cy + 30, 3)], sub: [circle(cx - 1, cy + 10, 2.4)] },
+    ];
+  },
 };
 
 function solve(pieces: Piece[]): Contour[] {

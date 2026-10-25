@@ -118,7 +118,7 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
     help: "The geometric pattern cut through the layers: it grows from the back layer to the front one.",
     fields: [
       {
-        kind: "choice", key: "design.pattern", label: "Pattern", rail: true, shuffle: true,
+        kind: "choice", key: "design.pattern", label: "Design", rail: true, shuffle: true,
         help: "Tunnel nests one shape; Mandala rings it with petals and dots; Sunburst cuts rays; Scene cuts layered ridges of hills, peaks, waves, a forest, clouds or a city; Lattice cuts a grid of holes; Flow cuts wavy stripes; Your picture turns a photo, drawing, SVG or sample shape into layers.",
         options: opts(PATTERNS, PATTERN_NAMES),
         apply: (p, v) => withDesign(p, { pattern: v as Pattern, ...PATTERN_START[v as Pattern] }),
@@ -251,7 +251,7 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
       { kind: "number", key: "design.min", label: "Back cut-out", unit: "%", min: 0, max: 150, step: 1, shuffle: [15, 35], show: exceptPicture("scale"), help: "Size of the cut-out on the back pattern layer, as a share of the window." },
       { kind: "number", key: "design.max", label: "Front cut-out", unit: "%", min: 5, max: 200, step: 1, shuffle: [85, 115], show: exceptPicture("scale"), help: "Size of the cut-out on the front layer. Over 100% leaves only the corners of the window." },
       { kind: "number", key: "design.twist", label: "Twist", unit: "deg", min: -45, max: 45, step: 0.5, shuffle: [-8, 8], show: exceptPicture("scale"), help: "Turns each layer's pattern a little more than the one behind it: a spiral." },
-      { kind: "number", key: "design.rotate", label: "Turn", unit: "deg", min: -180, max: 180, step: 1, shuffle: [-30, 30], help: "Turns the whole pattern." },
+      { kind: "number", key: "design.rotate", label: "Turn design", unit: "deg", min: -180, max: 180, step: 1, shuffle: [-30, 30], help: "Turns the whole design." },
       { kind: "number", key: "design.shiftX", label: "Vanishing point X", unit: "%", min: -90, max: 90, step: 1, shuffle: [-40, 40], show: (p) => !isPat(p, "landscape", "flow") && exceptPicture("scale")(p), help: "Moves the back cut-outs left or right, so the tunnel runs off at an angle." },
       { kind: "number", key: "design.shiftY", label: "Vanishing point Y", unit: "%", min: -90, max: 90, step: 1, shuffle: [-40, 40], show: (p) => !isPat(p, "landscape", "flow") && exceptPicture("scale")(p), help: "Moves the back cut-outs up or down." },
       { kind: "toggle", key: "design.stretch", label: "Stretch to the window", show: shaped, help: "Cut-outs stretch to the window's width and height instead of keeping their shape." },

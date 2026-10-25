@@ -158,4 +158,25 @@ export const SIGN_PRESETS: GenPreset<SignParams>[] = [
       mount: { kind: "standoff", hole: 4 },
     },
   },
+  {
+    id: "mandala-welcome", name: "Mandala welcome", note: "Cinzel capitals under a detailed mandala, engraved frame",
+    params: {
+      name: "Mandala welcome", board: { shape: "arch", auto: true, pad: 20, corner: 10 }, text: { text: "WELCOME", fontId: "cinzel", size: 30, spacing: 3 },
+      motif: { kind: "mandala", side: "above", size: 70, gap: 8 }, border: { kind: "engrave", inset: 7, width: 2 }, mount: { kind: "hanging", hole: 5 },
+    },
+  },
+  {
+    id: "lake-house", name: "Lake house", note: "Mountain scene beside a serif family name, on a cord",
+    params: {
+      name: "Lake house sign", board: { shape: "rounded", auto: true, pad: 18, corner: 12 }, text: { text: "The Millers\nLake House", fontId: "playfair-display", size: 30, lead: 1.15 },
+      motif: { kind: "mountains", side: "left", size: 64, gap: 10 }, border: { kind: "engrave", inset: 6, width: 2 }, mount: { kind: "hanging", hole: 5 },
+    },
+  },
+  {
+    id: "paisley-home", name: "Paisley home", note: "Script greeting with paisley motifs either side",
+    params: {
+      name: "Paisley home sign", board: { shape: "rounded", auto: true, pad: 18, corner: 10 }, text: { text: "Home Sweet Home", fontId: "great-vibes", size: 38 },
+      motif: { kind: "paisley", side: "both", size: 44, gap: 8 }, border: { kind: "engrave", inset: 6, width: 2 }, mount: { kind: "hanging", hole: 5 },
+    },
+  },
 ];

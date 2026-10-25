@@ -50,12 +50,14 @@ export interface CatalogueEntry {
   /** Help articles use this product id. */
   helpProduct: string;
   process: CatalogueProcess;
+  /** A preset picture under public/presets (the 3D-shaded drawing), or null. */
+  picture: string | null;
 }
 
 const editor = (product: string, preset?: string) =>
   `/app/editor/local?p=${product}${preset ? `&preset=${encodeURIComponent(preset)}` : ""}`;
 
-function fromGenerator(id: GeneratorId, process: CatalogueProcess, category: string): CatalogueEntry {
+function fromGenerator(id: GeneratorId, process: CatalogueProcess, category: string): Omit<CatalogueEntry, "picture"> {
   const info = GENERATOR_INFO[id];
   const lazy = START_LAZY[id];
   const list = START_PRESETS[id] ?? [];
@@ -66,7 +68,7 @@ function fromGenerator(id: GeneratorId, process: CatalogueProcess, category: str
         { id: "mountain-range", name: "Mountain range" },
       ]
     : [];
-  const presets = (list.length ? list.slice(0, 3).map((p) => ({ id: p.id, name: p.name })) : featured)
+  const presets = (list.length ? list.slice(0, 6).map((p) => ({ id: p.id, name: p.name })) : featured)
     .map((p) => ({ ...p, href: editor(id, p.id) }));
   return {
     slug: id,
@@ -84,7 +86,7 @@ function fromGenerator(id: GeneratorId, process: CatalogueProcess, category: str
 
 const CATALOGUE_BY_ID = new Map(GENERATORS.map((g) => [g.id, g]));
 
-function fromCatalog(id: string, product: string, helpProduct: string, process: CatalogueProcess): CatalogueEntry {
+function fromCatalog(id: string, product: string, helpProduct: string, process: CatalogueProcess): Omit<CatalogueEntry, "picture"> {
   const g = CATALOGUE_BY_ID.get(id);
   return {
     slug: id,
@@ -100,8 +102,18 @@ function fromCatalog(id: string, product: string, helpProduct: string, process: 
   };
 }
 
-/** Every public generator card. Alias cards open an existing editor and preset. */
-export const CATALOGUE: CatalogueEntry[] = [
+const CORE_PICTURE: Record<string, string> = { hinge: "gift-box", letters: "hello-sign", parametric: "head-stack" };
+
+/** The picture of the preset a card opens: its own preset, else the product's featured or first one. */
+export function pictureOf(href: string, cover?: string): string | null {
+  const u = new URL(href, "https://hingelab.local");
+  const product = u.searchParams.get("p");
+  if (!product) return null;
+  const id = u.searchParams.get("preset") ?? cover ?? CORE_PICTURE[product] ?? START_LAZY[product as GeneratorId]?.cover ?? START_PRESETS[product as GeneratorId]?.[0]?.id;
+  return id ? `/presets/${product}/${id}.svg` : null;
+}
+
+const ENTRIES: Omit<CatalogueEntry, "picture">[] = [
   fromCatalog("hinge-box", "hinge", "hinge", "laser"),
   fromCatalog("letters", "letters", "letters", "laser"),
   fromCatalog("parametric", "parametric", "parametric", "laser"),
@@ -245,9 +257,12 @@ export const CATALOGUE: CatalogueEntry[] = [
   },
 ];
 
+/** Every public generator card. Alias cards open an existing editor and preset. */
+export const CATALOGUE: CatalogueEntry[] = ENTRIES.map((e) => ({ ...e, picture: e.slug === "photo-layers" || e.slug === "engrave-prep" ? null : pictureOf(e.href) }));
+
 export const catalogueBySlug = (slug: string) => CATALOGUE.find((c) => c.slug === slug);
 
-export const COLLECTIONS: { slug: string; name: string; blurb: string; href: string }[] = [
+const COLLECTION_ENTRIES: { slug: string; name: string; blurb: string; href: string }[] = [
   { slug: "birthday", name: "Birthday", blurb: "Cake toppers and number signs.", href: editor("topper", "happy-birthday") },
   { slug: "wedding", name: "Wedding", blurb: "Names, table numbers and a heart tunnel.", href: editor("topper", "mr-mrs") },
   { slug: "eid", name: "Eid and Ramadan", blurb: "Greeting toppers and layered art.", href: editor("topper", "eid-mubarak") },
@@ -255,6 +270,10 @@ export const COLLECTIONS: { slug: string; name: string; blurb: string; href: str
   { slug: "halloween", name: "Halloween", blurb: "Layered scenes in the Shadow Box.", href: editor("shadowbox", "rabbit-hole") },
   { slug: "baby", name: "Baby", blurb: "Shower toppers.", href: editor("topper", "baby-shower") },
 ];
+
+/** Seasonal starting points, each with the picture of the preset it opens. */
+export const COLLECTIONS: { slug: string; name: string; blurb: string; href: string; picture: string | null }[] =
+  COLLECTION_ENTRIES.map((c) => ({ ...c, picture: pictureOf(c.href) }));
 
 export const GRAPHICS: { id: string; name: string; src: string }[] = [
   { id: "star-tunnel", name: "Star tunnel", src: "/presets/shadowbox/star-tunnel.svg" },

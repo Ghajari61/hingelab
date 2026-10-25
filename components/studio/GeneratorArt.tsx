@@ -5,7 +5,28 @@
 const slits = (x0: number, y0: number, n: number, dx: number, h: number, cls = "") =>
   Array.from({ length: n }, (_, i) => <line key={i} className={cls} x1={x0 + i * dx} y1={y0 + (i % 2 ? 6 : 0)} x2={x0 + i * dx} y2={y0 + h - (i % 2 ? 0 : 6)} />);
 
+/** The 3D-shaded picture of a ready-made design for each generator; the blank canvas keeps its line drawing. */
+const PICTURE: Record<string, string> = {
+  popup: "/presets/popup/nut-snack-bowl.svg",
+  "hinge-box": "/presets/hinge/gift-box.svg",
+  "hinged-cover": "/templates/thumbs/hinge-notebook-cover.svg",
+  letters: "/presets/letters/hello-sign.svg",
+  parametric: "/presets/parametric/head-stack.svg",
+  "finger-box": "/presets/boxes/small-box.svg",
+  tray: "/presets/boxes/organiser.svg",
+  "hinge-fill": "/templates/thumbs/hinge-bracelet.svg",
+  lamp: "/presets/boxes/honeycomb-lantern.svg",
+  jigsaw: "/presets/puzzle/kids-12.svg",
+  calibration: "/presets/calibration/plywood-3.svg",
+  "shadow-box": "/presets/shadowbox/star-tunnel.svg",
+  "paper-box": "/presets/paperbox/jewelry-6x6x3.svg",
+};
+
+export const generatorPicture = (id: string): string | undefined => PICTURE[id];
+
 export function GeneratorArt({ id }: { id: string }) {
+  const pic = PICTURE[id];
+  if (pic) return <img className={`gen-pic gen-${id}`} src={pic} alt="" aria-hidden="true" loading="lazy" decoding="async" width={300} height={200} />;
   return (
     <svg className={`gen-art gen-${id}`} viewBox="0 0 160 96" aria-hidden="true">
       {ART[id] ?? ART.blank}

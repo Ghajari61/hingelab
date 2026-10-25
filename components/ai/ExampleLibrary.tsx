@@ -125,13 +125,13 @@ export function ExampleLibrary() {
       <form className="ai-lib-form" onSubmit={add}>
         <div className="ai-lib-files">
           <button type="button" className={`ai-lib-drop${svg ? " has" : ""}`} onClick={() => svgRef.current?.click()} disabled={busy}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            { }
             {svg ? <img src={svg.url} alt={`Cut file ${svg.name}`} /> : <><FileUp size={22} aria-hidden /><b>Cut file (SVG or DXF)</b><span>Real size in mm, text as paths. Red cuts, blue scores, black fills engrave.</span></>}
           </button>
           <input ref={svgRef} type="file" accept=".svg,.dxf,image/svg+xml" hidden onChange={(e) => { void pickSvg(e.target.files?.[0]); e.target.value = ""; }} />
           <div className={`ai-lib-drop${photo ? " has" : ""}`}>
             <button type="button" className="ai-lib-drop-btn" onClick={() => photoRef.current?.click()} disabled={busy}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+              { }
               {photo ? <img src={photo} alt="Photo of the finished product" /> : <><ImagePlus size={22} aria-hidden /><b>Photo of the product</b><span>Optional, but it helps a lot: the finished piece on a plain background.</span></>}
             </button>
             {photo && <button type="button" className="ai-icon-btn" aria-label="Remove photo" title="Remove photo" onClick={() => setPhoto(null)} disabled={busy}><X size={16} aria-hidden /></button>}
@@ -174,9 +174,9 @@ export function ExampleLibrary() {
             {found.slice(0, shown).map((x) => (
               <li key={x.id}>
                 <div className="ai-lib-pics">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  { }
                   <img src={`/api/ai/examples/${x.id}/render`} alt={`Cut file of ${x.title}`} loading="lazy" />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  { }
                   {x.hasPhoto && <img src={`/api/ai/examples/${x.id}/photo`} alt={`Photo of ${x.title}`} loading="lazy" />}
                 </div>
                 <b dir="auto">{x.title}</b>
