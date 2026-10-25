@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.6.0",
-    "pub_date": "2026-10-25T20:56:01.803Z",
-    "notes": "Latest GitHub UI redesign and whole-app updates: purple accents, warm neutrals, 3D card pictures, detailed motifs, cleaned presets and fixes.",
+    "version": "1.7.0",
+    "pub_date": "2026-10-25T21:47:10.029Z",
+    "notes": "Latest GitHub changes: free SVG tools, STL export, seasonal designs and collection pages.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.6.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnZTZGVCTnRzQ0FVbEVpRFNzbWdxUnNWb2owbkh2WjNCVFdwd0NQZVgyb2s1aHpVUDRHQWN0VnluY3k5Mmc4Q0JZNUMyeFRrN2ZNb3EwVnhNZmxXZGdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTYxNzQ3CWZpbGU6SGluZ2VMYWJfMS42LjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuNi4wCmlqMUIwd0tzTXc3b3AvYVhBd3ZsOXdyK3NRNXUrb1R2L1pUZlY1MStLNGVSd0FQaHljZmNjM0pVbzJkaTFuOFJQY2kwVDl4UjBiaVcxQmZGZ3hDdUNRPT0K",
-        "size": 11042709,
-        "sha256": "87d92752ec5de9e52c3881813375e730c31287416bf91d7ad99a4a934f7f7f8b"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.7.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnVMODJ1bkNCNUgwNE94R1A4clBRVllyb2pxTFNRR2FPSDhHS0ZYcHlHeGxBRFhDb2hFanB0VmN4WHh4akdMeEJJak90dzZNa2pXT2VsUFFqUjlPZ2dVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTY0ODAxCWZpbGU6SGluZ2VMYWJfMS43LjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuNy4wCkIySnFoa2g0VXFJaXRzeDlYdUhkT1NhY0RFL3pJRHFkMVJ2aTVSODZQdExKV05ZWXF4UC82SktOb0VRU0hpUGZjN3FpdDNzZ1RBOURIT0RPREJuQ0NRPT0K",
+        "size": 11053868,
+        "sha256": "64d8c4abb7ef9c37186e764e1b1117a32c4a122c4f8e2d849d2324c50f00f619"
       }
     }
   }

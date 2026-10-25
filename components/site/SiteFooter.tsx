@@ -11,6 +11,7 @@ export function SiteFooter() {
       <nav aria-label="Product">
         <Link href="/generators">Generators</Link>
         <Link href="/templates">Templates</Link>
+        <Link href="/tools">Free tools</Link>
         <Link href="/help">Guides</Link>
         <a href="/#pricing">Pricing</a>
       </nav>

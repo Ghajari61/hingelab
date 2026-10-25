@@ -1595,3 +1595,14 @@ The owner asked for the engineering to be checked from the start, every part tes
 - **Updates.** In-range updates only; billing and sign-in libraries (Stripe, Supabase) are left as they are. undici is pinned to 7.30.1 through `overrides` for its advisories.
 - **Rail pictures** were regenerated: groups added since the last run (pattern and motif rails) now have pictures.
 
+## D202. Growth features from a competitor review
+
+The owner pointed at Vector Painter's laser apps page and asked for everything worthwhile from it, deciding without questions. What it does well is marketing: small free tools with their own search pages, seasonal generators, 3D print output. HingeLab's engineering is already ahead, so these are the additions:
+
+- **Free tools** (`/tools`, `lib/tools`, `components/site/FreeTool.tsx`): thickness resizer (scales the `<svg>` size by new ÷ old and leaves paths untouched; a viewBox alone counts as millimetres), laser to STL (`lib/export/stl.ts`), and nesting for any SVG (`lib/tools/nestSvg.ts`: a part is an even-odd region of closed cut loops, red or green layers in HingeLab files or every stroked layer otherwise; other lines go with the part their first point is in; uses the existing raster nester). All on the device, 8 MB limit, no account. Unlike the competitor, downloads do not ask for an email: "no account needed" stays a HingeLab promise.
+- **STL** in the export dialog for every editor, at the design's thickness or one typed in. Cut loops only: score lines, hinge slits and engraving are left out. Binary STL, y flipped so the print reads correctly, faces outward (a test checks the enclosed volume).
+- **Seasonal.** Four ornament presets (three signs, one Boxes bird house) and `lib/site/collections.ts`: collections gather presets from every generator by words in their id or name plus a listed few. Pages at `/collections/<slug>`; the home page features Christmas from October and Valentine's Day in January and February (decided when the page is built).
+- **Search.** A full sitemap and SoftwareApplication structured data on generator and tool pages.
+- **Small touches.** Box volume in the Boxes summary; a measure-and-test reminder in the export dialog.
+- **Not done.** A trial of Pro or a "buy designs, get Pro" offer: those are pricing changes for the owner to decide.
+

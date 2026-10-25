@@ -26,6 +26,15 @@ export interface ExportResult {
 /** The user's own laser settings for the LightBurn file, and the material they belong to. */
 export interface LaserFromMaterial { name: string; laser: Partial<Record<LaserOp, LaserSetting>> }
 
+/** The STL file (3D print) of an exported SVG, loaded only when asked for so the triangulation stays out of the editors. */
+export async function makeSTLExport(svg: string, s: ExportSettings, base: string, thickness?: number): Promise<ExportResult> {
+  const { loopsToSTL, cutLoops } = await import("./stl");
+  const T = s.stlT ?? thickness ?? 3;
+  const r = loopsToSTL(cutLoops(readScene(svg)), T);
+  const note = `${r.pieces} solid piece${r.pieces === 1 ? "" : "s"}, ${Math.round(T * 100) / 100} mm thick. Open the file in your slicer; the parts lie flat as on the sheet.`;
+  return { file: { name: `${base}.stl`, data: r.data, mime: FORMAT_INFO.stl.mime }, count: 1, notes: [note] };
+}
+
 export function makeExport(svg: string, sheets: Rect[] | null | undefined, s: ExportSettings, base: string, mat?: LaserFromMaterial): ExportResult {
   const fmt = FORMAT_INFO[s.format];
   const notes: string[] = [];

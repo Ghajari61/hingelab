@@ -4,7 +4,7 @@ import { platform } from "@hingelab/platform";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Download } from "lucide-react";
 import type { Units } from "@/components/editor/format";
-import { makeExport, type ExportFile, type LaserFromMaterial } from "@/lib/export/bundle";
+import { makeExport, makeSTLExport, type ExportFile, type LaserFromMaterial } from "@/lib/export/bundle";
 import { recordExport } from "@/lib/generators/nav";
 import { loadMaterials } from "@/lib/materials/library";
 import { bedOf, CUSTOM_MACHINE, defaultExport, EXPORT_FORMATS, FORMAT_INFO, loadExport, overBed, saveExport, type ExportSettings, type Rect } from "@/lib/export/profiles";
@@ -26,9 +26,11 @@ function download(f: ExportFile) {
  * sheets), SVG, DXF, PDF or a LightBurn project, every sheet in one file or one file per sheet, a
  * mirrored copy and hairline strokes. The files are made from the same SVG the editor exports.
  */
-export default function ExportDialog({ getSVG, localSVG, sheets, size, base, units, material, onClose, toast }: {
+export default function ExportDialog({ getSVG, localSVG, sheets, size, base, units, material, thickness, onClose, toast }: {
   /** The design's material id: the user's own laser settings for it go into a LightBurn file. */
   material?: string;
+  /** The design's material thickness, mm: how thick an STL's parts are unless the user changes it. */
+  thickness?: number;
   /** The design's SVG built on this device, for the job summary (none: no summary). */
   localSVG?: () => string | null;
   /** The design's SVG, or null when it cannot be exported (the editor has said why). */
@@ -79,7 +81,7 @@ export default function ExportDialog({ getSVG, localSVG, sheets, size, base, uni
     try {
       const svg = await getSVG();
       if (!svg) return;
-      const r = makeExport(svg, sheets, s, base, mat);
+      const r = s.format === "stl" ? await makeSTLExport(svg, s, base, thickness) : makeExport(svg, sheets, s, base, mat);
       download(r.file);
       saveExport(s);
       toast(`Downloading ${r.file.name}${r.count > 1 ? ` (${r.count} files)` : ""}`);
@@ -137,7 +139,12 @@ export default function ExportDialog({ getSVG, localSVG, sheets, size, base, uni
             </div>
           )}
 
-          <div className="exp-opts">
+          {s.format === "stl" && (
+            <div className="exp-bed">
+              <label>Part thickness (mm)<input className="sel" type="number" min={0.2} max={100} step={0.1} value={s.stlT ?? thickness ?? 3} onChange={(e) => upd({ stlT: Math.min(100, Math.max(0.2, Number(e.target.value) || 3)) })} /></label>
+            </div>
+          )}
+          {s.format !== "stl" && <div className="exp-opts">
             <label className="chk"><input type="checkbox" checked={s.merge !== false} onChange={(e) => upd({ merge: e.target.checked })} />Cut shared lines once (where touching parts share an edge)</label>
             <label className="chk"><input type="checkbox" checked={s.mirror} onChange={(e) => upd({ mirror: e.target.checked })} />Mirror left to right (to engrave the back of clear acrylic)</label>
             {(s.format === "svg" || s.format === "pdf") && (
@@ -146,14 +153,15 @@ export default function ExportDialog({ getSVG, localSVG, sheets, size, base, uni
             {s.format === "dxf" && (
               <label className="chk"><input type="checkbox" checked={s.inches} onChange={(e) => upd({ inches: e.target.checked })} />Numbers in inches (for software that reads a DXF as inches)</label>
             )}
-          </div>
+          </div>}
 
           {localSVG && <JobEstimate svg={localSVG} version={0} sheets={sheets} material={material} units={units === "in" ? "in" : "mm"} machine={s.machine} title="Job summary" />}
 
           <p className="exp-note">
             {s.format === "lbrn2" && mat
               ? `Files are made on your device. The LightBurn file carries the speed, power and passes you saved for “${mat.name}”; layers without your settings keep LightBurn's own.`
-              : "Files are made on your device. Laser power and speed are not set: use your own tested settings for each layer."}
+              : s.format === "stl" ? "The file is made on your device. Check the part thickness, and print a small part first to check the fit of slots and tabs."
+              : "Files are made on your device. Laser power and speed are not set: use your own tested settings for each layer. Measure your real material thickness and cut a small test before the whole job."}
           </p>
           <div className="rename-row">
             <button type="button" className="btn-ghost-sm" onClick={onClose}>Cancel</button>
