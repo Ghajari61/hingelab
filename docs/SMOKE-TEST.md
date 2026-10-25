@@ -36,6 +36,15 @@ Run before a release. The automated checks come first; the rest needs a person, 
 4. Hinge Box: Cut-out pattern "Motif", choose Star (not a heart), a Circle shape, Mark Engrave: the file has an engrave layer, no extra cuts.
 5. Paper Box: Bakery box in 3D: drag Fold from 100 % to 0 % and back, then Explode; Wine carrier (four bottles): the dividers stand inside. Lines "Mountain folds: Dash-dot": the gable box's handle creases come out dashed.
 6. Parametric: Source "Wall art": change the pattern, drag a ridge curve's points, add an attractor, add a shelf; Mounting "Rails" with 1x4: every slat has two notches; the estimate lists sheets, rails and screws. With Pro: Export 3D model (GLB) opens in Windows 3D Viewer or Blender.
+
+## By hand: 1.3.0
+
+1. Generators page and the landing grid list Pop-up with its cone icon; `/app/editor/local?p=popup` opens the Classic pop-up bowl with no checks other than info.
+2. Drag Open in 3D from 100 % to 0 % and back: the rings settle flat and the arms shrink; every arm's tab sits in its ring's slot.
+3. Presets: Spiral Christmas tree (star on top), Bread basket (two handle ears), Cupcake tower (three flat tiers), Spiral pendant (E27 hole, LED warning), Scroll-saw spiral bowl (table tilt in the stats).
+4. Rings 30 on a 200 mm sheet: "The narrowest ring" check; its fix clears it. Bridges off: every ring is one closed cut in the SVG.
+5. Free plan: Classic bowl exports nothing (as every generator), and a spiral or star design names what needs Pro.
+
 ## By hand (Windows app)
 
 1. Install the new version over the old one; the app opens signed in.

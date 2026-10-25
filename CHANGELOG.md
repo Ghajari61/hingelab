@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0 (unreleased)
+
+**Pop-up.** A new generator: one flat sheet that lifts into a bowl, basket, Christmas tree, lampshade, ornament, sleeve or tiered stand. Rings or a spiral (up to four arms) in eleven outlines (circle, oval, rounded rectangle, polygon, star, heart, flower, leaf, pumpkin, snowflake or your own), with plain, wave, scallop or zigzag edges and optional petals. A profile curve sets the sides: cone, dome, soft, bell, flat bottom, stepped levels or your own curve. Slotted arms with a step and tab for every ring hold the form exactly (two can rise as handles); cords hold hanging shades; thick boards can use an angled scroll-saw cut with the table tilt worked out. Lamp holder rings (E14, E27, custom), a tealight hole, a hanging hole, a star, ball or point on top, engraving in the centre and round the rim, a set of smaller sizes, an Open slider in 3D, checks with fixes and 29 presets.
+
+Decision D197 in `DECISIONS.md`.
+
 ## 1.2.0 (21 Oct 2026)
 
 **Patterns everywhere.** The cut-out pattern on every part it fits: all Boxes designs, the clock's stand, the Hinge Box (with motif, shape, size and engrave or score), Letters lids and bases, the Parametric backboard, and the QR plate round the code (which still scans). Parts glued on top stay solid; a check says when a pattern is too large for its space and offers a smaller one. Your own seamless tile: upload a picture or SVG and it repeats edge to edge, joined across the seams, on a square, brick, half-drop or mirrored grid.
