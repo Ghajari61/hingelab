@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Download, Lock, RotateCcw } from "lucide-react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { Download, Lock, RotateCcw, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useSession } from "@hingelab/app/session";
 import type { Units } from "@/components/editor/format";
-import { useEditorPrefs } from "@/lib/prefs/editorStore";
+import { saveEditorPrefs, useEditorPrefs } from "@/lib/prefs/editorStore";
+import { clampDockWidth } from "@/lib/editor/workflow";
+import { WorkflowSteps } from "./WorkflowSteps";
 
 const FIRST_EXPORT_KEY = "hingelab-first-export-v1";
 
@@ -28,6 +30,10 @@ export function DockColumn({ children, onExport, exportLabel, alt = [], units, o
 }) {
   const [confirm, setConfirm] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  const col = useRef<HTMLDivElement>(null);
+  const body = useRef<HTMLDivElement>(null);
+  const bodyId = useId();
+  const drag = useRef<{ x: number; width: number } | null>(null);
   const session = useSession();
   // Free plan: say so beside Export before the click (Export then shows the upgrade with a preview).
   const needsPro = session.configured && !session.loading && !session.pro;
@@ -57,8 +63,29 @@ export function DockColumn({ children, onExport, exportLabel, alt = [], units, o
   }, [confirm]);
 
   return (
-    <div className="dock-col" inert={inert || undefined}>
+    <div ref={col} className="dock-col" data-detail={prefs.detail} data-collapsed={prefs.dockCollapsed || undefined} inert={inert || undefined}>
+      <div className="dock-resize" role="separator" aria-label="Settings panel width" aria-orientation="vertical"
+        aria-valuemin={280} aria-valuemax={560} aria-valuenow={prefs.dockW || 340} tabIndex={prefs.dockCollapsed ? -1 : 0}
+        onPointerDown={(e) => {
+          if (e.button !== 0) return;
+          drag.current = { x: e.clientX, width: col.current?.getBoundingClientRect().width ?? 340 };
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={(e) => { if (drag.current) saveEditorPrefs({ dockW: clampDockWidth(drag.current.width + drag.current.x - e.clientX) }); }}
+        onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }}
+        onLostPointerCapture={() => { drag.current = null; }}
+        onDoubleClick={() => saveEditorPrefs({ dockW: 0 })}
+        onKeyDown={(e) => {
+          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+          e.preventDefault();
+          const current = col.current?.getBoundingClientRect().width ?? 340;
+          saveEditorPrefs({ dockW: clampDockWidth(e.key === "Home" ? 280 : e.key === "End" ? 560 : current + (e.key === "ArrowLeft" ? 1 : -1) * (e.shiftKey ? 1 : 16)) });
+        }} />
       <div className="dock-head">
+        <button type="button" className="btn-ghost-sm dock-collapse" aria-label={prefs.dockCollapsed ? "Expand settings" : "Collapse settings"}
+          aria-expanded={!prefs.dockCollapsed} aria-controls={bodyId} onClick={() => saveEditorPrefs({ dockCollapsed: !prefs.dockCollapsed })}>
+          {prefs.dockCollapsed ? <PanelRightOpen size={16} aria-hidden /> : <PanelRightClose size={16} aria-hidden />}
+        </button>
         <span className="unit-toggle" role="group" aria-label="Units">
           <button type="button" data-u="mm" aria-pressed={units === "mm"} onClick={() => onUnits("mm")}>mm</button>
           <button type="button" data-u="in" aria-pressed={units === "in"} onClick={() => onUnits("in")}>inch</button>
@@ -81,7 +108,15 @@ export function DockColumn({ children, onExport, exportLabel, alt = [], units, o
           )}
         </div>
       </div>
-      {children}
+      <div className="dock-workflow" hidden={prefs.dockCollapsed}>
+        <div className="dock-detail" role="group" aria-label="Settings detail">
+          <span>Settings</span>
+          {(["simple", "advanced"] as const).map((detail) => <button type="button" key={detail} aria-pressed={prefs.detail === detail}
+            onClick={() => saveEditorPrefs({ detail })}>{detail === "simple" ? "Simple" : "Advanced"}</button>)}
+        </div>
+        <WorkflowSteps body={body} col={col} simple={prefs.detail === "simple"} onAdvanced={() => saveEditorPrefs({ detail: "advanced" })} />
+      </div>
+      <div ref={body} id={bodyId} className="dock-body" hidden={prefs.dockCollapsed}>{children}</div>
       <div className="dock-foot">
         {extra}
         {tip && (

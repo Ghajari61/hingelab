@@ -23,6 +23,7 @@ import type { TracedPicture } from "./levelsClient";
 import { usePhotoLooks } from "./usePhotoLooks";
 import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, MAX_FEATURE, MAX_KERF, MAX_THICKNESS, SHEET_EXTRAS, type AnyGenerator, type FieldSpec, type GenBase, type GenOutput, type NumberSpec } from "@/lib/generators/types";
 import { orderSections } from "@/lib/generators/sectionOrder";
+import { genSectionStep, isAdvancedKey } from "@/lib/editor/workflow";
 
 type P = GenBase & Record<string, unknown>;
 
@@ -36,8 +37,8 @@ const MAT_FIELDS: BaseField[] = [
   { id: "T", label: "Thick", len: true, step: 0.05, min: 0.1, max: MAX_THICKNESS, mat: true },
   { id: "K", label: "Kerf", len: true, step: 0.01, min: 0, max: MAX_KERF, mat: true },
 ];
-const KERF_Y_FIELD: BaseField = { id: "sheet.kerfY", label: "Kerf Y", len: true, step: 0.01, min: 0, max: MAX_KERF, mat: true, help: "Kerf across cuts that run left to right, for a machine that cuts wider on one axis." };
-const FEATURE_FIELD: BaseField = { id: "sheet.minFeature", label: "Min feature", len: true, step: 0.1, min: 0, max: MAX_FEATURE, mat: true, help: "The narrowest bar or tab your material holds; Checks warns about parts with thinner ones. 0 turns the check off." };
+const KERF_Y_FIELD: BaseField = { id: "sheet.kerfY", advanced: true, label: "Kerf Y", len: true, step: 0.01, min: 0, max: MAX_KERF, mat: true, help: "Kerf across cuts that run left to right, for a machine that cuts wider on one axis." };
+const FEATURE_FIELD: BaseField = { id: "sheet.minFeature", advanced: true, label: "Min feature", len: true, step: 0.1, min: 0, max: MAX_FEATURE, mat: true, help: "The narrowest bar or tab your material holds; Checks warns about parts with thinner ones. 0 turns the check off." };
 const COPIES_FIELD: BaseField = { id: "sheet.copies", label: "Copies", step: 1, min: 1, max: MAX_COPIES };
 const SHEET_FIELDS: BaseField[] = [
   { id: "bedW", label: "Bed W", len: true, step: 10, min: 50 },
@@ -84,10 +85,14 @@ export function GeneratorDock({
   );
 
   const field = (f: FieldSpec<P>): ReactNode => {
+    const node = fieldNode(f);
+    return node && f.kind !== "number" && isAdvancedKey(def.id, f.key, f.advanced) ? <div className="adv" data-advanced key={f.key}>{node}</div> : node;
+  };
+  const fieldNode = (f: FieldSpec<P>): ReactNode => {
     const hidden = f.show ? !f.show(params) : false;
     const value = getPath(params, f.key);
     const dflt = getPath(defaults, f.key);
-    if (f.kind === "number") return num(numberField(f), value as number, dflt as number, hidden, lockOf(f));
+    if (f.kind === "number") return num({ ...numberField(f), advanced: isAdvancedKey(def.id, f.key, f.advanced) }, value as number, dflt as number, hidden, lockOf(f));
     if (hidden) return null;
     if (f.kind === "toggle") {
       const lock = lockOf(f);
@@ -239,11 +244,11 @@ export function GeneratorDock({
   return (
     <aside className="dock" aria-label="Panels">
       {orderSections(def.id, def.sections).map((s) => ((s.show && !s.show(params)) || s.fields.every((f) => f.kind === "choice" && f.rail) ? null : (
-        <Sec key={s.id} title={s.title} startOpen={s.open ?? true} onReset={() => onResetSection(s.title, s.fields.map((f) => f.key))}>
+        <Sec key={s.id} step={genSectionStep(def.id, s.id, s.step)} title={s.title} startOpen={s.open ?? true} onReset={() => onResetSection(s.title, s.fields.map((f) => f.key))}>
           {body(s.fields as FieldSpec<P>[])}
         </Sec>
       )))}
-      <Sec title="Material" startOpen onReset={() => onResetSection("Material", ["material", "T", "K", "sheet.kerfXY", "sheet.kerfY", "sheet.minFeature"])}>
+      <Sec step="material" title="Material" startOpen onReset={() => onResetSection("Material", ["material", "T", "K", "sheet.kerfXY", "sheet.kerfY", "sheet.minFeature"])}>
         <MaterialPicker
           value={params.material} units={units} onPick={onMaterial}
           current={{ T: params.T, kx: params.K, ky: extras.kerfXY ? extras.kerfY ?? params.K : params.K, minFeature: extras.minFeature ?? 0 }}
@@ -253,13 +258,13 @@ export function GeneratorDock({
           {extras.kerfXY && num(KERF_Y_FIELD, extras.kerfY ?? params.K, params.K)}
           {num(FEATURE_FIELD, extras.minFeature ?? 0, 0)}
         </div>
-        <CheckField
+        <div className="adv" data-advanced><CheckField
           label="Separate X and Y kerf" title="For a machine that cuts wider along one axis: cut a 20 mm square and measure it across both ways"
           checked={!!extras.kerfXY} def={!!homeExtras.kerfXY}
           onChange={(on) => onApply(setPath(setPath(params, "sheet.kerfXY", on), "sheet.kerfY", extras.kerfY ?? params.K) as P)}
-        />
+        /></div>
       </Sec>
-      <Sec title="Checks" startOpen meta={out?.stats.length ? `${out.parts.length} parts` : undefined}>
+      <Sec step="validation" title="Checks" startOpen meta={out?.stats.length ? `${out.parts.length} parts` : undefined}>
         {out && out.stats.length > 0 && (
           <dl className="gen-stats">
             {out.stats.map((s) => <div key={s.label}><dt>{s.label}</dt><dd>{s.value}</dd></div>)}
@@ -273,10 +278,10 @@ export function GeneratorDock({
           </details>
         ) : null}
       </Sec>
-      <Sec title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers"])}>
+      <Sec step="export" title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers"])}>
         <LayersPanel layers={params.layers} labels={false} only={layerKeys} names={GEN_LAYER_NAMES} onVis={layerVis} onExp={layerExp} />
       </Sec>
-      <Sec title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "fit", "sheet", "job"])}>
+      <Sec step="layout" title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "fit", "sheet", "job"])}>
         <SheetSection
           bedW={params.bedW} bedH={params.bedH} fit={cleanFit(params.fit)} info={sheet.info} size={sheet.size} original={sheet.original} preview={sheet.preview}
           onSheet={sheet.onSheet} onFit={sheet.onFit}

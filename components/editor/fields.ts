@@ -21,6 +21,8 @@ export interface BaseField {
   mat?: boolean;
   /** One-sentence explanation, shown in the label's tooltip. */
   help?: string;
+  /** Fine-tuning: Simple hides it (its value still applies). */
+  advanced?: boolean;
 }
 
 export interface FieldDef extends BaseField {
@@ -39,21 +41,21 @@ export const FIELDS: FieldDef[] = [
   { id: "H", label: "Height", sec: "secDims", len: true, step: 1, min: 10 },
   { id: "R", label: "Radius", sec: "secDims", len: true, step: 0.5, min: 1, show: p => p.shape === "rect" || p.shape === "poly" },
   { id: "sides", label: "Sides", sec: "secDims", step: 1, min: 3, max: 12, show: p => p.shape === "poly" },
-  { id: "cylFlats", label: "Tab flats", sec: "secDims", step: 1, min: 3, max: 16, show: p => p.shape === "cyl" },
+  { id: "cylFlats", label: "Tab flats", sec: "secDims", advanced: true, step: 1, min: 3, max: 16, show: p => p.shape === "cyl" },
   { id: "T", label: "Thick", sec: "secMat", len: true, step: 0.1, min: 0.5, mat: true },
   { id: "K", label: "Kerf", sec: "secMat", len: true, step: 0.01, min: 0, mat: true, lab: p => p.Ky != null ? "Kerf X" : "Kerf" },
-  { id: "Ky", label: "Kerf Y", sec: "secMat", len: true, step: 0.01, min: 0, max: 5, mat: true, show: p => p.Ky != null, unset: p => p.K },
-  { id: "minFeature", label: "Min feature", sec: "secMat", len: true, step: 0.1, min: 0, max: 50, mat: true, unset: () => 0 },
-  { id: "slotW", label: "Slot width", sec: "secHinge", len: true, step: 0.05, min: 0.2, show: p => p.cutStyle === "slot" || p.pattern === "honeycomb", lab: p => p.pattern === "honeycomb" ? "Cell width" : "Slot width" },
+  { id: "Ky", label: "Kerf Y", sec: "secMat", advanced: true, len: true, step: 0.01, min: 0, max: 5, mat: true, show: p => p.Ky != null, unset: p => p.K },
+  { id: "minFeature", label: "Min feature", sec: "secMat", advanced: true, len: true, step: 0.1, min: 0, max: 50, mat: true, unset: () => 0 },
+  { id: "slotW", label: "Slot width", sec: "secHinge", advanced: true, len: true, step: 0.05, min: 0.2, show: p => p.cutStyle === "slot" || p.pattern === "honeycomb", lab: p => p.pattern === "honeycomb" ? "Cell width" : "Slot width" },
   { id: "slit", label: "Slit", sec: "secHinge", len: true, step: 0.5, min: 3, show: p => p.pattern !== "serpentine" && p.pattern !== "honeycomb" },
   { id: "bridge", label: "Bridge", sec: "secHinge", len: true, step: 0.25, min: 0.5, show: p => p.pattern !== "honeycomb" },
   { id: "pitch", label: "Spacing", sec: "secHinge", len: true, step: 0.05, min: 0.5 },
-  { id: "overrun", label: "Overrun", sec: "secHinge", len: true, step: 0.5, min: 0 },
-  { id: "stretch", label: "Stretch %", sec: "secHinge", step: 0.5, min: 0, max: 8, float: true },
+  { id: "overrun", label: "Overrun", sec: "secHinge", advanced: true, len: true, step: 0.5, min: 0 },
+  { id: "stretch", label: "Stretch %", sec: "secHinge", advanced: true, step: 0.5, min: 0, max: 8, float: true },
   { id: "tabW", label: "Tab width", sec: "secJoints", len: true, step: 0.5, min: 3 },
-  { id: "slotClr", label: "Slot play", sec: "secJoints", len: true, step: 0.05, min: -0.5 },
-  { id: "lidGap", label: "Lid gap", sec: "secJoints", len: true, step: 0.05, min: 0, show: p => p.lid === "removable" },
-  { id: "baseRingW", label: "Ring width", sec: "secJoints", len: true, step: 0.5, min: 3, max: 40, show: p => p.baseRing === true, unset: () => 8 },
+  { id: "slotClr", label: "Slot play", sec: "secJoints", advanced: true, len: true, step: 0.05, min: -0.5 },
+  { id: "lidGap", label: "Lid gap", sec: "secJoints", advanced: true, len: true, step: 0.05, min: 0, show: p => p.lid === "removable" },
+  { id: "baseRingW", label: "Ring width", sec: "secJoints", advanced: true, len: true, step: 0.5, min: 3, max: 40, show: p => p.baseRing === true, unset: () => 8 },
   { id: "lidOver", label: "Overhang", sec: "secLid", len: true, step: 0.5, min: 0, max: 100, unset: () => 0 },
   { id: "lidHoleD", label: "Hole size", sec: "secLid", len: true, step: 0.5, min: 1, max: 500, show: p => !!p.lidHole && p.lidHole !== "none" && p.lidHole !== "rim", lab: p => isLidSlot(p.lidHole) ? "Slot length" : "Hole size", unset: p => isLidSlot(p.lidHole) ? lidSlotSize(p).len : p.lidHole === "knob" ? 5 : 22 },
   { id: "lidHoleW", label: "Slot width", sec: "secLid", len: true, step: 0.5, min: 1, max: 200, show: p => isLidSlot(p.lidHole) || p.lidHole === "rim", lab: p => p.lidHole === "rim" ? "Top rim width" : "Slot width", unset: p => p.lidHole === "rim" ? defaultRimWidth(p.T) : lidSlotSize(p).w },

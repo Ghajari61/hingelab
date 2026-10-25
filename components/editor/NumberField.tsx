@@ -89,7 +89,7 @@ export function NumberField({
   };
 
   return (
-    <div className={`fld${invalid ? " invalid" : ""}${range ? "" : " no-slider"}`} hidden={hidden} data-id={field.id}>
+    <div className={`fld${invalid ? " invalid" : ""}${range ? "" : " no-slider"}`} hidden={hidden} data-id={field.id} data-advanced={field.advanced || undefined} data-changed={differs || undefined}>
       <label
         htmlFor={`f_${field.id}`}
         title={tip}

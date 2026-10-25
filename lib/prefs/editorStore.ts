@@ -32,6 +32,10 @@ export function applyEditorPrefs(p: EditorPrefs) {
   else root.dataset.uiSize = p.uiSize;
   if (p.reduceMotion) root.dataset.reduceMotion = "";
   else delete root.dataset.reduceMotion;
+  if (p.dockW) { root.dataset.dockW = ""; root.style.setProperty("--dock-w", `${p.dockW}px`); }
+  else { delete root.dataset.dockW; root.style.removeProperty("--dock-w"); }
+  if (p.dockCollapsed) root.dataset.dockCollapsed = "";
+  else delete root.dataset.dockCollapsed;
 }
 
 export function saveEditorPrefs(patch: Partial<EditorPrefs>): EditorPrefs {
@@ -59,7 +63,9 @@ if (typeof window !== "undefined") {
 export function useEditorPrefs(): EditorPrefs {
   const [p, setP] = useState<EditorPrefs>(DEFAULT_EDITOR_PREFS);
   useEffect(() => {
-    setP(editorPrefs());
+    const initial = editorPrefs();
+    applyEditorPrefs(initial);
+    setP(initial);
     const on = (e: Event) => setP((e as CustomEvent<EditorPrefs>).detail);
     window.addEventListener(EDITOR_PREFS_EVENT, on);
     return () => window.removeEventListener(EDITOR_PREFS_EVENT, on);

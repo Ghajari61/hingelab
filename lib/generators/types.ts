@@ -8,6 +8,7 @@ import type { Layers } from "@/lib/hinge/types";
 import type { Paper, PhotoSpec, Subject } from "@/lib/imaging/photoSpec";
 import type { Issue } from "@/lib/issues";
 import type { Contour } from "@/lib/letters/types";
+import type { Step } from "@/lib/editor/workflow";
 import type { GeneratorId } from "./ids";
 
 export type { Contour };
@@ -207,6 +208,8 @@ export interface BuildContext {
 interface FieldCommon<P> {
   /** Dot path into the params, e.g. "face.diameter". */
   key: string;
+  /** Fine-tuning: Simple hides it (missing: by its name, lib/editor/workflow.ts). */
+  advanced?: boolean;
   label: string;
   /** One sentence (ends with a period); it is the field's entry in the help centre. */
   help: string;
@@ -295,6 +298,8 @@ export type FieldSpec<P> = NumberSpec<P> | ChoiceSpec<P> | ToggleSpec<P> | TextS
 
 export interface SectionSpec<P> {
   id: string;
+  /** Its workflow step (missing: lib/editor/workflow.ts decides). */
+  step?: Step;
   title: string;
   /** What the section is for: the first paragraph of its help. */
   help: string;
