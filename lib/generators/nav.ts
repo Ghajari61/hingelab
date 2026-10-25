@@ -11,6 +11,7 @@ export interface NavLink { href: string; label: string }
 export const MAKE: NavLink[] = [
   { href: "/generators", label: "Generators" },
   { href: "/templates", label: "Templates" },
+  { href: "/tools", label: "Free tools" },
   { href: "/home", label: "Free-form Studio" },
 ];
 

@@ -5,7 +5,7 @@
  */
 import { MACHINE_PROFILES, machineById } from "@/lib/studio/library";
 
-export const EXPORT_FORMATS = ["svg", "dxf", "pdf", "lbrn2"] as const;
+export const EXPORT_FORMATS = ["svg", "dxf", "pdf", "lbrn2", "stl"] as const;
 export type ExportFormat = (typeof EXPORT_FORMATS)[number];
 
 /** `order`: what the format can make the laser software do about the cut order. */
@@ -13,6 +13,7 @@ export const FORMAT_INFO: Record<ExportFormat, { name: string; ext: string; mime
   svg: { name: "SVG", ext: "svg", mime: "image/svg+xml", about: "Layered by colour for LightBurn, xTool Creative Space, Glowforge and Inkscape.", order: "The layers are written engrave, score, inner cuts, outline, but an SVG cannot make the software keep that order: check that inner cuts run before outlines." },
   dxf: { name: "DXF", ext: "dxf", mime: "application/dxf", about: "R12 for CAD programs and older laser software. Pictures cannot go in a DXF.", order: "A DXF keeps each cut type on its own layer and colour but has no cut order: set inner cuts before outlines in your laser software." },
   pdf: { name: "PDF", ext: "pdf", mime: "application/pdf", about: "Vector lines at actual size, one page per sheet, for printing or for software that imports PDF.", order: "A PDF has no cut order: set inner cuts before outlines in your laser software." },
+  stl: { name: "STL (3D print)", ext: "stl", mime: "model/stl", about: "The cut-out parts as solid pieces at the material thickness, laid out as on the sheet, for a 3D printer. Score lines, hinge slits and engraving are left out.", order: "A 3D print has no cut order." },
   lbrn2: { name: "LightBurn", ext: "lbrn2", mime: "application/xml", about: "A LightBurn project with one layer per cut type. Text and pictures are left out: import the SVG for those.", order: "LightBurn follows the order in the file: engrave, score, inner cuts, then outlines (layer priority)." },
 };
 
@@ -34,6 +35,8 @@ export interface ExportSettings {
   inches: boolean;
   /** Cut once where parts share a cut line (on unless turned off). */
   merge?: boolean;
+  /** STL: how thick the printed parts are, mm (missing: the design's material thickness). */
+  stlT?: number;
 }
 
 export const HAIRLINE_MM = 0.0254;

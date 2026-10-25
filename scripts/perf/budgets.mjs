@@ -39,6 +39,7 @@ const LAZY_BUDGETS = {
   // counted again in each generator's chunks (the browser downloads it once). Your own tile, the
   // repeat grids, glued-part keep-outs and the sparse check (D193, D194) added about 1-2 KB each.
   // Twelve detailed motifs (D201): the motif code is in each generator's chunks, about 1 KB more each.
+  // Sign: three Christmas ornament presets (D202), +1 KB.
   "Clock generator": { key: /registry\.ts -> \.\/clock$/, kb: 34 },
   "Puzzle generator": { key: /registry\.ts -> \.\/puzzle$/, kb: 32 },
   "QR Code generator": { key: /registry\.ts -> \.\/qr$/, kb: 41 },
@@ -47,7 +48,7 @@ const LAZY_BUDGETS = {
   "Boxes generator": { key: /registry\.ts -> \.\/boxes$/, kb: 51 },
   "Cake Topper generator": { key: /registry\.ts -> \.\/topper$/, kb: 32 },
   "Key Holder generator": { key: /registry\.ts -> \.\/keyrack$/, kb: 31 },
-  "Sign generator": { key: /registry\.ts -> \.\/sign$/, kb: 34 },
+  "Sign generator": { key: /registry\.ts -> \.\/sign$/, kb: 35 },
   "Table Numbers generator": { key: /registry\.ts -> \.\/tablenum$/, kb: 34 },
   "Trophy generator": { key: /registry\.ts -> \.\/trophy$/, kb: 32 },
   // Your picture (D160), photo looks (D161), the enclosure (D162), item tags (D173): 46 KB. Phase 2: 51 KB.

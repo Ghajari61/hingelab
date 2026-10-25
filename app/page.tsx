@@ -20,6 +20,7 @@ import { siteProducts, totalPresets, type SiteIcon } from "@/lib/site/products";
 import { GALLERY, heroParams, isProSample, sheetFor } from "@/lib/site/samples";
 import { SITE_DESCRIPTION } from "@/lib/site/config";
 import { motif, MOTIF_NAMES, type MotifId } from "@/lib/generators/motifs";
+import { collectionBySlug } from "@/lib/site/collections";
 import "./landing.css";
 
 
@@ -31,6 +32,12 @@ const SHOWCASE: { id: MotifId; preset: string }[] = [
   { id: "triquetra", preset: "sign" }, { id: "fleur", preset: "sign" }, { id: "dreamcatcher", preset: "sign" },
   { id: "anchor", preset: "keyrack&preset=harbour-keys" }, { id: "olive", preset: "tablenum&preset=olive-grove" }, { id: "paisley", preset: "sign&preset=paisley-home" },
 ];
+/** The collection to feature for the time of year the page is built: Christmas from October, Valentine's in January and February. */
+function seasonal() {
+  const m = new Date().getMonth();
+  const slug = m >= 9 ? "christmas" : m <= 1 ? "valentines" : null;
+  return slug ? collectionBySlug(slug) ?? null : null;
+}
 const motifPath = (id: MotifId) => motif(id, 88, 50, 50).map((c) => "M" + c.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join("L") + "Z").join("");
 
 export const metadata: Metadata = {
@@ -190,6 +197,28 @@ export default async function HomePage() {
             ))}
           </ul>
         </section>
+
+        {(() => {
+          const season = seasonal();
+          if (!season) return null;
+          return (
+            <section id="season" className="band season">
+              <div className="season-card">
+                <div className="season-copy">
+                  <p className="hero-eyebrow"><Sparkles size={14} aria-hidden="true" />New for the season</p>
+                  <h2>{season.name} designs, ready to cut</h2>
+                  <p>{season.intro}</p>
+                  <Link href={`/collections/${season.slug}`} className="btn-primary btn-lg">See all {season.items.length} designs<ArrowRight size={18} aria-hidden="true" /></Link>
+                </div>
+                <ul className="season-pics">
+                  {season.items.slice(0, 6).map((it) => (
+                    <li key={`${it.product}/${it.id}`}><Link href={it.href} aria-label={it.name}><img src={it.picture} alt="" width={300} height={200} loading="lazy" /><span>{it.name}</span></Link></li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          );
+        })()}
 
         <section id="motifs" className="band motifs">
           <div className="band-head">

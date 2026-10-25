@@ -179,4 +179,25 @@ export const SIGN_PRESETS: GenPreset<SignParams>[] = [
       motif: { kind: "paisley", side: "both", size: 44, gap: 8 }, border: { kind: "engrave", inset: 6, width: 2 }, mount: { kind: "hanging", hole: 5 },
     },
   },
+  {
+    id: "name-ornament", name: "Christmas name ornament", note: "Round bauble with a snowflake and a name, on a ribbon",
+    params: {
+      name: "Name ornament", board: { shape: "circle", auto: false, width: 90, height: 90, corner: 4 }, text: { text: "Emma", fontId: "great-vibes", size: 15 },
+      motif: { kind: "snowflake", side: "above", size: 20, gap: 2 }, border: { kind: "engrave", inset: 4, width: 1.5 }, mount: { kind: "hanging", hole: 4 },
+    },
+  },
+  {
+    id: "star-ornament", name: "Star ornament", note: "Star-shaped tree ornament with a name and year",
+    params: {
+      name: "Star ornament", board: { shape: "star", auto: false, width: 100, height: 100, corner: 3 }, text: { text: "Noah\n2026", fontId: "fredoka", size: 13, lead: 1.1 },
+      motif: { kind: "none" }, border: { kind: "none" }, mount: { kind: "hanging", hole: 4 },
+    },
+  },
+  {
+    id: "tree-of-life-ornament", name: "Tree of life ornament", note: "Detailed tree of life bauble with a family name",
+    params: {
+      name: "Family ornament", board: { shape: "circle", auto: false, width: 100, height: 100, corner: 4 }, text: { text: "The Smiths", fontId: "playfair-display", size: 9 },
+      motif: { kind: "treeoflife", side: "above", size: 40, gap: 2 }, border: { kind: "none" }, mount: { kind: "hanging", hole: 4 },
+    },
+  },
 ];

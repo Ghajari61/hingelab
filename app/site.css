@@ -335,3 +335,21 @@ button.ai-lib-drop:hover:not(:disabled), .ai-lib-drop-btn:hover:not(:disabled) {
 .project-filters input, .project-filters select { min-width: 0; width: 100%; min-height: 38px; padding: 8px 10px; color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 8px; font: inherit; }
 .project-count { font-size: 13px; line-height: 1.5; color: var(--fg-dim); margin: 0 0 16px; }
 .box-meta .project-storage { width: fit-content; border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; margin-block: 5px; color: var(--fg); }
+
+/* Free tools (/tools) */
+.tool-grid .ia-card { padding: 16px; }
+.tool-box { display: grid; gap: 14px; margin: 24px 0 8px; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--panel); box-shadow: var(--shadow-1); }
+.tool-drop { position: relative; display: grid; justify-items: center; gap: 6px; padding: 26px 16px; border: 2px dashed color-mix(in srgb, var(--accent) 35%, var(--line)); border-radius: 12px; background: var(--brand-grad-soft); color: var(--fg); cursor: pointer; text-align: center; font-weight: 600; }
+.tool-drop svg { color: var(--accent); }
+.tool-drop small { color: var(--fg-dim); font-weight: 400; }
+.tool-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.tool-drop:focus-within { box-shadow: var(--focus-ring); }
+.tool-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.tool-fields label { display: grid; gap: 6px; font-size: 14px; color: var(--fg-dim); min-width: 0; }
+.tool-fields input:not([type="checkbox"]) { width: 100%; min-width: 0; box-sizing: border-box; height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-field); color: var(--fg); font: inherit; }
+.tool-fields .tool-check { display: flex; align-items: center; gap: 8px; align-self: end; height: 38px; }
+.tool-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.tool-error { color: var(--error-ink); margin: 0; }
+.tool-note { color: var(--fg); margin: 0; font-weight: 500; }
+.tool-preview { width: 100%; max-height: 420px; object-fit: contain; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.tool-safety { margin: 0; font-size: 13px; color: var(--fg-faint) !important; }
