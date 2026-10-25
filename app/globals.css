@@ -34,7 +34,6 @@ kbd { font-family: var(--font-num); font-size: 11px; color: var(--fg-faint); }
 .iconseg button:hover { color: var(--fg); background: var(--surface-hover); }
 .iconseg button[aria-pressed="true"] { background: var(--panel); color: var(--fg); font-weight: 600; box-shadow: var(--shadow-1), 0 0 0 1px var(--line); }
 .iconseg svg { display: block; }
-.product-tabs .soon { font-size: 10px; color: var(--fg-faint); border: 1px solid var(--line); padding: 0 5px; border-radius: 8px; }
 
 /* ---------- main ---------- */
 .main { display: grid; grid-template-columns: 244px minmax(0,1fr) 344px; min-height: 0; }

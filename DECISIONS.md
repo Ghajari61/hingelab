@@ -1610,3 +1610,7 @@ The owner pointed at Vector Painter's laser apps page and asked for everything w
 
 The owner asked for the panel header (Settings, Simple/Advanced and the seven workflow steps, D197) to go. The panel now starts with its sections and every setting shows (the column keeps `data-detail="advanced"`, so settings marked advanced are never hidden by an old saved "simple"). Sections keep their `data-step`, so nothing else that reads them changes.
 
+## D204. One product picker with pictures; Hinge Box by default
+
+The owner asked for the header's product tabs (three products and a Generators menu) to become one menu that opens as pictures, with the Hinge Box as the default. `ProductTabs` is now a single button with the open product's picture and name; it opens a panel with the three main products as large picture tiles and every generator as smaller ones (`PRODUCT_PICTURE`, featured preset pictures; a test checks each file exists). Escape or a click outside closes it. The guest editor without `?p=` opens the Hinge Box instead of the start gallery (Home still shows the gallery).
+
