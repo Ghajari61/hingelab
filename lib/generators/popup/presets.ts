@@ -97,7 +97,8 @@ export const POPUP_PRESETS:PopupPreset[]=[
       "mode": "tiered",
       "profile": {
         "kind": "pagoda",
-        "tiers": 2
+        "tiers": 2,
+        "depth": 110
       },
       "name": "Two-Tier Fruit Stand"
     }
@@ -117,7 +118,8 @@ export const POPUP_PRESETS:PopupPreset[]=[
       "mode": "tiered",
       "profile": {
         "kind": "pagoda",
-        "tiers": 3
+        "tiers": 3,
+        "depth": 170
       },
       "name": "Cupcake Tower (3 tiers)"
     }
@@ -140,7 +142,7 @@ export const POPUP_PRESETS:PopupPreset[]=[
       },
       "profile": {
         "kind": "linear",
-        "depth": 70
+        "depth": 240
       },
       "extras": {
         "finial": "star"
@@ -166,7 +168,8 @@ export const POPUP_PRESETS:PopupPreset[]=[
         "ratio": 0.75
       },
       "profile": {
-        "kind": "linear"
+        "kind": "linear",
+        "depth": 210
       },
       "name": "Snowflake Tree"
     }
@@ -197,7 +200,7 @@ export const POPUP_PRESETS:PopupPreset[]=[
         "width": 5
       },
       "profile": {
-        "depth": 15
+        "depth": 50
       },
       "sheet": {
         "copies": 6, "nest": "box", "calibration": false, "labels": false
@@ -223,12 +226,17 @@ export const POPUP_PRESETS:PopupPreset[]=[
       "mode": "hanging",
       "outline": {
         "shape": "snowflake",
-        "ratio": 0.8
+        "ratio": 0.8,
+        "width": 140,
+        "height": 140
       },
       "support": {
         "kind": "cords"
       },
-      "name": "Snowflake Bauble"
+      "name": "Snowflake Bauble",
+      "profile": {
+        "depth": 70
+      }
     }
   },
   {
@@ -369,7 +377,10 @@ export const POPUP_PRESETS:PopupPreset[]=[
       "support": {
         "kind": "cords"
       },
-      "name": "Scandinavian Spiral Pendant (E27)"
+      "name": "Scandinavian Spiral Pendant (E27)",
+      "profile": {
+        "depth": 200
+      }
     }
   },
   {
@@ -386,7 +397,8 @@ export const POPUP_PRESETS:PopupPreset[]=[
     "params": {
       "mode": "hanging",
       "profile": {
-        "kind": "bell"
+        "kind": "bell",
+        "depth": 170
       },
       "rings": {
         "center": 55
@@ -413,16 +425,20 @@ export const POPUP_PRESETS:PopupPreset[]=[
     "pro": true,
     "params": {
       "profile": {
-        "kind": "vase"
+        "kind": "vase",
+        "depth": 140
       },
       "rings": {
         "center": 55
       },
       "extras": {
-        "socket": "E27",
-        "base": true
+        "socket": "E27"
       },
-      "name": "Table Lamp Shade"
+      "name": "Table Lamp Shade",
+      "mode": "hanging",
+      "support": {
+        "kind": "cords"
+      }
     }
   },
   {
@@ -464,14 +480,17 @@ export const POPUP_PRESETS:PopupPreset[]=[
     ],
     "pro": true,
     "params": {
-      "mode": "hanging",
+      "mode": "bowl",
       "support": {
         "kind": "cords"
       },
       "extras": {
         "plantSeat": true
       },
-      "name": "Hanging Plant Holder"
+      "name": "Hanging Plant Holder",
+      "profile": {
+        "depth": 100
+      }
     }
   },
   {
@@ -510,7 +529,9 @@ export const POPUP_PRESETS:PopupPreset[]=[
     "params": {
       "mode": "tower",
       "profile": {
-        "kind": "pagoda"
+        "kind": "pagoda",
+        "depth": 170,
+        "tiers": 5
       },
       "extras": {
         "finial": "point"
@@ -537,7 +558,8 @@ export const POPUP_PRESETS:PopupPreset[]=[
         "corner": 0
       },
       "profile": {
-        "kind": "linear"
+        "kind": "linear",
+        "depth": 140
       },
       "name": "Pyramid"
     }
@@ -623,7 +645,10 @@ export const POPUP_PRESETS:PopupPreset[]=[
         "count": 3,
         "scale": 0.6
       },
-      "name": "Kids Nursery Mobile"
+      "name": "Kids Nursery Mobile",
+      "profile": {
+        "depth": 110
+      }
     }
   }
 ];

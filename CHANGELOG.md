@@ -1,6 +1,7 @@
 ## 1.3.0 — Pop-up (unreleased)
 
 - Pop-up generator with connected ring/spiral designs, editable profiles, 27 presets, shared laser exports and flat/open preview.
+- Pop-up fixes: ribs stay one piece on hearts, pumpkins, snowflakes, stars and odd polygons; tiered stands rise to their centre and k tiers make k levels; preset cards show the open form; towers, stands and shades have realistic heights; ribs, posts and knotted cords set every ring's height, so the bridges are snapped instead of warning about strain, and cords list their knot spacing.
 - Windows release preparation; not published.
 - Shared design-to-export workflow, Simple/Advanced settings, resizable/collapsible panels and a visible first-run tour.
 - Projects search and product/storage filters, including existing device-only generator drafts.
