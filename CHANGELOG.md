@@ -1,3 +1,9 @@
+## 1.4.0 — Windows workflow update (25 Oct 2026)
+
+- Windows installer updated from the published main branch, including the shared seven-step workflow, Simple/Advanced controls and adjustable settings panels.
+- Includes the latest Pop-up fixes for whole ribs, tiered stands, support heights and all 27 editable presets.
+- Keeps the existing updater identity and project format; version 1.3.0 remains available for rollback.
+
 ## 1.3.0 — Pop-up (unreleased)
 
 - Pop-up generator with connected ring/spiral designs, editable profiles, 27 presets, shared laser exports and flat/open preview.
