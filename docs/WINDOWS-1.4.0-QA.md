@@ -13,4 +13,5 @@ Source: main at 2b78e04, with version and release metadata updated in an isolate
 Limitations: Azure Authenticode signing is not configured; the independent updater signature is not a Windows publisher certificate. Clean Windows 10/11 VM installation and live-account update/sign-in were not repeated for this packaging release. Physical fabrication remains unverified.
 
 Rollback: restore the previous stable.json from the parent commit and redeploy to stop offering 1.4.0. Existing installations cannot be silently downgraded; ship a higher patch version if needed. The 1.3.0 download is retained.
-`nFull regression: 2788 passed, 33 skipped, one timing-only failure (386 ms vs 250 ms under concurrent test load). All 16 geometry-validation tests passed in an isolated rerun. No geometry correctness assertion failed.
+
+Full regression: 2788 passed, 33 skipped, one timing-only failure (386 ms vs 250 ms under concurrent test load). All 16 geometry-validation tests passed in an isolated rerun. No geometry correctness assertion failed.
