@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.3.0",
-    "pub_date": "2026-10-25T06:32:23.596Z",
-    "notes": "Pop-up generator: 27 editable bowl, basket, tree, lampshade and ornament presets; ring and spiral patterns, profile controls, shaped engraving, support parts and flat-to-open preview. Prototype actual stock before use.",
+    "version": "1.4.0",
+    "pub_date": "2026-10-25T17:28:19.587Z",
+    "notes": "Updated Windows workflow: seven design-to-export steps, Simple/Advanced settings, resizable panels, and latest Pop-up rib, support, tiered-stand and preset improvements.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.3.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnVPYlZnM1o5bUFrYnU4TVpkcEdWMHBseTNtSVdzQjhrR214WmZWZ0J6NnpMT3cwdG9YTmx5MTR3NnJwWm54NDR5czhDYVRjZGFITVdKYWk0ejkzYmdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTA5ODczCWZpbGU6SGluZ2VMYWJfMS4zLjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMy4wCkFVeEhVTDQ0bGQwcnhDNjlOTzd6TXV6S0tYWmZ4TjVpZG5QT0lJK3JqKzZYNVBEeWZiVWt5ZVhFSmkvTkV4VWxhMXFSMXVjS1lxVkFiM0Ivb2dITkJnPT0K",
-        "size": 10431211,
-        "sha256": "c68a52aea21620f019f5cef6e8cda33d2b232a61d774607a136dca6c4046365a"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.4.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnF6cUkwSHJxNFpwSmdoVFNuamVkS1VSQnhHa0lqRHkzVU9CT3JXVk9SRUhNM2k4UEYxQVpJZTBZVTFpaXpxakl0OUdnZjBlVWtycWk3N2gxeW14RHdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTQ5MjY5CWZpbGU6SGluZ2VMYWJfMS40LjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuNC4wCmJ4L1lHYXJmdDlYaEYxMS83Q2RQc3VQcXpsZTZ1SzNDd3JKYk96UXExM01nZGZWMWpHTEhJZDBhVDB0cFJ6K1BBc3RIQ2xqNWNnSDBPcDYyYVkrbUFRPT0K",
+        "size": 10433781,
+        "sha256": "6250f5c70469c3f31cafc837e2b5e04c77940684f5e8ef3c4584780a21871765"
       }
     }
   }
