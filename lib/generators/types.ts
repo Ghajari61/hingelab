@@ -178,6 +178,8 @@ export interface GenOutput {
   materials?: { main: string; second: string; secondK?: number };
   /** The parts are flat layers stacked face to face (thumbnails draw only what shows from the front). */
   stacked?: boolean;
+  /** The 3D view's fold slider, when parts have frames: its label and tooltip (a paper box's "Fold" when unset). */
+  fold?: { label: string; title: string };
   /** The cut-out pattern's result: shapes made, and on how many parts (for the checks). */
   pattern?: { shapes: number; parts: number; windowed: boolean };
 }

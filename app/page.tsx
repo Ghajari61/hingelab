@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  ArrowRight, Award, Baby, Box, Cake, CheckCircle2, Clock, Download, FileDown, Gift, GraduationCap, Hash, Heart, KeyRound, Layers,
+  ArrowRight, Award, Baby, Box, Cake, CheckCircle2, Clock, Cone, Download, FileDown, Gift, GraduationCap, Hash, Heart, KeyRound, Layers,
   LayoutGrid, Moon, Package, Puzzle, QrCode, Ruler, ScanLine, Shapes, ShieldCheck, Signpost, Sparkles, SquareStack, TreePine, Trophy,
   Type, Wand2, Wrench, type LucideIcon,
 } from "lucide-react";
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 
 const ICON: Record<SiteIcon, LucideIcon> = {
   hinge: Package, letters: Type, parametric: Layers, clock: Clock, puzzle: Puzzle, qr: QrCode, box: Box,
-  cake: Cake, key: KeyRound, sign: Signpost, hash: Hash, trophy: Trophy, layers: SquareStack,
+  cake: Cake, key: KeyRound, sign: Signpost, hash: Hash, trophy: Trophy, layers: SquareStack, cone: Cone,
 };
 
 const OCCASIONS: { name: string; icon: LucideIcon; preset: string }[] = [

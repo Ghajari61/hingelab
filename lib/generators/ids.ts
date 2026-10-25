@@ -1,5 +1,5 @@
 /** Generator ids and the little the shell needs before a generator's code loads. */
-export const GENERATOR_IDS = ["clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox"] as const;
+export const GENERATOR_IDS = ["clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "popup"] as const;
 export type GeneratorId = (typeof GENERATOR_IDS)[number];
 
 export const isGeneratorId = (v: unknown): v is GeneratorId => typeof v === "string" && (GENERATOR_IDS as readonly string[]).includes(v);
@@ -8,7 +8,7 @@ export interface GeneratorInfo {
   name: string;
   blurb: string;
   /** Lucide icon name, resolved by the shell. */
-  icon: "clock" | "puzzle" | "qr" | "box" | "cake" | "key" | "sign" | "hash" | "trophy" | "layers";
+  icon: "clock" | "puzzle" | "qr" | "box" | "cake" | "key" | "sign" | "hash" | "trophy" | "layers" | "cone";
   /** Autosave key on this device. */
   storageKey: string;
 }
@@ -24,4 +24,6 @@ export const GENERATOR_INFO: Record<GeneratorId, GeneratorInfo> = {
   tablenum: { name: "Table Numbers", blurb: "A whole set of table numbers in one file: stands in slotted bases, living-hinge tent cards or plaques, with labels and names.", icon: "hash", storageKey: "hingelab-gen-tablenum-v1" },
   trophy: { name: "Trophy", blurb: "Awards that stand up: a star, cup, shield, medal, flame, laurel or motif with a name plate, slotted into a stepped base in wood, acrylic or both.", icon: "trophy", storageKey: "hingelab-gen-trophy-v1" },
   paperbox: { name: "Paper Box", blurb: "Folding cartons, mailers and gift boxes in card or board for a cutter or a laser: tuck-end cartons, mailers and two-piece boxes with creases, slit locks and bleed.", icon: "box", storageKey: "hingelab-gen-paperbox-v1" },
-  shadowbox: { name: "Shadow Box", blurb: "Layered 3D paper-cut art from geometric patterns or your own picture, for a Cricut or a laser, with over a hundred ready-made designs.", icon: "layers", storageKey: "hingelab-gen-shadowbox-v1" },};
+  shadowbox: { name: "Shadow Box", blurb: "Layered 3D paper-cut art from geometric patterns or your own picture, for a Cricut or a laser, with over a hundred ready-made designs.", icon: "layers", storageKey: "hingelab-gen-shadowbox-v1" },
+  popup: { name: "Pop-up", blurb: "One flat piece that lifts into a bowl, basket, tree, lampshade or ornament: rings or a spiral in any outline, held by slotted arms or cords.", icon: "cone", storageKey: "hingelab-gen-popup-v1" },
+};

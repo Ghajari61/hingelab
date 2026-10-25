@@ -64,6 +64,7 @@ Which product: use the product that builds the object, and match "exact" when th
 - parametric: sculptures made of many slices; pick the closest preset, the shape itself cannot change
 - puzzle: jigsaw puzzles. qr: QR codes. clock: a plain clock (outline, ticks, numerals, hands, movement hole)
 - shadowbox: layered paper-cut tunnels, mandalas, sunbursts, landscapes and lattices
+- popup: collapsible bowls and baskets, pop-up Christmas trees, spiral lampshades and ornaments cut as rings or a spiral from one flat sheet
 - art: a custom picture, logo, ornament or illustration, and anything whose detail flag is true
 Set detail true when the photo or the description is a specific picture the chosen product cannot build from its settings. A clock face covered in separate leaves and flowers, a sign whose outline is a drawing, an engraved scene: detail true, and the brief lists those shapes plus the working parts (a clock's centre hole and hands, the words on a sign). Set detail false for a plain object, a word, a standard motif or a preset shape. If you would have to tell the user the product cannot cut a pattern you can see, detail is true.
 The brief describes only what the user asked for or the photo shows, in under 120 words; do not add features. When the user writes about the photo (what it is, its size, text or changes they want), that wins over what the photo seems to show.

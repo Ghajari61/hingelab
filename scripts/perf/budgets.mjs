@@ -46,6 +46,7 @@ const LAZY_BUDGETS = {
   "Boxes generator": { key: /registry\.ts -> \.\/boxes$/, kb: 50 },
   "Cake Topper generator": { key: /registry\.ts -> \.\/topper$/, kb: 31 },
   "Key Holder generator": { key: /registry\.ts -> \.\/keyrack$/, kb: 30 },
+  "Pop-up generator": { key: /registry\.ts -> \.\/popup$/, kb: 40 },
   "Sign generator": { key: /registry\.ts -> \.\/sign$/, kb: 33 },
   "Table Numbers generator": { key: /registry\.ts -> \.\/tablenum$/, kb: 32 },
   "Trophy generator": { key: /registry\.ts -> \.\/trophy$/, kb: 31 },

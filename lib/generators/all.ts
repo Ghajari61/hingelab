@@ -6,10 +6,11 @@ import { PUZZLE } from "./puzzle";
 import { QR } from "./qr";
 import { SHADOWBOX } from "./shadowbox";
 import { PAPERBOX } from "./paperbox";
+import { POPUP } from "./popup";
 import { SIGN } from "./sign";
 import { TABLENUM } from "./tablenum";
 import { TOPPER } from "./topper";
 import { TROPHY } from "./trophy";
 import type { AnyGenerator } from "./types";
 
-export const ALL_GENERATORS: AnyGenerator[] = [CLOCK, PUZZLE, QR, BOXES, TOPPER, KEYRACK, SIGN, TABLENUM, TROPHY, SHADOWBOX, PAPERBOX];
+export const ALL_GENERATORS: AnyGenerator[] = [CLOCK, PUZZLE, QR, BOXES, TOPPER, KEYRACK, SIGN, TABLENUM, TROPHY, SHADOWBOX, PAPERBOX, POPUP];
