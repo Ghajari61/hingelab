@@ -1,26 +1,38 @@
 # Pop-up 1.3.0 Windows QA — 2026-10-25
 
-Status: geometry and desktop generation checks passed; full authenticated native-app/local-server E2E remains BLOCKED, not passed.
+Status: local authenticated generation and native SVG export passed for all 27 presets. The earlier Docker blocker is resolved. This is software QA, not physical cutting certification.
 
-## Passed
-- Installed Windows executable reports FileVersion/ProductVersion 1.3.0; its native window was opened and inspected.
-- Built a separate 1.3.0 debug/e2e executable with compile-time HINGELAB_API_BASE=http://127.0.0.1:3457 and isolated app identifier app.hingelab.popupqa. The production signed installer was not rebuilt or changed.
-- Local Next server started on loopback port 3457.
-- Existing Pop-up geometry/snapshot suite: 39/39 passed.
-- New desktop generation suite: 27/27 passed. For EACH preset, calls the actual generateDesign server implementation with Pro plan, verifies a nonempty 3D model, positive sheet dimensions, valid finite SVG, then changes width to 260 mm and verifies successful editable regeneration. Verifies Free returns 403 and no SVG. This is a function-level integration test, not an authenticated HTTP/UI test.
-- All 27 exports parsed successfully as XML with SVG roots. None reports an error-level design issue. Warnings remain available in the per-preset JSON reports.
-- Files: tmp/popup-130-qa/svg; archive: tmp/popup-130-qa/Pop-up-1.3.0-27-SVG.zip.
-- Installer SHA-256 unchanged: c68a52aea21620f019f5cef6e8cda33d2b232a61d774607a136dca6c4046365a.
+## Environment and scope
+- Branch: feature/popup-generator. No push, main changes, online deployment or publication.
+- Installed release reports 1.3.0. It points at the production server; local testing therefore uses a separate 1.3.0 debug/e2e executable built with HINGELAB_API_BASE=http://127.0.0.1:3457 and isolated identifier app.hingelab.popupqa.
+- Test binary: desktop/src-tauri/target/debug/HingeLab.exe. Local Next server: 127.0.0.1:3457. Existing local Supabase: 127.0.0.1:55421.
+- A local-only test account received a temporary Pro plan. Production credentials and billing were untouched.
+- Native PKCE callback and token exchange succeeded. The authorization code was issued by a local test fixture; browser login/consent screens were not manually exercised.
 
-## Blocker and unverified paths
-Local Supabase at 127.0.0.1:55421 is unavailable. Docker engine calls did not return; its backend log says 'backend exited before becoming ready'. Windows service com.docker.service is Stopped. Start-Service failed with 'Cannot open com.docker.service service on computer'. Docker Desktop needs to be started successfully with the necessary Windows privileges before local authentication can be tested.
+## Passed checks
+- Existing geometry/snapshot suite: 39/39 passed in the preceding QA run.
+- Desktop generation suite: 27/27 passed in the preceding QA run. Each preset generated finite SVG and a nonempty 3D model; edited-width regeneration passed, and Free access returned 403 without SVG.
+- This run: authenticated HTTP POST /api/desktop/generate returned 200 with SVG and 3D objects for every one of the 27 presets.
+- This run: searched/selected every preset inside the native Windows editor and used its Export SVG button. Exactly 27 default-preset SVG files were verified on disk. Hexagon Fruit Basket was retried after the first click sequence produced no file.
+- All 27 native files parsed as SVG XML, contained paths, and had no NaN/Infinity values. Their ordered path d attributes matched the corresponding authenticated HTTP exports exactly (27/27). This comparison verifies path geometry, not physical manufacturability.
+- Representative native 3D check: four views rendered; Open pop-up changed between 0 and 1; Explode changed to 0.7 and back. These controls were visually checked on Hexagon Fruit Basket. Model data exists for all 27; a separate exhaustive visual 3D inspection of each preset was not performed.
+- Hexagon Fruit Basket width changed from 240 to 260 mm. Native SVG export produced a distinct, valid 260 mm file.
+- Saved the 260 mm project through the Windows file picker, changed the working width to 200 mm, then reopened the saved project. Width correctly returned to 260 mm and the preview regenerated.
+- Production installer SHA-256 is unchanged: c68a52aea21620f019f5cef6e8cda33d2b232a61d774607a136dca6c4046365a.
 
-The local native app opened at its 1.3.0 sign-in screen. An initial launch lacked HINGELAB_E2E_AUTH_URL_FILE; the subsequent launch command was prepared with this variable, but an already-running single instance prevents changing its environment without a fresh launch. No local sign-in, native SVG Save dialog, or click-through of all 27 presets was completed. No production credentials, billing rules or authentication code were changed. The existing production app remained separate.
+## Evidence
+- Native files: tmp/popup-130-qa/native-svg (27 preset exports plus one edited 260 mm export).
+- Downloadable archive: tmp/popup-130-qa/Pop-up-1.3.0-Windows-Exports.zip (28 SVGs).
+- HTTP files: tmp/popup-130-qa/http-svg.
+- Machine-readable records: tmp/popup-130-qa/http-results.json, native-results.json, geometry-comparison.json.
+- Editable saved project: tmp/popup-130-qa/hexagon-edited-260.oclc.
+- Native screenshot: docs/screenshots/popup-1.3.0-local-qa.png.
+- Earlier function-level exports remain separately in tmp/popup-130-qa/svg.
 
-## Resume
-1. Start Docker Desktop and wait for its engine; start the existing local Supabase stack without resetting its database.
-2. Start current Next dev server on 127.0.0.1:3457.
-3. Launch desktop/src-tauri/target/debug/HingeLab.exe fresh with HINGELAB_E2E_AUTH_URL_FILE and HINGELAB_E2E_BROWSER_FILE pointing into tmp/popup-130-qa.
-4. Use a local test account and existing PKCE sign-in, then verify all 27 native preset previews, edits, flat/open animation and actual SVG saves against the exported reference files. Keep test-account state isolated from the user's production session.
+## Limitations / follow-up observations
+- No actual laser cut, material flexure, load, lamp heat, or assembly fit was tested. Existing design warnings still apply; SVG validity does not certify physical performance.
+- Signed production installer was not rebuilt for localhost; these native functional checks apply to the isolated local-test build, not a production-server E2E run.
+- First-run tour was partly obscured by the expanded desktop sidebar at the tested window size. Skip dismissed it and the editor was usable. This cosmetic onboarding issue remains; no source fix is claimed.
+- No claim of exhaustive combinations of all parameter ranges or third-party laser software imports.
 
-No push, main changes, online deployment or installer publication was performed.
+The local server and isolated test app are left running for inspection. Production app session was not modified.
