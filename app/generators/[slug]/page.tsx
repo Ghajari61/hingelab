@@ -25,6 +25,10 @@ export default async function GeneratorLanding({ params }: { params: Promise<{ s
   const articles = faq.length ? faq : general;
   return (
     <PageShell title={item.name} lede={item.blurb}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org", "@type": "SoftwareApplication", name: `HingeLab ${item.name} generator`, applicationCategory: "DesignApplication",
+        operatingSystem: "Web browser, Windows", description: item.blurb, offers: { "@type": "Offer", price: "0", priceCurrency: "USD", description: "Free to design; export with Pro" },
+      }).replace(/</g, "\\u003c") }} />
       <div className="gen-top">
         <div className="gen-top-copy">
           <div className="gen-actions">

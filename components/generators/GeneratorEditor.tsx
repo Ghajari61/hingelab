@@ -722,7 +722,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       {exporting && (
         <ExportDialog
           getSVG={exportedSVG} localSVG={localSVG} sheets={arranged.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
-          base={def.fileName(built)} units={units} material={params.material} onClose={() => setExporting(false)} toast={toastMsg}
+          base={def.fileName(built)} units={units} material={params.material} thickness={params.T} onClose={() => setExporting(false)} toast={toastMsg}
         />
       )}
       {batching && (

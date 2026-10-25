@@ -605,7 +605,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
       {exporting && (
         <ExportDialog
           getSVG={exportedSVG} localSVG={localSVG} sheets={arranged.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
-          base={baseName(built)} units={units} material={params.material} onClose={() => setExporting(false)} toast={toastMsg}
+          base={baseName(built)} units={units} material={params.material} thickness={params.T} onClose={() => setExporting(false)} toast={toastMsg}
         />
       )}
       {sharing && (

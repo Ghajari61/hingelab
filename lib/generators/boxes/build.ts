@@ -16,6 +16,9 @@ import { buildBook } from "./book";
 import { DESIGN_NAMES, FIT_MM, FIT_NAMES, type BoxesParams } from "./params";
 import { patternTile, patternUnit } from "../pattern";
 
+/** An inside volume in mm³, as people say it: litres, or millilitres under one litre. */
+const litres = (mm3: number) => (mm3 >= 1e6 ? `${(mm3 / 1e6).toFixed(2)} L` : `${Math.round(mm3 / 1e3)} ml`);
+
 export interface BoxesInfo {
   /** Outside size of the finished piece, mm. */
   size: [number, number, number];
@@ -95,6 +98,7 @@ function buildBox(p: BoxesParams): BoxesOutput {
     stats: [
       { label: "Outside", value: `${r1(W)} × ${r1(D)} × ${r1(H + (b.lid === "liftoff" ? T : 0))} mm` },
       { label: "Inside", value: `${r1(W - 2 * T)} × ${r1(D - 2 * T)} × ${r1(H - (closed ? 2 : 1) * T)} mm` },
+      { label: "Holds", value: litres((W - 2 * T) * (D - 2 * T) * (H - (closed ? 2 : 1) * T)) },
       { label: "Fingers", value: `${fingerCount(W - 2 * T, f)} × ${fingerCount(D - 2 * T, f)} × ${fingerCount(H - 2 * T, f)}` },
     ],
     assembly: [

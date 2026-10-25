@@ -835,7 +835,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
           <ExportDialog
             getSVG={exportedAllSVG} localSVG={() => (result ? allSheetsSVG(result, params) : null)} sheets={stacked}
             size={{ w: Math.max(0, ...stacked.map((r) => r.w)), h: stacked.length ? stacked[stacked.length - 1].y + stacked[stacked.length - 1].h : 0 }}
-            base={base()} units={units} material={params.material.id} onClose={() => setExporting(false)} toast={toastMsg}
+            base={base()} units={units} material={params.material.id} thickness={params.material.T} onClose={() => setExporting(false)} toast={toastMsg}
           />
         </Suspense>
       )}

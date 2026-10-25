@@ -267,3 +267,14 @@ html:has(.landing), body:has(> .landing) { height: auto; overflow: visible; }
 /* Gallery pictures are files (app/landing-art); the frame stays as before. */
 img.g-box { width: 100%; height: auto; display: block; object-fit: contain; }
 img.g-sheet { box-sizing: border-box; object-fit: contain; }
+
+/* Seasonal collection on the home page */
+.season-card { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(20px, 4vw, 48px); align-items: center; padding: clamp(22px, 4vw, 44px); border-radius: 28px; background: radial-gradient(500px 280px at 0% 0%, rgba(194, 107, 234, .14), transparent 70%), radial-gradient(500px 300px at 100% 100%, rgba(91, 75, 219, .12), transparent 70%), var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow-2); }
+.season-copy { display: grid; gap: 14px; justify-items: start; }
+.season-copy h2 { margin: 0; }
+.season-pics { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.season-pics a { display: grid; gap: 6px; padding: 6px 6px 10px; border-radius: 14px; background: var(--surface-raised); border: 1px solid var(--line-soft); color: var(--fg); text-decoration: none; font-size: 13px; font-weight: 600; text-align: center; transition: transform var(--dur-med) var(--ease-out), box-shadow var(--dur-med); }
+.season-pics a:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
+.season-pics img { width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: contain; border-radius: 10px; background: var(--canvas-bg); }
+@media (max-width: 900px) { .season-card { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 520px) { .season-pics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -1,3 +1,12 @@
+## Unreleased — Free tools, 3D printing and the Christmas collection
+
+- **Free tools** at /tools, no account and nothing uploaded: a thickness resizer (a file drawn for 3 mm scaled to fit 4 mm stock), a laser-to-3D-print converter (SVG to STL) and sheet nesting for your own SVG (parts packed by their real shape, engraving kept on its part). Each tool has its own page with steps and questions.
+- **STL export.** Every editor's More… export dialog has STL (3D print): the cut-out parts as solid pieces at the material thickness (or one you choose), laid out as on the sheet.
+- **Christmas collection.** A name ornament, a star ornament, a tree of life ornament and a bird house ornament join the stocking holder, Christmas table numbers, pop-up trees and toppers on a new Christmas page. The home page features the season's collection (Christmas from October, Valentine's Day in January and February).
+- **Collections** now have their own pages (Christmas, Wedding, Birthday, Baby, Halloween, Eid and Ramadan, Valentine's Day, Graduation), each listing every fitting design from every generator with its picture.
+- **Search.** The sitemap lists every generator, tool, collection and guide (it listed four pages before), and generator and tool pages describe themselves to search engines.
+- Boxes show how much a box holds (litres or millilitres). The export dialog reminds you to measure your material and cut a test first.
+
 ## Unreleased — Review, motifs and fixes
 
 - Twelve detailed motifs that cut in one piece: mandala, girih star, compass rose, tree of life, Celtic knot, lotus, olive branch, anchor, mountains, fleur-de-lis, dreamcatcher and paisley. They appear in every motif picker (signs, toppers, table numbers, trophies, key holders), with ten new ready-made designs built on them.
