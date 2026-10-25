@@ -13,7 +13,7 @@ import { marqueeCenters, marqueeHoles } from "./marquee";
 import { fretHoles, type KeepOut } from "@/lib/generators/fretwork";
 import { labelPoint } from "./solid";
 import { hingeWall } from "./strips";
-import type { BoxInfo, BoxLetterStat, Contour, LetterIssue, LetterParams, LetterPart, PanelPart, PartMark, PlatePart, Shape, StripPart, Wall } from "./types";
+import type { BoxInfo, BoxLetterStat, Contour, LetterIssue, LetterParams, PanelPart, PartMark, PlatePart, Shape, StripPart, Wall } from "./types";
 
 export interface BoxLetter {
   shape: Shape;

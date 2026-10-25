@@ -9,7 +9,7 @@ import { fingerPanel } from "./joints";
 import { hasArt } from "./more";
 import { BOXES_DEFAULTS, BOXES_VERSION, DESIGN_NAMES, FIT_NAMES, LID_NAMES, PIERCE_SHAPES, migrateBoxes, mergeBoxes, type BoxesParams, type Design, type JointFit, type LidKind, type PierceShape } from "./params";
 import { BOXES_PRESETS } from "./presets";
-import { FRET_KINDS, FRET_NAMES, fretSample } from "../fretwork";
+import { FRET_KINDS, fretSample } from "../fretwork";
 import { PATTERN_HELP, patternOptions, repeatFields } from "../pattern";
 
 const is = (...d: Design[]) => (p: BoxesParams) => d.includes(p.design);

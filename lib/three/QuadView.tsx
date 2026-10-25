@@ -13,7 +13,7 @@ import { Camera, Home } from "lucide-react";
 import ListingPhoto, { type Shoot } from "./ListingPhoto";
 import { applyLook, type LookId } from "./looks";
 import { dimLines, dimSVG, modelBox } from "./dims";
-import { AXES, GRIP_KINDS, axisDrag, dragFactors, scaleDrag, shownAxes, sizeResult, snapDrag, turnDrag, uniformDrag, type Factors, type Grip, type GripAxis, type GripKind, type GripSet, type SizeGizmo } from "./grips";
+import { GRIP_KINDS, axisDrag, dragFactors, scaleDrag, shownAxes, sizeResult, snapDrag, turnDrag, uniformDrag, type Factors, type Grip, type GripAxis, type GripKind, type GripSet, type SizeGizmo } from "./grips";
 
 export type PaneId = "top" | "front" | "left" | "persp";
 export type Shade3D = "shaded" | "edges";
@@ -315,7 +315,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     renderer.setClearColor(0x000000, 0);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.autoUpdate = false;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.toneMapping = THREE.NeutralToneMapping;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.domElement.className = "v3-gl";
@@ -727,7 +727,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
       s.request();
     }
     return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
   const [photo, setPhoto] = useState(false);
   const closePhoto = useCallback(() => { setPhoto(false); host.current?.focus({ preventScroll: true }); }, []);

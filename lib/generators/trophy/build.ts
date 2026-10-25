@@ -1,5 +1,5 @@
 import { MATERIALS } from "@/lib/hinge/defaults";
-import { differenceShapes, makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
+import { differenceShapes, makeShape, offsetShapes, shapeContours, signedArea, unionShapes } from "@/lib/letters/polygon";
 import type { Shape } from "@/lib/letters/types";
 import { bboxOf, circle, customOutline, rect, regularPolygon, roundCorners, transform } from "../geom";
 import { tagMarks, type ItemBlock } from "../items";
@@ -40,7 +40,7 @@ const closed = (c: Contour): Contour => [...c, c[0]];
 const biggest = (s: Shape[]) => s.reduce((a, b) => (b.area > a.area ? b : a));
 const TAB_W = 16;
 
-/** `detail`: the picture's own regions on the emblem, to engrave or score (a traced picture only). */
+/** `detail`: the motif's own regions on the emblem, to engrave or score (a traced picture, or a built-in motif without words). */
 interface EmblemShape { shape: Shape; cx: number; cy: number; room: number; detail?: Contour[] }
 
 /** Scale a 100-unit design to w × h. */
@@ -91,7 +91,10 @@ export function emblemShape(p: TrophyParams, badPath: { v: boolean }, own: Motif
       const cs = motif(id, Math.max(w, h), w / 2, h / 2);
       const s = weld(cs, { border: 0.6, solid: true, bridge: Math.max(5, Math.min(w, h) * 0.06) })!;
       const b = bboxOf([s.outer]);
-      const detail = own && p.emblem.motif === "picture" ? move(cs, -b.x0, -b.y0) : undefined;
+      // the emblem cuts as one solid piece; a traced picture, or a built-in motif with no words on it, is marked on it in full
+      // (a built-in motif shows its openings, engraved, rather than being engraved all over)
+      const marked = own ? (p.emblem.motif === "picture" ? cs : null) : isMotifId(p.emblem.motif) && !p.emblem.text.trim() ? cs.filter((c) => signedArea(c) < 0) : null;
+      const detail = marked?.length ? move(marked, -b.x0, -b.y0) : undefined;
       return { shape: makeShape(transform(s.outer, { x: -b.x0, y: -b.y0 }), []), cx: (b.x1 - b.x0) / 2, cy: (b.y1 - b.y0) / 2, room: (b.x1 - b.x0) * 0.45, detail };
     }
     case "custom": {

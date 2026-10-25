@@ -11,7 +11,7 @@ import type { Path, Paths } from "clipper-lib";
 import type { UserContent } from "ai";
 import { z } from "zod";
 import { pathD, transformSubpaths } from "@/lib/studio/geom";
-import { fromPath, regionOf, toPath, UNIT } from "@/lib/studio/pathfinder";
+import { fromPath, regionOf, UNIT } from "@/lib/studio/pathfinder";
 import { parsePathData } from "@/lib/studio/svgImport";
 import { traceOutlines } from "@/lib/studio/trace/contours";
 import { luminance, removeSpeckles, type Bitmap, type Raster } from "@/lib/studio/trace/raster";

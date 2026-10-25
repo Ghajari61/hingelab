@@ -245,7 +245,7 @@ export default function StartScreen() {
           <div className="home-row" role="list" aria-label="Featured templates">
             {featured.map((t) => (
               <button key={t.id} type="button" role="listitem" className="tpl-mini" onClick={() => router.push(`/templates?t=${t.id}`)} data-testid={`featured-${t.id}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- static template thumbnails */}
+                { }
                 <span className="thumb"><img src={templateThumb(t.id)} alt="" loading="lazy" decoding="async" width={300} height={200} /></span>
                 <span className="txt"><span className="name">{t.title}</span><span className="meta">{t.category}</span></span>
               </button>

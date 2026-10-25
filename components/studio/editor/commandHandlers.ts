@@ -2,7 +2,7 @@
 
 import type { StoreApi } from "zustand";
 import { newId } from "@/lib/studio/doc";
-import { boxCenter, emptyBox, invert, isEmptyBox, mul, rotateAt, scaleAt, translate, unionBox } from "@/lib/studio/geom";
+import { boxCenter, emptyBox, invert, isEmptyBox, mul, rotateAt, scaleAt, unionBox } from "@/lib/studio/geom";
 import {
   alignSelected, anchorsCenter, breakAt, canJoinEnds, curveSegments, deleteSegments, editAnchors, extractSubpaths, hasSelectedSegment, insertMidpoints, joinAnchors,
   setKinds, straightenSegments, transformSelected, type MSub, type NodeRef,

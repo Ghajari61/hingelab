@@ -45,7 +45,7 @@ function CardArt({ pic, children }: { pic?: string; children: ReactNode }) {
   if (!pic) return <span className="art" aria-hidden="true">{children}</span>;
   return (
     <span className="art pic" aria-hidden="true">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
+      { }
       <img src={pic} alt="" width={96} height={66} loading="lazy" decoding="async" draggable={false} />
     </span>
   );

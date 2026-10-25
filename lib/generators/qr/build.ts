@@ -6,7 +6,7 @@
  */
 import { differenceShapes, intersectShapes, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import type { Shape } from "@/lib/letters/types";
-import { arc, bboxOf, circle, customOutline, deg, rect, reverse, roundedRect, stadium, transform } from "../geom";
+import { arc, bboxOf, circle, customOutline, deg, rect, reverse, roundedRect, stadium } from "../geom";
 import { tagItem } from "../items";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { HEART_PATH } from "../util";

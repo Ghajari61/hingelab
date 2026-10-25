@@ -121,4 +121,18 @@ export const TABLENUM_PRESETS: GenPreset<TablenumParams>[] = [
       text: { label: "Table", labelFont: "montserrat", fontId: "montserrat", size: 38 }, border: { kind: "none" },
     },
   },
+  {
+    id: "olive-grove", name: "Olive grove", note: "Serif numbers with an olive branch, 1 to 12",
+    params: {
+      name: "Olive table numbers", batch: { from: 1, to: 12 }, plate: { shape: "arch", pad: 14, corner: 6 },
+      text: { label: "Table", labelFont: "playfair-display", fontId: "playfair-display", size: 40 }, motif: { kind: "olive", place: "above", size: 24, gap: 4 }, border: { kind: "score", inset: 5 },
+    },
+  },
+  {
+    id: "compass-voyage", name: "Voyage", note: "Compass rose numbers for a travel-themed wedding, 1 to 10",
+    params: {
+      name: "Voyage table numbers", batch: { from: 1, to: 10 }, plate: { shape: "circle", pad: 14, corner: 6 },
+      text: { label: "Table", labelFont: "cinzel", fontId: "cinzel", size: 36 }, motif: { kind: "compass", place: "above", size: 26, gap: 4 }, border: { kind: "score", inset: 5 },
+    },
+  },
 ];

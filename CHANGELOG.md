@@ -1,3 +1,15 @@
+## Unreleased — Review, motifs and fixes
+
+- Twelve detailed motifs that cut in one piece: mandala, girih star, compass rose, tree of life, Celtic knot, lotus, olive branch, anchor, mountains, fleur-de-lis, dreamcatcher and paisley. They appear in every motif picker (signs, toppers, table numbers, trophies, key holders), with ten new ready-made designs built on them.
+- Trophies with a built-in motif and no words on the emblem engrave the motif's openings, so detailed motifs read on the solid piece.
+- Every ready-made design now opens without a warning about itself (a new test checks all 450+ of them): the farmhouse and cloud key holders put their wall-mount holes inside the board, five Hinge Box designs bend within the hinge or spread over sheets, letter boxes spread over sheets, and the matchbox no longer warns about its thumb notch.
+- Key holders: wall-mount holes slide down (then inward) into shaped boards such as a roof or a cloud, and always hang level.
+- Fixed: the Shadow Box panel had settings with the same internal key (one per design), which broke the panel's updates; its "Pattern" rail is now "Design", so it is not confused with the cut-out pattern.
+- Fixed: a browser console error on every page from an unsupported Permissions-Policy entry, and a three.js warning in the 3D view.
+- Security: Next.js 15.5.28 (fixes a critical advisory) and a patched undici; other libraries take their in-range updates. `npm audit` reports no vulnerabilities.
+- Website: a motif showcase on the home page, a two-column Questions section, and generator pages with a picture, the actions beside it and up to six preset pictures.
+- Code: unused imports and stale lint directives removed.
+
 ## Unreleased — New look
 
 - Purple is HingeLab's colour: buttons, selection and links across the website, the editors and the Windows app. Everyone starts on purple; an accent picked in Settings still wins (Settings › Accent now lists Purple first).

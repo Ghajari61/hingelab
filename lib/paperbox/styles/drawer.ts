@@ -83,7 +83,8 @@ export const DRAWER = registerBoxStyle({
     const a = trayOut[0] + 2 * c + t, b = trayOut[2] + c + t, d = trayOut[1];
     const sl = sleeve("sleeve", "Sleeve", a, b, d, { glue: num(p, "glueW", 15), taper: num(p, "glueTaper", 15), notch: num(p, "notch", 10), bleed });
     const warnings: string[] = [];
-    if (pull === "notch" && s.h < 2 * r + 4) warnings.push("The tray is low for its thumb notch; the notch takes most of the front.");
+    // the notch radius follows the tray height (at most 45 % of it), so it only gets too small for a thumb on a very low tray
+    if (pull === "notch" && r < 5) warnings.push("The tray is low for a thumb notch: the notch is under 10 mm across. Use a ribbon pull or a taller tray.");
     return {
       style: "drawer", parts: [sl, drawer], outer: [a + t, d, b + t], inner: s.inner, warnings,
       poses: [{ part: "tray", on: "sleeve", bottom: t, shift: [0, d * 0.42, 0] }],

@@ -530,7 +530,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
   }
   const presetOpt = (pr: GenPreset<unknown>): Opt => ({
     v: pr.id, text: pr.name, title: pr.note,
-    // eslint-disable-next-line @next/next/no-img-element -- static preset thumbnails
+     
     icon: <img src={`/presets/${def.id}/${pr.id}.svg`} alt="" width={66} height={44} loading="lazy" />,
     onClick: () => applyPreset(pr),
   });

@@ -297,7 +297,7 @@ export function AIDesigner({ plan, curator = false }: { plan: Plan; curator?: bo
         />
         {photo && (
           <div className="ai-attach">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            { }
             <img src={photo} alt="Your photo" />
             <div className="ai-photo-note">
               <label htmlFor="ai-photo-note" className="ai-label">About this photo <span className="ai-optional">(optional)</span></label>
@@ -367,7 +367,7 @@ export function AIDesigner({ plan, curator = false }: { plan: Plan; curator?: bo
         <section className="ai-result" aria-label="Your design">
           <div className="ai-preview">
             {preview ? (
-              // eslint-disable-next-line @next/next/no-img-element
+               
               <img src={preview} alt={`Cut file of ${design.name}`} />
             ) : (
               <p>{design.error ?? (design.locked ? "The preview of this design needs Pro." : "Open the design in the editor to see its preview.")}</p>

@@ -124,4 +124,18 @@ export const TROPHY_PRESETS: GenPreset<TrophyParams>[] = [
       plate: { title: "Club Classic", name: "Champion", year: "2026", width: 120 }, base: { tiers: 3, shape: "circle", width: 120, depth: 120 },
     },
   },
+  {
+    id: "girih-award", name: "Girih award", note: "Eight-point girih star on a two-tier base",
+    params: {
+      name: "Girih award", emblem: { kind: "motif", motif: "girih", width: 110, height: 110, text: "", laurel: false },
+      plate: { title: "Excellence Award", name: "Your Name", year: "2026", width: 120 }, base: { tiers: 2, shape: "octagon", width: 130, depth: 70 },
+    },
+  },
+  {
+    id: "tree-of-life-award", name: "Tree of life", note: "Tree of life emblem for a service or family award",
+    params: {
+      name: "Tree of life award", emblem: { kind: "motif", motif: "treeoflife", width: 110, height: 110, text: "", laurel: false },
+      plate: { title: "In Gratitude", name: "Your Name", year: "2026", width: 120 }, base: { tiers: 1, shape: "rounded", width: 130, depth: 70 },
+    },
+  },
 ];

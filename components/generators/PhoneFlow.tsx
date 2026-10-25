@@ -87,7 +87,7 @@ export default function PhoneFlow({
               </button>
               {shown.map((pr) => (
                 <button key={pr.id} type="button" className="pf-card" aria-pressed={current === pr.id} onClick={() => { onPreset(pr); setStep(1); }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- static preset thumbnails */}
+                  { }
                   <img src={thumb(pr)} alt="" width={132} height={88} loading="lazy" />
                   <span>{pr.name}</span>
                 </button>

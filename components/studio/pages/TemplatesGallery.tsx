@@ -92,7 +92,7 @@ export function TemplatesGallery() {
           <div className="tpl-grid" role="list" aria-label="Templates" data-testid="template-grid">
             {list.map((t) => (
               <button key={t.id} type="button" role="listitem" className="tpl-card" onClick={() => setSelId(t.id)} data-testid={`template-${t.id}`} aria-label={`${t.title}: ${t.category}, ${t.difficulty}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- static template thumbnails */}
+                { }
                 <span className="thumb"><img src={templateThumb(t.id)} alt="" loading="lazy" decoding="async" width={300} height={200} /></span>
                 <span className="chips">
                   {t.pro && <Badge kind="pro" />}
@@ -135,7 +135,7 @@ export function TemplatesGallery() {
 function TemplateDetail({ t }: { t: Template }) {
   return (
     <div className="tpl-detail">
-      {/* eslint-disable-next-line @next/next/no-img-element -- static template thumbnails */}
+      { }
       <div className="preview"><img src={templateThumb(t.id)} alt={`${t.title} preview`} width={300} height={200} /></div>
       <div className="info">
         <p>{t.description}</p>

@@ -78,7 +78,8 @@ export function GeneratorDock({
     ? { on: locks.has(f.key), toggle: () => locks.toggle(f.key) } : undefined);
   const num = (f: BaseField, value: number, def: number, hidden = false, lock?: { on: boolean; toggle: () => void }) => (
     <NumberField
-      key={f.id} field={f} value={value} defaultValue={def} units={units} label={f.label} hidden={hidden} extra={lock && <LockToggle {...lock} label={f.label} />}
+      // one setting can have a field per design (shown one at a time), so the label is part of the key
+      key={`${f.id}:${f.label}`} field={f} value={value} defaultValue={def} units={units} label={f.label} hidden={hidden} extra={lock && <LockToggle {...lock} label={f.label} />}
       onLive={(v) => onSet(f.id, v, false, f.mat)}
       onCommit={(v) => onSet(f.id, v, true, f.mat)}
     />

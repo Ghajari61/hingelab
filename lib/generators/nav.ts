@@ -68,7 +68,7 @@ function fromGenerator(id: GeneratorId, process: CatalogueProcess, category: str
         { id: "mountain-range", name: "Mountain range" },
       ]
     : [];
-  const presets = (list.length ? list.slice(0, 3).map((p) => ({ id: p.id, name: p.name })) : featured)
+  const presets = (list.length ? list.slice(0, 6).map((p) => ({ id: p.id, name: p.name })) : featured)
     .map((p) => ({ ...p, href: editor(id, p.id) }));
   return {
     slug: id,
@@ -105,7 +105,7 @@ function fromCatalog(id: string, product: string, helpProduct: string, process: 
 const CORE_PICTURE: Record<string, string> = { hinge: "gift-box", letters: "hello-sign", parametric: "head-stack" };
 
 /** The picture of the preset a card opens: its own preset, else the product's featured or first one. */
-function pictureOf(href: string, cover?: string): string | null {
+export function pictureOf(href: string, cover?: string): string | null {
   const u = new URL(href, "https://hingelab.local");
   const product = u.searchParams.get("p");
   if (!product) return null;

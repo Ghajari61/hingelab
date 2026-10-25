@@ -118,4 +118,11 @@ export const KEYRACK_PRESETS: GenPreset<KeyrackParams>[] = [
       motif: { kind: "key", side: "right", size: 26 }, hooks: { count: 4, profile: "round" }, mount: { kind: "keyhole" },
     },
   },
+  {
+    id: "harbour-keys", name: "Harbour keys", note: "Wave board with an anchor and five ball hooks",
+    params: {
+      name: "Harbour keys", board: { shape: "rounded", width: 320, height: 130, corner: 14 }, text: { text: "Harbour House", fontId: "playfair-display", size: 22 },
+      motif: { kind: "anchor", side: "left", size: 30 }, hooks: { count: 5, profile: "ball" }, mount: { kind: "keyhole" },
+    },
+  },
 ];

@@ -11,7 +11,7 @@ export default function GraphicsPage() {
       <div className="ia-grid">
         {GRAPHICS.map((g) => (
           <figure key={g.id} className="ia-card">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            { }
             <img src={g.src} alt={g.name} width={240} height={180} />
             <figcaption><b>{g.name}</b></figcaption>
           </figure>
