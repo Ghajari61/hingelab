@@ -676,7 +676,7 @@
   "w": 600,
   "h": 400,
   "sheets": 1,
-  "objects": 7,
+  "objects": 5,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
  },
  "popup-nut-snack-bowl": {
@@ -695,23 +695,23 @@
  },
  "popup-cupcake-tower-3-tiers": {
   "w": 600,
-  "h": 400,
-  "sheets": 1,
+  "h": 830,
+  "sheets": 2,
   "objects": 3,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
  },
  "popup-spiral-christmas-tree-with-star": {
   "w": 600,
-  "h": 400,
-  "sheets": 1,
+  "h": 830,
+  "sheets": 2,
   "objects": 4,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
  },
  "popup-snowflake-tree": {
   "w": 600,
-  "h": 400,
-  "sheets": 1,
-  "objects": 5,
+  "h": 830,
+  "sheets": 2,
+  "objects": 3,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
  },
  "popup-spiral-ornament-set-of-6": {
@@ -739,7 +739,7 @@
   "w": 600,
   "h": 400,
   "sheets": 1,
-  "objects": 15,
+  "objects": 3,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
  },
  "popup-haft-sin-tray-nowruz": {
@@ -781,7 +781,7 @@
   "w": 600,
   "h": 400,
   "sheets": 1,
-  "objects": 4,
+  "objects": 1,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
  },
  "popup-spiral-tealight-holder": {
@@ -807,8 +807,8 @@
  },
  "popup-pagoda-tower-decor": {
   "w": 600,
-  "h": 400,
-  "sheets": 1,
+  "h": 830,
+  "sheets": 2,
   "objects": 4,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
  },
@@ -816,7 +816,7 @@
   "w": 600,
   "h": 400,
   "sheets": 1,
-  "objects": 7,
+  "objects": 3,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
  },
  "popup-monogram-key-bowl": {
