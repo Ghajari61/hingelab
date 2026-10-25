@@ -6,7 +6,6 @@ import { useSession } from "@hingelab/app/session";
 import type { Units } from "@/components/editor/format";
 import { saveEditorPrefs, useEditorPrefs } from "@/lib/prefs/editorStore";
 import { clampDockWidth } from "@/lib/editor/workflow";
-import { WorkflowSteps } from "./WorkflowSteps";
 
 const FIRST_EXPORT_KEY = "hingelab-first-export-v1";
 
@@ -63,7 +62,7 @@ export function DockColumn({ children, onExport, exportLabel, alt = [], units, o
   }, [confirm]);
 
   return (
-    <div ref={col} className="dock-col" data-detail={prefs.detail} data-collapsed={prefs.dockCollapsed || undefined} inert={inert || undefined}>
+    <div ref={col} className="dock-col" data-detail="advanced" data-collapsed={prefs.dockCollapsed || undefined} inert={inert || undefined}>
       <div className="dock-resize" role="separator" aria-label="Settings panel width" aria-orientation="vertical"
         aria-valuemin={280} aria-valuemax={560} aria-valuenow={prefs.dockW || 340} tabIndex={prefs.dockCollapsed ? -1 : 0}
         onPointerDown={(e) => {
@@ -107,14 +106,6 @@ export function DockColumn({ children, onExport, exportLabel, alt = [], units, o
             </div>
           )}
         </div>
-      </div>
-      <div className="dock-workflow" hidden={prefs.dockCollapsed}>
-        <div className="dock-detail" role="group" aria-label="Settings detail">
-          <span>Settings</span>
-          {(["simple", "advanced"] as const).map((detail) => <button type="button" key={detail} aria-pressed={prefs.detail === detail}
-            onClick={() => saveEditorPrefs({ detail })}>{detail === "simple" ? "Simple" : "Advanced"}</button>)}
-        </div>
-        <WorkflowSteps body={body} col={col} simple={prefs.detail === "simple"} onAdvanced={() => saveEditorPrefs({ detail: "advanced" })} />
       </div>
       <div ref={body} id={bodyId} className="dock-body" hidden={prefs.dockCollapsed}>{children}</div>
       <div className="dock-foot">

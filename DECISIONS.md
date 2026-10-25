@@ -1606,3 +1606,7 @@ The owner pointed at Vector Painter's laser apps page and asked for everything w
 - **Small touches.** Box volume in the Boxes summary; a measure-and-test reminder in the export dialog.
 - **Not done.** A trial of Pro or a "buy designs, get Pro" offer: those are pricing changes for the owner to decide.
 
+## D203. The step bar and Simple/Advanced switch are removed
+
+The owner asked for the panel header (Settings, Simple/Advanced and the seven workflow steps, D197) to go. The panel now starts with its sections and every setting shows (the column keeps `data-detail="advanced"`, so settings marked advanced are never hidden by an old saved "simple"). Sections keep their `data-step`, so nothing else that reads them changes.
+
