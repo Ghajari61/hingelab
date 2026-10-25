@@ -5,6 +5,7 @@
  * the odd ones); other corners are butt joints, where both panels stop short so their inner
  * faces just meet.
  */
+import { halfKerf } from "./kerf";
 import { bboxOf, offsetRect, simplify, tabCount } from "@/lib/hinge";
 import { Loop, turnAt } from "./path";
 import { slotAt } from "./strips";
@@ -137,7 +138,7 @@ export function facetedWall(poly: Contour, o: FacetOptions): FacetResult {
     for (const x of [...tx].reverse()) pts.push([x + a / 2, hBody], [x + a / 2, hBody + T], [x - a / 2, hBody + T], [x - a / 2, hBody]);
     for (let k = nf - 1; k >= 0; k--) pts.push([startX[k], ys[k + 1]], [startX[k], ys[k]]);
     const x0 = Math.min(...startX);
-    const outline = offsetRect(simplify(pts.map(([x, y]) => [x - x0, y] as Point)), p.K / 2);
+    const outline = offsetRect(simplify(pts.map(([x, y]) => [x - x0, y] as Point)), halfKerf(p));
     const w = Math.max(...endX) - x0;
     const name = `${o.letter}${o.panelNo + j}`;
     parts.push({

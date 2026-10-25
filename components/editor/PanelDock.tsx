@@ -13,10 +13,11 @@ import { HingeInspector } from "./HingeInspector";
 import type { CutStyle, Model } from "@/lib/hinge";
 import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
 import type { FitInfo } from "@/lib/fit/arrange";
-import { SheetSection } from "@/components/shell/SheetSection";
+import { SheetSection, type ResizePreview } from "@/components/shell/SheetSection";
 import { HelpMark } from "@/components/help/HelpContext";
 import { CheckField, ResetMark } from "./ResetMark";
 import type { Units } from "./format";
+import type { Step } from "@/lib/editor/workflow";
 import { applyStandardSize, insideText, STANDARD_GROUPS, STANDARD_SIZES, standardSizeOf } from "@/lib/hinge/standardSizes";
 import { BASE_TEXT_FONT, BASE_TEXT_SIZE, MAX_BASE_TEXT } from "@/lib/hinge/baseText";
 import { BUNDLED_FONTS } from "@/lib/letters/fontList";
@@ -28,6 +29,10 @@ import { PIERCE_SHAPES, type PierceShape } from "@/lib/generators/windowShape";
 export interface SheetProps {
   info: FitInfo | null;
   size: string | null;
+  /** The product's size at its design size. */
+  original?: string | null;
+  /** What a resize to fit would give, before it is applied. */
+  preview?: (f: FitSettings) => ResizePreview;
   meta?: string;
   onSheet: (w: number, h: number) => void;
   onFit: (f: FitSettings) => void;
@@ -37,8 +42,12 @@ function Chevron() {
   return <svg className="chev" width="8" height="8" viewBox="0 0 8 8"><path d="M2 1l4 3-4 3z" fill="currentColor" /></svg>;
 }
 
-export function Sec({ title, meta, startOpen, onReset, children }: {
+export function Sec({ title, meta, startOpen, onReset, children, step, advanced }: {
   title: string;
+  /** The workflow step it belongs to (the stepper jumps to it). */
+  step?: Step;
+  /** Only fine-tuning: Simple hides the whole section. */
+  advanced?: boolean;
   meta?: string;
   startOpen?: boolean;
   /** Shows a reset icon on the header that restores this section's defaults. */
@@ -48,7 +57,7 @@ export function Sec({ title, meta, startOpen, onReset, children }: {
   const init = useRef(false);
   // The help and reset buttons sit beside the summary, not in it (a summary is itself a button).
   return (
-    <div className="sec-wrap">
+    <div className="sec-wrap" data-step={step} data-advanced={advanced || undefined}>
     <details
       className="sec"
       ref={(el) => {
@@ -135,7 +144,7 @@ export function PanelDock({
   ));
   return (
     <aside className="dock" aria-label="Panels">
-      <Sec title="Dimensions" meta={dimsMeta} startOpen onReset={() => onResetSection("Dimensions", ["W", "D", "H", "R", "sides", "dia", "cylFlats"])}>
+      <Sec step="dimensions" title="Dimensions" meta={dimsMeta} startOpen onReset={() => onResetSection("Dimensions", ["W", "D", "H", "R", "sides", "dia", "cylFlats"])}>
         <div className="rowlabel">Standard size</div>
         <select
           className="sel" aria-label="Standard size" value={standardSizeOf(params) || "custom"}
@@ -151,7 +160,7 @@ export function PanelDock({
         </select>
         <div className="grid2">{fields("secDims")}</div>
       </Sec>
-      <Sec title="Material" startOpen onReset={() => onResetSection("Material", ["material", "T", "K", "Ky", "gamma", "minFeature"])}>
+      <Sec step="material" title="Material" startOpen onReset={() => onResetSection("Material", ["material", "T", "K", "Ky", "gamma", "minFeature"])}>
         <MaterialPicker
           value={params.material} units={units} onPick={onMaterial}
           current={{ T: params.T, kx: params.K, ky: params.Ky ?? params.K, minFeature: params.minFeature ?? 0 }}
@@ -168,7 +177,7 @@ export function PanelDock({
           }}
         />
       </Sec>
-      <Sec title="Hinge Pattern" meta={patMeta} startOpen onReset={() => onResetSection("Hinge pattern", ["pattern", "cutStyle", "slotW", "slit", "bridge", "pitch", "overrun", "stretch"])}>
+      <Sec step="construction" title="Hinge Pattern" meta={patMeta} startOpen onReset={() => onResetSection("Hinge pattern", ["pattern", "cutStyle", "slotW", "slit", "bridge", "pitch", "overrun", "stretch"])}>
         <div className="rowlabel">Cut style<ResetMark label="Cut style" show={params.cutStyle !== DEFAULTS.cutStyle} to={DEFAULTS.cutStyle === "slot" ? "Slots" : "Single line"} onReset={() => onCutStyle(DEFAULTS.cutStyle)} /></div>
         <div className="iconseg" id="cutSeg" role="group" aria-label="Cut style">
           <button type="button" data-v="slot" aria-pressed={params.cutStyle === "slot"} onClick={() => onCutStyle("slot")} title="Each cut is a round-ended slot of set width; edge cuts become notches in the outline">
@@ -185,11 +194,11 @@ export function PanelDock({
         <HingeInspector model={model} params={params} units={units} />
         <p className="note">Drag a field label left or right to scrub its value. Hold Shift for bigger steps. Stretch shortens each hinge zone to make up for the cuts opening as the wall bends; raise it only if a test wall comes out too long.</p>
       </Sec>
-      <Sec title="Bend Analysis" startOpen>
-        <AnalysisPanel model={model} error={error} units={units} />
+      <Sec step="validation" title="Bend Analysis" startOpen>
+        <AnalysisPanel model={model} error={error} units={units} material={params.material} />
         {checks}
       </Sec>
-      <Sec title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["tabW", "slotClr", "lidGap", "split", "baseRing", "baseRingW", "seamFingers"])}>
+      <Sec step="construction" title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["tabW", "slotClr", "lidGap", "split", "baseRing", "baseRingW", "seamFingers"])}>
         <div className="grid2">{fields("secJoints")}</div>
         <CheckField
           label="Support ring" title="A ring glued on the base, inside the wall, so the bottom of the hinge has a shoulder to sit on"
@@ -208,7 +217,7 @@ export function PanelDock({
         </div>
         <p className="note">Two halves fits long walls on small beds. Seams land in the middle of flat sides.</p>
       </Sec>
-      <Sec title="Lid" onReset={() => onResetSection("Lid", ["lidOver", "lidHole", "lidHoleD", "lidHoleW", "lidLip", "lidLipScore"])}>
+      <Sec step="construction" title="Lid" onReset={() => onResetSection("Lid", ["lidOver", "lidHole", "lidHoleD", "lidHoleW", "lidLip", "lidLipScore"])}>
         <div className="grid2">{fields("secLid")}</div>
         <div className="rowlabel">Hole<ResetMark label="Lid hole" show={(params.lidHole ?? "none") !== "none"} to="None" onReset={() => { const next: Params = { ...params }; delete next.lidHole; delete next.lidHoleD; delete next.lidHoleW; onPatch(next); }} /></div>
         <div className="iconseg wrap" role="group" aria-label="Lid hole">
@@ -234,11 +243,11 @@ export function PanelDock({
         )}
         <p className="note">Overhang makes a flat top wider than the box. A finger hole lifts a removable lid; a knob hole takes a knob&apos;s screw. A tissue slot makes a tissue box, a coin slot a money box, and a rim an open top with a frame, as on a pen holder.</p>
       </Sec>
-      <Sec title="Dividers" meta={(params.divX ?? 0) + (params.divY ?? 0) > 0 ? `${(params.divX ?? 0) + 1} × ${(params.divY ?? 0) + 1}` : undefined} onReset={() => onResetSection("Dividers", ["divX", "divY", "divH"])}>
+      <Sec step="construction" title="Dividers" meta={(params.divX ?? 0) + (params.divY ?? 0) > 0 ? `${(params.divX ?? 0) + 1} × ${(params.divY ?? 0) + 1}` : undefined} onReset={() => onResetSection("Dividers", ["divX", "divY", "divH"])}>
         <div className="grid2">{fields("secDiv")}</div>
         <p className="note">Dividers split the inside into compartments. They stand in slots in the base, lock together where they cross, and step up onto a support ring.</p>
       </Sec>
-      <Sec title="Cut-out pattern" meta={params.fret && params.fret !== "none" ? FRET_NAMES[params.fret] : undefined} onReset={() => onResetSection("Cut-out pattern", ["fret", "fretOn", "fretCell", "fretBar", "fretMotif", "fretShape", "fretSize", "fretMark"])}>
+      <Sec step="design" title="Cut-out pattern" meta={params.fret && params.fret !== "none" ? FRET_NAMES[params.fret] : undefined} onReset={() => onResetSection("Cut-out pattern", ["fret", "fretOn", "fretCell", "fretBar", "fretMotif", "fretShape", "fretSize", "fretMark"])}>
         <div className="rowlabel">Pattern</div>
         <select className="sel" aria-label="Cut-out pattern" value={params.fret ?? "none"} onChange={(e) => { const next: Params = { ...params, fret: e.target.value as Params["fret"] }; if (e.target.value === "none") { delete next.fret; delete next.fretOn; delete next.fretMotif; delete next.fretShape; delete next.fretSize; delete next.fretMark; } onPatch(next); }}>
           {FRET_BUILT_IN.map((k) => <option key={k} value={k}>{FRET_NAMES[k]}</option>)}
@@ -272,7 +281,7 @@ export function PanelDock({
         ) : null}
         <p className="note">A decorative pattern on the lid and the wall&apos;s flat stretches, as on a pierced jewellery box or a lantern: cut through, engraved, or scored, over the whole face or in a shape. Holes stay clear of the tabs, the hinge and the lid&apos;s opening.</p>
       </Sec>
-      <Sec title="Text under the box" meta={params.baseText?.trim() ? "On" : undefined} onReset={() => onResetSection("Text under the box", ["baseText", "baseTextSize", "baseTextFont"])}>
+      <Sec step="design" title="Text under the box" meta={params.baseText?.trim() ? "On" : undefined} onReset={() => onResetSection("Text under the box", ["baseText", "baseTextSize", "baseTextFont"])}>
         <textarea
           className="txt base-text" rows={3} maxLength={MAX_BASE_TEXT} dir="auto" aria-label="Text under the box"
           placeholder={"Company name\nPhone 0912 000 0000"} value={params.baseText ?? ""}
@@ -296,12 +305,12 @@ export function PanelDock({
         {textError && <p className="note warn">{textError}</p>}
         <p className="note">Engraved in the middle of the base, as filled vectors, so any laser program reads it. Long text shrinks to fit inside the walls. Put the engraved side down when you assemble.</p>
       </Sec>
-      <Sec title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
+      <Sec step="export" title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
         <LayersPanel layers={params.layers} labels={params.labels} onVis={onVis} onExp={onExp} onLabels={onLabels} />
       </Sec>
-      <Sec title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "testStrip", "fit"])}>
+      <Sec step="layout" title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "testStrip", "fit"])}>
         <SheetSection
-          bedW={params.bedW} bedH={params.bedH} fit={cleanFit(params.fit)} info={sheet.info} size={sheet.size}
+          bedW={params.bedW} bedH={params.bedH} fit={cleanFit(params.fit)} info={sheet.info} size={sheet.size} original={sheet.original} preview={sheet.preview}
           onSheet={sheet.onSheet} onFit={sheet.onFit}
         >
           <div className="grid2">{fields("secSheet")}</div>

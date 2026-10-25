@@ -1,5 +1,7 @@
 "use client";
 
+import {PopupTools} from '@/components/popup/PopupTools';
+import type {PopupParams} from '@/lib/generators/popup/params';
 import { platform } from "@hingelab/platform";
 import { useShortcutKey } from "@/components/shell/useShortcutKey";
 import { keepSetup } from "@/lib/prefs/editor";
@@ -33,12 +35,15 @@ import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 import { getLoadedFont, loadHarfBuzz } from "@/components/letters/runtime";
 import { fontsForExport, useFontUploads } from "@/components/letters/useFontUploads";
 import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
-import { usedArea, usedText } from "@/lib/fit/arrange";
+import { fabFromGenerator } from "@/lib/fab/adapters";
+import { genFabIssues } from "@/lib/fab/issues";
+import { validateFab } from "@/lib/fab/validate";
+import { fabStatus } from "@/lib/fab/model";
 import { autoFixAll, type Fix, type Issue } from "@/lib/issues";
 import type { Preset } from "@/lib/presets";
 import { generatorHelpMap } from "@/lib/generators/helpMap";
 import { GENERATOR_INFO, type GeneratorId } from "@/lib/generators/ids";
-import { arrangeGenerator, assemblySteps, genContent, genSVG, sheetIssues } from "@/lib/generators/output";
+import { arrangeGenerator, assemblySteps, cleanJob, genContent, genSVG, nominalLayout, sheetIssues } from "@/lib/generators/output";
 import { useArranged } from "./useArranged";
 import { partFrames } from "./highlight";
 import { NestChip, useNestWorker } from "./useNestWorker";
@@ -218,23 +223,27 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const built = arranged.params as P;
   const error = fontError ?? ("error" in arranged.result ? arranged.result.error : null);
   const lay = model ? arranged.lay : null;
-  const content = useMemo(() => (lay ? genContent(lay) : null), [lay]);
+  const [nominal, setNominal] = useState(false);
+  const content = useMemo(() => (lay ? genContent(nominal ? nominalLayout(lay, cleanJob(params.job).mirror) : lay) : null), [lay, nominal, params.job]);
   // Show in a check: a frame round the parts it is about, until the design changes.
-  const [highlight, setHighlight] = useState<string[] | null>(null);
+  const [highlight, setHighlight] = useState<{ ids: string[]; at?: Issue<P>["at"] } | null>(null);
   useEffect(() => { setHighlight(null); }, [deferred]);
-  const highlightOverlay = useMemo(() => (highlight && lay ? partFrames(lay, highlight) : null), [highlight, lay]);
+  const highlightOverlay = useMemo(() => (highlight && lay ? partFrames(lay, highlight.ids, highlight.at) : null), [highlight, lay]);
   const photos = out ? out.parts.reduce((n, pt) => n + (pt.images?.length ?? 0), 0) : 0;
   const gated = out ? designGates(built as { sheet?: { nest?: unknown } }, photos, account.plan, flags) : [];
   const lock = [out && def.pro ? def.pro(built, out) : null, ...gated].filter(Boolean).join(" ") || null;
   const locked = !!lock && !hasPro(account.plan);
   const batchNote = batchLimitMessage(account.plan, designBatchCount(params), !account.configured);
+  const fab = useMemo(() => fabFromGenerator(def.id, params, arranged), [def.id, params, arranged]);
+  const geometry = useMemo(() => (fab ? validateFab(fab) : []), [fab]);
   const issues = useMemo<Issue<P>[]>(
     () => (out ? [
       ...def.check(deferred, out),
       ...sheetIssues(def, deferred, arranged),
+      ...genFabIssues(geometry, deferred, arranged.repaired),
       ...(locked && lock ? [{ code: "NEEDS_PRO", level: "info" as const, message: `${lock} You can design it freely; exporting needs Pro.`, fixes: [] }] : []),
     ] : []),
-    [def, deferred, out, arranged, locked, lock],
+    [def, deferred, out, arranged, locked, lock, geometry],
   );
   const layerKeys = useMemo<LayerKey[]>(() => {
     const k: LayerKey[] = ["outline"];
@@ -264,7 +273,8 @@ function GenEditor({ def, onProduct, onHome, start }: {
   function checkAll(q: P): Issue<P>[] {
     const a = arrangeGenerator(def, q, ctx);
     if ("error" in a.result) return [];
-    return [...def.check(q, a.result.out), ...sheetIssues(def, q, a)];
+    const m = fabFromGenerator(def.id, q, a);
+    return [...def.check(q, a.result.out), ...sheetIssues(def, q, a), ...genFabIssues(m ? validateFab(m) : [], q, a.repaired)];
   }
 
   function applyIssueFix(fix: Fix<P>) {
@@ -285,7 +295,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       .catch(() => setModal({ type: "code", name: filename, data }));
   }
 
-  const localSVG = () => (lay && out && !out.notice ? genSVG(def, built, lay) : null);
+  const localSVG = () => (lay && out && !out.notice ? genSVG(def, built, lay, "", arranged.sheets) : null);
 
   async function exportedSVG(): Promise<string | null> {
     if (!lay || !out) { toastMsg(error ? "Fix the settings before exporting" : "Still loading"); return null; }
@@ -295,7 +305,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
     const over = batchLimitMessage(account.plan, designBatchCount(params), !account.configured);
     if (over) { setUpgrade(over); return null; }
     if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return null; }
-    if (!lock || !account.configured) return genSVG(def, built, lay);
+    if (!lock || !account.configured) return genSVG(def, built, lay, "", arranged.sheets);
     if (locked) { setUpgrade(lock); return null; }
     // A Pro design: the server checks the plan and builds it again.
     try {
@@ -562,7 +572,12 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const sheetProps = {
     info: fitInfo,
     size: out ? def.summary(built) : null,
-    meta: fitSet.mode === "off" ? undefined : fitSet.mode === "auto" ? `Auto · ${sheetsText}` : `Fit · ${fitSet.sheets} sheet${fitSet.sheets === 1 ? "" : "s"}`,
+    original: def.summary(params),
+    preview: (f: FitSettings) => {
+      const t = arrangeGenerator(def, { ...params, fit: f }, ctx);
+      return { scale: t.fit?.scale ?? 1, fits: !!t.fit?.fits, size: t.result && !("error" in t.result) ? def.summary(t.params) : null };
+    },
+    meta: fitSet.mode === "off" ? undefined : fitSet.mode === "auto" ? `Auto · ${sheetsText}` : `Resized · ${sheetsText}`,
     onSheet: (w: number, h: number) => replace({ ...params, bedW: w, bedH: h }, true),
     onFit: (f: FitSettings) => {
       replace({ ...params, fit: f }, true);
@@ -571,7 +586,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
   };
   const zoom = Math.round(viewApi.view.z / PX_PER_MM * 100) + "%";
   const notice = !error && out?.notice ? out.notice : !error && !lay ? "Loading…" : null;
-  const phoneSVG = useMemo(() => (phoneFlow.phone && lay && out && !out.notice ? genSVG(def, built, lay) : null), [phoneFlow.phone, def, built, lay, out]);
+  const phoneSVG = useMemo(() => (phoneFlow.phone && lay && out && !out.notice ? genSVG(def, built, lay, "", arranged.sheets) : null), [phoneFlow.phone, def, built, lay, out, arranged.sheets]);
 
   if (phoneFlow.phone) {
     return (
@@ -579,8 +594,9 @@ function GenEditor({ def, onProduct, onHome, start }: {
         <PhoneFlow
           name={def.name} summary={def.summary(out ? built : params)} presets={def.presets} thumb={(pr) => `/presets/${def.id}/${pr.id}.svg`}
           current={lastPreset} onPreset={applyPreset}
-          fields={
-            <GeneratorDock
+          fields={<>
+            {def.id === 'popup' && <PopupTools params={params as unknown as PopupParams} onApply={p => replace(p as unknown as P, true)} />}
+          <GeneratorDock
               simple def={def} params={params} defaults={defaults} out={out} units={units} layerKeys={layerKeys} onSet={setField}
               onApply={(next) => replace(next, true)} onMaterial={(mid, info) => replace(genWithMaterial(params, mid, info), true)}
               fonts={{
@@ -589,7 +605,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
                 onDelete: async (id) => { if (await fontFiles.remove(id)) replace(withoutFont(params, id), true); },
               }}
               onResetSection={resetSection} sheet={sheetProps} checks={null}
-            />
+            /></>
           }
           svg={phoneSVG} status={error ? `Fix this in the full editor: ${error}` : notice} nesting={nesting} assembly={assemblySteps(out?.assembly, params.gap)}
           onSVG={() => void exportNow()} onDXF={() => void exportDXFNow()} onFull={phoneFlow.full} onHome={onHome}
@@ -652,11 +668,12 @@ function GenEditor({ def, onProduct, onHome, start }: {
               onZoomCenter={viewApi.zoomCenter}
               onActual={() => viewApi.zoomCenter(PX_PER_MM / viewApi.viewRef.current.z)}
               onFit={() => viewApi.fit()}
-              tools={<ViewTools tool={tool} showGrid={showGrid} onTool={setTool} onGrid={() => setShowGrid((g) => !g)} />}
+              tools={<ViewTools tool={tool} showGrid={showGrid} onTool={setTool} onGrid={() => setShowGrid((g) => !g)} nominal={{ on: nominal, toggle: () => setNominal((v) => !v) }} />}
             />
           </section>
         </div>
         <DockColumn onExport={exportNow} exportLabel="Export SVG" alt={[{ label: "DXF", title: "Export as DXF (R12, mm)", run: () => void exportDXFNow() }, { label: "More…", title: "PDF, LightBurn, one file per sheet, mirror, and a check against your machine's bed (Ctrl+Shift+E)", run: openExport }]} units={units} onUnits={setUnits} onResetAll={resetAll} inert={shared.viewing}>
+          {def.id === 'popup' && <PopupTools params={params as unknown as PopupParams} onApply={p => replace(p as unknown as P, true)} />}
           <GeneratorDock
             def={def}
             locks={canShuffle ? locks : undefined}
@@ -678,7 +695,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
             onBatch={() => { const l = gateLock("batch", account.plan, flags); if (l) setUpgrade(l); else setBatching(true); }}
             checks={<>
               {batchNote && <p className="note err" role="status">{batchNote} <button type="button" className="btn-ghost-sm" onClick={() => setUpgrade(batchNote)}>Upgrade</button></p>}
-              <IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} onShow={setHighlight} />
+              <IssueList issues={issues} onFix={applyIssueFix} onAutoFix={autoFixEverything} onShow={(ids, at) => setHighlight({ ids, at })} />
               {lay && <JobEstimate svg={localSVG} version={lay} sheets={arranged.sheets} material={params.material} units={units === "in" ? "in" : "mm"} />}
             </>}
           />
@@ -688,7 +705,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
         x={cursor.x}
         y={cursor.y}
         zoom={zoom}
-        parts={out && lay ? { count: lay.items.filter((it) => it.i >= 0).length, used: usedText(usedArea(lay, arranged.sheets), (mm) => fmtLen(mm, units, true)) } : null}
+        parts={out && fab ? fabStatus(fab, (mm) => fmtLen(mm, units, true)) : null}
         fit={fit}
         saved={shared.viewing ? "Shared design, not saved" : file.status ?? saved}
       />

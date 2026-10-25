@@ -93,7 +93,7 @@ export function LettersDock({
   return (
     <aside className="dock" aria-label="Panels">
 
-      <Sec title="Text" meta={params.text.trim() ? `${[...params.text.trim()].length} chars` : undefined} startOpen onReset={() => onResetSection("Text", ["sizeMode", "size", "letterSpacing", "thicken", "weld", "direction"])}>
+      <Sec step="design" title="Text" meta={params.text.trim() ? `${[...params.text.trim()].length} chars` : undefined} startOpen onReset={() => onResetSection("Text", ["sizeMode", "size", "letterSpacing", "thicken", "weld", "direction"])}>
         <textarea
           className="textin"
           dir="auto"
@@ -124,7 +124,7 @@ export function LettersDock({
         <p className="note">Letter spacing never separates letters that join, as in connected scripts. Thicken grows every stroke outward.</p>
       </Sec>
       {box ? (
-        <Sec title="Box" meta={params.wallStyle === "hinge" ? "Living hinge" : "Flat panels"} startOpen onReset={() => onResetSection("Box", ["depth", "minCornerRadius", "facetTol", "panelMin", "wallMaxLength", "islandArea", "smallIslands", "stackIslands", "marquee", "cutout"])}>
+        <Sec step="dimensions" title="Box" meta={params.wallStyle === "hinge" ? "Living hinge" : "Flat panels"} startOpen onReset={() => onResetSection("Box", ["depth", "minCornerRadius", "facetTol", "panelMin", "wallMaxLength", "islandArea", "smallIslands", "stackIslands", "marquee", "cutout"])}>
           <div className="grid2">{fields("box")}</div>
           {hinge && (
             <CheckField
@@ -176,7 +176,7 @@ export function LettersDock({
           </p>
         </Sec>
       ) : params.mode === "stencil" ? (
-        <Sec title="Stencil" meta={`${params.bridgesPerIsland} bridge${params.bridgesPerIsland > 1 ? "s" : ""} per centre`} startOpen onReset={() => onResetSection("Stencil", ["bridgesPerIsland", "stencilBridge", "sheetMargin"])}>
+        <Sec step="design" title="Stencil" meta={`${params.bridgesPerIsland} bridge${params.bridgesPerIsland > 1 ? "s" : ""} per centre`} startOpen onReset={() => onResetSection("Stencil", ["bridgesPerIsland", "stencilBridge", "sheetMargin"])}>
           <p className="note">The letters are cut out of one sheet. Bridges hold the centres of letters such as A, O and 8 so they don&apos;t fall out.</p>
           <Choice label="Bridges per centre" value={String(params.bridgesPerIsland) as "1" | "2"} def={String(LETTER_DEFAULTS.bridgesPerIsland) as "1" | "2"} onPick={(v) => onPatch({ bridgesPerIsland: v === "2" ? 2 : 1 }, true)} options={[
             { v: "1", text: "One", title: "One bridge across the thinnest stroke" },
@@ -186,19 +186,19 @@ export function LettersDock({
           <p className="note">Margin is the border of sheet around the text.</p>
         </Sec>
       ) : (
-        <Sec title="Mode" meta="Solid" startOpen onReset={() => onResetSection("Mode", ["weldDots", "stencilBridge"])}>
+        <Sec step="design" title="Mode" meta="Solid" startOpen onReset={() => onResetSection("Mode", ["weldDots", "stencilBridge"])}>
           <p className="note">Solid cuts each letter shape out as a flat piece, with counters as inner cuts.</p>
           <CheckField label="Weld dots" checked={params.weldDots} def={LETTER_DEFAULTS.weldDots} onChange={(on) => onPatch({ weldDots: on }, true)} />
           <div className="grid2">{fields("solid")}</div>
           <p className="note">Weld dots joins every separate piece of a word, dots and accents included, with small bridges so each word cuts as one part.</p>
         </Sec>
       )}
-      <Sec title="Material" startOpen onReset={() => onResetSection("Material", ["material", "T", "K"])}>
+      <Sec step="material" title="Material" startOpen onReset={() => onResetSection("Material", ["material", "T", "K"])}>
         <MaterialPicker value={params.material} units={units} onPick={onMaterial} current={{ T: params.T, kx: params.K, ky: params.K, minFeature: 0 }} />
         <div className="grid2">{fields("mat")}</div>
       </Sec>
       {hinge && (
-        <Sec title="Hinge Pattern" meta={params.pattern[0].toUpperCase() + params.pattern.slice(1)} startOpen onReset={() => onResetSection("Hinge pattern", ["cutStyle", "pattern", "slotW", "slit", "bridge", "pitch", "overrun", "stretch"])}>
+        <Sec step="construction" title="Hinge Pattern" meta={params.pattern[0].toUpperCase() + params.pattern.slice(1)} startOpen onReset={() => onResetSection("Hinge pattern", ["cutStyle", "pattern", "slotW", "slit", "bridge", "pitch", "overrun", "stretch"])}>
           <Choice<CutStyle> label="Cut style" value={params.cutStyle} def={LETTER_DEFAULTS.cutStyle} onPick={(v) => onPatch({ cutStyle: v }, true)} options={[
             { v: "slot", text: "Slots", title: "Each cut is a round-ended slot of set width; edge cuts become notches in the outline" },
             { v: "line", text: "Single line", title: "Each cut is a single laser line (kerf width only)" },
@@ -216,22 +216,22 @@ export function LettersDock({
           <p className="note">Hinge cuts go only where the letter curves. Stretch shortens each curved stretch to make up for the cuts opening as the wall bends.</p>
         </Sec>
       )}
-      <Sec title="Analysis" startOpen>
+      <Sec step="validation" title="Analysis" startOpen>
         <LettersAnalysis model={model} error={error} units={units} showZones={showZones} onShowZones={onShowZones} />
         {checks}
       </Sec>
       {box && (
-        <Sec title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["tabW", "slotClr", "baseRim", "lidGap"])}>
+        <Sec step="construction" title="Joints & Fit" onReset={() => onResetSection("Joints & Fit", ["tabW", "slotClr", "baseRim", "lidGap"])}>
           <div className="grid2">{fields("joints")}</div>
           <p className="note">Tabs on the walls fit slots in the base{params.lid === "fixed" ? " and the lid" : ""}. Slot play loosens or tightens that fit; Base rim moves the slots in from the plate edge.</p>
         </Sec>
       )}
-      <Sec title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
+      <Sec step="export" title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
         <LayersPanel layers={params.layers} labels={params.labels} only={hinge ? undefined : ["outline", "slots", "labels"]} onVis={layerVis} onExp={layerExp} onLabels={(on) => onPatch({ labels: on }, true)} />
       </Sec>
-      <Sec title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "fit"])}>
+      <Sec step="layout" title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "fit"])}>
         <SheetSection
-          bedW={params.bedW} bedH={params.bedH} fit={cleanFit(params.fit)} info={sheet.info} size={sheet.size}
+          bedW={params.bedW} bedH={params.bedH} fit={cleanFit(params.fit)} info={sheet.info} size={sheet.size} original={sheet.original} preview={sheet.preview}
           onSheet={sheet.onSheet} onFit={sheet.onFit}
         >
           <div className="grid2">{fields("sheet")}</div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 const KEY = "hingelab-onboarded-v1";
@@ -26,7 +27,7 @@ export function Onboarding() {
     setStep(null);
   };
   const s = STEPS[step];
-  return (
+  return createPortal(
     <section className="onboarding" role="dialog" aria-modal="false" aria-labelledby="onboarding-title">
       <button type="button" className="onboarding-x" aria-label="Skip the tour" onClick={done}><X size={14} aria-hidden /></button>
       <p className="onboarding-step">Step {step + 1} of {STEPS.length}</p>
@@ -39,6 +40,6 @@ export function Onboarding() {
           <button type="button" className="btn-dark-sm" onClick={() => (step < STEPS.length - 1 ? setStep(step + 1) : done())} autoFocus>{step < STEPS.length - 1 ? "Next" : "Done"}</button>
         </span>
       </div>
-    </section>
+    </section>, document.body
   );
 }

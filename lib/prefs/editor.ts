@@ -23,10 +23,19 @@ export interface EditorPrefs {
   uiSize: UiSize;
   /** Panels and menus appear without animation (also on when the system asks for it). */
   reduceMotion: boolean;
+  /** Simple hides fine-tuning fields (their values still apply); Advanced shows every field. */
+  detail: "simple" | "advanced";
+  /** The settings panel's width, px (0: the layout's own). */
+  dockW: number;
+  /** The settings panel is folded to a strip. */
+  dockCollapsed: boolean;
 }
 
+/** Narrowest and widest settings panel a drag may give, px. */
+export const DOCK_W: [number, number] = [280, 560];
+
 export const DEFAULT_EDITOR_PREFS: EditorPrefs = {
-  decimals: 1, dims3d: true, quad: true, shade: "shaded", autosave: true, confirmReset: true, keepSetup: false, uiSize: "normal", reduceMotion: false,
+  decimals: 1, dims3d: true, quad: true, shade: "shaded", autosave: true, confirmReset: true, keepSetup: false, uiSize: "normal", reduceMotion: false, detail: "advanced", dockW: 0, dockCollapsed: false,
 };
 
 /** The 3D toolbar's own keys from before these preferences, read once when there are none yet. */
@@ -56,6 +65,9 @@ export function normalizeEditorPrefs(raw: unknown): EditorPrefs {
     keepSetup: bool("keepSetup"),
     uiSize: r.uiSize === "compact" || r.uiSize === "large" ? r.uiSize : "normal",
     reduceMotion: bool("reduceMotion"),
+    detail: r.detail === "simple" ? "simple" : "advanced",
+    dockW: typeof r.dockW === "number" && Number.isFinite(r.dockW) && r.dockW > 0 ? Math.round(Math.min(DOCK_W[1], Math.max(DOCK_W[0], r.dockW))) : 0,
+    dockCollapsed: bool("dockCollapsed"),
   };
 }
 

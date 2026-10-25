@@ -749,6 +749,8 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
 
   const blade = p.cutter.kind === "blade";
   const mat = blade ? "card" : MATERIALS[p.material]?.name ?? `${T} mm sheet`;
+  // A blade cutter cuts each colour of card on its own mat: the colour is the part's stock.
+  if (blade) for (const q of parts) if (q.color && q.material !== "second") q.stock = `Card ${q.color.toUpperCase()}`;
   return {
     parts,
     stats: [

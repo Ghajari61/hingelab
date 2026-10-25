@@ -1,0 +1,28 @@
+import {describe,it,expect} from 'vitest';
+import {POPUP} from '../popup';
+import {mergePopup} from '../popup/params';
+import {popupGeometry,tiltDepth,profileHeight} from '../popup/build';
+import {cutPart} from '../output';
+describe('Pop-up construction',()=>{
+ it('keeps a single bridged blank and animates its rings',()=>{const p=mergePopup({});const g=popupGeometry(p);expect(g.rings.length).toBeGreaterThan(3);expect(g.parts[0].holes.length).toBeGreaterThan(g.rings.length);expect(g.parts[0].views3d?.every(v=>v.frames?.length===2)).toBe(true);});
+ it('computes tilted drop and mode profiles',()=>{expect(tiltDepth(10,.2,5)).toBeCloseTo(10*.2/Math.tan(5*Math.PI/180));expect(profileHeight(mergePopup({mode:'tower'}),0)).toBeGreaterThan(profileHeight(mergePopup({mode:'tower'}),1));});
+ it('nominal paths receive kerf once through shared exporter',()=>{const p=mergePopup({});const part=POPUP.build(p,{}).parts[0];expect(cutPart(part,.15).bbox.x1).toBeGreaterThan(cutPart(part,0).bbox.x1);});
+});
+import {POPUP_PRESETS} from '../popup/presets';
+import {CTX} from './ctx';
+import {arrangeGenerator,genSVG} from '../output';
+import {createHash} from 'node:crypto';
+import {signedArea,parsePathData} from '../geom';
+const finite=(c:number[][])=>c.every(p=>p.length===2&&p.every(Number.isFinite));
+function crosses(c:number[][]){const orient=(a:number[],b:number[],d:number[])=>(b[0]-a[0])*(d[1]-a[1])-(b[1]-a[1])*(d[0]-a[0]);for(let i=0;i<c.length;i++)for(let j=i+2;j<c.length;j++){if(i===0&&j===c.length-1)continue;const a=c[i],b=c[(i+1)%c.length],d=c[j],e=c[(j+1)%c.length];if(orient(a,b,d)*orient(a,b,e)<-1e-8&&orient(d,e,a)*orient(d,e,b)<-1e-8)return true;}return false;}
+describe('Pop-up preset cut files',()=>{for(const pr of POPUP_PRESETS)it(pr.name,()=>{const p=POPUP.merge(pr.params),out=POPUP.build(p,CTX);expect(out.error).toBeUndefined();expect(out.notice).toBeUndefined();expect(out.parts.length).toBeGreaterThan(0);for(const pt of out.parts)for(const c of [pt.outer,...pt.holes]){expect(finite(c)).toBe(true);expect(Math.abs(signedArea(c))).toBeGreaterThan(0);expect(crosses(c),pt.id).toBe(false);}const a=arrangeGenerator(POPUP,p,CTX);expect(a.lay).toBeTruthy();const svg=genSVG(POPUP,p,a.lay!);expect(svg).not.toMatch(/NaN|Infinity/);expect(svg).toContain('mm');expect(createHash('sha256').update(svg).digest('hex')).toMatchSnapshot();},20000);});
+it('bridge lands preserve one connected blank and ring count is linked',()=>{const p=mergePopup({rings:{by:'count',count:10}}),g=popupGeometry(p);expect(g.rings.length).toBe(10);expect(g.notches.every(n=>g.rings.some(r=>r.height===n.height))).toBe(true);});
+it('Persian shaping produces outlines without missing glyphs',()=>{const out=POPUP.build(mergePopup({engraving:{text:'نوروز مبارک'}}),CTX);expect(out.notice).toBeUndefined();expect(out.missing).toEqual([]);expect(out.parts[0].engrave!.length).toBeGreaterThan(0);});
+it('invalid geometry inputs fail closed',()=>{for(const raw of [{outline:{sides:1e9}},{profile:{depth:NaN}},{rings:{gap:.1}},{outline:{shape:'custom',path:'M0 0L10 0L10 10'}}])expect(POPUP.build(mergePopup(raw),CTX).error).toBeTruthy();});
+import {unionShapes} from '@/lib/letters/polygon';
+it('default bridges keep the cut blank connected',()=>{const out=POPUP.build(mergePopup({}),CTX),b=out.parts[0];expect(unionShapes([b.outer,...b.holes],[],true).length).toBe(1);});
+it('nested set yields distinct non-overlapping annular blanks',()=>{const p=mergePopup({sets:{count:3,scale:.6}}),out=POPUP.build(p,CTX);expect(out.error).toBeUndefined();const b=out.parts[0],islands=unionShapes([b.outer,...b.holes],[],true);expect(islands.length).toBe(3);for(let i=0;i<islands.length;i++)for(let j=i+1;j<islands.length;j++){expect(islands[i].holes.length+islands[j].holes.length).toBeGreaterThan(0);}});
+it('all outline families offset or report collapsed geometry without broken paths',()=>{for(const shape of ['circle','ellipse','rounded','polygon','star','heart','flower','leaf','pumpkin','snowflake']){const out=POPUP.build(mergePopup({outline:{shape},rings:{center:15,rim:5,width:5}}),CTX);expect(out.error,shape).toBeUndefined();expect(out.parts[0].holes.every(finite)).toBe(true);}});
+it('custom curve and segmented settings change geometry',()=>{const a=POPUP.build(mergePopup({}),CTX),b=POPUP.build(mergePopup({pattern:{segmented:true},profile:{kind:'custom',curve:'0,0;0.5,0.8;1,1'}}),CTX);expect(b.error).toBeUndefined();expect(b.parts[0].holes).not.toEqual(a.parts[0].holes);expect(b.parts[0].views3d?.at(2)?.place.z).not.toEqual(a.parts[0].views3d?.at(2)?.place.z);});
+it('two crossed ribs and three/four radial ribs stay single connected parts',()=>{for(const count of [2,3,4]){const out=POPUP.build(mergePopup({support:{ribs:count}}),CTX);expect(out.error).toBeUndefined();const ribs=out.parts.filter(p=>p.id.startsWith('rib-')&&p.id!=='rib-hub');expect(ribs.length).toBe(count);for(const r of ribs)expect(unionShapes([r.outer,...r.holes],[],true).length).toBe(1);expect(out.parts.some(p=>p.id==='rib-hub')).toBe(count>2);}});
+it('assembly card has shaped instructions and score diagram',()=>{const out=POPUP.build(mergePopup({sets:{assemblyCard:true}}),CTX);expect(out.error).toBeUndefined();const card=out.parts.find(p=>p.id==='assembly-card')!;expect(card.engrave!.length).toBeGreaterThan(0);expect(card.score!.length).toBeGreaterThan(0);});

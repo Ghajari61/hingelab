@@ -5,6 +5,7 @@
  * flat), hinge columns over the curves plus an overrun into the neighbouring flats limited by the
  * free space before the nearest tab, intervals closer than one pitch merged.
  */
+import { slotLessKerf } from "./kerf";
 import { bboxOf, hingeSegments, makeCols, tabCount, wallOutline } from "@/lib/hinge";
 import type { HingeCol, Params } from "@/lib/hinge";
 import { curvatureZones, tightestRadius, widestPoint } from "./curvature";
@@ -44,7 +45,7 @@ export const verdictOf = (r: number, rMin: number): Zone["verdict"] => (r >= 1.2
 /** Slot rectangle for a tab centred at arc length s on the centerline (the Hinge Box slot size). */
 export function slotAt(loop: Loop, s: number, p: LetterParams): Contour {
   const c = loop.at(s), t = loop.tangent(s), n: Point = [-t[1], t[0]];
-  const sa = (p.tabW + p.slotClr - p.K) / 2, sb = (p.T + p.slotClr - p.K) / 2;
+  const sa = slotLessKerf(p.tabW + p.slotClr, p) / 2, sb = slotLessKerf(p.T + p.slotClr, p) / 2;
   const r = ([[-1, -1], [1, -1], [1, 1], [-1, 1]] as const).map(([i, j]) => [c[0] + t[0] * sa * i + n[0] * sb * j, c[1] + t[1] * sa * i + n[1] * sb * j] as Point);
   return signedArea(r) < 0 ? r.reverse() : r;
 }

@@ -28,7 +28,10 @@ import { ViewTools } from "@/components/shell/ViewTools";
 import { DockColumn } from "@/components/shell/DockColumn";
 import { fitSummary } from "@/components/shell/SheetSection";
 import { arrangeLetters } from "@/lib/fit/letters";
-import { usedArea, usedText } from "@/lib/fit/arrange";
+import { fabFromLetters } from "@/lib/fab/adapters";
+import { fabIssues } from "@/lib/fab/issues";
+import { validateFab } from "@/lib/fab/validate";
+import { fabStatus } from "@/lib/fab/model";
 import { cleanFit, type FitSettings } from "@/lib/fit/fitToSheets";
 import type { Preset } from "@/lib/presets";
 import { useMyPresets } from "@/components/shell/useMyPresets";
@@ -185,13 +188,17 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   const deferred = useDeferredValue(params);
   const ready = !!hb && !!font && font.id === deferred.fontId;
   const arranged = useMemo(() => (ready ? arrangeLetters(deferred, font!, hb!) : null), [ready, deferred, font, hb]);
+  const fab = useMemo(() => (arranged ? fabFromLetters(deferred, arranged) : null), [deferred, arranged]);
   const result = arranged?.result ?? null;
   /** The settings actually built: the design, shrunk when Fit is on. */
   const built = arranged?.params ?? deferred;
   const model = result && !("error" in result) ? result : null;
   const error = loadError ?? (result && "error" in result ? result.error : null);
   const lay = model ? arranged?.lay ?? null : null;
-  const content = useMemo(() => (lay ? letterLayerContent(lay, built) : null), [lay, built]);
+  // Nominal view: the same letters laid out without kerf (the files are always cut compensated).
+  const [nominal, setNominal] = useState(false);
+  const nominalArr = useMemo(() => (nominal && ready ? arrangeLetters({ ...deferred, K: 0 }, font!, hb!) : null), [nominal, ready, deferred, font, hb]);
+  const content = useMemo(() => (nominalArr?.lay ? letterLayerContent(nominalArr.lay, nominalArr.params) : lay ? letterLayerContent(lay, built) : null), [lay, built, nominalArr]);
   thumbSrc.current = { content, w: lay?.width ?? 0, h: lay?.height ?? 0 };
   const overlay = useMemo(
     () => (showZones && model?.box && lay ? zoneOverlay(model.box, (letter) => baseOffset(lay, letter)) : null),
@@ -199,7 +206,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   );
   const hingeWalls = deferred.mode === "box" && deferred.wallStyle === "hinge";
   const fontsOf = useCallback((id: string) => (font && font.id === id ? font : null), [font]);
-  const issues = useMemo(() => (ready && arranged ? lettersIssues(deferred, fontsOf, hb!, arranged) : []), [ready, arranged, deferred, fontsOf, hb]);
+  const issues = useMemo(() => (ready && arranged ? [...lettersIssues(deferred, fontsOf, hb!, arranged), ...fabIssues<LetterParams>(fab ? validateFab(fab) : [])] : []), [ready, arranged, deferred, fontsOf, hb, fab]);
 
   const viewApi = useCanvasView();
   viewApi.fitArgs.current = { bedW: params.bedW, bedH: params.bedH, layW: lay?.width ?? 0, layH: lay?.height ?? 0, sheets: arranged?.sheets };
@@ -507,7 +514,12 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
   const sheetProps = {
     info: fitInfo,
     size: `${built.sizeMode === "capHeight" ? "cap" : "total"} ${fmtLen(built.size, units)}${built.mode === "box" ? `, depth ${fmtLen(built.depth, units)}` : ""}`,
-    meta: fitSet.mode === "off" ? undefined : fitSet.mode === "auto" ? `Auto · ${sheetsText}` : `Fit · ${fitSet.sheets} sheet${fitSet.sheets === 1 ? "" : "s"}`,
+    original: `${params.sizeMode === "capHeight" ? "cap" : "total"} ${fmtLen(params.size, units)}${params.mode === "box" ? `, depth ${fmtLen(params.depth, units)}` : ""}`,
+    preview: font && hb ? (f: FitSettings) => {
+      const t = arrangeLetters({ ...params, fit: f }, font, hb);
+      return { scale: t.fit?.scale ?? 1, fits: !!t.fit?.fits, size: `${t.params.sizeMode === "capHeight" ? "cap" : "total"} ${fmtLen(t.params.size, units)}` };
+    } : undefined,
+    meta: fitSet.mode === "off" ? undefined : fitSet.mode === "auto" ? `Auto · ${sheetsText}` : `Resized · ${sheetsText}`,
     onSheet: (w: number, h: number) => patch({ bedW: w, bedH: h }, true),
     onFit: (f: FitSettings) => {
       patch({ fit: f }, true);
@@ -567,7 +579,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
             onZoomCenter={viewApi.zoomCenter}
             onActual={() => viewApi.zoomCenter(PX_PER_MM / viewApi.viewRef.current.z)}
             onFit={() => viewApi.fit()}
-            tools={<ViewTools tool={tool} showGrid={showGrid} onTool={setTool} onGrid={() => setShowGrid((g) => !g)} />}
+            tools={<ViewTools tool={tool} showGrid={showGrid} onTool={setTool} onGrid={() => setShowGrid((g) => !g)} nominal={{ on: nominal, toggle: () => setNominal((v) => !v) }} />}
           />
         </section>
         </div>
@@ -605,7 +617,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
         x={cursor.x}
         y={cursor.y}
         zoom={zoom}
-        parts={model && lay ? { count: model.parts.length, used: usedText(usedArea(lay, arranged?.sheets ?? null), (mm) => fmtLen(mm, units, true)) } : null}
+        parts={model && fab ? fabStatus(fab, (mm) => fmtLen(mm, units, true)) : null}
         fit={fit}
         saved={shared.viewing ? "Shared design, not saved" : file.status ?? saved}
       />

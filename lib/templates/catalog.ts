@@ -1,3 +1,4 @@
+import {POPUP_PRESETS} from '@/lib/generators/popup/presets';
 /**
  * The template library: what each template is, for the gallery and search. Data only; geometry lives in
  * lib/templates/studio.ts (Studio templates), lib/templates/presets.ts (generator settings) and the
@@ -9,6 +10,7 @@ import { TEMPLATE_CATEGORIES, type Template, type TemplateBuilt, type TemplateCa
 const PLY = "Plywood";
 
 const META: TemplateMeta[] = [
+  ...POPUP_PRESETS.map((p): TemplateMeta => ({id:`popup-${p.id}`,title:p.name,description:p.note,category:p.category === "Lighting" ? "Lamps & light" : "Home & decor",tags:p.tags,material:"Plywood",thickness:3,difficulty:"Advanced",source:"editor",product:"popup"})),
   // ---------- living hinges, drawn in Studio ----------
   { id: "hinge-notebook-cover", title: "A5 notebook cover", category: "Living hinges", source: "studio", material: PLY, thickness: 3, difficulty: "Medium", featured: true,
     description: "A wooden cover for an A5 notebook. The spine is a live Living Hinge, so it bends like leather; two slots on the back take an elastic band, and a scored rosette decorates the front. Change the hinge pattern or spacing in Live Effects.",

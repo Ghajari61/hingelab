@@ -27,6 +27,34 @@ export interface UserMaterial {
   /** Built-in material it bends like (living hinges), or "custom". */
   like: string;
   laser: Partial<Record<LaserOp, LaserSetting>>;
+  /** Room a tab needs in its slot beyond the kerf, mm (missing: the design's own). */
+  clearance?: number;
+  /** The sheet's grain: along X, along Y, or none (MDF, acrylic). */
+  grain?: Grain;
+  /** Turns the nesting may make: any, only half turns (keeps the grain), or none. */
+  rotate?: RotatePolicy;
+  /** Narrowest bridge that holds a loose piece, mm (0: not set). */
+  bridge?: number;
+  /** Space between parts and along the sheet's edge, mm (missing: the design's own). */
+  spacing?: number;
+  margin?: number;
+  /** What the user cut to measure it, and when. Missing: never calibrated on a machine. */
+  calibration?: Calibration;
+}
+
+export type Grain = "none" | "x" | "y";
+export type RotatePolicy = "any" | "half" | "none";
+/** Results of the calibration coupons (lib/generators/calibration), as the user measured them. */
+export interface Calibration {
+  /** ISO date of the cut. */
+  date: string;
+  kx?: number;
+  ky?: number;
+  /** The fit ladder's step that fitted best, mm. */
+  clearance?: number;
+  /** The tightest hinge strip radius that bent without cracking, mm. */
+  hingeRadius?: number;
+  notes?: string;
 }
 
 export const MATERIALS_KEY = "hingelab-materials";
@@ -35,6 +63,7 @@ export const MAX_MATERIALS = 100;
 export const MAX_MATERIAL_NAME = 80;
 export const RANGES = {
   T: [0.05, 100], kerf: [0, 5], minFeature: [0, 50], speed: [0.1, 5000], power: [0, 100], passes: [1, 50],
+  clearance: [-1, 2], bridge: [0, 20], spacing: [0, 50], margin: [0, 50], hingeRadius: [0.5, 500],
 } as const;
 
 const num = (v: unknown, [lo, hi]: readonly [number, number]) =>
@@ -70,10 +99,40 @@ export function cleanMaterial(x: unknown): UserMaterial | null {
   if (!name || T == null || kx == null) return null;
   const ky = num(q.ky, RANGES.kerf) ?? kx;
   const like = typeof q.like === "string" && q.like in MATERIALS ? q.like : "custom";
+  const opt = <K extends string>(k: K, v: number | null) => (v == null ? {} : { [k]: v });
+  const cal = cleanCalibration(q.calibration);
   return {
     id: isUserId(q.id) ? q.id : newMaterialId(), name, T, kx, ky,
     minFeature: num(q.minFeature, RANGES.minFeature) ?? 0, like, laser: cleanLaser(q.laser),
+    ...opt("clearance", num(q.clearance, RANGES.clearance)), ...opt("bridge", num(q.bridge, RANGES.bridge)),
+    ...opt("spacing", num(q.spacing, RANGES.spacing)), ...opt("margin", num(q.margin, RANGES.margin)),
+    ...(q.grain === "x" || q.grain === "y" || q.grain === "none" ? { grain: q.grain } : {}),
+    ...(q.rotate === "any" || q.rotate === "half" || q.rotate === "none" ? { rotate: q.rotate } : {}),
+    ...(cal ? { calibration: cal } : {}),
   };
+}
+
+/** A calibration record with every value checked, or none. */
+export function cleanCalibration(x: unknown): Calibration | undefined {
+  if (!x || typeof x !== "object") return undefined;
+  const q = x as Record<string, unknown>;
+  const date = typeof q.date === "string" && /^\d{4}-\d{2}-\d{2}/.test(q.date) ? q.date.slice(0, 24) : null;
+  if (!date) return undefined;
+  const out: Calibration = { date };
+  const kx = num(q.kx, RANGES.kerf), ky = num(q.ky, RANGES.kerf), c = num(q.clearance, RANGES.clearance), r = num(q.hingeRadius, RANGES.hingeRadius);
+  if (kx != null) out.kx = kx;
+  if (ky != null) out.ky = ky;
+  if (c != null) out.clearance = c;
+  if (r != null) out.hingeRadius = r;
+  if (typeof q.notes === "string" && q.notes.trim()) out.notes = q.notes.replace(/[\u0000-\u001f<>]/g, " ").slice(0, 400);
+  return out;
+}
+
+/** Records a calibration on a material: the measured kerf and clearance become its values, dated. */
+export function applyCalibration(m: UserMaterial, c: Calibration): UserMaterial {
+  const cal = cleanCalibration(c);
+  if (!cal) return m;
+  return cleanMaterial({ ...m, ...(cal.kx != null ? { kx: cal.kx } : {}), ...(cal.ky != null ? { ky: cal.ky } : {}), ...(cal.clearance != null ? { clearance: cal.clearance } : {}), calibration: cal }) ?? m;
 }
 
 /** A whole list, cleaned: bad entries dropped, repeated ids kept once, at most MAX_MATERIALS. */
@@ -156,14 +215,27 @@ export interface MaterialInfo {
   gamma: number;
   laser: Partial<Record<LaserOp, LaserSetting>>;
   user: boolean;
+  clearance?: number;
+  grain?: Grain;
+  rotate?: RotatePolicy;
+  bridge?: number;
+  spacing?: number;
+  /** Measured on the user's machine (a calibration is recorded), or only an estimate. */
+  tested: boolean;
+  calibration?: Calibration;
 }
 
 export function materialInfo(id: string, list: UserMaterial[]): MaterialInfo | null {
   const u = list.find((m) => m.id === id);
-  if (u) return { name: u.name, T: u.T, kx: u.kx, ky: u.ky, minFeature: u.minFeature, gamma: (MATERIALS[u.like] ?? MATERIALS.custom).gamma, laser: u.laser, user: true };
+  if (u) {
+    return {
+      name: u.name, T: u.T, kx: u.kx, ky: u.ky, minFeature: u.minFeature, gamma: (MATERIALS[u.like] ?? MATERIALS.custom).gamma, laser: u.laser, user: true,
+      clearance: u.clearance, grain: u.grain, rotate: u.rotate ?? (u.grain && u.grain !== "none" ? "half" : undefined), bridge: u.bridge, spacing: u.spacing, tested: !!u.calibration, calibration: u.calibration,
+    };
+  }
   const b = MATERIALS[id];
   if (!b) return null;
-  return { name: b.name, T: b.T, kx: b.K, ky: b.K, minFeature: 0, gamma: b.gamma, laser: {}, user: false };
+  return { name: b.name, T: b.T, kx: b.K, ky: b.K, minFeature: 0, gamma: b.gamma, laser: {}, user: false, tested: false };
 }
 
 /** Measured values from a test card. */

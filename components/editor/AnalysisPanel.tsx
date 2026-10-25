@@ -1,9 +1,11 @@
 "use client";
 
 import type { Model } from "@/lib/hinge";
+import { useMaterials } from "@/components/shell/useMaterials";
 import { fmtLen, type Units } from "./format";
 
-export function AnalysisPanel({ model, error, units }: { model: Model | null; error: string | null; units: Units }) {
+export function AnalysisPanel({ model, error, units, material }: { model: Model | null; error: string | null; units: Units; material?: string }) {
+  const cal = useMaterials().find((m) => m.id === material)?.calibration;
   if (!model) {
     return <div className="verdict err"><span className="dot" /><span>{error}</span></div>;
   }
@@ -26,7 +28,11 @@ export function AnalysisPanel({ model, error, units }: { model: Model | null; er
         <dt>Torsion bar length × width</dt><dd>{fmtLen(a.barLen, units, true)} × {fmtLen(a.barW, units, true)}</dd>
         <dt>Hinge columns</dt><dd>{a.columns}</dd>
       </dl>
-      <p className="note">The minimum radius is an engineering estimate from torsion-bar strain. Always cut a test piece in your own material.</p>
+      <p className="note">
+        The minimum radius is an engineering estimate from torsion-bar strain. Estimate; tested on this material: {cal
+          ? `yes (${cal.date.slice(0, 10)}${cal.hingeRadius != null ? `, your test strip bent to R ${fmtLen(cal.hingeRadius, units)}` : ""}).`
+          : "no. Cut the Calibration coupons' hinge strip in your own material."}
+      </p>
     </>
   );
 }

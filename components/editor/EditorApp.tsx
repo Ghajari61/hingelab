@@ -13,7 +13,10 @@ import {
 } from "@/lib/hinge";
 import { arrangeHinge } from "@/lib/fit/hinge";
 import { hingeWithMaterial } from "@/lib/materials/apply";
-import { usedArea, usedText } from "@/lib/fit/arrange";
+import { fabFromHinge } from "@/lib/fab/adapters";
+import { fabIssues } from "@/lib/fab/issues";
+import { validateFab } from "@/lib/fab/validate";
+import { fabStatus } from "@/lib/fab/model";
 import { autoFixAll, type Fix } from "@/lib/issues";
 import { explainHingeError, hingeIssues } from "@/lib/issues/hinge";
 import { IssueList } from "@/components/shell/IssueList";
@@ -115,6 +118,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   });
 
   const arranged = useMemo(() => arrangeHinge(params), [params]);
+  const fab = useMemo(() => fabFromHinge(params, arranged), [params, arranged]);
   const result = arranged.result;
   /** The settings actually built: the design, shrunk when Fit is on. */
   const built = arranged.params;
@@ -122,10 +126,16 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   const error = "error" in result ? explainHingeError(built, result.error) : null;
   const lay = model ? arranged.lay : null;
   const baseText = useBaseTextContext(built);
-  const content = useMemo(() => (model && lay ? layerContent(model, lay, built, baseText.ctx) : null), [model, lay, built, baseText.ctx]);
+  // Nominal view: the same design laid out without kerf (the files are always cut compensated).
+  const [nominal, setNominal] = useState(false);
+  const nominalArr = useMemo(() => (nominal ? arrangeHinge({ ...params, K: 0, Ky: 0 }) : null), [nominal, params]);
+  const content = useMemo(() => {
+    if (nominalArr?.lay && !("error" in nominalArr.result)) return layerContent(nominalArr.result, nominalArr.lay, nominalArr.params, baseText.ctx);
+    return model && lay ? layerContent(model, lay, built, baseText.ctx) : null;
+  }, [model, lay, built, baseText.ctx, nominalArr]);
   const fitSet = cleanFit(params.fit);
   const checked = useDeferredValue(params);
-  const issues = useMemo(() => hingeIssues(checked), [checked]);
+  const issues = useMemo(() => [...hingeIssues(checked), ...fabIssues<Params>(fab ? validateFab(fab) : [])], [checked, fab]);
 
   const shared = useSharedView(start, start?.name ?? "Hinge Box", (m) => toastMsg(m));
   useAutosave(params, units, onStatus, undefined, !cloud && !shared.viewing);
@@ -466,7 +476,12 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   const sheetProps = {
     info: fitInfo,
     size: hingeSize(built, units),
-    meta: fitSet.mode === "off" ? undefined : fitSet.mode === "auto" ? `Auto · ${sheetsText}` : `Fit · ${fitSet.sheets} sheet${fitSet.sheets === 1 ? "" : "s"}`,
+    original: hingeSize(params, units),
+    preview: (f: { mode: "off" | "sheets" | "auto"; sheets: number }) => {
+      const t = arrangeHinge({ ...params, fit: f });
+      return { scale: t.fit?.scale ?? 1, fits: !!t.fit?.fits, size: hingeSize(t.params, units) };
+    },
+    meta: fitSet.mode === "off" ? undefined : fitSet.mode === "auto" ? `Auto · ${sheetsText}` : `Resized · ${sheetsText}`,
     onSheet: (w: number, h: number) => { const next = { ...params, bedW: w, bedH: h }; patch(next, true); applyFit(next); },
     onFit: (f: { mode: "off" | "sheets" | "auto"; sheets: number }) => {
       const next = { ...params, fit: f };
@@ -529,7 +544,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
             onZoomCenter={viewApi.zoomCenter}
             onActual={() => viewApi.zoomCenter(PX_PER_MM / viewApi.viewRef.current.z)}
             onFit={() => viewApi.fit()}
-            tools={<ViewTools tool={tool} showGrid={showGrid} onTool={setTool} onGrid={() => setShowGrid((g) => !g)} />}
+            tools={<ViewTools tool={tool} showGrid={showGrid} onTool={setTool} onGrid={() => setShowGrid((g) => !g)} nominal={{ on: nominal, toggle: () => setNominal((v) => !v) }} />}
           />
         </section>
         </div>
@@ -573,7 +588,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
         x={cursor.x}
         y={cursor.y}
         zoom={zoom}
-        parts={model && lay ? { count: model.parts.length, used: usedText(usedArea(lay, arranged.sheets), (mm) => fmtLen(mm, units, true)) } : null}
+        parts={model && fab ? fabStatus(fab, (mm) => fmtLen(mm, units, true)) : null}
         fit={fit}
         saved={shared.viewing ? "Shared design, not saved" : file.status ?? saved}
       />

@@ -9,7 +9,9 @@ describe("desktop Randomise", () => {
   it("marks the settings Randomise may change, and seeds with their own dice", async () => {
     const c = await desktopCatalog();
     const fields = (id: string) => c.products.find((p) => p.id === id)!.sections.flatMap((s) => s.fields);
-    for (const p of c.products.filter((x) => x.id !== "hinge")) {
+    // Calibration coupons have nothing to randomise: they are measured against the sizes they were cut at.
+    expect(fields("calibration").some((f) => f.kind !== "text" && f.shuffle)).toBe(false);
+    for (const p of c.products.filter((x) => x.id !== "hinge" && x.id !== "calibration")) {
       expect(fields(p.id).some((f) => f.kind !== "text" && f.shuffle), p.id).toBe(true);
       expect(fields(p.id).some((f) => f.kind === "text" && "shuffle" in f), p.id).toBe(false);
     }

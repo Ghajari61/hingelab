@@ -1,3 +1,4 @@
+import {POPUP_PRESETS} from '@/lib/generators/popup/presets';
 /**
  * Settings of the templates made with HingeLab's own generators and the living-hinge box editor.
  * Data only: the build script turns them into cut files and thumbnails, and the classic editors
@@ -13,6 +14,7 @@ export interface TemplatePreset {
 }
 
 export const TEMPLATE_PRESETS: Record<string, TemplatePreset> = {
+  ...Object.fromEntries(POPUP_PRESETS.map(p => [`popup-${p.id}`, {product:"popup" as const,name:p.name,note:p.note,params:p.params as Record<string,unknown>}])),
   // living-hinge boxes
   "hinge-pen-case": { product: "hinge", name: "Rounded pen case", note: "Long pill-shaped case with a lift-off lid", params: { name: "Rounded pen case", shape: "pill", W: 190, D: 46, H: 36, R: 23 } },
   "hinge-sweet-jar": { product: "hinge", name: "Sweet jar", note: "Round jar with a wave hinge and a lid", params: { name: "Sweet jar", shape: "cyl", dia: 100, H: 120, pattern: "wave" } },

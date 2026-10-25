@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 
 const ICON: Record<SiteIcon, LucideIcon> = {
   hinge: Package, letters: Type, parametric: Layers, clock: Clock, puzzle: Puzzle, qr: QrCode, box: Box,
-  cake: Cake, key: KeyRound, sign: Signpost, hash: Hash, trophy: Trophy, layers: SquareStack,
+  cake: Cake, key: KeyRound, sign: Signpost, hash: Hash, trophy: Trophy, layers: SquareStack, ruler: Ruler,
 };
 
 const OCCASIONS: { name: string; icon: LucideIcon; preset: string }[] = [

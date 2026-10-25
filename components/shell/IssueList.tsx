@@ -13,8 +13,8 @@ export function IssueList<P>({ issues, onFix, onAutoFix, onShow }: {
   issues: Issue<P>[];
   onFix: (fix: Fix<P>, issue: Issue<P>) => void;
   onAutoFix: () => void;
-  /** Select the parts an issue is about. */
-  onShow?: (ids: string[]) => void;
+  /** Select the parts an issue is about (and frame where it is, when it knows). */
+  onShow?: (ids: string[], at?: Issue<P>["at"]) => void;
 }) {
   if (!issues.length) return null;
   const sorted = sortIssues(issues);
@@ -32,7 +32,7 @@ export function IssueList<P>({ issues, onFix, onAutoFix, onShow }: {
               {i.fixes.map((f) => (
                 <button key={f.id} type="button" className={f.safe ? "safe" : undefined} title={f.safe ? "Auto-fix all applies this one" : undefined} onClick={() => onFix(f, i)}>{f.label}</button>
               ))}
-              {onShow && i.partIds?.length ? <button type="button" className="show" onClick={() => onShow(i.partIds!)}>Show</button> : null}
+              {onShow && i.partIds?.length ? <button type="button" className="show" onClick={() => onShow(i.partIds!, i.at)}>Show</button> : null}
             </div>
           )}
         </div>

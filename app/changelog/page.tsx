@@ -7,6 +7,7 @@ export const metadata: Metadata = { title: "Changelog", alternates: { canonical:
 export default function ChangelogPage() {
   return (
     <PageShell title="Changelog" lede="Recent changes to the Windows app and the public site.">
+      <h2>Version 1.3.0 — Pop-up</h2><p>27 editable bowls, baskets, trees, lampshades and ornaments. Ring and spiral blanks, profile controls, supports, shaped engraving and animated flat-to-open previews. Prototype material flexure before cutting a full design.</p>
       <h2>15 October 2026</h2>
       <ul>
         <li>The public site groups pages into Make, Community and Learn, with a generator catalogue.</li>

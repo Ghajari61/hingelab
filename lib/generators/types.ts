@@ -8,6 +8,7 @@ import type { Layers } from "@/lib/hinge/types";
 import type { Paper, PhotoSpec, Subject } from "@/lib/imaging/photoSpec";
 import type { Issue } from "@/lib/issues";
 import type { Contour } from "@/lib/letters/types";
+import type { Step } from "@/lib/editor/workflow";
 import type { GeneratorId } from "./ids";
 
 export type { Contour };
@@ -84,12 +85,16 @@ export interface SheetExtras {
   kerfY?: number;
   /** Narrowest bar the material holds, mm; parts with thinner features are flagged (0: no check). */
   minFeature?: number;
+  /** Turns outline nesting may make (the material's grain): any, half turns only, or none (missing: any). */
+  rotate?: "any" | "half" | "none";
+  /** Clean up the cut paths: repeated points, empty shapes and lines repeated within a part (missing: off). */
+  repair?: boolean;
 }
 
 /** What a save without sheet extras means. */
 export const SHEET_EXTRAS: SheetExtras = { nest: "box", calibration: false, labels: false, copies: 1 };
 /** A new design's sheet extras: every key, so merging a save keeps the material ones. */
-export const SHEET_DEFAULTS: Required<SheetExtras> = { ...SHEET_EXTRAS, kerfXY: false, kerfY: 0.15, minFeature: 0 };
+export const SHEET_DEFAULTS: Required<Omit<SheetExtras, "rotate" | "repair">> = { ...SHEET_EXTRAS, kerfXY: false, kerfY: 0.15, minFeature: 0 };
 export const MAX_KERF = 2;
 /** Only a guard against hand-made requests: no laser cuts anywhere near this thick. */
 export const MAX_THICKNESS = 100;
@@ -152,6 +157,11 @@ export interface GenPart {
   tone?: number;
   /** Cut from the design's second material (packed on its own sheets). */
   material?: "main" | "second";
+  /**
+   * The stock it is cut from when parts of one material still need separate sheets: a colour of
+   * card for a blade cutter. Parts of different stocks never share a sheet.
+   */
+  stock?: string;
   /** Preview colour (thumbnails and 3D), e.g. gold mirror acrylic. */
   color?: string;
   /** The preview colour is paper or card, without a shine. */
@@ -198,6 +208,8 @@ export interface BuildContext {
 interface FieldCommon<P> {
   /** Dot path into the params, e.g. "face.diameter". */
   key: string;
+  /** Fine-tuning: Simple hides it (missing: by its name, lib/editor/workflow.ts). */
+  advanced?: boolean;
   label: string;
   /** One sentence (ends with a period); it is the field's entry in the help centre. */
   help: string;
@@ -286,6 +298,8 @@ export type FieldSpec<P> = NumberSpec<P> | ChoiceSpec<P> | ToggleSpec<P> | TextS
 
 export interface SectionSpec<P> {
   id: string;
+  /** Its workflow step (missing: lib/editor/workflow.ts decides). */
+  step?: Step;
   title: string;
   /** What the section is for: the first paragraph of its help. */
   help: string;

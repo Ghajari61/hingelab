@@ -6,6 +6,7 @@ import type { GeneratorId } from "./ids";
 import type { AnyGenerator } from "./types";
 
 export const loadGenerator: Record<GeneratorId, () => Promise<AnyGenerator>> = {
+  popup: () => import("./popup").then((m) => m.POPUP as AnyGenerator),
   clock: () => import("./clock").then((m) => m.CLOCK as AnyGenerator),
   puzzle: () => import("./puzzle").then((m) => m.PUZZLE as AnyGenerator),
   qr: () => import("./qr").then((m) => m.QR as AnyGenerator),
@@ -16,4 +17,5 @@ export const loadGenerator: Record<GeneratorId, () => Promise<AnyGenerator>> = {
   tablenum: () => import("./tablenum").then((m) => m.TABLENUM as AnyGenerator),
   trophy: () => import("./trophy").then((m) => m.TROPHY as AnyGenerator),
   shadowbox: () => import("./shadowbox").then((m) => m.SHADOWBOX as AnyGenerator),
-  paperbox: () => import("./paperbox").then((m) => m.PAPERBOX as AnyGenerator),};
+  paperbox: () => import("./paperbox").then((m) => m.PAPERBOX as AnyGenerator),
+  calibration: () => import("./calibration").then((m) => m.CALIBRATION as AnyGenerator),};

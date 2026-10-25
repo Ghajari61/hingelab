@@ -28,10 +28,14 @@ export function genWithMaterial<P extends GenBase>(p: P, id: string, m: Material
   const next = { ...p, material: id, sheet };
   sheet.kerfXY = false;
   sheet.minFeature = 0;
+  delete sheet.rotate;
   if (!m) return next;
   if (m.T != null) next.T = m.T;
   if (m.kx != null) next.K = m.kx;
   if (differs(m.kx, m.ky)) { sheet.kerfXY = true; sheet.kerfY = m.ky!; }
   sheet.minFeature = m.minFeature;
+  // The grain limits the turns nesting may make; the material's spacing is the part gap.
+  if (m.rotate && m.rotate !== "any") sheet.rotate = m.rotate;
+  if (m.spacing != null) next.gap = m.spacing;
   return next;
 }

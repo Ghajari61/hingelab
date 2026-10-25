@@ -57,8 +57,8 @@ let cached: Promise<MenuProduct[]> | null = null;
 export function aiMenu(): Promise<MenuProduct[]> {
   cached ??= (async () => {
     const cat = await desktopCatalog();
-    const fromCatalog = (p: DProduct): MenuProduct => ({ id: p.id, name: p.name, blurb: p.blurb, presets: p.presets.map(({ id, name, note }) => ({ id, name, note })), fields: usable(p) });
-    const byId = new Map(cat.products.map((p) => [p.id as AIProduct, fromCatalog(p)]));
+    const fromCatalog = (p: DProduct): MenuProduct => ({ id: p.id as AIProduct, name: p.name, blurb: p.blurb, presets: p.presets.map(({ id, name, note }) => ({ id, name, note })), fields: usable(p) });
+    const byId = new Map(cat.products.filter((p) => (AI_PRODUCTS as readonly string[]).includes(p.id)).map((p) => [p.id as AIProduct, fromCatalog(p)]));
     byId.set("letters", {
       id: "letters", name: "Letters", blurb: "Letter boxes (hollow letters with living-hinge or flat walls), solid cut-out letters and stencils from a word or name, in any of the bundled fonts.",
       presets: LETTER_PRESETS.map(({ id, name, note }) => ({ id, name, note })), fields: LETTER_FIELDS,

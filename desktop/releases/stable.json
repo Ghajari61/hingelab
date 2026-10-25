@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.2.0",
-    "pub_date": "2026-10-21T05:23:30.571Z",
-    "notes": "Patterns everywhere: the cut-out pattern on every part it fits, in Boxes, the Hinge Box, Letters, Parametric and the QR plate, plus your own seamless tile. Paper Box folds in 3D with a Fold slider, explode and mountain and valley creases, and has 14 new structures with 29 presets: pyramid, cube, prism, cone, bakery box, hinged lid, pie box, clamshell, takeout pail, carry box, wine carrier, paper bag, CD sleeve and cell inserts. Parametric wall art: wave, ridge, noise, ripple, mountain and attractor patterns as slat walls on 1x2 to 1x4 rails, with shelves, an organic edge, sheet and lumber estimates and GLB export.",
+    "version": "1.3.0",
+    "pub_date": "2026-10-25T06:32:23.596Z",
+    "notes": "Pop-up generator: 27 editable bowl, basket, tree, lampshade and ornament presets; ring and spiral patterns, profile controls, shaped engraving, support parts and flat-to-open preview. Prototype actual stock before use.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.2.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmpvbVFCUlc5S3hST2VhWnhkSzdLcVB6SjNaemZFU2djSTZlTFMvSmk0UHNiMWlha2E4S29vcUJjWkYxSjBmdzU0SW5rc0hqbXhBOWJiWUh0RXRVWFFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyNTU5OTM4CWZpbGU6SGluZ2VMYWJfMS4yLjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMi4wCnpwM2pRdzhkek8waTJiazVjU1hvdENoa2ZzOEwrNUY2cGlmNm5FdkQ3Z09xMG9idW14T0ZzTkx2bExhT2dmVWFuME5seEZWY2oxRDlpZDJtSG9nWURBPT0K",
-        "size": 10208117,
-        "sha256": "84e433d6e843b43af909ba2273b54e27dca45f8be30028b02250e671382b9cc1"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.3.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnVPYlZnM1o5bUFrYnU4TVpkcEdWMHBseTNtSVdzQjhrR214WmZWZ0J6NnpMT3cwdG9YTmx5MTR3NnJwWm54NDR5czhDYVRjZGFITVdKYWk0ejkzYmdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTA5ODczCWZpbGU6SGluZ2VMYWJfMS4zLjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuMy4wCkFVeEhVTDQ0bGQwcnhDNjlOTzd6TXV6S0tYWmZ4TjVpZG5QT0lJK3JqKzZYNVBEeWZiVWt5ZVhFSmkvTkV4VWxhMXFSMXVjS1lxVkFiM0Ivb2dITkJnPT0K",
+        "size": 10431211,
+        "sha256": "c68a52aea21620f019f5cef6e8cda33d2b232a61d774607a136dca6c4046365a"
       }
     }
   }

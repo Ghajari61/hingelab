@@ -89,7 +89,7 @@ export async function batchZip(job: BatchJob): Promise<BatchResult | null> {
       if (!a.lay) { fail("It does not fit on the sheet."); continue; }
       const lock = def.pro?.(a.params as never, out) ?? null;
       if (lock && !job.pro) { fail(lock); continue; }
-      const svg = genSVG(def, a.params, a.lay);
+      const svg = genSVG(def, a.params, a.lay, "", a.sheets);
       const slug = slugOf(row.name);
       for (const fmt of job.formats) {
         const name = `${folders[i]}/${slug}.${FORMAT_INFO[fmt].ext}`;

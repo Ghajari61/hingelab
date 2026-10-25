@@ -2,6 +2,7 @@
  * Letter Box: every letter becomes a closed box, a base and a lid in the letter's shape joined
  * by walls along every outline and counter. Walls are living-hinge strips or flat panels.
  */
+import { halfKerf } from "./kerf";
 import { bendAnalysis, cutWidth } from "@/lib/hinge";
 import { cleanCutout, concaveRadiusOf, cornerRadiusOf, hingeParamsOf, wallHeightOf } from "./defaults";
 import { facetContour, facetedWall } from "./facets";
@@ -70,12 +71,12 @@ function boxPlates(shapes: Shape[], name: string, p: LetterParams, slots: Contou
     pieces.forEach((s, k) => out.push(make(s, pieces.length > 1 ? `${label} ${k + 1}` : label, withSlots, withMarks)));
 
   const rim = Math.max(0, p.baseRim ?? 0);
-  const plate = dropSpecks(offsetShapes(shapes, rim + p.K / 2, join), MIN_PIECE_AREA);
+  const plate = dropSpecks(offsetShapes(shapes, rim + halfKerf(p), join), MIN_PIECE_AREA);
   series(plate, `${name} · base`, true, true);
   if (p.lid === "fixed") series(plate, `${name} · lid`, true, false);
   if (p.lid === "removable") {
     series(plate, `${name} · lid`, false, false);
-    const lip = dropSpecks(offsetShapes(shapes, -(p.T + p.lidGap) + p.K / 2, join), 4);
+    const lip = dropSpecks(offsetShapes(shapes, -(p.T + p.lidGap) + halfKerf(p), join), 4);
     if (lip.length) series(lip, `${name} · lid lip`, false, false);
     else issues.push({ lvl: "warn", msg: `“${name}” is too narrow for a lid lip, so the lip was left out.` });
   }
@@ -103,7 +104,7 @@ function cutoutHoles(shapes: Shape[], p: LetterParams, plate: "base" | "lid", sl
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const s of inner) { x0 = Math.min(x0, s.bbox.x0); y0 = Math.min(y0, s.bbox.y0); x1 = Math.max(x1, s.bbox.x1); y1 = Math.max(y1, s.bbox.y1); }
   const holes = fretHoles({ kind: c.kind, cell: c.cell, bar: c.bar }, x0, y0, x1, y1, keep, (q) => inner.some((s) => pointInShape(q, s)));
-  return p.K > 0 ? holes.flatMap((h) => offsetShapes([makeShape(signedArea(h) < 0 ? [...h].reverse() : h, [])], -p.K / 2).map((s) => s.outer)) : holes;
+  return p.K > 0 ? holes.flatMap((h) => offsetShapes([makeShape(signedArea(h) < 0 ? [...h].reverse() : h, [])], -halfKerf(p)).map((s) => s.outer)) : holes;
 }
 
 /**
