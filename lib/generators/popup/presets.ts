@@ -1,14 +1,200 @@
 import type {GenPreset} from '../types';
 import type {PopupParams} from './params';
-export type PopupPreset=GenPreset<PopupParams>&{category:string;tags:string[]};
-export const POPUP_PRESETS:PopupPreset[]=[
-  {"id":"studio-ripple-bowl","name":"Ripple display bowl","note":"Display object with editable contours and supports; prototype the lift before use.","category":"Kitchen & dining","tags":["Kitchen & dining","bowl","pop-up"],"pro":true,"params":{"pattern":{"kind":"spiral","edge":"wave","amplitude":1,"frequency":12},"name":"Ripple display bowl","outline":{"width":220,"height":220},"profile":{"depth":26}}},
-  {"id":"studio-polygon-tray","name":"Polygon display tray","note":"Display object with editable contours and supports; prototype the lift before use.","category":"Kitchen & dining","tags":["Kitchen & dining","bowl","pop-up"],"pro":true,"params":{"outline":{"shape":"polygon","width":250,"height":250,"sides":8},"name":"Polygon display tray","profile":{"depth":28},"rings":{"width":12}}},
-  {"id":"studio-petal-bowl","name":"Petal catchall","note":"Display object with editable contours and supports; prototype the lift before use.","category":"Kitchen & dining","tags":["Kitchen & dining","bowl","pop-up"],"pro":true,"params":{"pattern":{"kind":"rings"},"name":"Petal catchall","outline":{"shape":"flower","width":230,"height":230,"petals":8,"petalDepth":0.08},"profile":{"depth":28}}},
+export type PopupPreset = GenPreset<PopupParams> & {category:string;tags:string[]};
+export const POPUP_PRESETS:PopupPreset[] = [
   {
-    "id": "spiral-trivet-bowl",
-    "name": "Spiral Trivet Bowl",
-    "note": "Kitchen & dining · Editable pop-up design; prototype before use.",
+    "id": "precision-orbit-bowl",
+    "name": "Orbit locking bowl",
+    "category": "Precision joinery",
+    "params": {
+      "name": "Orbit locking bowl",
+      "outline": {
+        "width": 260,
+        "height": 260
+      },
+      "rings": {
+        "width": 12,
+        "center": 55
+      },
+      "profile": {
+        "kind": "dome",
+        "depth": 42
+      },
+      "support": {
+        "ribs": 3
+      }
+    },
+    "note": "Numbered profile ribs with matched ring slots. Measure stock and test the joint coupon before cutting.",
+    "pro": true,
+    "tags": [
+      "precision",
+      "matched joints",
+      "flat pack"
+    ]
+  },
+  {
+    "id": "precision-oval-valet",
+    "name": "Oval entry valet",
+    "category": "Precision joinery",
+    "params": {
+      "name": "Oval entry valet",
+      "outline": {
+        "shape": "ellipse",
+        "width": 290,
+        "height": 210
+      },
+      "rings": {
+        "width": 12,
+        "center": 50
+      },
+      "profile": {
+        "kind": "flat-bottom",
+        "depth": 28
+      },
+      "support": {
+        "ribs": 2
+      }
+    },
+    "note": "Numbered profile ribs with matched ring slots. Measure stock and test the joint coupon before cutting.",
+    "pro": true,
+    "tags": [
+      "precision",
+      "matched joints",
+      "flat pack"
+    ]
+  },
+  {
+    "id": "precision-hex-display",
+    "name": "Hexagonal display bowl",
+    "category": "Precision joinery",
+    "params": {
+      "name": "Hexagonal display bowl",
+      "outline": {
+        "shape": "polygon",
+        "sides": 6,
+        "corner": 8,
+        "width": 280,
+        "height": 280
+      },
+      "rings": {
+        "width": 14,
+        "center": 60
+      },
+      "profile": {
+        "kind": "bell",
+        "depth": 48
+      },
+      "support": {
+        "ribs": 3
+      }
+    },
+    "note": "Numbered profile ribs with matched ring slots. Measure stock and test the joint coupon before cutting.",
+    "pro": true,
+    "tags": [
+      "precision",
+      "matched joints",
+      "flat pack"
+    ]
+  },
+  {
+    "id": "precision-petal-centrepiece",
+    "name": "Petal centrepiece",
+    "category": "Precision joinery",
+    "params": {
+      "name": "Petal centrepiece",
+      "outline": {
+        "shape": "flower",
+        "petals": 6,
+        "petalDepth": 0.1,
+        "width": 280,
+        "height": 280
+      },
+      "rings": {
+        "width": 13,
+        "center": 55
+      },
+      "profile": {
+        "depth": 38
+      },
+      "support": {
+        "ribs": 2
+      }
+    },
+    "note": "Numbered profile ribs with matched ring slots. Measure stock and test the joint coupon before cutting.",
+    "pro": true,
+    "tags": [
+      "precision",
+      "matched joints",
+      "flat pack"
+    ]
+  },
+  {
+    "id": "precision-gallery-tower",
+    "name": "Gallery stepped tower",
+    "category": "Precision joinery",
+    "params": {
+      "name": "Gallery stepped tower",
+      "mode": "tower",
+      "outline": {
+        "width": 260,
+        "height": 260
+      },
+      "rings": {
+        "width": 14,
+        "center": 60
+      },
+      "profile": {
+        "kind": "linear",
+        "depth": 145
+      },
+      "support": {
+        "ribs": 4
+      }
+    },
+    "note": "Numbered profile ribs with matched ring slots. Measure stock and test the joint coupon before cutting.",
+    "pro": true,
+    "tags": [
+      "precision",
+      "matched joints",
+      "flat pack"
+    ]
+  },
+  {
+    "id": "precision-soft-square",
+    "name": "Soft-square organiser",
+    "category": "Precision joinery",
+    "params": {
+      "name": "Soft-square organiser",
+      "outline": {
+        "shape": "rounded",
+        "width": 250,
+        "height": 250,
+        "corner": 45
+      },
+      "rings": {
+        "width": 14,
+        "center": 60
+      },
+      "profile": {
+        "kind": "flat-bottom",
+        "depth": 36
+      },
+      "support": {
+        "ribs": 2
+      }
+    },
+    "note": "Numbered profile ribs with matched ring slots. Measure stock and test the joint coupon before cutting.",
+    "pro": true,
+    "tags": [
+      "precision",
+      "matched joints",
+      "flat pack"
+    ]
+  },
+  {
+    "id": "studio-ripple-bowl",
+    "name": "Ripple display bowl",
+    "note": "Display object with editable contours and supports; prototype the lift before use. Uses separate, positively located rings on matched profile ribs.",
     "category": "Kitchen & dining",
     "tags": [
       "Kitchen & dining",
@@ -18,9 +204,101 @@ export const POPUP_PRESETS:PopupPreset[]=[
     "pro": true,
     "params": {
       "pattern": {
-        "kind": "spiral"
+        "kind": "rings",
+        "follow": "shape",
+        "edge": "wave",
+        "amplitude": 1,
+        "frequency": 12,
+        "arms": 2,
+        "segmented": false
       },
-      "name": "Spiral Trivet Bowl"
+      "name": "Ripple display bowl",
+      "outline": {
+        "width": 220,
+        "height": 220
+      },
+      "profile": {
+        "depth": 26
+      }
+    }
+  },
+  {
+    "id": "studio-polygon-tray",
+    "name": "Polygon display tray",
+    "note": "Display object with editable contours and supports; prototype the lift before use.",
+    "category": "Kitchen & dining",
+    "tags": [
+      "Kitchen & dining",
+      "bowl",
+      "pop-up"
+    ],
+    "pro": true,
+    "params": {
+      "outline": {
+        "shape": "polygon",
+        "width": 250,
+        "height": 250,
+        "sides": 8
+      },
+      "name": "Polygon display tray",
+      "profile": {
+        "depth": 28
+      },
+      "rings": {
+        "width": 12
+      }
+    }
+  },
+  {
+    "id": "studio-petal-bowl",
+    "name": "Petal catchall",
+    "note": "Display object with editable contours and supports; prototype the lift before use.",
+    "category": "Kitchen & dining",
+    "tags": [
+      "Kitchen & dining",
+      "bowl",
+      "pop-up"
+    ],
+    "pro": true,
+    "params": {
+      "pattern": {
+        "kind": "rings"
+      },
+      "name": "Petal catchall",
+      "outline": {
+        "shape": "flower",
+        "width": 230,
+        "height": 230,
+        "petals": 8,
+        "petalDepth": 0.08
+      },
+      "profile": {
+        "depth": 28
+      }
+    }
+  },
+  {
+    "id": "spiral-trivet-bowl",
+    "name": "Stepped Trivet Bowl",
+    "note": "Kitchen & dining · Editable pop-up design; prototype before use. Uses separate, positively located rings on matched profile ribs.",
+    "category": "Kitchen & dining",
+    "tags": [
+      "Kitchen & dining",
+      "bowl",
+      "pop-up"
+    ],
+    "pro": true,
+    "params": {
+      "pattern": {
+        "kind": "rings",
+        "follow": "shape",
+        "edge": "plain",
+        "amplitude": 1,
+        "frequency": 16,
+        "arms": 2,
+        "segmented": false
+      },
+      "name": "Stepped Trivet Bowl"
     }
   },
   {
@@ -129,8 +407,8 @@ export const POPUP_PRESETS:PopupPreset[]=[
   },
   {
     "id": "spiral-christmas-tree-with-star",
-    "name": "Spiral Christmas Tree with Star",
-    "note": "Seasonal · Editable pop-up design; prototype before use.",
+    "name": "Stepped Christmas Tree with Star",
+    "note": "Seasonal · Editable pop-up design; prototype before use. Uses separate, positively located rings on matched profile ribs.",
     "category": "Seasonal",
     "tags": [
       "Seasonal",
@@ -141,7 +419,13 @@ export const POPUP_PRESETS:PopupPreset[]=[
     "params": {
       "mode": "tower",
       "pattern": {
-        "kind": "spiral"
+        "kind": "rings",
+        "follow": "shape",
+        "edge": "plain",
+        "amplitude": 1,
+        "frequency": 16,
+        "arms": 2,
+        "segmented": false
       },
       "profile": {
         "kind": "linear",
@@ -150,7 +434,7 @@ export const POPUP_PRESETS:PopupPreset[]=[
       "extras": {
         "finial": "star"
       },
-      "name": "Spiral Christmas Tree with Star"
+      "name": "Stepped Christmas Tree with Star"
     }
   },
   {
@@ -179,8 +463,8 @@ export const POPUP_PRESETS:PopupPreset[]=[
   },
   {
     "id": "spiral-ornament-set-of-6",
-    "name": "Spiral Ornament (set of 6)",
-    "note": "Seasonal · Editable pop-up design; prototype before use.",
+    "name": "Layered Ornament (set of 6)",
+    "note": "Seasonal · Editable pop-up design; prototype before use. Separate rings with measured suspension heights.",
     "category": "Seasonal",
     "tags": [
       "Seasonal",
@@ -191,7 +475,7 @@ export const POPUP_PRESETS:PopupPreset[]=[
     "params": {
       "mode": "hanging",
       "pattern": {
-        "kind": "spiral"
+        "kind": "rings"
       },
       "outline": {
         "width": 100,
@@ -206,12 +490,15 @@ export const POPUP_PRESETS:PopupPreset[]=[
         "depth": 50
       },
       "sheet": {
-        "copies": 6, "nest": "box", "calibration": false, "labels": false
+        "copies": 6,
+        "nest": "box",
+        "calibration": false,
+        "labels": false
       },
       "support": {
         "kind": "cords"
       },
-      "name": "Spiral Ornament (set of 6)"
+      "name": "Layered Ornament (set of 6)"
     }
   },
   {
@@ -280,9 +567,9 @@ export const POPUP_PRESETS:PopupPreset[]=[
         "shape": "heart"
       },
       "rings": {
-        "center": 20,
-        "rim": 6,
-        "width": 6
+        "center": 30,
+        "rim": 10,
+        "width": 10
       },
       "profile": {
         "depth": 20
@@ -357,8 +644,8 @@ export const POPUP_PRESETS:PopupPreset[]=[
   },
   {
     "id": "scandinavian-spiral-pendant-e27",
-    "name": "Scandinavian Spiral Pendant (E27)",
-    "note": "Lighting · Editable pop-up design; prototype before use.",
+    "name": "Scandinavian Layered Pendant (E27)",
+    "note": "Lighting · Editable pop-up design; prototype before use. Separate rings with measured suspension heights.",
     "category": "Lighting",
     "tags": [
       "Lighting",
@@ -369,7 +656,7 @@ export const POPUP_PRESETS:PopupPreset[]=[
     "params": {
       "mode": "hanging",
       "pattern": {
-        "kind": "spiral"
+        "kind": "rings"
       },
       "rings": {
         "center": 55
@@ -380,7 +667,7 @@ export const POPUP_PRESETS:PopupPreset[]=[
       "support": {
         "kind": "cords"
       },
-      "name": "Scandinavian Spiral Pendant (E27)",
+      "name": "Scandinavian Layered Pendant (E27)",
       "profile": {
         "depth": 200
       }
@@ -446,8 +733,8 @@ export const POPUP_PRESETS:PopupPreset[]=[
   },
   {
     "id": "spiral-tealight-holder",
-    "name": "Spiral Tealight Holder",
-    "note": "Lighting · Editable pop-up design; prototype before use.",
+    "name": "Stepped Tealight Holder",
+    "note": "Lighting · Editable pop-up design; prototype before use. Uses separate, positively located rings on matched profile ribs.",
     "category": "Lighting",
     "tags": [
       "Lighting",
@@ -457,7 +744,13 @@ export const POPUP_PRESETS:PopupPreset[]=[
     "pro": true,
     "params": {
       "pattern": {
-        "kind": "spiral"
+        "kind": "rings",
+        "follow": "shape",
+        "edge": "plain",
+        "amplitude": 1,
+        "frequency": 16,
+        "arms": 2,
+        "segmented": false
       },
       "rings": {
         "center": 55
@@ -468,7 +761,7 @@ export const POPUP_PRESETS:PopupPreset[]=[
       "profile": {
         "depth": 18
       },
-      "name": "Spiral Tealight Holder"
+      "name": "Stepped Tealight Holder"
     }
   },
   {
@@ -601,7 +894,8 @@ export const POPUP_PRESETS:PopupPreset[]=[
         "text": "Sam"
       },
       "job": {
-        "names": "Sam\nAlex", "mirror": false
+        "names": "Sam\nAlex",
+        "mirror": false
       },
       "name": "Wedding Favour Bowl (names, batch)"
     }

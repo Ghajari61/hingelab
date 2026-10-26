@@ -1,4 +1,46 @@
 {
+ "popup-precision-orbit-bowl": {
+  "w": 600,
+  "h": 400,
+  "sheets": 1,
+  "objects": 5,
+  "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
+ },
+ "popup-precision-oval-valet": {
+  "w": 600,
+  "h": 400,
+  "sheets": 1,
+  "objects": 3,
+  "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
+ },
+ "popup-precision-hex-display": {
+  "w": 600,
+  "h": 400,
+  "sheets": 1,
+  "objects": 5,
+  "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
+ },
+ "popup-precision-petal-centrepiece": {
+  "w": 600,
+  "h": 400,
+  "sheets": 1,
+  "objects": 3,
+  "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
+ },
+ "popup-precision-gallery-tower": {
+  "w": 600,
+  "h": 400,
+  "sheets": 1,
+  "objects": 6,
+  "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
+ },
+ "popup-precision-soft-square": {
+  "w": 600,
+  "h": 400,
+  "sheets": 1,
+  "objects": 3,
+  "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
+ },
  "popup-studio-ripple-bowl": {
   "w": 600,
   "h": 400,
