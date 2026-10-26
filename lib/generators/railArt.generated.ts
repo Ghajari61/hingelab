@@ -27,7 +27,7 @@ export const GEN_RAIL_GROUPS: Record<string, string> = {
   "gen-shadowbox-design.cell": "circle diamond hex oval square triangle",
   "gen-shadowbox-design.hole": "butterfly circle cloud flower heart house leaf moon moonstar paw snowflake sparkle star sun tree",
   "gen-shadowbox-design.opening": "arch circle drop flower frame heart orbit oval polygon squircle star wavy",
-  "gen-shadowbox-design.pattern": "flow landscape lattice mandala picture sunburst tunnel",
+  "gen-shadowbox-design.pattern": "flow landscape lattice mandala picture sunburst topographic tunnel",
   "gen-shadowbox-design.ridge": "clouds dunes hills mountains sine skyline trees waves zigzag",
   "gen-shadowbox-frame.shape": "arch blossom circle cloud diamond heart hexagon house octagon pill rect rounded scalloped shield squircle",
   "gen-shadowbox-look.palette": "autumn candy coral desert forest gold kraft lavender mint mono night ocean pastel rainbow rose sage snow sunset",

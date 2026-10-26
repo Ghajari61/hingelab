@@ -8,7 +8,7 @@ import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 import { isPictureText } from "./picPath";
 
-export const PATTERNS = ["tunnel", "mandala", "sunburst", "landscape", "lattice", "flow", "picture"] as const;
+export const PATTERNS = ["tunnel", "mandala", "sunburst", "landscape", "lattice", "flow", "topographic", "picture"] as const;
 export type Pattern = (typeof PATTERNS)[number];
 export const OPENINGS = ["circle", "oval", "squircle", "polygon", "star", "flower", "wavy", "orbit", "heart", "arch", "drop", "frame"] as const;
 export type Opening = (typeof OPENINGS)[number];
@@ -339,7 +339,7 @@ export function mergeShadowBox(raw: unknown): ShadowBoxParams {
   g.cell = oneOf(CELLS, g.cell, d.design.cell);
   g.sides = clamp(Math.round(g.sides), 3, 16);
   g.waves = clamp(Math.round(g.waves), 1, 12);
-  g.count = clamp(Math.round(g.count), 3, 48);
+  g.count = clamp(Math.round(g.count), 3, g.pattern === "topographic" ? 12 : 48);
   g.seed = clamp(Math.round(g.seed), 0, 99999);
   g.hole = oneOf(HOLES, g.hole, d.design.hole);
   g.holeSize = clamp(g.holeSize, 5, 45);

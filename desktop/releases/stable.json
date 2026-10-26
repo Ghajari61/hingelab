@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.9.0",
-    "pub_date": "2026-10-26T04:10:02.248Z",
-    "notes": "Hinge Box engineering fixes: safer kerf-compensated slots and holes, divider support protection, accurate X/Y keyholes, clearer controls, and 10 new editable modern designs (59 total).",
+    "version": "1.10.0",
+    "pub_date": "2026-10-26T04:47:13.752Z",
+    "notes": "Shadow Box engineering fixes, editable multi-basin topography, 12 modern designs (146 total), corrected pin/screw placement, cable clearances and removable-back assembly.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.9.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnYxREtxODRiblpUQk1LMGpNNWVYMys0bTFuc2h1aUtiTkUyMVV3Nmw0R2laa3E1T0dDbW5jd0V2SEZDMldncmpOMzJCcEg1N0FVUzRwTWpyeC9OZmdBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTg3NzQ3CWZpbGU6SGluZ2VMYWJfMS45LjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuOS4wCmJWb3ZWTy9hUFpjaWZwSlo0aXpNZTNFbXlSWGk3M2tJbG5NOFZyTlAxa1ZEWXZkYndXbzR6Um5qL3BSdnV1YXl4ZmpFcElEZGRRWDFzR0tWSVFuaUJ3PT0K",
-        "size": 11185047,
-        "sha256": "e2963e1cbc0d0ba13983096f5afdc146ff41495920c759f7d8b9af9d375ee955"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.10.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmt2KzZCYTBpZnowL1NIbVNJNzIxUkIzeTloSFV6aGdyZ1FOOEdmQ3VlL3ZKMHVYSG5GbnhLSGw4bloxcE50b1VwcjlURktJemJoQVJNRk93MkZiTEF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTg5OTE1CWZpbGU6SGluZ2VMYWJfMS4xMC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjEwLjAKUWJqd1JvOElGbHFwU1VUQTJHd0NaUTZyQ21BQ3NUMGh2WTY0VzNZbUFCVVJOQyt2endwTUF6R1dmQmdvNlZvR0ZMQllpd3pzQ2VPZ2hhRk5wOVV3RHc9PQo=",
+        "size": 11313172,
+        "sha256": "e97c657b04f34c8ed264dc877cdc789ea3d50ab9b33835e02ec36269bde8ed87"
       }
     }
   }
