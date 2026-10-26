@@ -35,7 +35,7 @@ function keep(pts: { p: Point }[]) {
   });
 }
 
-const outline = (edges: Edge[], r: number) => { const pts = ringPoints(edges, r); return keep(pts).map((i) => pts[i].p); };
+export const outline = (edges: Edge[], r: number) => { const pts = ringPoints(edges, r); return keep(pts).map((i) => pts[i].p); };
 
 /** The wall: a band between radius ro (outside) and ri, from z0 up h; curved zones darker. */
 function wallBand(edges: Edge[], ro: number, ri: number, z0: number, h: number) {
@@ -70,7 +70,7 @@ function wallBand(edges: Edge[], ro: number, ri: number, z0: number, h: number) 
 }
 
 /** Slit lines drawn on the outside of each curved corner, staggered like the lattice. */
-function slitLines(edges: Edge[], r: number, z0: number, h: number, pitch: number, bridge: number) {
+export function slitLines(edges: Edge[], r: number, z0: number, h: number, pitch: number, bridge: number) {
   const pos: number[] = [];
   let col = 0;
   for (const e of edges) {
@@ -102,7 +102,7 @@ const named = (m: Model, name: string) => m.parts.find((pt): pt is PlatePart => 
 const dotA = (q: Point, a: Point) => q[0] * a[0] + q[1] * a[1];
 
 /** A see-through slab for a clear window. */
-function windowSlab(outer: Point[], z0: number, t: number) {
+export function windowSlab(outer: Point[], z0: number, t: number) {
   const m = slab(outer, [], z0, t, "window");
   m.material = new THREE.MeshStandardMaterial({ color: 0xcfe6f5, transparent: true, opacity: 0.35, roughness: 0.1 });
   m.userData.keepMaterial = true;
@@ -230,7 +230,7 @@ export function buildHingeScene(model: Model, user: Params, explode = 0): Scene3
 }
 
 /** Base cuts that show: openings and keyholes, not the tab slots. */
-function isOpening(h: Point[], p: Params) {
+export function isOpening(h: Point[], p: Params) {
   const b = bbox(h), w = b[2] - b[0], d = b[3] - b[1], small = Math.min(w, d), big = Math.max(w, d);
   return !(small <= p.T + Math.max(0, p.slotClr) + 0.01 && big <= p.tabW + Math.max(0, p.slotClr) + 0.01);
 }

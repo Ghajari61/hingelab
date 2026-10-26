@@ -7,6 +7,8 @@ import { unionShapes } from "@/lib/letters/polygon";
 import { finishScene, slab, slabs, type Scene3D } from "@/lib/three/flat";
 import { ITEM_SEP, itemOf, itemSkinName } from "./items";
 import type { Contour, GenImage, GenOutput, GenPart } from "./types";
+import type { Layout } from "@/lib/hinge";
+import type { CutPart } from "./output";
 
 const ENGRAVE = new THREE.MeshStandardMaterial({ color: "#3a2a1c", roughness: 0.9 });
 ENGRAVE.userData.shared = true;
@@ -116,8 +118,15 @@ function pictureSkin(im: GenImage, z: number, name: string, loads: Promise<void>
   return mesh;
 }
 
-export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1): Scene3D {
+/**
+ * With `lay` (the cut layout) and no folding parts, the design opens out in place: `explode(e)`
+ * takes every part from where it sits assembled, one after another on a soft arc, to its place on
+ * the sheet, lying flat (turned as the nesting turned it). Parts drawn as several pieces in 3D (a
+ * bent part) shrink away, and the flat part they are cut as grows in their place.
+ */
+export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1, lay?: Layout<CutPart>): Scene3D {
   const inner = new THREE.Group();
+  const wraps: { p: Shown; wrap: THREE.Object3D; content: THREE.Object3D }[] = [];
   const loads: Promise<void>[] = [];
   // A part that bends is drawn as its flat pieces, each where it sits.
   const parts: Shown[] = out.parts.flatMap((p) => p.views3d?.length
@@ -214,7 +223,15 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1)
     stand.add(spin);
     wrap.add(stand);
     inner.add(wrap);
+    wraps.push({ p, wrap, content: stand });
   });
+  if (!folding.length && lay) {
+    const run = unfoldParts(inner, wraps, lay, T);
+    run(0);
+    const scene = finishScene(inner);
+    run(explode);
+    return { ...scene, explode: (e: number) => run(Math.min(1, Math.max(0, e))), ...(loads.length ? { ready: Promise.all(loads) } : {}) };
+  }
   if (!folding.length) {
     const scene = finishScene(inner);
     return loads.length ? { ...scene, ready: Promise.all(loads) } : scene;
@@ -230,4 +247,99 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1)
     explode: (e: number) => { at = { ...at, explode: e }; place(); },
   };
   return { ...scene, ...hooks, ...(loads.length ? { ready: Promise.all(loads) } : {}) };
+}
+
+const easeIO = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2);
+const segE = (e: number, a: number, b: number) => easeIO(Math.min(1, Math.max(0, (e - a) / Math.max(1e-6, b - a))));
+
+/** The opening-out moves for generatorScene: each wrapped part travels from its assembled matrix to its place on the sheet. */
+function unfoldParts(inner: THREE.Group, wraps: { p: Shown; wrap: THREE.Object3D; content: THREE.Object3D }[], lay: Layout<CutPart>, T: number) {
+  const cx = lay.width / 2, cy = lay.height / 2;
+  const used = new Set<number>();
+  inner.updateMatrixWorld(true);
+  const middle = new THREE.Box3().setFromObject(inner).getCenter(new THREE.Vector3());
+  const moves: ((e: number) => void)[] = [];
+  // the top layers leave first, so a stack comes apart from the top down
+  const order = wraps.map((w, i) => ({ w, i, z: w.p.place?.z ?? 0 })).sort((a, b) => b.z - a.z || a.i - b.i);
+  const n = Math.max(1, order.length - 1);
+  order.forEach(({ w }, rank) => {
+    // A wrap placed by a plan matrix keeps it; the others are placed by position and rotation.
+    if (w.wrap.matrixAutoUpdate) w.wrap.updateMatrix();
+    w.content.updateMatrix();
+    const local = w.content.matrix.clone();
+    const spin = w.content.children[0];
+    if (spin) { spin.updateMatrix(); local.multiply(spin.matrix); }
+    const startM = w.wrap.matrix.clone().multiply(local);
+    const sp = new THREE.Vector3(), sq = new THREE.Quaternion(), ss = new THREE.Vector3();
+    startM.decompose(sp, sq, ss);
+    // A part standing on edge (a box's wall) first falls outwards about its foot, away from the middle.
+    const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(sq);
+    let fall: ((k: number) => THREE.Matrix4) | null = null;
+    if (Math.abs(normal.z) < 0.5) {
+      const bb = new THREE.Box3().setFromObject(w.wrap), c = bb.getCenter(new THREE.Vector3());
+      const d = new THREE.Vector3(c.x - middle.x, c.y - middle.y, 0);
+      if (d.lengthSq() < 1e-6) d.set(normal.x, normal.y, 0);
+      if (d.dot(new THREE.Vector3(normal.x, normal.y, 0)) < 0 && d.lengthSq() < 1) d.negate();
+      d.normalize();
+      const axis = new THREE.Vector3(0, 0, 1).cross(d).normalize(), pivot = new THREE.Vector3(c.x, c.y, bb.min.z);
+      fall = (k) => new THREE.Matrix4().makeTranslation(pivot.x, pivot.y, pivot.z)
+        .multiply(new THREE.Matrix4().makeRotationAxis(axis, (Math.PI / 2) * k))
+        .multiply(new THREE.Matrix4().makeTranslation(-pivot.x, -pivot.y, -pivot.z)).multiply(startM);
+      fall(1).decompose(sp, sq, ss);
+    }
+    const idx = lay.items.findIndex((it, j) => !used.has(j) && it.pt.src.id === w.p.id);
+    const t0 = fall ? 0.36 : 0.08, span = fall ? 0.3 : 0.5;
+    const win: [number, number] = [t0 + (span * rank) / n, Math.min(1, t0 + (span * rank) / n + 0.34)];
+    const inv = local.clone().invert();
+    const m = new THREE.Matrix4(), pos = new THREE.Vector3(), q = new THREE.Quaternion();
+    w.wrap.matrixAutoUpdate = false;
+    if (idx < 0) {
+      // drawn as pieces in 3D: shrink away as the others travel
+      moves.push((e) => {
+        const k = segE(e, win[0], win[1]);
+        m.compose(sp, sq, ss.clone().multiplyScalar(Math.max(1e-3, 1 - k)));
+        w.wrap.matrix.copy(m.multiply(inv));
+        w.wrap.visible = k < 0.999;
+        w.wrap.matrixWorldNeedsUpdate = true;
+      });
+      return;
+    }
+    used.add(idx);
+    const it = lay.items[idx];
+    const tp = new THREE.Vector3(it.ox - cx, -(it.oy - cy), 0);
+    const tq = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -((it.pt.turned ?? 0) * Math.PI) / 180);
+    const lift = Math.min(80, 15 + sp.distanceTo(tp) * 0.2);
+    moves.push((e) => {
+      const k = segE(e, win[0], win[1]);
+      if (fall && k === 0) {
+        w.wrap.matrix.copy(fall(segE(e, 0.04, 0.36)).multiply(inv));
+        w.wrap.matrixWorldNeedsUpdate = true;
+        return;
+      }
+      pos.copy(sp).lerp(tp, k);
+      // first up and clear of the others, then over and down
+      pos.z += Math.sin(Math.PI * k) * lift;
+      q.copy(sq).slerp(tq, k);
+      m.compose(pos, q, ss);
+      w.wrap.matrix.copy(m.multiply(inv));
+      w.wrap.matrixWorldNeedsUpdate = true;
+    });
+  });
+  // cut parts no 3D part stands for (a bent part's flat strip) grow in place as the others land
+  lay.items.forEach((it, j) => {
+    if (used.has(j)) return;
+    const outer = it.pt.outline[0];
+    if (!outer || outer.length < 3) return;
+    const mesh = slab(outer, [...it.pt.outline.slice(1), ...it.pt.inner], 0, T, it.pt.name);
+    mesh.matrixAutoUpdate = false;
+    inner.add(mesh);
+    const at = new THREE.Vector3(it.ox - cx, -(it.oy - cy), 0);
+    moves.push((e) => {
+      const k = segE(e, 0.8, 1);
+      mesh.visible = k > 0.001;
+      mesh.matrix.compose(at, new THREE.Quaternion(), new THREE.Vector3(1, 1, 1).multiplyScalar(Math.max(1e-3, k)));
+      mesh.matrixWorldNeedsUpdate = true;
+    });
+  });
+  return (e: number) => { for (const mv of moves) mv(e); inner.updateMatrixWorld(true); };
 }
