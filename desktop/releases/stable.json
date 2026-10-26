@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.8.0",
-    "pub_date": "2026-10-26T03:20:02.744Z",
-    "notes": "Latest GitHub updates: Hinge Box lids, cabinets and drawers, animated 3D opening and sheet unfolding, idle rotation, and simplified product/settings navigation.",
+    "version": "1.9.0",
+    "pub_date": "2026-10-26T04:10:02.248Z",
+    "notes": "Hinge Box engineering fixes: safer kerf-compensated slots and holes, divider support protection, accurate X/Y keyholes, clearer controls, and 10 new editable modern designs (59 total).",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.8.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmlJaCtkSktMZEo0RnBNT2FTNHZLcnZyck1IZWpQVXZGT0hpQlNMczJSQ2tMN3JNbmh6L2xiVFBTQ0hnUEJKS0hjcjhTUzgrQVBlc210Mi84b1hhOWdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTg0NzcyCWZpbGU6SGluZ2VMYWJfMS44LjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuOC4wCkFGZW13bWg3WElQZVZaejJmNk9MNndoekZseXJnam42eXBLdEljbTNISHpZMzZlWVBkb3MvNWtqbzhjQWxjUFRGdUtwZTMrSDg5Y0hDWXpESmpwakFnPT0K",
-        "size": 11153292,
-        "sha256": "eb02dc02e313d021033b4b8c3a7c2e3e5542eb7705e086683ab7fc1d6b583256"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.9.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnYxREtxODRiblpUQk1LMGpNNWVYMys0bTFuc2h1aUtiTkUyMVV3Nmw0R2laa3E1T0dDbW5jd0V2SEZDMldncmpOMzJCcEg1N0FVUzRwTWpyeC9OZmdBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTg3NzQ3CWZpbGU6SGluZ2VMYWJfMS45LjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuOS4wCmJWb3ZWTy9hUFpjaWZwSlo0aXpNZTNFbXlSWGk3M2tJbG5NOFZyTlAxa1ZEWXZkYndXbzR6Um5qL3BSdnV1YXl4ZmpFcElEZGRRWDFzR0tWSVFuaUJ3PT0K",
+        "size": 11185047,
+        "sha256": "e2963e1cbc0d0ba13983096f5afdc146ff41495920c759f7d8b9af9d375ee955"
       }
     }
   }
