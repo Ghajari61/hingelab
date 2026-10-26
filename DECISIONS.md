@@ -1637,3 +1637,13 @@ The owner asked for exploded 3D views to open as an attractive animation that en
 - **QuadView**: damped OrbitControls (the render loop runs while they settle, otherwise it still renders only on change); the perspective view auto-rotates (≈3.6°/s, time-based) after 5 s without pointer, wheel or key input, only while that view is shown and not for reduced motion; views reframe on the closed box widening to the fully opened box as the model opens, always holding the model as it is; the floor and shadows are sized for the opened-out model.
 - Tested in `lib/hinge3d/__tests__/unfold.test.ts` (assembled at 0 equals the static scene, finite and on the floor throughout, flat at the sheet thickness at 1, for lids, caps, cabinets, drawers and a generator box).
 
+
+## D207. Pop-up engineering review
+
+The owner asked for an expert review of the Pop-up generator's structure, settings and every preset, fixing whatever would fail in the workshop.
+
+- **Bridges are modelled as guided beams** (`popup/engineering.ts`): strain ε = 3·T·δ/L² against the stock's limit (plywood 1 %, MDF 0.4 %, acrylic 0.6 %). A few hundredths of a millimetre of drop already reaches it, so bridges only hold the blank together while it is cut; the supports set the heights. The strain warning, the snap count and the assembly text all come from this model, and only cuts between rings at different heights are snapped (a pagoda keeps its tier bridges).
+- **Only ribs, cords and bevelled (tilt) rings set heights.** A centre post and handles do not: they no longer ask for snapped bridges (which would let the rings fall). Tower now starts on ribs; the post is a cross of two plates under the centre, offered only with no ribs and no centre opening.
+- **Holes, slots and slits keep clear of bridges** (`clearTurn`): cord holes, petal slits and handle slots turn to the angle furthest from every bridge. Cords run through every ring, the spiral strip's middle and the centre disc, so nothing hangs loose.
+- **Ribs follow the pattern**: smooth ramp tops under spirals; 3–4 radial ribs on a hub (and always for a sleeve, on a ring hub round the opening so the object reaches the table). Sleeve mode enlarges the centre disc to fit the sleeve. Handles become lugs on the long rib when there are ribs, or plates in matching slots mid-ring. A finial has a tab through a centre slot.
+- Checked over a 300-case matrix (modes × supports × patterns × rib counts × extras): no errors and no split parts. Tests in `popup.test.ts` (Pop-up engineering).

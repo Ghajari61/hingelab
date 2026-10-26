@@ -1,3 +1,10 @@
+## Unreleased — Pop-up engineering review
+
+- **Honest bridge check.** The strain on the bridges is worked out as a bending beam for the stock (plywood, MDF, acrylic). The panel says how many ring cuts to snap; cuts between rings at the same height (a pagoda's tiers, a flat centre) keep their bridges.
+- **Supports that really hold the shape.** Only ribs, cords and bevelled rings set the ring heights; a centre post and handles no longer ask you to snap bridges. Towers start on ribs. 3–4 ribs stand round a hub, a vase sleeve's ribs stand round the opening on a ring so the vase reaches the table, and spirals rest on smooth ramp ribs instead of steps.
+- **Nothing cut into a bridge.** Cord holes, petal slits and handle slots turn away from the bridges. Cords thread every ring and the centre disc, and spiral cords sit in the middle of the strip.
+- Handles on a ribbed basket are lugs on the long rib; separate handles stand in slots that fit them. A finial stands on a tab through the centre. Sleeve mode makes the centre big enough for the sleeve. Clearer assembly steps and an overall height that counts the feet and hub.
+
 ## Unreleased — 3D that opens out and moves smoothly
 
 - **Open it out.** A play button beside Explode in the 3D view animates the design apart and back together. A Hinge Box's lid swings open on its hinge (a lift-off or cap lid rises with a little tilt), a cabinet opens its door or slides its drawers out standing, then tips onto its back; the walls fold down outwards, each side towards its own side; then every part travels on a soft arc to its place on the sheet and lies flat side by side, with the hinge cuts drawn on once it lands. Generator designs (boxes, signs, toppers and the rest) do the same: walls fall outwards about their feet, then every part lands flat where the layout puts it. The Explode slider scrubs the same motion.

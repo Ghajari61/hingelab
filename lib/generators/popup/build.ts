@@ -1,15 +1,20 @@
 import {differenceShapes,intersectShapes,makeShape,offsetShapes,unionShapes} from '@/lib/letters/polygon';
-import {circle,customOutline,ellipse,rect,regularPolygon,roundCorners,roundedRect,transform,TAU,pointInContour,distToContour,parsePathData} from '../geom';
+import {circle,customOutline,ellipse,rect,regularPolygon,roundCorners,roundedRect,transform,TAU,pointInContour,distToContour,parsePathData,signedArea} from '../geom';
 import {shapeOutline} from '../shapes';
 import {bendAround} from '../textPath';
 import type {BuildContext,Contour,GenOutput,GenPart,Pt} from '../types';
+import {bridgeStrain,clearTurn,cutsToSnap,polar,spiralStripCentres} from './engineering';
 import {SHAPES,PROFILES,type PopupParams} from './params';
 /** How far a rib reaches below the rings: its spine, never cut through by the ring grooves or the centre half-lap. */
 export const ribFoot=(p:PopupParams)=>Math.max((p.profile.depth+Math.max(12,p.T*3))*.15,3*(p.T+p.support.fit)+2);
-/** Ribs, a centre post or knotted cords set every ring's height, so the bridge lands only hold the rings while cutting. */
-export const setsHeights=(p:PopupParams)=>['ribs','post','cords'].includes(p.support.kind);
+/**
+ * Ribs, knotted cords or bevelled (tilted) cuts set every ring's height, so the bridge lands only
+ * hold the rings while cutting. A centre post holds the centre alone and handles hold nothing: with
+ * those the rings hang on their bridges (see engineering.ts for why that rarely works).
+ */
+export const setsHeights=(p:PopupParams)=>['ribs','cords','tilt'].includes(p.support.kind);
 /** Cord length between one ring's knot and the next, mm, centre out (the cord holes sit half a pitch inside each ring). */
-export function knotSpacing(rings:{radius:number;height:number}[],pitch:number):number[]{const at=rings.slice(0,-1).map(r=>({r:r.radius-pitch/2,z:r.height})).sort((a,b)=>a.r-b.r);return at.slice(1).map((q,i)=>Math.hypot(q.r-at[i].r,q.z-at[i].z));}
+export function knotSpacing(cord:{r:number;z:number}[]):number[]{const at=[...cord].sort((a,b)=>a.r-b.r);return at.slice(1).map((q,i)=>Math.hypot(q.r-at[i].r,q.z-at[i].z));}
 export const tiltDepth=(n:number,g:number,angle:number)=>n*g/Math.tan(angle*Math.PI/180);
 export function curvePoints(text:string):Pt[]{const points=text.split(';').map(v=>v.split(',').map(Number) as Pt);if(points.length<2||points.length>16||points.some(v=>v.length!==2||v.some(x=>!Number.isFinite(x)||x<0||x>1))||points[0][0]!==0||points.at(-1)![0]!==1||points.some((v,i)=>i>0&&v[0]<=points[i-1][0]))throw Error('Use 2–16 ordered curve points x,y from 0 to 1, including x=0 and x=1.');return points;}
 /** Smoothstep between ordered controls is bounded and never overshoots narrow rings. */
@@ -33,15 +38,15 @@ export function ringPlan(p:PopupParams,outer=outlineOf(p)) {const radius=distToC
 const matrix=(z:number)=>[1,0,0,0,0,1,0,0,0,0,1,z];
 function band(c:Contour,gap:number){const s=makeShape(c,[]),a=offsetShapes([s],gap/2),b=offsetShapes([s],-gap/2);return differenceShapes(a.flatMap(s=>[s.outer,...s.holes]),b.flatMap(s=>[s.outer,...s.holes]));}
 /** Cut slots stop at solid bridge lands; all physical paths are closed polygons. */
-function ringSlots(p:PopupParams,c:Contour,index:number):Contour[]{const b=band(c,p.rings.gap);const lands:Contour[]=[];const radius=Math.max(p.outline.width,p.outline.height);for(let j=0;j<p.bridges.count;j++){const angle=j*360/p.bridges.count+(p.bridges.alternate?index%2:index)*p.bridges.stagger;lands.push(transform(rect(0,-p.bridges.width/2,radius,p.bridges.width),{rot:angle}));}const slots=differenceShapes(b.flatMap(s=>[s.outer,...s.holes]),lands).map(s=>s.outer);
+function ringSlots(p:PopupParams,c:Contour,index:number,pitch:number):Contour[]{const b=band(c,p.rings.gap);const lands:Contour[]=[];const radius=Math.max(p.outline.width,p.outline.height);for(let j=0;j<p.bridges.count;j++){const angle=j*360/p.bridges.count+(p.bridges.alternate?index%2:index)*p.bridges.stagger;lands.push(transform(rect(0,-p.bridges.width/2,radius,p.bridges.width),{rot:angle}));}const slots=differenceShapes(b.flatMap(s=>[s.outer,...s.holes]),lands).map(s=>s.outer);
  // Side reliefs define a bounded radial flexure length at each bridge land.
- const pitch=(distToContour([0,0],outlineOf(p))-p.rings.rim-p.rings.center/2)/Math.max(2,p.rings.by==='count'?p.rings.count-2:Math.round((distToContour([0,0],outlineOf(p))-p.rings.rim-p.rings.center/2)/p.rings.width));
  const length=Math.min(p.bridges.length,pitch*.7),g=p.rings.gap;
  for(let j=0;j<p.bridges.count;j++){const angle=j*360/p.bridges.count+(p.bridges.alternate?index%2:index)*p.bridges.stagger;const q=transform(c,{rot:-angle});const hits:number[]=[];for(let k=0;k<q.length;k++){const a=q[k],b=q[(k+1)%q.length];if((a[1]<=0&&b[1]>0)||(b[1]<=0&&a[1]>0)){const x=a[0]-a[1]*(b[0]-a[0])/(b[1]-a[1]);if(x>0)hits.push(x);}}const r=Math.min(...hits);if(Number.isFinite(r))for(const sign of [-1,1])slots.push(transform(roundedRect(r-length/2,sign*(p.bridges.width+g)/2-g/2,length,g,g/2),{rot:angle}));}
  return slots;}
 /** Continuous narrow spiral slot; the uncut strip is one connected sheet. */
 function spiralSlots(p:PopupParams,radius:number,count:number):Contour[]{const arms=p.pattern.kind==='multi'?p.pattern.arms:1,slots:Contour[]=[];const start=p.rings.center/2,end=radius-p.rings.rim,turns=Math.max(1,count/arms);for(let arm=0;arm<arms;arm++){const n=Math.min(5000,Math.ceil(turns*160));const points:Contour=Array.from({length:n+1},(_,i)=>{const t=i/n,a=t*turns*TAU+arm*TAU/arms,r=start+t*(end-start);return [r*Math.cos(a),r*Math.sin(a)] as Pt;});const left:Contour=[],right:Contour=[];for(let i=0;i<points.length;i++){const a=points[Math.max(0,i-1)],b=points[Math.min(n,i+1)],l=Math.hypot(b[0]-a[0],b[1]-a[1]);const x=-(b[1]-a[1])/l*p.rings.gap/2,y=(b[0]-a[0])/l*p.rings.gap/2;left.push([points[i][0]+x,points[i][1]+y]);right.push([points[i][0]-x,points[i][1]-y]);}slots.push([...left,...right.reverse()]);}return slots;}
-export function popupGeometry(p:PopupParams,ctx:BuildContext={}) {validate(p);const outer=outlineOf(p),plan=ringPlan(p,outer),{rings,radius}=plan;const holes=p.pattern.kind==='rings'?plan.loops.flatMap((c,i)=>ringSlots(p,c,i)):spiralSlots(p,radius,plan.loops.length);if(p.pattern.segmented){for(const ring of rings.slice(1,-1)){const r=ring.radius-plan.pitch*.5;for(let k=0;k<p.outline.petals;k++){const c=transform(roundedRect(r-plan.pitch*.25,-p.rings.gap/2,plan.pitch*.5,p.rings.gap,p.rings.gap/2),{rot:k*360/p.outline.petals});if(c.every(v=>pointInContour(v,outer)))holes.push(c);}}}const centerHole=p.mode==='sleeve'?p.extras.sleeveDiameter:p.extras.socket!=='none'?(p.extras.socket==='E14'?28:p.extras.socket==='E27'?40:p.extras.socketDiameter):p.extras.tealight?p.extras.tealightDiameter:0;
+export function popupGeometry(p:PopupParams,ctx:BuildContext={}) {validate(p);const outer=outlineOf(p),plan=ringPlan(p,outer),{rings,radius}=plan;const holes=p.pattern.kind==='rings'?plan.loops.flatMap((c,i)=>ringSlots(p,c,i,plan.pitch)):spiralSlots(p,radius,plan.loops.length);if(p.pattern.segmented){// petal slits sit between the bridges, never on one
+  const turn=clearTurn(p,p.outline.petals,plan.loops.length);for(const ring of rings.slice(1,-1)){const r=ring.radius-plan.pitch*.5;for(let k=0;k<p.outline.petals;k++){const c=transform(roundedRect(r-plan.pitch*.25,-p.rings.gap/2,plan.pitch*.5,p.rings.gap,p.rings.gap/2),{rot:turn+k*360/p.outline.petals});if(c.every(v=>pointInContour(v,outer)))holes.push(c);}}}const centerHole=p.mode==='sleeve'?p.extras.sleeveDiameter:p.extras.socket!=='none'?(p.extras.socket==='E14'?28:p.extras.socket==='E27'?40:p.extras.socketDiameter):p.extras.tealight?p.extras.tealightDiameter:0;
  if(centerHole>0){if(centerHole+2*p.T>=p.rings.center)throw Error('Centre opening needs a wider centre disc (opening plus two material thicknesses).');holes.push(circle(0,0,centerHole/2));}
  const views:NonNullable<GenPart['views3d']>=[];for(const ring of rings){const region=differenceShapes([ring.outer],ring.inner?[ring.inner]:[]);const pieces=differenceShapes(region.flatMap(v=>[v.outer,...v.holes]),holes);for(const s of pieces)views.push({outer:s.outer,holes:[...s.holes,...(!ring.inner&&centerHole?[circle(0,0,centerHole/2)]:[])],place:{x:0,y:0,z:ring.height,m:matrix(ring.height)},frames:[matrix(0),matrix(ring.height)],apart:[0,0,ring.height*.3]});}
  const missing:string[]=[];let loading=false;let engrave:Contour[]=[];for(const [text,onRim] of [[p.engraving.text||p.engraving.monogram,false],[p.engraving.rim,true]] as const){if(!text)continue;const shaped=ctx.text?.(text.slice(0,100),p.engraving.fontId,p.engraving.size);if(!shaped){loading=true;continue;}missing.push(...shaped.missing);engrave.push(...(onRim?bendAround(shaped.contours,radius-p.rings.rim/2,'top'):shaped.contours));}
@@ -49,23 +54,89 @@ export function popupGeometry(p:PopupParams,ctx:BuildContext={}) {validate(p);co
  engrave=intersectShapes(engrave,[outer]).flatMap(s=>[s.outer,...s.holes]);if(holes.length&&engrave.length)engrave=differenceShapes(engrave,holes).flatMap(s=>[s.outer,...s.holes]);
  for(const v of views){v.engrave=intersectShapes(engrave,[v.outer,...v.holes]).flatMap(q=>[q.outer,...q.holes]);}const parts:GenPart[]=[{id:'blank',name:'Blank',outer,holes,engrave,views3d:views}];
  const supportFit=p.T+p.support.fit,notches:{radius:number;height:number}[]=[];
+ const centreR=centerHole/2,h0=profileHeight(p,0);
+ // An object stands in a sleeve's opening, so ribs must not cross the centre: radial ribs round a ring hub.
+ const radial=p.support.kind==='ribs'&&(p.support.ribs>2||(p.mode==='sleeve'&&centreR>0));
+ const ribCount=p.support.kind==='ribs'?(radial?Math.max(3,p.support.ribs):2):0;
+ // the ribs start just outside the opening, so they still carry the narrow centre ring
+ const hubIn=p.mode==='sleeve'&&centreR>0?centreR+2:0,hub=hubIn?hubIn:Math.max(12,p.T*4);
+ const spiral=p.pattern.kind!=='rings';
+ /** Height of the surface at radius r along a rib, for spirals (a smooth ramp: a helical strip has no steps). */
+ const surfaceAt=(r:number,rimFrom:number)=>{const c=p.rings.center/2;if(r<=c)return h0;if(r>=rimFrom)return profileHeight(p,1);return profileHeight(p,Math.max(0,Math.min(1,(r-c)/(radius-c))));};
+ const handlesOnRibs=(p.support.kind==='handles'||p.extras.handles)&&ribCount>0;
  if(p.support.kind==='ribs'){// A stepped comb supports the rings at exactly their scheduled heights.
-  for(let k=0;k<p.support.ribs;k++){const a=k*(p.support.ribs>2?2:1)*Math.PI/p.support.ribs;const along=(c:Contour)=>{const q=transform(c,{rot:-a*180/Math.PI});const hits:number[]=[];for(let j=0;j<q.length;j++){const A=q[j],B=q[(j+1)%q.length];if((A[1]<=0&&B[1]>0)||(B[1]<=0&&A[1]>0))hits.push(A[0]-A[1]*(B[0]-A[0])/(B[1]-A[1]));}return [Math.min(...hits),Math.max(...hits)];};
-   const intervals=rings.map(r=>({r,x:along(r.outer),inside:r.inner?along(r.inner):[0,0]}));// One block per ring on each side, from its tread down to the foot, on a spine under the lowest ring: each side
+  for(let k=0;k<ribCount;k++){const a=k*(radial?2:1)*Math.PI/ribCount;const along=(c:Contour)=>{const q=transform(c,{rot:-a*180/Math.PI});const hits:number[]=[];for(let j=0;j<q.length;j++){const A=q[j],B=q[(j+1)%q.length];if((A[1]<=0&&B[1]>0)||(B[1]<=0&&A[1]>0))hits.push(A[0]-A[1]*(B[0]-A[0])/(B[1]-A[1]));}return [Math.min(...hits),Math.max(...hits)];};
+   const intervals=rings.map(r=>({r,x:along(r.outer),inside:r.inner?along(r.inner):[0,0]}));
+   const foot=ribFoot(p),hMin=Math.min(...intervals.map(v=>v.r.height));
+   let sh;
+   if(spiral){// a smooth ramp under the helical strip, a flat tread under the rim and the centre
+    const ends=along(outer),rimFrom=radius-p.rings.rim,top:Pt[]=[];const n=Math.max(24,Math.ceil((ends[1]-ends[0])/2));
+    for(let i=0;i<=n;i++){const x=ends[0]+(ends[1]-ends[0])*i/n;top.push([x,-surfaceAt(Math.abs(x),rimFrom)]);}
+    sh=unionShapes([[...top,[ends[1],foot],[ends[0],foot]]]);
+   }else{// One block per ring on each side, from its tread down to the foot, on a spine under the lowest ring: each side
    // follows its own crossings (outlines need not be symmetric), and the rib can neither cross itself nor fall apart.
-   const foot=ribFoot(p),hMin=Math.min(...intervals.map(v=>v.r.height));const blocks:Contour[]=[rect(-radius,-hMin,2*radius,foot+hMin)];
-   for(const {r,x,inside} of intervals){const a0=Math.min(inside[1],x[1]),a1=Math.max(inside[1],x[1]),b0=Math.min(inside[0],x[0]),b1=Math.max(inside[0],x[0]);blocks.push(rect(a0,-r.height,a1-a0,r.height+foot),rect(b0,-r.height,b1-b0,r.height+foot));}
-   let sh=unionShapes(blocks);const cut:Contour[]=[];for(const {r,x,inside} of intervals){for(const sign of [-1,1]){const w=Math.max(1,Math.min(p.T*2,(sign>0?x[1]-inside[1]:inside[0]-x[0])*.6)),rad=sign>0?(x[1]+inside[1])/2:-(x[0]+inside[0])/2;cut.push(rect(sign*rad-w/2,-r.height-supportFit/2,w,supportFit));notches.push({radius:rad,height:r.height});}}const topAtCentre=-profileHeight(p,0),bottom=foot,joint=(topAtCentre+bottom)/2;cut.push(k%2===0?rect(-supportFit/2,topAtCentre-1,supportFit,joint-topAtCentre+1):rect(-supportFit/2,joint,supportFit,bottom-joint+1));sh=differenceShapes(sh.flatMap(s=>[s.outer,...s.holes]),cut);if(p.support.ribs>2){const hub=Math.max(12,p.T*4);sh=intersectShapes(sh.flatMap(s=>[s.outer,...s.holes]),[rect(hub,-p.profile.depth-3,radius-hub,bottom+p.profile.depth+4)]);sh=unionShapes([...sh.flatMap(s=>[s.outer,...s.holes]),rect(hub+3,bottom-1,8,p.T+1)]);}sh.forEach((s,i)=>parts.push({id:`rib-${k+1}-${i}`,name:`Rib ${k+1}`,outer:s.outer,holes:s.holes,place:{x:0,y:0,z:0,upright:true,yaw:a*180/Math.PI}}));}
- if(p.support.ribs>2){const hub=Math.max(12,p.T*4);parts.push({id:'rib-hub',name:'Radial support hub',outer:circle(0,0,hub+17),holes:Array.from({length:p.support.ribs},(_,i)=>transform(rect(hub+3-p.support.fit/2,-supportFit/2,8+p.support.fit,supportFit),{rot:i*360/p.support.ribs})),place:{x:0,y:0,z:-ribFoot(p)-p.T}});}}
+    const blocks:Contour[]=[rect(-radius,-hMin,2*radius,foot+hMin)];
+    for(const {r,x,inside} of intervals){const a0=Math.min(inside[1],x[1]),a1=Math.max(inside[1],x[1]),b0=Math.min(inside[0],x[0]),b1=Math.max(inside[0],x[0]);blocks.push(rect(a0,-r.height,a1-a0,r.height+foot),rect(b0,-r.height,b1-b0,r.height+foot));}
+    sh=unionShapes(blocks);}
+   // the seats: each ring rests on its tread, held in by the riser of the next (no pocket: the ring is wider than any pocket)
+   for(const {r,x,inside} of intervals)for(const sign of [-1,1])notches.push({radius:sign>0?(x[1]+inside[1])/2:-(x[0]+inside[0])/2,height:r.height});
+   // Handles: the rib along the length rises past the rim at both ends, with a finger hole, so the whole basket lifts by its ribs.
+   if(handlesOnRibs&&k===0){const ends=along(outer),hr=profileHeight(p,1),ear=40;for(const sign of [-1,1]){const x0=sign>0?ends[1]:ends[0]-ear;const lug=rect(x0,-(hr+45),ear,hr+45+foot);const hole=roundedRect(x0+8,-(hr+38),ear-16,18,9);sh=differenceShapes(unionShapes([...sh.flatMap(s=>[s.outer,...s.holes]),lug]).flatMap(s=>[s.outer,...s.holes]),[hole]);}}
+   const cut:Contour[]=[];const topAtCentre=-h0,bottom=foot,joint=(topAtCentre+bottom)/2;
+   if(!radial)cut.push(k%2===0?rect(-supportFit/2,topAtCentre-1,supportFit,joint-topAtCentre+1):rect(-supportFit/2,joint,supportFit,bottom-joint+1));
+   if(cut.length)sh=differenceShapes(sh.flatMap(s=>[s.outer,...s.holes]),cut);
+   if(radial){sh=intersectShapes(sh.flatMap(s=>[s.outer,...s.holes]),[rect(hub,-p.profile.depth-60,radius+60,bottom+p.profile.depth+64)]);sh=unionShapes([...sh.flatMap(s=>[s.outer,...s.holes]),rect(hub+3,bottom-1,8,p.T+1)]);}
+   sh.forEach((s,i)=>parts.push({id:`rib-${k+1}-${i}`,name:`Rib ${k+1}`,outer:s.outer,holes:s.holes,place:{x:0,y:0,z:0,upright:true,yaw:a*180/Math.PI}}));}
+  if(radial)parts.push({id:'rib-hub',name:hubIn?'Support ring (the object stands inside it)':'Radial support hub',outer:circle(0,0,hub+17),holes:[...(hubIn?[circle(0,0,hubIn)]:[]),...Array.from({length:ribCount},(_,i)=>transform(rect(hub+3-p.support.fit/2,-supportFit/2,8+p.support.fit,supportFit),{rot:i*360/ribCount}))],place:{x:0,y:0,z:-ribFoot(p)-p.T}});}
  if(p.support.kind==='tilt'){const length=100,h=length*Math.tan(p.support.angle*Math.PI/180);parts.push({id:'wedge',name:`Bevel jig ${p.support.angle} degrees`,outer:[[0,0],[length,0],[length,-h]],holes:[]});}
- if(p.support.kind==='handles'||p.extras.handles){for(const sign of [-1,1]){const x=sign*radius*.5;holes.push(roundedRect(x-supportFit/2,-8,supportFit,16,1));parts.push({id:`handle-${sign}`,name:'Handle support',outer:roundedRect(-8,-p.profile.depth-30,16,p.profile.depth+42,4),holes:[roundedRect(-4,-p.profile.depth-25,8,20,3)],place:{x,y:0,z:0,upright:true}});}}
- if(p.support.kind==='cords'||p.extras.loop){for(const ring of rings.slice(0,-1)){const r=ring.radius-plan.pitch/2;for(let j=0;j<3;j++)holes.push(circle(r*Math.cos(j*TAU/3),r*Math.sin(j*TAU/3),p.support.cordDiameter/2));}}
+ if((p.support.kind==='handles'||p.extras.handles)&&!handlesOnRibs){// Separate handle plates, each through a slot in the middle of one ring, clear of its bridges.
+  const ring=rings.slice(1,-1).reduce((b,r)=>Math.abs(r.radius-plan.pitch/2-radius*.6)<Math.abs(b.radius-plan.pitch/2-radius*.6)?r:b,rings[Math.min(1,rings.length-1)]);
+  const rMid=ring.radius-plan.pitch/2,turn=clearTurn(p,2,plan.loops.length),len=Math.min(16,plan.pitch*3);
+  for(const sign of [0,180]){const ang=turn+sign,[x,y]=polar(rMid,ang);holes.push(transform(roundedRect(-supportFit/2,-len/2,supportFit,len,1),{rot:ang,x,y}));
+   // upright parts take their floor position from x and z: the plate's face runs along the slot
+   parts.push({id:`handle-${sign?1:-1}`,name:'Handle',outer:roundedRect(-len/2,-p.profile.depth-30,len,p.profile.depth+42,4),holes:[roundedRect(-len/2+4,-p.profile.depth-25,len-8,20,3)],place:{x,y:0,z:y,upright:true,yaw:ang+90}});}}
+ const cord:{r:number;z:number}[]=[];
+ if(p.support.kind==='cords'||p.extras.loop){// Cords run through every ring and the centre, between the bridges, knotted under each.
+  const turn=clearTurn(p,3,plan.loops.length),holeR=p.support.cordDiameter/2;
+  const discR=(centreR+p.rings.center/2)/2,rimR=radius-p.rings.rim/2;
+  for(let j=0;j<3;j++){const ang=turn+j*120;
+   const at:{r:number;z:number}[]=spiral
+    ?[...spiralStripCentres(p.rings.center/2,radius-p.rings.rim,plan.loops.length,p.pattern.kind==='multi'?p.pattern.arms:1,ang*Math.PI/180).map(r=>({r,z:surfaceAt(r,radius-p.rings.rim)})),{r:rimR,z:profileHeight(p,1)}]
+    :rings.slice(0,-1).map((ring,i)=>({r:i===0?rimR:ring.radius-plan.pitch/2,z:ring.height}));
+   at.push({r:discR,z:h0});
+   const ok=at.filter(q=>q.r-holeR>centreR+1);
+   for(const q of ok)holes.push(circle(...polar(q.r,ang),holeR));
+   if(j===0)cord.push(...ok.sort((a,b)=>a.r-b.r));}}
  if(p.extras.base||p.extras.plantSeat){parts.push({id:'base',name:'Base / plant seat',outer:circle(0,0,p.rings.center/2),holes:[],place:{x:0,y:0,z:-p.T}});}
  if(p.extras.feet)for(let i=0;i<3;i++)parts.push({id:`foot-${i}`,name:`Foot ${i+1}`,outer:roundedRect(-8,-15,16,30,3),holes:[],place:{x:radius*.6*Math.cos(i*TAU/3),y:radius*.6*Math.sin(i*TAU/3),z:-p.T}});
- if(p.support.kind==='post'||p.extras.post){const w=Math.max(12,p.T*4),h=p.profile.depth+20;const slots=rings.map(r=>rect(w/2-p.T,-r.height-supportFit/2,p.T+1,supportFit));for(const s of differenceShapes([rect(-w/2,-h,w,h+10)],slots))parts.push({id:'post',name:'Centre post (rings require radial supports)',outer:s.outer,holes:s.holes,place:{x:0,y:0,z:0,upright:true}});}
- if(p.extras.finial!=='none'){const w=24,shape=p.extras.finial==='ball'?'circle':p.extras.finial==='star'?'star':'diamond';parts.push({id:'finial',name:'Top finial',outer:transform(shapeOutline(shape,w,w,0),{x:-w/2,y:-w}),holes:[circle(0,-5,1.5)],place:{x:0,y:-p.profile.depth,z:0,upright:true}});}
- const validHoles=intersectShapes(holes,[outer]);parts[0].holes=unionShapes(validHoles.flatMap(s=>[s.outer,...s.holes])).flatMap(s=>[s.outer,...s.holes]);return {...plan,parts,notches,missing,loading};}
-export function buildPopup(p:PopupParams,ctx:BuildContext):GenOutput {try{const g=popupGeometry(p,ctx);if(p.sets.count>1)addNestedSet(p,g.parts,ctx);if(p.sets.assemblyCard)g.parts.push(assemblyCard(p,ctx));return {parts:g.parts,missing:g.missing,notice:g.loading?'Loading engraving font…':undefined,stats:[{label:'Rings',value:String(g.rings.length)},{label:'Open height',value:`${p.profile.depth.toFixed(1)} mm`},{label:'Outer span',value:`${p.outline.width} × ${p.outline.height} mm`},{label:'Ring pitch',value:`${g.pitch.toFixed(2)} mm`},...(p.support.kind==='tilt'?[{label:'Tilt depth',value:`${tiltDepth(g.loops.length,p.rings.gap,p.support.angle).toFixed(1)} mm`}]:[]),...(p.support.kind==='cords'?[{label:'Cord allowance',value:`3 × ${Math.ceil(p.profile.depth+radiusCord(g.radius)+100)} mm; trim after fitting`},{label:'Knot spacing',value:(k=>!k.length?'none':Math.max(...k)-Math.min(...k)<1?`${Math.round(k[0])} mm`:`${Math.round(Math.min(...k))} to ${Math.round(Math.max(...k))} mm`)(knotSpacing(g.rings,g.pitch))}]:[])],assembly:['Cut a bridge and joint coupon in the actual stock before cutting the full blank.',setsHeights(p)?'Engrave first, then internal slots and finally the outer perimeter. Snap the bridge lands once the rings sit in the supports: the supports hold every ring at its height.':'Engrave first, then internal slots and finally the outer perimeter. Keep all bridge lands intact.','Lift progressively without forcing. The preview is a target shape, not a validated elastic simulation.',p.support.kind==='cords'?'Thread the cords from the centre out and knot each one under every ring at the knot spacing shown; hang it from the centre.':'Fit profile supports from below. Check every ring seat; use an external fixture where required.','Tilted cuts require bevel-capable equipment and a physical jig test. Use LED lamps only; never an exposed flame.']};}catch(e){return {parts:[],stats:[],error:e instanceof Error?e.message:'Unable to build Pop-up geometry.'};}}
+ if((p.support.kind==='post'||p.extras.post)&&ribCount===0&&h0>p.T*2){// A cross of two plates under the centre, its tabs through a cross slot in the centre disc.
+  const w=Math.max(4*p.T,Math.min(60,p.rings.center*.8-2*centreR)),tab=Math.max(p.T*2,w*.5);
+  if(w>=4*p.T&&!centreR){holes.push(rect(-(tab+p.support.fit)/2,-supportFit/2,tab+p.support.fit,supportFit),rect(-supportFit/2,-(tab+p.support.fit)/2,supportFit,tab+p.support.fit));
+   for(const k of [0,1]){let s=unionShapes([rect(-w/2,-h0,w,h0),rect(-tab/2,-h0-p.T,tab,p.T)]);const half=h0/2;s=differenceShapes(s.flatMap(v=>[v.outer,...v.holes]),[k===0?rect(-supportFit/2,-half,supportFit,half+1):rect(-supportFit/2,-h0-p.T-1,supportFit,h0+p.T+1-half)]);s.forEach((v,i)=>parts.push({id:`post-${k+1}-${i}`,name:`Centre post ${k+1}`,outer:v.outer,holes:v.holes,place:{x:0,y:0,z:0,upright:true,yaw:k*90}}));}}}
+ if(p.extras.finial!=='none'){// stands on the centre disc, its tab in a slot through the disc
+  const w=24,shape=p.extras.finial==='ball'?'circle':p.extras.finial==='star'?'star':'diamond',tab=8;const body=transform(shapeOutline(shape,w,w,0),{x:-w/2,y:-w});
+  // the tab runs up into the middle of the shape (a star's foot is a notch between two points)
+  const withTab=unionShapes([body,rect(-tab/2,-w/2,tab,w/2+p.T)]).sort((a,b)=>Math.abs(signedArea(b.outer))-Math.abs(signedArea(a.outer)))[0];
+  if(!centreR)holes.push(rect(-(tab+p.support.fit)/2,-supportFit/2,tab+p.support.fit,supportFit));
+  parts.push({id:'finial',name:'Top finial',outer:centreR?body:withTab.outer,holes:[...(centreR?[]:withTab.holes),circle(0,-w*.62,1.5)],place:{x:0,y:-(h0+p.T),z:0,upright:true}});}
+ const validHoles=intersectShapes(holes,[outer]);parts[0].holes=unionShapes(validHoles.flatMap(s=>[s.outer,...s.holes])).flatMap(s=>[s.outer,...s.holes]);return {...plan,parts,notches,cord,missing,loading};}
+export function buildPopup(p:PopupParams,ctx:BuildContext):GenOutput {try{const g=popupGeometry(p,ctx);if(p.sets.count>1)addNestedSet(p,g.parts,ctx);if(p.sets.assemblyCard)g.parts.push(assemblyCard(p,ctx));
+ const ribs=g.parts.some(q=>q.id.startsWith('rib-')),hubbed=g.parts.some(q=>q.id==='rib-hub');
+ const overall=p.profile.depth+p.T+(ribs?ribFoot(p)+(hubbed?p.T:0):0);
+ const snap=cutsToSnap(p,g.rings,g.pitch),cuts=g.rings.length-1,strain=bridgeStrain(p,g.rings,g.pitch);
+ const centreUp=profileHeight(p,0)>profileHeight(p,1);
+ const snapLine=setsHeights(p)
+  ?(snap<cuts?`Snap the bridges of the ${snap} ring cut${snap===1?'':'s'} between rings at different heights once the rings sit in the supports; the ${cuts-snap} cut${cuts-snap===1?'':'s'} between rings at the same height keep their bridges, so each level stays one piece.`:'Snap the bridge lands once the rings sit in the supports: the supports hold every ring at its height, and a bridge bent that far would crack.')
+  :`Keep all bridge lands intact: they carry the rings here. Each bends about ${(strain.strain*100).toFixed(1)} % at its surface (the stock takes about ${(strain.allowed*100).toFixed(1)} %).`;
+ return {parts:g.parts,missing:g.missing,notice:g.loading?'Loading engraving font…':undefined,
+  stats:[{label:'Rings',value:String(g.rings.length)},{label:'Open height',value:`${p.profile.depth.toFixed(1)} mm`},{label:'Overall height',value:`${overall.toFixed(1)} mm`},{label:'Outer span',value:`${p.outline.width} × ${p.outline.height} mm`},{label:'Ring pitch',value:`${g.pitch.toFixed(2)} mm`},{label:'Bridges to snap',value:setsHeights(p)?`${snap} of ${cuts} ring cuts`:'none'},
+   ...(p.support.kind==='tilt'?[{label:'Tilt depth',value:`${tiltDepth(g.loops.length,p.rings.gap,p.support.angle).toFixed(1)} mm`}]:[]),
+   ...(p.support.kind==='cords'?[{label:'Cord allowance',value:`3 × ${Math.ceil(p.profile.depth+radiusCord(g.radius)+100)} mm${centreUp?'':' plus the drop to your hook'}; trim after fitting`},{label:'Knot spacing',value:(k=>!k.length?'none':Math.max(...k)-Math.min(...k)<1?`${Math.round(k[0])} mm`:`${Math.round(Math.min(...k))} to ${Math.round(Math.max(...k))} mm`)(knotSpacing(g.cord))}]:[])],
+  assembly:['Cut a bridge and joint coupon in the actual stock before cutting the full blank.','Engrave first, then internal slots and finally the outer perimeter.',snapLine,
+   'Lift progressively without forcing. The preview is a target shape, not a validated elastic simulation.',
+   p.support.kind==='cords'?(centreUp?'Thread the cords from the centre out and knot each one under every ring at the knot spacing shown; hang it from the centre.':'Thread the cords from the centre out and knot each one under every ring and under the centre at the knot spacing shown; gather the three cords above the bowl and hang it from them.')
+    :ribs?'Slot the ribs together (and into the hub), set them on the table and lay the blank on them: each ring drops onto its own tread.':'Fit profile supports from below. Check every ring seat; use an external fixture where required.',
+   'Tilted cuts require bevel-capable equipment and a physical jig test. Use LED lamps only; never an exposed flame.']};}catch(e){return {parts:[],stats:[],error:e instanceof Error?e.message:'Unable to build Pop-up geometry.'};}}
 const radiusCord=(r:number)=>r*.5;
 
 /** Nested sets deliberately use open centres. Descendants occupy their parent's centre waste. */
