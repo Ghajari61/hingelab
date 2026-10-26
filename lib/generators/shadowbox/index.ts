@@ -28,6 +28,7 @@ export const PATTERN_NAMES: Named<Pattern> = {
   sunburst: ["Sunburst", "Straight or curled rays"], landscape: ["Scene", "Layered hills, peaks, waves, a forest, clouds or a city"],
   lattice: ["Lattice", "A grid of holes"], flow: ["Flow", "Wavy stripes that widen toward the front"],
   picture: ["Your picture", "A photo, drawing, SVG or sample shape turned into layers"],
+  topographic: ["Topography", "Seeded organic basins merging into layered contour landscapes"],
 };
 const SAMPLE_NAMES: Named<Sample> = {
   cat: "Cat", fish: "Fish", bird: "Bird", pear: "Pear", butterfly: "Butterfly", heart: "Heart", tree: "Pine tree", leaf: "Leaf",
@@ -90,6 +91,7 @@ const PATTERN_START: Record<Pattern, Partial<ShadowBoxParams["design"]>> = {
   lattice: { min: 25, max: 95, pitch: 20 },
   flow: { min: 25, max: 85, count: 7, waves: 3, amp: 30, swirl: 90 },
   picture: { min: 20, max: 100 },
+  topographic: { min: 15, max: 115, basins: 3, waves: 3, amp: 40, twist: 0, seed: 17 },
 };
 const CURVED: Opening[] = ["polygon", "star", "flower", "wavy", "orbit"];
 /** A capsule on a square frame would be a plain circle, so it turns landscape (a standard 7 × 5 in when that size was picked). */
@@ -119,7 +121,7 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
     fields: [
       {
         kind: "choice", key: "design.pattern", label: "Design", rail: true, shuffle: true,
-        help: "Tunnel nests one shape; Mandala rings it with petals and dots; Sunburst cuts rays; Scene cuts layered ridges of hills, peaks, waves, a forest, clouds or a city; Lattice cuts a grid of holes; Flow cuts wavy stripes; Your picture turns a photo, drawing, SVG or sample shape into layers.",
+        help: "Tunnel nests one shape; Mandala rings it with petals and dots; Sunburst cuts rays; Scene cuts layered ridges of hills, peaks, waves, a forest, clouds or a city; Lattice cuts a grid of holes; Flow cuts wavy stripes; Topography grows organic basins into merging contours; Your picture turns a photo, drawing, SVG or sample shape into layers.",
         options: opts(PATTERNS, PATTERN_NAMES),
         apply: (p, v) => withDesign(p, { pattern: v as Pattern, ...PATTERN_START[v as Pattern] }),
       },
@@ -132,6 +134,9 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
       { kind: "number", key: "design.sides", label: "Points", unit: "", min: 3, max: 16, step: 1, int: true, shuffle: [3, 12], show: (p) => shaped(p) && CURVED.includes(p.design.opening), help: "Corners of the polygon, points of the star, petals of the flower, waves round the wavy circle or ellipses of the orbit." },
       { kind: "number", key: "design.inner", label: "Inner size", unit: "%", min: 5, max: 95, step: 1, shuffle: [25, 75], show: (p) => (shaped(p) && ["star", "flower", "wavy", "orbit"].includes(p.design.opening)) || isPat(p, "sunburst"), help: "How deep a star's, flower's or wavy circle's notches go, how wide the orbit's ellipses are, or how wide the sunburst's rays are." },
       { kind: "number", key: "design.count", label: "Stripes", unit: "", min: 3, max: 48, step: 1, int: true, shuffle: [5, 16], show: (p) => isPat(p, "flow"), help: "Wavy stripes down the window." },
+      { kind: "number", key: "design.basins", label: "Basins", unit: "", min: 3, max: 12, step: 1, int: true, show: (p) => isPat(p, "topographic"), help: "Organic openings that grow and merge from back to front." },
+      { kind: "number", key: "design.amp", label: "Contour irregularity", unit: "%", min: 0, max: 80, step: 1, show: (p) => isPat(p, "topographic"), help: "Zero makes round basins; higher values make smooth organic shores." },
+      { kind: "number", key: "design.waves", label: "Contour lobes", unit: "", min: 1, max: 12, step: 1, int: true, show: (p) => isPat(p, "topographic"), help: "Smooth bends around each basin. Use fewer lobes for broader, stronger contours." },
       { kind: "number", key: "design.waves", label: "Waves", unit: "", min: 1, max: 12, step: 1, int: true, shuffle: [1, 6], show: (p) => isPat(p, "flow"), help: "Waves along each stripe, across the window." },
       { kind: "number", key: "design.amp", label: "Wave height", unit: "%", min: 0, max: 80, step: 1, shuffle: [10, 50], show: (p) => isPat(p, "flow"), help: "How far the stripes swing up and down." },
       { kind: "number", key: "design.swirl", label: "Drift", unit: "deg", min: -180, max: 180, step: 1, shuffle: [-120, 120], show: (p) => isPat(p, "flow"), help: "Slides the waves along from the back layer to the front one, so the stripes ripple in depth." },
@@ -146,7 +151,7 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
       },
       { kind: "choice", key: "design.from", label: "Rises from", show: (p) => isPat(p, "landscape"), options: [{ v: "bottom", text: "Bottom" }, { v: "top", text: "Top", title: "Hangs down like clouds or a cave roof" }, { v: "both", text: "Both", title: "A canyon" }], help: "Where the paper of each layer sits: under the ridge, above it, or both." },
       { kind: "number", key: "design.amp", label: "Ridge height", unit: "%", min: 0, max: 80, step: 1, shuffle: [15, 45], show: (p) => isPat(p, "landscape"), help: "How tall the bumps are, as a share of the window's height." },
-      { kind: "number", key: "design.seed", label: "Variation", unit: "", min: 0, max: 99999, step: 1, int: true, random: true, shuffle: true, show: (p) => isPat(p, "landscape"), help: "Picks a different random set of peaks, trees, clouds and buildings." },
+      { kind: "number", key: "design.seed", label: "Variation", unit: "", min: 0, max: 99999, step: 1, int: true, random: true, shuffle: true, show: (p) => isPat(p, "landscape", "topographic"), help: "Picks a reproducible variation of the scene or organic contours." },
       {
         kind: "choice", key: "design.cell", label: "Cells", rail: true, shuffle: true, show: (p) => isPat(p, "lattice"),
         help: "The holes of the lattice.",
@@ -302,7 +307,7 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
     help: "A shallow box behind the layers for an LED strip, so the pattern glows from behind.",
     fields: [
       { kind: "toggle", key: "light.on", label: "Light box behind the layers", help: "Adds rings of the frame's border behind the stack, deep enough for an LED strip stuck round their inside." },
-      { kind: "number", key: "light.depth", label: "Light depth", unit: "mm", min: 3, max: 60, step: 0.5, show: (p) => p.light.on, help: "Room behind the layers for the LED strip: at least the strip's width (check your strip), rounded up to whole rings of the sheet." },
+      { kind: "number", key: "light.depth", label: "Light depth", unit: "mm", min: 3, max: 60, step: 0.5, show: (p) => p.light.on, help: "Room behind the layers for the LED strip: at least the strip's width (check your strip), rounded up to whole rings of the sheet and at least the cable diameter." },
       { kind: "number", key: "light.cable", label: "Cable notch", unit: "mm", min: 0, max: 20, step: 0.5, show: (p) => p.light.on, help: "Width of the notch at the bottom of the light box that lets the LED cable out; 0 for none (a battery light inside)." },
       { kind: "toggle", key: "light.diffuser", label: "Diffuser", show: (p) => p.light.on, help: "A whole sheet between the light box and the layers that spreads the light evenly; it is laid out on its own sheets." },
       { kind: "number", key: "light.diffT", label: "Diffuser thickness", unit: "mm", min: 0.1, max: 6, step: 0.1, show: (p) => p.light.on && p.light.diffuser, help: "Thickness of the diffuser sheet, for the depth and the 3D view." },
@@ -344,6 +349,7 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
   if (key === "design.pattern") {
     const box = rect(-1.2, -1.2, 2.4, 2.4);
     switch (v as Pattern) {
+      case "topographic": return ring([box, circle(-0.45, -0.2, 0.42, 0.02), circle(0.45, -0.2, 0.5, 0.02), circle(0, 0.55, 0.35, 0.02)]);
       case "tunnel": return ring([box, ...[1, 0.75, 0.5, 0.25].map((s) => rect(-s, -s, 2 * s, 2 * s))]);
       case "mandala": return ring([box, ...Array.from({ length: 8 }, (_, i) => regularPolygon(4, 0.45, i * 45, 0.6 * Math.sin((i * Math.PI) / 4), -0.6 * Math.cos((i * Math.PI) / 4))), circle(0, 0, 0.3, 0.02)]);
       case "sunburst": return ring([box, ...Array.from({ length: 10 }, (_, i) => { const a = (i * Math.PI) / 5; return [[0.15 * Math.sin(a), -0.15 * Math.cos(a)], [Math.sin(a - 0.14), -Math.cos(a - 0.14)], [Math.sin(a + 0.14), -Math.cos(a + 0.14)]] as Contour; })]);

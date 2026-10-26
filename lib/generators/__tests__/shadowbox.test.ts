@@ -16,9 +16,9 @@ const area = (p: { outer: [number, number][]; holes: [number, number][][] }) => 
 const choice = (key: string) => SHADOWBOX.sections.flatMap((s) => s.fields).find((f) => f.key === key) as ChoiceSpec<ShadowBoxParams>;
 
 describe("shadow box", () => {
-  it("has 134 presets that all build with no errors or warnings", () => {
-    expect(SHADOWBOX.presets).toHaveLength(134);
-    expect(new Set(SHADOWBOX.presets.map((p) => p.id)).size).toBe(134);
+  it("has 146 presets that all build with no errors or warnings", () => {
+    expect(SHADOWBOX.presets).toHaveLength(146);
+    expect(new Set(SHADOWBOX.presets.map((p) => p.id)).size).toBe(146);
     for (const pr of SHADOWBOX.presets) {
       const p = SHADOWBOX.merge(pr.params);
       const out = SHADOWBOX.build(p, CTX);

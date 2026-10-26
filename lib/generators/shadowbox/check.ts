@@ -15,6 +15,8 @@ export function checkShadowBox(p: ShadowBoxParams, out: ShadowBoxOutput): Issue<
   const issues: Issue<ShadowBoxParams>[] = [];
   const info = out.info;
   if (!info) return issues;
+  if (info.missingMounts) issues.push({ code: "MOUNTING_HOLES", level: "error", message: `${info.missingMounts} mounting holes could not fit fully inside their parts. Widen the shared border or spacer frames, reduce hole diameters, or disable the affected mounting option before cutting.`, fixes: [] });
+  if (p.light.on && p.light.cable > p.light.depth) issues.push({ code: "CABLE_DEPTH", level: "info", message: "The light cavity was made deeper to fit the cable diameter. The depth and ring count include this allowance.", fixes: [] });
   if (info.noWindow) {
     const border = Math.max(5, Math.floor(Math.min(p.frame.width, p.frame.height) / 6));
     issues.push({ code: "NO_WINDOW", level: "error", message: "The frame's border leaves no window for the pattern.", fixes: [{ id: "border", label: `Border ${border} mm`, safe: true, apply: (q) => ({ ...q, frame: { ...q.frame, border } }) }] });

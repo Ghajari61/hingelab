@@ -44,8 +44,8 @@ export interface LazyStart {
 
 export const START_LAZY: Partial<Record<GeneratorId, LazyStart>> = {
   shadowbox: {
-    count: 134,
-    cover: "star-tunnel",
+    count: 146,
+    cover: "delta-contours",
     load: () => import("./shadowbox/featured").then((m) => m.SHADOWBOX_FEATURED.map((c) => ({ ...c, params: {} }))),
   },
 };
