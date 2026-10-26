@@ -1,3 +1,12 @@
+## Unreleased — Pop-up: engineering review and true-to-life 3D
+
+- **The 3D shows how a pop-up is really assembled.** Hanging designs show their three cords running through every cord hole, a knot under each ring and the ring they hang from; lamps show the socket, its shade ring and the LED bulb; tealight holders show the tealight; a vase sleeve shows the glass vase standing inside it. Drawn only, never cut.
+- **Nested sets stand side by side** in 3D instead of inside each other.
+- **Vase sleeve**: the ribs are now radial round an open ring, so nothing crosses the opening, and the ready-made sleeve is taller (150 mm) for a real vase.
+- **Dome** is a true spherical cap whose wall meets the rim at 65°, so the rim ring no longer floats far above the one below it. **Varied rings** are now spaced evenly along the slope (narrower where the wall is steep), as they were meant to be.
+- **Base plate** under ribs sits on the floor below them instead of cutting through them; a **finial** stands on a tab through a slot in the top disc.
+- New checks: a bowl wall with slits taller than 12 mm, rings that hang far apart, and a lamp bulb that would not fit through the ring under the centre disc (with a fix). The E27 lamp designs get an 80 mm centre so the bulb clears.
+
 ## 1.8.0 — 3D that opens out and moves smoothly
 
 - **Open it out.** A play button beside Explode in the 3D view animates the design apart and back together. A Hinge Box's lid swings open on its hinge (a lift-off or cap lid rises with a little tilt), a cabinet opens its door or slides its drawers out standing, then tips onto its back; the walls fold down outwards, each side towards its own side; then every part travels on a soft arc to its place on the sheet and lies flat side by side, with the hinge cuts drawn on once it lands. Generator designs (boxes, signs, toppers and the rest) do the same: walls fall outwards about their feet, then every part lands flat where the layout puts it. The Explode slider scrubs the same motion.
