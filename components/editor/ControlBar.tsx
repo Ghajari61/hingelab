@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Box, Cake, ChevronDown, Clock, Hash, KeyRound, Layers, Package, Puzzle, QrCode, Ruler, Shapes, Signpost, SquareStack, Tag, Trophy, Type } from "lucide-react";
+import { Box, Cake, Check, ChevronDown, Clock, Hash, KeyRound, Layers, Package, Puzzle, QrCode, Ruler, Shapes, Signpost, SquareStack, Tag, Trophy, Type } from "lucide-react";
 import type { Params } from "@/lib/hinge";
 import { DEFAULTS } from "@/lib/hinge/defaults";
 import { HINGE_VARIANTS, hingeVariantOf, type HingeVariant } from "@/lib/hinge/presets";
@@ -47,6 +47,7 @@ export const PRODUCT_PICTURE: Record<Product, string> = {
   sign: "/presets/sign/welcome-arch.svg", topper: "/presets/topper/happy-birthday.svg", popup: "/presets/popup/spiral-trivet-bowl.svg", charm: "/presets/charm/family-baubles.svg", family: "/presets/family/family-crossword.svg",
   clock: "/presets/clock/wall-roman.svg", puzzle: "/presets/puzzle/kids-12.svg", qr: "/presets/qr/keychain.svg",
   keyrack: "/presets/keyrack/home-sweet-home.svg", tablenum: "/presets/tablenum/wedding-arch.svg", trophy: "/presets/trophy/star-award.svg",
+  keychain: "/presets/keychain/name-rounded.svg",
 };
 
 const CORE_BLURB: Record<CoreProduct, string> = {
@@ -70,7 +71,8 @@ export function ProductTabs({ product, onProduct }: { product: Product; onProduc
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setOpen(false); trigger.current?.focus(); } };
     document.addEventListener("pointerdown", onDown);
     document.addEventListener("keydown", onKey);
-    box.current?.querySelector<HTMLElement>('.pp-tile[aria-current="true"], .pp-tile')?.focus();
+    const selected = box.current?.querySelector<HTMLElement>('.pp-tile[aria-current="true"]') ?? box.current?.querySelector<HTMLElement>('.pp-tile');
+    selected?.focus({ preventScroll: true });
     return () => { document.removeEventListener("pointerdown", onDown); document.removeEventListener("keydown", onKey); };
   }, [open]);
   const tile = (p: Product) => (
@@ -78,8 +80,12 @@ export function ProductTabs({ product, onProduct }: { product: Product; onProduc
       key={p} type="button" className="pp-tile" aria-current={product === p || undefined}
       onClick={() => { setOpen(false); if (p !== product) onProduct(p); }}
     >
-      <span className="pp-pic"><img src={PRODUCT_PICTURE[p]} alt="" width={150} height={100} loading="lazy" /></span>
-      <span className="pp-name">{PRODUCT_INFO[p].icon}{PRODUCT_INFO[p].name}</span>
+      <span className="pp-pic">
+        <span className="pp-icon">{PRODUCT_INFO[p].icon}</span>
+        <img src={PRODUCT_PICTURE[p]} alt="" width={150} height={100} loading="lazy" />
+        {product === p && <span className="pp-selected" aria-hidden><Check size={13} /></span>}
+      </span>
+      <span className="pp-name">{PRODUCT_INFO[p].name}</span>
       <small>{isGeneratorId(p) ? GENERATOR_INFO[p].blurb : CORE_BLURB[p as CoreProduct]}</small>
     </button>
   );
@@ -94,10 +100,8 @@ export function ProductTabs({ product, onProduct }: { product: Product; onProduc
       </button>
       {open && (
         <div className="pp-panel" id={panelId} role="dialog" aria-label="Choose what to make">
-          <p className="pp-head">Main products</p>
-          <div className="pp-grid pp-core">{CORE_PRODUCTS.map(tile)}</div>
-          <p className="pp-head"><Shapes size={14} aria-hidden />Generators</p>
-          <div className="pp-grid">{GENERATOR_IDS.map(tile)}</div>
+          <div className="pp-head"><span>Choose what to make</span><span className="pp-count">{ALL_PRODUCTS.length} products</span></div>
+          <div className="pp-grid">{ALL_PRODUCTS.map(tile)}</div>
         </div>
       )}
     </div>

@@ -32,6 +32,8 @@ import { PX_PER_MM, useCanvasView } from "@/hooks/useCanvasView";
 import { fmtLen, type Units } from "@/components/editor/format";
 import { MenuBar, type MenuEntry } from "@/components/editor/MenuBar";
 import { PRODUCT_INFO, type Product } from "@/components/editor/ControlBar";
+import { PresetLibrary } from "@/components/shell/PresetLibrary";
+import { PARAMETRIC_PRESETS } from "@/lib/parametric/presets";
 import { GalleryRail } from "@/components/shell/GalleryRail";
 import { HelpContext, useHelpPanel } from "@/components/help/HelpContext";
 import { ViewToggle } from "@/components/shell/ViewToggle";
@@ -694,6 +696,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
           inert={shared.viewing}
         >
+          <PresetLibrary product="parametric" presets={PARAMETRIC_PRESETS} onApply={(pr, keep) => { const next = mergeParametricParams(pr.params); replace(keep ? keepSetup(params, next) : next, true); setSelected([]); if (pr.finish) setFinish(pr.finish); toastMsg(`Opened “${pr.name}”. Ctrl+Z undoes it.`); }} />
           <section className="gallery-group" aria-label="Designs">
             <h3>Designs</h3>
             <div className="ds-entry">

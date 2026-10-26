@@ -22,6 +22,8 @@ import { PX_PER_MM, useCanvasView } from "@/hooks/useCanvasView";
 import { fmtLen, type Units } from "@/components/editor/format";
 import { MenuBar, type MenuEntry } from "@/components/editor/MenuBar";
 import { PRODUCT_INFO, type Product } from "@/components/editor/ControlBar";
+import { PresetLibrary } from "@/components/shell/PresetLibrary";
+import { LETTER_PRESETS } from "@/lib/letters/presets";
 import { GalleryRail } from "@/components/shell/GalleryRail";
 import { ViewToggle, type ViewMode } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
@@ -545,7 +547,9 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
           })}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
           inert={shared.viewing}
-        />
+        >
+          <PresetLibrary product="letters" presets={LETTER_PRESETS} getCategory={pr => ({ box: "Letter boxes", solid: "Solid lettering", stencil: "Stencils" })[mergeParams(pr.params).mode]} onApply={(pr, keep) => { const next = mergeParams(pr.params); replace(keep ? keepSetup(params, next) : next, true); toastMsg(`Opened “${pr.name}”. Ctrl+Z undoes it.`); }} />
+        </GalleryRail>
         <div className={`stage${viewMode === "3d" ? " no-rulers" : ""}`}>
         <ViewToggle value={viewMode} onChange={setViewMode} />
         <div className="stage-3d" hidden={viewMode !== "3d"}>

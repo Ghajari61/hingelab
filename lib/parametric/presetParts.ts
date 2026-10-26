@@ -72,4 +72,7 @@ export const PRESET_PARTS: Record<string, number> = {
   "folded-heart": 3,
   "folded-globe": 5,
   "folded-face": 13,
+  "studio-wave-relief": 17,
+  "studio-atlas-stack": 101,
+  "studio-fluted-vessel": 25,
 };

@@ -132,6 +132,7 @@ const ENTRIES: Omit<CatalogueEntry, "picture">[] = [
   fromGenerator("keyrack", "laser", "Home"),
   fromGenerator("tablenum", "laser", "Lettering"),
   fromGenerator("trophy", "laser", "Home"),
+  fromGenerator("keychain", "laser", "Lettering"),
   {
     slug: "name-tunnel",
     name: "Name & logo tunnel",

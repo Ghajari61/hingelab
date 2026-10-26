@@ -87,7 +87,8 @@ export function bandPoint(b: Band, a: number): Pt | null {
 }
 
 /** Pin holes: two, at different angles so a layer cannot go in turned round. */
-export const PIN_ANGLES = [(-3 * Math.PI) / 4, Math.PI / 3];
+// Keep registration pins off the four screw rays; a pin must not enlarge a screw pilot.
+export const PIN_ANGLES = [(-5 * Math.PI) / 9, Math.PI / 3];
 /** Screws: four, toward the corners. */
 export const SCREW_ANGLES = [(-3 * Math.PI) / 4, -Math.PI / 4, Math.PI / 4, (3 * Math.PI) / 4];
 
@@ -161,7 +162,7 @@ export function lightRings(p: ShadowBoxParams, b: Band, n: number): Shape[] {
 }
 
 /** Light box rings: enough of the material to make the light depth. */
-export const ringCount = (p: ShadowBoxParams) => (p.light.on ? Math.max(1, Math.ceil(p.light.depth / p.T - 1e-6)) : 0);
+export const ringCount = (p: ShadowBoxParams) => (p.light.on ? Math.max(1, Math.ceil(Math.max(p.light.depth, p.light.cable) / p.T - 1e-6)) : 0);
 
 /**
  * Four finger-jointed walls round the stack (and its light box and back), `D` deep: the top and
@@ -176,9 +177,12 @@ export function walls(p: ShadowBoxParams, fb: ReturnType<typeof bboxOf>, D: numb
   const down = fingerPanel(H, D, T, f, [N, E(false), N, E(false)], [false, false, false, false]);
   const x0 = fb.x0 - c - T, y0 = fb.y0 - c - T;
   const hole = cableZ !== null && p.light.cable > 0 ? [circle(W / 2, D - cableZ, p.light.cable / 2)] : [];
+  // A cable opening at the rear edge is a notch, not an invalid interior contour.
+  const bottom = hole.length ? differenceShapes([across], hole) : [];
+  const bottomShape = bottom.length === 1 ? bottom[0] : makeShape(across, []);
   return [
     { id: "wall-top", name: "Box top", outer: across, holes: [], place: { x: x0, y: -D, z: y0, upright: true } },
-    { id: "wall-bottom", name: "Box bottom", outer: across, holes: hole, place: { x: x0, y: -D, z: fb.y1 + c, upright: true } },
+    { id: "wall-bottom", name: "Box bottom", outer: bottomShape.outer, holes: bottomShape.holes, place: { x: x0, y: -D, z: fb.y1 + c, upright: true } },
     { id: "wall-left", name: "Box left side", outer: down, holes: [], place: { x: fb.x0 - c, y: -D, z: y0, upright: true, yaw: 90 } },
     { id: "wall-right", name: "Box right side", outer: down, holes: [], place: { x: fb.x1 + c + T, y: -D, z: y0, upright: true, yaw: 90 } },
   ];

@@ -2,6 +2,9 @@ import type { GenPreset } from "../types";
 import type { PuzzleParams } from "./params";
 
 export const PUZZLE_PRESETS: GenPreset<PuzzleParams>[] = [
+  {"id": "studio-logic-puzzle", "name": "Numbered logic puzzle", "note": "24 numbered pieces in a 240 x 180 mm rectangle.", "params": {"name": "Numbered logic puzzle", "shape": {"kind": "rect", "width": 240, "height": 180}, "pieces": {"auto": true, "count": 24}, "tabs": {"style": "classic", "jitter": 6, "seed": 29}, "engrave": {"kind": "numbers", "fontId": "archivo-black", "numberSize": 6}}},
+  {"id": "studio-cafe-puzzle", "name": "Cafe puzzle coaster", "note": "120 mm round coaster split into nine wavy pieces.", "params": {"name": "Cafe puzzle coaster", "shape": {"kind": "circle", "width": 120, "height": 120}, "pieces": {"auto": true, "count": 9}, "tabs": {"style": "wavy", "size": 24, "seed": 19}}},
+  {"id": "studio-home-puzzle", "name": "Family house puzzle", "note": "240 mm house-shaped puzzle with 20 seeded pieces.", "params": {"name": "Family house puzzle", "shape": {"kind": "house", "width": 240, "height": 220, "corner": 6}, "pieces": {"auto": true, "count": 20}, "tabs": {"style": "classic", "size": 20, "jitter": 4, "seed": 41}, "engrave": {"kind": "text", "text": "The Smiths", "fontId": "pacifico", "size": 26}}},
   {
     id: "kids-12", name: "Kids 12", note: "12 chunky pieces in a tray, 200 × 150 mm",
     params: {

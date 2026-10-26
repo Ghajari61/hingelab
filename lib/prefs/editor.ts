@@ -72,12 +72,19 @@ export function normalizeEditorPrefs(raw: unknown): EditorPrefs {
 }
 
 /** Settings File › New carries over when `keepSetup` is on: the material and the sheet. */
-export const SETUP_KEYS = ["material", "T", "K", "bedW", "bedH", "gap", "sheetW", "sheetH"] as const;
+export const SETUP_KEYS = ["material", "T", "K", "Ky", "gamma", "minFeature", "stock", "paper", "bedW", "bedH", "gap", "sheetW", "sheetH"] as const;
 
 /** `next` with the material and sheet of `prev` (only keys both designs have). */
 export function keepSetup<T extends object>(prev: T, next: T): T {
   const out = { ...next } as Record<string, unknown>;
   const p = prev as Record<string, unknown>;
   for (const k of SETUP_KEYS) if (k in out && p[k] !== undefined) out[k] = typeof p[k] === "object" ? JSON.parse(JSON.stringify(p[k])) : p[k];
+  // Directional kerf and grain belong to the stock; copies and job labels belong to the new design.
+  if (p.sheet && out.sheet && typeof p.sheet === "object" && typeof out.sheet === "object") {
+    const old = p.sheet as Record<string, unknown>;
+    const sheet = { ...out.sheet } as Record<string, unknown>;
+    for (const k of ["kerfXY", "kerfY", "minFeature", "rotate"]) if (old[k] !== undefined) sheet[k] = old[k];
+    out.sheet = sheet;
+  }
   return out as T;
 }

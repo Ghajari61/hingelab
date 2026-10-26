@@ -64,7 +64,7 @@ const sections: SectionSpec<QrParams>[] = [
         help: "How much of the code can be damaged or covered and still scan; higher levels need more modules, and a centre logo needs Q or H.",
         options: (["L", "M", "Q", "H"] as const).map((v) => ({ v, text: v, title: `Recovers ${ECC_RECOVERY[v]} %` })),
       },
-      { kind: "number", key: "code.quiet", label: "Quiet zone", unit: "", min: 0, max: 8, step: 1, int: true, help: "Clear space around the code, in modules; scanners need about two." },
+      { kind: "number", key: "code.quiet", label: "Quiet zone", unit: "", min: 0, max: 8, step: 1, int: true, help: "Clear space around the code, in modules; standard QR symbols need at least four clear modules on every side." },
       { kind: "number", key: "code.dot", label: "Dot size", unit: "%", min: 50, max: 100, step: 1, show: (p) => p.code.style === "dots" || p.code.style === "connected", help: "Dot diameter as a share of a module; smaller dots look lighter but scan less well." },
       { kind: "toggle", key: "code.invert", label: "Invert (light code)", show: outputs("engrave"), help: "Engraves the background instead of the modules, for materials that engrave lighter than they are (dark acrylic, anodised aluminium)." },
     ],

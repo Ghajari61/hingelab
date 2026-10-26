@@ -3,6 +3,10 @@
  * the generator's own presets, and its Presets panel lists every design.
  */
 export const SHADOWBOX_FEATURED = [
+  { id: "delta-contours", name: "Delta contours", note: "Fourteen organic contour layers merging three basins" },
+  { id: "archipelago-relief", name: "Archipelago relief", note: "Five merging islands with broad, flowing contour ledges" },
+  { id: "cathedral-light", name: "Cathedral light", note: "Receding arches in a serviceable LED enclosure with registration pins" },
+  { id: "kinetic-iris", name: "Kinetic iris", note: "Twenty-four curved rays in a deep circular relief" },
   { id: "star-tunnel", name: "Star tunnel", note: "Six-point stars twisting into the distance" },
   { id: "lotus-mandala", name: "Lotus mandala", note: "Eight teardrop petals around a round heart" },
   { id: "mountain-range", name: "Mountain range", note: "Night mountains under a moon" },

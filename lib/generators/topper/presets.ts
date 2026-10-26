@@ -2,6 +2,9 @@ import type { GenPreset } from "../types";
 import type { TopperParams } from "./params";
 
 export const TOPPER_PRESETS: GenPreset<TopperParams>[] = [
+  {"id": "studio-celebrate-topper", "name": "Celebrate script topper", "note": "Celebrate script joined to a star motif.", "params": {"name": "Celebrate script topper", "text": {"text": "Celebrate", "fontId": "pacifico", "size": 32}, "motif": {"kind": "stars", "place": "above", "size": 38, "gap": -4}}},
+  {"id": "studio-milestone-topper", "name": "Milestone topper", "note": "Class of 2027 under a graduation cap, with editable text.", "params": {"name": "Milestone topper", "text": {"text": "Class of\n2027", "fontId": "archivo-black", "size": 24, "spacing": 0.5}, "style": {"kind": "outline", "border": 4, "mark": "engrave"}, "motif": {"kind": "cap", "place": "above", "size": 60, "gap": -4}}},
+  {"id": "studio-anniversary-topper", "name": "Anniversary topper", "note": "Always script with wedding rings in contrasting layers.", "params": {"name": "Anniversary topper", "text": {"text": "Always", "fontId": "pacifico", "size": 38}, "style": {"kind": "layered", "border": 4, "weld": 1}, "motif": {"kind": "rings", "place": "above", "size": 46, "gap": -3}, "mat": {"mat2": "acrylic-gold", "T2": 3}}},
   {
     id: "happy-birthday", name: "Happy Birthday", note: "Script letters with balloons, two sticks",
     params: { name: "Happy Birthday topper", text: { text: "Happy\nBirthday", fontId: "pacifico", size: 30 }, motif: { kind: "balloons", place: "above", size: 46, gap: -4 } },

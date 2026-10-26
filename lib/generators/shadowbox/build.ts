@@ -53,6 +53,8 @@ export interface ShadowBoxInfo {
   rings?: number;
   /** The keyholes need a wider border: this wide, mm. */
   keyBorder?: number;
+  /** Requested holes that could not be cut wholly inside their parts. */
+  missingMounts?: number;
   /** The finger-jointed box, outside, mm. */
   boxW?: number;
   boxH?: number;
@@ -322,6 +324,26 @@ function openingsOf(p: ShadowBoxParams, w: Win, win: Shape, i: number, L: number
   };
 
   switch (g.pattern) {
+    case "topographic": {
+      // The same seeded contours grow on every layer. No per-layer noise: at zero twist
+      // and shift their openings are nested, so contour ledges remain predictable.
+      const random = rng(g.seed), n = Math.max(3, Math.min(12, g.basins));
+      const out: Contour[] = [];
+      for (let j = 0; j < n; j++) {
+        const angle = TAU * j / n + (random() - 0.5) * 0.25;
+        const cx = vx + Math.cos(angle) * w.R * 0.48, cy = vy + Math.sin(angle) * w.R * 0.48;
+        const phase = random() * TAU, radius = w.R * s * (0.55 + random() * 0.12);
+        const amp = Math.max(0, Math.min(80, g.amp)) / 100;
+        const points: Contour = [];
+        for (let k = 0; k < 144; k++) {
+          const a = TAU * k / 144;
+          const r = radius * (1 + amp * (0.22 * Math.sin(g.waves * a + phase) + 0.1 * Math.cos((g.waves + 2) * a - phase)));
+          points.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+        }
+        out.push(points);
+      }
+      return turn(out, rot, w.cx, w.cy);
+    }
     case "tunnel":
       return shapeAt(g.opening, s, rot);
     case "mandala": {
@@ -548,21 +570,29 @@ function textAt(p: ShadowBoxParams, size: number, w: Win, winCs: Contour[], ctx:
 }
 
 /** Steps for the back board, light box, pins and numbers, before the layers go on. */
-function enclosureSteps(p: ShadowBoxParams, rings: number, diffuser: boolean, N: number): string[] {
+function enclosureSteps(p: ShadowBoxParams, rings: number, diffuser: boolean, N: number, mountingReady = true): string[] {
   const out: string[] = [];
-  if (p.box.pins) out.push(`Push ${p.box.pin} mm pins, dowels or cocktail sticks through the two pin holes as you stack the parts, so every part lines up; trim them flush when the glue is dry.`);
+  if (!mountingReady) out.push("Some mounting holes could not be made. Resolve the mounting warnings before cutting or assembling the enclosure.");
+  if (p.box.pins && mountingReady) out.push(`Push ${p.box.pin} mm pins, dowels or cocktail sticks through the two pin holes as you stack the parts, so every part lines up; trim them flush when the glue is dry.`);
   if (p.box.numbers) out.push(`Each layer's number is scored on its bottom border (Layer 1 to Layer ${N - 1}; the front layer has none), so the stack goes together in order.`);
-  if (p.box.back !== "none") out.push(p.box.back === "screwed"
+  if (p.box.back !== "none" && (p.box.back !== "screwed" || mountingReady)) out.push(p.box.back === "screwed"
     ? `The back board is screwed on with four ${p.box.screw} mm screws through its corner holes into the pilot holes above it, so it comes off${rings ? " to reach the lights" : ""}.`
     : "Glue the back board on behind everything else, outlines lined up.");
   if (rings) {
-    out.push(`Glue the ${rings} light box rings into one stack on the back board${p.light.cable > 0 ? ", the notched ones at the back" : ""}. Stick an LED strip round the inside of the rings, facing in${p.light.cable > 0 ? ", and lead its cable out through the notch at the bottom" : ""}.`);
+    out.push(`Glue the ${rings} light box rings into one stack${p.box.back === "screwed" ? "; keep the removable back board separate and do not glue it" : p.box.back !== "none" ? " on the back board" : " behind the layers"}${p.light.cable > 0 ? ", the notched ones at the back" : ""}. Stick an LED strip round the inside of the rings, facing in${p.light.cable > 0 ? ", and lead its cable out through the notch at the bottom" : ""}.`);
     if (diffuser) out.push("Lay the diffuser on the light box: it spreads the light evenly behind the layers. Cut it from white or frosted acrylic, or glue tracing paper onto a frame.");
   }
   return out;
 }
 
 export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBoxOutput {
+  const finite = (value: unknown): boolean => typeof value === "number" ? Number.isFinite(value)
+    : value !== null && typeof value === "object" ? Object.values(value).every(finite) : true;
+  if (!finite(p)) return { parts: [], stats: [], error: "Every numeric setting must be finite. Correct the imported dimensions or layer settings." };
+  if (p.T < 0.1 || p.K < 0 || p.K >= p.T || p.frame.width <= 0 || p.frame.height <= 0 || p.frame.border <= 0
+    || !Number.isInteger(p.stack.count) || p.stack.count < 2 || p.stack.count > 20 || p.stack.gap < 0) {
+    return { parts: [], stats: [], error: "Use thickness of at least 0.1 mm, positive frame dimensions, kerf below thickness, 2–20 whole layers, and non-negative layer spacing." };
+  }
   const { width: W, height: H, border } = p.frame;
   const T = p.T, N = p.stack.count;
   const frame = orient(simplifyClosed(frameOutline(p.frame.shape, W, H, p.frame.corner), SIMPLIFY));
@@ -703,7 +733,11 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
   // Holes through the parts that share the border band, and numbers on it.
   const banded = (q: GenPart) => q.place && !q.place.upright && !q.id.startsWith("piece");
   const drill = (ok: (q: GenPart) => boolean, cs: Contour[]) => {
-    for (let i = 0; i < parts.length; i++) if (banded(parts[i]) && ok(parts[i])) for (const c of cs) parts[i] = drillPart(parts[i], c);
+    for (let i = 0; i < parts.length; i++) if (banded(parts[i]) && ok(parts[i])) for (const c of cs) {
+      const before = parts[i], after = drillPart(before, c);
+      if (after === before) info.missingMounts = (info.missingMounts ?? 0) + 1;
+      parts[i] = after;
+    }
   };
   if (p.box.pins) drill(() => true, pinHoles(p, band));
   if (p.box.back === "screwed") {
@@ -771,7 +805,7 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
       blade
         ? `Cut every layer from its own colour of ${mat}; Layer 1 is the back and Layer ${N} the front.`
         : `Cut the ${N} layers from ${mat}; Layer 1 is the back and Layer ${N} the front.`,
-      ...enclosureSteps(p, rings.length, diffuser, N),
+      ...enclosureSteps(p, rings.length, diffuser, N, !info.missingMounts && !info.keyBorder),
       frames
         ? `Glue ${per === 1 ? "a spacer frame" : `${per} spacer frames`} between each pair of layers, lining up the outlines.`
         : `Stick ${r1(gapZ)} mm foam tape around the border of every layer but the front one, with small foam squares behind wide areas of the pattern.`,
@@ -799,7 +833,7 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
         : p.box.back === "none" && !rings.length
           ? [`Fit the stack into a shadow box frame at least ${Math.ceil(depth + 5)} mm deep, or glue a backing card on and hang it as it is.`]
           : []),
-      ...(p.box.hang === "keyhole" ? [`Hang it on two screws or nails ${r0((fb.x1 - fb.x0) / 2)} mm apart, level, through the keyholes near the top: slip the heads through the round ends and let the box drop onto them.`] : []),
+      ...(p.box.hang === "keyhole" && !info.keyBorder && !info.missingMounts ? [`Hang it on two screws or nails ${r0((fb.x1 - fb.x0) / 2)} mm apart, level, through the keyholes near the top: slip the heads through the round ends and let the box drop onto them.`] : []),
       ...(p.box.hang === "stand" ? ["Stand the box upright in the two feet, its lower edge pushed fully into their slots."] : []),
     ],
     info,

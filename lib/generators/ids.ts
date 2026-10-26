@@ -1,5 +1,5 @@
 /** Generator ids and the little the shell needs before a generator's code loads. */
-export const GENERATOR_IDS = ["clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "popup", "charm", "family"] as const;
+export const GENERATOR_IDS = ["clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "keychain", "popup", "charm", "family"] as const;
 export type GeneratorId = (typeof GENERATOR_IDS)[number];
 
 export const isGeneratorId = (v: unknown): v is GeneratorId => typeof v === "string" && (GENERATOR_IDS as readonly string[]).includes(v);
@@ -28,4 +28,5 @@ export const GENERATOR_INFO: Record<GeneratorId, GeneratorInfo> = {
   family: { name: "Family Names", blurb: "A list of names made into one piece: a name crossword, a tree of names, a name snowflake, a ring round a word, a split monogram or letter bunting.", icon: "tag", storageKey: "hingelab-gen-family-v1" },
   charm: { name: "Name Charms", blurb: "Personalised ornaments, keychains, earrings, bag tags, drink markers, place cards and gift tags, one per name on your list, with holes that keep their wall.", icon: "tag", storageKey: "hingelab-gen-charm-v1" },
   popup: { name: "Pop-up", blurb: "One flat piece that lifts into a bowl, basket, tree, lampshade or ornament.", icon: "layers", storageKey: "hingelab-gen-popup-v1" },
+  keychain: { name: "Keychain", blurb: "Personalized name keychains, pet tags and charms with shapes, motifs, raised lettering and reinforced ring tabs.", icon: "key", storageKey: "hingelab-gen-keychain-v1" },
 };

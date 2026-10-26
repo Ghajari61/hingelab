@@ -19,6 +19,7 @@ const PICTURE: Record<string, string> = {
   "hinge-fill": "/templates/thumbs/hinge-bracelet.svg",
   lamp: "/presets/boxes/honeycomb-lantern.svg",
   jigsaw: "/presets/puzzle/kids-12.svg",
+  keychain: "/presets/keychain/name-rounded.svg",
   "shadow-box": "/presets/shadowbox/star-tunnel.svg",
   "paper-box": "/presets/paperbox/jewelry-6x6x3.svg",
 };

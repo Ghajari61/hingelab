@@ -17,6 +17,7 @@ import { PX_PER_MM, useCanvasView } from "@/hooks/useCanvasView";
 import { fmtLen, type Units } from "@/components/editor/format";
 import { MenuBar, type MenuEntry } from "@/components/editor/MenuBar";
 import { PRODUCT_INFO, type Opt, type Product } from "@/components/editor/ControlBar";
+import { PresetLibrary } from "@/components/shell/PresetLibrary";
 import { GalleryRail, type GalleryGroup } from "@/components/shell/GalleryRail";
 import { ViewToggle, type ViewMode } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
@@ -53,7 +54,7 @@ import { makeTextFn } from "@/lib/generators/text";
 import type { AnyGenerator, BuildContext, ChoiceSpec, FieldSpec, GenBase, GenPreset, ImageSpec } from "@/lib/generators/types";
 import { GEN_RAIL_GROUPS } from "@/lib/generators/railArt.generated";
 import { addRailGroups } from "@/lib/railArt";
-import { presetMatches, randomiseParams, shuffleFields } from "@/lib/generators/randomise";
+import { randomiseParams, shuffleFields } from "@/lib/generators/randomise";
 import { Dices } from "lucide-react";
 import { GeneratorDock } from "./GeneratorDock";
 import { useGenPrefs } from "./useGenPrefs";
@@ -141,7 +142,6 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const help = useHelpPanel(helpMap);
   const myPresets = useMyPresets();
   const prefs = useGenPrefs(def.id);
-  const [presetQuery, setPresetQuery] = useState("");
   const account = usePlan();
   const [upgrade, setUpgrade] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -394,10 +394,10 @@ function GenEditor({ def, onProduct, onHome, start }: {
     toastMsg("All settings reset. Ctrl+Z undoes it.");
   }
 
-  function applyPreset(pr: GenPreset<unknown>) {
+  function applyPreset(pr: GenPreset<unknown>, keep = false) {
     prefs.used(pr.id);
     setLastPreset(pr.id);
-    replace(def.merge(pr.params) as P, true);
+    replace(keep ? keepSetup(params, def.merge(pr.params) as P) : def.merge(pr.params) as P, true);
     window.setTimeout(() => viewApi.fit(), 50);
     toastMsg(`Preset “${pr.name}”. Ctrl+Z returns to your last design.`);
   }
@@ -510,6 +510,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
   // Left rail: the definition's big choices as picture cards, then the presets.
   const lockSet = new Set(prefs.locks);
   const locks = { has: (k: string) => lockSet.has(k), toggle: prefs.toggleLock };
+  const categoryField = def.sections.flatMap(s => s.fields).find(f => f.kind === "choice" && f.rail);
   const groups: GalleryGroup[] = [];
   for (const s of def.sections) {
     if (s.show && !s.show(params)) continue;
@@ -528,31 +529,6 @@ function GenEditor({ def, onProduct, onHome, start }: {
       });
     }
   }
-  const presetOpt = (pr: GenPreset<unknown>): Opt => ({
-    v: pr.id, text: pr.name, title: pr.note,
-     
-    icon: <img src={`/presets/${def.id}/${pr.id}.svg`} alt="" width={66} height={44} loading="lazy" />,
-    onClick: () => applyPreset(pr),
-  });
-  const byId = new Map(def.presets.map((pr) => [pr.id, pr] as const));
-  const listed = (ids: string[]) => ids.map((id) => byId.get(id)).filter((pr): pr is GenPreset<unknown> => !!pr);
-  const fav = { has: (v: string) => prefs.favs.includes(v), toggle: (v: string) => prefs.toggleFav(v) };
-  const art = `gen-${def.id}-preset`;
-  const favs = listed(prefs.favs).filter((pr) => presetMatches(presetQuery, pr));
-  if (favs.length) groups.push({ label: "Favourites", name: `${def.name} favourite presets`, art, value: "", cols: 2, fav, options: favs.map(presetOpt) });
-  const recent = presetQuery ? [] : listed(prefs.recent);
-  if (recent.length) groups.push({ label: "Recent", name: `${def.name} recent presets`, art, value: "", cols: 2, fav, options: recent.map(presetOpt) });
-  groups.push({
-    label: "Presets", name: `${def.name} presets`, art, value: "", cols: 2, fav,
-    head: def.presets.length > 6 ? (
-      <input
-        type="search" className="gsearch" placeholder={`Search ${def.presets.length} presets`} aria-label={`Search ${def.name} presets`}
-        value={presetQuery} onChange={(e) => setPresetQuery(e.target.value)}
-      />
-    ) : undefined,
-    empty: "No presets match. Try another word.",
-    options: def.presets.filter((pr) => presetMatches(presetQuery, pr)).map(presetOpt),
-  });
   const canShuffle = useMemo(() => shuffleFields(def).length > 0, [def]);
   function randomiseDesign() {
     replace(randomiseParams(def, params, lockSet), true);
@@ -627,6 +603,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       />
       <div className="main">
         <GalleryRail title={PRODUCT_INFO[def.id].name} icon={PRODUCT_INFO[def.id].icon} groups={groups} history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }} inert={shared.viewing}>
+          <PresetLibrary product={def.id} presets={def.presets} onApply={applyPreset} getCategory={pr => categoryField?.kind === "choice" ? categoryField.options.find(o => o.v === String(getPath(def.merge(pr.params), categoryField.key)))?.text ?? def.name : def.name} />
           {canShuffle && (
             <button type="button" className="btn-auto gen-shuffle" onClick={randomiseDesign} title="A new random design. Lock a setting (its lock icon) to keep it. Ctrl+Z undoes it.">
               <Dices size={15} aria-hidden /> Randomise design{prefs.locks.length ? ` · ${prefs.locks.length} locked` : ""}

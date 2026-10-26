@@ -35,6 +35,7 @@ export const GENERATORS: GeneratorMeta[] = [
   { id: "hinge-fill", n: 7, name: "Hinge Pattern Fill", category: "Hinges", plan: "pro", opens: "studio", blurb: "Fill any shape of your own with a living-hinge pattern." },
   { id: "lamp", n: 8, name: "Lamp & Lantern", category: "Home", plan: "pro", opens: { templates: "/templates?c=Lamps+%26+light" }, blurb: "Lanterns and shades with parametric perforation patterns." },
   { id: "jigsaw", n: 9, name: "Jigsaw Puzzle", category: "Games", plan: "free", freeLimit: "Free up to 50 pieces", opens: { editor: "/app/editor/local?p=puzzle" }, blurb: "Puzzles of any shape with shared single-line cuts." },
+  { id: "keychain", n: 10, name: "Keychain", category: "Lettering", plan: "free", opens: { editor: "/app/editor/local?p=keychain" }, blurb: "Personalized name keychains, pet tags and charms with reinforced ring tabs." },
   { id: "shadow-box", n: 11, name: "3D Shadow Box", category: "Home", plan: "free", opens: { editor: "/app/editor/local?p=shadowbox" }, blurb: "Layered paper-cut panels from geometric patterns or your own picture, for a laser or a Cricut, with over a hundred ready-made designs." },
   { id: "paper-box", n: 12, name: "Paper Box", category: "Boxes", plan: "free", opens: { editor: "/app/editor/local?p=paperbox" }, blurb: "Folding cartons, mailers and gift boxes in card: tuck ends, mailers and two-piece boxes with creases and slit locks." },
 ];

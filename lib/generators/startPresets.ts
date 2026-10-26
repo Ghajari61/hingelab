@@ -1,3 +1,4 @@
+import { KEYCHAIN_PRESETS } from "./keychain/presets";
 /**
  * Presets the start page and `?preset=` links read, kept small for the editor shell. Most generators list
  * every preset; Shadow Box (over a hundred designs) loads a few featured cards after the page, with no settings:
@@ -20,6 +21,7 @@ import type { GeneratorId } from "./ids";
 import type { GenPreset } from "./types";
 
 export const START_PRESETS: Record<GeneratorId, GenPreset<unknown>[]> = {
+  keychain: KEYCHAIN_PRESETS as GenPreset<unknown>[],
   popup: POPUP_PRESETS as GenPreset<unknown>[],
   charm: CHARM_PRESETS as GenPreset<unknown>[],
   family: FAMILY_PRESETS as GenPreset<unknown>[],
@@ -46,8 +48,8 @@ export interface LazyStart {
 
 export const START_LAZY: Partial<Record<GeneratorId, LazyStart>> = {
   shadowbox: {
-    count: 134,
-    cover: "star-tunnel",
+    count: 149,
+    cover: "delta-contours",
     load: () => import("./shadowbox/featured").then((m) => m.SHADOWBOX_FEATURED.map((c) => ({ ...c, params: {} }))),
   },
 };

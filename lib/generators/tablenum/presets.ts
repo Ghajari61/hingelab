@@ -2,6 +2,9 @@ import type { GenPreset } from "../types";
 import type { TablenumParams } from "./params";
 
 export const TABLENUM_PRESETS: GenPreset<TablenumParams>[] = [
+  {"id": "studio-cafe-numbers", "name": "Cafe counter numbers", "note": "Six bold counter numbers in single-layer slotted bases.", "params": {"name": "Cafe counter numbers", "plate": {"shape": "rounded", "pad": 12, "corner": 6}, "text": {"label": "", "fontId": "bebas-neue", "size": 64}, "border": {"kind": "none"}, "base": {"layers": 1, "depth": 50}, "batch": {"from": 1, "to": 6}}},
+  {"id": "studio-exhibition-labels", "name": "Exhibition table labels", "note": "Eight hexagonal EXHIBIT labels with 55 mm bases.", "params": {"name": "Exhibition table labels", "plate": {"shape": "hexagon", "pad": 10}, "text": {"label": "EXHIBIT", "labelFont": "bebas-neue", "labelSize": 12, "fontId": "archivo-black", "size": 52}, "border": {"kind": "score", "inset": 4}, "base": {"layers": 1, "depth": 55}, "batch": {"from": 1, "to": 8}}},
+  {"id": "studio-banquet-arches", "name": "Banquet arches", "note": "Ten arch-shaped banquet numbers with deeper 60 mm bases.", "params": {"name": "Banquet arches", "text": {"fontId": "pacifico", "size": 62}, "batch": {"from": 1, "to": 10}, "base": {"depth": 60}}},
   {
     id: "wedding-arch", name: "Wedding arch", note: "Script Table and numbers on arches in stepped bases",
     params: { name: "Wedding table numbers", text: { fontId: "pacifico", size: 56 } },

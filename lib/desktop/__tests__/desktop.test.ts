@@ -136,7 +136,7 @@ describe("desktop versions and releases", () => {
 describe("desktop catalog", () => {
   it("lists every product as plain JSON with no code in it", async () => {
     const c = await desktopCatalog();
-    expect(c.products.map((p) => p.id)).toEqual(["hinge", "clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "popup", "charm", "family"]);
+    expect(c.products.map((p) => p.id)).toEqual(["hinge", "clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "keychain", "popup", "charm", "family"]);
     expect(JSON.parse(JSON.stringify(c))).toEqual(c);
     const text = JSON.stringify(c);
     expect(text).not.toMatch(/=>|function\s*\(/);
@@ -163,6 +163,13 @@ const gen = async (req: object, plan: "free" | "pro" = "free") => {
 };
 
 describe("desktop generate (server-side SVG)", () => {
+  it("exports the new Keychain generator through the Windows API", async () => {
+    const r = await gen({ product: "keychain", params: { text: { name: "ALEX" }, ring: { side: "right", diameter: 5 } } }, "pro");
+    expect(r.status, r.body.error).toBe(200);
+    expect(r.body.svg).toContain("<svg");
+    expect(r.body.svg).not.toMatch(/NaN|Infinity/);
+    expect(r.body.width).toBeGreaterThan(65);
+  });
   it("builds the same Hinge Box SVG as the web export; Free preview still carries the mark", async () => {
     const proOut = exportHingeForPlan(DEFAULTS, "pro");
     if (!proOut.ok) throw new Error("pro export failed");

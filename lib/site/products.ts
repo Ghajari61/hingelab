@@ -20,7 +20,7 @@ export interface SiteProduct {
 }
 
 const FEATURED: Record<string, string> = {
-  hinge: "gift-box", letters: "hello-sign", parametric: "head-stack",
+  keychain: "name-rounded", hinge: "gift-box", letters: "hello-sign", parametric: "head-stack",
   clock: "wall-roman", puzzle: "kids-12", qr: "keychain", boxes: "organiser",
   topper: "happy-birthday", keyrack: "home-sweet-home", sign: "welcome-arch", tablenum: "wedding-arch", trophy: "star-award", shadowbox: "star-tunnel", paperbox: "tea-box", charm: "family-baubles", family: "family-crossword",
 };
