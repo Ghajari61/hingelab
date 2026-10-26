@@ -235,7 +235,7 @@ export function PanelDock({
         </div>
         <p className="note">Two halves fits long walls on small beds. Seams land in the middle of flat sides.</p>
       </Sec>
-      <Sec step="construction" title="Lid" meta={params.drawers ? "Drawers" : LID_NAMES[params.lid]} onReset={() => onResetSection("Lid", ["lidOver", "lidHole", "lidHoleD", "lidHoleW", "lidLip", "lidLipScore", "flipSide", "flipBand", "flipFixed", "capH", "lidSteps", "lidStepIn", "lidWindow"])}>
+      {!params.drawers && <Sec step="construction" title="Lid" meta={params.drawers ? "Drawers" : LID_NAMES[params.lid]} onReset={() => onResetSection("Lid", ["lidOver", "lidHole", "lidHoleD", "lidHoleW", "lidLip", "lidLipScore", "flipSide", "flipBand", "flipFixed", "capH", "lidSteps", "lidStepIn", "lidWindow"])}>
         {params.lid === "flip" && (
           <>
             <div className="rowlabel">Hinge side<ResetMark label="Hinge side" show={(params.flipSide ?? "back") !== "back"} to="Back" onReset={() => { const next: Params = { ...params }; delete next.flipSide; onPatch(next); }} /></div>
@@ -247,7 +247,7 @@ export function PanelDock({
           </>
         )}
         <div className="grid2">{fields("secLid")}</div>
-        {model?.flip && <p className="note">The hinge opens about {Math.round(model.flip.angle)}° before it is bent to its limit.</p>}
+        {model?.flip && <p className="note">Estimated opening: {Math.round(model.flip.angle)}°. Test a strip from the same sheet and grain direction before making the lid; this is not a fatigue or strength rating.</p>}
         {params.lid !== "open" && (
           <>
             <div className="rowlabel">Hole<ResetMark label="Lid hole" show={(params.lidHole ?? "none") !== "none"} to="None" onReset={() => { const next: Params = { ...params }; delete next.lidHole; delete next.lidHoleD; delete next.lidHoleW; delete next.lidWindow; onPatch(next); }} /></div>
@@ -282,9 +282,9 @@ export function PanelDock({
           />
         )}
         <p className="note">A flip-top lid is one plate with a living-hinge band across it: the strip behind the band is held by the wall&apos;s tabs and the rest swings up. A cap slips over the top like a shoebox lid. Steps stack smaller plates on the lid. A finger hole lifts a lid, a knob hole takes a knob&apos;s screw, a lamp hole an E27 holder; a tissue slot makes a tissue box, a coin slot a money box, and a rim an open top with a frame, with a clear window if you like.</p>
-      </Sec>
+      </Sec>}
       <Sec step="construction" title="Base & standing" meta={params.drawers ? "Upright" : [params.baseHole && params.baseHole !== "none" ? (params.baseHole === "rim" ? "Open" : "Hole") : "", params.upright ? "Upright" : ""].filter(Boolean).join(", ") || undefined} onReset={() => onResetSection("Base & standing", ["baseHole", "baseHoleD", "baseHoleW", "hangHoles", "upright"])}>
-        <div className="rowlabel">Opening</div>
+        {!params.drawers && <><div className="rowlabel">Opening</div>
         <div className="iconseg full" role="group" aria-label="Base opening">
           {BASE_HOLES.map(([v, text, title]) => (
             <button
@@ -293,7 +293,7 @@ export function PanelDock({
             >{text}</button>
           ))}
         </div>
-        <div className="grid2">{fields("secBase")}</div>
+        <div className="grid2">{fields("secBase")}</div></>}
         <CheckField
           label="Hanging holes" title="Two keyhole slots near the top of the base, to hang the box on two screws: a wall cabinet or a wall planter"
           checked={params.hangHoles === true} def={false}
@@ -308,12 +308,13 @@ export function PanelDock({
         )}
         <p className="note">Stood up, a box with a flip-top lid hinged on the left is a cabinet with a door, and dividers across the depth are its shelves. Hanging holes go near the top of the base, so a cabinet hangs on two screws.</p>
       </Sec>
-      <Sec step="construction" title="Dividers" meta={(params.divX ?? 0) + (params.divY ?? 0) > 0 ? `${(params.divX ?? 0) + 1} × ${(params.divY ?? 0) + 1}` : undefined} onReset={() => onResetSection("Dividers", ["divX", "divY", "divH"])}>
+      {!params.drawers && <Sec step="construction" title="Dividers" meta={(params.divX ?? 0) + (params.divY ?? 0) > 0 ? `${(params.divX ?? 0) + 1} × ${(params.divY ?? 0) + 1}` : undefined} onReset={() => onResetSection("Dividers", ["divX", "divY", "divH"])}>
         <div className="grid2">{fields("secDiv")}</div>
         <p className="note">Dividers split the inside into compartments. They stand in slots in the base, lock together where they cross, and step up onto a support ring.</p>
-      </Sec>
+      </Sec>}
       <Sec step="construction" title="Drawers" meta={params.drawers ? `${params.drawers}` : undefined} onReset={() => onResetSection("Drawers", ["drawers", "drawerPull"])}>
         <div className="grid2">{fields("secDrawers")}</div>
+        {!!params.drawers && <p className="note">Drawers use an open front, a solid back and automatic shelves. Lid, divider and base-opening settings are restored when drawers are turned off.</p>}
         {(params.drawers ?? 0) > 0 && (
           <>
             <div className="rowlabel">Pull</div>

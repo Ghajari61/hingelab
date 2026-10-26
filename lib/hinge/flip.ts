@@ -82,6 +82,8 @@ export function flipBand(p: Params, edges: Edge[], rOut: number): FlipBand | { e
   const cross = chordAt(edges, rOut, a, edge - fixed);
   const len = cross ? cross[1] - cross[0] : span;
   const bl = bandLattice(p);
+  const bandKerf = 2 * kerfAcross(a, bl.K, kerfY(bl));
+  if (slotLike(bl) && bl.slotW < bandKerf + 0.05) return { error: "Flip hinge slots are too narrow for the kerf in this direction. Reduce kerf, widen the slots, or change the hinge side. Honeycomb lids use 0.8 mm slots." };
   const rMin = bendAnalysis(bl, Math.max(10, len), 1).rMin;
   const auto = Math.max(4 * bl.pitch, Math.ceil((1.25 * rMin * FLIP_TARGET * Math.PI) / 180));
   const B = p.flipBand && p.flipBand > 0 ? p.flipBand : auto;

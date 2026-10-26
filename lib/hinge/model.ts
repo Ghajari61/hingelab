@@ -69,7 +69,7 @@ function plateOpening(
     const { len, w } = lidSlotSize(p), along = slotAlongY(p), rad = inner - coreIn;
     const pts = slotOutline(len, w, along, k, ky);
     const name = kind === "coin" ? "coin slot" : "tissue slot";
-    if (w > k + 0.5 && len >= w && pts.every((q) => coreDistance(edges, q) <= rad - 3) && (!band || onFlap(pts, band, 3))) return { polys: [pts], holeR: (along ? len : w) / 2, rimW: 0 };
+    if (w > Math.max(k, ky) + 0.5 && len >= w && pts.every((q) => coreDistance(edges, q) <= rad - 3) && (!band || onFlap(pts, band, 3))) return { polys: [pts], holeR: (along ? len : w) / 2, rimW: 0 };
     issues.push({ lvl: "warn", msg: `The ${name} is too big for the ${where}, so it was left out. Make the slot shorter or narrower, or the box larger.` });
     return none;
   }
@@ -77,6 +77,10 @@ function plateOpening(
   if (d0 == null) return none;
   const d = size.d ?? d0;
   const what = kind === "knob" ? "knob" : kind === "lamp" ? "lamp-holder" : kind === "hole" ? "" : "finger";
+  if (d <= Math.max(k, ky) + 0.5) {
+    issues.push({ lvl: "warn", msg: `The ${what ? `${what} ` : ""}hole was left out: its diameter must exceed both kerf values by more than 0.5 mm.` });
+    return none;
+  }
   if (band && kind !== "lamp") {
     // On a flip lid the finger or knob hole goes near the free edge, over the inside of the box.
     const a = band.a, free = coreSupport(edges, [-a[0], -a[1]]) + rOut, over = Math.max(0, p.lidOver ?? 0);
@@ -142,6 +146,10 @@ export function builtParams(p: Params): Params {
 
 /** Build a living-hinge box. Returns `{ error }` with the prototype's message when the input is invalid. */
 export function computeModel(input: Params): ComputeResult {
+  // Imported projects bypass form bounds; reject bad numbers before derived geometry or loops.
+  for (const [field, value] of Object.entries(input)) {
+    if (typeof value === "number" && !Number.isFinite(value)) return { error: `${field} needs a finite number.` };
+  }
   const issues: Issue[] = [];
   const shell = builtParams(input), asDrawers = shell !== input;
   if (drawerCount(input) && !asDrawers) issues.push({ lvl: "warn", msg: "Drawers need a rounded or pill-shaped case, so they were left out." });
@@ -151,6 +159,9 @@ export function computeModel(input: Params): ComputeResult {
   if (t <= 0.5) return { error: "Material thickness must be more than 0.5 mm." };
   if (k < 0 || k >= t) return { error: "Kerf must be between 0 and the material thickness." };
   if (p.Ky != null && !(isFinite(p.Ky) && p.Ky >= 0 && p.Ky < t)) return { error: "Kerf Y must be between 0 and the material thickness." };
+  if ([p.W, p.D, p.H, p.dia, p.slit, p.bridge, p.pitch, p.tabW, p.bedW, p.bedH].some(n => n <= 0)) return { error: "Dimensions, slit length, bridges, spacing, tabs and sheet size must be positive." };
+  if (p.gap < 0 || p.lidGap < 0) return { error: "Sheet spacing and lid clearance cannot be negative." };
+  if (Math.min(t, p.tabW) + p.slotClr <= Math.max(k, kerfY(p)) + 0.05) return { error: "Joint clearance collapses the tab slots after kerf compensation. Increase clearance or reduce kerf." };
   if (slotLike(p) && p.slotW < k + 0.05) return { error: "Slot width must be at least 0.05 mm wider than the kerf." };
   if (p.pattern === "honeycomb" && barWidth(p) < 0.3) return { error: "Honeycomb walls are too thin. Narrow the cells or widen the spacing." };
   if (p.pattern !== "honeycomb" && p.pitch <= cutWidth(p) + 0.3) return { error: slotLike(p) ? "Slit spacing is too tight for this slot width. Increase the spacing or narrow the slots." : "Slit spacing is too tight for this kerf. Increase the spacing." };
@@ -205,6 +216,14 @@ export function computeModel(input: Params): ComputeResult {
   const bh = p.baseHole ?? "none";
   if (bh === "rim" && div) issues.push({ lvl: "warn", msg: "Dividers need a base to stand on, so the open bottom was left out. Take the dividers out, or use a hole instead." });
   else if (bh === "hole" || bh === "rim") baseOpen = plateOpening(p, bh, { d: p.baseHoleD, w: p.baseHoleW }, edges, R, baseInner, "base", issues).polys;
+  if (baseOpen.length && bh === "hole" && div?.places.some(s => {
+    // The entire divider foot needs support, including sockets between crossings.
+    const nearest = s.from <= 0 && s.to >= 0 ? 0 : Math.min(Math.abs(s.from), Math.abs(s.to));
+    return Math.hypot(s.at, nearest) < (p.baseHoleD ?? ROUND_D.hole!) / 2 + t / 2 + Math.max(2, p.minFeature ?? 0);
+  })) {
+    baseOpen = [];
+    issues.push({ lvl: "warn", msg: "The base opening was left out because it cuts into a divider support or tab socket. Reduce the opening or change the divider count." });
+  }
   const baseSlots = div ? [...slotRects, ...div.baseSlots] : slotRects;
   const hang = p.hangHoles ? hangHoles(p, edges, R, [...baseSlots, ...baseOpen], issues) : [];
   const base = plate("BASE", R, [...baseSlots, ...baseOpen, ...hang]);
@@ -253,7 +272,7 @@ export function computeModel(input: Params): ComputeResult {
     parts.push(lid);
     flip = { a: band.a, from: band.from, to: band.to, angle: band.angle };
     if (!topSlots.length) issues.push({ lvl: "info", msg: "No tab reaches the strip behind the flip hinge, so glue that strip to the top of the wall." });
-    if (band.angle < 90) issues.push({ lvl: "warn", msg: `The flip hinge opens only about ${Math.round(band.angle)}° before it is bent to its limit. Widen the hinge band, or use a more flexible hinge style.` });
+    if (band.angle < 90) issues.push({ lvl: "warn", msg: `The flip hinge's estimated opening is only ${Math.round(band.angle)}°. Widen the band or use a more flexible pattern, then verify with a material test strip.` });
   }
   if (p.lid === "fixed" || p.lid === "removable") parts.push(...lidSteps(p, { W: p.W + 2 * over, D: p.D + 2 * over, R: R + over, dia: p.dia + 2 * over }, lidOpening, "LID", issues));
   if (p.lid !== "flip" && p.lid !== "fixed" && p.lid !== "removable" && p.lid !== "cap" && lidStepCount(p)) issues.push({ lvl: "info", msg: "Lid steps need a fixed, removable or cap lid." });
@@ -315,7 +334,7 @@ export function computeModel(input: Params): ComputeResult {
   const fix = p.pattern === "honeycomb" ? " or narrow the cells." : slotLike(p) ? " or narrow the slots." : ".";
   if (minBar == null && barWidth(p) < 0.9) issues.push({ lvl: "warn", msg: "Torsion bars are under 0.9 mm wide and may char or snap. Widen the slit spacing" + fix });
   if (minBar != null && barWidth(p) < minBar) issues.push({ lvl: "warn", msg: `Torsion bars are under ${r3(minBar)} mm wide, the narrowest your material holds, and may char or snap. Widen the slit spacing` + fix });
-  if (p.material === "acr3") issues.push({ lvl: "warn", msg: "Acrylic living hinges crack easily. Use them only for gentle curves or heat-assisted bends." });
+  if (["acr2", "acr3", "acr5", "mirror3"].includes(p.material)) issues.push({ lvl: "warn", msg: "Acrylic living hinges can crack, especially with repeated opening. Test a coupon; the bend estimate is not a fatigue rating." });
   if (p.pattern !== "serpentine" && p.pattern !== "honeycomb" && hs.Lp < p.bridge * 2) issues.push({ lvl: "warn", msg: "Slits are short compared with the bridges, so the hinge will be stiff. Lengthen the slits or shrink the bridges." });
   if (p.pattern === "serpentine") issues.push({ lvl: "info", msg: "Serpentine bends very tightly but the wall can stretch. Glue the wall to the base and lid." });
   if (an.ratio > 3) issues.push({ lvl: "info", msg: "The hinge is far more flexible than this corner needs. Auto-fit can make it stiffer and stronger." });
@@ -340,20 +359,24 @@ function bandBox(band: FlipBand, gap: number): Point[] {
  * the screw head goes through the round end, then the box drops onto the narrow slot.
  */
 function hangHoles(p: Params, edges: Edge[], R: number, existing: Point[][], issues: Issue[]): Point[][] {
-  const t = p.T, k = p.K, head = 9, neck = 4.5, len = 9;
+  const t = p.T, k = p.K, ky = kerfY(p), head = 9, neck = 4.5, len = 9;
+  if (Math.max(k, ky) >= neck - 0.5) {
+    issues.push({ lvl: "warn", msg: "Hanging holes were left out: the kerf is too wide for their 4.5 mm necks." });
+    return [];
+  }
   const top = coreSupport(edges, [0, -1]) + R;
   const yEnd = -(top - t - Math.max(0, p.slotClr) - 6), y0 = yEnd + len;
   // How wide the inside is at the head's height.
   let lo = 0, hi = 1e4;
   for (let i = 0; i < 48; i++) { const m = (lo + hi) / 2; if (coreDistance(edges, [m, y0]) <= R - t - 2) lo = m; else hi = m; }
   const key = (x: number): Point[] => {
-    const rh = (head - k) / 2, rn = (neck - k) / 2, out: Point[] = [];
-    const yTop = yEnd + rn, ang = Math.asin(Math.min(1, rn / rh));
+    const rh = (head - k) / 2, rn = (neck - k) / 2, rhy = (head - ky) / 2, rny = (neck - ky) / 2, out: Point[] = [];
+    const yTop = yEnd + neck / 2, ang = Math.asin(Math.min(1, rn / rh));
     // the slot's round top end
-    for (let i = 0; i <= 8; i++) { const a = Math.PI + (Math.PI * i) / 8; out.push([x + rn * Math.cos(a), yTop + rn * Math.sin(a)]); }
+    for (let i = 0; i <= 8; i++) { const a = Math.PI + (Math.PI * i) / 8; out.push([x + rn * Math.cos(a), yTop + rny * Math.sin(a)]); }
     // down the right side to the head, round the head, back up the left side
     const a0 = -Math.PI / 2 + ang, a1 = 3 * Math.PI / 2 - ang;
-    for (let i = 0; i <= 24; i++) { const a = a0 + ((a1 - a0) * i) / 24; out.push([x + rh * Math.cos(a), y0 + rh * Math.sin(a)]); }
+    for (let i = 0; i <= 24; i++) { const a = a0 + ((a1 - a0) * i) / 24; out.push([x + rh * Math.cos(a), y0 + rhy * Math.sin(a)]); }
     return out;
   };
   const clash = (poly: Point[]) => {
