@@ -1,3 +1,9 @@
+## Unreleased — Family Names and more Christmas charms
+
+- **New product: Family Names.** One list of names becomes one piece: a name crossword where every name crosses another, a Christmas tree built from the names, a snowflake with a name on each arm, a ring of names round "Mum" or an initial, a split monogram with the name across the initial, or bunting with a letter on each flag. Add a silhouette backer for two layers. 20 ready-made designs.
+- **Name Charms:** gift card holder ornaments (four layers, the card slides into a pocket), a little dangle tag under a charm for the year, and snowman, reindeer, cat and gingerbread characters whose hat, nose and buttons cut separately to paint. 9 new designs.
+- Welded names now score every letter so they read clearly, like weld-and-score.
+
 ## Unreleased — Name Charms
 
 - **New product: Name Charms.** Type a list of names and get one charm each: Christmas ornaments (baubles, stars, trees, snowflakes, paws, dog bones, lanterns), keychains (connected script names, layered mirror acrylic, engraved tags, big initials, house key tags), earrings in pairs, school and luggage bag tags, wine-glass markers that clip on the stem, place cards that stand on a slotted foot, and gift and stocking tags.
