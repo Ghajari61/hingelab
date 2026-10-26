@@ -2,6 +2,9 @@ import type {GenPreset} from '../types';
 import type {PopupParams} from './params';
 export type PopupPreset=GenPreset<PopupParams>&{category:string;tags:string[]};
 export const POPUP_PRESETS:PopupPreset[]=[
+  {"id":"studio-ripple-bowl","name":"Ripple display bowl","note":"Display object with editable contours and supports; prototype the lift before use.","category":"Kitchen & dining","tags":["Kitchen & dining","bowl","pop-up"],"pro":true,"params":{"pattern":{"kind":"spiral","edge":"wave","amplitude":1,"frequency":12},"name":"Ripple display bowl","outline":{"width":220,"height":220},"profile":{"depth":26}}},
+  {"id":"studio-polygon-tray","name":"Polygon display tray","note":"Display object with editable contours and supports; prototype the lift before use.","category":"Kitchen & dining","tags":["Kitchen & dining","bowl","pop-up"],"pro":true,"params":{"outline":{"shape":"polygon","width":250,"height":250,"sides":8},"name":"Polygon display tray","profile":{"depth":28},"rings":{"width":12}}},
+  {"id":"studio-petal-bowl","name":"Petal catchall","note":"Display object with editable contours and supports; prototype the lift before use.","category":"Kitchen & dining","tags":["Kitchen & dining","bowl","pop-up"],"pro":true,"params":{"pattern":{"kind":"rings"},"name":"Petal catchall","outline":{"shape":"flower","width":230,"height":230,"petals":8,"petalDepth":0.08},"profile":{"depth":28}}},
   {
     "id": "spiral-trivet-bowl",
     "name": "Spiral Trivet Bowl",

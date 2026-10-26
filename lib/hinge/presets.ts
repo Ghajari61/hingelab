@@ -126,6 +126,9 @@ export function randomHingeBox(p: Params, plan: Plan = "pro", rnd: Rnd = Math.ra
 }
 
 export const HINGE_PRESETS: Preset<Params>[] = [
+  {"id": "studio-stationery-case", "name": "Stationery hinge case", "note": "Split hinge walls, a divider and a removable lid for stationery.", "params": {"name": "Stationery hinge case", "W": 220, "D": 110, "H": 55, "R": 22, "lid": "removable", "divX": 1, "slit": 40, "bridge": 2, "split": 2, "fit": {"mode": "auto", "sheets": 1}}},
+  {"id": "studio-object-display", "name": "Object display case", "note": "200 x 150 mm display case with a framed lid window.", "params": {"name": "Object display case", "W": 200, "D": 150, "H": 70, "R": 26, "lidHole": "rim", "lidHoleW": 18, "lidWindow": true, "slit": 40, "bridge": 2, "split": 2, "fit": {"mode": "auto", "sheets": 1}}},
+  {"id": "studio-drawing-case", "name": "Drawing tools case", "note": "Long pill-shaped flip-top case for drawing tools; split walls fit standard sheets.", "params": {"name": "Drawing tools case", "shape": "pill", "W": 240, "D": 90, "H": 48, "lid": "flip", "slit": 40, "bridge": 2, "lidOver": 2, "split": 2, "fit": {"mode": "auto", "sheets": 1}}},
   // Contemporary collection. Dimensions stay editable; no automatic scaling of the product.
   { id: "capsule-valet", name: "Capsule valet", note: "Soft pill silhouette with three open compartments for everyday carry", params: { name: "Capsule valet", shape: "pill", W: 240, D: 100, H: 50, lid: "open", divX: 2, slit: 40, bridge: 2, split: 2, bedW: 900, bedH: 600 } },
   { id: "ribbon-desk", name: "Ribbon desk organiser", note: "Continuous rounded ribbon around three tall stationery bays", params: { name: "Ribbon desk organiser", W: 220, D: 110, H: 105, R: 28, lid: "open", divX: 2, slit: 40, bridge: 2, split: 2, bedW: 900, bedH: 600 } },

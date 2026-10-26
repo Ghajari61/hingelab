@@ -21,7 +21,7 @@ export function checkQr(p: QrParams, out: QrOutput): Issue<QrParams>[] {
       code: "SMALL_MODULES", level: "warn",
       message: `Modules are ${info.module.toFixed(2)} mm; ${kind === "engrave" ? "engraved" : kind === "cutout" ? "cut-out" : "stencil"} codes need ${minM} mm or more to scan reliably.`,
       fixes: [
-        { id: "bigger", label: `Code size ${size} mm`, safe: true, apply: (q) => ({ ...q, code: { ...q.code, size } }) },
+        { id: "bigger", label: `Code size ${size} mm`, safe: false, apply: (q) => ({ ...q, code: { ...q.code, size } }) },
         ...(p.code.ecc !== "L" && p.logo.kind === "none" ? [{ id: "ecc-l", label: "Error correction L (fewer modules)", safe: false, apply: (q: QrParams) => ({ ...q, code: { ...q.code, ecc: "L" as const } }) }] : []),
       ],
     });
@@ -45,11 +45,11 @@ export function checkQr(p: QrParams, out: QrOutput): Issue<QrParams>[] {
     });
   }
 
-  if (info.margin < 2 * info.module - 1e-6) {
+  if (info.margin < 4 * info.module - 1e-6) {
     issues.push({
       code: "QUIET_ZONE", level: "warn",
-      message: `Only ${info.margin.toFixed(1)} mm of clear space around the code; scanners want at least two modules (${(2 * info.module).toFixed(1)} mm).`,
-      fixes: [{ id: "quiet", label: "Quiet zone 2 modules", safe: true, apply: (q) => ({ ...q, code: { ...q.code, quiet: Math.max(2, q.code.quiet) } }) }],
+      message: `Only ${info.margin.toFixed(1)} mm of clear space around the code; standard QR symbols need at least four modules (${(4 * info.module).toFixed(1)} mm).`,
+      fixes: [{ id: "quiet", label: "Quiet zone 4 modules", safe: false, apply: (q) => ({ ...q, code: { ...q.code, quiet: Math.max(4, q.code.quiet) } }) }],
     });
   }
 

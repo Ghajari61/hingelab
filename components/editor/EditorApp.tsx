@@ -36,6 +36,8 @@ import type { NumericKey } from "./fields";
 import { MenuBar, type MenuEntry } from "./MenuBar";
 import { hingeGroups, PRODUCT_INFO, type Product } from "./ControlBar";
 import { clientOnly } from "@hingelab/ui/lazy";
+import { PresetLibrary } from "@/components/shell/PresetLibrary";
+import { HINGE_PRESETS } from "@/lib/hinge/presets";
 import { GalleryRail } from "@/components/shell/GalleryRail";
 import { ViewToggle, type ViewMode } from "@/components/shell/ViewToggle";
 import { ViewTools } from "@/components/shell/ViewTools";
@@ -508,6 +510,7 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
           inert={shared.viewing}
         >
+          <PresetLibrary product="hinge" presets={HINGE_PRESETS} getCategory={pr => ({ rect: "Rounded boxes", cyl: "Cylinders", pill: "Pill cases", poly: "Polygon boxes" })[hingePresetParams(pr.params).shape] ?? "Other shapes"} onApply={(pr, keep) => { const next = hingePresetParams(pr.params); patch(keep ? keepSetup(params, next) : next, true); toastMsg(`Opened “${pr.name}”. Ctrl+Z undoes it.`); }} />
           <button type="button" className="btn-auto gen-shuffle" onClick={randomBox} title="A whole new box idea: tissue box, money box, lantern, planter and more. Your material and sheet stay. Ctrl+Z undoes it.">
             <Dices size={15} aria-hidden /> Randomise box
           </button>

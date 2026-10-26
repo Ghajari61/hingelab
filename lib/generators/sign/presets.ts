@@ -2,6 +2,9 @@ import type { GenPreset } from "../types";
 import type { SignParams } from "./params";
 
 export const SIGN_PRESETS: GenPreset<SignParams>[] = [
+  {"id": "studio-meeting-sign", "name": "Meeting room plaque", "note": "STUDIO 01 plaque with rounded corners for a meeting room.", "params": {"name": "Meeting room plaque", "style": {"kind": "engraved"}, "board": {"shape": "rounded", "auto": true, "pad": 22, "corner": 10, "width": 260, "height": 100}, "text": {"text": "STUDIO 01", "fontId": "bebas-neue", "size": 26}, "motif": {"kind": "key", "side": "above", "size": 30, "gap": 8}, "border": {"kind": "engrave", "inset": 7, "width": 1.5}, "mount": {"kind": "standoff", "hole": 5}}},
+  {"id": "studio-market-sign", "name": "Maker market sign", "note": "Hanging HANDMADE STUDIO sign with an engraved border.", "params": {"name": "Maker market sign", "board": {"shape": "rect", "auto": true, "pad": 22, "corner": 12}, "text": {"text": "HANDMADE\nSTUDIO", "fontId": "bebas-neue", "size": 36, "spacing": 2, "lead": 1.15}, "motif": {"kind": "none", "side": "above", "size": 34, "gap": 8}, "border": {"kind": "engrave", "inset": 6, "width": 3}, "mount": {"kind": "hanging", "hole": 6}}},
+  {"id": "studio-quiet-space", "name": "Quiet space sign", "note": "Layered Calm script with a wide rounded backing.", "params": {"name": "Quiet space sign", "style": {"kind": "layered", "weld": 1.2}, "board": {"shape": "rounded", "auto": true, "pad": 20, "corner": 18}, "text": {"text": "Calm", "fontId": "pacifico", "size": 54, "spacing": -0.5}, "motif": {"kind": "none", "side": "right", "size": 30, "gap": 4}, "border": {"kind": "none"}, "mount": {"kind": "hanging", "hole": 5}, "mat": {"mat2": "acrylic-gold", "T2": 3}}},
   {
     id: "welcome-arch", name: "Welcome arch", note: "Script on an arch with a flower and a scored frame",
     params: { name: "Welcome sign" },

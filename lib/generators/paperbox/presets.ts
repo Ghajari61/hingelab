@@ -22,6 +22,9 @@ const SHEETS: Record<string, [number, number]> = {
 };
 
 const LIST: GenPreset<PaperBoxParams>[] = [
+  {"id": "studio-accessory-drawer", "name": "Accessory drawer carton", "note": "Sliding 120 x 80 x 35 mm accessory carton with 0.5 mm clearance.", "params": {"name": "Accessory drawer carton", "style": "drawer", "paper": "chip1", "T": 1, "styles": {"drawer": {"L": 120, "W": 80, "H": 35, "dims": "inner", "clearance": 0.5}}}},
+  {"id": "studio-voucher-pillow", "name": "Voucher pillow carton", "note": "130 x 90 x 22 mm pillow carton for vouchers and small gifts.", "params": {"name": "Voucher pillow carton", "style": "pillow", "paper": "300", "T": 0.4, "styles": {"pillow": {"L": 130, "W": 90, "H": 22, "dims": "inner"}}}},
+  {"id": "studio-sample-sleeve", "name": "Craft sample sleeve", "note": "110 x 70 x 25 mm sleeve for a craft sample pack.", "params": {"name": "Craft sample sleeve", "style": "sleeve", "paper": "300", "T": 0.4, "styles": {"sleeve": {"L": 110, "W": 70, "H": 25, "dims": "inner"}}}},
   // Two-piece gift boxes
   P("jewelry-6x6x3", "Jewelry gift box 6×6×3", "Two-piece box, 60 × 60 × 30 mm inside", "two-piece", 60, 60, 30, "chip1", { clearance: 0.5 }),
   P("ring-box", "Ring box", "Small two-piece box, 50 × 50 × 40 mm", "two-piece", 50, 50, 40, "chip1"),

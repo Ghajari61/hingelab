@@ -67,6 +67,9 @@ function curve(over: Partial<ParametricParams["curveNormal"]>, specs: CurveShape
 }
 
 export const PARAMETRIC_PRESETS: ParametricPreset[] = [
+  {"id":"studio-wave-relief","category":"wall-art","tags":["wave","sine"],"name":"Cross-current relief","note":"Cross-current relief: editable dimensions and construction settings. Sine relief as parallel fins","params":{"name":"Cross-current relief","source":{"kind":"library","id":"wave-panel"},"parallel":fins({spacing:10,axis:"Y"})}},
+  {"id":"studio-atlas-stack","category":"nature","tags":["mountains","contour","topographic","map","layers"],"name":"Atlas contour sculpture","note":"Atlas contour sculpture: editable dimensions and construction settings. The mountains as stacked contour layers","params":{"name":"Atlas contour sculpture","source":{"kind":"library","id":"terrain"},"method":"stacked","stacked":{"axis":"Z","dowels":true,"dowelCount":2,"registrationMarks":true,"hollow":false,"shell":8}}},
+  {"id":"studio-fluted-vessel","category":"lamps","tags":["vase","radial"],"name":"Fluted display vessel","note":"Fluted display vessel: editable dimensions and construction settings. Profile fins round the axis","params":{"name":"Fluted display vessel","source":{"kind":"library","id":"vase"},"method":"radial","radial":{"axis":"Y","axisPoint":null,"count":24,"angleRange":[0,360],"innerRadius":20,"hubPlates":1,"hubWidth":20,"profileSource":"mesh"}}},
   // Portraits & faces
   {
     id: "slat-portrait", category: "portraits", finish: "dark", tags: ["face", "veil", "hair", "slats", "slat wall", "fins", "featured"],

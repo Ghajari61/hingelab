@@ -2,6 +2,9 @@ import type { GenPreset } from "../types";
 import type { ClockParams } from "./params";
 
 export const CLOCK_PRESETS: GenPreset<ClockParams>[] = [
+  {"id": "studio-atelier-clock", "name": "Atelier dial", "note": "240 mm minimal dial with longer ticks and slim balanced-looking hands.", "params": {"name": "Atelier dial", "face": {"size": 240, "layers": "single"}, "markers": {"style": "ticks", "minutes": false, "tickLength": 18, "tickWidth": 3, "inset": 8}, "hands": {"style": "baton", "hour": 58, "minute": 84, "width": 5, "tail": 12}, "hanger": "none"}},
+  {"id": "studio-workbench-clock", "name": "Workbench desk clock", "note": "160 mm desktop clock with slot-in stand and simple dot markers.", "params": {"name": "Workbench desk clock", "face": {"size": 160, "layers": "single"}, "markers": {"style": "dots", "numerals": "arabic", "size": 16, "inset": 6, "tickLength": 8, "tickWidth": 2.5, "dot": 6, "minutes": false}, "hands": {"style": "baton", "hour": 38, "minute": 54, "width": 6, "tail": 12}, "hanger": "none", "stand": true}},
+  {"id": "studio-gallery-clock", "name": "Gallery hexagon", "note": "280 mm hexagonal dial with twelve bold ticks.", "params": {"name": "Gallery hexagon", "face": {"shape": "polygon", "sides": 6, "size": 280, "corner": 8, "layers": "single"}, "markers": {"style": "ticks", "numerals": "arabic", "fontId": "oswald", "size": 18, "minutes": false, "tickLength": 12, "tickWidth": 3}, "hands": {"style": "arrow", "hour": 62, "minute": 88, "width": 14, "tail": 16}}},
   { id: "wall-roman", name: "Wall clock", note: "Roman numerals on a raised ring", params: { name: "Wall clock" } },
   {
     id: "desk-stand", name: "Desk clock with stand", note: "Slot-in stand, no glue needed",

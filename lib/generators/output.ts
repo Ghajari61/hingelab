@@ -239,6 +239,11 @@ export function buildBatch<P extends GenBase>(def: GeneratorDef<P>, q: P, ctx: B
 
 /** Build at a scale and lay the parts out on sheets (Fit "off" packs at design size, like Auto). */
 export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, ctx: BuildContext): GenArranged<P> {
+  const invalid = (value: unknown): boolean => typeof value === "number" ? !Number.isFinite(value)
+    : value !== null && typeof value === "object" ? Object.values(value).some(invalid) : false;
+  if (invalid(p) || p.T <= 0 || p.K < 0 || p.bedW <= 2 * SHEET_EDGE || p.bedH <= 2 * SHEET_EDGE || p.gap < 0) {
+    return { params: p, result: { error: "Use finite settings, positive thickness and sheet dimensions, and non-negative kerf and part spacing." }, lay: null, sheets: null, fit: null };
+  }
   const fit = cleanFit(p.fit);
   const x = cleanExtras(p.sheet);
   const job = cleanJob(p.job);
@@ -247,6 +252,9 @@ export function arrangeGenerator<P extends GenBase>(def: GeneratorDef<P>, p: P, 
     const q = s === 1 || !def.scale ? p : def.scale(p, s);
     const out = buildBatch(def, q, ctx, job.names);
     if (out.error) return { params: q, result: { error: out.error } };
+    if (out.parts.some(pt => pt.outer.length < 3 || invalid([pt.outer, pt.holes, pt.cuts, pt.score, pt.engrave]))) {
+      return { params: q, result: { error: "A part contains invalid geometry. Correct the design before cutting or nesting." } };
+    }
     const mixed = out.parts.some((pt) => pt.material === "second") || new Set(out.parts.map((pt) => pt.stock ?? "")).size > 1;
     const names = { main: out.materials?.main ?? `Main material ${q.T} mm`, second: out.materials?.second ?? "Second material" };
     const [kx, ky] = kerfOf(q);
