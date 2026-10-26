@@ -1,6 +1,7 @@
 import type {Issue} from '@/lib/issues';
 import type {GenOutput} from '../types';
 import {ringPlan,setsHeights,tiltDepth} from './build';
+import {bridgeStrain} from './engineering';
 import type {PopupParams} from './params';
 export function checkPopup(p:PopupParams,out:GenOutput):Issue<PopupParams>[] {
  const issues:Issue<PopupParams>[]=[];
@@ -13,7 +14,9 @@ export function checkPopup(p:PopupParams,out:GenOutput):Issue<PopupParams>[] {
  if(p.outline.width>p.bedW-10||p.outline.height>p.bedH-10)add('bed','Blank exceeds the selected bed; never split a connected blank automatically.',{label:'Scale outline to bed',safe:false,apply:q=>{const s=Math.min((q.bedW-10)/q.outline.width,(q.bedH-10)/q.outline.height);return {...q,outline:{...q.outline,width:q.outline.width*s,height:q.outline.height*s},rings:{...q.rings,center:q.rings.center*s,rim:q.rings.rim*s}};}});
  if(p.support.kind==='tilt'){const depth=tiltDepth(g.loops.length,p.rings.gap,p.support.angle);if(Math.abs(depth-p.profile.depth)>Math.max(2,p.profile.depth*.1))add('tilt-depth','Computed tilted-cut depth differs from the target.',{label:'Match bevel angle',apply:q=>({...q,support:{...q.support,angle:Math.max(1,Math.min(15,Math.atan(g.loops.length*q.rings.gap/Math.max(1,q.profile.depth))*180/Math.PI))}})});add('bevel','Tilted cuts require bevel-capable equipment; a normal laser cuts perpendicular to the sheet.');}
  if(setsHeights(p))add('snap-bridges','The supports set every ring\'s height: cut sacrificial bridge lands before placing separate rings on the locating tabs.',undefined,'info');
- else if(p.profile.depth/g.loops.length>p.bridges.length*.3)add('strain','Target lift may exceed bridge flexure. Validate with a coupon; supports do not make brittle bridges flexible.',{label:'Reduce target depth',apply:q=>({...q,profile:{...q.profile,depth:g.loops.length*q.bridges.length*.25}})});
+ else{// Bridges are short guided beams (engineering.ts): with no support setting the heights they carry the whole drop.
+  const st=bridgeStrain(p,g.rings,g.pitch);
+  if(st.ratio>1)add('strain',`The bridges would bend ${st.ratio.toFixed(0)} times further than ${p.T} mm stock takes (a ${st.drop.toFixed(1)} mm drop between rings over ${st.length.toFixed(1)} mm lands), so they would crack. Rest the rings on supports that set their heights.`,p.pattern.kind==='rings'?{label:'Use profile ribs',apply:q=>({...q,support:{...q.support,kind:'ribs'}})}:{label:'Use cords',apply:q=>({...q,support:{...q.support,kind:'cords'}})});}
  if(!setsHeights(p)&&p.profile.kind!=='linear')add('support','This profile needs independent support at its ring heights.',{label:'Use profile ribs',apply:q=>({...q,support:{...q.support,kind:'ribs'}})});
  {// Neighbouring rings at different heights leave a slit in the wall: small things fall out of a bowl.
   let step=0;for(let i=0;i+1<g.rings.length;i++)step=Math.max(step,Math.abs(g.rings[i].height-g.rings[i+1].height));const slit=step-p.T;

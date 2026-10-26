@@ -11,7 +11,7 @@ const ease = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2
  * The 3D workspace's settings, kept by the editor so the toolbar and the view share them. The
  * toolbar (loaded with the 3D view) restores and saves the layout preferences.
  *
- * Explode is eased: `explodeTarget` is where the slider (or the play button) asks to go, and
+ * Explode is eased: `explodeTarget` is where the slider asks to go, and
  * `explode` glides there, so the model opens and closes smoothly instead of jumping.
  */
 export function useView3D() {

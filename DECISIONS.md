@@ -1675,3 +1675,15 @@ The owner asked for the Pop-up to be reviewed as a product and for its 3D to be 
 - **Base plate** with ribs sits at −ribFoot − T; the **finial** has a 2T tab through a T+fit slot when the centre is clear.
 - **Checks**: `wall-gap` (bowls without a plant seat, slit > 12 mm), `hang-apart` (info), `base-plate` (info), `bulb` (centre must be ≥ bulb Ø + 20 mm; E14 45, E27 60). E27 lamp presets use an 80 mm centre.
 - Tested in `lib/generators/__tests__/popup.test.ts` ("Pop-up engineering and 3D"); all preset snapshots and thumbnails were regenerated.
+
+## D207. Pop-up bridge strain model (from the first Pop-up review)
+
+The first Pop-up review (PR #13) was written against an older Pop-up whose supports main has since replaced with the precision joint schedule (`ribAssembly`, `suspensionLayout`, `handleAssembly`). When it was combined for release only its bridge model was kept: `popup/engineering.ts` (guided-beam strain ε = 3·T·δ/L² against plywood 1 %, MDF 0.4 %, acrylic 0.6 %; `cutsToSnap`; `clearTurn`), used by the strain warning. Its rib, cord, post and handle rewrites were dropped in favour of main's, and D212 covers the later engineering fixes. Post and handle supports on main are crossed rib pairs, so they still set every ring's height.
+
+## D208. Explode stays in place; no play button
+
+The owner asked for the product to explode gently in place with the existing slider, and for the play button to go. This supersedes the opening-out part of D206.
+
+- The 3D editors no longer use the open-out choreography: the slider's eased value (`useView3D`, unchanged) drives the design's own in-place explode (Hinge Box: walls up a little, lid well clear, flip lid swings, drawers slide out; generators: their usual apart offsets; folding designs as before).
+- Designs whose scenes are rebuilt per explode value are wrapped by `rebuiltExplode` (lib/three/rebuilt.ts): one stable root that swaps in each build (closed and fully open builds kept), so QuadView treats them as exploding in place and widens the views to hold the opened design. QuadView repaints the look and display mode of each new build.
+- The play button is removed. `hingeUnfoldScene` and the generator unfold path stay in the library (tested) but are not wired to any view.

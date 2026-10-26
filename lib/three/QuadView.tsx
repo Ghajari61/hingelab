@@ -222,6 +222,9 @@ function meshesOf(root: THREE.Object3D) {
   return out;
 }
 
+/** True for models whose explode rebuilds them (see lib/three/rebuilt). */
+const rebuilt = (m: QuadModel) => (m as { rebuilds?: boolean }).rebuilds === true;
+
 function paintShade(root: THREE.Object3D, shade: Shade3D) {
   for (const mesh of meshesOf(root)) {
     let edges = mesh.getObjectByName("__edges") as THREE.LineSegments | undefined;
@@ -627,6 +630,13 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     st.current?.request();
   };
 
+  /** Paints a rebuilt model's current build (look and display mode) and redraws once its pictures load. */
+  const repaint = (m: QuadModel) => {
+    if (live.current.look) applyLook(m.group, live.current.look);
+    paintShade(m.group, live.current.shade);
+    m.ready?.then(() => { if (shown.current === m) st.current?.request(); });
+  };
+
   /** After the model or its contents changed: look, display mode, box, grids and framing. */
   const settle = (reframe: boolean) => {
     const s = st.current, m = shown.current;
@@ -643,6 +653,8 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
       m.group.updateMatrixWorld(true);
     }
     if (reframe || live.current.measure || m.explode) stageFor();
+    // A rebuilt model may now show a build the look has not reached yet.
+    if (rebuilt(m)) repaint(m);
     if (reframe) for (const p of s.panes) fitPane(p);
     s.request();
   };
@@ -701,6 +713,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     pokeRef.current();
     if (m?.explode) {
       m.explode(explode);
+      if (rebuilt(m)) repaint(m);
       // The views widen with the model as it opens out and close in again as it goes back together.
       const b0 = bbox.current, b1 = farBox.current;
       if (s && b0 && b1 && !b0.isEmpty() && !b1.isEmpty()) {
