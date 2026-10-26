@@ -150,6 +150,8 @@ export interface ShadowBoxParams extends GenBase {
     /** Ridge height, % of the window. */
     amp: number;
     seed: number;
+    /** Independent topographic basin count; other patterns keep their own repetition count. */
+    basins: number;
     /** Petals, rays or ridge bumps. */
     count: number;
     cell: Cell;
@@ -276,7 +278,7 @@ export const SHADOWBOX_DEFAULTS: ShadowBoxParams = {
   box: { back: "none", screw: 3, hang: "none", head: 8, walls: false, lip: 3, finger: 10, pins: false, pin: 3, numbers: false },
   design: {
     pattern: "tunnel", opening: "star", sides: 6, inner: 55, petal: "drop",
-    ridge: "mountains", from: "bottom", amp: 18, seed: 7, count: 12,
+    ridge: "mountains", from: "bottom", amp: 18, seed: 7, count: 12, basins: 3,
     cell: "hex", pitch: 18, fade: 40,
     min: 18, max: 118, twist: 6, rotate: 0, shiftX: 0, shiftY: 0, swirl: 0, waves: 3,
     web: 1.5, loose: "drop", bridge: 2, stretch: false, moon: false, hole: "circle", holeSize: 18,
@@ -339,7 +341,8 @@ export function mergeShadowBox(raw: unknown): ShadowBoxParams {
   g.cell = oneOf(CELLS, g.cell, d.design.cell);
   g.sides = clamp(Math.round(g.sides), 3, 16);
   g.waves = clamp(Math.round(g.waves), 1, 12);
-  g.count = clamp(Math.round(g.count), 3, g.pattern === "topographic" ? 12 : 48);
+  g.count = clamp(Math.round(g.count), 3, 48);
+  g.basins = clamp(Math.round(g.basins), 3, 12);
   g.seed = clamp(Math.round(g.seed), 0, 99999);
   g.hole = oneOf(HOLES, g.hole, d.design.hole);
   g.holeSize = clamp(g.holeSize, 5, 45);

@@ -12,7 +12,7 @@ const p = (raw: Record<string, unknown> = {}) => mergeShadowBox({ cutter: { kind
 const band: Band = { frame: rect(0, 0, 200, 160), win: rect(14, 14, 172, 132), width: 14, cx: 100, cy: 80 };
 describe("shadow box engineering regressions", () => {
   it("preserves the editable topographic pattern and its reproducible seed", () => {
-    const q = p({ design: { pattern: "topographic", count: 3, amp: 30, seed: 42 }, stack: { count: 6 } });
+    const q = p({ design: { pattern: "topographic", basins: 3, amp: 30, seed: 42 }, stack: { count: 6 } });
     expect(q.design.pattern).toBe("topographic");
     const a = SHADOWBOX.build(q, CTX);
     expect(a.error).toBeUndefined();
@@ -87,7 +87,7 @@ describe("shadow box option families and exports", () => {
     expect(out.assembly?.join(" ")).toContain("Layer 1");
   });
   it("keeps untwisted topographic openings nested with deterministic contours", () => {
-    const q = p({ stack: { count: 10, back: false }, design: { pattern: "topographic", count: 3, seed: 17, twist: 0, shiftX: 0, shiftY: 0, web: 0 } });
+    const q = p({ stack: { count: 10, back: false }, design: { pattern: "topographic", basins: 3, seed: 17, twist: 0, shiftX: 0, shiftY: 0, web: 0 } });
     const layers = SHADOWBOX.build(q, CTX).parts.filter(pt => /^layer\d+$/.test(pt.id));
     for (let i = 1; i < layers.length; i++) {
       const before = layers[i - 1].holes, after = layers[i].holes;

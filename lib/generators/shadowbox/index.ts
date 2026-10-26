@@ -91,7 +91,7 @@ const PATTERN_START: Record<Pattern, Partial<ShadowBoxParams["design"]>> = {
   lattice: { min: 25, max: 95, pitch: 20 },
   flow: { min: 25, max: 85, count: 7, waves: 3, amp: 30, swirl: 90 },
   picture: { min: 20, max: 100 },
-  topographic: { min: 15, max: 115, count: 3, waves: 3, amp: 40, twist: 0, seed: 17 },
+  topographic: { min: 15, max: 115, basins: 3, waves: 3, amp: 40, twist: 0, seed: 17 },
 };
 const CURVED: Opening[] = ["polygon", "star", "flower", "wavy", "orbit"];
 /** A capsule on a square frame would be a plain circle, so it turns landscape (a standard 7 × 5 in when that size was picked). */
@@ -134,7 +134,7 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
       { kind: "number", key: "design.sides", label: "Points", unit: "", min: 3, max: 16, step: 1, int: true, shuffle: [3, 12], show: (p) => shaped(p) && CURVED.includes(p.design.opening), help: "Corners of the polygon, points of the star, petals of the flower, waves round the wavy circle or ellipses of the orbit." },
       { kind: "number", key: "design.inner", label: "Inner size", unit: "%", min: 5, max: 95, step: 1, shuffle: [25, 75], show: (p) => (shaped(p) && ["star", "flower", "wavy", "orbit"].includes(p.design.opening)) || isPat(p, "sunburst"), help: "How deep a star's, flower's or wavy circle's notches go, how wide the orbit's ellipses are, or how wide the sunburst's rays are." },
       { kind: "number", key: "design.count", label: "Stripes", unit: "", min: 3, max: 48, step: 1, int: true, shuffle: [5, 16], show: (p) => isPat(p, "flow"), help: "Wavy stripes down the window." },
-      { kind: "number", key: "design.count", label: "Basins", unit: "", min: 3, max: 12, step: 1, int: true, show: (p) => isPat(p, "topographic"), help: "Organic openings that grow and merge from back to front." },
+      { kind: "number", key: "design.basins", label: "Basins", unit: "", min: 3, max: 12, step: 1, int: true, show: (p) => isPat(p, "topographic"), help: "Organic openings that grow and merge from back to front." },
       { kind: "number", key: "design.amp", label: "Contour irregularity", unit: "%", min: 0, max: 80, step: 1, show: (p) => isPat(p, "topographic"), help: "Zero makes round basins; higher values make smooth organic shores." },
       { kind: "number", key: "design.waves", label: "Contour lobes", unit: "", min: 1, max: 12, step: 1, int: true, show: (p) => isPat(p, "topographic"), help: "Smooth bends around each basin. Use fewer lobes for broader, stronger contours." },
       { kind: "number", key: "design.waves", label: "Waves", unit: "", min: 1, max: 12, step: 1, int: true, shuffle: [1, 6], show: (p) => isPat(p, "flow"), help: "Waves along each stripe, across the window." },

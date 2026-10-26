@@ -327,7 +327,7 @@ function openingsOf(p: ShadowBoxParams, w: Win, win: Shape, i: number, L: number
     case "topographic": {
       // The same seeded contours grow on every layer. No per-layer noise: at zero twist
       // and shift their openings are nested, so contour ledges remain predictable.
-      const random = rng(g.seed), n = Math.max(3, Math.min(12, g.count));
+      const random = rng(g.seed), n = Math.max(3, Math.min(12, g.basins));
       const out: Contour[] = [];
       for (let j = 0; j < n; j++) {
         const angle = TAU * j / n + (random() - 0.5) * 0.25;
