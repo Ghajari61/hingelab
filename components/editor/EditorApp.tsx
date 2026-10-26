@@ -195,6 +195,8 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
   function setChoice(key: "shape" | "lid" | "pattern" | "cutStyle", value: string) {
     const next: Params = { ...params, [key]: value };
     if (key === "shape" && value === "pill") next.R = Math.min(next.W, next.D) / 2;
+    // A chest of drawers is open at the front, so picking a lid turns it back into a box.
+    if (key === "lid" && params.drawers) { delete next.drawers; delete next.drawerPull; toastMsg("Drawers off: the box has a lid again. Ctrl+Z undoes it."); }
     // Honeycomb takes its cell width from the slot width, so it starts from a fitted lattice instead.
     if (key === "pattern" && value === "honeycomb" && params.pattern !== "honeycomb") {
       const wall = Math.max(0.9, 0.35 * next.T, next.minFeature ?? 0);

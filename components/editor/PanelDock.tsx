@@ -95,6 +95,24 @@ const LID_HOLES = [
   ["tissue", "Tissue", "A long slot to pull tissues through"],
   ["coin", "Coin", "A narrow slot for coins: a money box"],
   ["rim", "Rim", "An open top: the lid's middle is cut away, leaving a rim round the edge, as on a pen holder"],
+  ["lamp", "Lamp", "A 40 mm hole for an E27 lamp holder (make it 29 mm for E14): a pendant shade"],
+] as const;
+
+/** Which way a flip lid's hinge runs: value, button text, tooltip. */
+const FLIP_SIDES = [
+  ["back", "Back", "Hinged along the back: a flip-top box"],
+  ["left", "Left", "Hinged on the left: a cabinet door when the box stands up"],
+  ["right", "Right", "Hinged on the right"],
+  ["front", "Front", "Hinged along the front"],
+] as const;
+
+const LID_NAMES: Record<Params["lid"], string> = { open: "Open", fixed: "Fixed", removable: "Lift-off", flip: "Flip-top", cap: "Cap" };
+
+/** Openings through the base: value, button text, tooltip. */
+const BASE_HOLES = [
+  ["none", "None", "A plain base"],
+  ["hole", "Hole", "A round hole in the middle: a lamp cord, or to drain a planter"],
+  ["rim", "Open", "An open bottom with a rim round the edge: a lamp shade or a sleeve"],
 ] as const;
 
 export function PanelDock({
@@ -217,17 +235,39 @@ export function PanelDock({
         </div>
         <p className="note">Two halves fits long walls on small beds. Seams land in the middle of flat sides.</p>
       </Sec>
-      <Sec step="construction" title="Lid" onReset={() => onResetSection("Lid", ["lidOver", "lidHole", "lidHoleD", "lidHoleW", "lidLip", "lidLipScore"])}>
+      <Sec step="construction" title="Lid" meta={params.drawers ? "Drawers" : LID_NAMES[params.lid]} onReset={() => onResetSection("Lid", ["lidOver", "lidHole", "lidHoleD", "lidHoleW", "lidLip", "lidLipScore", "flipSide", "flipBand", "flipFixed", "capH", "lidSteps", "lidStepIn", "lidWindow"])}>
+        {params.lid === "flip" && (
+          <>
+            <div className="rowlabel">Hinge side<ResetMark label="Hinge side" show={(params.flipSide ?? "back") !== "back"} to="Back" onReset={() => { const next: Params = { ...params }; delete next.flipSide; onPatch(next); }} /></div>
+            <div className="iconseg full" role="group" aria-label="Hinge side">
+              {FLIP_SIDES.map(([v, text, title]) => (
+                <button key={v} type="button" title={title} aria-pressed={(params.flipSide ?? "back") === v} onClick={() => onPatch({ ...params, flipSide: v })}>{text}</button>
+              ))}
+            </div>
+          </>
+        )}
         <div className="grid2">{fields("secLid")}</div>
-        <div className="rowlabel">Hole<ResetMark label="Lid hole" show={(params.lidHole ?? "none") !== "none"} to="None" onReset={() => { const next: Params = { ...params }; delete next.lidHole; delete next.lidHoleD; delete next.lidHoleW; onPatch(next); }} /></div>
-        <div className="iconseg wrap" role="group" aria-label="Lid hole">
-          {LID_HOLES.map(([v, text, title]) => (
-            <button
-              key={v} type="button" title={title} aria-pressed={(params.lidHole ?? "none") === v}
-              onClick={() => { const next: Params = { ...params, lidHole: v }; delete next.lidHoleD; delete next.lidHoleW; onPatch(next); }}
-            >{text}</button>
-          ))}
-        </div>
+        {model?.flip && <p className="note">The hinge opens about {Math.round(model.flip.angle)}° before it is bent to its limit.</p>}
+        {params.lid !== "open" && (
+          <>
+            <div className="rowlabel">Hole<ResetMark label="Lid hole" show={(params.lidHole ?? "none") !== "none"} to="None" onReset={() => { const next: Params = { ...params }; delete next.lidHole; delete next.lidHoleD; delete next.lidHoleW; delete next.lidWindow; onPatch(next); }} /></div>
+            <div className="iconseg wrap" role="group" aria-label="Lid hole">
+              {LID_HOLES.map(([v, text, title]) => (
+                <button
+                  key={v} type="button" title={title} aria-pressed={(params.lidHole ?? "none") === v}
+                  onClick={() => { const next: Params = { ...params, lidHole: v }; delete next.lidHoleD; delete next.lidHoleW; if (v !== "rim") delete next.lidWindow; onPatch(next); }}
+                >{text}</button>
+              ))}
+            </div>
+          </>
+        )}
+        {params.lid !== "open" && params.lidHole === "rim" && (
+          <CheckField
+            label="Clear window" title="A clear acrylic plate under the rim: a display box or a display cabinet"
+            checked={params.lidWindow === true} def={false}
+            onChange={(on) => { const next: Params = { ...params, lidWindow: on }; if (!on) delete next.lidWindow; onPatch(next); }}
+          />
+        )}
         {params.lid === "removable" && (
           <CheckField
             label="Lip under the lid" title="A second plate under the lid that sits inside the walls and keeps it in place"
@@ -241,11 +281,50 @@ export function PanelDock({
             onChange={(on) => { const next: Params = { ...params, lidLipScore: on }; if (!on) delete next.lidLipScore; onPatch(next); }}
           />
         )}
-        <p className="note">Overhang makes a flat top wider than the box. A finger hole lifts a removable lid; a knob hole takes a knob&apos;s screw. A tissue slot makes a tissue box, a coin slot a money box, and a rim an open top with a frame, as on a pen holder.</p>
+        <p className="note">A flip-top lid is one plate with a living-hinge band across it: the strip behind the band is held by the wall&apos;s tabs and the rest swings up. A cap slips over the top like a shoebox lid. Steps stack smaller plates on the lid. A finger hole lifts a lid, a knob hole takes a knob&apos;s screw, a lamp hole an E27 holder; a tissue slot makes a tissue box, a coin slot a money box, and a rim an open top with a frame, with a clear window if you like.</p>
+      </Sec>
+      <Sec step="construction" title="Base & standing" meta={params.drawers ? "Upright" : [params.baseHole && params.baseHole !== "none" ? (params.baseHole === "rim" ? "Open" : "Hole") : "", params.upright ? "Upright" : ""].filter(Boolean).join(", ") || undefined} onReset={() => onResetSection("Base & standing", ["baseHole", "baseHoleD", "baseHoleW", "hangHoles", "upright"])}>
+        <div className="rowlabel">Opening</div>
+        <div className="iconseg full" role="group" aria-label="Base opening">
+          {BASE_HOLES.map(([v, text, title]) => (
+            <button
+              key={v} type="button" title={title} aria-pressed={(params.baseHole ?? "none") === v}
+              onClick={() => { const next: Params = { ...params, baseHole: v }; delete next.baseHoleD; delete next.baseHoleW; if (v === "none") delete next.baseHole; onPatch(next); }}
+            >{text}</button>
+          ))}
+        </div>
+        <div className="grid2">{fields("secBase")}</div>
+        <CheckField
+          label="Hanging holes" title="Two keyhole slots near the top of the base, to hang the box on two screws: a wall cabinet or a wall planter"
+          checked={params.hangHoles === true} def={false}
+          onChange={(on) => { const next: Params = { ...params, hangHoles: on }; if (!on) delete next.hangHoles; onPatch(next); }}
+        />
+        {(params.drawers ?? 0) > 0 ? <p className="note">A chest of drawers always stands up.</p> : (
+          <CheckField
+            label="Stand it up (cabinet)" title="Shows the box stood on its side: the base is the back and the lid the front door. The top of the drawing is the top of the cabinet."
+            checked={params.upright === true} def={false}
+            onChange={(on) => { const next: Params = { ...params, upright: on }; if (!on) delete next.upright; onPatch(next); }}
+          />
+        )}
+        <p className="note">Stood up, a box with a flip-top lid hinged on the left is a cabinet with a door, and dividers across the depth are its shelves. Hanging holes go near the top of the base, so a cabinet hangs on two screws.</p>
       </Sec>
       <Sec step="construction" title="Dividers" meta={(params.divX ?? 0) + (params.divY ?? 0) > 0 ? `${(params.divX ?? 0) + 1} × ${(params.divY ?? 0) + 1}` : undefined} onReset={() => onResetSection("Dividers", ["divX", "divY", "divH"])}>
         <div className="grid2">{fields("secDiv")}</div>
         <p className="note">Dividers split the inside into compartments. They stand in slots in the base, lock together where they cross, and step up onto a support ring.</p>
+      </Sec>
+      <Sec step="construction" title="Drawers" meta={params.drawers ? `${params.drawers}` : undefined} onReset={() => onResetSection("Drawers", ["drawers", "drawerPull"])}>
+        <div className="grid2">{fields("secDrawers")}</div>
+        {(params.drawers ?? 0) > 0 && (
+          <>
+            <div className="rowlabel">Pull</div>
+            <div className="iconseg full" role="group" aria-label="Drawer pull">
+              {([["knob", "Knob hole"], ["finger", "Finger hole"], ["none", "None"]] as const).map(([v, text]) => (
+                <button key={v} type="button" aria-pressed={(params.drawerPull ?? "knob") === v} onClick={() => { const next: Params = { ...params, drawerPull: v }; if (v === "knob") delete next.drawerPull; onPatch(next); }}>{text}</button>
+              ))}
+            </div>
+          </>
+        )}
+        <p className="note">A chest of drawers: the box stands on its side as a case open at the front, with a shelf between each two drawers. Each drawer is a small hinge box of its own with a front plate to glue on. Width and depth set the front of the case, height its depth. Needs a rounded shape, or a pill wider than it is tall.</p>
       </Sec>
       <Sec step="design" title="Cut-out pattern" meta={params.fret && params.fret !== "none" ? FRET_NAMES[params.fret] : undefined} onReset={() => onResetSection("Cut-out pattern", ["fret", "fretOn", "fretCell", "fretBar", "fretMotif", "fretShape", "fretSize", "fretMark"])}>
         <div className="rowlabel">Pattern</div>

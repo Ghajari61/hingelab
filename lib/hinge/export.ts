@@ -35,24 +35,28 @@ export function layerContent(model: Model, lay: Layout, p: Params, ctx?: BuildCo
     if (pt.kind === "wall") {
       const d = outlinePath(pt, ox, oy);
       L.outline.push(d); L.fills.push(d);
-      for (const c of pt.cols) L.hinge.push(...hingeCutPaths(c.x, colSegments(c.kind, model.hs, pt.hBody, p.bridge), pt.hBody, p, ox, oy));
+      const lp = pt.lattice ? { ...p, ...pt.lattice } : p;
+      for (const c of pt.cols) L.hinge.push(...hingeCutPaths(c.x, colSegments(c.kind, pt.hs ?? model.hs, pt.hBody, lp.bridge), pt.hBody, lp, ox, oy));
       for (const h of pt.holes ?? []) L.slots.push(polyD(h, ox, oy));
       marks(L, pt, ox, oy);
       if (pt.label) L.labels.push({ x: pt.label.x + ox, y: pt.label.y + oy, text: pt.name, size: pt.label.vertical ? clamp(pt.hBody / 11, 2.5, 5) : clamp(pt.hBody / 7, 3, 7), rot: pt.label.vertical ? -90 : 0 });
     } else {
-      const d = pt.ek ? polyD(roundedPointsXY(pt.edges, pt.r, pt.ek[0], pt.ek[1]), ox, oy) : roundedPath(pt.edges, pt.r, ox, oy);
+      const d = pt.pts ? polyD(pt.pts, ox, oy) : pt.ek ? polyD(roundedPointsXY(pt.edges, pt.r, pt.ek[0], pt.ek[1]), ox, oy) : roundedPath(pt.edges, pt.r, ox, oy);
       L.outline.push(d); L.fills.push(d);
       for (const s of pt.slots) L.slots.push(polyD(s, ox, oy));
+      for (const s of pt.hinge ?? []) L.hinge.push(polyD(s, ox, oy));
+      for (const s of pt.hingeLines ?? []) L.hinge.push("M" + s.map((q) => `${r3(q[0] + ox)},${r3(q[1] + oy)}`).join(" L"));
       if (pt.scoreR) (L.score ??= []).push(roundedPath(pt.edges, pt.scoreR, ox, oy));
       marks(L, pt, ox, oy);
       const w = pt.bbox.x1 - pt.bbox.x0, h = pt.bbox.y1 - pt.bbox.y0;
       const size = pt.rim ? clamp(pt.rim * 0.45, 2, 5) : clamp(Math.min(w, h) / 9, 3, 8);
-      const text = pt.name === "BASE" && ctx ? baseTextShape(p, pt.edges, model.R - p.T, ctx) : null;
+      const text = pt.name === "BASE" && !pt.noText && ctx ? baseTextShape(p, pt.edges, model.R - p.T, ctx) : null;
       if (text?.contours.length) (L.engrave ??= []).push(contoursD(text.contours, ox, oy));
       // The part name moves above the text under the box.
       const lift = text?.contours.length ? text.height / 2 + size * 0.9 : 0;
       // An open top's label sits on the bottom of its rim.
-      L.labels.push({ x: ox, y: lift ? oy - lift : pt.rim ? oy + pt.bbox.y1 - pt.rim / 2 : pt.hole ? oy + pt.hole + size : oy, text: pt.name, size });
+      if (pt.labelAt) L.labels.push({ x: ox + pt.labelAt[0], y: oy + pt.labelAt[1], text: pt.name, size });
+      else L.labels.push({ x: ox, y: lift ? oy - lift : pt.rim ? oy + pt.bbox.y1 - pt.rim / 2 : pt.hole ? oy + pt.hole + size : oy, text: pt.name, size });
     }
   }
   return L;

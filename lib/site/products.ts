@@ -29,7 +29,7 @@ const pic = (id: string, ids: string[]) => `/presets/${id}/${ids.includes(FEATUR
 
 export function siteProducts(): SiteProduct[] {
   const core: SiteProduct[] = [
-    { id: "hinge", name: "Hinge Box", blurb: "Living-hinge boxes in rounded, pill, polygon and cylinder shapes, with a bend check.", icon: "hinge", href: "/app/editor/local?p=hinge", picture: pic("hinge", HINGE_PRESETS.map((p) => p.id)), presets: HINGE_PRESETS.length },
+    { id: "hinge", name: "Hinge Box", blurb: "Living-hinge boxes, cabinets with doors, chests of drawers and lamp shades, with a bend check.", icon: "hinge", href: "/app/editor/local?p=hinge", picture: pic("hinge", HINGE_PRESETS.map((p) => p.id)), presets: HINGE_PRESETS.length },
     { id: "letters", name: "Letters", blurb: "Letter boxes, solid name signs and stencils from any text and font.", icon: "letters", href: "/app/editor/local?p=letters", picture: pic("letters", LETTER_PRESETS.map((p) => p.id)), presets: LETTER_PRESETS.length },
     { id: "parametric", name: "Parametric", blurb: "Sliced sculptures from 3D files, photos or text: fins, stacks, waffles and papercraft.", icon: "parametric", href: "/app/editor/local?p=parametric", picture: pic("parametric", PARAMETRIC_PRESETS.map((p) => p.id)), presets: PARAMETRIC_PRESETS.length },
   ];

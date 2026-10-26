@@ -39,7 +39,15 @@ export const HINGE_FIELD_HELP: Record<NumericKey, string> = {
   divX: "How many dividers split the box across its width. Each runs front to back and stands in slots in the base.",
   divY: "How many dividers split the box across its depth. Each runs left to right; where dividers cross they lock with half-lap slots.",
   divH: "How tall the dividers stand. 0 makes them as tall as fits: just under a fixed lid, or under a lid's lip.",
-  lidHoleW: "How wide the tissue or coin slot is. About 25 to 35 mm lets tissues pull through; 3 to 4 mm takes coins.",
+  lidHoleW: "How wide the tissue or coin slot is. About 25 to 35 mm lets tissues pull through; 3 to 4 mm takes coins. For a rim, how wide the frame left round the open top is.",
+  flipBand: "How wide a flip lid's living-hinge band is. A wider band opens further before it is bent to its limit; left out, it is sized to open about 105°.",
+  flipFixed: "The strip between a flip lid's hinge band and its edge, held by the wall's top tabs. Left out, it is just wide enough for the tab slots.",
+  capH: "How far a cap lid comes down over the box, its top included. Left out, it is 40% of the box, 25 to 60 mm.",
+  lidSteps: "How many smaller plates are stacked on the lid, each glued on the one below, for a stepped or domed top.",
+  lidStepIn: "How much smaller each step is than the one under it, all round.",
+  baseHoleD: "The diameter of the hole in the base: about 10 mm for a lamp cord, 8 to 15 mm to drain a planter.",
+  baseHoleW: "How wide the band left round an open bottom is, as on a lamp shade.",
+  drawers: "How many drawers the box holds. The box then stands on its side as an open-fronted case, with a shelf between each two drawers.",
   ...HINGE,
 };
 

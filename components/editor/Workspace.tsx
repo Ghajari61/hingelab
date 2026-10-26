@@ -12,14 +12,17 @@ import type { ProductId } from "@/lib/supabase/types";
 import { isGeneratorId } from "@/lib/generators/ids";
 import { START_LAZY, START_PRESETS } from "@/lib/generators/startPresets";
 import { TEMPLATE_PRESETS } from "@/lib/templates/presets";
+import { HINGE_PRESETS } from "@/lib/hinge/presets";
 import { AI_START_KEY } from "@/lib/ai/types";
-import { StartGallery, type StartChoice } from "@/components/shell/StartGallery";
+import type { StartChoice } from "@/components/shell/StartGallery";
 import { Onboarding } from "@/components/shell/Onboarding";
 
 // Each product is its own chunk, loaded when it opens.
 const LettersEditor = lazy(() => import("@/components/letters/LettersEditor"));
 const ParametricEditor = lazy(() => import("@/components/parametric/ParametricEditor"));
 const GeneratorEditor = lazy(() => import("@/components/generators/GeneratorEditor"));
+// Only Home shows the start gallery (the editor opens on the Hinge Box), so it loads when it opens.
+const StartGallery = lazy(() => import("@/components/shell/StartGallery").then((m) => ({ default: m.StartGallery })));
 
 const PRODUCT_KEY = "hingelab-product";
 
@@ -58,6 +61,11 @@ function urlPreset(p: Product | null): StartChoice | null {
     const tid = q.get("template");
     const t = tid && Object.prototype.hasOwnProperty.call(TEMPLATE_PRESETS, tid) ? TEMPLATE_PRESETS[tid] : undefined;
     if (t && t.product === p) return { product: p, preset: { id: `template-${tid}`, name: t.name, note: t.note, params: t.params } };
+    // A Hinge Box ready-made box (links from the collection pages).
+    if (p === "hinge") {
+      const hp = HINGE_PRESETS.find((x) => x.id === q.get("preset"));
+      return hp ? { product: p, preset: hp as unknown as StartChoice["preset"] } : null;
+    }
     if (!isGeneratorId(p)) return null;
     const id = q.get("preset");
     if (!id) return null;
@@ -93,7 +101,7 @@ const PRODUCT_ID: Record<CoreProduct, ProductId> = { hinge: "hinge-box", letters
 const fromId = (id: ProductId): Product => (id === "letters" ? "letters" : id === "parametric" ? "parametric" : "hinge");
 
 /**
- * Guest editor: opens on the start gallery unless `?p=` names a product; each product keeps its own autosave.
+ * Guest editor: opens on the Hinge Box unless `?p=` names a product (Home shows the start gallery); each product keeps its own autosave.
  * Cloud project: the product is fixed by the project; switching products starts a new cloud project.
  * Parametric cloud projects are Pro; when the plan refuses one, Parametric opens in the guest editor.
  * Generators design on the device, so picking one from a cloud project opens the guest editor.
@@ -104,7 +112,8 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
     const choice = chooseInitial(readLocalCopy<Record<string, unknown>>(cloud.id), { params: cloud.params, updated_at: cloud.updatedAt });
     return { ...cloud, params: choice.params, push: choice.push };
   });
-  const [product, setProduct] = useState<Product | null>(() => (doc ? fromId(doc.product) : urlProduct()));
+  // with no product named, the editor opens on the Hinge Box (the product picker in the header switches)
+  const [product, setProduct] = useState<Product | null>(() => (doc ? fromId(doc.product) : urlProduct() ?? "hinge"));
   const [start, setStart] = useState<StartChoice | null>(() => (doc ? null : urlPreset(product)));
   // A share link (`#share=…`) opens its design read-only; the decoder loads only for such links.
   const [opening, setOpening] = useState(() => !doc && !!product && /(?:^#|&)share=/.test(window.location.hash));
@@ -196,7 +205,7 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
       </div>
     );
   }
-  if (!product) return <StartGallery onPick={pick} />;
+  if (!product) return <Suspense fallback={<div className="boot">Loading…</div>}><StartGallery onPick={pick} /></Suspense>;
   const preset = start?.product === product ? start.preset : undefined;
   const key = `${product}|${preset?.id ?? "autosave"}`;
   const boot = <div className="boot">Loading{product === "letters" ? " Letters" : product === "parametric" ? " Parametric" : ""}…</div>;

@@ -78,7 +78,7 @@ export function finishScene(inner: THREE.Group): Scene3D {
 }
 
 /** Cut lines (SVG path data in sheet mm) painted on a transparent sheet just above the parts. */
-function cutOverlay(d: string[], width: number, height: number, z: number): THREE.Mesh | null {
+export function cutOverlay(d: string[], width: number, height: number, z: number): THREE.Mesh | null {
   if (!d.length || typeof document === "undefined" || typeof Path2D === "undefined" || width <= 0 || height <= 0) return null;
   const k = Math.min(8, 4096 / width, 4096 / height);
   const c = document.createElement("canvas");

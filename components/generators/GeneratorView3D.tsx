@@ -37,12 +37,15 @@ export default function GeneratorView3D({ out, lay, T, material, units, frameKey
   const [fold, setFold] = useState(1);
   const folds = useMemo(() => !!out?.parts.some((p) => p.views3d?.some((q) => q.frames?.length)), [out]);
   const editable = !!edit;
-  const rebuildOn = folds ? 0 : explode;
+  // With a layout, the design opens out in place (every part to its place on the sheet); folding
+  // boxes fold and explode in place; without a layout the scene is rebuilt as it explodes.
+  const unfolds = !folds && !!lay && !flat;
+  const rebuildOn = folds || unfolds ? 0 : explode;
   const scene = useMemo(() => {
     if (!out || out.error) return null;
     if (flat && lay) return flatScene(flatOf(lay), T);
-    return generatorScene(out, T, rebuildOn);
-  }, [out, lay, T, flat, rebuildOn]);
+    return generatorScene(out, T, rebuildOn, 1, !folds && lay ? lay : undefined);
+  }, [out, lay, T, flat, rebuildOn, folds]);
   useEffect(() => {
     if (!scene?.fold) return;
     scene.fold(fold);
@@ -60,7 +63,7 @@ export default function GeneratorView3D({ out, lay, T, material, units, frameKey
   return (
     <QuadView
       decimals={editorPrefs.decimals}
-      {...quadProps(v)} id="preview3d" model={scene} look={lookOf(material)} frameKey={key} units={units} {...(folds ? { explode } : {})}
+      {...quadProps(v)} id="preview3d" model={scene} look={lookOf(material)} frameKey={key} units={units} {...(folds || unfolds ? { explode } : {})}
       measure={flat || (explode === 0 && fold === 1)} label="The design in 3D: Top, Front, Left and Perspective views" onSelect={setSel} grips={grips}
     >
       <View3DBarTools v={v} flat>

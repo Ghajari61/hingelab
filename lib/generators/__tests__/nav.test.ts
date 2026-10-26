@@ -43,3 +43,17 @@ describe("collections and free tools", () => {
     expect(TOOLS.map((t) => t.id)).toEqual(["thickness-resizer", "svg-to-stl", "nesting"]);
   });
 });
+
+describe("product picker", () => {
+  it("has a picture that exists for every product", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { GENERATOR_IDS } = await import("@/lib/generators/ids");
+    const src = readFileSync(join(process.cwd(), "components/editor/ControlBar.tsx"), "utf8");
+    const block = src.slice(src.indexOf("PRODUCT_PICTURE"), src.indexOf("CORE_BLURB"));
+    for (const id of ["hinge", "letters", "parametric", ...GENERATOR_IDS]) {
+      const m = new RegExp(`(?:^|[\\s{,])"?${id}"?: "([^"]+)"`).exec(block);
+      expect(m, id).not.toBeNull();
+      expect(existsSync(join(process.cwd(), "public", m![1])), m![1]).toBe(true);
+    }
+  });
+});

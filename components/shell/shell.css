@@ -2,15 +2,28 @@
 
 /* ---------- header ---------- */
 .hdr-center { display: flex; justify-content: center; flex: 1 1 auto; min-width: 0; }
-.product-tabs button { height: 30px; padding-inline: 12px; white-space: nowrap; flex: none; }
-.gen-menu { position: relative; display: inline-flex; }
-.gen-menu > button svg:last-child { margin-inline-start: -2px; opacity: .7; }
-.gen-dropdown { position: absolute; top: calc(100% + 8px); right: 0; z-index: 60; width: 320px; display: grid; gap: 2px; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-3); animation: ui-pop var(--dur-fast) var(--ease-out); transform-origin: top right; }
-.product-tabs .gen-dropdown button { height: auto; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px; text-align: start; border-radius: 8px; color: var(--fg); }
-.gen-dropdown button[aria-current="true"] { background: var(--surface-hover); }
-.gen-dropdown .gi { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; background: var(--surface-hover); }
-.gen-dropdown .gt { display: grid; gap: 2px; font-size: 13px; }
-.gen-dropdown .gt small { color: var(--fg-dim); font-size: 12px; line-height: 1.35; font-weight: 400; white-space: normal; }
+/* Product picker (D204): one button with the open product's picture; a panel of pictures to choose from. */
+.product-picker { position: relative; }
+.pp-trigger { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px 0 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-field); color: var(--fg); font: 600 13px/1 var(--font-ui); cursor: pointer; white-space: nowrap; transition: border-color var(--dur-fast), background var(--dur-fast); }
+.pp-trigger:hover, .pp-trigger[aria-expanded="true"] { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: var(--panel); }
+.pp-trigger svg { opacity: .7; }
+.pp-thumb { display: grid; place-items: center; width: 36px; height: 28px; border-radius: 7px; background: var(--canvas-bg); overflow: hidden; }
+.pp-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.pp-panel { position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 80; width: min(860px, calc(100vw - 24px)); max-height: min(78vh, 720px); overflow-y: auto; padding: 14px 16px 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-3); }
+.pp-head { display: flex; align-items: center; gap: 6px; margin: 6px 2px 10px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--fg-dim); }
+.pp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 8px; }
+.pp-core { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pp-tile { display: grid; gap: 4px; align-content: start; padding: 6px 6px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--fg); text-align: start; font: inherit; cursor: pointer; transition: border-color var(--dur-fast), box-shadow var(--dur-fast), transform var(--dur-fast); }
+.pp-tile:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: var(--shadow-2); transform: translateY(-1px); }
+.pp-tile:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.pp-tile[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.pp-pic { display: grid; place-items: center; aspect-ratio: 3 / 2; border-radius: 8px; background: var(--canvas-bg); overflow: hidden; }
+.pp-pic img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
+.pp-core .pp-pic { aspect-ratio: 16 / 9; }
+.pp-name { display: flex; align-items: center; gap: 6px; padding: 2px 4px 0; font-size: 13px; font-weight: 650; }
+.pp-name svg { color: var(--accent); flex: none; }
+.pp-tile small { padding: 0 4px; font-size: 11.5px; line-height: 1.35; color: var(--fg-dim); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+@media (max-width: 640px) { .pp-core { grid-template-columns: minmax(0, 1fr); } .pp-panel { position: fixed; top: 60px; left: 12px; right: 12px; width: auto; transform: none; } }
 .doc-title { max-width: 260px; }
 .hdr-tools { display: flex; align-items: center; gap: 2px; margin-inline-start: 8px; }
 .hdr-btn { width: 34px; height: 34px; display: grid; place-items: center; border: 0; background: none; color: var(--fg-dim); border-radius: 8px; cursor: pointer; transition: background var(--dur-fast), color var(--dur-fast); }
@@ -110,7 +123,6 @@
 @media (max-width: 1180px) {
   .main { grid-template-columns: 208px minmax(0, 1fr) 320px; }
   .doc-title { display: none; }
-  .product-tabs button { padding-inline: 8px; }
   .gcards.c3 .gcard { padding-inline: 3px; }
   .gcards.c3 .gcard .lbl { font-size: 10.5px; }
 }
@@ -120,15 +132,6 @@
   /* Option groups wrap onto rows (one column on phones) instead of a clipped horizontal strip. */
   .gallery-scroll { grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); }
   .hdr-center { order: 5; flex-basis: 100%; position: relative; }
-  /* The tab strip scrolls if it still does not fit; the Generators menu is placed against the
-     header row (not the strip) so the strip's overflow does not clip it. */
-  .product-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-  .product-tabs::-webkit-scrollbar { display: none; }
-  .product-tabs.more-start::before, .product-tabs.more-end::after { content: ""; position: sticky; z-index: 1; flex: none; width: 22px; pointer-events: none; }
-  .product-tabs.more-start::before { left: 0; margin-inline-end: -24px; background: linear-gradient(to right, var(--field), transparent); }
-  .product-tabs.more-end::after { right: 0; margin-inline-start: -24px; background: linear-gradient(to left, var(--field), transparent); }
-  .gen-menu { position: static; }
-  .gen-dropdown { max-width: calc(100vw - 16px); }
   .dock-col { border-left: 0; }
 }
 /* Portrait tablets: the drawing and the settings side by side, the options rail a short strip above. */
@@ -140,8 +143,6 @@
   .main > .dock-col .dock { overflow-y: auto; }
 }
 @media (max-width: 480px) {
-  .product-tabs > button > svg, .gen-menu > button > svg:first-child { display: none; }
-  .product-tabs button { padding-inline: 8px; }
 }
 .pe-3d { background: var(--canvas-bg); }
 .stage-3d[hidden] { display: none; }
@@ -387,25 +388,11 @@ details.sec > summary:hover .sec-rst, .sec-rst:focus-visible { opacity: 1; }
 .sec-wrap:hover .sec-rst, .sec-wrap:focus-within .sec-rst { opacity: 1; }
 
 /* Shared design-to-export workflow, for web and the Windows editor. */
-.dock-col { position: relative; min-width: 0; grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.dock-col { position: relative; min-width: 0; grid-template-rows: auto minmax(0, 1fr) auto; }
 .dock-body { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .dock-body > .dock { flex: 1; min-height: 0; }
-.dock-body[hidden], .dock-workflow[hidden] { display: none; }
+.dock-body[hidden] { display: none; }
 .dock-col[data-detail="simple"] [data-advanced] { display: none; }
-.dock-workflow { padding: 10px 12px; border-bottom: 1px solid var(--line); }
-.dock-detail { display: flex; gap: 4px; align-items: center; margin-bottom: 10px; }
-.dock-detail > span { margin-inline-end: auto; font-size: 12px; font-weight: 600; color: var(--fg); }
-.dock-detail button, .steps button { color: var(--fg-dim); background: transparent; border: 1px solid transparent; border-radius: 7px; cursor: pointer; font: inherit; }
-.dock-detail button { min-height: 30px; padding: 4px 8px; font-size: 12px; }
-.dock-detail button[aria-pressed="true"] { color: var(--select-ink); background: var(--select); }
-.steps ol { display: flex; flex-wrap: wrap; gap: 4px; padding: 0; margin: 0; list-style: none; }
-.steps button { display: inline-flex; gap: 5px; align-items: center; padding: 5px 6px; min-height: 30px; font-size: 11px; }
-.steps button:hover:not(:disabled), .steps button[aria-current="step"] { color: var(--fg); border-color: var(--line-strong); background: var(--field); }
-.steps button:disabled { opacity: .5; cursor: default; }
-.steps .n { font-variant-numeric: tabular-nums; opacity: .7; }
-.steps .b { border-radius: 4px; padding: 0 4px; background: var(--field); font-weight: 700; }
-.steps-note { font-size: 12px; line-height: 1.5; margin: 8px 0 0; color: var(--fg-dim); }
-.steps-note button { text-decoration: underline; padding: 0; }
 .dock-body .sec-wrap { scroll-margin-block-start: 8px; }
 .dock-resize { position: absolute; inset: 0 auto 0 -4px; width: 8px; cursor: col-resize; touch-action: none; z-index: 8; }
 .dock-resize:hover, .dock-resize:focus-visible { background: var(--accent); opacity: .7; }

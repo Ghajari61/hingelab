@@ -38,65 +38,67 @@ export const PRODUCT_INFO: Record<Product, { name: string; icon: ReactNode }> = 
   ...(Object.fromEntries(GENERATOR_IDS.map((id) => [id, { name: GENERATOR_INFO[id].name, icon: GEN_ICON[GENERATOR_INFO[id].icon] }])) as Record<GeneratorId, { name: string; icon: ReactNode }>),
 };
 
-/** Product switcher in the header: the three core products, then the generators in a menu. */
+/** A ready-made design's picture for each product (public/presets), shown in the product picker. */
+export const PRODUCT_PICTURE: Record<Product, string> = {
+  hinge: "/presets/hinge/gift-box.svg", letters: "/presets/letters/hello-sign.svg", parametric: "/presets/parametric/head-stack.svg",
+  shadowbox: "/presets/shadowbox/star-tunnel.svg", boxes: "/presets/boxes/small-box.svg", paperbox: "/presets/paperbox/jewelry-6x6x3.svg",
+  sign: "/presets/sign/welcome-arch.svg", topper: "/presets/topper/happy-birthday.svg", popup: "/presets/popup/spiral-trivet-bowl.svg",
+  clock: "/presets/clock/wall-roman.svg", puzzle: "/presets/puzzle/kids-12.svg", qr: "/presets/qr/keychain.svg",
+  keyrack: "/presets/keyrack/home-sweet-home.svg", tablenum: "/presets/tablenum/wedding-arch.svg", trophy: "/presets/trophy/star-award.svg",
+  calibration: "/presets/calibration/plywood-3.svg",
+};
+
+const CORE_BLURB: Record<CoreProduct, string> = {
+  hinge: "Living-hinge boxes, cabinets with doors, chests of drawers and lamp shades.",
+  letters: "Letter boxes, solid signs and stencils from any text.",
+  parametric: "Sliced sculptures: fins, layers, waffles and clocks.",
+};
+
+/**
+ * Product picker in the header: one button with the open product; it opens a panel of pictures,
+ * the three main products first and every generator after, to pick from.
+ */
 export function ProductTabs({ product, onProduct }: { product: Product; onProduct: (p: Product) => void }) {
   const [open, setOpen] = useState(false);
-  const menuId = useId();
+  const panelId = useId();
   const box = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setOpen(false); trigger.current?.focus(); } };
     document.addEventListener("pointerdown", onDown);
     document.addEventListener("keydown", onKey);
+    box.current?.querySelector<HTMLElement>('.pp-tile[aria-current="true"], .pp-tile')?.focus();
     return () => { document.removeEventListener("pointerdown", onDown); document.removeEventListener("keydown", onKey); };
   }, [open]);
-  // On narrow screens the strip scrolls: fade the edges that hide tabs, and keep the current tab in view.
-  const strip = useRef<HTMLDivElement>(null);
-  const [more, setMore] = useState({ start: false, end: false });
-  useEffect(() => {
-    const el = strip.current;
-    if (!el) return;
-    const update = () => setMore({ start: el.scrollLeft > 1, end: el.scrollLeft + el.clientWidth < el.scrollWidth - 1 });
-    const on = el.querySelector<HTMLElement>(':scope > button[aria-pressed="true"], .gen-menu > button[aria-pressed="true"]');
-    if (on) {
-      const a = el.getBoundingClientRect(), b = on.getBoundingClientRect();
-      if (b.right > a.right) el.scrollLeft += b.right - a.right + 24;
-      else if (b.left < a.left) el.scrollLeft -= a.left - b.left + 24;
-    }
-    update();
-    el.addEventListener("scroll", update, { passive: true });
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => { el.removeEventListener("scroll", update); ro.disconnect(); };
-  }, [product]);
-  const gen = isGeneratorId(product) ? product : null;
+  const tile = (p: Product) => (
+    <button
+      key={p} type="button" className="pp-tile" aria-current={product === p || undefined}
+      onClick={() => { setOpen(false); if (p !== product) onProduct(p); }}
+    >
+      <span className="pp-pic"><img src={PRODUCT_PICTURE[p]} alt="" width={150} height={100} loading="lazy" /></span>
+      <span className="pp-name">{PRODUCT_INFO[p].icon}{PRODUCT_INFO[p].name}</span>
+      <small>{isGeneratorId(p) ? GENERATOR_INFO[p].blurb : CORE_BLURB[p as CoreProduct]}</small>
+    </button>
+  );
   return (
-    <div ref={strip} className={`iconseg product-tabs${more.start ? " more-start" : ""}${more.end ? " more-end" : ""}`} role="group" aria-label="Product">
-      {CORE_PRODUCTS.map((p) => (
-        <button key={p} type="button" aria-pressed={product === p} onClick={() => onProduct(p)}>
-          {PRODUCT_INFO[p].icon}{PRODUCT_INFO[p].name}
-        </button>
-      ))}
-      <div className="gen-menu" ref={box}>
-        <button type="button" aria-pressed={!!gen} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-          {gen ? PRODUCT_INFO[gen].icon : <Shapes size={16} aria-hidden />}{gen ? PRODUCT_INFO[gen].name : "Generators"}<ChevronDown size={13} aria-hidden />
-        </button>
-        {open && (
-          <div className="gen-dropdown" role="menu" aria-label="Generators">
-            {GENERATOR_IDS.map((id) => (
-              <button
-                key={id} type="button" role="menuitem" aria-current={product === id || undefined}
-                aria-label={GENERATOR_INFO[id].name} aria-describedby={`${menuId}-${id}`}
-                onClick={() => { setOpen(false); onProduct(id); }}
-              >
-                <span className="gi">{PRODUCT_INFO[id].icon}</span>
-                <span className="gt"><b>{GENERATOR_INFO[id].name}</b><small id={`${menuId}-${id}`}>{GENERATOR_INFO[id].blurb}</small></span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+    <div className="product-picker" ref={box}>
+      <button
+        ref={trigger} type="button" className="pp-trigger" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? panelId : undefined}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className="pp-thumb"><img src={PRODUCT_PICTURE[product]} alt="" width={36} height={24} /></span>
+        {PRODUCT_INFO[product].name}<ChevronDown size={14} aria-hidden />
+      </button>
+      {open && (
+        <div className="pp-panel" id={panelId} role="dialog" aria-label="Choose what to make">
+          <p className="pp-head">Main products</p>
+          <div className="pp-grid pp-core">{CORE_PRODUCTS.map(tile)}</div>
+          <p className="pp-head"><Shapes size={14} aria-hidden />Generators</p>
+          <div className="pp-grid">{GENERATOR_IDS.map(tile)}</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -105,6 +107,13 @@ export const LID_OPTS = (onLid: (v: string) => void): Opt[] => [
   { v: "open", text: "Open tray", title: "No lid", onClick: () => onLid("open") },
   { v: "fixed", text: "Fixed lid", title: "A lid joined to the walls", onClick: () => onLid("fixed") },
   { v: "removable", text: "Removable lid", title: "A lid with a lip that lifts off", onClick: () => onLid("removable") },
+];
+
+/** The Hinge Box's lids: the shared three, a flip-top lid and a cap. */
+export const HINGE_LID_OPTS = (onLid: (v: string) => void): Opt[] => [
+  ...LID_OPTS(onLid),
+  { v: "flip", text: "Flip-top lid", title: "One plate with a living-hinge band: it swings open, and makes a cabinet door when the box stands up", onClick: () => onLid("flip") },
+  { v: "cap", text: "Cap lid", title: "A shallow box that slips over the top, like a shoebox or hat-box lid", onClick: () => onLid("cap") },
 ];
 
 /** Hinge Box gallery: shape, lid and hinge pattern. */
@@ -133,7 +142,8 @@ export function hingeGroups({ params, plan = "pro", onShape, onLid, onPattern, o
   ].map((o) => ({ ...o, locked: !canUsePattern(plan, o.v as Params["pattern"]) }));
   return [
     { label: "Shape", name: "Box shape", art: "shape", value: params.shape, options: shape, home: DEFAULTS.shape },
-    { label: "Lid", name: "Lid type", art: "lid", value: params.lid, options: LID_OPTS(onLid), cols: 3, home: DEFAULTS.lid },
+    // A chest of drawers is open at the front: picking a lid turns it back into a box.
+    { label: "Lid", name: "Lid type", art: "lid", value: params.drawers ? "open" : params.lid, options: HINGE_LID_OPTS(onLid), cols: 3, home: DEFAULTS.lid },
     { label: "Hinge pattern", name: "Hinge pattern", art: "pattern", value: params.pattern, options: pattern, home: DEFAULTS.pattern, tools: onRandom && <RandomMark label="Pattern" onRandom={onRandom} /> },
     ...(onVariant ? [{
       label: "Hinge style", name: "Hinge style", art: "variant", value: hingeVariantOf(params), cols: 3 as const,

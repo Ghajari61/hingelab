@@ -17,6 +17,8 @@ import { HINGE_FIELD_HELP } from "@/lib/help/fieldHelp";
 import { clone, DEFAULTS, exportSVG, MATERIALS, mergeParams, type Params } from "@/lib/hinge";
 import { HINGE_PRESETS, hingePresetParams, randomHingeBox } from "@/lib/hinge/presets";
 import { defaultRimWidth, isLidSlot, lidSlotSize } from "@/lib/hinge/lidSlot";
+import { defaultCapH, LID_STEP_IN, roundHoleD } from "@/lib/hinge/model";
+import { flipBandAuto } from "@/lib/hinge/flip";
 import { SHEET_PRESETS } from "@/lib/studio/library";
 import { FRET_BUILT_IN, FRET_NAMES } from "@/lib/generators/fretwork";
 import { MOTIF_IDS, MOTIF_NAMES } from "@/lib/generators/motifs";
@@ -63,8 +65,10 @@ const HINGE_SECTIONS: { id: FieldDef["sec"] | "secShape"; title: string; help: s
   { id: "secMat", title: "Material", help: "The sheet you cut: its thickness and the laser's kerf." },
   { id: "secHinge", title: "Hinge", help: "The living-hinge pattern cut into the bending wall." },
   { id: "secJoints", title: "Joints", help: "Tabs and slots that join the wall to the base and lid." },
-  { id: "secLid", title: "Lid", help: "The lid's opening, overhang and lip." },
-  { id: "secDiv", title: "Dividers", help: "Strips that split the inside into compartments." },
+  { id: "secLid", title: "Lid", help: "The lid's opening, overhang and lip; a flip-top's hinge, a cap's height and stacked steps." },
+  { id: "secBase", title: "Base & standing", help: "An opening in the base, hanging holes, and standing the box up as a cabinet." },
+  { id: "secDiv", title: "Dividers", help: "Strips that split the inside into compartments (shelves when the box stands up)." },
+  { id: "secDrawers", title: "Drawers", help: "A chest of drawers: an open-fronted case with drawers that slide in." },
   { id: "secFret", title: "Cut-out pattern", help: "A decorative pattern cut through the lid and the wall's flat stretches." },
   { id: "secText", title: "Text under the box", help: "A name, phone number or message engraved on the base." },
   { id: "secSheet", title: "Sheet", help: "Your laser bed and how parts are laid out on it." },
@@ -93,7 +97,11 @@ function hingeProduct(): DProduct {
     ],
     secShape: [
       { kind: "choice", key: "shape", label: "Shape", options: (["rect", "pill", "poly", "cyl"] as const).map((v) => ({ v, text: SHAPE_NAMES[v], pro: !FREE_SHAPES.includes(v) })) },
-      { kind: "choice", key: "lid", label: "Lid", options: [{ v: "open", text: "Open tray", title: "No lid" }, { v: "fixed", text: "Fixed lid", title: "A lid joined to the walls" }, { v: "removable", text: "Removable lid", title: "A lid with a lip that lifts off" }] },
+      { kind: "choice", key: "lid", label: "Lid", options: [
+        { v: "open", text: "Open tray", title: "No lid" }, { v: "fixed", text: "Fixed lid", title: "A lid joined to the walls" }, { v: "removable", text: "Removable lid", title: "A lid with a lip that lifts off" },
+        { v: "flip", text: "Flip-top lid", title: "One plate with a living-hinge band that swings open; a cabinet door when the box stands up" },
+        { v: "cap", text: "Cap lid", title: "A shallow box that slips over the top, like a shoebox lid" },
+      ] },
     ],
     secMat: [{ kind: "choice", key: "material", label: "Material", options: MATERIAL_OPTIONS }],
     secHinge: [
@@ -116,11 +124,29 @@ function hingeProduct(): DProduct {
         { v: "tissue", text: "Tissue", title: "A long slot to pull tissues through" },
         { v: "coin", text: "Coin", title: "A narrow slot for coins: a money box" },
         { v: "rim", text: "Rim", title: "An open top: the lid's middle is cut away, leaving a rim round the edge" },
+        { v: "lamp", text: "Lamp", title: "A 40 mm hole for an E27 lamp holder" },
       ] },
+      { kind: "choice", key: "flipSide", label: "Hinge side", help: "Which side a flip-top lid's hinge runs along.", default: "back", options: [{ v: "back", text: "Back" }, { v: "left", text: "Left" }, { v: "right", text: "Right" }, { v: "front", text: "Front" }] },
+      { kind: "number", key: "flipBand", label: "Hinge band", help: HINGE_FIELD_HELP.flipBand, unit: "mm", min: 4, max: 300, step: 0.5, default: 30 },
+      { kind: "number", key: "capH", label: "Cap height", help: HINGE_FIELD_HELP.capH, unit: "mm", min: 12, max: 3000, step: 1, default: 30 },
+      { kind: "number", key: "lidSteps", label: "Steps", help: HINGE_FIELD_HELP.lidSteps, unit: "", min: 0, max: 3, step: 1, int: true, default: 0 },
+      { kind: "number", key: "lidStepIn", label: "Step size", help: HINGE_FIELD_HELP.lidStepIn, unit: "mm", min: 1, max: 60, step: 0.5, default: 6 },
+      { kind: "toggle", key: "lidWindow", label: "Clear window", help: "A clear acrylic plate under a rim: a display box." },
       { kind: "number", key: "lidHoleD", label: "Hole size", help: HINGE_FIELD_HELP.lidHoleD, unit: "mm", min: 1, max: 500, step: 0.5, default: 22 },
       { kind: "number", key: "lidHoleW", label: "Slot width", help: HINGE_FIELD_HELP.lidHoleW, unit: "mm", min: 1, max: 200, step: 0.5, default: 30 },
       { kind: "number", key: "lidOver", label: "Overhang", help: HINGE_FIELD_HELP.lidOver, unit: "mm", min: 0, max: 100, step: 0.5, default: 0 },
       { kind: "toggle", key: "lidLipScore", label: "Score the lip on the lid", help: "Marks the lip's outline on the lid, so the lip lines up when you glue it. Put the scored side down." },
+    ],
+    secBase: [
+      { kind: "choice", key: "baseHole", label: "Opening", default: "none", options: [{ v: "none", text: "None" }, { v: "hole", text: "Hole", title: "A lamp cord or a drain" }, { v: "rim", text: "Open bottom", title: "A rim round an open bottom: a lamp shade" }] },
+      { kind: "number", key: "baseHoleD", label: "Hole size", help: HINGE_FIELD_HELP.baseHoleD, unit: "mm", min: 2, max: 500, step: 0.5, default: 10 },
+      { kind: "number", key: "baseHoleW", label: "Bottom rim", help: HINGE_FIELD_HELP.baseHoleW, unit: "mm", min: 1, max: 200, step: 0.5, default: 13 },
+      { kind: "toggle", key: "hangHoles", label: "Hanging holes", help: "Two keyhole slots near the top of the base, to hang the box on screws." },
+      { kind: "toggle", key: "upright", label: "Stand it up (cabinet)", help: "Shows the box stood on its side: the base at the back and the lid as the door." },
+    ],
+    secDrawers: [
+      { kind: "number", key: "drawers", label: "Drawers", help: HINGE_FIELD_HELP.drawers, unit: "", min: 0, max: 4, step: 1, int: true, default: 0 },
+      { kind: "choice", key: "drawerPull", label: "Pull", default: "knob", options: [{ v: "knob", text: "Knob hole" }, { v: "finger", text: "Finger hole" }, { v: "none", text: "None" }] },
     ],
     secDiv: [
       { kind: "number", key: "divX", label: "Across width", help: HINGE_FIELD_HELP.divX, unit: "", min: 0, max: 8, step: 1, int: true, default: 0 },
@@ -157,7 +183,7 @@ function hingeProduct(): DProduct {
       .map((f) => withDefault(f, (DEFAULTS as unknown as Record<string, unknown>)[f.key])),
   }));
   const presets = HINGE_PRESETS.map((pr) => ({ id: pr.id, name: pr.name, note: pr.note, pro: hingeLocks("free", hingePresetParams(pr.params)).length > 0 }));
-  return { id: "hinge", name: "Hinge Box", blurb: "Living-hinge boxes in rounded, pill, polygon and cylinder shapes, with tabs and a lid.", icon: "box", sections, presets };
+  return { id: "hinge", name: "Hinge Box", blurb: "Living-hinge boxes in rounded, pill, polygon and cylinder shapes: flip-top, cap and lift-off lids, cabinets with doors, chests of drawers and lamp shades.", icon: "box", sections, presets };
 }
 
 export function hingeForm(p: Params): DForm {
@@ -194,11 +220,27 @@ export function hingeForm(p: Params): DForm {
   if (p.lidHole == null && p.lid !== "open") values.lidHole = "none";
   if (p.lidOver == null && p.lid !== "open") values.lidOver = 0;
   if (opening === "rim" && p.lidHoleW == null) values.lidHoleW = defaultRimWidth(p.T);
-  if (opening !== "none" && p.lidHoleD == null) values.lidHoleD = isLidSlot(opening) ? lidSlotSize(p).len : opening === "knob" ? 5 : 22;
+  if (opening !== "none" && p.lidHoleD == null) values.lidHoleD = isLidSlot(opening) ? lidSlotSize(p).len : roundHoleD(opening) ?? 22;
+  if (p.flipSide == null) values.flipSide = "back";
+  if (p.lid !== "flip") hidden.push("flipSide", "flipBand");
+  else if (p.flipBand == null) values.flipBand = flipBandAuto(p);
+  if (p.lid !== "cap") hidden.push("capH"); else if (p.capH == null) values.capH = defaultCapH(p);
+  const steppable = p.lid === "fixed" || p.lid === "removable" || p.lid === "cap";
+  if (!steppable) hidden.push("lidSteps", "lidStepIn");
+  else { if (p.lidSteps == null) values.lidSteps = 0; if (!p.lidSteps) hidden.push("lidStepIn"); else if (p.lidStepIn == null) values.lidStepIn = LID_STEP_IN; }
+  if (opening !== "rim") hidden.push("lidWindow");
+  if (p.lid === "cap") hidden.push("lidOver");
+  const bh = p.baseHole ?? "none";
+  if (p.baseHole == null) values.baseHole = "none";
+  if (bh !== "hole") hidden.push("baseHoleD"); else if (p.baseHoleD == null) values.baseHoleD = roundHoleD("hole") ?? 10;
+  if (bh !== "rim") hidden.push("baseHoleW"); else if (p.baseHoleW == null) values.baseHoleW = defaultRimWidth(p.T);
+  if (p.drawers == null) values.drawers = 0;
+  if (p.drawerPull == null) values.drawerPull = "knob";
+  if (!p.drawers) hidden.push("drawerPull");
   if (isLidSlot(opening) && p.lidHoleW == null) values.lidHoleW = lidSlotSize(p).w;
   if ((p.divX ?? 0) + (p.divY ?? 0) === 0) hidden.push("divH");
   for (const k of ["divX", "divY", "divH"] as const) if (p[k] == null) values[k] = 0;
-  return { hidden: [...new Set(hidden)], hiddenSections: p.lid === "open" ? ["secLid"] : [], labels, ...(Object.keys(values).length ? { values } : {}) };
+  return { hidden: [...new Set(hidden)], hiddenSections: p.lid === "open" || (p.drawers ?? 0) > 0 ? ["secLid"] : [], labels, ...(Object.keys(values).length ? { values } : {}) };
 }
 
 // ---------------------------------------------------------------- Generators

@@ -3,9 +3,19 @@
 export type Point = [number, number];
 
 export type Shape = "rect" | "pill" | "poly" | "cyl";
-export type Lid = "open" | "fixed" | "removable";
+/**
+ * open: no lid. fixed: glued on the wall's top tabs. removable: lifts off, with a lip.
+ * flip: one plate with a living-hinge band across it, the strip behind the band fixed to the walls
+ * (a flip-top box, or a cabinet door when the box stands up). cap: a shallow second box that slips
+ * over the top (a shoebox or hat-box lid).
+ */
+export type Lid = "open" | "fixed" | "removable" | "flip" | "cap";
+/** The side a flip lid's hinge band runs along, seen from above (back is the top of the drawing). */
+export type FlipSide = "back" | "left" | "right" | "front";
 export type Pattern = "straight" | "wave" | "relief" | "serpentine" | "honeycomb";
-export type LidHole = "none" | "finger" | "knob" | "tissue" | "coin" | "rim";
+export type LidHole = "none" | "finger" | "knob" | "tissue" | "coin" | "rim" | "lamp";
+/** An opening through the base: a round hole (drain, cord) or an open bottom with a rim. */
+export type BaseHole = "none" | "hole" | "rim";
 export type CutStyle = "slot" | "line";
 
 export interface LayerFlags {
@@ -57,6 +67,34 @@ export interface Params {
   lidLip?: boolean;
   /** Score the lip's outline on the lid, to line the lip up when gluing (missing: off). */
   lidLipScore?: boolean;
+  /** Flip lid: the side its hinge band runs along (missing: back). */
+  flipSide?: FlipSide;
+  /** Flip lid: width of the living-hinge band, mm (missing: wide enough to open about 105°). */
+  flipBand?: number;
+  /** Flip lid: width of the strip behind the band that is fixed to the walls, mm (missing: auto). */
+  flipFixed?: number;
+  /** Cap lid: its outside height, how far it comes down over the box, mm (missing: auto). */
+  capH?: number;
+  /** Extra plates stacked on a fixed, removable or cap lid, each smaller: a stepped top (missing: 0). */
+  lidSteps?: number;
+  /** How much smaller each step is all round, mm (missing: 6). */
+  lidStepIn?: number;
+  /** A clear plate under an open-top (rim) lid: a display window (missing: off). */
+  lidWindow?: boolean;
+  /** An opening through the base (missing: none). */
+  baseHole?: BaseHole;
+  /** The base hole's diameter, mm (missing: 10). */
+  baseHoleD?: number;
+  /** The open bottom's rim width, mm (missing: as a lid's rim). */
+  baseHoleW?: number;
+  /** Two keyhole slots near the top of the base, to hang the box on screws (missing: off). */
+  hangHoles?: boolean;
+  /** Show the box stood up on a wall, base at the back and lid at the front: a cabinet (missing: off). */
+  upright?: boolean;
+  /** Drawers in an upright, open-fronted case: 0 to 4 (missing: 0). */
+  drawers?: number;
+  /** What each drawer front has to pull it by (missing: knob). */
+  drawerPull?: "knob" | "finger" | "none";
   /** A ring glued on the base, inside the wall, so the hinge has a shoulder to sit on (missing: off). */
   baseRing?: boolean;
   /** Width of that ring, mm (missing: 8). */
@@ -151,6 +189,10 @@ export interface WallPart {
   bbox: BBox;
   /** True for the bend test strip. */
   test?: boolean;
+  /** The strip's own slit intervals, when it is not as tall as the box's wall (a cap or drawer wall). */
+  hs?: HingeSegments;
+  /** Its own lattice, when it was fitted to its shorter wall. */
+  lattice?: Partial<Pick<Params, "pitch" | "bridge" | "slit" | "slotW">>;
   /** True for an inside divider (a flat strip, no hinge). */
   divider?: boolean;
   /** Decorative holes cut through the strip (already kerf-compensated). */
@@ -188,10 +230,50 @@ export interface PlatePart {
   /** The pattern engraved or scored instead of cut. */
   engrave?: Point[][];
   score?: Point[][];
+  /** The outline as points, already kerf-compensated, when it is not the rounded core (a clipped window). */
+  pts?: Point[];
+  /** Living-hinge cuts in the plate (a flip lid's band): closed slots, and single-line cuts. */
+  hinge?: Point[][];
+  hingeLines?: Point[][];
+  /** Cut from clear acrylic, not the box's material. */
+  clear?: boolean;
+  /** Leave the text under the box off this plate (it has an opening in the middle). */
+  noText?: boolean;
+  /** Where the part's name goes, when not in the middle (a flip lid's flap). */
+  labelAt?: Point;
   bbox: BBox;
 }
 
 export type Part = WallPart | PlatePart;
+
+/** A flip lid's hinge: band from `from` to `to` along the unit vector `a` (towards the hinge side). */
+export interface FlipInfo {
+  a: Point;
+  from: number;
+  to: number;
+  /** About how far the lid opens before the band is bent to its limit, degrees. */
+  angle: number;
+}
+
+/** A cap lid's body, for the 3D view: its core, corner radius, wall height and outside height. */
+export interface CapInfo {
+  edges: Edge[];
+  R: number;
+  hBody: number;
+  H: number;
+}
+
+/** A drawer, for the 3D view: centred at y = `cy` in the case, `w` wide, `h` tall and `d` deep; its front `fw` × `fh`. */
+export interface DrawerPlace {
+  name: string;
+  cy: number;
+  w: number;
+  h: number;
+  d: number;
+  r: number;
+  fw: number;
+  fh: number;
+}
 
 export interface HingeSegments {
   closed: [number, number][];
@@ -240,6 +322,12 @@ export interface Model {
   analysis: Analysis;
   /** Inside dividers, when there are any. */
   dividers?: DividerPlace[];
+  /** A flip lid's hinge band. */
+  flip?: FlipInfo;
+  /** A cap lid's body. */
+  cap?: CapInfo;
+  /** Drawers, when the box is a chest of drawers. */
+  drawerPlaces?: DrawerPlace[];
 }
 
 export interface ModelError {
