@@ -204,7 +204,8 @@ export const CHARM: GeneratorDef<CharmParams> = {
   ],
   scale: scaleCharm,
   art,
-  batch: () => "names.list",
+  // The names list already makes one charm per name, so the sheet batch is not offered.
+  batch: () => null,
   fileName: (p) => namedFile("charms", p.name, p.kind.kind),
   summary: (p) => {
     const n = charmNames(p).length;
