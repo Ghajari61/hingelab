@@ -1,3 +1,9 @@
+## Unreleased — Name Charms
+
+- **New product: Name Charms.** Type a list of names and get one charm each: Christmas ornaments (baubles, stars, trees, snowflakes, paws, dog bones, lanterns), keychains (connected script names, layered mirror acrylic, engraved tags, big initials, house key tags), earrings in pairs, school and luggage bag tags, wine-glass markers that clip on the stem, place cards that stand on a slotted foot, and gift and stocking tags.
+- Engrave, score or cut the name through, glue it on in mirror acrylic, or make the welded name itself the charm. Add a second line (a year, a date, a phone number) and a motif.
+- Built to last: every hanging hole keeps enough material round it (it moves inwards on stars and hearts), names are fitted clear of the edge and the hole, earrings show their weight, glass clips are checked so they flex without snapping, and place-card slots match your stock. 28 ready-made designs.
+
 ## Unreleased — Calibration removed
 
 - The Calibration product (kerf strips, fit ladder and hinge test strip) and its Test & Calibration card are gone, with the coupon results form in My materials. The sheet's Calibration bar and the kerf page stay, and materials you already tested keep their measured values.

@@ -1,5 +1,6 @@
 /** Every generator, loaded eagerly: for tests, the help centre (server) and scripts only. */
 import { BOXES } from "./boxes";
+import { CHARM } from "./charm";
 import { POPUP } from "./popup";
 import { CLOCK } from "./clock";
 import { KEYRACK } from "./keyrack";
@@ -13,4 +14,4 @@ import { TOPPER } from "./topper";
 import { TROPHY } from "./trophy";
 import type { AnyGenerator } from "./types";
 
-export const ALL_GENERATORS: AnyGenerator[] = [POPUP, CLOCK, PUZZLE, QR, BOXES, TOPPER, KEYRACK, SIGN, TABLENUM, TROPHY, SHADOWBOX, PAPERBOX];
+export const ALL_GENERATORS: AnyGenerator[] = [POPUP, CLOCK, PUZZLE, QR, BOXES, TOPPER, KEYRACK, SIGN, TABLENUM, TROPHY, SHADOWBOX, PAPERBOX, CHARM];

@@ -8,6 +8,7 @@ const slits = (x0: number, y0: number, n: number, dx: number, h: number, cls = "
 /** The 3D-shaded picture of a ready-made design for each generator; the blank canvas keeps its line drawing. */
 const PICTURE: Record<string, string> = {
   popup: "/presets/popup/nut-snack-bowl.svg",
+  "name-charms": "/presets/charm/family-baubles.svg",
   "hinge-box": "/presets/hinge/gift-box.svg",
   "hinged-cover": "/templates/thumbs/hinge-notebook-cover.svg",
   letters: "/presets/letters/hello-sign.svg",

@@ -1,5 +1,5 @@
 /** Generator ids and the little the shell needs before a generator's code loads. */
-export const GENERATOR_IDS = ["clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "popup"] as const;
+export const GENERATOR_IDS = ["clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "popup", "charm"] as const;
 export type GeneratorId = (typeof GENERATOR_IDS)[number];
 
 export const isGeneratorId = (v: unknown): v is GeneratorId => typeof v === "string" && (GENERATOR_IDS as readonly string[]).includes(v);
@@ -8,7 +8,7 @@ export interface GeneratorInfo {
   name: string;
   blurb: string;
   /** Lucide icon name, resolved by the shell. */
-  icon: "clock" | "puzzle" | "qr" | "box" | "cake" | "key" | "sign" | "hash" | "trophy" | "layers" | "ruler";
+  icon: "clock" | "puzzle" | "qr" | "box" | "cake" | "key" | "sign" | "hash" | "trophy" | "layers" | "ruler" | "tag";
   /** Autosave key on this device. */
   storageKey: string;
 }
@@ -25,5 +25,6 @@ export const GENERATOR_INFO: Record<GeneratorId, GeneratorInfo> = {
   trophy: { name: "Trophy", blurb: "Awards that stand up: a star, cup, shield, medal, flame, laurel or motif with a name plate, slotted into a stepped base in wood, acrylic or both.", icon: "trophy", storageKey: "hingelab-gen-trophy-v1" },
   paperbox: { name: "Paper Box", blurb: "Folding cartons, mailers and gift boxes in card or board for a cutter or a laser: tuck-end cartons, mailers and two-piece boxes with creases, slit locks and bleed.", icon: "box", storageKey: "hingelab-gen-paperbox-v1" },
   shadowbox: { name: "Shadow Box", blurb: "Layered 3D paper-cut art from geometric patterns or your own picture, for a Cricut or a laser, with over a hundred ready-made designs.", icon: "layers", storageKey: "hingelab-gen-shadowbox-v1" },
+  charm: { name: "Name Charms", blurb: "Personalised ornaments, keychains, earrings, bag tags, drink markers, place cards and gift tags, one per name on your list, with holes that keep their wall.", icon: "tag", storageKey: "hingelab-gen-charm-v1" },
   popup: { name: "Pop-up", blurb: "One flat piece that lifts into a bowl, basket, tree, lampshade or ornament.", icon: "layers", storageKey: "hingelab-gen-popup-v1" },
 };

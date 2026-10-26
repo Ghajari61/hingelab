@@ -5,6 +5,7 @@
  */
 import { BOXES_PRESETS } from "./boxes/presets";
 import { POPUP_PRESETS } from "./popup/presets";
+import { CHARM_PRESETS } from "./charm/presets";
 import { CLOCK_PRESETS } from "./clock/presets";
 import { KEYRACK_PRESETS } from "./keyrack/presets";
 import { PUZZLE_PRESETS } from "./puzzle/presets";
@@ -19,6 +20,7 @@ import type { GenPreset } from "./types";
 
 export const START_PRESETS: Record<GeneratorId, GenPreset<unknown>[]> = {
   popup: POPUP_PRESETS as GenPreset<unknown>[],
+  charm: CHARM_PRESETS as GenPreset<unknown>[],
   clock: CLOCK_PRESETS as GenPreset<unknown>[],
   puzzle: PUZZLE_PRESETS as GenPreset<unknown>[],
   qr: QR_PRESETS as GenPreset<unknown>[],
