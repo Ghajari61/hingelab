@@ -26,7 +26,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
         {c.items.map((it) => (
           <Link key={`${it.product}/${it.id}`} className="ia-card" href={it.href}>
             <span className="ia-pic"><img src={it.picture} alt="" width={300} height={200} loading="lazy" /></span>
-            <span className="ia-chip">{isGeneratorId(it.product) ? GENERATOR_INFO[it.product].name.toUpperCase() : it.product.toUpperCase()}</span>
+            <span className="ia-chip">{isGeneratorId(it.product) ? GENERATOR_INFO[it.product].name.toUpperCase() : it.product === "hinge" ? "HINGE BOX" : it.product.toUpperCase()}</span>
             <b>{it.name}</b>
             {it.note && <p>{it.note}</p>}
           </Link>

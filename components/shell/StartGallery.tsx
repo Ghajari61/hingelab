@@ -31,7 +31,7 @@ export const PRODUCT_KEYS: Record<Product, string> = {
 };
 
 const BLURB: Record<Product, string> = {
-  hinge: "Rounded, round and many-sided boxes with living-hinge walls.",
+  hinge: "Living-hinge boxes, cabinets with doors, chests of drawers and lamp shades.",
   letters: "Letter boxes, solid signs and stencils from any text.",
   parametric: "Sliced sculptures: fins, layers, waffles and clocks.",
   ...(Object.fromEntries(GENERATOR_IDS.map((id) => [id, GENERATOR_INFO[id].blurb])) as Record<(typeof GENERATOR_IDS)[number], string>),

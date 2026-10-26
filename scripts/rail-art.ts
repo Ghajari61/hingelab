@@ -9,7 +9,7 @@ import * as hb from "harfbuzzjs";
 import Module from "manifold-3d";
 import { DEFAULTS as HINGE, colSegments, computeModel, cutWidth, hingeCutPaths, mergeParams, outlinePath, type Params, type WallPart } from "@/lib/hinge";
 import { HINGE_VARIANTS } from "@/lib/hinge/presets";
-import { sceneSVG } from "@/components/editor/scene3d";
+import { sceneSVG, thumbExplode } from "@/components/editor/scene3d";
 import { BUNDLED_FONTS, computeLetterModel, loadFont, mergeLetterParams, type LoadedFont } from "@/lib/letters";
 import { computeParametric, loadSource, mergeParametricParams } from "@/lib/parametric";
 import { PARAMETRIC_PRESETS } from "@/lib/parametric/presets";
@@ -66,7 +66,7 @@ const hingeBox = (q: Partial<Params>) => {
   const p = mergeParams({ ...q });
   const m = computeModel(p);
   if ("error" in m) throw new Error(`hinge ${JSON.stringify(q)}: ${m.error}`);
-  return sceneSVG(m, p, -0.6, p.lid === "removable" ? 0.35 : 0);
+  return sceneSVG(m, p, -0.6, thumbExplode(p));
 };
 const SHAPE: Record<string, Partial<Params>> = {
   rect: { shape: "rect", W: 140, D: 90, H: 70, R: 24 },
@@ -75,7 +75,7 @@ const SHAPE: Record<string, Partial<Params>> = {
   cyl: { shape: "cyl", dia: 110, H: 70 },
 };
 putGroup("shape", Object.entries(SHAPE).map(([v, q]) => [v, hingeBox(q)]));
-putGroup("lid", (["open", "fixed", "removable"] as const).map((v) => [v, hingeBox({ ...SHAPE.rect, lid: v })]));
+putGroup("lid", (["open", "fixed", "removable", "flip", "cap"] as const).map((v) => [v, hingeBox({ ...SHAPE.rect, lid: v, ...(v === "flip" ? { lidHole: "finger" as const } : {}) })]));
 
 /** A close-up of the hinge wall as a wooden panel seen from above, with the real cuts. */
 function hingePanel(q: Partial<Params>): string {

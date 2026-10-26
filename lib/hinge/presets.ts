@@ -68,6 +68,17 @@ const BOX_IDEAS: BoxIdea[] = [
   { name: "Gift box", make: (b) => ({ W: b(120, 200, 10), D: b(80, 140, 10), H: b(50, 100, 10), R: b(16, 34, 2), lid: "removable", lidOver: b(3, 5, 1) }) },
   { name: "Desk tray", make: (b, r) => ({ shape: r() < 0.5 ? "pill" : "rect", W: b(200, 260, 10), D: b(90, 120, 10), R: b(24, 40, 2), H: b(45, 65, 5), lid: "open", baseRing: true }) },
   { name: "Sweet bowl", make: (b) => ({ shape: "poly", sides: b(10, 12, 1), W: b(140, 180, 10), R: b(16, 24, 2), H: b(55, 75, 5), lid: "open" }) },
+  { name: "Flip-top box", make: (b) => ({ W: b(150, 200, 10), D: b(110, 140, 5), H: b(60, 85, 5), R: b(18, 28, 2), lid: "flip", lidHole: "finger" }) },
+  { name: "Pencil case", make: (b) => ({ shape: "pill", W: b(200, 230, 10), D: b(80, 90, 5), H: b(45, 55, 5), lid: "flip", slit: 40, bridge: 2 }) },
+  { name: "Book box", make: (b) => ({ W: b(150, 180, 10), D: b(210, 240, 10), H: b(50, 70, 5), R: b(14, 18, 2), lid: "flip", flipSide: "left", lidOver: b(3, 5, 1), slit: 40, bridge: 2 }) },
+  { name: "Mini cabinet", make: (b) => ({ W: b(170, 200, 10), D: b(220, 260, 10), H: b(110, 140, 10), R: b(16, 22, 2), lid: "flip", flipSide: "left", lidHole: "knob", divY: b(1, 3), upright: true, split: 2, fit: { mode: "auto", sheets: 1 } }) },
+  { name: "Wall cabinet", make: (b) => ({ W: b(180, 210, 10), D: b(240, 280, 10), H: b(100, 120, 10), R: b(16, 20, 2), lid: "flip", flipSide: "left", lidHole: "knob", divY: b(2, 3), hangHoles: true, upright: true, split: 2, fit: { mode: "auto", sheets: 1 } }) },
+  { name: "Chest of drawers", make: (b) => ({ W: b(160, 210, 10), D: b(160, 220, 10), H: b(130, 170, 10), R: b(12, 18, 2), drawers: b(2, 4), split: 2, fit: { mode: "auto", sheets: 1 } }) },
+  { name: "Shoebox", make: (b) => ({ W: b(180, 220, 10), D: b(120, 150, 10), H: b(80, 100, 5), R: b(14, 20, 2), lid: "cap", capH: b(30, 40, 5), split: 2, fit: { mode: "auto", sheets: 1 } }) },
+  { name: "Hat box", make: (b) => ({ shape: "cyl", dia: b(150, 190, 10), H: b(110, 140, 10), lid: "cap", capH: b(40, 50, 5), split: 2, fit: { mode: "auto", sheets: 1 } }) },
+  { name: "Stepped jewellery box", make: (b) => ({ W: b(140, 170, 10), D: b(100, 120, 5), H: b(55, 70, 5), R: b(18, 24, 2), lidSteps: b(1, 2), lidHole: "knob", lidOver: b(2, 4, 1) }) },
+  { name: "Display box", make: (b) => ({ W: b(160, 200, 10), D: b(110, 140, 10), H: b(50, 70, 5), R: b(18, 24, 2), lidHole: "rim", lidHoleW: b(14, 18, 1), lidWindow: true }) },
+  { name: "Lamp shade", make: (b) => ({ shape: "cyl", dia: b(150, 190, 10), H: b(150, 180, 10), lid: "fixed", lidHole: "lamp", baseHole: "rim", baseHoleW: b(12, 16, 1), split: 2, fit: { mode: "auto", sheets: 1 } }) },
 ];
 
 /** Settings a random box keeps: the material, the machine and the sheet are the user's. */
@@ -143,4 +154,31 @@ export const HINGE_PRESETS: Preset<Params>[] = [
   { id: "jewel-organiser", name: "Jewellery organiser", note: "Twelve small compartments", params: { name: "Jewellery organiser", W: 190, D: 120, H: 55, R: 16, lidHole: "knob", divX: 3, divY: 2, lidLipScore: true } },
   { id: "sweet-bowl", name: "Sweet bowl", note: "Twelve-sided low bowl", params: { name: "Sweet bowl", shape: "poly", sides: 12, W: 160, R: 20, H: 65, lid: "open", pattern: "wave" } },
   { id: "oct-jewel", name: "Octagon jewellery box", note: "Eight sides, knob and overhang", params: { name: "Octagon jewellery box", shape: "poly", sides: 8, W: 130, R: 14, H: 55, lidHole: "knob", lidOver: 3 } },
+  // ---- flip-top lids: one plate with a living-hinge band
+  { id: "flip-top-box", name: "Flip-top box", note: "Lid with a hinge band at the back, finger hole at the front", params: { name: "Flip-top box", W: 160, D: 115, H: 70, R: 24, lid: "flip", lidHole: "finger" } },
+  { id: "pencil-case", name: "Pencil case", note: "Long pill case with a flip-top lid", params: { name: "Pencil case", shape: "pill", W: 220, D: 80, H: 50, lid: "flip", slit: 40, bridge: 2, lidOver: 2 } },
+  { id: "glasses-case", name: "Glasses case", note: "Pill case, lid hinged along the back", params: { name: "Glasses case", shape: "pill", W: 175, D: 75, H: 50, lid: "flip", slit: 40, bridge: 2, lidHole: "finger" } },
+  { id: "book-box", name: "Book box", note: "Opens like a book: cover hinged on the left", params: { name: "Book box", W: 170, D: 230, H: 60, R: 14, lid: "flip", flipSide: "left", lidOver: 4, slit: 40, bridge: 2, split: 2, fit: { mode: "auto", sheets: 1 } } },
+  { id: "cigar-box", name: "Cigar box", note: "Wide flip-top box with an overhanging lid and a knob", params: { name: "Cigar box", W: 230, D: 160, H: 65, R: 18, lid: "flip", lidHole: "knob", lidOver: 3, split: 2, fit: { mode: "auto", sheets: 1 }, slit: 40, bridge: 2 } },
+  // ---- cabinets: the box stood on its side, the flip lid as its door
+  { id: "mini-cabinet", name: "Mini cabinet", note: "Door hinged on the left, two shelves", params: { name: "Mini cabinet", W: 180, D: 240, H: 130, R: 18, lid: "flip", flipSide: "left", lidHole: "knob", divY: 2, upright: true, split: 2, fit: { mode: "auto", sheets: 1 }, slit: 40, bridge: 2 } },
+  { id: "wall-cabinet", name: "Wall cabinet", note: "Hangs on two screws: door, three shelves", params: { name: "Wall cabinet", W: 200, D: 280, H: 110, R: 16, lid: "flip", flipSide: "left", lidHole: "knob", divY: 3, hangHoles: true, upright: true, split: 2, fit: { mode: "auto", sheets: 1 }, slit: 40, bridge: 2 } },
+  { id: "display-cabinet", name: "Display cabinet", note: "Framed glass door and two shelves, to hang on a wall", params: { name: "Display cabinet", W: 190, D: 250, H: 110, R: 20, lid: "flip", flipSide: "left", lidHole: "rim", lidHoleW: 16, lidWindow: true, divY: 2, hangHoles: true, upright: true, split: 2, fit: { mode: "auto", sheets: 1 } } },
+  { id: "flap-cabinet", name: "Flap-door wall cabinet", note: "Door hinged at the top, one shelf: spices or keys", params: { name: "Flap-door wall cabinet", W: 260, D: 190, H: 100, R: 18, lid: "flip", flipSide: "back", lidHole: "finger", divY: 1, hangHoles: true, upright: true, split: 2, fit: { mode: "auto", sheets: 1 }, slit: 40, bridge: 2 } },
+  // ---- chests of drawers
+  { id: "desk-drawers", name: "Desk drawers", note: "Two drawers with knob holes", params: { name: "Desk drawers", W: 200, D: 160, H: 170, R: 14, drawers: 2, split: 2, fit: { mode: "auto", sheets: 1 }, slit: 40, bridge: 2 } },
+  { id: "jewel-chest", name: "Jewellery chest", note: "Three drawers with finger holes", params: { name: "Jewellery chest", W: 170, D: 210, H: 150, R: 16, drawers: 3, drawerPull: "finger", split: 2, fit: { mode: "auto", sheets: 1 }, slit: 40, bridge: 2 } },
+  { id: "craft-drawers", name: "Craft drawers", note: "Four shallow drawers for beads and bits", params: { name: "Craft drawers", W: 150, D: 170, H: 130, R: 15, drawers: 4, split: 2, fit: { mode: "auto", sheets: 1 }, slit: 40, bridge: 2 } },
+  // ---- cap lids
+  { id: "shoebox", name: "Shoebox gift box", note: "A cap lid slips over the top", params: { name: "Shoebox gift box", W: 200, D: 140, H: 90, R: 16, lid: "cap", capH: 35, split: 2, fit: { mode: "auto", sheets: 1 }, slit: 40, bridge: 2 } },
+  { id: "hat-box", name: "Round hat box", note: "Cylinder with a deep cap lid", params: { name: "Round hat box", shape: "cyl", dia: 180, H: 130, lid: "cap", capH: 45, split: 2, fit: { mode: "auto", sheets: 1 } } },
+  { id: "tea-tin", name: "Tea tin", note: "Tall cylinder, cap lid with a knob", params: { name: "Tea tin", shape: "cyl", dia: 95, H: 140, lid: "cap", capH: 45, lidHole: "knob" } },
+  { id: "stepped-keepsake", name: "Stepped keepsake", note: "Round box with a two-step cap", params: { name: "Stepped keepsake", shape: "cyl", dia: 130, H: 75, lid: "cap", capH: 30, lidSteps: 2, lidHole: "knob" } },
+  // ---- stepped and windowed lids
+  { id: "stepped-jewel", name: "Stepped jewellery box", note: "Lift-off lid with two stacked steps", params: { name: "Stepped jewellery box", W: 160, D: 115, H: 65, R: 22, lidSteps: 2, lidStepIn: 7, lidHole: "knob", lidOver: 3 } },
+  { id: "display-box", name: "Display box", note: "Lift-off lid with a framed clear window", params: { name: "Display box", W: 180, D: 130, H: 60, R: 22, lidHole: "rim", lidHoleW: 16, lidWindow: true, slit: 40, bridge: 2 } },
+  // ---- lamps and planters
+  { id: "pendant-shade", name: "Pendant lamp shade", note: "Open bottom, E27 holder hole in the top", params: { name: "Pendant lamp shade", shape: "cyl", dia: 180, H: 170, lid: "fixed", lidHole: "lamp", baseHole: "rim", baseHoleW: 14, pattern: "honeycomb", slotW: 9.3, pitch: 5.4, split: 2, fit: { mode: "auto", sheets: 1 } } },
+  { id: "table-lamp", name: "Table lamp", note: "Quatrefoil walls, cord hole in the base, open top", params: { name: "Table lamp", W: 130, D: 130, H: 200, R: 32, lid: "fixed", lidHole: "rim", lidHoleW: 14, baseHole: "hole", baseHoleD: 10, fret: "quatrefoil", fretOn: "walls", fretCell: 16, fretBar: 3, split: 2, fit: { mode: "auto", sheets: 1 } } },
+  { id: "drain-planter", name: "Planter with drain hole", note: "Six sides, support ring, a hole to drain", params: { name: "Planter with drain hole", shape: "poly", sides: 6, W: 170, R: 22, H: 130, lid: "open", baseRing: true, baseHole: "hole", baseHoleD: 12 } },
 ];

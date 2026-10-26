@@ -1,5 +1,5 @@
 /** Bend estimate and the auto-fit search. */
-import type { AutoFitResult, BendResult, Params } from "./types";
+import type { AutoFitResult, BendResult, ComputeResult, Model, Params } from "./types";
 import { MATERIALS } from "./defaults";
 import { barWidth, cutWidth, hingeSegments, honeyLattice } from "./hinge";
 import { r3 } from "./util";
@@ -69,4 +69,18 @@ export function withFittedLattice(p: Params, q: Params): Params {
   const next = { ...p, pitch: q.pitch, bridge: q.bridge };
   if (p.pattern !== "serpentine") next.slit = q.slit;
   return next;
+}
+
+/**
+ * A part box of its own (a cap lid, a drawer) whose walls are shorter than the box's: when the box's
+ * lattice is too stiff for it, its own Auto-fit lattice, if that bends well. `build` is computeModel.
+ */
+export function refitLattice(q: Params, m: Model, build: (q: Params) => ComputeResult): { m: Model; lattice?: Partial<Params> } {
+  if (m.analysis.verdict === "ok") return { m };
+  const fit = autoFit(honeyLattice(q), m.hBody, m.rN);
+  if (!fit.ok) return { m };
+  const q2 = withFittedLattice(q, fit.q);
+  const m2 = build(q2);
+  if ("error" in m2 || m2.analysis.verdict !== "ok") return { m };
+  return { m: m2, lattice: { pitch: q2.pitch, bridge: q2.bridge, slit: q2.slit, slotW: q2.slotW } };
 }

@@ -1,7 +1,7 @@
 import type { Edge, Params, Point } from "./types";
 
 /** A long slot in the lid: pulls tissues out (tissue) or takes coins (coin). */
-export const isLidSlot = (h: Params["lidHole"]): h is "tissue" | "coin" => h === "tissue" || h === "coin";
+export const isLidSlot = (h: string | undefined): h is "tissue" | "coin" => h === "tissue" || h === "coin";
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 

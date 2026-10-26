@@ -8,7 +8,7 @@ import { computeModel, layoutParts } from "@/lib/hinge";
 import { hingeLocks } from "@/lib/plans";
 import { hingePresetParams } from "@/lib/hinge/presets";
 import type { Params as HingeParams } from "@/lib/hinge/types";
-import { sceneSVG } from "@/components/editor/scene3d";
+import { sceneSVG, thumbExplode } from "@/components/editor/scene3d";
 import { BUNDLED_FONTS, loadFont, type LoadedFont } from "@/lib/letters";
 import { ALL_GENERATORS } from "@/lib/generators/all";
 import { arrangeGenerator, genContent, type CutPart } from "@/lib/generators/output";
@@ -244,7 +244,7 @@ function hingeTemplate(t: Template): Out {
   const lay = layoutParts(m.parts, p.bedW, p.gap);
   const locks = hingeLocks("free", p);
   const pro = locks.length ? `${locks.join(" and ")} need${locks.length > 1 ? "" : "s"} the Pro plan` : undefined;
-  const thumb = sceneSVG(m, p, -0.6, p.lid === "removable" ? 0.35 : 0).replace("<svg ", '<svg width="300" height="200" ');
+  const thumb = sceneSVG(m, p, -0.6, thumbExplode(p)).replace("<svg ", '<svg width="300" height="200" ');
   return { built: { w: Math.ceil(lay.width), h: Math.ceil(lay.height), sheets: 1, objects: lay.items.length, ...(pro ? { pro } : {}) }, thumb };
 }
 

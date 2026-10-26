@@ -121,7 +121,7 @@ export function P_slotW(pt: Pick<WallPart, "outline" | "caps">) { const o = pt.o
  * Unfold the wall centerline into one strip (or two halves) and place the hinge zones.
  * Mutates `edges` (seam flags and tab positions), matching the prototype.
  */
-export function buildWalls(p: Params, edges: Edge[], rN: number, hBody: number, topTabs: boolean):
+export function buildWalls(p: Params, edges: Edge[], rN: number, hBody: number, topTabs: boolean | ((e: Edge, u: number) => boolean)):
   { error: string } | { parts: WallPart[]; cols: HingeCol[]; hs: HingeSegments; L: number; zoneLen: number } {
   const N = edges.length;
 
@@ -144,8 +144,12 @@ export function buildWalls(p: Params, edges: Edge[], rN: number, hBody: number, 
   const L = x;
 
   // tabs in strip coords
-  const tabX: number[] = [];
-  for (const s of segs) if (s.kind === "edge") for (const u of edges[s.i].tabs) if (u - p.tabW / 2 >= s.from - 1e-6 && u + p.tabW / 2 <= s.to + 1e-6) tabX.push(s.x0 + u - s.from);
+  // `topX`: the tabs that also go up into the lid (all of them for a fixed lid, the hinge side's for a flip lid)
+  const tabX: number[] = [], topX: number[] = [];
+  for (const s of segs) if (s.kind === "edge") for (const u of edges[s.i].tabs) if (u - p.tabW / 2 >= s.from - 1e-6 && u + p.tabW / 2 <= s.to + 1e-6) {
+    tabX.push(s.x0 + u - s.from);
+    if (topTabs === true || (typeof topTabs === "function" && topTabs(edges[s.i], u))) topX.push(s.x0 + u - s.from);
+  }
 
   // hinge intervals around arcs
   const freeStart = (e: Edge) => e.tabs.length ? e.tabs[0] - p.tabW / 2 : (e.seam ? e.len / 2 - 2 : e.len / 2);
@@ -181,8 +185,9 @@ export function buildWalls(p: Params, edges: Edge[], rN: number, hBody: number, 
   cuts.forEach(([x0, x1], pi) => {
     const w = x1 - x0;
     const tabsHere = tabX.filter(tx => tx > x0 && tx < x1).map(tx => tx - x0).sort((m, n) => m - n);
+    const topHere = topX.filter(tx => tx > x0 && tx < x1).map(tx => tx - x0).sort((m, n) => m - n);
     const myCols = cols.filter(c => c.x > x0 + edgeMargin && c.x < x1 - edgeMargin).map(c => ({ x: c.x - x0, kind: c.kind }));
-    const wo = wallOutline(w, hBody, topTabs ? tabsHere : [], tabsHere, myCols, p, hs, p.seamFingers === true);
+    const wo = wallOutline(w, hBody, topHere, tabsHere, myCols, p, hs, p.seamFingers === true);
     const outline = wo.outline;
     // label on the longest straight
     let lab: number | null = null, best = 0;

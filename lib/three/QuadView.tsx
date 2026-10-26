@@ -243,6 +243,9 @@ function glow(mesh: THREE.Mesh, on: boolean) {
   }
 }
 
+/** How long the mouse and keys rest before the perspective view starts turning, ms. */
+const IDLE_MS = 5000;
+
 const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref) {
   const { model, look, frameKey, explode = 0, measure, shade, quad, active, onActive, onQuad, onShade, dims, units, dim, onPick, pickable, onSelect, selectName, grips, id, testId, className = "", label = "3D views of the design", photoName, children } = props;
   const [gripKind, setGripKind] = useState<GripKind>("size");
@@ -273,8 +276,14 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
   showDims.current = dims && measure ? units : null;
   const decimals = useRef(1);
   decimals.current = props.decimals ?? 1;
-  const live = useRef({ explode, measure, look, shade });
-  live.current = { explode, measure, look, shade };
+  const [photo, setPhoto] = useState(false);
+  const live = useRef({ explode, measure, look, shade, quad, active, photo });
+  live.current = { explode, measure, look, shade, quad, active, photo };
+  /** When the mouse or keys last moved the view (the idle turn waits IDLE_MS after it). */
+  const idle = useRef(performance.now());
+  const pokeRef = useRef<() => void>(() => {});
+  /** The model fully exploded (models that explode in place), to frame and stage it as it opens. */
+  const farBox = useRef<THREE.Box3 | null>(null);
   const cube = useRef<HTMLDivElement>(null);
   const st = useRef<Stage | null>(null);
   const shown = useRef<QuadModel | null>(null);
@@ -337,9 +346,15 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     ground.receiveShadow = true;
     scene.add(ground);
 
-    let frame = 0;
+    let frame = 0, last = 0;
     const draw = () => {
       frame = 0;
+      // Damped controls (and the idle turn) keep moving after the mouse stops: each update that
+      // moves the camera fires "change", which asks for the next frame, until they settle. The
+      // turn is timed, so it is as slow on a fast screen as on a slow one.
+      const t = performance.now(), dt = last ? Math.min(0.1, (t - last) / 1000) : 1 / 60;
+      last = t;
+      for (const p of panes) p.controls.update(dt);
       const hr = el.getBoundingClientRect();
       renderer.setScissorTest(false);
       renderer.clear();
@@ -371,7 +386,10 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
       cam.position.set(...def.dir).multiplyScalar(400);
       cam.layers.enable(def.layer);
       const controls = new OrbitControls(cam, pel);
-      controls.enableDamping = false;
+      // Soft, eased movement: the view glides to a stop instead of halting with the mouse.
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.12;
+      controls.autoRotateSpeed = 0.6;
       controls.screenSpacePanning = true;
       controls.zoomToCursor = true;
       if (def.ortho) {
@@ -410,7 +428,27 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     }
     st.current = { renderer, scene, overlay, shapes, hitMat, sun, ground, grids: [], panes, request };
     resize();
+    // After IDLE_MS without the mouse or keys, the perspective view turns slowly round the model.
+    const still = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    const poke = () => {
+      idle.current = performance.now();
+      const p = panes.find((x) => x.def.id === "persp");
+      if (p?.controls.autoRotate) { p.controls.autoRotate = false; request(); }
+    };
+    pokeRef.current = poke;
+    const wake = ["pointerdown", "pointermove", "wheel", "keydown", "touchstart"] as const;
+    for (const t of wake) el.addEventListener(t, poke, { passive: true });
+    const timer = window.setInterval(() => {
+      const p = panes.find((x) => x.def.id === "persp"), l = live.current;
+      if (!p || p.controls.autoRotate || still?.matches || document.visibilityState !== "visible") return;
+      if (!shown.current || drag.current || l.photo || !(l.quad || l.active === "persp")) return;
+      if (performance.now() - idle.current < IDLE_MS) return;
+      p.controls.autoRotate = true;
+      request();
+    }, 500);
     return () => {
+      window.clearInterval(timer);
+      for (const t of wake) el.removeEventListener(t, poke);
       ro.disconnect();
       for (const off of offs) off();
       for (const k of handles.current) k.dispose();
@@ -433,16 +471,16 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const bounds = () => {
+  const bounds = (over?: THREE.Box3 | null) => {
     const g = shown.current?.group;
-    const box = bbox.current && !bbox.current.isEmpty() ? bbox.current.clone() : g ? new THREE.Box3().setFromObject(g) : new THREE.Box3();
+    const box = over && !over.isEmpty() ? over.clone() : bbox.current && !bbox.current.isEmpty() ? bbox.current.clone() : g ? new THREE.Box3().setFromObject(g) : new THREE.Box3();
     if (box.isEmpty()) box.set(new THREE.Vector3(-50, 0, -50), new THREE.Vector3(50, 50, 50));
     return { box, c: box.getCenter(new THREE.Vector3()), r: Math.max(10, box.getSize(new THREE.Vector3()).length() / 2) };
   };
 
   /** Zoom extents: frame the whole model, looking along `dir` (or the view's own direction). */
-  const fitPane = (p: Pane, dir?: THREE.Vector3) => {
-    const { box, c, r } = bounds();
+  const fitPane = (p: Pane, dir?: THREE.Vector3, over?: THREE.Box3 | null) => {
+    const { box, c, r } = bounds(over);
     const cam = p.cam;
     const d = (dir ?? new THREE.Vector3(...p.def.dir)).normalize();
     if (cam instanceof THREE.PerspectiveCamera) {
@@ -482,7 +520,8 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
   const stageFor = () => {
     const s = st.current;
     if (!s) return;
-    const { box, c, r } = bounds();
+    // Room for the model opened out too, so its parts never leave the floor and the shadows.
+    const { box, c, r } = bounds(farBox.current && bbox.current ? bbox.current.clone().union(farBox.current) : null);
     // Models stand on y = 0; ones centred on the origin (wall pieces) stand on their lowest point.
     const y0 = box.min.y < -0.5 ? box.min.y : 0;
     const size = Math.max(200, Math.ceil((r * 6) / 100) * 100);
@@ -595,6 +634,14 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     if (live.current.look) applyLook(m.group, live.current.look);
     paintShade(m.group, live.current.shade);
     if (m.explode || live.current.measure || reframe) bbox.current = measureBox();
+    farBox.current = null;
+    if (m.explode) {
+      m.explode(1);
+      m.group.updateMatrixWorld(true);
+      farBox.current = modelBox(m.group);
+      m.explode(live.current.explode);
+      m.group.updateMatrixWorld(true);
+    }
     if (reframe || live.current.measure || m.explode) stageFor();
     if (reframe) for (const p of s.panes) fitPane(p);
     s.request();
@@ -650,10 +697,25 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
   }, [look, shade]);
 
   useEffect(() => {
-    const m = shown.current;
-    if (m?.explode) m.explode(explode);
-    st.current?.request();
+    const m = shown.current, s = st.current;
+    pokeRef.current();
+    if (m?.explode) {
+      m.explode(explode);
+      // The views widen with the model as it opens out and close in again as it goes back together.
+      const b0 = bbox.current, b1 = farBox.current;
+      if (s && b0 && b1 && !b0.isEmpty() && !b1.isEmpty()) {
+        // Always holds the model as it is now (a cabinet tipping over leaves its closed box).
+        const u = b0.clone().union(b1), k = explode * explode * (3 - 2 * explode);
+        const box = new THREE.Box3(b0.min.clone().lerp(u.min, k), b0.max.clone().lerp(u.max, k)).union(modelBox(m.group));
+        for (const p of s.panes) fitPane(p, p.def.ortho ? undefined : p.cam.position.clone().sub(p.controls.target), box);
+      }
+    }
+    s?.request();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [explode]);
+
+  // A new design or another layout wakes the view (the idle turn waits again).
+  useEffect(() => { pokeRef.current(); }, [model, quad, active]);
 
   // Panes change size when the layout changes; the observer redraws, this keeps the dimensions current.
   useEffect(() => { st.current?.request(); }, [quad, active, dims, units, measure]);
@@ -729,7 +791,6 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     return out;
      
   }, []);
-  const [photo, setPhoto] = useState(false);
   const closePhoto = useCallback(() => { setPhoto(false); host.current?.focus({ preventScroll: true }); }, []);
 
   /** Sizes the handles to this view's millimetres per pixel and hides the ones seen end-on; false when there are none. */
