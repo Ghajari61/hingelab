@@ -1,3 +1,14 @@
+## Unreleased — Lids, doors, cabinets and drawers
+
+- **Flip-top lid.** One plate with a living-hinge band across it: the strip behind the band is held by the wall's tabs and the rest swings open. Pick the hinge side (back, left, right or front); the band is sized to open about 105° and the panel says how far it opens. Finger and knob holes move to the free edge.
+- **Cabinets.** Stand any box up (Base & standing › Stand it up): the base is the back, a flip-top lid hinged on the left is the door, and dividers across the depth are shelves. New ready-made mini, wall, display (glass door) and flap-door cabinets.
+- **Chests of drawers.** Set Drawers to 1–4: the case stands open at the front with a shelf between each two drawers, and each drawer is a small hinge box of its own with a front plate and a knob or finger hole. Drawer walls get their own fitted hinge when the case's is too stiff for them.
+- **Cap lid.** A shallow box of its own that slips over the top, like a shoebox or a hat box, with its own fitted hinge for short walls.
+- **Stepped lids** (up to three smaller plates on a fixed, lift-off or cap lid; round on a cylinder), a **clear window** under a rim, and a **lamp-holder hole** (E27).
+- **Base openings**: a round hole (lamp cord, planter drain) or an open bottom for lamp shades; **hanging holes** (two keyholes) to hang a box or cabinet on screws.
+- 21 new ready-made designs (flip-top box, pencil and glasses cases, book box, cigar box, four cabinets, three chests of drawers, shoebox, hat box, tea tin, stepped keepsake, stepped jewellery box, display box, pendant shade, table lamp, planter with drain hole), new Randomise box ideas, and a Cabinets & storage collection page. Hinge Box designs can now be linked with `?p=hinge&preset=<id>`.
+- The 3D view and the pictures show flip lids opening, caps, steps, windows, cabinets standing up and drawers; the preset and card pictures are drawn by a new renderer that sorts every face, so inside walls and lids no longer overlap wrongly.
+
 ## Unreleased — Free tools, 3D printing and the Christmas collection
 
 - **Free tools** at /tools, no account and nothing uploaded: a thickness resizer (a file drawn for 3 mm scaled to fit 4 mm stock), a laser-to-3D-print converter (SVG to STL) and sheet nesting for your own SVG (parts packed by their real shape, engraving kept on its part). Each tool has its own page with steps and questions.

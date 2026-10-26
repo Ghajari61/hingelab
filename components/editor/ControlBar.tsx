@@ -49,7 +49,7 @@ export const PRODUCT_PICTURE: Record<Product, string> = {
 };
 
 const CORE_BLURB: Record<CoreProduct, string> = {
-  hinge: "Rounded, round and many-sided boxes with living-hinge walls.",
+  hinge: "Living-hinge boxes, cabinets with doors, chests of drawers and lamp shades.",
   letters: "Letter boxes, solid signs and stencils from any text.",
   parametric: "Sliced sculptures: fins, layers, waffles and clocks.",
 };
@@ -109,6 +109,13 @@ export const LID_OPTS = (onLid: (v: string) => void): Opt[] => [
   { v: "removable", text: "Removable lid", title: "A lid with a lip that lifts off", onClick: () => onLid("removable") },
 ];
 
+/** The Hinge Box's lids: the shared three, a flip-top lid and a cap. */
+export const HINGE_LID_OPTS = (onLid: (v: string) => void): Opt[] => [
+  ...LID_OPTS(onLid),
+  { v: "flip", text: "Flip-top lid", title: "One plate with a living-hinge band: it swings open, and makes a cabinet door when the box stands up", onClick: () => onLid("flip") },
+  { v: "cap", text: "Cap lid", title: "A shallow box that slips over the top, like a shoebox or hat-box lid", onClick: () => onLid("cap") },
+];
+
 /** Hinge Box gallery: shape, lid and hinge pattern. */
 export function hingeGroups({ params, plan = "pro", onShape, onLid, onPattern, onVariant, onRandom }: {
   params: Params;
@@ -135,7 +142,8 @@ export function hingeGroups({ params, plan = "pro", onShape, onLid, onPattern, o
   ].map((o) => ({ ...o, locked: !canUsePattern(plan, o.v as Params["pattern"]) }));
   return [
     { label: "Shape", name: "Box shape", art: "shape", value: params.shape, options: shape, home: DEFAULTS.shape },
-    { label: "Lid", name: "Lid type", art: "lid", value: params.lid, options: LID_OPTS(onLid), cols: 3, home: DEFAULTS.lid },
+    // A chest of drawers is open at the front: picking a lid turns it back into a box.
+    { label: "Lid", name: "Lid type", art: "lid", value: params.drawers ? "open" : params.lid, options: HINGE_LID_OPTS(onLid), cols: 3, home: DEFAULTS.lid },
     { label: "Hinge pattern", name: "Hinge pattern", art: "pattern", value: params.pattern, options: pattern, home: DEFAULTS.pattern, tools: onRandom && <RandomMark label="Pattern" onRandom={onRandom} /> },
     ...(onVariant ? [{
       label: "Hinge style", name: "Hinge style", art: "variant", value: hingeVariantOf(params), cols: 3 as const,

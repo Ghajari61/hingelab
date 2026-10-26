@@ -590,12 +590,18 @@ export const ARTICLES: HelpArticle[] = [
   },
   {
     slug: "hinge-lid", product: "hinge", title: "Lid options",
-    summary: "A flat top wider than the box, a finger or knob hole, and the lip under a removable lid.",
-    keywords: ["lid", "overhang", "flat top", "finger hole", "knob", "lip", "removable"],
+    summary: "Five kinds of lid (open, fixed, lift-off, flip-top and cap), steps, windows, holes and the lip under a removable lid.",
+    keywords: ["lid", "overhang", "flat top", "finger hole", "knob", "lip", "removable", "flip", "flip-top", "hinged lid", "cap", "shoebox", "hat box", "steps", "stepped", "window", "display", "lamp"],
     fields: [{ product: "hinge", secs: ["secLid"] }],
     blocks: [
       { list: [
+        "Open tray: no lid. Fixed lid: glued on the wall's top tabs. Removable lid: lifts off, with a lip that drops inside the walls.",
+        "Flip-top lid: one plate with a living-hinge band across it. The strip between the band and the hinge side is held by the wall's top tabs; the rest is a flap that swings up as the band bends. Pick the hinge side (back for a flip-top box, left for a cabinet door). The band is sized to open about 105°; a wider band opens further. The panel tells you how far it opens.",
+        "Cap lid: a shallow box of its own that slips over the top, like a shoebox or hat-box lid. Cap height sets how far it comes down. Its walls are shorter than the box's, so when the box's hinge is too stiff for them they get their own fitted lattice.",
+        "Steps: up to three smaller plates stacked on a fixed, lift-off or cap lid, for a stepped or domed top. Step size is how much smaller each one is all round. A cylinder's steps are round.",
         "Overhang: the lid reaches this far past the walls all round, so a flat top has an edge to lift by. 0 keeps it flush with the box.",
+        "Rim and clear window: a rim cuts the lid's middle away; turn on Clear window for a clear acrylic plate under it, for a display box or a display cabinet. Cut the window from 2 to 3 mm clear acrylic.",
+        "Lamp hole: a 40 mm hole for an E27 lamp holder (set 29 mm for E14), for a pendant shade.",
         "Hole: a finger hole (about 22 mm) to lift a removable lid, or a knob hole sized for your knob's screw. A hole too big for the lid is left out, and Checks says so.",
         "Lip under the lid (removable lids): a second plate that sits inside the walls and keeps the lid in place. Turn it off for a lid that simply rests on top.",
         "Tissue and coin slots: a long slot with round ends along the box's long side, sized to the box (tissue) or 32 × 4 mm (coin). Set its length and width; a slot too big for the lid is left out.",
@@ -603,6 +609,23 @@ export const ARTICLES: HelpArticle[] = [
       ] },
     ],
     related: ["box-joints", "hinge-dimensions", "hinge-dividers"],
+  },
+  {
+    slug: "hinge-cabinets", product: "hinge", title: "Cabinets, drawers, lamps and planters",
+    summary: "Stand a box up as a cabinet with a door and shelves, make a chest of drawers, open the base for a lamp shade or a drain, and hang it on a wall.",
+    keywords: ["cabinet", "cupboard", "door", "shelves", "drawers", "chest of drawers", "wall cabinet", "display cabinet", "hang", "keyhole", "lamp", "lamp shade", "pendant", "cord", "planter", "drain", "upright"],
+    fields: [{ product: "hinge", secs: ["secBase", "secDrawers"] }],
+    blocks: [
+      { list: [
+        "Cabinet: choose a flip-top lid hinged on the left and turn on Stand it up. The base becomes the back and the lid the door; width and depth are the front of the cabinet and height is its depth. Dividers across the depth are its shelves.",
+        "Wall cabinet: turn on Hanging holes. Two keyhole slots go near the top of the back, so the cabinet hangs on two screws: the screw heads pass through the round ends, then it drops onto the narrow slots.",
+        "Display cabinet: give the door a rim and a clear window. Flap-door cabinet: hinge the door at the back, which is the top when the box stands up.",
+        "Chest of drawers: set Drawers to 1 to 4. The case stands on its side, open at the front, with a shelf between each two drawers. Each drawer is a small hinge box of its own with a front plate to glue on, and a knob or finger hole. A drawer's walls are lower than the case's, so they get their own hinge lattice when they need one. Drawers need a rounded or pill shape.",
+        "Base opening: a round hole in the middle (about 10 mm for a lamp cord, 8 to 15 mm to drain a planter), or an open bottom with a rim, for a lamp shade or a sleeve. Dividers need a base, so an open bottom is left out when there are dividers.",
+        "Pendant shade: fixed lid with a lamp hole and an open bottom. Table lamp: a rim top, a cord hole in the base and a cut-out pattern on the walls. Always use an LED bulb in wood or card.",
+      ] },
+    ],
+    related: ["hinge-lid", "hinge-dividers", "hinge-dimensions"],
   },
   {
     slug: "hinge-standard-text", product: "hinge", title: "Standard sizes and text under the box",

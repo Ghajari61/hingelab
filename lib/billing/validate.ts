@@ -19,7 +19,7 @@ const finite = (v: unknown): v is number => typeof v === "number" && Number.isFi
 
 const HINGE_ENUMS: Partial<Record<keyof Params, readonly string[]>> = {
   shape: ["rect", "pill", "poly", "cyl"],
-  lid: ["open", "fixed", "removable"],
+  lid: ["open", "fixed", "removable", "flip", "cap"],
   pattern: ["straight", "wave", "relief", "serpentine", "honeycomb"],
   cutStyle: ["slot", "line"],
 };
@@ -28,6 +28,7 @@ const HINGE_ENUMS: Partial<Record<keyof Params, readonly string[]>> = {
 const HINGE_OPTIONAL: Partial<Record<keyof Params, [number, number]>> = {
   Ky: [0, 5], lidOver: [0, 100], lidHoleD: [0, 500], lidHoleW: [1, 200], gamma: [0.001, 1], minFeature: [0, 50], baseRingW: [3, 80],
   divX: [0, 8], divY: [0, 8], divH: [0, 3000], baseTextSize: [1.5, 40], fretCell: [6, 80], fretBar: [1, 15], fretSize: [20, 100],
+  flipBand: [4, 300], flipFixed: [3, 200], capH: [12, 3000], lidSteps: [0, 3], lidStepIn: [1, 60], baseHoleD: [2, 500], baseHoleW: [1, 200], drawers: [0, 4],
 };
 
 /** [min, max] per Hinge Box number; the minimums are the editor's, the maximums are generous. */
@@ -55,7 +56,11 @@ export function hingeRequestError(p: Params): string | null {
     const v = p[k];
     if (v !== undefined && (!finite(v) || v < lo || v > hi)) return `${k} must be a number between ${lo} and ${hi}.`;
   }
-  if (p.lidHole !== undefined && !["none", "finger", "knob", "tissue", "coin", "rim"].includes(p.lidHole)) return "Invalid value for lidHole.";
+  if (p.lidHole !== undefined && !["none", "finger", "knob", "tissue", "coin", "rim", "lamp"].includes(p.lidHole)) return "Invalid value for lidHole.";
+  if (p.flipSide !== undefined && !["back", "left", "right", "front"].includes(p.flipSide)) return "Invalid value for flipSide.";
+  if (p.baseHole !== undefined && !["none", "hole", "rim"].includes(p.baseHole)) return "Invalid value for baseHole.";
+  if (p.drawerPull !== undefined && !["knob", "finger", "none"].includes(p.drawerPull)) return "Invalid value for drawerPull.";
+  for (const k of ["lidWindow", "hangHoles", "upright"] as const) if (p[k] !== undefined && typeof p[k] !== "boolean") return `Invalid value for ${k}.`;
   if (p.lidLip !== undefined && typeof p.lidLip !== "boolean") return "Invalid value for lidLip.";
   if (p.lidLipScore !== undefined && typeof p.lidLipScore !== "boolean") return "Invalid value for lidLipScore.";
   if (p.baseRing !== undefined && typeof p.baseRing !== "boolean") return "Invalid value for baseRing.";
@@ -71,7 +76,9 @@ export function hingeRequestError(p: Params): string | null {
   const columns = around / p.pitch;
   const lattice = honeyLattice(p);
   const rows = p.H / Math.max(lattice.slit + lattice.bridge, 1);
-  if (columns * rows > MAX_HINGE_SLITS) return "This hinge has too many slits to build on the server. Use a larger slit spacing or a smaller box.";
+  // A cap lid and drawers are hinge boxes of their own.
+  const boxes = 1 + (p.lid === "cap" ? 1 : 0) + Math.max(0, Math.min(4, Math.round(p.drawers ?? 0)));
+  if (columns * rows * boxes > MAX_HINGE_SLITS) return "This hinge has too many slits to build on the server. Use a larger slit spacing or a smaller box.";
   return null;
 }
 

@@ -4,8 +4,11 @@
  * drawn (darker curved zones with slit lines), never recomputed.
  */
 import * as THREE from "three";
-import type { Edge, LayerContent, Layout, Model, Params, Point } from "@/lib/hinge";
+import type { Edge, LayerContent, Layout, Model, Params, PlatePart, Point } from "@/lib/hinge";
+import { buildCore } from "@/lib/hinge/core";
 import { honeyLattice } from "@/lib/hinge/hinge";
+import { clipHalf } from "@/lib/hinge/flip";
+import { builtParams } from "@/lib/hinge/model";
 import { finishScene, flatScene, slab, type FlatPart, type Scene3D } from "@/lib/three/flat";
 
 /** Points around the core at offset r: flat sides plus `perArc` points per quarter turn of corner. */
@@ -95,14 +98,57 @@ function plate(edges: Edge[], r: number, z0: number, t: number, name: string, ti
   return m;
 }
 
-/** The assembled box. `explode` 0..1 lifts the walls a little and the lid well clear. */
-export function buildHingeScene(model: Model, p: Params, explode = 0): Scene3D {
+const named = (m: Model, name: string) => m.parts.find((pt): pt is PlatePart => pt.kind === "plate" && pt.name === name);
+const dotA = (q: Point, a: Point) => q[0] * a[0] + q[1] * a[1];
+
+/** A see-through slab for a clear window. */
+function windowSlab(outer: Point[], z0: number, t: number) {
+  const m = slab(outer, [], z0, t, "window");
+  m.material = new THREE.MeshStandardMaterial({ color: 0xcfe6f5, transparent: true, opacity: 0.35, roughness: 0.1 });
+  m.userData.keepMaterial = true;
+  return m;
+}
+
+/**
+ * A flip lid at height z: the strip behind the band and the band stay put; the flap turns about the
+ * band's edge by `open` (0..1 of its reach, at most 100°).
+ */
+function flipLid(m: Model, p: Params, lid: PlatePart, z: number, open: number) {
+  const g = new THREE.Group(), f = m.flip!, a = f.a, t = p.T;
+  const out = lid.pts ?? outline(lid.edges, lid.r);
+  const holes = lid.slots.filter((h) => !h.every((q) => dotA(q, a) >= f.to));
+  const onFlap = (h: Point[]) => h.every((q) => dotA(q, a) <= f.from);
+  const rest = slab(clipHalf(out, [-a[0], -a[1]], -f.from), [], z, t, "lid");
+  rest.userData.tint = 1.04;
+  const strip = slab(clipHalf(clipHalf(out, [-a[0], -a[1]], -f.from), a, f.to), [], z + 0.02, t, "lid hinge");
+  strip.userData.tint = 0.82;
+  const flap = slab(clipHalf(out, a, f.from), holes.filter(onFlap), 0, t, "lid flap");
+  flap.userData.tint = 1.04;
+  // The flap turns about the band's edge on the lid's top face, upwards.
+  const pivot = new THREE.Vector3(a[0] * f.from, -(a[1] * f.from), z + t);
+  const axis = new THREE.Vector3(-a[1], -a[0], 0).normalize();
+  const hinge = new THREE.Group();
+  hinge.position.copy(pivot);
+  flap.position.set(-pivot.x, -pivot.y, z - pivot.z);
+  hinge.add(flap);
+  const angle = (Math.min(100, f.angle) * Math.PI * open) / 180;
+  const q = new THREE.Quaternion().setFromAxisAngle(axis, angle);
+  const probe = new THREE.Vector3(-a[0] * 10, a[1] * 10, 0).applyQuaternion(q);
+  hinge.quaternion.copy(probe.z >= 0 ? q : new THREE.Quaternion().setFromAxisAngle(axis, -angle));
+  g.add(rest, strip, hinge);
+  return g;
+}
+
+/** The assembled box. `explode` 0..1 lifts the walls a little and the lid well clear (a flip lid swings open). */
+export function buildHingeScene(model: Model, user: Params, explode = 0): Scene3D {
+  const p = builtParams(user);
   const t = p.T, edges = model.core.edges, R = model.R, hBody = model.hBody;
   const inner = new THREE.Group();
   const wallLift = explode * hBody * 0.35;
   const lidLift = explode * (hBody * 0.9 + 20);
   const plateR = R + p.K / 2;
-  inner.add(plate(edges, plateR, 0, t, "base", 0.93));
+  const base = named(model, "BASE");
+  inner.add(plate(edges, plateR, 0, t, "base", 0.93, base?.slots.filter((h) => isOpening(h, p)) ?? []));
   const ring = model.parts.find((pt) => pt.kind === "plate" && pt.name === "BASE RING");
   if (ring?.kind === "plate") inner.add(plate(edges, ring.r, t + wallLift * 0.45, t, "base ring", 0.78, ring.slots));
   const z0 = t + wallLift;
@@ -117,25 +163,76 @@ export function buildHingeScene(model: Model, p: Params, explode = 0): Scene3D {
   }
   const top = t + hBody;
   const lidR = plateR + Math.max(0, p.lidOver ?? 0);
-  const lid = model.parts.find((pt) => pt.kind === "plate" && pt.name === "LID");
+  const lid = named(model, "LID");
   // The wall's tabs fill the lid's first slots, so only the opening (after them) shows.
   const tabSlots = edges.reduce((n, e) => n + e.tabs.length, 0);
-  const holes = lid?.kind === "plate" ? lid.slots.slice(p.lid === "fixed" ? tabSlots : 0) : [];
+  const holes = lid ? lid.slots.slice(p.lid === "fixed" ? tabSlots : 0) : [];
+  let lidTop = top + t;
   if (p.lid === "fixed") inner.add(plate(edges, lidR, top + lidLift, t, "lid", 1.04, holes));
   if (p.lid === "removable") {
     const lipR = R - t - p.lidGap + p.K / 2;
     if (lipR > 0.5 && p.lidLip !== false) inner.add(plate(edges, lipR, top - t + lidLift, t, "lid lip", 0.86, holes));
     inner.add(plate(edges, lidR, top + lidLift, t, "lid", 1.04, holes));
   }
+  if (p.lid === "flip" && lid && model.flip) inner.add(flipLid(model, p, lid, top, explode));
+  if (p.lid === "fixed" || p.lid === "removable") lidTop = top + t + lidLift;
+  // ---- a cap lid: its walls round the top of the box, its top on the box's walls
+  if (p.lid === "cap" && model.cap) {
+    const c = model.cap, capTop = named(model, "CAP TOP"), cz = top + lidLift;
+    const capTabs = c.edges.reduce((n, e) => n + e.tabs.length, 0);
+    inner.add(wallBand(c.edges, c.R, c.R - t, cz - c.hBody, c.hBody));
+    inner.add(slitLines(c.edges, c.R + 0.15, cz - c.hBody, c.hBody, p.pitch, honeyLattice(p).bridge));
+    inner.add(plate(c.edges, c.R + p.K / 2, cz, t, "cap top", 1.04, capTop ? capTop.slots.slice(capTabs) : []));
+    lidTop = cz + t;
+  }
+  // ---- steps on the lid, and a window under an open top
+  for (const st of model.parts) {
+    if (st.kind !== "plate" || !/ STEP (\d)$/.test(st.name)) continue;
+    const i = Number(st.name.slice(-1));
+    inner.add(plate(st.edges, st.r, lidTop + (i - 1) * t, t, st.name.toLowerCase(), 1.06, st.slots));
+  }
+  const win = named(model, "WINDOW");
+  if (win) {
+    const wz = p.lid === "cap" ? lidTop - 1.8 * t : p.lid === "flip" ? top - 0.7 * t : lidTop - 1.8 * t;
+    inner.add(windowSlab(win.pts ?? outline(win.edges, win.r), wz, 0.6 * t));
+  }
+  // ---- drawers: fronts at the open top, boxes behind them, pulled out as the view explodes
+  for (const d of model.drawerPlaces ?? []) {
+    const front = named(model, `${d.name} FRONT`), pull = explode * d.d * 0.7;
+    if (front) inner.add(plate(front.edges, front.r, top + pull + 0.5, t, d.name.toLowerCase() + " front", 1.04, front.slots).translateY(-d.cy));
+    const dc = buildCore({ ...p, shape: "rect", W: d.w, D: d.d, R: d.r });
+    if ("error" in dc) continue;
+    const box = new THREE.Group();
+    box.add(plate(dc.edges, d.r, 0, t, d.name.toLowerCase() + " base", 0.9));
+    box.add(wallBand(dc.edges, d.r, d.r - t, t, d.h - t));
+    // The drawer's height runs up the case (minus y in the drawing), its depth along the case's height.
+    box.rotation.x = -Math.PI / 2;
+    box.position.set(0, -(d.cy + d.h / 2), t + 1 + d.d / 2 + pull);
+    inner.add(box);
+  }
+  if (p.upright || model.drawerPlaces?.length) {
+    // Stood on its side: the base is the back, the lid or the drawer fronts face forward.
+    const stand = new THREE.Group();
+    stand.add(...inner.children.slice());
+    stand.rotation.x = Math.PI / 2;
+    inner.add(stand);
+  }
   return finishScene(inner);
 }
+
+/** Base cuts that show: openings and keyholes, not the tab slots. */
+function isOpening(h: Point[], p: Params) {
+  const b = bbox(h), w = b[2] - b[0], d = b[3] - b[1], small = Math.min(w, d), big = Math.max(w, d);
+  return !(small <= p.T + Math.max(0, p.slotClr) + 0.01 && big <= p.tabW + Math.max(0, p.slotClr) + 0.01);
+}
+const bbox = (h: Point[]) => [Math.min(...h.map((q) => q[0])), Math.min(...h.map((q) => q[1])), Math.max(...h.map((q) => q[0])), Math.max(...h.map((q) => q[1]))];
 
 /** The cut parts lying flat where the layout put them, with the hinge slits drawn on the walls. */
 export function hingeFlatScene(lay: Layout, content: LayerContent | null, p: Params): Scene3D {
   const parts: FlatPart[] = lay.items.map(({ pt, ox, oy }) => {
     const sh = (q: Point): Point => [q[0] + ox, q[1] + oy];
     if (pt.kind === "wall") return { name: pt.name, outer: pt.outline.map(sh), holes: (pt.holes ?? []).map((h) => h.map(sh)) };
-    return { name: pt.name, outer: outline(pt.edges, pt.r).map(sh), holes: pt.slots.map((s) => s.map(sh)) };
+    return { name: pt.name, outer: (pt.pts ?? outline(pt.edges, pt.r)).map(sh), holes: pt.slots.map((s) => s.map(sh)) };
   });
   return flatScene(parts, p.T, content ? { d: content.hinge, width: lay.width, height: lay.height } : undefined);
 }

@@ -51,7 +51,14 @@ export function explainHingeError(p: Params, error: string): string {
 }
 
 /** Model messages that a coded issue below already covers. */
-const COVERED = [/^Corner radius is too small for a lid lip/, /^Torsion bars are under/, /^No flat side is long enough/, /^The hinge is far more flexible/];
+const COVERED = [/^Corner radius is too small for a lid lip/, /^Torsion bars are under/, /^No flat side is long enough/, /^The hinge is far more flexible/, /^The flip hinge opens only/];
+
+/** A flip lid hinged across the other way (left for back, back for left...), or null when it has no flip lid. */
+function flipTurned(p: Params): Params | null {
+  if (p.lid !== "flip") return null;
+  const side = p.flipSide ?? "back";
+  return { ...p, flipSide: side === "back" || side === "front" ? "left" : "back" };
+}
 
 export function hingeIssues(p: Params): HIssue[] {
   const out: HIssue[] = [];
@@ -63,6 +70,12 @@ export function hingeIssues(p: Params): HIssue[] {
     if (/Slit spacing is too tight/.test(res.error)) fixes.push({ id: "pitch", label: `Spacing ${r3(up(cutWidth(p) + 1, 0.05))} mm`, safe: true, apply: (q) => ({ ...q, pitch: r3(up(cutWidth(q) + 1, 0.05)) }) });
     if (/Honeycomb walls are too thin/.test(res.error)) fixes.push({ id: "cell", label: `Cell width ${r3(Math.max(p.K + 0.6, 2 * p.pitch - 1))} mm`, safe: true, apply: (q) => ({ ...q, slotW: r3(Math.max(q.K + 0.6, 2 * q.pitch - 1)) }) });
     if (/Corner radius must be at least/.test(res.error)) fixes.push({ id: "radius", label: `Radius ${up(p.T + 1)} mm`, safe: true, apply: (q) => ({ ...q, R: up(q.T + 1) }) });
+    if (/too narrow for a flip hinge/.test(res.error)) {
+      const turned = flipTurned(p);
+      if (p.flipBand != null || p.flipFixed != null) fixes.push({ id: "flip-auto", label: "Automatic hinge band", safe: true, apply: (q) => { const n = { ...q }; delete n.flipBand; delete n.flipFixed; return n; } });
+      if (turned && !("error" in computeModel(turned))) fixes.push({ id: "flip-side", label: `Hinge on the ${turned.flipSide}`, safe: false, apply: (q) => flipTurned(q) ?? q });
+    }
+    if (/cap lid is taller than the box/.test(res.error)) fixes.push({ id: "cap-auto", label: "Automatic cap height", safe: true, apply: (q) => { const n = { ...q }; delete n.capH; return n; } });
     const small = RADIUS_TOO_BIG.test(res.error) ? underTwiceRadius(p) : [];
     if (small.length) {
       const r = radiusThatFits(p);
@@ -117,13 +130,22 @@ export function hingeIssues(p: Params): HIssue[] {
     });
   }
 
-  if (p.lid === "removable" && (p.shape === "rect" || p.shape === "poly") && !m.parts.some((pt) => pt.kind === "plate" && pt.name === "LID LIP")) {
+  if (p.lid === "removable" && !p.drawers && (p.shape === "rect" || p.shape === "poly") && !m.parts.some((pt) => pt.kind === "plate" && pt.name === "LID LIP")) {
     const R = up(p.T + p.lidGap + 1);
     out.push({
       code: "NO_LIP", level: "warn",
       message: "The corner radius is too small for a lid lip, so the lip was left out.",
       fixes: [{ id: "radius", label: `Radius ${R} mm`, safe: true, apply: (q) => ({ ...q, R: Math.max(q.R, R) }) }],
     });
+  }
+
+  if (m.flip && m.flip.angle < 90) {
+    const fixes: Fix<Params>[] = [];
+    if (p.flipBand != null) fixes.push({ id: "flip-auto", label: "Automatic hinge band", safe: true, apply: (q) => { const n = { ...q }; delete n.flipBand; return n; } });
+    const flex = { ...p, slit: 40, bridge: 2, pitch: 2.5 };
+    const fm = computeModel(flex);
+    if (!("error" in fm) && fm.flip && fm.flip.angle >= 90 && fm.analysis.verdict !== "err") fixes.push({ id: "flip-flex", label: "Flexible hinge style", safe: false, apply: (q) => ({ ...q, slit: 40, bridge: 2, pitch: 2.5 }) });
+    out.push({ code: "FLIP_ANGLE", level: "warn", message: `The flip lid opens only about ${Math.round(m.flip.angle)}° before its hinge band is bent to its limit.`, fixes });
   }
 
   if (m.core.edges.every((e) => e.tabs.length === 0)) {

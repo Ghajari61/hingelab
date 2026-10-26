@@ -5,7 +5,7 @@ import * as hb from "harfbuzzjs";
 import Module from "manifold-3d";
 import { computeModel } from "@/lib/hinge";
 import { HINGE_PRESETS, hingePresetParams } from "@/lib/hinge/presets";
-import { sceneSVG } from "@/components/editor/scene3d";
+import { sceneSVG, thumbExplode } from "@/components/editor/scene3d";
 import { BUNDLED_FONTS, computeLetterModel, loadFont, mergeLetterParams, shapeText, type LoadedFont } from "@/lib/letters";
 import { LETTER_PRESETS } from "@/lib/letters/presets";
 import { computeParametric, loadSource, mergeParametricParams } from "@/lib/parametric";
@@ -56,7 +56,7 @@ if (want("hinge")) for (const preset of HINGE_PRESETS) {
   const p = hingePresetParams(preset.params);
   const m = computeModel(p);
   if ("error" in m) throw new Error(`hinge/${preset.id}: ${m.error}`);
-  out("hinge", preset.id, sceneSVG(m, p, -0.6, p.lid === "removable" ? 0.35 : 0).replace("<svg ", '<svg width="300" height="200" '));
+  out("hinge", preset.id, sceneSVG(m, p, -0.6, thumbExplode(p)).replace("<svg ", '<svg width="300" height="200" '));
 }
 
 if (want("letters")) for (const preset of LETTER_PRESETS) {
