@@ -116,6 +116,30 @@ export const CHARM_PRESETS: GenPreset<CharmParams>[] = [
     id: "table-name-plates", name: "Dinner name plates", note: "Rounded name plates with a laurel, standing",
     params: { name: "Name plates", kind: { kind: "placecard" }, names: { list: "Chef Marco\nGuest of honour", fontId: "playfair-display", size: 10 }, shape: { kind: "rounded", width: 100, height: 38, margin: 5, frame: true }, accent: { kind: "laurel", place: "left", size: 18 }, stand: { depth: 30, clearance: 0.1 } },
   },
+  // ---- gift card holders
+  {
+    id: "gift-card-ornament", name: "Gift card holder ornament", note: "A pocket for a gift card behind a framed window, the name across the front",
+    params: { name: "Gift card ornament", kind: { kind: "cardholder" }, names: { list: "Henry\nSophie", fontId: "pacifico", size: 18 }, shape: { kind: "rounded", width: 106, height: 78, margin: 4, frame: false }, card: { width: 85.6, height: 54, clearance: 1, lip: 5 }, hang: { kind: "loop", side: "top", hole: 4, wall: 3 }, mat: { mat2: "acrylic-white", T2: 3 } },
+    pro: true,
+  },
+  {
+    id: "gift-card-scallop", name: "Scalloped gift card holder", note: "Scalloped edge, gold mirror name",
+    params: { name: "Scalloped card holder", kind: { kind: "cardholder" }, names: { list: "Grace", fontId: "great-vibes", size: 20 }, textStyle: { bold: 0.3 }, shape: { kind: "scalloped", width: 120, height: 92, margin: 5, frame: false }, card: { width: 85.6, height: 54, clearance: 1, lip: 5 }, hang: { kind: "loop", side: "top", hole: 4, wall: 3 }, mat: { mat2: "acrylic-gold", T2: 3 } },
+    pro: true,
+  },
+  // ---- with a dangle
+  {
+    id: "new-home-ornament", name: "New home ornament", note: "House with the family name and street, a little key dangle with the year",
+    params: { name: "New home", kind: { kind: "ornament" }, names: { list: "The Jeongs", fontId: "archivo-black", size: 11, sub: "975 Lakeside Dr", subSize: 45 }, shape: { kind: "house", width: 80, height: 82, margin: 6, frame: true }, hang: { kind: "hole", side: "top", hole: 4, wall: 3 }, dangle: { on: true, shape: "circle", size: 22, text: "2026", hole: 3 } },
+  },
+  {
+    id: "memorial-paw", name: "Pet memorial ornament", note: "Paw with the pet's name, a heart dangle that says Forever",
+    params: { name: "Pet memorial", kind: { kind: "ornament" }, names: { list: "Annie", fontId: "pacifico", size: 12 }, shape: { kind: "motif", motif: "paw", width: 75, height: 75, margin: 3, frame: false }, hang: { kind: "loop", side: "top", hole: 4, wall: 3 }, dangle: { on: true, shape: "heart", size: 22, text: "Forever", hole: 3 } },
+  },
+  {
+    id: "keychain-dangle", name: "Keychain with a year tag", note: "Name tag keychain with a little round tag for the year",
+    params: { name: "Keychain dangle", kind: { kind: "keychain" }, names: { list: "Isla\nOwen", fontId: "fredoka", size: 10 }, shape: { kind: "pill", width: 62, height: 24, margin: 3, frame: true }, hang: { kind: "hole", side: "left", hole: 5, wall: 3 }, dangle: { on: true, shape: "circle", size: 20, text: "2026", hole: 3 } },
+  },
   // ---- gift tags
   {
     id: "stocking-tags", name: "Stocking tags", note: "Tags with a hole for the ribbon, one per stocking",

@@ -117,9 +117,9 @@ describe("library and layers", () => {
     expect(fmtLength(toMM(1, "in"), "in", true)).toBe("1 in");
   });
   it("lists the ten generators with existing plans and Pop-up", () => {
-    expect(GENERATORS).toHaveLength(13);
-    expect(GENERATORS.filter((g) => g.plan === "free").map((g) => g.id).sort()).toEqual(["finger-box", "jigsaw", "name-charms", "paper-box", "shadow-box", "tray"]);
-    expect(GENERATORS.map((g) => g.n)).toEqual([15, 16, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12]);
+    expect(GENERATORS).toHaveLength(14);
+    expect(GENERATORS.filter((g) => g.plan === "free").map((g) => g.id).sort()).toEqual(["family-names", "finger-box", "jigsaw", "name-charms", "paper-box", "shadow-box", "tray"]);
+    expect(GENERATORS.map((g) => g.n)).toEqual([15, 16, 17, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12]);
   });
 });
 

@@ -198,6 +198,8 @@ export interface TextShape {
   width: number;
   height: number;
   missing: string[];
+  /** Each glyph's own outlines, in the same frame and drawing order (for scoring where letters overlap). */
+  glyphs?: Contour[][];
 }
 
 export interface BuildContext {

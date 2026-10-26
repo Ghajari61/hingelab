@@ -13,6 +13,8 @@ import type { BuildContext, Contour, Pt } from "./types";
 export interface TextBlock {
   /** Filled glyph regions, the block centred on (0, 0). */
   contours: Contour[];
+  /** Each glyph's outlines in drawing order, in the same frame (plain style only; for weld and score). */
+  glyphs?: Contour[][];
   width: number;
   height: number;
   /** A font is still loading (draw nothing yet). */
@@ -41,14 +43,18 @@ export function textBlock(ctx: BuildContext, text: string, fontId: string, size:
   if (shaped.some((t) => !t)) return { contours: [], width: 0, height: 0, loading: true };
   const width = Math.max(...shaped.map((t) => t!.width));
   let cs: Contour[] = [];
+  let glyphs: Contour[][] | undefined = [];
   shaped.forEach((t, k) => {
     for (const c of t!.missing) if (o.missing && !o.missing.includes(c)) o.missing.push(c);
     const dx = o.align === "left" ? (t!.width - width) / 2 : o.align === "right" ? (width - t!.width) / 2 : 0;
     const dy = (k - (lines.length - 1) / 2) * lead;
     for (const c of t!.contours) cs.push(c.map(([x, y]) => [x + dx, y + dy] as Pt));
+    if (glyphs && t!.glyphs) for (const g of t!.glyphs) glyphs.push(g.map((c) => c.map(([x, y]) => [x + dx, y + dy] as Pt)));
+    else glyphs = undefined;
   });
   if (!cs.length) return { contours: [], width: 0, height: 0, loading: false };
   if (!isPlainStyle(o.style)) {
+    glyphs = undefined;
     const b0 = bboxOf(cs);
     const mx = (b0.x0 + b0.x1) / 2, my = (b0.y0 + b0.y1) / 2;
     cs = styleContours(cs.map((c) => c.map(([x, y]) => [x - mx, y - my] as Pt)), o.style!);
@@ -56,7 +62,8 @@ export function textBlock(ctx: BuildContext, text: string, fontId: string, size:
   }
   const b = bboxOf(cs);
   const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
-  return { contours: cs.map((c) => c.map(([x, y]) => [x - cx, y - cy] as Pt)), width: b.x1 - b.x0, height: b.y1 - b.y0, loading: false };
+  const sh = (c: Contour) => c.map(([x, y]) => [x - cx, y - cy] as Pt);
+  return { contours: cs.map(sh), ...(glyphs?.length ? { glyphs: glyphs.map((g) => g.map(sh)) } : {}), width: b.x1 - b.x0, height: b.y1 - b.y0, loading: false };
 }
 
 /** Points of a contour, at most `max` of them (evenly picked). */

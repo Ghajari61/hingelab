@@ -44,7 +44,7 @@ export const PRODUCT_INFO: Record<Product, { name: string; icon: ReactNode }> = 
 export const PRODUCT_PICTURE: Record<Product, string> = {
   hinge: "/presets/hinge/gift-box.svg", letters: "/presets/letters/hello-sign.svg", parametric: "/presets/parametric/head-stack.svg",
   shadowbox: "/presets/shadowbox/star-tunnel.svg", boxes: "/presets/boxes/small-box.svg", paperbox: "/presets/paperbox/jewelry-6x6x3.svg",
-  sign: "/presets/sign/welcome-arch.svg", topper: "/presets/topper/happy-birthday.svg", popup: "/presets/popup/spiral-trivet-bowl.svg", charm: "/presets/charm/family-baubles.svg",
+  sign: "/presets/sign/welcome-arch.svg", topper: "/presets/topper/happy-birthday.svg", popup: "/presets/popup/spiral-trivet-bowl.svg", charm: "/presets/charm/family-baubles.svg", family: "/presets/family/family-crossword.svg",
   clock: "/presets/clock/wall-roman.svg", puzzle: "/presets/puzzle/kids-12.svg", qr: "/presets/qr/keychain.svg",
   keyrack: "/presets/keyrack/home-sweet-home.svg", tablenum: "/presets/tablenum/wedding-arch.svg", trophy: "/presets/trophy/star-award.svg",
 };

@@ -22,6 +22,7 @@ import { motifRef } from "../motifRef";
 import { fitBox, orient, orientHole, shapeOutline, type ShapeKind } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { textBlock, weld } from "../weld";
+import { overlapScores } from "../weldScore";
 import { charmNames, type CharmParams } from "./params";
 
 export interface CharmInfo {
@@ -40,6 +41,11 @@ export interface CharmInfo {
   /** Drink markers: strain at the clip arm's root as it opens, and what the stock takes. */
   clipStrain: number;
   allowed: number;
+  /** Card holders: how far the card shows above the pocket (negative: below the edge), and the narrowest arm round the pocket, mm. */
+  card: number;
+  arm: number;
+  /** Smallest words on a dangle, mm (Infinity: none). */
+  dangleLetter: number;
 }
 
 export type CharmOutput = GenOutput & { info?: CharmInfo };
@@ -127,13 +133,13 @@ function clearance(q: Pt, outer: Contour): number {
  * Where a hole of radius r keeps `wall` all round, searching inwards from the top (or left) edge
  * along the centre line, and the wall it gets (less than asked only when the blank is too small).
  */
-export function holeSpot(outer: Contour, side: "top" | "left", r: number, wall: number): { at: Pt; wall: number } {
+export function holeSpot(outer: Contour, side: Side, r: number, wall: number): { at: Pt; wall: number } {
   const b = bboxOf([outer]);
   const need = r + wall;
   let best: { at: Pt; c: number } = { at: [(b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2], c: -Infinity };
-  const span = side === "top" ? b.y1 - b.y0 : b.x1 - b.x0;
+  const span = side === "left" || side === "right" ? b.x1 - b.x0 : b.y1 - b.y0;
   for (let t = 0; t <= span * 0.6; t += 0.2) {
-    const q: Pt = side === "top" ? [(b.x0 + b.x1) / 2, b.y0 + t] : [b.x0 + t, (b.y0 + b.y1) / 2];
+    const q = along(b, side, t);
     const c = clearance(q, outer);
     if (c >= need) return { at: q, wall };
     if (c > best.c) best = { at: q, c };
@@ -141,14 +147,22 @@ export function holeSpot(outer: Contour, side: "top" | "left", r: number, wall: 
   return { at: best.at, wall: Math.max(0, best.c - r) };
 }
 
+type Side = "top" | "left" | "bottom" | "right";
+
+/** A point `t` in from one edge of a box, on its centre line. */
+function along(b: { x0: number; y0: number; x1: number; y1: number }, side: Side, t: number): Pt {
+  const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+  return side === "top" ? [cx, b.y0 + t] : side === "bottom" ? [cx, b.y1 - t] : side === "right" ? [b.x1 - t, cy] : [b.x0 + t, cy];
+}
+
 /** The outline's first point along the centre line from the top (or left). */
 function edgeAt(outer: Contour, side: "top" | "left"): Pt {
   const b = bboxOf([outer]);
   for (let t = 0; t <= (side === "top" ? b.y1 - b.y0 : b.x1 - b.x0); t += 0.1) {
-    const q: Pt = side === "top" ? [(b.x0 + b.x1) / 2, b.y0 + t] : [b.x0 + t, (b.y0 + b.y1) / 2];
+    const q = along(b, side, t);
     if (pointInContour(q, outer)) return q;
   }
-  return side === "top" ? [(b.x0 + b.x1) / 2, b.y0] : [b.x0, (b.y0 + b.y1) / 2];
+  return along(b, side, 0);
 }
 
 /** Kinds that hang from a hole or loop (bag tags use their strap slot, markers their clip, cards stand). */
@@ -175,7 +189,7 @@ export function hang(p: CharmParams, blank: Shape): Hung {
   return { shape: makeShape(body.outer, [...blank.holes, hole]), hole, keep: orient(circle(c[0], c[1], R + 0.5)), wall: h.wall };
 }
 
-interface Content { cs: Contour[]; blocks: { item: string; cs: Contour[] }[]; w: number; h: number }
+interface Content { cs: Contour[]; blocks: { item: string; cs: Contour[] }[]; w: number; h: number; glyphs: Contour[][] }
 
 /** The name, its second line and the accent motif as one block centred on (0, 0), at full size. */
 function content(p: CharmParams, ctx: BuildContext, name: string, missing: string[]): { c: Content | null; loading: boolean } {
@@ -206,8 +220,9 @@ function content(p: CharmParams, ctx: BuildContext, name: string, missing: strin
   const b = bboxOf(all), cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
   const sh = (cs: Contour[]) => move(cs, -cx, -cy);
   nameCs = sh(nameCs); subCs = sh(subCs); acc = sh(acc);
+  const glyphs = ("glyphs" in t && t.glyphs ? t.glyphs : []).map(sh);
   return {
-    c: { cs: [...nameCs, ...subCs, ...acc], blocks: [{ item: "Name", cs: nameCs }, { item: "Second line", cs: subCs }, { item: "Motif", cs: acc }], w: b.x1 - b.x0, h: b.y1 - b.y0 },
+    c: { cs: [...nameCs, ...subCs, ...acc], blocks: [{ item: "Name", cs: nameCs }, { item: "Second line", cs: subCs }, { item: "Motif", cs: acc }], w: b.x1 - b.x0, h: b.y1 - b.y0, glyphs },
     loading: false,
   };
 }
@@ -224,8 +239,9 @@ function samples(cs: Contour[]): Pt[] {
  * The largest scale (≤ 1) and centre at which the block sits inside the safe area: the blank shrunk
  * by the margin, minus the hole's keep-out. Tries a few heights so a top hole pushes the name down.
  */
-export function fitContent(cs: Contour[], blank: Shape, keep: Contour | null, margin: number): { s: number; at: Pt } {
-  const safe = largest(keep ? differenceShapes(shapeContours(offsetShapes([makeShape(blank.outer, [])], -margin)), [keep]) : offsetShapes([makeShape(blank.outer, [])], -margin));
+export function fitContent(cs: Contour[], blank: Shape, keep: Contour | Contour[] | null, margin: number): { s: number; at: Pt } {
+  const keeps = !keep ? [] : Array.isArray(keep[0]?.[0]) ? (keep as Contour[]) : [keep as Contour];
+  const safe = largest(keeps.length ? differenceShapes(shapeContours(offsetShapes([makeShape(blank.outer, [])], -margin)), keeps) : offsetShapes([makeShape(blank.outer, [])], -margin));
   if (!safe) return { s: 0, at: [0, 0] };
   // The safe outline thinned to a few hundred points: the margin hides the difference.
   const thin = (c: Contour) => { const k = Math.max(1, Math.floor(c.length / 320)); return k === 1 ? c : c.filter((_, i) => i % k === 0); };
@@ -263,8 +279,75 @@ function withClip(p: CharmParams, blank: Shape): { shape: Shape; strain: number 
   return { shape: makeShape(s.outer, [...blank.holes, ...s.holes]), strain: (1.5 * c.ring * delta) / (L * L) };
 }
 
+/** Kinds that can carry a dangle under them. */
+export const dangles = (p: CharmParams) => p.dangle.on && (p.kind.kind === "ornament" || p.kind.kind === "keychain" || p.kind.kind === "gifttag");
+
+/** The small tag that hangs under a charm: its shape with a hole at the top and its words engraved. */
+function dangleTag(p: CharmParams, ctx: BuildContext, missing: string[]): { part: GenPart | null; wall: number; letter: number; loading: boolean } {
+  const d = p.dangle, s = d.size;
+  const tall = d.shape === "teardrop" ? 1.45 : d.shape === "bauble" ? 1.15 : d.shape === "pill" || d.shape === "tag" || d.shape === "banner" || d.shape === "bone" ? 0.55 : 1;
+  const o = blankOutline({ ...p, shape: { ...p.shape, kind: d.shape as CharmParams["shape"]["kind"], width: s, height: s * tall, corner: Math.min(p.shape.corner, s * 0.1) } }, ctx, missing);
+  if (!o.outer) return { part: null, wall: Infinity, letter: 0, loading: o.loading };
+  // A loop on its top edge keeps the whole little face for the words.
+  const wall = Math.min(p.hang.wall, 2.5);
+  const h = hang({ ...p, kind: { kind: "ornament" }, hang: { kind: "loop", side: "top", hole: d.hole, wall } }, makeShape(o.outer, []));
+  const blank = h.shape;
+  const spot = { wall: h.wall };
+  let engrave: Contour[] | undefined, letter = 0;
+  if (d.text.trim()) {
+    const t = textBlock(ctx, d.text, p.names.subFontId, s * 0.3, { missing });
+    if (t.loading) return { part: null, wall: Infinity, letter: 0, loading: true };
+    const fit = fitContent(t.contours, makeShape(o.outer, []), h.keep, Math.max(1.5, s * 0.08));
+    if (fit.s > 0) { engrave = shapeContours(unionShapes(move(scaleAbout(t.contours, fit.s), fit.at[0], fit.at[1]))); letter = s * 0.3 * fit.s; }
+  }
+  return { part: { id: "dangle", name: "Dangle", outer: blank.outer, holes: blank.holes, ...(engrave ? { engrave } : {}) }, wall: spot.wall, letter, loading: false };
+}
+
+/**
+ * A gift card holder: four layers glued in order. The back carries the hanging loop; the spacer is
+ * the back's outline with a pocket open at the top, as wide as the card plus the clearance; the
+ * front has a window a lip smaller than the pocket, so the card cannot fall out forwards; the name,
+ * welded in the second material, crosses the front's lower edge. A thumb notch in the spacer and
+ * front lets you push the card up when it sits below the edge.
+ */
+function cardHolder(p: CharmParams, outer: Contour, c: Content | null, id: string, label: string, at: { x: number; y: number; z: number }) {
+  const W = p.shape.width, H = p.shape.height, k = p.card;
+  const pw = k.width + 2 * k.clearance, arm = (W - pw) / 2;
+  const depth = H - arm;
+  const show = k.height + k.clearance - depth;
+  const pocket = orient(rect(arm, -10, pw, depth + 10));
+  const blank = makeShape(outer, []);
+  const back = hang({ ...p, kind: { kind: "ornament" }, hang: { ...p.hang, kind: p.hang.kind === "none" ? "none" : "loop", side: "top" } }, blank);
+  const notch = show < 10 ? [orient(circle(W / 2, 0, Math.min(10, pw * 0.15)))] : [];
+  const top = Math.max(k.lip, notch.length ? 12 : k.lip);
+  const window = orient(roundedRect(arm + k.lip, top, pw - 2 * k.lip, depth - k.lip - top, 2));
+  const spacer = largest(differenceShapes([outer], [pocket, ...notch]));
+  const frontShape = largest(differenceShapes([outer], [window, ...notch]));
+  const parts: GenPart[] = [
+    { id: `${id}-back`, name: `${label} back`, outer: back.shape.outer, holes: back.shape.holes, place: { ...at, z: 0 } },
+  ];
+  if (spacer) parts.push({ id: `${id}-spacer`, name: `${label} pocket`, outer: spacer.outer, holes: spacer.holes, place: { ...at, z: p.T } });
+  if (frontShape) parts.push({ id: `${id}-front`, name: `${label} front`, outer: frontShape.outer, holes: frontShape.holes, score: [closed(roundedRect(arm + k.lip - 1.5, top - 1.5, pw - 2 * k.lip + 3, depth - k.lip - top + 3, 3))], place: { ...at, z: 2 * p.T } });
+  let letter = 0;
+  if (c) {
+    // The name sits across the lower part of the front, over the window's bottom edge.
+    const keep = orient(rect(-10, -10, W + 20, H * 0.5 + 10));
+    const fit = fitContent(c.cs, blank, keep, p.shape.margin);
+    if (fit.s > 0) {
+      const placed = move(scaleAbout(c.cs, fit.s), fit.at[0], fit.at[1]);
+      const word = weld(placed, { border: Math.max(0.3, p.style.weld), minHole: 2, bridge: Math.max(2, p.style.weld * 3) });
+      if (word) {
+        const sc = overlapScores(c.glyphs.map((g) => move(scaleAbout(g, fit.s), fit.at[0], fit.at[1])));
+        parts.push({ id: `${id}-name`, name: `${label} name`, outer: word.outer, holes: word.holes, ...(sc.length ? { score: sc } : {}), material: "second", place: { ...at, z: 3 * p.T } });
+      }
+      letter = p.names.size * fit.s;
+    }
+  }
+  return { parts, wall: back.wall, show, arm: Math.min(arm, H - depth), letter };
+}
+
 const KIND_NAMES: Record<CharmParams["kind"]["kind"], string> = {
-  ornament: "Ornament", keychain: "Keychain", earrings: "Earring", bagtag: "Bag tag", drink: "Drink marker", placecard: "Place card", gifttag: "Gift tag",
+  ornament: "Ornament", keychain: "Keychain", earrings: "Earring", bagtag: "Bag tag", drink: "Drink marker", placecard: "Place card", gifttag: "Gift tag", cardholder: "Card holder",
 };
 
 export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
@@ -275,7 +358,7 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
   if (names.length > 200) return { parts: [], stats: [], error: "At most 200 charms in one file; split the list." };
   const kind = p.kind.kind, letters = p.style.kind === "letters";
   const slotW = p.T + p.stand.clearance;
-  const info: CharmInfo = { count: 0, width: 0, height: 0, letter: Infinity, squeezed: [], wall: Infinity, grams: 0, clipStrain: 0, allowed: charmStrainLimit(p) };
+  const info: CharmInfo = { count: 0, width: 0, height: 0, letter: Infinity, squeezed: [], wall: Infinity, grams: 0, clipStrain: 0, allowed: charmStrainLimit(p), card: 0, arm: Infinity, dangleLetter: Infinity };
   const m2 = material2(p.mat.mat2);
   const second = (pt: GenPart): GenPart => ({ ...pt, material: "second", color: m2.color, t: p.mat.T2 });
   const parts: GenPart[] = [];
@@ -313,8 +396,23 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
       const place = at(b.x1 - b.x0, b.y1 - b.y0);
       info.letter = Math.min(info.letter, p.names.size);
       info.width = Math.max(info.width, b.x1 - b.x0); info.height = Math.max(info.height, b.y1 - b.y0);
-      parts.push({ id, name: p.style.backing > 0 ? `${label} back` : label, outer: back.outer, holes: back.holes, place });
-      if (p.style.backing > 0) parts.push(second({ id: `${id}-front`, name: `${label} letters`, outer: word.outer, holes: word.holes, place: { ...place, z: p.T } }));
+      // Weld and score: where script letters overlap, the edge is scored so each letter still reads.
+      const scores = overlapScores(cn.c.glyphs);
+      const sc = scores.length ? { score: scores } : {};
+      parts.push({ id, name: p.style.backing > 0 ? `${label} back` : label, outer: back.outer, holes: back.holes, ...(p.style.backing > 0 ? {} : sc), place });
+      if (p.style.backing > 0) parts.push(second({ id: `${id}-front`, name: `${label} letters`, outer: word.outer, holes: word.holes, ...sc, place: { ...place, z: p.T } }));
+      info.count++;
+      continue;
+    }
+
+    if (kind === "cardholder") {
+      const c = cardHolder(p, base.outer!, cn.c, id, label, at(p.shape.width, p.shape.height));
+      parts.push(...c.parts.map((pt) => (pt.material === "second" ? second(pt) : pt)));
+      info.wall = Math.min(info.wall, c.wall);
+      info.card = c.show;
+      info.arm = Math.min(info.arm, c.arm);
+      if (name && c.letter) info.letter = Math.min(info.letter, c.letter);
+      info.width = Math.max(info.width, p.shape.width); info.height = Math.max(info.height, p.shape.height);
       info.count++;
       continue;
     }
@@ -339,6 +437,20 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
       const b = bboxOf([base.outer!]);
       hung = { ...hung, keep: hung.keep ?? orient(rect(b.x0, b.y0 - 50, b.x1 - b.x0, 50 + p.clip.ring)) };
     }
+    // A dangle: a hole at the bottom, and a small tag that hangs from it on a jump ring.
+    let dangle: GenPart | null = null;
+    const keeps: Contour[] = hung.keep ? [hung.keep] : [];
+    if (dangles(p)) {
+      const r = p.dangle.hole / 2, wall = Math.min(p.hang.wall, 2.5);
+      // Opposite the hanging hole: under a charm hung from the top, at the far end of one hung from the left.
+      const spot = holeSpot(hung.shape.outer, p.hang.side === "left" ? "right" : "bottom", r, wall);
+      hung = { ...hung, shape: makeShape(hung.shape.outer, [...hung.shape.holes, orientHole(circle(spot.at[0], spot.at[1], r))]) };
+      keeps.push(orient(circle(spot.at[0], spot.at[1], r + wall + 0.5)));
+      info.wall = Math.min(info.wall, spot.wall);
+      const d = dangleTag(p, ctx, missing);
+      if (d.loading) loading = true;
+      if (d.part) { dangle = d.part; info.wall = Math.min(info.wall, d.wall); if (d.letter) info.dangleLetter = Math.min(info.dangleLetter, d.letter); }
+    }
     info.wall = Math.min(info.wall, hung.wall);
     if (strain > info.clipStrain) info.clipStrain = strain;
 
@@ -355,12 +467,15 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
       foot = largest(f);
     }
 
-    const placeAt = (() => { const b = bboxOf([card.outer]); return at(b.x1 - b.x0, b.y1 - b.y0 + (foot ? 20 : 0)); })();
+    // The cell holds the charm and what goes with it: a foot under a card, a dangle below or beside.
+    const dw = dangle ? p.dangle.size + 8 : 0;
+    const placeAt = (() => { const b = bboxOf([card.outer]); return at(b.x1 - b.x0 + (dangle && p.hang.side === "left" ? dw : 0), b.y1 - b.y0 + (foot ? 20 : 0) + (dangle && p.hang.side !== "left" ? dw : 0)); })();
     const marks: Pick<GenPart, "engrave" | "score"> = {};
     let holes = card.holes;
     let front: Shape | null = null;
+    let frontScore: Contour[] = [];
     if (cn.c) {
-      const fit = fitContent(cn.c.cs, makeShape(card.outer, []), hung.keep, p.shape.margin);
+      const fit = fitContent(cn.c.cs, makeShape(card.outer, []), keeps, p.shape.margin);
       if (fit.s > 0) {
         const placed = move(scaleAbout(cn.c.cs, fit.s), fit.at[0], fit.at[1]);
         const blocks = cn.c.blocks.map((bk) => ({ item: bk.item, cs: move(scaleAbout(bk.cs, fit.s), fit.at[0], fit.at[1]) }));
@@ -380,7 +495,10 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
             holes = [...holes, ...outs];
             break;
           }
-          case "layered": front = weld(placed, { border: Math.max(0.3, p.style.weld), minHole: 2, bridge: Math.max(2, p.style.weld * 3) }); break;
+          case "layered":
+            front = weld(placed, { border: Math.max(0.3, p.style.weld), minHole: 2, bridge: Math.max(2, p.style.weld * 3) });
+            frontScore = overlapScores(cn.c.glyphs.map((g) => move(scaleAbout(g, fit.s), fit.at[0], fit.at[1])));
+            break;
         }
       } else if (name && !info.squeezed.includes(name)) info.squeezed.push(name);
     }
@@ -401,7 +519,14 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
       // Standing cards: the frame's y runs down from height -place.y, so the bottom edge meets the floor.
       const place = upright ? { x: pl.x, y: -b.y1, z: pl.y, upright: true } : pl;
       parts.push({ id: pid, name: `${label}${side}`, outer: card.outer, holes, ...marks, ...(upright ? { upright: true } : {}), place });
-      if (front) parts.push(second({ id: `${pid}-front`, name: `${label}${side} letters`, outer: front.outer, holes: front.holes, place: { ...pl, z: p.T } }));
+      if (front) parts.push(second({ id: `${pid}-front`, name: `${label}${side} letters`, outer: front.outer, holes: front.holes, ...(frontScore.length ? { score: frontScore } : {}), place: { ...pl, z: p.T } }));
+    }
+    if (dangle) {
+      const db = bboxOf([dangle.outer]);
+      const right = p.hang.side === "left";
+      parts.push({ ...dangle, id: `${id}-dangle`, name: `${label} dangle`, place: right
+        ? { x: placeAt.x + b.x1 + 6 - db.x0, y: placeAt.y + (b.y0 + b.y1) / 2 - (db.y0 + db.y1) / 2, z: 0 }
+        : { x: placeAt.x + (b.x0 + b.x1) / 2 - (db.x0 + db.x1) / 2, y: placeAt.y + b.y1 + 6 - db.y0, z: 0 } });
     }
     if (foot) {
       const fb = bboxOf([foot.outer]);
@@ -424,6 +549,8 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
     ...(kind === "earrings" ? [{ label: "Weight", value: `${r1(info.grams)} g each` }] : []),
     ...(kind === "drink" ? [{ label: "Clip", value: `fits a ${p.clip.stem} mm stem, ${r1(info.clipStrain * 100)} % of ${r1(info.allowed * 100)} % strain` }] : []),
     ...(kind === "placecard" ? [{ label: "Slots", value: `${r1(slotW)} mm for ${p.T} mm stock` }] : []),
+    ...(kind === "cardholder" ? [{ label: "Card", value: `${p.card.width} × ${p.card.height} mm, ${info.card >= 0 ? `shows ${r1(info.card)} mm above the top` : `sits ${r1(-info.card)} mm inside (thumb notch)`}` }] : []),
+    ...(dangles(p) ? [{ label: "Dangle", value: `${p.dangle.size} mm ${p.dangle.shape}${p.dangle.text.trim() ? ` “${p.dangle.text}”` : ""}` }] : []),
     { label: "Parts", value: String(parts.length) },
     ...(mixed ? [{ label: "Second material", value: `${m2.name} ${p.mat.T2} mm` }] : []),
   ];
@@ -439,7 +566,9 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
     case "drink": assembly.push(`Press each marker sideways onto a glass stem; the opening flexes ${r1((p.clip.stem - p.clip.opening) / 2)} mm each side and grips.`); break;
     case "placecard": assembly.push("Slide each card's slot down onto its foot's slot, at right angles, until they sit flush."); break;
     case "gifttag": assembly.push("Tie the tag on with twine or ribbon through the hole."); break;
+    case "cardholder": assembly.push("Glue the pocket layer on the back, keeping glue a few millimetres away from the pocket's edge so the card slides freely.", "Glue the front on the pocket layer, lined up by the outline, then the name across the front's lower edge.", "Slide the gift card in from the top."); break;
   }
+  if (dangles(p)) assembly.push(`Join the dangle to the charm with a ${Math.max(5, Math.round(p.dangle.hole * 2))} mm jump ring through both holes.`);
   return {
     parts, stats, assembly, info, missing: missing.length ? missing : undefined,
     notice: loading ? "Loading the font." : undefined,

@@ -12,7 +12,7 @@ import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
 import { TEXT_FORM, TEXT_STYLE, cleanTextForm, cleanTextStyle, type TextForm, type TextStyle } from "../textStyle";
 import { mergeInto } from "../util";
 
-export type CharmKind = "ornament" | "keychain" | "earrings" | "bagtag" | "drink" | "placecard" | "gifttag";
+export type CharmKind = "ornament" | "keychain" | "earrings" | "bagtag" | "drink" | "placecard" | "gifttag" | "cardholder";
 /** How the name shows: engraved or scored on a blank, cut through it, glued on in a second material, or the welded name is the charm. */
 export type CharmStyle = "engrave" | "score" | "cutout" | "layered" | "letters";
 /** Charm outlines: the shared shapes, a few charm shapes, or a motif's silhouette. */
@@ -75,10 +75,14 @@ export interface CharmParams extends GenBase {
   stand: { depth: number; clearance: number };
   /** Bag tags: the strap slot. */
   strap: { length: number; width: number };
+  /** Gift card holders: the card's size and how the pocket holds it. */
+  card: { width: number; height: number; clearance: number; lip: number };
+  /** A small tag hanging under the charm on a jump ring, with its own words (a year). */
+  dangle: { on: boolean; shape: string; size: number; text: string; hole: number };
   mat: { mat2: string; T2: number };
 }
 
-export const CHARM_KINDS: CharmKind[] = ["ornament", "keychain", "earrings", "bagtag", "drink", "placecard", "gifttag"];
+export const CHARM_KINDS: CharmKind[] = ["ornament", "keychain", "earrings", "bagtag", "drink", "placecard", "gifttag", "cardholder"];
 export const CHARM_STYLES: CharmStyle[] = ["engrave", "score", "cutout", "layered", "letters"];
 export const CHARM_SHAPE_EXTRA = ["teardrop", "bauble", "bone", "motif"] as const;
 const HANGS: HangKind[] = ["hole", "loop", "none"];
@@ -108,6 +112,8 @@ export const CHARM_DEFAULTS: CharmParams = {
   clip: { stem: 8, opening: 7.2, ring: 2 },
   stand: { depth: 30, clearance: 0.1 },
   strap: { length: 22, width: 5 },
+  card: { width: 85.6, height: 54, clearance: 1, lip: 5 },
+  dangle: { on: false, shape: "heart", size: 24, text: "2026", hole: 3 },
   mat: { mat2: "acrylic-gold", T2: 3 },
 };
 
@@ -120,6 +126,7 @@ export const KIND_START: Record<CharmKind, { shape: Partial<CharmParams["shape"]
   drink: { shape: { kind: "circle", width: 28, height: 28, margin: 2.5 }, hang: { kind: "none", side: "top", hole: 3, wall: 2 }, size: 6 },
   placecard: { shape: { kind: "banner", width: 95, height: 40, margin: 5 }, hang: { kind: "none", side: "top", hole: 3, wall: 2 }, size: 14 },
   gifttag: { shape: { kind: "tag", width: 75, height: 40, margin: 4 }, hang: { kind: "hole", side: "left", hole: 4, wall: 3 }, size: 12 },
+  cardholder: { shape: { kind: "rounded", width: 106, height: 78, margin: 4 }, hang: { kind: "hole", side: "top", hole: 4, wall: 3 }, size: 16 },
 };
 
 export const isCharmShape = (v: unknown): v is CharmShape => isShapeKind(v) || (CHARM_SHAPE_EXTRA as readonly string[]).includes(v as string);
@@ -156,6 +163,10 @@ export function mergeCharm(raw: unknown): CharmParams {
   p.stand.clearance = clamp(p.stand.clearance, -0.3, 1);
   p.strap.length = clamp(p.strap.length, 8, 60);
   p.strap.width = clamp(p.strap.width, 2, 15);
+  p.card.width = clamp(p.card.width, 30, 200); p.card.height = clamp(p.card.height, 20, 150);
+  p.card.clearance = clamp(p.card.clearance, 0, 5); p.card.lip = clamp(p.card.lip, 1.5, 20);
+  if (!isCharmShape(p.dangle.shape) || p.dangle.shape === "motif") p.dangle.shape = d.dangle.shape;
+  p.dangle.size = clamp(p.dangle.size, 10, 80); p.dangle.hole = clamp(p.dangle.hole, 1.5, 8); p.dangle.text = p.dangle.text.slice(0, 12);
   return p;
 }
 

@@ -9,6 +9,7 @@ const slits = (x0: number, y0: number, n: number, dx: number, h: number, cls = "
 const PICTURE: Record<string, string> = {
   popup: "/presets/popup/nut-snack-bowl.svg",
   "name-charms": "/presets/charm/family-baubles.svg",
+  "family-names": "/presets/family/family-crossword.svg",
   "hinge-box": "/presets/hinge/gift-box.svg",
   "hinged-cover": "/templates/thumbs/hinge-notebook-cover.svg",
   letters: "/presets/letters/hello-sign.svg",

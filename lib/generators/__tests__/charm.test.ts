@@ -153,6 +153,28 @@ describe("Name Charms", () => {
     expect(field.apply(p({}), "earrings").hang.hole).toBeLessThan(2.5);
   });
 
+  it("a gift card holder stacks back, pocket, front and name, and the pocket fits the card", () => {
+    const out = build({ kind: { kind: "cardholder" }, names: { list: "Henry" }, shape: { kind: "rounded", width: 106, height: 78 }, card: { width: 85.6, height: 54, clearance: 1, lip: 5 } });
+    expect(out.parts.map((q) => q.id)).toEqual(["charm-1-back", "charm-1-spacer", "charm-1-front", "charm-1-name"]);
+    expect(out.parts.map((q) => q.place!.z)).toEqual([0, 3, 6, 9]);
+    const spacer = out.parts[1];
+    // the pocket opens through the top: the spacer's outline dips to the pocket's floor
+    const xs = spacer.outer.filter((q) => Math.abs(q[1] - (78 - (106 - 87.6) / 2)) < 0.05).map((q) => q[0]);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(87.6, 1);
+    expect(out.parts[3].material).toBe("second");
+    expect(CHARM.pro!(p({ kind: { kind: "cardholder" } }), out)).toMatch(/Pro/);
+  });
+
+  it("a dangle hangs under the charm from a bottom hole, with its own words", () => {
+    const out = build({ names: { list: "Ann" }, shape: { kind: "circle", width: 60, height: 60 }, dangle: { on: true, shape: "heart", size: 22, text: "2026", hole: 3 } });
+    expect(out.parts).toHaveLength(2);
+    const main = out.parts[0], d = out.parts[1];
+    const low = main.holes.map((h) => bboxOf([h])).sort((a, b) => b.y1 - a.y1)[0];
+    expect(low.y1).toBeGreaterThan(50);
+    expect(d.holes).toHaveLength(1);
+    expect(d.engrave!.length).toBeGreaterThan(0);
+  });
+
   it("every preset builds, exports and opens without a warning", () => {
     for (const pr of CHARM.presets) {
       const q = p(pr.params);

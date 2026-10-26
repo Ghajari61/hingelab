@@ -98,6 +98,24 @@ export function checkCharm(p: CharmParams, out: CharmOutput): Issue<CharmParams>
   if (p.style.kind === "cutout" && p.textForm.stencil === 0) {
     issues.push({ code: "CHARM_CUTOUT_MIDDLES", level: "info", message: "Cut-through names lose the middles of O, A and B.", fixes: [{ id: "stencil", label: "Stencil bridges 0.8 mm", safe: true, apply: (q) => ({ ...q, textForm: { ...q.textForm, stencil: 0.8 } }) }] });
   }
+  if (Number.isFinite(info.dangleLetter) && info.dangleLetter < 3) {
+    issues.push({
+      code: "CHARM_DANGLE_TEXT", level: "warn",
+      message: `The words on the dangle come out ${r1(info.dangleLetter)} mm high; a bigger dangle or fewer letters reads better.`,
+      fixes: [{ id: "big", label: `Dangle ${Math.ceil(p.dangle.size * Math.min(2, 3.2 / Math.max(0.5, info.dangleLetter)))} mm`, safe: true, apply: (q) => ({ ...q, dangle: { ...q.dangle, size: Math.min(80, Math.ceil(q.dangle.size * Math.min(2, 3.2 / Math.max(0.5, info.dangleLetter)))) } }) }],
+    });
+  }
+  if (kind === "cardholder") {
+    const need = p.card.width + 2 * p.card.clearance + 12;
+    if (info.arm < 6) {
+      issues.push({
+        code: "CARD_THIN_ARMS", level: "warn",
+        message: `The pocket leaves only ${r1(info.arm)} mm of material at the sides or bottom; 6 mm keeps the holder stiff.`,
+        fixes: [{ id: "wide", label: `Holder ${Math.ceil(need)} mm wide`, safe: true, apply: (q) => ({ ...q, shape: { ...q.shape, width: Math.ceil(q.card.width + 2 * q.card.clearance + 12), height: Math.max(q.shape.height, Math.ceil(q.card.height * 0.9 + 6)) } }) }],
+      });
+    }
+    if (p.T < 0.9) issues.push({ code: "CARD_THIN_SPACER", level: "warn", message: `The pocket layer is ${p.T} mm, thinner than a gift card (0.76 mm) with room to slide.`, fixes: [] });
+  }
   if (kind === "placecard" && p.stand.clearance < 0) {
     issues.push({ code: "CHARM_TIGHT_SLOT", level: "info", message: "The slots are narrower than the stock: the card and foot press together tightly and may split thin wood.", fixes: [{ id: "fit", label: "Clearance 0.1 mm", safe: true, apply: (q) => ({ ...q, stand: { ...q.stand, clearance: 0.1 } }) }] });
   }

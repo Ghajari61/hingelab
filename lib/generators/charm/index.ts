@@ -20,7 +20,7 @@ const blanked = (p: CharmParams) => p.style.kind !== "letters";
 const MOTIF_SHAPES = MOTIF_OPTIONS.filter((o) => o.v !== "none");
 
 export const KIND_NAMES: Record<CharmKind, string> = {
-  ornament: "Ornaments", keychain: "Keychains", earrings: "Earrings", bagtag: "Bag tags", drink: "Drink markers", placecard: "Place cards", gifttag: "Gift tags",
+  ornament: "Ornaments", keychain: "Keychains", earrings: "Earrings", bagtag: "Bag tags", drink: "Drink markers", placecard: "Place cards", gifttag: "Gift tags", cardholder: "Gift card holders",
 };
 
 const SHAPE_OPTIONS = [
@@ -42,7 +42,7 @@ const sections: SectionSpec<CharmParams>[] = [
     fields: [
       {
         kind: "choice", key: "kind.kind", label: "Make", rail: true, apply: startKind,
-        help: "Ornaments, keychains, earrings, bag tags, drink markers that clip on a glass, place cards that stand, or gift tags.",
+        help: "Ornaments, keychains, earrings, bag tags, drink markers that clip on a glass, place cards that stand, gift tags, or gift card holder ornaments.",
         options: (Object.keys(KIND_NAMES) as CharmKind[]).map((v) => ({ v, text: KIND_NAMES[v] })),
       },
     ],
@@ -135,7 +135,28 @@ const sections: SectionSpec<CharmParams>[] = [
     ],
   },
   {
-    id: "mat", title: "Second material", open: false, show: (p) => p.style.kind === "layered" || (p.style.kind === "letters" && p.style.backing > 0),
+    id: "card", title: "Gift card", open: true, show: (p) => p.kind.kind === "cardholder",
+    help: "The pocket the gift card slides into, between the back and the front.",
+    fields: [
+      { kind: "number", key: "card.width", label: "Card width", unit: "mm", min: 30, max: 200, step: 0.1, help: "Width of the card; a standard gift card is 85.6 mm." },
+      { kind: "number", key: "card.height", label: "Card height", unit: "mm", min: 20, max: 150, step: 0.1, help: "Height of the card; a standard gift card is 54 mm." },
+      { kind: "number", key: "card.clearance", label: "Clearance", unit: "mm", min: 0, max: 5, step: 0.1, help: "Room round the card on each side so it slides in and out easily." },
+      { kind: "number", key: "card.lip", label: "Lip", unit: "mm", min: 1.5, max: 20, step: 0.5, help: "How far the front overlaps the card round the window, so it cannot fall out forwards." },
+    ],
+  },
+  {
+    id: "dangle", title: "Dangle", open: false, show: (p) => ["ornament", "keychain", "gifttag"].includes(p.kind.kind),
+    help: "A small tag hanging under the charm on a jump ring, with its own words such as the year.",
+    fields: [
+      { kind: "toggle", key: "dangle.on", label: "Dangle", help: "Adds a small tag under each charm, joined by a jump ring." },
+      { kind: "choice", key: "dangle.shape", label: "Dangle shape", show: (p) => p.dangle.on, options: [{ v: "heart", text: "Heart" }, { v: "star", text: "Star" }, { v: "circle", text: "Circle" }, { v: "teardrop", text: "Teardrop" }, { v: "tag", text: "Tag" }, { v: "house", text: "House" }, { v: "diamond", text: "Diamond" }], help: "The shape of the little tag." },
+      { kind: "number", key: "dangle.size", label: "Dangle size", unit: "mm", min: 10, max: 80, step: 0.5, show: (p) => p.dangle.on, help: "Width of the little tag." },
+      { kind: "text", key: "dangle.text", label: "Dangle words", maxLength: 12, show: (p) => p.dangle.on, placeholder: "2026", help: "Words engraved on the little tag, such as the year." },
+      { kind: "number", key: "dangle.hole", label: "Dangle holes", unit: "mm", min: 1.5, max: 8, step: 0.1, show: (p) => p.dangle.on, help: "Diameter of the holes the jump ring goes through." },
+    ],
+  },
+  {
+    id: "mat", title: "Second material", open: false, show: (p) => p.style.kind === "layered" || p.kind.kind === "cardholder" || (p.style.kind === "letters" && p.style.backing > 0),
     help: "The material of the glued-on letters: mirror, glitter or coloured acrylic, or wood.",
     fields: material2Fields<CharmParams>("mat"),
   },
@@ -165,6 +186,7 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
       drink: [circle(20, 28, 12, 0.2), circle(20, 10, 7, 0.2), circle(20, 10, 4.5, 0.2).slice().reverse()],
       placecard: [roundedRect(0, 6, 44, 20, 3), rect(16, 26, 12, 6)],
       gifttag: [[[8, 6], [44, 6], [44, 32], [8, 32], [0, 19]], hole(8, 19)],
+      cardholder: [roundedRect(0, 4, 44, 32, 4), roundedRect(6, 0, 32, 22, 1).slice().reverse(), rect(10, 26, 24, 4)],
     };
     return [{ d: fitArt(pics[v] ?? [], 38).join(" "), fill: true }];
   }
@@ -195,7 +217,7 @@ export const CHARM: GeneratorDef<CharmParams> = {
   presets: CHARM_PRESETS,
   build: buildCharm,
   check: (p, out) => checkCharm(p, out as CharmOutput),
-  pro: (p) => (p.style.kind === "layered" || (p.style.kind === "letters" && p.style.backing > 0) ? "Layered charms (two materials) need Pro." : null),
+  pro: (p) => (p.kind.kind === "cardholder" ? "Gift card holders (four layers) need Pro." : p.style.kind === "layered" || (p.style.kind === "letters" && p.style.backing > 0) ? "Layered charms (two materials) need Pro." : null),
   fonts: (p) => [
     ...(p.names.list.trim() ? [p.names.fontId] : []),
     ...(p.names.sub.trim() && p.style.kind !== "letters" ? [p.names.subFontId] : []),
