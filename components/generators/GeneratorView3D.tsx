@@ -11,6 +11,7 @@ import { flatScene } from "@/lib/three/flat";
 import { lookOf } from "@/lib/three/looks";
 import { useEditorPrefs } from "@/lib/prefs/editorStore";
 import QuadView from "@/lib/three/QuadView";
+import { rebuiltExplode } from "@/lib/three/rebuilt";
 import { quadProps, useView3D } from "@/components/shell/view3d";
 import { View3DBarTools } from "@/components/shell/View3DTools";
 import type { Units } from "@/components/editor/format";
@@ -37,18 +38,17 @@ export default function GeneratorView3D({ out, lay, T, material, units, frameKey
   const [fold, setFold] = useState(1);
   const folds = useMemo(() => !!out?.parts.some((p) => p.views3d?.some((q) => q.frames?.length)), [out]);
   const editable = !!edit;
-  // With a layout, the design opens out in place (every part to its place on the sheet); folding
-  // boxes fold and explode in place; without a layout the scene is rebuilt as it explodes.
-  const unfolds = !folds && !!lay && !flat;
-  const rebuildOn = folds || unfolds ? 0 : explode;
+  // Folding boxes fold and explode in place; the rest are rebuilt as they pull apart where they
+  // stand, behind one root, so the views widen with them.
   const scene = useMemo(() => {
     if (!out || out.error) return null;
     if (flat && lay) return flatScene(flatOf(lay), T);
-    return generatorScene(out, T, rebuildOn, 1, !folds && lay ? lay : undefined);
-  }, [out, lay, T, flat, rebuildOn, folds]);
+    return folds ? generatorScene(out, T, 0) : rebuiltExplode((e) => generatorScene(out, T, e));
+  }, [out, lay, T, flat, folds]);
   useEffect(() => {
-    if (!scene?.fold) return;
-    scene.fold(fold);
+    const folder = scene && "fold" in scene ? scene.fold : undefined;
+    if (!folder) return;
+    folder(fold);
     v.handle.current?.refresh();
   }, [scene, fold, v.handle]);
   // A different set of parts (another design) reframes; resizing the same parts does not.
@@ -63,7 +63,7 @@ export default function GeneratorView3D({ out, lay, T, material, units, frameKey
   return (
     <QuadView
       decimals={editorPrefs.decimals}
-      {...quadProps(v)} id="preview3d" model={scene} look={lookOf(material)} frameKey={key} units={units} {...(folds || unfolds ? { explode } : {})}
+      {...quadProps(v)} id="preview3d" model={scene} look={lookOf(material)} frameKey={key} units={units} explode={explode}
       measure={flat || (explode === 0 && fold === 1)} label="The design in 3D: Top, Front, Left and Perspective views" onSelect={setSel} grips={grips}
     >
       <View3DBarTools v={v} flat>

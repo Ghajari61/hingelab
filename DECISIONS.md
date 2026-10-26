@@ -1647,3 +1647,11 @@ The owner asked for an expert review of the Pop-up generator's structure, settin
 - **Holes, slots and slits keep clear of bridges** (`clearTurn`): cord holes, petal slits and handle slots turn to the angle furthest from every bridge. Cords run through every ring, the spiral strip's middle and the centre disc, so nothing hangs loose.
 - **Ribs follow the pattern**: smooth ramp tops under spirals; 3–4 radial ribs on a hub (and always for a sleeve, on a ring hub round the opening so the object reaches the table). Sleeve mode enlarges the centre disc to fit the sleeve. Handles become lugs on the long rib when there are ribs, or plates in matching slots mid-ring. A finial has a tab through a centre slot.
 - Checked over a 300-case matrix (modes × supports × patterns × rib counts × extras): no errors and no split parts. Tests in `popup.test.ts` (Pop-up engineering).
+
+## D208. Explode stays in place; no play button
+
+The owner asked for the product to explode gently in place with the existing slider, and for the play button to go. This supersedes the opening-out part of D206.
+
+- The 3D editors no longer use the open-out choreography: the slider's eased value (`useView3D`, unchanged) drives the design's own in-place explode (Hinge Box: walls up a little, lid well clear, flip lid swings, drawers slide out; generators: their usual apart offsets; folding designs as before).
+- Designs whose scenes are rebuilt per explode value are wrapped by `rebuiltExplode` (lib/three/rebuilt.ts): one stable root that swaps in each build (closed and fully open builds kept), so QuadView treats them as exploding in place and widens the views to hold the opened design. QuadView repaints the look and display mode of each new build.
+- The play button is removed. `hingeUnfoldScene` and the generator unfold path stay in the library (tested) but are not wired to any view.
