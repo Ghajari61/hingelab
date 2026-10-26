@@ -72,7 +72,7 @@ const sections: SectionSpec<FamilyParams>[] = [
       { kind: "number", key: "tree.weld", label: "Weld", unit: "mm", min: 0.2, max: 4, step: 0.1, help: "How much the letters grow so the lines fuse into one piece." },
       { kind: "choice", key: "tree.star", shuffle: true, label: "Topper", rail: true, options: MOTIF_OPTIONS.filter((o) => !o.input), help: "The motif on top of the tree: a star, a snowflake, an angel's crown or none." },
       { kind: "toggle", key: "tree.trunk", label: "Trunk", help: "A trunk under the tree." },
-      { kind: "text", key: "tree.year", label: "Trunk words", maxLength: 12, show: (p) => p.tree.trunk, placeholder: "2026", help: "Words cut through the trunk, such as the year." },
+      { kind: "text", key: "tree.year", label: "Trunk words", maxLength: 12, show: (p) => p.tree.trunk, placeholder: "A year", help: "Words cut through the trunk, such as the year." },
     ],
   },
   {
@@ -80,7 +80,7 @@ const sections: SectionSpec<FamilyParams>[] = [
     help: "A name along every arm, round a disc in the middle.",
     fields: [
       { kind: "number", key: "snowflake.diameter", label: "Diameter", unit: "mm", min: 50, max: 400, step: 1, help: "Size of the snowflake across." },
-      { kind: "text", key: "snowflake.centre", label: "Centre words", maxLength: 8, placeholder: "2026", help: "Words cut through the middle disc, such as the year." },
+      { kind: "text", key: "snowflake.centre", label: "Centre words", maxLength: 8, placeholder: "A year", help: "Words cut through the middle disc, such as the year." },
       { kind: "number", key: "snowflake.weld", label: "Weld", unit: "mm", min: 0.2, max: 4, step: 0.1, help: "How much the letters grow so the arms fuse into one piece." },
     ],
   },
@@ -91,7 +91,7 @@ const sections: SectionSpec<FamilyParams>[] = [
       { kind: "number", key: "ring.diameter", label: "Diameter", unit: "mm", min: 40, max: 400, step: 1, help: "Size of the ring across." },
       { kind: "number", key: "ring.nameSize", label: "Name height", unit: "mm", min: 3, max: 40, step: 0.5, help: "Height of the names round the ring; they shrink to fit all the way round." },
       { kind: "text", key: "ring.separator", label: "Between names", maxLength: 3, help: "The mark between the names, such as a dot." },
-      { kind: "text", key: "ring.centre", label: "Centre", maxLength: 3, placeholder: "Mum", help: "A short word or an initial in the middle; empty shows the motif instead." },
+      { kind: "text", key: "ring.centre", label: "Centre", maxLength: 3, placeholder: "A short word", help: "A short word or an initial in the middle; empty shows the motif instead." },
       { kind: "font", key: "ring.centreFont", label: "Centre font", sample: (p) => p.ring.centre || "Aa", show: (p) => !!p.ring.centre.trim(), help: "The typeface of the middle word; script looks lovely." },
       { kind: "choice", key: "ring.motif", label: "Centre motif", rail: true, options: MOTIF_OPTIONS, show: (p) => !p.ring.centre.trim(), help: "The motif in the middle when there is no word." },
       ...motifArtFields<FamilyParams>("ring.motif", "ring.art", (p) => p.layout.kind === "ring" && !p.ring.centre.trim()),

@@ -155,7 +155,7 @@ const sections: SectionSpec<CharmParams>[] = [
       { kind: "toggle", key: "dangle.on", label: "Dangle", help: "Adds a small tag under each charm, joined by a jump ring." },
       { kind: "choice", key: "dangle.shape", label: "Dangle shape", show: (p) => p.dangle.on, options: [{ v: "heart", text: "Heart" }, { v: "star", text: "Star" }, { v: "circle", text: "Circle" }, { v: "teardrop", text: "Teardrop" }, { v: "tag", text: "Tag" }, { v: "house", text: "House" }, { v: "diamond", text: "Diamond" }], help: "The shape of the little tag." },
       { kind: "number", key: "dangle.size", label: "Dangle size", unit: "mm", min: 10, max: 80, step: 0.5, show: (p) => p.dangle.on, help: "Width of the little tag." },
-      { kind: "text", key: "dangle.text", label: "Dangle words", maxLength: 12, show: (p) => p.dangle.on, placeholder: "2026", help: "Words engraved on the little tag, such as the year." },
+      { kind: "text", key: "dangle.text", label: "Dangle words", maxLength: 12, show: (p) => p.dangle.on, placeholder: "A year or a date", help: "Words engraved on the little tag, such as the year." },
       { kind: "number", key: "dangle.hole", label: "Dangle holes", unit: "mm", min: 1.5, max: 8, step: 0.1, show: (p) => p.dangle.on, help: "Diameter of the holes the jump ring goes through." },
     ],
   },
