@@ -46,6 +46,23 @@ export const CHARM_PRESETS: GenPreset<CharmParams>[] = [
     params: { name: "Wedding ornament", kind: { kind: "ornament" }, names: { list: "Emma & James", fontId: "great-vibes", size: 15, sub: "Est. 2026", subFontId: "playfair-display", subSize: 40 }, style: { kind: "layered", weld: 0.8 }, shape: { kind: "circle", width: 85, height: 85, margin: 7, frame: true }, accent: { kind: "rings", place: "above", size: 16 }, mat: { mat2: "acrylic-gold", T2: 3 } },
     pro: true,
   },
+  // ---- characters
+  {
+    id: "snowman-ornaments", name: "Snowman ornaments", note: "Snowmen in top hats, a carrot nose and hat cut separately to paint",
+    params: { name: "Snowmen", kind: { kind: "ornament" }, names: { list: "Rico\nMia\nTheo", fontId: "pacifico", size: 13 }, shape: { kind: "snowman", width: 64, height: 100, margin: 2, hat: "tophat", paint: true }, hang: { kind: "loop", side: "top", hole: 3.5, wall: 2.5 } },
+  },
+  {
+    id: "reindeer-ornaments", name: "Reindeer ornaments", note: "Antlers and a red nose cut on its own, the name on the muzzle",
+    params: { name: "Reindeer", kind: { kind: "ornament" }, names: { list: "Luca\nNora\nFinn", fontId: "archivo-black", size: 10 }, shape: { kind: "reindeer", width: 84, height: 110, margin: 2, paint: true }, hang: { kind: "loop", side: "top", hole: 3.5, wall: 2.5 } },
+  },
+  {
+    id: "cat-santa", name: "Cat in a Santa hat", note: "A cat face with whiskers scored, the hat cut separately, name and year",
+    params: { name: "Cat ornament", kind: { kind: "ornament" }, names: { list: "Missy\nShiro", fontId: "pacifico", size: 12, sub: "2026", subSize: 50 }, shape: { kind: "cat", width: 86, height: 84, margin: 2, hat: "santa", paint: true }, hang: { kind: "loop", side: "top", hole: 3.5, wall: 2.5 } },
+  },
+  {
+    id: "gingerbread-tags", name: "Gingerbread gift tags", note: "Gingerbread friends with icing scored and buttons to glue on",
+    params: { name: "Gingerbread tags", kind: { kind: "gifttag" }, names: { list: "Ella\nJack\nRose", fontId: "fredoka", size: 9 }, shape: { kind: "gingerbread", width: 80, height: 86, margin: 1.5, paint: true }, hang: { kind: "loop", side: "top", hole: 3.5, wall: 2.5 } },
+  },
   // ---- keychains
   {
     id: "name-keychains", name: "Connected name keychains", note: "Each name welded into one piece with a ring loop",

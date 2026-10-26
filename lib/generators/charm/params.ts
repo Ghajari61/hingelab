@@ -11,12 +11,13 @@ import { SECOND_MATERIALS } from "../material2";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
 import { TEXT_FORM, TEXT_STYLE, cleanTextForm, cleanTextStyle, type TextForm, type TextStyle } from "../textStyle";
 import { mergeInto } from "../util";
+import { isCharacter, type CharacterKind, type HatKind } from "./characters";
 
 export type CharmKind = "ornament" | "keychain" | "earrings" | "bagtag" | "drink" | "placecard" | "gifttag" | "cardholder";
 /** How the name shows: engraved or scored on a blank, cut through it, glued on in a second material, or the welded name is the charm. */
 export type CharmStyle = "engrave" | "score" | "cutout" | "layered" | "letters";
 /** Charm outlines: the shared shapes, a few charm shapes, or a motif's silhouette. */
-export type CharmShape = ShapeKind | "teardrop" | "bauble" | "bone" | "motif";
+export type CharmShape = ShapeKind | "teardrop" | "bauble" | "bone" | "motif" | CharacterKind;
 export type HangKind = "hole" | "loop" | "none";
 export type HangSide = "top" | "left";
 export type AccentPlace = "above" | "left" | "below";
@@ -59,6 +60,10 @@ export interface CharmParams extends GenBase {
     margin: number;
     /** Scores a frame line just inside the edge. */
     frame: boolean;
+    /** Characters (snowman, cat): the hat. */
+    hat: HatKind;
+    /** Characters: cut the hat, nose and buttons as separate pieces to paint or cut in another colour. */
+    paint: boolean;
   };
   accent: { kind: string; art: MotifArt; place: AccentPlace; size: number };
   hang: {
@@ -106,7 +111,7 @@ export const CHARM_DEFAULTS: CharmParams = {
   textStyle: { ...TEXT_STYLE },
   textForm: { ...TEXT_FORM },
   style: { kind: "engrave", weld: 0.8, backing: 0 },
-  shape: { kind: "circle", motif: "snowflake", art: { ...MOTIF_ART }, width: 70, height: 70, corner: 3, margin: 4, frame: true },
+  shape: { kind: "circle", motif: "snowflake", art: { ...MOTIF_ART }, width: 70, height: 70, corner: 3, margin: 4, frame: true, hat: "tophat", paint: true },
   accent: { kind: "none", art: { ...MOTIF_ART }, place: "above", size: 14 },
   hang: { kind: "hole", side: "top", hole: 4, wall: 3 },
   clip: { stem: 8, opening: 7.2, ring: 2 },
@@ -129,7 +134,7 @@ export const KIND_START: Record<CharmKind, { shape: Partial<CharmParams["shape"]
   cardholder: { shape: { kind: "rounded", width: 106, height: 78, margin: 4 }, hang: { kind: "hole", side: "top", hole: 4, wall: 3 }, size: 16 },
 };
 
-export const isCharmShape = (v: unknown): v is CharmShape => isShapeKind(v) || (CHARM_SHAPE_EXTRA as readonly string[]).includes(v as string);
+export const isCharmShape = (v: unknown): v is CharmShape => isShapeKind(v) || isCharacter(v) || (CHARM_SHAPE_EXTRA as readonly string[]).includes(v as string);
 const clamp = (v: number, lo: number, hi: number) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo);
 
 export function mergeCharm(raw: unknown): CharmParams {
@@ -143,6 +148,7 @@ export function mergeCharm(raw: unknown): CharmParams {
   p.shape.art = cleanMotifArt(p.shape.art);
   p.accent.art = cleanMotifArt(p.accent.art);
   if (!HANGS.includes(p.hang.kind)) p.hang.kind = d.hang.kind;
+  if (!["none", "tophat", "santa", "beanie"].includes(p.shape.hat)) p.shape.hat = d.shape.hat;
   if (!SIDES.includes(p.hang.side)) p.hang.side = d.hang.side;
   if (!ACCENT_PLACES.includes(p.accent.place)) p.accent.place = d.accent.place;
   if (!(p.mat.mat2 in SECOND_MATERIALS)) p.mat.mat2 = d.mat.mat2;

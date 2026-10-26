@@ -175,6 +175,18 @@ describe("Name Charms", () => {
     expect(d.engrave!.length).toBeGreaterThan(0);
   });
 
+  it("characters cut their hat and nose as separate pieces and keep the name clear of them", () => {
+    const out = build({ names: { list: "Luca" }, shape: { kind: "reindeer", width: 84, height: 110, paint: true }, hang: { kind: "loop" } });
+    const nose = out.parts.find((q) => /nose/.test(q.name))!;
+    expect(nose).toBeTruthy();
+    const main = out.parts[0], nb = bboxOf([nose.outer]);
+    const nc: Pt = [(nb.x0 + nb.x1) / 2, (nb.y0 + nb.y1) / 2], nr = (nb.x1 - nb.x0) / 2;
+    for (const c of main.engrave!.slice(0, -2)) for (const q of c) expect(Math.hypot(q[0] - nc[0], q[1] - nc[1])).toBeGreaterThan(nr + 0.8);
+    const snow = build({ names: { list: "Rico" }, shape: { kind: "snowman", width: 64, height: 100, hat: "tophat", paint: true } });
+    expect(snow.parts.map((q) => q.name)).toEqual(["Ornament Rico", "Ornament Rico hat", "Ornament Rico carrot nose"]);
+    expect(build({ names: { list: "Rico" }, shape: { kind: "snowman", paint: false } }).parts).toHaveLength(1);
+  });
+
   it("every preset builds, exports and opens without a warning", () => {
     for (const pr of CHARM.presets) {
       const q = p(pr.params);

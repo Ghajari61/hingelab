@@ -14,6 +14,7 @@ import { blankOutline, buildCharm, type CharmOutput } from "./build";
 import { checkCharm } from "./check";
 import { CHARM_DEFAULTS, KIND_START, charmNames, mergeCharm, type CharmKind, type CharmParams } from "./params";
 import { CHARM_PRESETS } from "./presets";
+import { CHARACTERS, CHARACTER_NAMES, isCharacter } from "./characters";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const blanked = (p: CharmParams) => p.style.kind !== "letters";
@@ -26,6 +27,7 @@ export const KIND_NAMES: Record<CharmKind, string> = {
 const SHAPE_OPTIONS = [
   ...SHAPE_KINDS.map((k) => ({ v: k as string, text: SHAPE_NAMES[k] })),
   { v: "teardrop", text: "Teardrop" }, { v: "bauble", text: "Bauble" }, { v: "bone", text: "Dog bone" }, { v: "motif", text: "Motif silhouette" },
+  ...CHARACTERS.map((c) => ({ v: c as string, text: CHARACTER_NAMES[c] })),
 ];
 
 /** Picking a kind starts from the size, hanging and shape that suit it; names and style stay. */
@@ -86,7 +88,9 @@ const sections: SectionSpec<CharmParams>[] = [
       { kind: "number", key: "shape.height", label: "Height", unit: "mm", min: 8, max: 300, step: 0.5, help: "Height of each charm." },
       { kind: "number", key: "shape.corner", label: "Corner radius", unit: "mm", min: 0, max: 30, step: 0.5, show: (p) => ["rect", "house", "hexagon", "octagon", "diamond", "banner", "tag", "star", "shield"].includes(p.shape.kind), help: "Rounds the shape's corners." },
       { kind: "number", key: "shape.margin", label: "Margin", unit: "mm", min: 0.5, max: 30, step: 0.5, help: "Space kept between the name and the charm's edge." },
-      { kind: "toggle", key: "shape.frame", shuffle: true, label: "Scored frame", help: "Scores a line just inside the edge, like a frame." },
+      { kind: "toggle", key: "shape.frame", shuffle: true, label: "Scored frame", show: (p) => !isCharacter(p.shape.kind), help: "Scores a line just inside the edge, like a frame." },
+      { kind: "choice", key: "shape.hat", shuffle: true, label: "Hat", show: (p) => p.shape.kind === "snowman" || p.shape.kind === "cat", help: "The character's hat: a top hat, a Santa hat, a bobble hat or none.", options: [{ v: "tophat", text: "Top hat" }, { v: "santa", text: "Santa hat" }, { v: "beanie", text: "Bobble hat" }, { v: "none", text: "None" }] },
+      { kind: "toggle", key: "shape.paint", label: "Separate pieces", show: (p) => isCharacter(p.shape.kind), help: "Cuts the hat, nose and buttons on their own as well, to paint them or cut them in another colour and glue them in place." },
     ],
   },
   {
@@ -169,7 +173,7 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
   if (key === "accent.kind" || key === "shape.motif") return motifArt(v);
   if (key === "shape.kind") {
     if (v === "motif") return motifArt("tree");
-    if (v === "teardrop" || v === "bauble" || v === "bone") {
+    if (v === "teardrop" || v === "bauble" || v === "bone" || isCharacter(v)) {
       const p = mergeCharm({ shape: { kind: v, width: v === "bone" ? 60 : 30, height: v === "bone" ? 26 : 44 } });
       const o = blankOutline(p, {}, []).outer;
       return o ? [{ d: fitArt([o], 38).join(" "), fill: true }] : [];

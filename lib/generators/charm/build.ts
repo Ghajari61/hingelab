@@ -24,6 +24,7 @@ import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { textBlock, weld } from "../weld";
 import { overlapScores } from "../weldScore";
 import { charmNames, type CharmParams } from "./params";
+import { characterIn, isCharacter, type Character } from "./characters";
 
 export interface CharmInfo {
   count: number;
@@ -109,6 +110,7 @@ export function blankOutline(p: CharmParams, ctx: BuildContext, missing: string[
     case "teardrop": return { outer: orient(teardrop(w, h)), loading: false };
     case "bauble": return { outer: orient(bauble(w, h)), loading: false };
     case "bone": return { outer: orient(bone(w, h)), loading: false };
+    case "snowman": case "reindeer": case "cat": case "gingerbread": return { outer: orient(characterIn(s.kind, w, h, s.hat).outline), loading: false };
     case "motif": {
       const m = motifRef(s.motif, s.art, ctx, missing);
       if (m.loading) return { outer: null, loading: true };
@@ -367,6 +369,7 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
   if (!letters && !base.outer) return { parts: [], stats: [], error: "Pick a shape or a motif for the charm." };
 
   const pair = kind === "earrings" ? 2 : 1;
+  const char: Character | null = !letters && isCharacter(p.shape.kind) ? characterIn(p.shape.kind, p.shape.width, p.shape.height, p.shape.hat) : null;
   const cols = Math.max(1, Math.ceil(Math.sqrt(names.length * pair)));
   let slotN = 0, loading = false, cellW = 0, cellH = 0;
   const at = (w: number, h: number) => {
@@ -475,7 +478,9 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
     let front: Shape | null = null;
     let frontScore: Contour[] = [];
     if (cn.c) {
-      const fit = fitContent(cn.c.cs, makeShape(card.outer, []), keeps, p.shape.margin);
+      // A character's name goes in its own area (the snowman's belly, the reindeer's muzzle), clear of its nose and buttons.
+      if (char) for (const pc of char.pieces) { const g = largest(offsetShapes(unionShapes([orient(pc.c)]), 1.2)); if (g) keeps.push(g.outer); }
+      const fit = fitContent(cn.c.cs, makeShape(char ? orient(char.fit) : card.outer, []), keeps, char ? Math.min(p.shape.margin, 2) : p.shape.margin);
       if (fit.s > 0) {
         const placed = move(scaleAbout(cn.c.cs, fit.s), fit.at[0], fit.at[1]);
         const blocks = cn.c.blocks.map((bk) => ({ item: bk.item, cs: move(scaleAbout(bk.cs, fit.s), fit.at[0], fit.at[1]) }));
@@ -502,7 +507,11 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
         }
       } else if (name && !info.squeezed.includes(name)) info.squeezed.push(name);
     }
-    if (p.shape.frame && p.style.kind !== "cutout") {
+    if (char) {
+      marks.engrave = [...(marks.engrave ?? []), ...char.engrave.map(orient)];
+      marks.score = [...(marks.score ?? []), ...char.score];
+    }
+    if (p.shape.frame && p.style.kind !== "cutout" && !char) {
       const ring = offsetShapes([makeShape(base.outer!, [])], -Math.max(1.2, Math.min(p.shape.width, p.shape.height) * 0.035));
       marks.score = [...(marks.score ?? []), ...shapeContours(ring).map(closed)];
     }
@@ -520,6 +529,10 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
       const place = upright ? { x: pl.x, y: -b.y1, z: pl.y, upright: true } : pl;
       parts.push({ id: pid, name: `${label}${side}`, outer: card.outer, holes, ...marks, ...(upright ? { upright: true } : {}), place });
       if (front) parts.push(second({ id: `${pid}-front`, name: `${label}${side} letters`, outer: front.outer, holes: front.holes, ...(frontScore.length ? { score: frontScore } : {}), place: { ...pl, z: p.T } }));
+    }
+    if (char && p.shape.paint) {
+      // The hat, nose and buttons cut on their own, to paint or cut in another colour and glue in place.
+      char.pieces.forEach((pc, i) => parts.push({ id: `${id}-piece-${i + 1}`, name: `${label} ${pc.name.toLowerCase()}`, outer: orient(pc.c), holes: [], place: { ...placeAt, z: p.T } }));
     }
     if (dangle) {
       const db = bboxOf([dangle.outer]);
