@@ -7,8 +7,8 @@ import { keepSetup } from "@/lib/prefs/editor";
 
 describe("product collection release", () => {
   for (const def of ALL_GENERATORS) it(`${def.id}: new designs retain their settings and export millimetre SVGs`, () => {
-    const presets = def.presets.filter(p => p.id.startsWith("studio-"));
-    expect(presets).toHaveLength(3);
+    const presets = def.id === "keychain" ? def.presets : def.presets.filter(p => p.id.startsWith("studio-"));
+    expect(presets).toHaveLength(def.id === "keychain" ? 24 : 3);
     expect(new Set(def.presets.map(p=>p.id)).size).toBe(def.presets.length);
     for(const preset of presets) {
       const p = def.merge(preset.params);

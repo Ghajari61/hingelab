@@ -16,7 +16,7 @@ export type Opt = { v: string; text: string; title?: string; icon?: ReactNode; o
 export type CoreProduct = "hinge" | "letters" | "parametric";
 export type Product = CoreProduct | GeneratorId;
 export const CORE_PRODUCTS: CoreProduct[] = ["hinge", "letters", "parametric"];
-export const ALL_PRODUCTS: Product[] = [...CORE_PRODUCTS, ...GENERATOR_IDS];
+export const ALL_PRODUCTS: Product[] = [...CORE_PRODUCTS, ...GENERATOR_IDS.filter(id => id !== "calibration")];
 
 const GEN_ICON: Record<GeneratorInfo["icon"], ReactNode> = {
   clock: <Clock size={16} aria-hidden />,
@@ -45,6 +45,7 @@ export const PRODUCT_PICTURE: Record<Product, string> = {
   sign: "/presets/sign/welcome-arch.svg", topper: "/presets/topper/happy-birthday.svg", popup: "/presets/popup/spiral-trivet-bowl.svg",
   clock: "/presets/clock/wall-roman.svg", puzzle: "/presets/puzzle/kids-12.svg", qr: "/presets/qr/keychain.svg",
   keyrack: "/presets/keyrack/home-sweet-home.svg", tablenum: "/presets/tablenum/wedding-arch.svg", trophy: "/presets/trophy/star-award.svg",
+  keychain: "/presets/keychain/name-rounded.svg",
   calibration: "/presets/calibration/plywood-3.svg",
 };
 

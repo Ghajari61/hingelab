@@ -20,7 +20,7 @@ export interface SiteProduct {
 }
 
 const FEATURED: Record<string, string> = {
-  hinge: "gift-box", letters: "hello-sign", parametric: "head-stack",
+  keychain: "name-rounded", hinge: "gift-box", letters: "hello-sign", parametric: "head-stack",
   clock: "wall-roman", puzzle: "kids-12", qr: "keychain", boxes: "organiser",
   topper: "happy-birthday", keyrack: "home-sweet-home", sign: "welcome-arch", tablenum: "wedding-arch", trophy: "star-award", shadowbox: "star-tunnel", paperbox: "tea-box", calibration: "plywood-3",
 };
@@ -33,7 +33,7 @@ export function siteProducts(): SiteProduct[] {
     { id: "letters", name: "Letters", blurb: "Letter boxes, solid name signs and stencils from any text and font.", icon: "letters", href: "/app/editor/local?p=letters", picture: pic("letters", LETTER_PRESETS.map((p) => p.id)), presets: LETTER_PRESETS.length },
     { id: "parametric", name: "Parametric", blurb: "Sliced sculptures from 3D files, photos or text: fins, stacks, waffles and papercraft.", icon: "parametric", href: "/app/editor/local?p=parametric", picture: pic("parametric", PARAMETRIC_PRESETS.map((p) => p.id)), presets: PARAMETRIC_PRESETS.length },
   ];
-  const gens: SiteProduct[] = GENERATOR_IDS.map((id) => {
+  const gens: SiteProduct[] = GENERATOR_IDS.filter(id => id !== "calibration").map((id) => {
     const list = GENERATOR_PRESETS[id];
     return { id, name: GENERATOR_INFO[id].name, blurb: GENERATOR_INFO[id].blurb, icon: GENERATOR_INFO[id].icon, href: `/app/editor/local?p=${id}`, picture: pic(id, list.map((p) => p.id)), presets: list.length };
   });
