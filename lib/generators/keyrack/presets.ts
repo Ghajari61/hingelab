@@ -2,6 +2,9 @@ import type { GenPreset } from "../types";
 import type { KeyrackParams } from "./params";
 
 export const KEYRACK_PRESETS: GenPreset<KeyrackParams>[] = [
+  {"id": "studio-entry-rail", "name": "Entry key rail", "note": "300 mm slim pill-shaped rail with four square hooks.", "params": {"name": "Entry key rail", "board": {"shape": "pill", "width": 300, "height": 75}, "text": {"text": ""}, "motif": {"kind": "none"}, "hooks": {"count": 4, "profile": "square", "y": 62, "margin": 45}, "mount": {"kind": "holes", "y": 24}}},
+  {"id": "studio-shared-studio", "name": "Shared studio keys", "note": "Four named key positions on a 340 mm studio board.", "params": {"name": "Shared studio keys", "board": {"shape": "rounded", "width": 340, "height": 140}, "text": {"text": "Studio", "fontId": "pacifico", "size": 25, "y": 24}, "motif": {"kind": "heart", "side": "right", "size": 18, "gap": 4}, "hooks": {"count": 4, "profile": "round", "y": 76, "margin": 45, "labels": "A\nB\nC\nD", "labelSize": 7}}},
+  {"id": "studio-mail-station", "name": "Compact mail station", "note": "280 mm entry organiser with four hooks and a 65 mm shelf.", "pro": true, "params": {"name": "Compact mail station", "board": {"shape": "rect", "width": 280, "height": 180, "corner": 6}, "text": {"text": "POST", "fontId": "archivo-black", "size": 18, "y": 52}, "motif": {"kind": "none"}, "hooks": {"count": 4, "profile": "square", "y": 84, "margin": 38}, "shelf": {"on": true, "depth": 65, "at": 14}, "mount": {"kind": "holes", "y": 30}}},
   {
     id: "home-sweet-home", name: "Home Sweet Home", note: "Script and a little house over four round hooks",
     params: { name: "Home Sweet Home key holder" },

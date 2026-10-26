@@ -2,6 +2,9 @@ import type { GenPreset } from "../types";
 import type { BoxesParams } from "./params";
 
 export const BOXES_PRESETS: GenPreset<BoxesParams>[] = [
+  {"id": "studio-maker-tray", "name": "Maker parts tray", "note": "Nine full-height compartments in a 270 x 180 x 40 mm tray.", "params": {"name": "Maker parts tray", "design": "tray", "tray": {"width": 270, "depth": 180, "height": 40, "cols": 3, "rows": 3, "dividers": 100}}},
+  {"id": "studio-watch-case", "name": "Watch presentation case", "note": "Lift-off presentation case with a TIME engraving and 190 x 100 mm interior.", "params": {"name": "Watch presentation case", "design": "box", "box": {"width": 190, "depth": 100, "height": 65, "lid": "liftoff", "clearance": 0.3}, "engrave": {"text": "TIME", "fontId": "cinzel", "size": 16, "motif": "none", "border": 4}}},
+  {"id": "studio-sample-holder", "name": "Material sample holder", "note": "Open 125 x 85 mm holder with finger notch for material sample cards.", "params": {"name": "Material sample holder", "design": "box", "joint": {"finger": 8}, "box": {"width": 125, "depth": 85, "height": 55, "lid": "open", "notch": true}, "engrave": {"text": "", "motif": "none", "border": 0}}},
   { id: "small-box", name: "Small box", note: "120 × 80 × 60 mm inside, closed, glued", params: { name: "Small box", design: "box", box: { width: 120, depth: 80, height: 60, lid: "closed" } } },
   { id: "pencil-cup", name: "Pencil cup", note: "Open box, 75 mm square and 100 mm tall", params: { name: "Pencil cup", design: "box", joint: { finger: 8 }, box: { width: 75, depth: 75, height: 100, lid: "open" } } },
   { id: "keepsake", name: "Keepsake box", note: "Lift-off lid with a lip that drops inside the walls", params: { name: "Keepsake box", design: "box", box: { width: 160, depth: 110, height: 70, lid: "liftoff", clearance: 0.3 } } },

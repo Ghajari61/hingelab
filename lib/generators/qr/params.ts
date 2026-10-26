@@ -107,7 +107,7 @@ export const QR_DEFAULTS: QrParams = {
     first: "", last: "", org: "", jobTitle: "", phone: "", email: "", website: "",
     to: "", subject: "", body: "", smsTo: "", message: "", tel: "",
   },
-  code: { ecc: "M", style: "square", size: 50, quiet: 2, dot: 85, invert: false },
+  code: { ecc: "M", style: "square", size: 50, quiet: 4, dot: 85, invert: false },
   output: { kind: "engrave", bridge: 20 },
   plate: { shape: "rect", padding: 5, corner: 4, frame: false, frameWidth: 1.2, frameStyle: "line" },
   label: { text: "", position: "below", fontId: "fredoka", size: 6, style: "plain" },

@@ -3,6 +3,7 @@
 // lib/templates/built.json. Deterministic: the same sources give byte-identical output.
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { optimize } from "svgo";
 import * as hb from "harfbuzzjs";
 import { computeModel, layoutParts } from "@/lib/hinge";
 import { hingeLocks } from "@/lib/plans";
@@ -302,6 +303,11 @@ for (const t of TEMPLATES) {
   if (t.product && TEMPLATE_PRESETS[t.id]?.product !== t.product) throw new Error(`${t.id}: product ${t.product} has no matching settings`);
   if (t.source === "editor" && !t.product) throw new Error(`${t.id}: an "editor" template needs a product`);
   const out = t.source === "studio" ? studioTemplate(t) : t.product === "hinge" ? hingeTemplate(t) : t.product ? generatorTemplate(t) : importedTemplate(t);
+  // Only catalogue previews are rounded to screen-scale precision; cutting files stay untouched.
+  if (out.thumb.length >= 64_000) out.thumb = optimize(out.thumb, {
+    multipass: true, floatPrecision: 0,
+    plugins: [{ name: "preset-default", params: { overrides: { removeViewBox: false } } }],
+  }).data;
   writeFile(join(PUB, "thumbs", `${t.id}.svg`), out.thumb);
   let bytes = out.thumb.length;
   for (const f of out.files ?? []) {

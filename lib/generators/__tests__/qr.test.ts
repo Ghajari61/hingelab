@@ -239,10 +239,11 @@ describe("QR checks and fixes", () => {
     }
   });
 
-  it("small modules: Auto-fix all makes the code bigger", () => {
+  it("small modules: explicit size fix makes the code bigger without silent resizing", () => {
     const p = mergeQr({ content: CONTENT.vcard, code: { size: 20 }, output: { kind: "cutout" } });
     expect(codes(p)).toContain("SMALL_MODULES");
-    const fixed = autoFixAll(p, issuesOf).params;
+    expect(autoFixAll(p, issuesOf).params.code.size).toBe(20);
+    const fixed = issuesOf(p).find(i => i.code === "SMALL_MODULES")!.fixes[0].apply(p);
     expect(fixed.code.size).toBeGreaterThan(20);
     expect(codes(fixed)).not.toContain("SMALL_MODULES");
   });
@@ -256,7 +257,8 @@ describe("QR checks and fixes", () => {
     ] as const) {
       const p = mergeQr(raw);
       expect(codes(p), code).toContain(code);
-      expect(codes(autoFixAll(p, issuesOf).params), code).not.toContain(code);
+      const issue = issuesOf(p).find(i => i.code === code)!;
+      expect(codes(issue.fixes[0].apply(p)), code).not.toContain(code);
     }
   });
 

@@ -2,6 +2,9 @@ import type { GenPreset } from "../types";
 import type { TrophyParams } from "./params";
 
 export const TROPHY_PRESETS: GenPreset<TrophyParams>[] = [
+  {"id": "studio-maker-award", "name": "Maker excellence award", "note": "Maker award with a 120 mm emblem and wider stepped base.", "params": {"name": "Maker excellence award", "emblem": {"width": 120, "height": 120, "text": "01"}, "plate": {"title": "Maker Award", "name": "Design Studio", "year": "2026", "width": 120}, "base": {"width": 140, "depth": 65}}},
+  {"id": "studio-team-cup", "name": "Team achievement cup", "note": "Team cup with a 145 x 72 mm base and editable dedication.", "params": {"name": "Team achievement cup", "emblem": {"kind": "cup", "width": 120, "height": 110, "text": "", "laurel": false}, "plate": {"title": "Team Award", "name": "Together", "year": "2026", "titleSize": 9, "nameSize": 8, "width": 100}, "stem": {"height": 0}, "base": {"tiers": 3, "width": 145, "depth": 72, "step": 6}}},
+  {"id": "studio-design-shield", "name": "Design achievement shield", "note": "DESIGN shield with an editable name plate and deeper base.", "params": {"name": "Design achievement shield", "emblem": {"kind": "shield", "width": 100, "height": 110, "text": "DESIGN", "fontId": "bebas-neue", "size": 12, "laurel": true}, "plate": {"title": "Excellence", "name": "Creative Team", "year": "2026", "width": 120, "titleSize": 8, "nameSize": 9}, "stem": {"height": 6}, "base": {"tiers": 2, "width": 140, "depth": 70}}},
   {
     id: "star-award", name: "Star award", note: "A star with a number, a name plate and a two-tier base",
     params: { name: "Star award" },
