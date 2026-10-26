@@ -207,7 +207,10 @@ function generatorTemplate(t: Template): Out {
   if ("error" in a.result) throw new Error(`${t.id}: ${a.result.error}`);
   if (!a.lay || !a.sheets) throw new Error(`${t.id}: nothing laid out`);
   const lay = a.lay;
-  const thumb = assembledSVG(a.result.out, p.T);
+  // Show one assembled product; batch copies belong to the cutting sheets, not an overlapping preview.
+  const preview = def.build(p, genCtx);
+  if (preview.error) throw new Error(`${t.id}: ${preview.error}`);
+  const thumb = assembledSVG(preview, p.T);
   const pro = def.pro?.(a.params, a.result.out) ?? null;
   if (pro && t.source !== "editor") throw new Error(`${t.id}: exporting needs Pro (${pro}), so it must be an "editor" template`);
   if (t.source === "editor") {

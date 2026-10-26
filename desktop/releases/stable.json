@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.11.0",
-    "pub_date": "2026-10-26T05:42:55.455Z",
-    "notes": "48 editable presets across all 16 products, unified left preset library, fabrication input guards, QR quiet-zone and explicit sizing fixes, and preserved directional kerf and grain settings.",
+    "version": "1.12.0",
+    "pub_date": "2026-10-26T06:39:58.636Z",
+    "notes": "Pop-up matched ring/rib joints, centred 3D assembly, radial hubs and real handle tabs, contour-based suspension, joint test coupons, corrected nested sets and six precision presets (36 total).",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.11.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnN1WXpqV21Yd1kxT09hbTJ4aFh4VnNKQWZRU0craVpPbmxzTS9TNFNSVWFhZFVSS3RWS2xGaXlyT1BXdDlIM0xGd2UxcXBlc1VFbUdFK1R6UDZzcUF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTkzMzQyCWZpbGU6SGluZ2VMYWJfMS4xMS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjExLjAKQmszSkw1bDBTYVE4SWw5WGJjaVZ2Rkx2RFFiZ0pEQWg1L0IwNFBpZGpEUXZYS3o2Tm1JbmcyN2JzRUVUQmJGbzZpekJjK2k4cHZhZXozYjR1UTkzQmc9PQo=",
-        "size": 11442502,
-        "sha256": "18181984ca2d4c3742730acd0498df35e75ebc584b7d92f9a2f7c1dbe728962b"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.12.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnYrTkxGSDdtbCs3S3cwUU55NGdFMFJaNzhaVktuVkpJUFFSeTNaUWtldmtkSjd4akJ2YjlJRW1zVGVDVzZ0WXZrNGhnRU1LSit4cjdrY01JaXdIMndJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTk2NzY4CWZpbGU6SGluZ2VMYWJfMS4xMi4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjEyLjAKbUQ1T05RTlhjZHNGWTNmdDJiY0U0L1l5ZEJxU3l3VlR0eDNxWVJVLzg4VzBLUzFKV0hxRHBVNlJBKzlvMVRKU3V3RUk1UUh6QjkyaVhDNzZxY2JTQmc9PQo=",
+        "size": 11695029,
+        "sha256": "5d5ddee329fc84b2c0c61942d0c1662aacb5ae8d98855aee754b2d8c09c319bb"
       }
     }
   }

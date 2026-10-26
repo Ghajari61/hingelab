@@ -4,4 +4,4 @@
 - [x] Three new editable presets for each of 16 products; actual thumbnails.
 - [x] Engineering regressions reproduced and fixed.
 - [x] Test catalogue, exports, settings, UI; typecheck and build.
-- [ ] Publish website and Windows 1.11.0; verify downloaded installer.
+- [x] Publish website and Windows 1.11.0; verify downloaded installer.

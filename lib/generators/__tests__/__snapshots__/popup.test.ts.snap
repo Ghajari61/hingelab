@@ -1,61 +1,73 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Pop-up preset cut files > Bell Pendant 1`] = `"fe3d37a97e2ec435306c7168cc4501ea75f453bd00a0d72a7f1f458effb48766"`;
+exports[`Pop-up preset cut files > Bell Pendant 1`] = `"8dafce1807fc5286c413b78eb1c89dc262d3cfc0eefac8090cabd79024abde9f"`;
 
-exports[`Pop-up preset cut files > Bread Basket with Handles 1`] = `"8e3d803d67fa64b486a828691eff309291d2e442a471af6f224b6c988d77ee9a"`;
+exports[`Pop-up preset cut files > Bread Basket with Handles 1`] = `"fba48e28ace3c4908394d5689e009ea95591109f2868a074c07ba51f65275397"`;
 
-exports[`Pop-up preset cut files > Cupcake Tower (3 tiers) 1`] = `"8f2d9cbca072f84dbf98c0ec51c3dcc6302146217df973629b915cac30064360"`;
+exports[`Pop-up preset cut files > Cupcake Tower (3 tiers) 1`] = `"63d1184a92aac1513f7e432ebc5d9e7fc7c9f17aec37c732ea1a48b296bc5bbf"`;
 
-exports[`Pop-up preset cut files > Eid Sweets Bowl 1`] = `"a8bff5f1630120fd3f4c1b9336d57ba1380f33d3f4a7748ab3107ba3e6ca0442"`;
+exports[`Pop-up preset cut files > Eid Sweets Bowl 1`] = `"55413b62bf4ab186997ba512a21af844e52ee6eb91f9016a264b56d8cb55e6cb"`;
 
-exports[`Pop-up preset cut files > Haft-Sin Tray (Nowruz) 1`] = `"7f9aacdfac2ee7bab1285822ccadfe45b7e172a665592a52c9b57b0d27710c69"`;
+exports[`Pop-up preset cut files > Gallery stepped tower 1`] = `"fdf38fdfb4599727298ff082f6b8750fc0588de771422be1bd95e2549daaa5b6"`;
 
-exports[`Pop-up preset cut files > Halloween Pumpkin Candy Basket 1`] = `"750c5043ae3c135bd5360594dea53f8895b7de7a2d220360fe73ef71ddef6fa8"`;
+exports[`Pop-up preset cut files > Haft-Sin Tray (Nowruz) 1`] = `"bfb6f2755137e6f4c944185abae17414bcbe5b6bfd4b611f5fe2534a13c6b0ea"`;
 
-exports[`Pop-up preset cut files > Hanging Plant Holder 1`] = `"8a437a529e386ae6366ba5fb28bc5c8874ab50c8b19c67b66356cfa7d56b7392"`;
+exports[`Pop-up preset cut files > Halloween Pumpkin Candy Basket 1`] = `"298719af2f770ee021deab7c0e55f15ed75b3c93b5297fc1d57e8b8cfa73ca3f"`;
 
-exports[`Pop-up preset cut files > Heart Valentine Basket 1`] = `"fc89d08c510f64b87b0f07431c11bb13a6f84d387cc529251e5b895c3cbdcec4"`;
+exports[`Pop-up preset cut files > Hanging Plant Holder 1`] = `"dd5e7e5a04a893c58de55f0f6efc28144ba16f8e852570cbf1a2f913708a970b"`;
 
-exports[`Pop-up preset cut files > Hexagon Fruit Basket 1`] = `"6630d0cfa7174eda5c3f226b87511de349cce69982d6daabe9e92b7b9411b45c"`;
+exports[`Pop-up preset cut files > Heart Valentine Basket 1`] = `"8fa326d1a102beea16b3d7473f9184dd1963b4ef7a45fbdb56f049feb8f1f3fe"`;
 
-exports[`Pop-up preset cut files > Kids Nursery Mobile 1`] = `"961c0d13cd2d06507197ed9fe9669d95d33695a016c09ffe9f0319c9ca2be2bd"`;
+exports[`Pop-up preset cut files > Hexagon Fruit Basket 1`] = `"aab1dae8af0fa5a6368ba77be55daa937262c2a62d8a0acf08e52d3826ceda33"`;
 
-exports[`Pop-up preset cut files > Mandala Catch-all 1`] = `"0f6e6c08cc2a0eb044e7f4b2cc6d7ab8558f1ef67ec45dd1eb9e317cc8e5c1fc"`;
+exports[`Pop-up preset cut files > Hexagonal display bowl 1`] = `"59e94bf050824ee1711c2f1be6d46a71b12f4d83c6854fcc6b0cd0c531b0c902"`;
 
-exports[`Pop-up preset cut files > Monogram Key Bowl 1`] = `"689cddbba8ff1eeb19d2619fb96a164345aa76650a4c5c480aa3a080a0682a50"`;
+exports[`Pop-up preset cut files > Kids Nursery Mobile 1`] = `"a587edd693bc7ff2527bede6bf77c48ed5a5298e0e907dd2d40ce2d9a289dc38"`;
 
-exports[`Pop-up preset cut files > Nut & Snack Bowl 1`] = `"921ed10b288ae04b6fef1f68901fb65a134a1a2155d723d6b3d263d6ea1dd754"`;
+exports[`Pop-up preset cut files > Layered Ornament (set of 6) 1`] = `"c95a5151f1b6ea4e16c1fe4689264a7d2ce6f4a718f637c74423bd33a4410444"`;
 
-exports[`Pop-up preset cut files > Pagoda Tower Decor 1`] = `"8db514ab5653129ab2683fd8784179b3b68e293b2e3e3fcfdbc680a629aee065"`;
+exports[`Pop-up preset cut files > Mandala Catch-all 1`] = `"e1e7aed39021577f74218265eebc108c8e5bf3537af86325815bbf11c0882312"`;
 
-exports[`Pop-up preset cut files > Petal catchall 1`] = `"715a9259aaf90f57b454ccf6647921cd658b541859484bcacfb8c0ca2174f492"`;
+exports[`Pop-up preset cut files > Monogram Key Bowl 1`] = `"7b0e769c2c118a797407f051a50cd7dae7864c3b094a0a8cd9b2f88745d71ec2"`;
 
-exports[`Pop-up preset cut files > Polygon display tray 1`] = `"07a91b0e82c00f0f068ce9176b19a2b3b3c10904bfd3f3e4707422186251d9a1"`;
+exports[`Pop-up preset cut files > Nut & Snack Bowl 1`] = `"7b4fd51af9b112b24eb7ce53b2ec7a61bf3aa4930ceda079f2dcd915befe957d"`;
 
-exports[`Pop-up preset cut files > Pyramid 1`] = `"6c54719cfe399c43f44869753f93e2fbc50c0861713fce9ad4738d6e99e1f8e3"`;
+exports[`Pop-up preset cut files > Orbit locking bowl 1`] = `"c14ce8fe30b46a19ab78b012eb975ebe9cd98131226a1207c76174143ba328a7"`;
 
-exports[`Pop-up preset cut files > Ramadan Dates Bowl 1`] = `"1cac3a3523a533c3c3c5a6083197b54d9eadc2c298c4710c9f635990b417e32b"`;
+exports[`Pop-up preset cut files > Oval entry valet 1`] = `"26a4f25fea09fcd143cfe60929a54e1921e4cdb0a9a6b3c88532bf36b37fdeb4"`;
 
-exports[`Pop-up preset cut files > Ripple display bowl 1`] = `"cad48c9af5a19761ea39c39be958236ad0a4e6400adfe1ff8a14986ea090cfc7"`;
+exports[`Pop-up preset cut files > Pagoda Tower Decor 1`] = `"8c97a1bb4073aa87149d1619ebd41fb62d4d184737e3862dd50c967472e34b66"`;
 
-exports[`Pop-up preset cut files > Scandinavian Spiral Pendant (E27) 1`] = `"ab08a2666972581536544197b3bc5decd25426223ed3c6e87a522350f9abefd3"`;
+exports[`Pop-up preset cut files > Petal catchall 1`] = `"88de6237506223a5799ccc3d3dc71dd2265270300508114644038ed724f65f37"`;
 
-exports[`Pop-up preset cut files > Snowflake Bauble 1`] = `"dc9257d205a0ce247cb3adbccc51b85d669a7b344be76c2264fba7f21f4cb526"`;
+exports[`Pop-up preset cut files > Petal centrepiece 1`] = `"e7301775a4975c900229fdec858feb2ce7f79da396d53a25296eabf9975d8776"`;
 
-exports[`Pop-up preset cut files > Snowflake Tree 1`] = `"a884a45f02f7d4f6efaf4fb76ee20832046206738ae569224f64bfc59faf0b47"`;
+exports[`Pop-up preset cut files > Polygon display tray 1`] = `"70ddce5aaf10f962b987f73fd1271e9cde641d402880cdb70be4c8239fbc1d72"`;
 
-exports[`Pop-up preset cut files > Spiral Christmas Tree with Star 1`] = `"7f830b42ed845c48b244629265ce57631a2d6766c93608d5fdee57db59289e39"`;
+exports[`Pop-up preset cut files > Pyramid 1`] = `"345b8623ca5f6855c21c5f608a0e840af05b76da87713bdec67f16f8ba7d219e"`;
 
-exports[`Pop-up preset cut files > Spiral Ornament (set of 6) 1`] = `"4a39d9963191599c26d7bc6c82905d62024df844e86ac9dc1d701bc09969b647"`;
+exports[`Pop-up preset cut files > Ramadan Dates Bowl 1`] = `"bd58a9c5ae0b3fd5041dfa7f32ca15a30b07e821b3baa3929973b6b3cdefb3d1"`;
 
-exports[`Pop-up preset cut files > Spiral Tealight Holder 1`] = `"8fd11dba8425065919dfe0ad130e3bc3d54f8cbe1fa5e91bc4d8aecc75f1af14"`;
+exports[`Pop-up preset cut files > Ripple display bowl 1`] = `"5b373e77990c73bdcf68a09a15b61188e2ad025f79da80761db72416ea449191"`;
 
-exports[`Pop-up preset cut files > Spiral Trivet Bowl 1`] = `"5f6b6eda6cefdca6a96a849f455d9f788cfaad347f98cb0f153ce12f1437cb29"`;
+exports[`Pop-up preset cut files > Scandinavian Layered Pendant (E27) 1`] = `"5e045ad7af0c6b2ca3c953eedc264aed632b19fa10a4181922b2dd329654cd33"`;
 
-exports[`Pop-up preset cut files > Table Lamp Shade 1`] = `"f5454ce3b656d6da87345e6e425d0ba652f91adf3ea15d88a9748762a5c2901e"`;
+exports[`Pop-up preset cut files > Snowflake Bauble 1`] = `"68257a8c3cd88e1170bfae1fc983b01a6af5952c4142b40e986db6079d15ab9c"`;
 
-exports[`Pop-up preset cut files > Two-Tier Fruit Stand 1`] = `"68817b2002a387879e56c90c2984062b86246c260741579b1bfd9e616e726bed"`;
+exports[`Pop-up preset cut files > Snowflake Tree 1`] = `"92146d52e95d00952bac6e53e2c8b696ee3420be7601ee802bdfd0eef7c1b016"`;
 
-exports[`Pop-up preset cut files > Vase Sleeve 1`] = `"3b1f60e21b1999cd5b31fc52847940108299b13a12dadb16614450fa08849702"`;
+exports[`Pop-up preset cut files > Soft-square organiser 1`] = `"e082015da160680abdc23a6d66fc169b81f8f60a752a2d8121e8bf2483a13ea0"`;
 
-exports[`Pop-up preset cut files > Wedding Favour Bowl (names, batch) 1`] = `"c09e941d667b9655a0ac3e8eb4d1b2da2bcf1029b9e83bb442d70782b207e40f"`;
+exports[`Pop-up preset cut files > Stepped Christmas Tree with Star 1`] = `"7d23017e323f6e72720cb29b3cbb393a03c6709fe99e43b6b45f360db3ef2bc7"`;
+
+exports[`Pop-up preset cut files > Stepped Tealight Holder 1`] = `"e62dd128ecd43a6955946e1a8b08f03e6403c7f040ea56c84ba93e0b74978da3"`;
+
+exports[`Pop-up preset cut files > Stepped Trivet Bowl 1`] = `"606909419de1c24543b3dde160bee54ffd2fad1103d57883b7203b93e9b6575e"`;
+
+exports[`Pop-up preset cut files > Table Lamp Shade 1`] = `"6495066985692757059a4ef3c9aee98465a0a2d5a86c86d257bc1b5f6b840c4c"`;
+
+exports[`Pop-up preset cut files > Two-Tier Fruit Stand 1`] = `"de3aed391c3dffa6ec93ef9baabaf2ee0092c8b831f3313bdc6fb79e79c6f73e"`;
+
+exports[`Pop-up preset cut files > Vase Sleeve 1`] = `"90348221147fc1c785fe505425ab2ec0a34fc91c269d0e5e52216d5ae997f674"`;
+
+exports[`Pop-up preset cut files > Wedding Favour Bowl (names, batch) 1`] = `"b90f15e6c61da28ffa7c3aef3929d1db5a57cd071118a6855b8aa41534245293"`;
