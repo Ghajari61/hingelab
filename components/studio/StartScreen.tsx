@@ -309,7 +309,7 @@ export default function StartScreen() {
             <h3>Learn</h3>
             <ul>
               <li><a href="/help#first-cut">Make your first cut in five minutes</a></li>
-              <li><a href="/help#kerf">Measure your kerf with the calibration card</a></li>
+              <li><a href="/help#kerf">Measure your kerf</a></li>
               <li><a href="/help#shortcuts">Keyboard shortcuts</a></li>
             </ul>
           </div>

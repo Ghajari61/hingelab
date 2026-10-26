@@ -8,7 +8,7 @@ import { join } from "node:path";
 import * as hb from "harfbuzzjs";
 import { describe, expect, it } from "vitest";
 import { ALL_GENERATORS } from "@/lib/generators/all";
-import { CALIBRATION } from "@/lib/generators/calibration";
+import { STRIPS } from "./strips";
 import { arrangeGenerator, genContent, genSVG } from "@/lib/generators/output";
 import { CTX } from "@/lib/generators/__tests__/ctx";
 import { computeModel, exportSVG, layoutParts, mergeParams } from "@/lib/hinge";
@@ -134,9 +134,9 @@ describe("every generator's export, read back", () => {
 
 describe("the kerf is applied once, in every format", () => {
   const K = 0.2, w = 10;
-  const p = CALIBRATION.merge({ K, kerf: { width: w, strips: 2, both: false }, ladder: { on: false }, hinge: { on: false } });
-  const a = arrangeGenerator(CALIBRATION, p, CTX);
-  const svg = genSVG(CALIBRATION, a.params, a.lay!, "", a.sheets);
+  const p = STRIPS.merge({ K, width: w });
+  const a = arrangeGenerator(STRIPS, p, CTX);
+  const svg = genSVG(STRIPS, a.params, a.lay!, "", a.sheets);
   const widths = (polys: { pts: Pt[] }[]) => polys.map((q) => Math.max(...q.pts.map((t) => t[0])) - Math.min(...q.pts.map((t) => t[0])));
 
   it("SVG and DXF strips measure the design width plus the kerf, not twice it", () => {
@@ -148,7 +148,7 @@ describe("the kerf is applied once, in every format", () => {
 
   it("LightBurn and PDF carry the same size", () => {
     const lb = makeExport(svg, a.sheets, { ...defaultExport("co2-50"), format: "lbrn2" }, "c").file.data as string;
-    // Outline shapes only (LightBurn layer 02); the strips' scored labels are on layer 01.
+    // Outline shapes only (LightBurn layer 02).
     const xs = [...lb.matchAll(/CutIndex="2">\s*<XForm>[^<]*<\/XForm>\s*<VertList>([^<]+)<\/VertList>/g)].map((m) => [...m[1].matchAll(/V([-\d.]+) ([-\d.]+)/g)].map((v) => +v[1]));
     expect(xs.length).toBe(2);
     for (const v of xs) expect(Math.max(...v) - Math.min(...v)).toBeCloseTo(w + K, 2);

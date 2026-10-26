@@ -1637,3 +1637,11 @@ The owner asked for exploded 3D views to open as an attractive animation that en
 - **QuadView**: damped OrbitControls (the render loop runs while they settle, otherwise it still renders only on change); the perspective view auto-rotates (≈3.6°/s, time-based) after 5 s without pointer, wheel or key input, only while that view is shown and not for reduced motion; views reframe on the closed box widening to the fully opened box as the model opens, always holding the model as it is; the floor and shadows are sized for the opened-out model.
 - Tested in `lib/hinge3d/__tests__/unfold.test.ts` (assembled at 0 equals the static scene, finite and on the floor throughout, flat at the sheet thickness at 1, for lids, caps, cabinets, drawers and a generator box).
 
+
+## D209. The Calibration product is removed
+
+The owner asked for the Calibration section to be removed entirely.
+
+- Gone: the Calibration generator (kerf strips, fit ladder, hinge strip; `lib/generators/calibration`, its presets and pictures), its Test & Calibration card and Studio starter, the Tools entry in the product menu, the "Record coupon results" form in My materials, and the links to them (Learn › Kerf & fit tools, the start screen, the hinge analysis note).
+- Kept: the sheet's **Calibration bar** extra (a ruler strip on exported sheets, `lib/fit/calibration.ts`), the kerf form on /learn/kerf, and a material's stored `calibration` record (old saves still load and still show "tested on your machine"); nothing new writes it.
+- Saved designs or links that ask for the `calibration` generator fall back like any unknown product id. The kerf-once export test uses a test-only strips design (`lib/export/__tests__/strips.ts`).

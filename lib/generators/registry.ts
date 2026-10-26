@@ -18,4 +18,4 @@ export const loadGenerator: Record<GeneratorId, () => Promise<AnyGenerator>> = {
   trophy: () => import("./trophy").then((m) => m.TROPHY as AnyGenerator),
   shadowbox: () => import("./shadowbox").then((m) => m.SHADOWBOX as AnyGenerator),
   paperbox: () => import("./paperbox").then((m) => m.PAPERBOX as AnyGenerator),
-  calibration: () => import("./calibration").then((m) => m.CALIBRATION as AnyGenerator),};
+};

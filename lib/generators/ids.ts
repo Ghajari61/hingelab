@@ -1,5 +1,5 @@
 /** Generator ids and the little the shell needs before a generator's code loads. */
-export const GENERATOR_IDS = ["clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "calibration", "popup"] as const;
+export const GENERATOR_IDS = ["clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "popup"] as const;
 export type GeneratorId = (typeof GENERATOR_IDS)[number];
 
 export const isGeneratorId = (v: unknown): v is GeneratorId => typeof v === "string" && (GENERATOR_IDS as readonly string[]).includes(v);
@@ -26,4 +26,4 @@ export const GENERATOR_INFO: Record<GeneratorId, GeneratorInfo> = {
   paperbox: { name: "Paper Box", blurb: "Folding cartons, mailers and gift boxes in card or board for a cutter or a laser: tuck-end cartons, mailers and two-piece boxes with creases, slit locks and bleed.", icon: "box", storageKey: "hingelab-gen-paperbox-v1" },
   shadowbox: { name: "Shadow Box", blurb: "Layered 3D paper-cut art from geometric patterns or your own picture, for a Cricut or a laser, with over a hundred ready-made designs.", icon: "layers", storageKey: "hingelab-gen-shadowbox-v1" },
   popup: { name: "Pop-up", blurb: "One flat piece that lifts into a bowl, basket, tree, lampshade or ornament.", icon: "layers", storageKey: "hingelab-gen-popup-v1" },
-  calibration: { name: "Calibration", blurb: "Test coupons for a new sheet or machine: kerf strips, a slot fit ladder and a living-hinge strip, with the results saved to your material.", icon: "ruler", storageKey: "hingelab-gen-calibration-v1" },};
+};

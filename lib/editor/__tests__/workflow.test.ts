@@ -13,10 +13,9 @@ describe("editor workflow", () => {
     expect(normalizeEditorPrefs({}).detail).toBe("advanced");
     expect(normalizeEditorPrefs({ dockW: -10 }).dockW).toBe(0);
   });
-  it("respects explicit product sections and keeps calibration accessible", () => {
+  it("respects explicit product sections and own advanced flags", () => {
     expect(genSectionStep("popup", "profile", "dimensions")).toBe("dimensions");
     expect(genSectionStep("paperbox", "mailer-size")).toBe("dimensions");
-    expect(isAdvancedKey("calibration", "fit")).toBe(false);
     expect(isAdvancedKey("popup", "support.fit")).toBe(true);
     expect(isAdvancedKey("popup", "support.fit", false)).toBe(false);
   });

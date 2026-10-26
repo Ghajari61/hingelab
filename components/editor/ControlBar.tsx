@@ -45,7 +45,6 @@ export const PRODUCT_PICTURE: Record<Product, string> = {
   sign: "/presets/sign/welcome-arch.svg", topper: "/presets/topper/happy-birthday.svg", popup: "/presets/popup/spiral-trivet-bowl.svg",
   clock: "/presets/clock/wall-roman.svg", puzzle: "/presets/puzzle/kids-12.svg", qr: "/presets/qr/keychain.svg",
   keyrack: "/presets/keyrack/home-sweet-home.svg", tablenum: "/presets/tablenum/wedding-arch.svg", trophy: "/presets/trophy/star-award.svg",
-  calibration: "/presets/calibration/plywood-3.svg",
 };
 
 const CORE_BLURB: Record<CoreProduct, string> = {

@@ -44,7 +44,7 @@ export interface UserMaterial {
 
 export type Grain = "none" | "x" | "y";
 export type RotatePolicy = "any" | "half" | "none";
-/** Results of the calibration coupons (lib/generators/calibration), as the user measured them. */
+/** Measured results recorded on a material (kept for materials saved before the Calibration product was removed). */
 export interface Calibration {
   /** ISO date of the cut. */
   date: string;

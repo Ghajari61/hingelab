@@ -90,7 +90,7 @@ Research for the grouping is in `docs/RESEARCH_ATOMM.md`. This section is the si
 | Community | Graphics | Studio's own motif set inside editors | A small public page of original SVG only |
 | Community | Materials | Thickness and kerf inside each editor | A public reference page |
 | Learn | Guides | `/help` | Same |
-| Learn | Kerf & fit tools | Test & Calibration starter (`calibration` in `lib/generators/catalog.ts`) | A public entry that opens that starter |
+| Learn | Kerf & fit tools | `/learn/kerf` (kerf form) | The Calibration product was removed (D209) |
 | Learn | Changelog | `PROGRESS.md` (repo only) | A public page |
 | Learn | For developers | Nothing | A placeholder. No third-party SDK and no embed until asked |
 

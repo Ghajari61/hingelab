@@ -17,7 +17,6 @@ const PICTURE: Record<string, string> = {
   "hinge-fill": "/templates/thumbs/hinge-bracelet.svg",
   lamp: "/presets/boxes/honeycomb-lantern.svg",
   jigsaw: "/presets/puzzle/kids-12.svg",
-  calibration: "/presets/calibration/plywood-3.svg",
   "shadow-box": "/presets/shadowbox/star-tunnel.svg",
   "paper-box": "/presets/paperbox/jewelry-6x6x3.svg",
 };
@@ -114,13 +113,6 @@ const ART: Record<string, React.ReactNode> = {
       <rect className="cut" x="44" y="12" width="72" height="72" rx="4" />
       {[30, 24, 18, 12, 6].map((r, i) => (
         <rect key={r} className={`cut pop${i % 3 ? ` d${i % 3 + 1}` : ""}`} x={80 - r} y={48 - r} width={2 * r} height={2 * r} rx="1.5" transform={`rotate(${i * 9} 80 48)`} />
-      ))}
-    </g>
-  ),
-  calibration: (
-    <g>
-      {Array.from({ length: 20 }, (_, i) => (
-        <rect key={i} className={`cell c${i % 5}`} x={28 + (i % 5) * 22} y={14 + Math.floor(i / 5) * 18} width="18" height="14" rx="1.5" style={{ opacity: 0.18 + 0.16 * (i % 5) }} />
       ))}
     </g>
   ),

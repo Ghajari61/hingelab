@@ -50,10 +50,8 @@ export const ADVANCED_NAMES = new Set([
   "minuteH", "minuteW", "hourHole", "shaft", "maxDial", "web", "diffT", "screw", "head", "dpi", "lead",
 ]);
 
-/** Generators whose every setting is the point of the design (nothing is fine-tuning). */
-const NO_ADVANCED = new Set(["calibration"]);
-
-export const isAdvancedKey = (gen: string, key: string, own?: boolean) => own ?? (!NO_ADVANCED.has(gen) && ADVANCED_NAMES.has(key.split(".").pop() ?? ""));
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const isAdvancedKey = (gen: string, key: string, own?: boolean) => own ?? ADVANCED_NAMES.has(key.split(".").pop() ?? "");
 
 export type Detail = "simple" | "advanced";
 

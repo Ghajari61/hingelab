@@ -11,7 +11,6 @@ import { NumberField } from "@/components/editor/NumberField";
 import type { BaseField } from "@/components/editor/fields";
 import type { Units } from "@/components/editor/format";
 import type { DesignMaterial } from "./MaterialPicker";
-import { CouponResults } from "./CouponResults";
 import "./materials.css";
 
 type LaserText = Record<LaserOp, { speed: string; power: string; passes: string }>;
@@ -31,7 +30,7 @@ const TURNS: Record<RotatePolicy, string> = { any: "Any turn", half: "Half turns
 /** What the user has measured, or that the values are still an estimate. */
 export function calibrationLine(m: Pick<UserMaterial, "calibration">, fmt: (v: number) => string): string {
   const c = m.calibration;
-  if (!c) return "Not tested on your machine: these values are an estimate. Cut the calibration coupons to measure them.";
+  if (!c) return "Not tested on your machine: these values are an estimate.";
   const got = [c.kx != null && `kerf ${fmt(c.kx)}${c.ky != null && c.ky !== c.kx ? ` / ${fmt(c.ky)}` : ""}`, c.clearance != null && `fit clearance ${fmt(c.clearance)}`, c.hingeRadius != null && `hinge bends to ${fmt(c.hingeRadius)} radius`].filter(Boolean);
   return `Tested on your machine ${c.date.slice(0, 10)}${got.length ? `: ${got.join(", ")}` : ""}.`;
 }
@@ -197,7 +196,6 @@ export default function MaterialsDialog({ selected, current, units, onUse, onClo
                   />
                 )}
                 <p className="note" role="status">{calibrationLine(draft, fmt)}</p>
-                <CouponResults key={draft.id} draft={draft} onRecord={(m, note) => { setDraft(m); setMsg(note); }} />
                 <label className="mats-name">Bends like (Hinge Box stiffness)
                   <select className="sel" value={draft.like} onChange={(e) => setDraft({ ...draft, like: e.target.value })}>
                     <option value="custom">Not set (a generic sheet)</option>

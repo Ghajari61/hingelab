@@ -35,7 +35,7 @@ describe("start screen cards", () => {
 });
 
 describe("Studio starters", () => {
-  it.each(["hinge-fill", "calibration"])("%s builds a valid document with every part on its sheet", (id) => {
+  it.each(["hinge-fill"])("%s builds a valid document with every part on its sheet", (id) => {
     let n = 0;
     const st = buildGeneratorStarter(id, () => `n${++n}`)!;
     const doc = createDocument({ id, name: id, sheet: st.sheet });
@@ -51,15 +51,5 @@ describe("Studio starters", () => {
     };
     st.nodes.forEach((c) => visit(c, [1, 0, 0, 1, 0, 0]));
     expect(flat(st.nodes).some((x) => (x.type === "shape" || x.type === "path") && x.effects?.some((e) => e.kind === "livingHinge"))).toBe(true);
-  });
-
-  it("sizes the slot comb to the material", () => {
-    const labels = (t: number) => flat(buildGeneratorStarter("calibration", () => "x", t)!.nodes).filter((x): x is TextNode => x.type === "text" && /slot$/.test(x.name ?? "")).map((x) => x.text);
-    expect(labels(3)).toEqual(["2.7", "2.8", "2.9", "3.0", "3.1", "3.2", "3.3"]);
-    expect(labels(6)).toEqual(["5.7", "5.8", "5.9", "6.0", "6.1", "6.2", "6.3"]);
-    const comb = flat(buildGeneratorStarter("calibration", () => "x", 3)!.nodes).find((x) => x.name === "Comb")!;
-    const xs = nodePaths(comb)[0].nodes.filter((a) => Math.abs(a.y - 32) < 1e-6).map((a) => a.x).sort((a, b) => a - b);
-    const widths = Array.from({ length: xs.length / 2 }, (_, i) => Math.round((xs[2 * i + 1] - xs[2 * i]) * 100) / 100);
-    expect(widths).toEqual([2.7, 2.8, 2.9, 3, 3.1, 3.2, 3.3]);
   });
 });
