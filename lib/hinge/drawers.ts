@@ -63,7 +63,12 @@ export function buildDrawers(
     const y0 = bounds[i], y1 = bounds[i + 1];
     const h = floorTo(y1 - y0 - 2 * play), w = floorTo(widest(edges, ri - play, y0 + play, y1 - play));
     const d = floorTo(depth - 1.5);
-    const rd = floorTo(Math.max(t + 2, Math.min(p.shape === "rect" ? p.R : 20, Math.min(w, d) / 2 - 1)));
+    // A bay inside a pill's round end can be too narrow for a drawer box.
+    if (w < 2 * (t + 3) + 4) {
+      out.issues.push({ lvl: "warn", msg: `${name} was left out: its bay is too narrow at the case's round end. Make the case wider than it is tall, or use the rounded shape.` });
+      continue;
+    }
+    const rd = floorTo(Math.min(Math.min(w, d) / 2 - 0.5, Math.max(t + 2, Math.min(p.shape === "rect" ? p.R : 20, Math.min(w, d) / 2 - 1))));
     const q: Params = {
       ...p, name, shape: "rect", W: w, D: d, H: h, R: rd, lid: "open", drawers: 0, divX: 0, divY: 0, upright: false,
       baseRing: false, testStrip: false, hangHoles: false, lidSteps: 0, lidWindow: false, fit: undefined,

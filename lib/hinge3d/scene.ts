@@ -4,7 +4,7 @@
  * drawn (darker curved zones with slit lines), never recomputed.
  */
 import * as THREE from "three";
-import type { Edge, LayerContent, Layout, Model, Params, PlatePart, Point } from "@/lib/hinge";
+import type { Edge, LayerContent, Layout, Model, Params, PlatePart, Point, WallPart } from "@/lib/hinge";
 import { buildCore } from "@/lib/hinge/core";
 import { honeyLattice } from "@/lib/hinge/hinge";
 import { clipHalf } from "@/lib/hinge/flip";
@@ -113,7 +113,7 @@ function windowSlab(outer: Point[], z0: number, t: number) {
  * A flip lid at height z: the strip behind the band and the band stay put; the flap turns about the
  * band's edge by `open` (0..1 of its reach, at most 100°).
  */
-function flipLid(m: Model, p: Params, lid: PlatePart, z: number, open: number) {
+function flipLid(m: Model, p: Params, lid: PlatePart, z: number, open: number, win?: PlatePart) {
   const g = new THREE.Group(), f = m.flip!, a = f.a, t = p.T;
   const out = lid.pts ?? outline(lid.edges, lid.r);
   const holes = lid.slots.filter((h) => !h.every((q) => dotA(q, a) >= f.to));
@@ -131,6 +131,12 @@ function flipLid(m: Model, p: Params, lid: PlatePart, z: number, open: number) {
   hinge.position.copy(pivot);
   flap.position.set(-pivot.x, -pivot.y, z - pivot.z);
   hinge.add(flap);
+  // A window glued under the flap turns with it.
+  if (win) {
+    const w = windowSlab(win.pts ?? outline(win.edges, win.r), 0, 0.6 * t);
+    w.position.set(-pivot.x, -pivot.y, z - 0.7 * t - pivot.z);
+    hinge.add(w);
+  }
   const angle = (Math.min(100, f.angle) * Math.PI * open) / 180;
   const q = new THREE.Quaternion().setFromAxisAngle(axis, angle);
   const probe = new THREE.Vector3(-a[0] * 10, a[1] * 10, 0).applyQuaternion(q);
@@ -174,14 +180,17 @@ export function buildHingeScene(model: Model, user: Params, explode = 0): Scene3
     if (lipR > 0.5 && p.lidLip !== false) inner.add(plate(edges, lipR, top - t + lidLift, t, "lid lip", 0.86, holes));
     inner.add(plate(edges, lidR, top + lidLift, t, "lid", 1.04, holes));
   }
-  if (p.lid === "flip" && lid && model.flip) inner.add(flipLid(model, p, lid, top, explode));
+  // A flip lid stays on its walls (they lift as the view explodes) and swings open instead.
+  if (p.lid === "flip" && lid && model.flip) inner.add(flipLid(model, p, lid, top + wallLift, explode, named(model, "WINDOW")));
   if (p.lid === "fixed" || p.lid === "removable") lidTop = top + t + lidLift;
   // ---- a cap lid: its walls round the top of the box, its top on the box's walls
   if (p.lid === "cap" && model.cap) {
     const c = model.cap, capTop = named(model, "CAP TOP"), cz = top + lidLift;
     const capTabs = c.edges.reduce((n, e) => n + e.tabs.length, 0);
     inner.add(wallBand(c.edges, c.R, c.R - t, cz - c.hBody, c.hBody));
-    inner.add(slitLines(c.edges, c.R + 0.15, cz - c.hBody, c.hBody, p.pitch, honeyLattice(p).bridge));
+    // The cap's walls may have their own lattice (fitted to their height).
+    const lat = model.parts.find((pt): pt is WallPart => pt.kind === "wall" && pt.name.startsWith("CAP WALL"))?.lattice;
+    inner.add(slitLines(c.edges, c.R + 0.15, cz - c.hBody, c.hBody, lat?.pitch ?? p.pitch, lat?.bridge ?? honeyLattice(p).bridge));
     inner.add(plate(c.edges, c.R + p.K / 2, cz, t, "cap top", 1.04, capTop ? capTop.slots.slice(capTabs) : []));
     lidTop = cz + t;
   }
@@ -191,7 +200,7 @@ export function buildHingeScene(model: Model, user: Params, explode = 0): Scene3
     const i = Number(st.name.slice(-1));
     inner.add(plate(st.edges, st.r, lidTop + (i - 1) * t, t, st.name.toLowerCase(), 1.06, st.slots));
   }
-  const win = named(model, "WINDOW");
+  const win = p.lid === "flip" ? undefined : named(model, "WINDOW");
   if (win) {
     const wz = p.lid === "cap" ? lidTop - 1.8 * t : p.lid === "flip" ? top - 0.7 * t : lidTop - 1.8 * t;
     inner.add(windowSlab(win.pts ?? outline(win.edges, win.r), wz, 0.6 * t));

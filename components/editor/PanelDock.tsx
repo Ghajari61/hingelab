@@ -299,11 +299,13 @@ export function PanelDock({
           checked={params.hangHoles === true} def={false}
           onChange={(on) => { const next: Params = { ...params, hangHoles: on }; if (!on) delete next.hangHoles; onPatch(next); }}
         />
-        <CheckField
-          label="Stand it up (cabinet)" title="Shows the box stood on its side: the base is the back and the lid the front door. The top of the drawing is the top of the cabinet."
-          checked={params.upright === true || (params.drawers ?? 0) > 0} def={false}
-          onChange={(on) => { const next: Params = { ...params, upright: on }; if (!on) delete next.upright; onPatch(next); }}
-        />
+        {(params.drawers ?? 0) > 0 ? <p className="note">A chest of drawers always stands up.</p> : (
+          <CheckField
+            label="Stand it up (cabinet)" title="Shows the box stood on its side: the base is the back and the lid the front door. The top of the drawing is the top of the cabinet."
+            checked={params.upright === true} def={false}
+            onChange={(on) => { const next: Params = { ...params, upright: on }; if (!on) delete next.upright; onPatch(next); }}
+          />
+        )}
         <p className="note">Stood up, a box with a flip-top lid hinged on the left is a cabinet with a door, and dividers across the depth are its shelves. Hanging holes go near the top of the base, so a cabinet hangs on two screws.</p>
       </Sec>
       <Sec step="construction" title="Dividers" meta={(params.divX ?? 0) + (params.divY ?? 0) > 0 ? `${(params.divX ?? 0) + 1} × ${(params.divY ?? 0) + 1}` : undefined} onReset={() => onResetSection("Dividers", ["divX", "divY", "divH"])}>
@@ -322,7 +324,7 @@ export function PanelDock({
             </div>
           </>
         )}
-        <p className="note">A chest of drawers: the box stands on its side as a case open at the front, with a shelf between each two drawers. Each drawer is a small hinge box of its own with a front plate to glue on. Width and depth set the front of the case, height its depth. Needs a rounded or pill shape.</p>
+        <p className="note">A chest of drawers: the box stands on its side as a case open at the front, with a shelf between each two drawers. Each drawer is a small hinge box of its own with a front plate to glue on. Width and depth set the front of the case, height its depth. Needs a rounded shape, or a pill wider than it is tall.</p>
       </Sec>
       <Sec step="design" title="Cut-out pattern" meta={params.fret && params.fret !== "none" ? FRET_NAMES[params.fret] : undefined} onReset={() => onResetSection("Cut-out pattern", ["fret", "fretOn", "fretCell", "fretBar", "fretMotif", "fretShape", "fretSize", "fretMark"])}>
         <div className="rowlabel">Pattern</div>

@@ -8,7 +8,8 @@
  * opens follows from the bend estimate: a band `B` wide bends to radius r over an angle B / r.
  */
 import type { Edge, FlipSide, Params, Point } from "./types";
-import { cutWidth, hingeSegments, honeyLattice, kerfY, slotLike } from "./hinge";
+import { cutWidth, hingeSegments, kerfY, slotLike } from "./hinge";
+import { kerfAcross } from "@/lib/materials/axes";
 import { bendAnalysis } from "./analysis";
 import { coreDistance } from "./lidSlot";
 import { buildCore } from "./core";
@@ -80,12 +81,22 @@ export function flipBand(p: Params, edges: Edge[], rOut: number): FlipBand | { e
   // The cuts run across the lid, about as long as the lid is wide there.
   const cross = chordAt(edges, rOut, a, edge - fixed);
   const len = cross ? cross[1] - cross[0] : span;
-  const rMin = bendAnalysis(honeyLattice(p), Math.max(10, len), 1).rMin;
-  const auto = Math.max(4 * p.pitch, Math.ceil((1.25 * rMin * FLIP_TARGET * Math.PI) / 180));
+  const bl = bandLattice(p);
+  const rMin = bendAnalysis(bl, Math.max(10, len), 1).rMin;
+  const auto = Math.max(4 * bl.pitch, Math.ceil((1.25 * rMin * FLIP_TARGET * Math.PI) / 180));
   const B = p.flipBand && p.flipBand > 0 ? p.flipBand : auto;
   if (fixed + B > span - 10) return { error: "The lid is too narrow for a flip hinge this wide. Narrow the hinge band or the fixed strip, or make the box larger." };
   const to = edge - fixed, from = to - B;
   return { a, from, to, edge, span, rMin, angle: Math.min(180, ((B / (1.25 * rMin)) * 180) / Math.PI) };
+}
+
+/**
+ * The lattice the band is cut with: the wall's slit, bridge, spacing and cut style, always as straight
+ * cuts. A honeycomb's cells are far wider than a slot, so its band uses the standard slot lattice.
+ */
+export function bandLattice(p: Params): Params {
+  if (p.pattern === "honeycomb") return { ...p, pattern: "straight", slotW: 0.8, pitch: 2.5, slit: 28, bridge: 3 };
+  return { ...p, pattern: "straight" };
 }
 
 /** The fixed strip's width when the design leaves it out: room for the tab slots and 3 mm more. */
@@ -114,13 +125,15 @@ export function flipKeepsTab(p: Params, band: FlipBand, rN: number) {
  * The band's cuts on a lid of outer radius `rOut`: closed slots for the slot style, centre lines for
  * single-line cuts. Columns alternate between slits bridged at both edges and slits that run off them.
  */
-export function flipCuts(p: Params, edges: Edge[], rOut: number, band: FlipBand): { slots: Point[][]; lines: Point[][] } {
+export function flipCuts(user: Params, edges: Edge[], rOut: number, band: FlipBand): { slots: Point[][]; lines: Point[][] } {
+  const p = bandLattice(user);
   const a = band.a, b: Point = [-a[1], a[0]], g = p.bridge, B = band.to - band.from;
   const slots: Point[][] = [], lines: Point[][] = [];
   let nc = Math.max(1, Math.floor(B / p.pitch));
   if (nc % 2 === 0) nc -= 1;
   const start = band.from + (B - (nc - 1) * p.pitch) / 2;
-  const slot = slotLike(p), rr = (cutWidth(p) - p.K) / 2, k2 = kerfY(p) / 2, run = slot ? p.slotW + 0.5 : 0.4;
+  // The slots run along b: the kerf across their sides is the one across a, across their ends the one across b.
+  const ky = kerfY(p), slot = slotLike(p), rr = cutWidth(p) / 2 - kerfAcross(a, p.K, ky), k2 = kerfAcross(b, p.K, ky), run = slot ? p.slotW + 0.5 : 0.4;
   const pt = (u: number, v: number): Point => [a[0] * u + b[0] * v, a[1] * u + b[1] * v];
   for (let j = 0; j < nc; j++) {
     const u = start + j * p.pitch, ch = chordAt(edges, rOut, a, u);

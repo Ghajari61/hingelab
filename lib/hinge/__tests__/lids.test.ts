@@ -86,6 +86,23 @@ describe("flip-top lid", () => {
     for (const q of win.pts!) expect(dot(q, f.a)).toBeLessThanOrEqual(f.from - 1 + 1e-6);
   });
 
+  it("cuts a honeycomb box's band with plain slots that never touch", () => {
+    const m = model({ lid: "flip", pattern: "honeycomb", slotW: 9.3, pitch: 5.4, W: 300, D: 300, H: 120, R: 30 });
+    const slots = plate(m, "LID")!.hinge!;
+    expect(slots.length).toBeGreaterThan(10);
+    // Each slot is a standard 0.8 mm slot, well under the band's 2.5 mm spacing.
+    for (const sl of slots) expect(span(sl, 1)).toBeLessThan(1);
+    expect("error" in computeModel(box({ lid: "flip", pattern: "honeycomb", slotW: 3, pitch: 2 }))).toBe(false);
+  });
+
+  it("takes the kerf across each slot's own sides, whichever way the band runs", () => {
+    const back = plate(model({ lid: "flip", K: 0.1, Ky: 0.3 }), "LID")!.hinge![0];
+    const left = plate(model({ lid: "flip", flipSide: "left", K: 0.1, Ky: 0.3 }), "LID")!.hinge![0];
+    // Back hinge: slots run along x, so their width (along y) loses the y kerf; left hinge: the x kerf.
+    expect(span(back, 1)).toBeCloseTo(DEFAULTS.slotW - 0.3, 6);
+    expect(span(left, 0)).toBeCloseTo(DEFAULTS.slotW - 0.1, 6);
+  });
+
   it("refuses a lid too narrow for the hinge, and offers a fix", () => {
     const r = computeModel(box({ lid: "flip", D: 40, H: 40, R: 12 }));
     expect("error" in r && r.error).toMatch(/too narrow for a flip hinge/);
@@ -247,6 +264,14 @@ describe("chest of drawers", () => {
     expect(m.issues.some((i) => /Drawers need/.test(i.msg))).toBe(true);
   });
 
+  it("leaves out drawers that a pill's round end has no room for, with a note", () => {
+    const m = model({ shape: "pill", W: 120, D: 300, H: 150, drawers: 3, slit: 40, bridge: 2 });
+    expect(m.issues.some((i) => /round end/.test(i.msg))).toBe(true);
+    expect(m.drawerPlaces?.length ?? 0).toBeLessThan(3);
+    const wide = model({ shape: "pill", W: 300, D: 160, H: 150, drawers: 2, slit: 40, bridge: 2 });
+    expect(wide.drawerPlaces).toHaveLength(2);
+  });
+
   it("makes one drawer with a finger hole", () => {
     const m = model({ drawers: 1, W: 160, D: 90, H: 120, R: 16, drawerPull: "finger", slit: 40, bridge: 2 });
     expect(m.drawerPlaces).toHaveLength(1);
@@ -288,6 +313,9 @@ describe("the rest of the app knows the new settings", () => {
       expect(svg).not.toMatch(/NaN|Infinity/);
       expect(svg.length).toBeLessThan(60_000);
     }
+    // Only the lid's opening is glass, not the base's hole.
+    const gp = box({ lidHole: "rim", lidWindow: true, baseHole: "hole" });
+    expect(sceneSVG(model(gp), gp, -0.6, 0.35).split("rgba(178,214,236,.78)").length - 1).toBe(1);
     // Stood up, a cabinet is as tall as its depth; a flip lid swings up as the view explodes.
     const cab = box({ lid: "flip", flipSide: "left", W: 160, D: 220, H: 120, R: 20, upright: true });
     expect(buildHingeScene(model(cab), cab).size[1]).toBeCloseTo(220 + DEFAULTS.K, 0);

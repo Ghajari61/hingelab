@@ -43,7 +43,7 @@ const HOLE = "rgba(48,30,14,.62)";
 const GLASS = "rgba(178,214,236,.78)";
 
 /** Side faces of a solid with outline `pts` from z0 to z1, its top, and (when `bottom`) its underside. */
-function prism(pts: Point[], z0: number, z1: number, tone: number, decals: Point[][] = [], opts: { bottom?: boolean; fill?: string; hinge?: boolean[]; skip?: number[] } = {}): Face[] {
+function prism(pts: Point[], z0: number, z1: number, tone: number, decals: Point[][] = [], opts: { bottom?: boolean; fill?: string; hinge?: boolean[]; skip?: number[]; decalFill?: string } = {}): Face[] {
   const out: Face[] = [];
   let area = 0;
   for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; area += a[0] * b[1] - b[0] * a[1]; }
@@ -58,7 +58,7 @@ function prism(pts: Point[], z0: number, z1: number, tone: number, decals: Point
     out.push(f);
   }
   const top = (ccw ? pts.slice().reverse() : pts).map(([x, y]) => [x, y, z1] as Vec3);
-  out.push({ q: top, tone: tone * 1.1, fill: opts.fill, decals: decals.map((d) => ({ q: d.map(([x, y]) => [x, y, z1 + 0.01] as Vec3), fill: HOLE })) });
+  out.push({ q: top, tone: tone * 1.1, fill: opts.fill, decals: decals.map((d) => ({ q: d.map(([x, y]) => [x, y, z1 + 0.01] as Vec3), fill: opts.decalFill ?? HOLE })) });
   if (opts.bottom) out.push({ q: (ccw ? pts : pts.slice().reverse()).map(([x, y]) => [x, y, z0] as Vec3), tone: tone * 0.7, fill: opts.fill });
   return out;
 }
@@ -120,14 +120,16 @@ function boxFaces(model: Model, user: Params, explode: number): Face[] {
   }
   const over = p.lidOver ?? 0;
   const lidRing = over ? ring(edges, R + over, 10) : outer;
+  // With a window, the lid's opening is glass.
+  const glass = named(model, "WINDOW") ? { decalFill: GLASS } : {};
   const lid = named(model, "LID");
   const tabs = edges.reduce((n, e) => n + e.tabs.length, 0);
   let top = H;
-  if (p.lid === "fixed") faces.push(...prism(pts(lidRing), H - t, H, 1, lid ? lid.slots.slice(tabs) : []));
+  if (p.lid === "fixed") faces.push(...prism(pts(lidRing), H - t, H, 1, lid ? lid.slots.slice(tabs) : [], glass));
   if (p.lid === "removable") {
     const z0 = H - t + lidLift, lipR = R - t - p.lidGap;
     if (lipR > 0.5 && lidLift > 0.5 && p.lidLip !== false) faces.push(...prism(pts(ring(edges, lipR, 8)), z0 - t, z0, 0.8));
-    faces.push(...prism(pts(lidRing), z0, z0 + t, 1, lid?.slots ?? []));
+    faces.push(...prism(pts(lidRing), z0, z0 + t, 1, lid?.slots ?? [], glass));
     top = z0 + t;
   }
   if (p.lid === "flip" && lid && model.flip) {
@@ -143,7 +145,7 @@ function boxFaces(model: Model, user: Params, explode: number): Face[] {
     for (let u = f.from + 2; u < f.to - 1; u += Math.max(2, (f.to - f.from) / 7)) lines.push([[a[0] * u - b[0] * span * 0.92, a[1] * u - b[1] * span * 0.92, H + 0.05], [a[0] * u + b[0] * span * 0.92, a[1] * u + b[1] * span * 0.92, H + 0.05]]);
     bandFaces[bandFaces.length - 1].lines = lines;
     faces.push(...bandFaces);
-    const flap = prism(clipHalf(all, a, f.from), H - t, H, 1, holes.filter((h) => h.every((q) => dotA(q, a) <= f.from)), { bottom: true });
+    const flap = prism(clipHalf(all, a, f.from), H - t, H, 1, holes.filter((h) => h.every((q) => dotA(q, a) <= f.from)), { bottom: true, ...glass });
     const open = (Math.min(100, f.angle) * Math.PI / 180) * Math.min(1, explode * 1.6);
     const pivot: Vec3 = [a[0] * f.from, a[1] * f.from, H];
     // Turned so the flap's far edge goes up.
@@ -156,7 +158,7 @@ function boxFaces(model: Model, user: Params, explode: number): Face[] {
     const c = model.cap, z1 = H + lidLift, capTop = named(model, "CAP TOP");
     const ctabs = c.edges.reduce((n, e) => n + e.tabs.length, 0);
     faces.push(...band(ring(c.edges, c.R, 10), ring(c.edges, c.R - t, 10), z1 - t - c.hBody, z1 - t));
-    faces.push(...prism(pts(ring(c.edges, c.R, 10)), z1 - t, z1, 1, capTop ? capTop.slots.slice(ctabs) : []));
+    faces.push(...prism(pts(ring(c.edges, c.R, 10)), z1 - t, z1, 1, capTop ? capTop.slots.slice(ctabs) : [], glass));
     top = z1;
   }
   if (p.lid === "fixed") top = H;
@@ -165,8 +167,7 @@ function boxFaces(model: Model, user: Params, explode: number): Face[] {
     const i = Number(st.name.slice(-1));
     faces.push(...prism(pts(ring(st.edges, st.r, 10)), top + (i - 1) * t, top + i * t, 1.04, st.slots));
   }
-  const win = named(model, "WINDOW");
-  if (win) for (const f of faces) for (const d of f.decals ?? []) if (d.q.length > 12) d.fill = GLASS;
+
   // ---- drawer fronts on the open top of a chest of drawers
   for (const d of model.drawerPlaces ?? []) {
     const fc = buildCore({ ...p, shape: "rect", W: d.fw, D: d.fh, R: 2 });
