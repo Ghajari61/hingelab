@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.12.0",
-    "pub_date": "2026-10-26T06:39:58.636Z",
-    "notes": "Pop-up matched ring/rib joints, centred 3D assembly, radial hubs and real handle tabs, contour-based suspension, joint test coupons, corrected nested sets and six precision presets (36 total).",
+    "version": "1.12.1",
+    "pub_date": "2026-10-26T13:32:28.070Z",
+    "notes": "Equal-size product cards, refined icon badges and previews, and responsive product picker positioning.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.12.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnYrTkxGSDdtbCs3S3cwUU55NGdFMFJaNzhaVktuVkpJUFFSeTNaUWtldmtkSjd4akJ2YjlJRW1zVGVDVzZ0WXZrNGhnRU1LSit4cjdrY01JaXdIMndJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTk2NzY4CWZpbGU6SGluZ2VMYWJfMS4xMi4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjEyLjAKbUQ1T05RTlhjZHNGWTNmdDJiY0U0L1l5ZEJxU3l3VlR0eDNxWVJVLzg4VzBLUzFKV0hxRHBVNlJBKzlvMVRKU3V3RUk1UUh6QjkyaVhDNzZxY2JTQmc9PQo=",
-        "size": 11695029,
-        "sha256": "5d5ddee329fc84b2c0c61942d0c1662aacb5ae8d98855aee754b2d8c09c319bb"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.12.1_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnFtUFVYTFd5MWtGejVoMU4yU2xZclo5bjJybk5reFFtSW1PWE4rbHBZb2U5b2E4SmpLWnVocGFYZjkzd2FwK2FkVmhtNlkrQ2tsLzhJeUNSNVFaSndRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDIxNDk5CWZpbGU6SGluZ2VMYWJfMS4xMi4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjEyLjEKNnJaVE9IcS82bTIzTEFoY0YyNE5sMW5GaVRRTjhHRDNFVzBqbUZ5djBaWHFuUGxHeDNoY25Udng2RTVCMktCWUJJb0l6YjJuOHh2UDk0dE9yWUhiQmc9PQo=",
+        "size": 11700015,
+        "sha256": "a770333035092448d241bf022f484a07eceb85c107681ac114b8a02dbf4f656a"
       }
     }
   }
