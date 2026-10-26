@@ -4,6 +4,9 @@ import type { CharmParams } from "./params";
 const FAMILY = "Olivia\nNoah\nAva\nLiam\nMum\nDad";
 
 export const CHARM_PRESETS: GenPreset<CharmParams>[] = [
+  { id: "studio-star-names", name: "Star name ornaments", note: "Wooden stars with each name engraved and a scored frame.", params: { name: "Star name ornaments", kind: { kind: "ornament" }, names: { list: "Ella\nJack\nMia", fontId: "fredoka", size: 12 }, shape: { kind: "star", width: 80, height: 78, margin: 4, frame: true }, hang: { kind: "hole", side: "top", hole: 3.5, wall: 2.5 } } },
+  { id: "studio-script-keychains", name: "Script name keychains", note: "Connected script names in acrylic with a ring loop.", params: { name: "Script name keychains", kind: { kind: "keychain" }, material: "acr3", T: 3, K: 0.1, names: { list: "Ruby\nOscar", fontId: "pacifico", size: 15 }, style: { kind: "letters", weld: 1, backing: 0 }, hang: { kind: "loop", side: "left", hole: 5, wall: 3 } } },
+  { id: "studio-snowman-tags", name: "Snowman stocking tags", note: "Snowmen in bobble hats with the hat and nose cut to paint.", params: { name: "Snowman stocking tags", kind: { kind: "gifttag" }, names: { list: "Leo\nIvy", fontId: "pacifico", size: 12 }, shape: { kind: "snowman", width: 60, height: 96, margin: 2, hat: "beanie", paint: true }, hang: { kind: "loop", side: "top", hole: 3.5, wall: 2.5 } } },
   // ---- ornaments
   {
     id: "family-baubles", name: "Family name baubles", note: "A bauble for everyone, names engraved under a snowflake",

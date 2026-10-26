@@ -5,6 +5,9 @@ const FAMILY = "Olivia\nNoah\nAva\nLiam\nMum\nDad";
 const BIG = "Grandma\nGrandpa\nSophie\nOliver\nEmily\nJack\nLily\nMax\nRuby\nLeo";
 
 export const FAMILY_PRESETS: GenPreset<FamilyParams>[] = [
+  { id: "studio-grandkids-crossword", name: "Grandkids crossword", note: "The grandchildren's names crossing on engraved tiles.", params: { name: "Grandkids crossword", layout: { kind: "crossword" }, names: { list: "Amelia\nNoah\nLeo\nElla", fontId: "archivo-black" }, crossword: { tile: 14, back: "outline", pad: 3, grid: true }, hang: { kind: "loop", hole: 4, wall: 3 } } },
+  { id: "studio-name-tree", name: "Christmas name tree", note: "Five names stacked into a tree with a star and the year.", params: { name: "Christmas name tree", layout: { kind: "tree" }, names: { list: "Zoe\nMaya\nOwen\nCaleb\nHarper", fontId: "archivo-black", caps: true }, tree: { width: 90, maxLine: 14, weld: 0.7, star: "star", trunk: true, year: "2026" }, hang: { kind: "loop", hole: 4, wall: 2.5 } } },
+  { id: "studio-nana-ring", name: "Nana ring", note: "Nana in script with the grandchildren round the ring.", params: { name: "Nana ring", layout: { kind: "ring" }, names: { list: "Lucy\nTom\nAva\nSam", fontId: "archivo-black", caps: true }, ring: { diameter: 90, centre: "Nana", centreFont: "pacifico", nameSize: 8, separator: "•", frame: true }, mark: { kind: "engrave" } } },
   // ---- crosswords
   {
     id: "family-crossword", name: "Family crossword ornament", note: "Everyone's names crossing on engraved tiles, with an outline backing",

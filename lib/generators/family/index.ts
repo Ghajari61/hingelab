@@ -91,7 +91,7 @@ const sections: SectionSpec<FamilyParams>[] = [
       { kind: "number", key: "ring.diameter", label: "Diameter", unit: "mm", min: 40, max: 400, step: 1, help: "Size of the ring across." },
       { kind: "number", key: "ring.nameSize", label: "Name height", unit: "mm", min: 3, max: 40, step: 0.5, help: "Height of the names round the ring; they shrink to fit all the way round." },
       { kind: "text", key: "ring.separator", label: "Between names", maxLength: 3, help: "The mark between the names, such as a dot." },
-      { kind: "text", key: "ring.centre", label: "Centre", maxLength: 3, placeholder: "A short word", help: "A short word or an initial in the middle; empty shows the motif instead." },
+      { kind: "text", key: "ring.centre", label: "Centre", maxLength: 6, placeholder: "A short word", help: "A short word or an initial in the middle; empty shows the motif instead." },
       { kind: "font", key: "ring.centreFont", label: "Centre font", sample: (p) => p.ring.centre || "Aa", show: (p) => !!p.ring.centre.trim(), help: "The typeface of the middle word; script looks lovely." },
       { kind: "choice", key: "ring.motif", label: "Centre motif", rail: true, options: MOTIF_OPTIONS, show: (p) => !p.ring.centre.trim(), help: "The motif in the middle when there is no word." },
       ...motifArtFields<FamilyParams>("ring.motif", "ring.art", (p) => p.layout.kind === "ring" && !p.ring.centre.trim()),

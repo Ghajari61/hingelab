@@ -148,7 +148,7 @@ export function mergeFamily(raw: unknown): FamilyParams {
   p.backer.offset = clamp(p.backer.offset, 1, 15);
   p.tree.year = p.tree.year.slice(0, 12);
   const r = p.ring;
-  r.diameter = clamp(r.diameter, 40, 400); r.nameSize = clamp(r.nameSize, 3, 40); r.centre = r.centre.slice(0, 3); r.separator = r.separator.slice(0, 3);
+  r.diameter = clamp(r.diameter, 40, 400); r.nameSize = clamp(r.nameSize, 3, 40); r.centre = r.centre.slice(0, 6); r.separator = r.separator.slice(0, 3);
   const b = p.bunting;
   b.width = clamp(b.width, 30, 300); b.height = clamp(b.height, 30, 400); b.hole = clamp(b.hole, 2, 10); b.letter = clamp(b.letter, 30, 90);
   p.hang.hole = clamp(p.hang.hole, 1, 12); p.hang.wall = clamp(p.hang.wall, 1, 10);
