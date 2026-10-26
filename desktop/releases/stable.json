@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.7.0",
-    "pub_date": "2026-10-25T21:47:10.029Z",
-    "notes": "Latest GitHub changes: free SVG tools, STL export, seasonal designs and collection pages.",
+    "version": "1.8.0",
+    "pub_date": "2026-10-26T03:20:02.744Z",
+    "notes": "Latest GitHub updates: Hinge Box lids, cabinets and drawers, animated 3D opening and sheet unfolding, idle rotation, and simplified product/settings navigation.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.7.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnVMODJ1bkNCNUgwNE94R1A4clBRVllyb2pxTFNRR2FPSDhHS0ZYcHlHeGxBRFhDb2hFanB0VmN4WHh4akdMeEJJak90dzZNa2pXT2VsUFFqUjlPZ2dVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTY0ODAxCWZpbGU6SGluZ2VMYWJfMS43LjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuNy4wCkIySnFoa2g0VXFJaXRzeDlYdUhkT1NhY0RFL3pJRHFkMVJ2aTVSODZQdExKV05ZWXF4UC82SktOb0VRU0hpUGZjN3FpdDNzZ1RBOURIT0RPREJuQ0NRPT0K",
-        "size": 11053868,
-        "sha256": "64d8c4abb7ef9c37186e764e1b1117a32c4a122c4f8e2d849d2324c50f00f619"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.8.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmlJaCtkSktMZEo0RnBNT2FTNHZLcnZyck1IZWpQVXZGT0hpQlNMczJSQ2tMN3JNbmh6L2xiVFBTQ0hnUEJKS0hjcjhTUzgrQVBlc210Mi84b1hhOWdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTg0NzcyCWZpbGU6SGluZ2VMYWJfMS44LjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjEuOC4wCkFGZW13bWg3WElQZVZaejJmNk9MNndoekZseXJnam42eXBLdEljbTNISHpZMzZlWVBkb3MvNWtqbzhjQWxjUFRGdUtwZTMrSDg5Y0hDWXpESmpwakFnPT0K",
+        "size": 11153292,
+        "sha256": "eb02dc02e313d021033b4b8c3a7c2e3e5542eb7705e086683ab7fc1d6b583256"
       }
     }
   }
