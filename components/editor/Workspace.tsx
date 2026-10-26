@@ -93,7 +93,7 @@ const PRODUCT_ID: Record<CoreProduct, ProductId> = { hinge: "hinge-box", letters
 const fromId = (id: ProductId): Product => (id === "letters" ? "letters" : id === "parametric" ? "parametric" : "hinge");
 
 /**
- * Guest editor: opens on the start gallery unless `?p=` names a product; each product keeps its own autosave.
+ * Guest editor: opens on the Hinge Box unless `?p=` names a product (Home shows the start gallery); each product keeps its own autosave.
  * Cloud project: the product is fixed by the project; switching products starts a new cloud project.
  * Parametric cloud projects are Pro; when the plan refuses one, Parametric opens in the guest editor.
  * Generators design on the device, so picking one from a cloud project opens the guest editor.
@@ -104,7 +104,8 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
     const choice = chooseInitial(readLocalCopy<Record<string, unknown>>(cloud.id), { params: cloud.params, updated_at: cloud.updatedAt });
     return { ...cloud, params: choice.params, push: choice.push };
   });
-  const [product, setProduct] = useState<Product | null>(() => (doc ? fromId(doc.product) : urlProduct()));
+  // with no product named, the editor opens on the Hinge Box (the product picker in the header switches)
+  const [product, setProduct] = useState<Product | null>(() => (doc ? fromId(doc.product) : urlProduct() ?? "hinge"));
   const [start, setStart] = useState<StartChoice | null>(() => (doc ? null : urlPreset(product)));
   // A share link (`#share=…`) opens its design read-only; the decoder loads only for such links.
   const [opening, setOpening] = useState(() => !doc && !!product && /(?:^#|&)share=/.test(window.location.hash));

@@ -6,6 +6,8 @@
 - **Collections** now have their own pages (Christmas, Wedding, Birthday, Baby, Halloween, Eid and Ramadan, Valentine's Day, Graduation), each listing every fitting design from every generator with its picture.
 - **Search.** The sitemap lists every generator, tool, collection and guide (it listed four pages before), and generator and tool pages describe themselves to search engines.
 - Boxes show how much a box holds (litres or millilitres). The export dialog reminds you to measure your material and cut a test first.
+- One product button in the header instead of a row of tabs and a Generators menu: it shows the open product and opens a panel of pictures (the three main products, then every generator) to choose from. The editor opens on the Hinge Box when no product is named.
+- The settings panel no longer has the Simple/Advanced switch and the seven-step bar above it: every setting shows, and the panel starts straight with the sections.
 
 ## 1.6.0 — GitHub sync (25 Oct 2026)
 
