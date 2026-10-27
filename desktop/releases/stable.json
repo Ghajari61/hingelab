@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.15.0",
-    "pub_date": "2026-10-27T02:50:16.009Z",
-    "notes": "Photo to Product: 1–5 product photos, authenticated AI analysis, editable paw ornaments, heart hinge boxes and tags, 3D preview, known and estimated dimensions, and laser SVG build packages.",
+    "version": "1.16.0",
+    "pub_date": "2026-10-27T03:44:37.764Z",
+    "notes": "Template-free Photo to Product: AI-authored editable part assemblies from 1–5 photos, same-page 3D, custom parameters, individual part editing and optional laser SVG export.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.15.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnVTNVVVdG5mcHBPdlBtMWVxZFYxWVFQS3h5SDdlR1RoWnBEc3N3aGpxQTI0SnFwS3lDa05lMVFZcmhGMnNtb0tnaXNXeDJ6UVo3TnpBN1lReEdsZ0FnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDY5Mzc0CWZpbGU6SGluZ2VMYWJfMS4xNS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE1LjAKRGROWUpjc0c4WHc2Q0EzMndiNUVJZDdudExhR0taTG9YdkFrRUhaZVQ5ODRETlY0TW5wRHJSOVpLNm9jT2ZaMWV1SFlqMHNTUzYzU1Nlc2R5azFZQnc9PQo=",
-        "size": 11894530,
-        "sha256": "8322f3df2dc4ebd76a3407f30f7264b2e0cc25aa26e3c9c75a4778e107b1a5f4"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.16.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmg0c0RxSHAvWEtQTklSTkF6dVdCTDc3d01iNFBFbkdISjhpRUdqVHdrY3lCMmQzZXJlNXBqSUNSL2VHeDlHcS9DckNOZjcyRDVwQk9weDJVN2ZRaHdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDcyNjU3CWZpbGU6SGluZ2VMYWJfMS4xNi4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE2LjAKY2VzUSs4OEtNVEI3am0yT09EUE45c250UzgvUGFhSnNMOTB3alNDQlh2d2Fxa1RRMWNmK0ZJdHJlTHIweXZVQXdhYTFqT3ltMDBMcXN6eW5DTldNRFE9PQo=",
+        "size": 11904555,
+        "sha256": "1997d0ae4ecd0a66be6e5f94720e00c3f844349da073c3a65a6564873dba20af"
       }
     }
   }
