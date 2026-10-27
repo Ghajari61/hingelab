@@ -114,12 +114,13 @@ export function rectInside(s: Shape, x0: number, y0: number, x1: number, y1: num
   return true;
 }
 
-const HOLE_BOXES = new WeakMap<Shape, [number, number, number, number][]>();
+// keyed by the holes array itself and checked against its length, so a changed shape never reads stale boxes
+const HOLE_BOXES = new WeakMap<Contour[], [number, number, number, number][]>();
 function holeBoxes(s: Shape) {
-  let b = HOLE_BOXES.get(s);
-  if (!b) {
+  let b = HOLE_BOXES.get(s.holes);
+  if (!b || b.length !== s.holes.length) {
     b = s.holes.map(h => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of h) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } return [x0, y0, x1, y1] as [number, number, number, number]; });
-    HOLE_BOXES.set(s, b);
+    HOLE_BOXES.set(s.holes, b);
   }
   return b;
 }

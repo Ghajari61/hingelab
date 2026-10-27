@@ -62,6 +62,7 @@ describe("SVG output cannot be broken out of", () => {
   it("thumbnail markup with anything active is refused", () => {
     const ok = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect x="0" y="0" width="10" height="10" style="fill:var(--surface-sheet,#1F1D1A)"/><path d="M0 0L5 5" fill="url(#g)"/></svg>`;
     expect(inertSvgMarkup(ok)).toBe(ok);
+    expect(inertSvgMarkup(`<svg><rect fill="url('#g')"/><rect fill="url( #g)"/></svg>`)).toBeDefined();
     for (const bad of [
       `<svg><script>alert(1)</script></svg>`,
       `<svg onload="alert(1)"></svg>`,
@@ -70,6 +71,7 @@ describe("SVG output cannot be broken out of", () => {
       `<svg><foreignObject><img src=x onerror=alert(1)></foreignObject></svg>`,
       `<svg><use href="data:image/svg+xml,..."/></svg>`,
       `<svg><rect style="fill:url(https://evil.example/x)"/></svg>`,
+      `<svg><rect style="fill:url( 'https://evil.example/x')"/></svg>`,
       `<svg><animate attributeName="href" to="javascript:alert(1)"/></svg>`,
       `<svg><style>@import url(x)</style></svg>`,
       `<img src=x onerror=alert(1)>`,
