@@ -201,6 +201,7 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
     const z = pl.z + explode * 30 * levels.indexOf(pl.z);
     const wrap = new THREE.Group();
     wrap.name = p.name;
+    wrap.userData.partId = p.id;
     if (p.frames?.length) folding.push({ wrap, frames: p.frames, apart: p.apart ?? [0, 0, 0] });
     else if (pl.m) {
       // A folded face: the plan matrix, between the scene's axes (x, -y, z) and the part's (u, -v, h).
