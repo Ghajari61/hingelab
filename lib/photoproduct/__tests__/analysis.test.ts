@@ -34,7 +34,8 @@ describe("joint multi-view model analysis",()=>{
  it("sends all five photos in one request, validates their ids and keeps measured dimensions authoritative",async()=>{
   const ids=["p1","p2","p3","p4","p5"],m=mock(specification(ids));
   const out=await analyzeProductPhotos({photos:ids.map(photo),note:"same product",features:"fidelity-joinery-v1",measurements:{...measurements,width:125}},"test",{model:m.model});
-  expect(m.calls).toHaveLength(2);expect(JSON.stringify(m.calls)).toContain("p5");expect(JSON.stringify(m.calls[1])).toContain('VISUAL CORRECTION PASS');expect(out.analysis.width).toBe(125);expect(out.analysis.uncertainties.join(" ")).toMatch(/Repeated photos/);expect('review' in out.analysis&&out.analysis.review?.status).toBe('compared');
+  expect(m.calls).toHaveLength(2);expect(JSON.stringify(m.calls)).toContain("p5");expect(JSON.stringify(m.calls[1])).toContain('VISUAL CORRECTION PASS');expect(JSON.stringify(m.calls[1])).toContain('Measured CAD evidence');expect(JSON.stringify(m.calls[1])).toContain('NOT the part center');expect(out.analysis.width).toBe(125);expect(out.analysis.uncertainties.join(" ")).toMatch(/Repeated photos/);expect('review' in out.analysis&&out.analysis.review?.status).toBe('compared');
+  expect(out.analysis.uncertainties[0]).toMatch(/Engine check:.*separate assemblies/);
  });
  it("refuses incomplete or contradictory reference bookkeeping",async()=>{
   const m=mock(specification(["wrong-id"]));await expect(analyzeProductPhotos({photos:[photo()],note:"",measurements},"test",{model:m.model})).rejects.toThrow(/valid product specification/);
