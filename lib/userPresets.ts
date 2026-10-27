@@ -1,5 +1,5 @@
 /** "Save as my preset": settings kept on this device, and in the account when signed in (user_presets). */
-import { GENERATOR_IDS, type GeneratorId } from "@/lib/generators/ids";
+import { GENERATOR_IDS, LEGACY_GENERATOR_IDS, type GeneratorId } from "@/lib/generators/ids";
 import type { ProductId } from "@/lib/supabase/types";
 
 /** Generators' presets stay on this device, like their designs. */
@@ -39,7 +39,7 @@ export function parseMyPresets(raw: string | null, products: readonly PresetProd
   }
 }
 
-export const parseGeneratorPresets = (raw: string | null): MyPreset[] => parseMyPresets(raw, GENERATOR_IDS);
+export const parseGeneratorPresets = (raw: string | null): MyPreset[] => parseMyPresets(raw, [...GENERATOR_IDS, ...LEGACY_GENERATOR_IDS]);
 
 export function cleanPresetName(name: string): string {
   return name.replace(/\s+/g, " ").trim().slice(0, 60);

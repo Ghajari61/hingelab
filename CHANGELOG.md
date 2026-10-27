@@ -1,3 +1,8 @@
+## 1.21.0 — Unified Boxes & Packaging
+
+- **Boxes and Wood Packaging are one product.** The shared Boxes & Packaging library includes every former box and packaging preset, with editable sizes, joints, lids, engraving, sheet layouts, SVG export and 3D preview. Existing packaging project files, links and local drafts retain their original settings.
+- **Photo to Product has been removed** from the website and Windows app, including its analysis endpoints and desktop API access. Existing personal files and local stored data are not deleted. Opening an old Photo to Product file explains that the feature has been retired.
+
 ## 1.20.0 — Wood Packaging and sturdier Pop-up ribs
 
 - **Paper Box is now Wood Packaging.** Gift, product and shipping boxes in plywood with finger joints: lift-off, sliding, pin-hinged, inset or closed lids, trays and divided boxes, drawer boxes, hexagon boxes, divider inserts, stacking trays and book boxes, with your brand engraved on the lid. All the paper designs became their wooden equivalents (70 ready-made boxes): two-piece boxes take a lift-off lid, tuck-end cartons a sliding lid, mailers and clamshells a hinged lid, drawer cartons and sleeves a wooden drawer. Designs saved as paper boxes open as the matching wooden box at the same inside size. Bags, cones, pillow boxes, pyramids and other paper-only forms are gone.

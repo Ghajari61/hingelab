@@ -10,6 +10,7 @@ import { arrangeHinge } from "@/lib/fit/hinge";
 import { GENERATOR_IDS, GENERATOR_INFO, isGeneratorId, type GeneratorId } from "@/lib/generators/ids";
 import { arrangeGenerator, cleanExtras, genSVG, sheetIssues } from "@/lib/generators/output";
 import { getPath, setPath } from "@/lib/generators/path";
+import { findGeneratorPreset } from "@/lib/generators/presetLookup";
 import { loadGenerator } from "@/lib/generators/registry";
 import { sanitizeGeneratorParams } from "@/lib/generators/sanitize";
 import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, type AnyGenerator, type FieldSpec, type GenBase } from "@/lib/generators/types";
@@ -432,7 +433,7 @@ export async function generateDesign(req: unknown, plan: Plan): Promise<Generate
     delete r.change;
   }
   if (r.product === "art") return (await import("./art")).generateArt(r, plan);
-  const product = allProducts(await desktopCatalog()).find((p) => p.id === r.product)!;
+  const product = allProducts(await desktopCatalog()).find((p) => p.id === (r.product === "paperbox" ? "boxes" : r.product))!;
   if (r.product === "letters") return (await import("./letters")).generateLetters(r, product, plan);
   if (r.product === "parametric") return (await import("./parametric")).generateParametric(r, plan);
   return r.product === "hinge" ? generateHinge(r, product, plan) : generateGenerator(r, r.product, product, plan);
@@ -485,7 +486,7 @@ function changeGenerator(def: AnyGenerator, product: DProduct, p: GenBase, chang
  * field like an edit from the editor; an edit the catalog does not allow is skipped and reported.
  */
 export async function designFromChanges(id: DesktopProductId, preset: string | null, changes: Change[], from?: Record<string, unknown>): Promise<{ params: Record<string, unknown>; skipped: string[] }> {
-  const product = allProducts(await desktopCatalog()).find((x) => x.id === id)!;
+  const product = allProducts(await desktopCatalog()).find((x) => x.id === (id === "paperbox" ? "boxes" : id))!;
   const skipped: string[] = [];
   if (id === "letters") return (await import("./letters")).lettersFromChanges(product, preset, changes, from);
   if (id === "parametric") return { params: from ?? {}, skipped: changes.map((c) => c.key) };
@@ -500,7 +501,7 @@ export async function designFromChanges(id: DesktopProductId, preset: string | n
     return { params: p as unknown as Record<string, unknown>, skipped };
   }
   const def = await loadGenerator[id]();
-  const pr = preset ? def.presets.find((x) => x.id === preset) : undefined;
+  const pr = preset ? findGeneratorPreset(def, preset) : undefined;
   let p: GenBase = def.merge(from ?? (pr ? pr.params : {}));
   for (const c of changes) {
     const q = changeGenerator(def, product, p, c);
@@ -583,7 +584,7 @@ async function generateGenerator(r: GenerateRequest, id: GeneratorId, product: D
   const def = await loadGenerator[id]();
   let p: GenBase;
   if (typeof r.preset === "string") {
-    const pr = def.presets.find((x) => x.id === r.preset);
+    const pr = findGeneratorPreset(def, r.preset);
     if (!pr) return { status: 400, body: { error: "Unknown preset." } };
     p = def.merge(pr.params);
   } else {

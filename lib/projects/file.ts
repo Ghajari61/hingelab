@@ -48,6 +48,7 @@ export function detectProject(bytes: Uint8Array): DetectedProject {
   if (!j || typeof j !== "object" || Array.isArray(j)) return { error: NOT_A_PROJECT };
   const o = j as Record<string, unknown>;
   if (!o.params || typeof o.params !== "object" || Array.isArray(o.params)) return { error: NOT_A_PROJECT };
+  if (o.product === "photoproduct") return { error: "Photo to Product has been removed from HingeLab. Your saved file has not been changed." };
   const section = sectionOfProduct(o.product);
   if (section === "removed") return { error: "That file is a Test Cards design. Test Cards was removed from HingeLab, so it can't be opened." };
   if (!section) return { error: "That project was made with a newer version of HingeLab. Update the app to open it." };

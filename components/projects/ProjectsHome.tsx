@@ -65,7 +65,7 @@ export function ProjectsHome({ projects, products, localOnly = [], limit = Infin
     window.addEventListener("focus", read);
     return () => { window.removeEventListener("storage", read); window.removeEventListener("focus", read); };
   }, []);
-  const matches = (name: string, kind: string) => (product === "all" || kind === product) && name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+  const matches = (name: string, kind: string) => (product === "all" || (kind === "paperbox" ? "boxes" : kind) === product) && name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
   const visible = storage === "local" ? [] : projects.filter((p) => matches(`${p.name} ${PRODUCT_LABEL[p.product]}`, p.product));
   const local = storage === "account" ? [] : drafts.filter((p) => matches(p.name, p.product));
 

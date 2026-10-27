@@ -34,7 +34,7 @@ const search = () => platform().router.search();
 function urlProduct(): Product | null {
   try {
     const v = (productFromPath(platform().router.path()) ?? search().get("p")) as Product | null;
-    return v && ALL_PRODUCTS.includes(v) ? v : null;
+    return v && (ALL_PRODUCTS.includes(v) || isGeneratorId(v)) ? v : null;
   } catch {
     return null;
   }
@@ -103,13 +103,16 @@ const fromId = (id: ProductId): Product => (id === "letters" ? "letters" : id ==
  * Generators design on the device, so picking one from a cloud project opens the guest editor.
  */
 export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null }) {
+  const [removedProduct, setRemovedProduct] = useState(() => !cloud && (
+    search().get("p") === "photoproduct" || /^\/editor\/photoproduct\/?$/.test(platform().router.path())
+  ));
   const [doc] = useState<CloudDoc | null>(() => {
     if (!cloud) return null;
     const choice = chooseInitial(readLocalCopy<Record<string, unknown>>(cloud.id), { params: cloud.params, updated_at: cloud.updatedAt });
     return { ...cloud, params: choice.params, push: choice.push };
   });
   // with no product named, the editor opens on the Hinge Box (the product picker in the header switches)
-  const [product, setProduct] = useState<Product | null>(() => (doc ? fromId(doc.product) : urlProduct() ?? "hinge"));
+  const [product, setProduct] = useState<Product | null>(() => (removedProduct ? null : doc ? fromId(doc.product) : urlProduct() ?? "hinge"));
   const [start, setStart] = useState<StartChoice | null>(() => (doc ? null : urlPreset(product)));
   // A share link (`#share=…`) opens its design read-only; the decoder loads only for such links.
   const [opening, setOpening] = useState(() => !doc && !!product && /(?:^#|&)share=/.test(window.location.hash));
@@ -201,6 +204,10 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
     setUrlProduct(null);
   };
 
+  if (removedProduct) return <div className="boot" role="status">
+    <p>Photo to Product has been removed from HingeLab. Your saved files have not been changed.</p>
+    <button type="button" className="linklike" onClick={() => { setRemovedProduct(false); home(); }}>Browse generators</button>
+  </div>;
   if (opening) return <div className="boot">Opening the shared design…</div>;
   if (handoff) return <div className="boot">Opening the project file…</div>;
   if (templateWait) return <div className="boot">Opening the template…</div>;

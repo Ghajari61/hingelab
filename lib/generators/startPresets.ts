@@ -22,7 +22,6 @@ import type { GeneratorId } from "./ids";
 import type { GenPreset } from "./types";
 
 export const START_PRESETS: Record<GeneratorId, GenPreset<unknown>[]> = {
-  photoproduct: [],
   keychain: KEYCHAIN_PRESETS as GenPreset<unknown>[],
   popup: POPUP_PRESETS as GenPreset<unknown>[],
   charm: CHARM_PRESETS as GenPreset<unknown>[],

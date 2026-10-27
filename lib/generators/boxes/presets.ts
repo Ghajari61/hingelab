@@ -1,7 +1,10 @@
+import { mergeBoxes } from "./params";
+import { PAPERBOX_PRESETS } from "../paperbox/presets";
+import { packagingDefaults } from "../paperbox/defaults";
 import type { GenPreset } from "../types";
 import type { BoxesParams } from "./params";
 
-export const BOXES_PRESETS: GenPreset<BoxesParams>[] = [
+const BOX_PRESETS: GenPreset<BoxesParams>[] = [
   {"id": "studio-maker-tray", "name": "Maker parts tray", "note": "Nine full-height compartments in a 270 x 180 x 40 mm tray.", "params": {"name": "Maker parts tray", "design": "tray", "tray": {"width": 270, "depth": 180, "height": 40, "cols": 3, "rows": 3, "dividers": 100}}},
   {"id": "studio-watch-case", "name": "Watch presentation case", "note": "Lift-off presentation case with a TIME engraving and 190 x 100 mm interior.", "params": {"name": "Watch presentation case", "design": "box", "box": {"width": 190, "depth": 100, "height": 65, "lid": "liftoff", "clearance": 0.3}, "engrave": {"text": "TIME", "fontId": "cinzel", "size": 16, "motif": "none", "border": 4}}},
   {"id": "studio-sample-holder", "name": "Material sample holder", "note": "Open 125 x 85 mm holder with finger notch for material sample cards.", "params": {"name": "Material sample holder", "design": "box", "joint": {"finger": 8}, "box": {"width": 125, "depth": 85, "height": 55, "lid": "open", "notch": true}, "engrave": {"text": "", "motif": "none", "border": 0}}},
@@ -55,4 +58,10 @@ export const BOXES_PRESETS: GenPreset<BoxesParams>[] = [
   { id: "engraved-chest", name: "Engraved lattice chest", note: "Pin-hinged chest with lattice engraved, not cut, on the walls and lid", params: { name: "Engraved lattice chest", design: "box", box: { width: 180, depth: 120, height: 80, lid: "pin", clearance: 0.4, notch: true, pin: 3 }, pierce: { pattern: "lattice", on: "both", cell: 14, bar: 3, shape: "full", size: 70, mark: "engrave" } } },
   { id: "circle-window-box", name: "Moon window box", note: "Honeycomb in a round window on the front and lid", params: { name: "Moon window box", design: "box", box: { width: 150, depth: 100, height: 70, lid: "liftoff", clearance: 0.3 }, pierce: { pattern: "honeycomb", on: "front-lid", cell: 8, bar: 2, shape: "circle", size: 85, mark: "cut" } } },
   { id: "birdhouse-ornament", name: "Bird house ornament", note: "A little bird house to hang on the tree, 60 mm wide", params: { name: "Bird house ornament", design: "bird", joint: { finger: 6 }, bird: { width: 60, depth: 60, height: 75, pitch: 22, hole: 18, perch: true, overhang: 8 } } },
+];
+
+/** Resolve each source library's defaults once so legacy and current editors apply identical presets. */
+export const BOXES_PRESETS: GenPreset<BoxesParams>[] = [
+  ...BOX_PRESETS.map(p => ({ ...p, params: mergeBoxes(p.params) })),
+  ...PAPERBOX_PRESETS.map(p => ({ ...p, id: `packaging-${p.id}`, params: packagingDefaults(p.params) })),
 ];

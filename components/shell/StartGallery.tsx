@@ -13,7 +13,7 @@ import { HINGE_PRESETS, hingePresetParams } from "@/lib/hinge/presets";
 import { LETTER_PRESETS } from "@/lib/letters/presets";
 import { PARAMETRIC_PRESETS } from "@/lib/parametric/presets";
 import { PRESET_PARTS } from "@/lib/parametric/presetParts";
-import { GENERATOR_IDS, GENERATOR_INFO, isGeneratorId, type GeneratorId } from "@/lib/generators/ids";
+import { GENERATOR_IDS, LEGACY_GENERATOR_IDS, GENERATOR_INFO, isGeneratorId, type GeneratorId } from "@/lib/generators/ids";
 import { START_LAZY, START_PRESETS, type LazyStart } from "@/lib/generators/startPresets";
 import { hingeLocks, lettersLock, parametricLocks } from "@/lib/plans";
 import type { Preset } from "@/lib/presets";
@@ -27,14 +27,14 @@ const CORE_PICTURE: Record<(typeof CORE_PRODUCTS)[number], string> = {
 };
 export const PRODUCT_KEYS: Record<Product, string> = {
   hinge: HINGE_KEY, letters: "hingelab-letters-v2", parametric: "hingelab-parametric-v1",
-  ...(Object.fromEntries(GENERATOR_IDS.map((id) => [id, GENERATOR_INFO[id].storageKey])) as Record<(typeof GENERATOR_IDS)[number], string>),
+  ...(Object.fromEntries([...GENERATOR_IDS, ...LEGACY_GENERATOR_IDS].map((id) => [id, GENERATOR_INFO[id].storageKey])) as Record<GeneratorId, string>),
 };
 
 const BLURB: Record<Product, string> = {
   hinge: "Living-hinge boxes, cabinets with doors, chests of drawers and lamp shades.",
   letters: "Letter boxes, solid signs and stencils from any text.",
   parametric: "Sliced sculptures: fins, layers, waffles and clocks.",
-  ...(Object.fromEntries(GENERATOR_IDS.map((id) => [id, GENERATOR_INFO[id].blurb])) as Record<(typeof GENERATOR_IDS)[number], string>),
+  ...(Object.fromEntries([...GENERATOR_IDS, ...LEGACY_GENERATOR_IDS].map((id) => [id, GENERATOR_INFO[id].blurb])) as Record<GeneratorId, string>),
 };
 
 const fromPresetProduct = (id: PresetProduct): Product => (id === "hinge-box" ? "hinge" : id);

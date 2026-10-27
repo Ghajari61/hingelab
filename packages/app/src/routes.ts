@@ -3,10 +3,10 @@
  * address hash: #/editor/hinge). A product id after /editor/ opens that editor; any other id is a
  * Studio project (DECISIONS.md D186, R3).
  */
-import { GENERATOR_IDS } from "@/lib/generators/ids";
+import { GENERATOR_IDS, LEGACY_GENERATOR_IDS } from "@/lib/generators/ids";
 
 export const CORE_PRODUCTS = ["hinge", "letters", "parametric"] as const;
-export const EDITOR_PRODUCTS: readonly string[] = [...CORE_PRODUCTS, ...GENERATOR_IDS];
+export const EDITOR_PRODUCTS: readonly string[] = [...CORE_PRODUCTS, ...GENERATOR_IDS, ...LEGACY_GENERATOR_IDS];
 
 export const ROUTES = {
   generators: "/generators",
@@ -46,6 +46,8 @@ export type RouteMatch =
   | { page: "other"; path: string };
 
 export function matchRoute(path: string): RouteMatch {
+  // A retired generator id is not a Studio project id.
+  if (/^\/editor\/photoproduct\/?$/.test(path)) return { page: "other", path };
   const product = productFromPath(path);
   if (product) return { page: "editor", product };
   const studio = /^\/editor\/([^/?#]+)\/?$/.exec(path);
