@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.18.0",
-    "pub_date": "2026-10-27T13:34:58.674Z",
-    "notes": "Curved support rails preserve photo-generated rib profiles and connect the 36-rib wave model with 76 insertable half-laps and two bonded side-laps. Editable stock, clearance and rail length; numbered notches and assembly guide; matching 3D and SVG. Physical fit requires a stock coupon and wood adhesive; decorative assembly, not load-rated seating.",
+    "version": "1.19.0",
+    "pub_date": "2026-10-27T15:22:37.116Z",
+    "notes": "Animated 3D assembly for photo-generated ribs with checked curved supports: numbered step-by-step insertion, adhesive faces, curing checkpoint, playback controls and reduced-motion support.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.18.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnJTR2VxSUZQdUR5N0Ftc0EvaHpDaDlVakZ0TzBJbkZGN3JrRklvZHpKVzVWUGNMQWg5djJUTThkcUFuQmRYaXJVNG0zVGppY2JKeEtJUThCMDFDeXdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTA4MDUzCWZpbGU6SGluZ2VMYWJfMS4xOC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE4LjAKUFZSTmJhZHRXWUN4bU9DZ0dFZXdIdXZPNFBRWVBNZjA3MFc2cDUwRHBsZXhhQlo4Y1QrRlFKUkU2QVJDNlZPZmduM1U3UWtBcWgzTG1aYUt3MTlVQXc9PQo=",
-        "size": 11929587,
-        "sha256": "837b4eb609714b144aee80575aa38368340d095bb8d5b8dd0622f9491de7c0be"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.19.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm9NZXIrTklUditTemxuZk1RcDJyekJvaGtqV0ZHbzhQMXlqaDJhbisyY0p3WDU5bEhrSTNqTkNuRmZNVzV0TGd3Tm1weldyVnZ3enhtNTE4MCtOZHdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTE0NTA4CWZpbGU6SGluZ2VMYWJfMS4xOS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE5LjAKMmtkMDFUVTlvbHRMVzRXOW1ldlBMbGVXYi9uSksvSmlCdEhOZHh0VXgwdFNtZnVqc1BzaVQ2QUpSdlhaekU2cGJETEYvN1l2Y05oOWNqdTJGZlV6RHc9PQo=",
+        "size": 11932313,
+        "sha256": "263842030bc69d8797ec4e22e4ec46e96f8491cb4a731ba5412237e195063c59"
       }
     }
   }
