@@ -1,3 +1,9 @@
+## 1.23.1 — Correct and faster Lay Flat previews
+
+- Fixed Pop-up rings and other disconnected cut regions appearing as overlapping surfaces, filled gaps and diagonal lines in Lay Flat. Each wooden region now keeps only its own holes, including nested islands, rotated parts and mirrored layouts.
+- Removed the malformed triangulation that stalled the 3D view. Local repeated measurements, including edge generation, improved Kids Nursery Mobile from 677 to 77 ms and Ripple display bowl from 1,092 to 62 ms. These are preview CPU timings, not total page load times.
+- All 36 Pop-up presets plus tiered, holding-land and zero-kerf cases have surface checks against cut geometry. SVG toolpaths and assembly dimensions are unchanged.
+
 ## 1.23.0 — No Weld and letter Cut / Score
 
 - Added **No Weld** beside the Weld controls in Letters, Name Charms, Signs, Cake Toppers and Family Names trees/snowflakes. The previous weld setting is retained; separate glyphs, dots and counters are preserved, including styled and curved text.
