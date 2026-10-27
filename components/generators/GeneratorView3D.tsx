@@ -75,7 +75,7 @@ export default function GeneratorView3D({ out, lay, T, material, units, frameKey
       measure={!guiding&&(flat || (explode === 0 && fold === 1))} label="The design in 3D: Top, Front, Left and Perspective views" onSelect={setSel} grips={grips}
     >
       <View3DBarTools v={v} flat={!guiding} explodeLabel={guiding?null:'Explode'}>
-        {plan&&<button type="button" aria-pressed={guiding} onClick={()=>{if(!guiding){v.setFlat(false);v.setExplode(0,0);v.setQuad(false);v.setActive('persp');}setGuide(!guiding);}}>Assembly guide</button>}
+        {plan&&<span className="v3-seg"><button type="button" aria-pressed={guiding} onClick={()=>{if(!guiding){v.setFlat(false);v.setExplode(0,0);v.setQuad(false);v.setActive('persp');}setGuide(!guiding);}}>Assembly guide</button></span>}
         {folds && !flat && (
           <label className="v3-explode" title="0 % is flat, 100 % is the assembled target">{edit?.def.id === 'popup' ? 'Open ↔ flat' : 'Fold'}
             <input type="range" min={0} max={1} step={0.01} value={fold} aria-label={edit?.def.id === 'popup' ? 'Open pop-up' : 'Fold'} aria-valuetext={`${Math.round(fold * 100)} %`} onChange={(e) => setFold(parseFloat(e.target.value))} />
