@@ -1,4 +1,5 @@
 import {placePoint} from '../place';
+import {ringCode,ringAssemblyOrder,ringLabels,ringInsertionInterference,assemblySteps,assemblyCards,type AssemblyGroup} from './assembly';
 import {ribAssembly,handleAssembly,suspensionLayout,jointCoupons} from './supports';
 import {popupHardware} from './hardware';
 import type {Hardware3D} from '../types';
@@ -23,6 +24,7 @@ export function outlineOf(p:PopupParams):Contour {const o=p.outline,w=o.width,h=
  switch(o.shape){case'circle':case'ellipse':c=ellipse(0,0,w/2,h/2);break;case'rounded':c=roundedRect(-w/2,-h/2,w,h,o.corner);break;case'polygon':c=roundCorners(regularPolygon(o.sides,w/2),o.corner);break;case'heart':c=transform(shapeOutline('heart',w,h,0),{x:-w/2,y:-h/2});break;case'custom':{if(o.path.length>120000)throw Error('SVG outline is too complex.');const parsed=parsePathData(o.path);if(parsed.contours.length!==1||!parsed.closed[0])throw Error('Use one closed SVG outline without holes.');c=customOutline(o.path,w,h)??[];break;}default:c=Array.from({length:240},(_,i)=>{const a=i*TAU/240;let r=1;if(o.shape==='star'||o.shape==='snowflake'){const n=o.shape==='snowflake'?6:o.points;r=o.ratio+(1-o.ratio)*(1+Math.cos(a*n))/2;}else if(o.shape==='leaf')r=.65+.35*Math.cos(a*2);else r=1-o.petalDepth*(1-Math.cos(a*o.petals))/2;return [w/2*r*Math.cos(a),h/2*r*Math.sin(a)] as Pt;});}
  if(c.length<3||!pointInContour([0,0],c))throw Error('Outline must be a closed shape containing its centre.');const shapes=unionShapes([c]);if(shapes.length!==1||shapes[0].holes.length)throw Error('Outline must be a single simple contour.');return shapes[0].outer;}
 function validate(p:PopupParams){
+ if(p.support.fit<0&&(['ribs','post','handles'].includes(p.support.kind)||p.extras.post))throw Error('Joint clearance must be zero or positive for collision-free insertion. Measure the stock and use a joint coupon.');
  const bounded:[[number,number,number],...Array<[number,number,number]>]=[[p.support.cordDiameter,1,10],[p.support.fit,-.2,1],[p.extras.socketDiameter,5,300],[p.extras.tealightDiameter,5,300],[p.extras.sleeveDiameter,5,1000],[p.engraving.size,2,40],[p.bridges.width,1,30],[p.bridges.length,1,50],[p.rings.center,5,1000],[p.rings.rim,3,200],[p.profile.belly,0,1],[p.profile.neck,0,1]];
  if(bounded.some(([v,lo,hi])=>!Number.isFinite(v)||v<lo||v>hi))throw Error('Accessory or flexure dimensions are outside supported limits.');
  if([p.outline.sides,p.outline.points,p.outline.petals,p.bridges.count,p.support.ribs,p.pattern.arms,p.pattern.frequency,p.profile.tiers,p.sets.count,p.rings.count].some(v=>!Number.isInteger(v)))throw Error('Counts must be whole numbers.');
@@ -45,7 +47,7 @@ export function ringPlan(p:PopupParams,outer=outlineOf(p)) {const radius=distToC
 const matrix=(z:number)=>[1,0,0,0,0,1,0,0,0,0,1,z];
 function band(c:Contour,gap:number){const s=makeShape(c,[]),a=offsetShapes([s],gap/2),b=offsetShapes([s],-gap/2);return differenceShapes(a.flatMap(s=>[s.outer,...s.holes]),b.flatMap(s=>[s.outer,...s.holes]));}
 /** Cut slots stop at solid bridge lands; all physical paths are closed polygons. */
-function ringSlots(p:PopupParams,c:Contour,index:number):Contour[]{const b=band(c,p.rings.gap);const lands:Contour[]=[];const radius=Math.max(p.outline.width,p.outline.height);for(let j=0;j<p.bridges.count;j++){const angle=j*360/p.bridges.count+(p.bridges.alternate?index%2:index)*p.bridges.stagger;lands.push(transform(rect(0,-p.bridges.width/2,radius,p.bridges.width),{rot:angle}));}const slots=differenceShapes(b.flatMap(s=>[s.outer,...s.holes]),lands).map(s=>s.outer);
+function ringSlots(p:PopupParams,c:Contour,index:number):Contour[]{const b=band(c,p.rings.gap);if(setsHeights(p)&&!p.bridges.keep)return b.flatMap(s=>[s.outer,...s.holes]);const lands:Contour[]=[];const radius=Math.max(p.outline.width,p.outline.height);for(let j=0;j<p.bridges.count;j++){const angle=j*360/p.bridges.count+(p.bridges.alternate?index%2:index)*p.bridges.stagger;lands.push(transform(rect(0,-p.bridges.width/2,radius,p.bridges.width),{rot:angle}));}const slots=differenceShapes(b.flatMap(s=>[s.outer,...s.holes]),lands).map(s=>s.outer);
  // Side reliefs define a bounded radial flexure length at each bridge land.
  const pitch=(distToContour([0,0],outlineOf(p))-p.rings.rim-p.rings.center/2)/Math.max(2,p.rings.by==='count'?p.rings.count-2:Math.round((distToContour([0,0],outlineOf(p))-p.rings.rim-p.rings.center/2)/p.rings.width));
  const length=Math.min(p.bridges.length,pitch*.7),g=p.rings.gap;
@@ -53,7 +55,7 @@ function ringSlots(p:PopupParams,c:Contour,index:number):Contour[]{const b=band(
  return slots;}
 /** Continuous narrow spiral slot; the uncut strip is one connected sheet. */
 function spiralSlots(p:PopupParams,radius:number,count:number):Contour[]{const arms=p.pattern.kind==='multi'?p.pattern.arms:1,slots:Contour[]=[];const start=p.rings.center/2,end=radius-p.rings.rim,turns=Math.max(1,count/arms);for(let arm=0;arm<arms;arm++){const n=Math.min(5000,Math.ceil(turns*160));const points:Contour=Array.from({length:n+1},(_,i)=>{const t=i/n,a=t*turns*TAU+arm*TAU/arms,r=start+t*(end-start);return [r*Math.cos(a),r*Math.sin(a)] as Pt;});const left:Contour=[],right:Contour=[];for(let i=0;i<points.length;i++){const a=points[Math.max(0,i-1)],b=points[Math.min(n,i+1)],l=Math.hypot(b[0]-a[0],b[1]-a[1]);const x=-(b[1]-a[1])/l*p.rings.gap/2,y=(b[0]-a[0])/l*p.rings.gap/2;left.push([points[i][0]+x,points[i][1]+y]);right.push([points[i][0]-x,points[i][1]-y]);}slots.push([...left,...right.reverse()]);}return slots;}
-export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0) {validate(p);if(p.pattern.kind!=='rings'&&(['ribs','post','handles'].includes(p.support.kind)||p.extras.post))throw Error('Precision rib joints require separate rings. Choose Rings; a continuous spiral needs a prototype-specific support.');const outer=outlineOf(p),plan=ringPlan(p,outer),{rings,radius}=plan;const holes=p.pattern.kind==='rings'?plan.loops.flatMap((c,i)=>ringSlots(p,c,i)):spiralSlots(p,radius,plan.loops.length);if(p.pattern.segmented){for(const ring of rings.slice(1,-1)){const r=ring.radius-plan.pitch*.5;for(let k=0;k<p.outline.petals;k++){const c=transform(roundedRect(r-plan.pitch*.25,-p.rings.gap/2,plan.pitch*.5,p.rings.gap,p.rings.gap/2),{rot:k*360/p.outline.petals});if(c.every(v=>pointInContour(v,outer)))holes.push(c);}}}const centerHole=nestedOpening|| (p.mode==='sleeve'?p.extras.sleeveDiameter:p.extras.socket!=='none'?(p.extras.socket==='E14'?28:p.extras.socket==='E27'?40:p.extras.socketDiameter):p.extras.tealight?p.extras.tealightDiameter:0);
+export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0,labelPrefix='') {validate(p);if(p.pattern.kind!=='rings'&&(['ribs','post','handles'].includes(p.support.kind)||p.extras.post))throw Error('Precision rib joints require separate rings. Choose Rings; a continuous spiral needs a prototype-specific support.');const outer=outlineOf(p),plan=ringPlan(p,outer),{rings,radius}=plan;const holes=p.pattern.kind==='rings'?plan.loops.flatMap((c,i)=>ringSlots(p,c,i)):spiralSlots(p,radius,plan.loops.length);if(p.pattern.segmented){for(const ring of rings.slice(1,-1)){const r=ring.radius-plan.pitch*.5;for(let k=0;k<p.outline.petals;k++){const c=transform(roundedRect(r-plan.pitch*.25,-p.rings.gap/2,plan.pitch*.5,p.rings.gap,p.rings.gap/2),{rot:k*360/p.outline.petals});if(c.every(v=>pointInContour(v,outer)))holes.push(c);}}}const centerHole=nestedOpening|| (p.mode==='sleeve'?p.extras.sleeveDiameter:p.extras.socket!=='none'?(p.extras.socket==='E14'?28:p.extras.socket==='E27'?40:p.extras.socketDiameter):p.extras.tealight?p.extras.tealightDiameter:0);
  if(nestedOpening&&rings.at(-1)!.radius<=nestedOpening/2+.01)rings.pop();
  if(centerHole>0){if(!nestedOpening&&centerHole+2*p.T>=p.rings.center)throw Error('Centre opening needs a wider centre disc (opening plus two material thicknesses).');holes.push(circle(0,0,centerHole/2));}
  const views:NonNullable<GenPart['views3d']>=[];
@@ -62,7 +64,7 @@ export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0)
  engrave=intersectShapes(engrave,[outer]).flatMap(s=>[s.outer,...s.holes]);if(holes.length&&engrave.length)engrave=differenceShapes(engrave,holes).flatMap(s=>[s.outer,...s.holes]);
  const parts:GenPart[]=[{id:'blank',name:'Blank',outer,holes,engrave,views3d:views}];
  const notches:{radius:number;height:number}[]=[];
- if(['ribs','post','handles'].includes(p.support.kind)||p.extras.post){const assembly=ribAssembly(p,rings,holes,centerHole,ribFoot(p),ctx);parts.push(...assembly.parts);holes.push(...assembly.joints.map(j=>j.slot));notches.push(...assembly.joints.map(j=>({radius:Math.abs(j.u),height:j.height})));}
+ if(['ribs','post','handles'].includes(p.support.kind)||p.extras.post){const assembly=ribAssembly(p,rings,holes,centerHole,ribFoot(p),ctx,labelPrefix);parts.push(...assembly.parts);holes.push(...assembly.joints.map(j=>j.slot));notches.push(...assembly.joints.map(j=>({radius:Math.abs(j.u),height:j.height})));}
  if(p.support.kind==='tilt'){const length=100,h=length*Math.tan(p.support.angle*Math.PI/180);parts.push({id:'wedge',name:`Bevel jig ${p.support.angle} degrees`,outer:[[0,0],[length,0],[length,-h]],holes:[]});}
  if(p.support.kind==='handles'||p.extras.handles){const handles=handleAssembly(p,rings[0],holes);parts.push(...handles.parts);holes.push(...handles.slots);}
  const suspension=(p.support.kind==='cords'||p.extras.loop)?suspensionLayout(p,rings,holes,centerHole):null;if(suspension)holes.push(...suspension.slots);
@@ -84,6 +86,8 @@ export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0)
  // with positive-wound cuts: that cancels the opening and turns inner holes into phantom wood.
  const validHoles=intersectShapes(holes,[outer]);
  parts[0].holes=unionShapes(validHoles.flatMap(s=>[s.outer,...s.holes])).flatMap(s=>[s.outer,...s.holes]);
+ engrave=differenceShapes(engrave,parts[0].holes).flatMap(s=>[s.outer,...s.holes]);parts[0].engrave=engrave;
+ if(p.support.labels&&p.pattern.kind==='rings'){const marks=ringLabels(p,rings,parts[0].holes,ctx,labelPrefix);engrave.push(...marks.contours);loading ||= marks.loading;parts[0].engrave=engrave;}
  const spans=parts[0].holes.map(radialSpan);
  const order=[...rings].sort((a,b)=>a.height-b.height);
  for(const ring of rings){
@@ -91,7 +95,8 @@ export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0)
   const lo=ring.inner?vertexSpan(ring.inner)[0]:0,hi=vertexSpan(ring.outer)[1];
   const near=parts[0].holes.filter((_,i)=>spans[i][1]>=lo&&spans[i][0]<=hi);
   const pieces=differenceShapes(region.flatMap(s=>[s.outer,...s.holes]),near);
-  for(const s of pieces)views.push({outer:s.outer,holes:s.holes,
+  if(p.pattern.kind==='rings'&&setsHeights(p)&&pieces.length!==1)throw Error(`Ring ${labelPrefix}${ringCode(rings.indexOf(ring))} is split by its cutouts. Widen the ring or reduce openings.`);
+  for(const s of pieces)views.push({name:`Ring ${labelPrefix}${ringCode(rings.indexOf(ring))}`,outer:s.outer,holes:s.holes,
    engrave:intersectShapes(engrave,[s.outer,...s.holes]).flatMap(q=>[q.outer,...q.holes]),
    place:{x:0,y:0,z:ring.height,m:matrix(ring.height)},
    // These are rigid rings after the holding lands have been cut, not a bending sheet.
@@ -104,6 +109,7 @@ export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0)
   else if(pl?.upright)part.apart=[0,(i%2?1:-1)*35,25];
   else part.apart=[0,0,-25-i*6];
  }
+ if(p.pattern.kind==='rings')for(const v of views)for(const rib of parts.filter(x=>/^rib-\d/.test(x.id)))if(ringInsertionInterference({...v,height:v.place.z},rib,p.T)>.005)throw Error(`${v.name} cannot descend onto ${rib.name}. Widen rings or change the outline/profile.`);
  return {...plan,parts,notches,missing,loading,suspension};}
 /**
  * The radii a contour's area spans about the centre (from 0 when it encloses the centre). A point on
@@ -113,16 +119,32 @@ function vertexSpan(c:Contour):[number,number]{let lo=Infinity,hi=0,e=0;for(let 
 function radialSpan(c:Contour):[number,number]{const s=vertexSpan(c);return pointInContour([0,0],c)?[0,s[1]]:s;}
 /** The floor under a design: the ribs' feet reach below the rings. */
 const floorOf=(p:PopupParams)=>(['ribs','post','handles'].includes(p.support.kind)||p.extras.post)&&p.pattern.kind==='rings'?-ribFoot(p):0;
-export function buildPopup(p:PopupParams,ctx:BuildContext):GenOutput {try{const g=popupGeometry(p,ctx);let hardware:Hardware3D[]=popupHardware(p,g,0,floorOf(p));if(p.sets.count>1)hardware=addNestedSet(p,g.parts,ctx);const spacings=(g.suspension?Array.from({length:3},(_,cord)=>{const pts=g.suspension!.positions.filter(v=>v.cord===cord).reverse();return pts.slice(1).map((v,i)=>Math.hypot(v.x-pts[i].x,v.y-pts[i].y,v.z-pts[i].z));}):[]);if(p.support.coupon)g.parts.push(...jointCoupons(p));if(p.sets.assemblyCard)g.parts.push(assemblyCard(p,ctx));return {parts:g.parts,hardware,missing:g.missing,notice:g.loading?'Loading engraving font…':undefined,stats:[{label:'Rings',value:String(g.rings.length)},{label:'Open height',value:`${p.profile.depth.toFixed(1)} mm`},{label:'Outer span',value:`${p.outline.width} × ${p.outline.height} mm`},{label:'Ring pitch',value:`${g.pitch.toFixed(2)} mm`},...(p.support.kind==='tilt'?[{label:'Tilt depth',value:`${tiltDepth(g.loops.length,p.rings.gap,p.support.angle).toFixed(1)} mm`}]:[]),...(p.support.kind==='cords'?[{label:'Cord allowance',value:`3 × ${Math.ceil(Math.max(0,...spacings.map(s=>s.reduce((a,v)=>a+v,0)))+100)} mm; trim after fitting`},{label:'Knot spacing',value:(k=>!k.length?'none':Math.max(...k)-Math.min(...k)<1?`${Math.round(k[0])} mm`:`${Math.round(Math.min(...k))} to ${Math.round(Math.max(...k))} mm`)(spacings.flat())}]:[])],assembly:['Cut a bridge and joint coupon in the actual stock before cutting the full blank.',setsHeights(p)?'Engrave first, then internal slots and finally the outer perimeter. Cut the sacrificial bridge lands before seating the separate rings; the supports locate every ring at its height.':'Engrave first, then internal slots and finally the outer perimeter. Keep all bridge lands intact.',setsHeights(p)?'Do not force a connected blank over rigid tabs: cut the sacrificial bridge lands first. Dry-fit rings one at a time.':'Keep flexure bridges intact and prototype the lift before final cutting.',p.support.kind==='cords'?'Thread the cords from the centre out and knot each one under every ring at the knot spacing shown; hang it from the centre.':'Assemble numbered R1/R2 crossed ribs at their half-lap, or plug radial ribs into the hub. Separate sacrificial bridges, then lower each ring onto its matching tabs from the lowest level upward. Use glue for permanent retention; tabs locate but are not snap locks.',...(g.suspension?Array.from({length:3},(_,cord)=>{const pts=g.suspension!.positions.filter(v=>v.cord===cord).reverse();return `Cord ${cord+1}, centre outward: `+pts.slice(1).map((v,i)=>Math.hypot(v.x-pts[i].x,v.y-pts[i].y,v.z-pts[i].z).toFixed(1)).join(', ')+' mm between support knots (allow extra for knot size).';}):[]),'Glue-on feet, base discs and finials are accessories, not precision locking joints.','Tilted cuts require bevel-capable equipment and a physical jig test. Use LED lamps only; never an exposed flame.']};}catch(e){return {parts:[],stats:[],error:e instanceof Error?e.message:'Unable to build Pop-up geometry.'};}}
+export function buildPopup(p:PopupParams,ctx:BuildContext):GenOutput {
+ try {
+  const g=popupGeometry(p,ctx);
+  let hardware:Hardware3D[]=popupHardware(p,g,0,floorOf(p));
+  let groups:AssemblyGroup[]=[{label:'',order:ringAssemblyOrder(g.rings,g.parts[0].views3d),radial:g.parts.some(v=>v.id==='rib-hub')}];
+  if(p.sets.count>1){const nested=addNestedSet(p,g.parts,ctx);hardware=nested.hardware;groups=nested.groups;g.loading ||= nested.loading;}
+  const spacings=g.suspension?Array.from({length:3},(_,cord)=>{const pts=g.suspension!.positions.filter(v=>v.cord===cord).reverse();return pts.slice(1).map((v,i)=>Math.hypot(v.x-pts[i].x,v.y-pts[i].y,v.z-pts[i].z));}):[];
+  if(p.support.coupon)g.parts.push(...jointCoupons(p));
+  if(p.sets.assemblyCard)g.parts.push(...assemblyCards(p,ctx,groups));
+  return {parts:g.parts,hardware,missing:g.missing,notice:g.loading?'Loading engraving font…':undefined,
+   stats:[{label:'Rings',value:String(groups.reduce((n,g)=>n+g.order.length,0))},{label:'Open height',value:`${p.profile.depth.toFixed(1)} mm`},{label:'Outer span',value:`${p.outline.width} × ${p.outline.height} mm`},{label:'Ring pitch',value:`${g.pitch.toFixed(2)} mm`},
+    ...(p.support.kind==='tilt'?[{label:'Tilt depth',value:`${tiltDepth(g.loops.length,p.rings.gap,p.support.angle).toFixed(1)} mm`}]:[]),
+    ...(p.support.kind==='cords'&&p.sets.count===1?[{label:'Cord allowance',value:`3 × ${Math.ceil(Math.max(0,...spacings.map(s=>s.reduce((a,v)=>a+v,0)))+100)} mm; trim after fitting`},{label:'Knot spacing',value:(k=>!k.length?'none':Math.max(...k)-Math.min(...k)<1?`${Math.round(k[0])} mm`:`${Math.round(Math.min(...k))} to ${Math.round(Math.max(...k))} mm`)(spacings.flat())}]:[])],
+   assembly:[...assemblySteps(p,g.parts,groups),
+    ...(g.suspension&&p.sets.count===1?spacings.map((s,cord)=>`Cord ${cord+1}, centre outward: ${s.map(v=>v.toFixed(1)).join(', ')} mm between support knots (allow extra for knot size).`):[])]};
+ }catch(e){return {parts:[],stats:[],error:e instanceof Error?e.message:'Unable to build Pop-up geometry.'};}
+}
 
 
 /** Nested sets deliberately use open centres. Descendants occupy their parent's centre waste. */
 /** Moves a placement `dx` along x on plan (matrix placements, folding frames and plain ones alike). */
 function shiftPlace(pl:GenPart['place'],dx:number){if(!pl)return;if(pl.m)pl.m=pl.m.map((v,i)=>i===3?v+dx:v);else pl.x+=dx;}
-function addNestedSet(p:PopupParams,parts:GenPart[],ctx:BuildContext):Hardware3D[]{
- const hardware:Hardware3D[]=[];let dx=0;
+function addNestedSet(p:PopupParams,parts:GenPart[],ctx:BuildContext){
+ const hardware:Hardware3D[]=[],groups:AssemblyGroup[]=[];let dx=0,loading=false;
  if(p.outline.shape!=='circle')throw Error('Nested waste sets currently require a circular outline.');
- const parent=parts[0];let radius=p.outline.width/2;
+ const parent=parts[0];
  // Remove the centre of each larger blank, retaining an annulus large enough for its own rings.
  const all:GenPart[]=[];
  for(let i=0;i<p.sets.count;i++){
@@ -130,18 +152,17 @@ function addNestedSet(p:PopupParams,parts:GenPart[],ctx:BuildContext):Hardware3D
   const center=i<p.sets.count-1?next+2*p.gap:Math.min(p.rings.center,width*.25);
   const q={...p,outline:{...p.outline,width,height:width},rings:{...p.rings,center,rim:Math.min(p.rings.rim,width*.07),by:'width' as const,width:Math.max(p.T*1.5,Math.min(p.rings.width,width*.06))},profile:{...p.profile,depth:p.profile.depth*p.sets.scale**i},sets:{...p.sets,count:1}};
   if(width-center<4*p.T+2*q.rings.rim)throw Error('Nested sizes leave too little material. Reduce set count or use a larger outer width.');
-  const g=popupGeometry(q,ctx,i<p.sets.count-1?center:0),blank=g.parts[0];
+  const label=`S${i+1}-`,g=popupGeometry(q,ctx,i<p.sets.count-1?center:0,label),blank=g.parts[0];
+  loading ||= g.loading;groups.push({label,order:ringAssemblyOrder(g.rings,g.parts[0].views3d),radial:g.parts.some(v=>v.id==='rib-hub')});
   // Cut nested in one blank, but each size is its own piece: in 3D they stand side by side.
   if(i>0)dx+=p.outline.width*p.sets.scale**(i-1)/2+width/2+30;
   for(const v of blank.views3d??[]){shiftPlace(v.place,dx);if(v.frames)v.frames=v.frames.map(m=>m.map((x,k)=>k===3?x+dx:x));}
   const extra=g.parts.slice(1).map(v=>({...v,id:`set-${i+1}-${v.id}`,name:`Size ${i+1}: ${v.name}`,place:v.place?{...v.place,...(v.place.m?{m:[...v.place.m]}:{})}:v.place}));
   for(const v of extra)shiftPlace(v.place,dx);
-  all.push(blank);parts.push(...extra);hardware.push(...popupHardware(q,g,dx,floorOf(q)));radius=next/2;
+  all.push(blank);parts.push(...extra);hardware.push(...popupHardware(q,g,dx,floorOf(q)));
  }
- void radius;
  parent.outer=all[0].outer;parent.holes=[...all[0].holes,...all.slice(1).flatMap(v=>[v.outer,...v.holes])];parent.engrave=all.flatMap(v=>v.engrave??[]);parent.views3d=all.flatMap(v=>v.views3d??[]);parent.name='Nested annular blanks (open centres)';
  // Discard supports of the original unmodified single-size blank.
  const keep=parts.filter(v=>v===parent||v.id.startsWith('set-'));parts.splice(0,parts.length,...keep);
- return hardware;
+ return {hardware,groups,loading};
 }
-function assemblyCard(p:PopupParams,ctx:BuildContext):GenPart{const engrave:Contour[]=[];const lines=['POP-UP / '+p.name,'1. Test kerf and bridge flexure.','2. Engrave, inner cuts, then outline.','3. Separate bridges; fit numbered ribs.','4. Prototype before loading. LED only.'];let y=15;for(const line of lines){const t=ctx.text?.(line,'archivo-black',3);if(t)engrave.push(...t.contours.map(c=>transform(c,{x:95,y})));y+=9;}return {id:'assembly-card',name:'Assembly card',outer:roundedRect(0,0,190,100,3),holes:[],engrave,score:[[[15,85],[40,65],[65,85]],[[15,89],[65,89]],[[90,85],[110,65],[130,85]]],place:{x:p.outline.width,y:0,z:0}};}
