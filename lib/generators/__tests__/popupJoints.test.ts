@@ -1,11 +1,12 @@
 import {it,expect} from 'vitest';
 import{POPUP}from'../popup';import{popupGeometry}from'../popup/build';import{mergePopup}from'../popup/params';import{placePoint}from'../place';import{pointInContour}from'../geom';
+const inVoid=(cs:[number,number][][],xy:[number,number])=>cs.filter(h=>pointInContour(xy,h)).length%2===1;
 it('every ring has real tabs entering matching blank slots at the same height',()=>{
  const p=mergePopup({});const g=popupGeometry(p);const blank=g.parts[0];
  for(const r of g.rings){let tabs=0;for(const rib of g.parts.filter(v=>v.id.startsWith('rib-')&&v.id!=='rib-hub')){
   for(let x=-p.outline.width/2;x<p.outline.width/2;x+=.5){if(!pointInContour([x,-r.height-p.T/2],rib.outer)||rib.holes.some(h=>pointInContour([x,-r.height-p.T/2],h)))continue;
    const world=placePoint(rib.place!,x,-r.height-p.T/2,p.T/2);if(!pointInContour([world[0],world[1]],r.outer)||r.inner&&pointInContour([world[0],world[1]],r.inner))continue;
-   expect(blank.holes.some(h=>pointInContour([world[0],world[1]],h)),'tab intersects uncut ring').toBe(true);tabs++;
+   expect(inVoid(blank.holes,[world[0],world[1]]),'tab intersects uncut ring').toBe(true);tabs++;
   }
  }expect(tabs,'ring must positively locate on its support').toBeGreaterThan(0);}
 });
@@ -19,8 +20,8 @@ for(const preset of POPUP_PRESETS)it(`${preset.id}: tabs and support solids do n
   for(let i=0;i<xs.length-1;i++){const u=(xs[i]+xs[i+1])/2;if(!pointInContour([u,y],rib.outer)||rib.holes.some(h=>pointInContour([u,y],h)))continue;
    const xyz=placePoint(rib.place!,u,y,p.T/2),xy:[number,number]=[xyz[0],xyz[1]];
    if(!pointInContour(xy,ring.outer)||ring.inner&&pointInContour(xy,ring.inner))continue;
-   expect(b.holes.some(h=>pointInContour(xy,h)),`${rib.id} at ring ${ring.height}`).toBe(true);contacts++;
-   for(const edge of [xs[i]+.01,u,xs[i+1]-.01])for(const t of [.01,p.T-.01]){const q=placePoint(rib.place!,edge,y,t);expect(b.holes.some(h=>pointInContour([q[0],q[1]],h)),'full stock thickness must fit').toBe(true);}
+   expect(inVoid(b.holes,xy),`${rib.id} at ring ${ring.height}`).toBe(true);contacts++;
+   for(const edge of [xs[i]+.01,u,xs[i+1]-.01])for(const t of [.01,p.T-.01]){const q=placePoint(rib.place!,edge,y,t);expect(inVoid(b.holes,[q[0],q[1]]),'full stock thickness must fit').toBe(true);}
   }
  }expect(contacts,'each ring needs positive locating tabs').toBeGreaterThanOrEqual(ribs.length);}
 },20000);

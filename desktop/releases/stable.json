@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.21.1",
-    "pub_date": "2026-10-27T17:15:57.552Z",
-    "notes": "Corrects phantom wood, nested holes and extra edges in all 36 Pop-up previews. Rigid rings, ribs and accessories explode correctly. Updated thumbnails; verified SVG output and joints.",
+    "version": "1.22.0",
+    "pub_date": "2026-10-27T17:59:23.504Z",
+    "notes": "Pop-up rings now clear full-thickness support insertion paths. Matched tabs, direct-release ring SVGs, engraved ring IDs and per-ring assembly order with nested size labels. Includes all 36 presets and corrected preview assets. Regenerate complete matching parts; test a stock coupon before cutting.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.21.1_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm9pZXZrQTNBcEwwdmM4dkRtQkZJeHFRTXF6ZDRFNkJVQ1lOZDUwQWZoTk45UXZqYWEwdWJlTHE3WjMrT0FmUW9nR0IrMFBwdzJTUFJBbVFPN29KUFFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTIxMzE5CWZpbGU6SGluZ2VMYWJfMS4yMS4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIxLjEKUWV4TVlzVEl6VDFPMHA2RVBaTWlnQXdGV2JUV0Ntcm5nT2JySFBjS1Z3b2NEOFFqUnpCeC84NERmWTNHNEFzd0YvZmhGY01BV1o4SXpnbmVidUliQ3c9PQo=",
-        "size": 11712700,
-        "sha256": "11d6151214ebe0c9aefabe9faeafb1f1d2b3710abc4a0d15ff1978e3b5d8d263"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.22.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnN4SE9SQVVrMU9sdS9WWWlHY0RTTHdKUm1VWEo3dVpRcy9rMEJtZHh5ckY2WWk0WDVHM0Y5K2JpQllFcXVaakVxYVEyV3dHYWZrd0RESU9qNUJiQ3dRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTIzOTQ2CWZpbGU6SGluZ2VMYWJfMS4yMi4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIyLjAKSkFHME9CSTlHeWJoWkhKcUcxRC9aU014ZGp2T1BEZHlCQWN6MjRZTTBDWEZjZmI4Qklsd0s3R0FKTVRFTWtManhUTXJldW5VamJRYUlTcXU2MStFQkE9PQo=",
+        "size": 11721997,
+        "sha256": "ecdf2db60515e217fc8d8d12343b93e4a44109aec66ef5b58c48aa84549fc307"
       }
     }
   }

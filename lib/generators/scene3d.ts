@@ -185,7 +185,7 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
   const loads: Promise<void>[] = [];
   // A part that bends is drawn as its flat pieces, each where it sits.
   const parts: Shown[] = out.parts.flatMap((p) => p.views3d?.length
-    ? p.views3d.map((v, i) => ({ ...p, id: `${p.id}-${i}`, outer: v.outer, holes: v.holes, cuts: undefined, score: undefined, engrave: v.engrave, images: undefined, pieces: undefined, place: v.place, views3d: undefined, frames: v.frames, apart: v.apart, creases: v.creases }))
+    ? p.views3d.map((v, i) => ({ ...p, name: v.name ?? p.name, id: `${p.id}-${i}`, outer: v.outer, holes: v.holes, cuts: undefined, score: undefined, engrave: v.engrave, images: undefined, pieces: undefined, place: v.place, views3d: undefined, frames: v.frames, apart: v.apart, creases: v.creases }))
     : [p]);
   // Folding faces: placed from their frames, so the fold and explode move them in place.
   const folding: { wrap: THREE.Object3D; frames: number[][]; apart: [number, number, number] }[] = [];

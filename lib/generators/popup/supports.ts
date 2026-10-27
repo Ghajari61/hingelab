@@ -1,8 +1,9 @@
 import { differenceShapes, unionShapes, intersectShapes, offsetShapes } from '@/lib/letters/polygon';
-import { rect, transform, signedArea } from '../geom';
+import { bboxOf, rect, transform, signedArea } from '../geom';
 import type { BuildContext, Contour, GenPart } from '../types';
 import type { PopupParams } from './params';
 import type { Ring } from './build';
+import { insertionReliefs } from './assembly';
 export interface RingJoint {
     ring: number;
     rib: number;
@@ -44,7 +45,7 @@ export function lighten(shapes: ReturnType<typeof unionShapes>, T: number): Retu
     return out.length === 1 ? out : shapes;
 }
 /** One joint schedule drives both mating cut files and their centred 3D placements. */
-export function ribAssembly(p: PopupParams, rings: Ring[], holes: Contour[], centerHole: number, foot: number, ctx: BuildContext) {
+export function ribAssembly(p: PopupParams, rings: Ring[], holes: Contour[], centerHole: number, foot: number, ctx: BuildContext, labelPrefix='') {
     // A sleeve's opening goes right through to the table: crossed ribs would block it, so its ribs
     // stand radially on an annular hub round the opening (at least three of them).
     const through = p.mode === 'sleeve' && centerHole > 0;
@@ -92,6 +93,7 @@ export function ribAssembly(p: PopupParams, rings: Ring[], holes: Contour[], cen
         throw Error('No safe ring-to-rib joint layout fits this design. Widen rings/centre, reduce slots or use two ribs.');
     const { joints, angles } = chosen, parts: GenPart[] = [];
     const width = p.T + fit;
+    const finishedCuts=unionShapes([...holes,...joints.map(j=>j.slot)]).flatMap(s=>[s.outer,...s.holes]);
     for (let k = 0; k < count; k++) {
         const angle = angles[k], sections = rings.map(r => ({ r, out: crossings(r.outer, angle), inside: r.inner ? crossings(r.inner, angle) : [-centerHole / 2, centerHole / 2] }));
         const end = Math.max(...sections.map(v => v.out[1])), start = radial ? hub : Math.min(...sections.map(v => v.out[0]));
@@ -119,7 +121,7 @@ export function ribAssembly(p: PopupParams, rings: Ring[], holes: Contour[], cen
         }
         for (const j of joints.filter(j => j.rib === k))
             blocks.push(rect(j.u - j.width / 2, -j.height - p.T, j.width, p.T + .1));
-        let shapes = unionShapes(blocks);
+        let shapes = differenceShapes(unionShapes(blocks).flatMap(s=>[s.outer,...s.holes]), insertionReliefs(p,rings,finishedCuts,angle));
         if (!radial) {
             const top = -Math.max(...rings.map(r => r.height)) - p.T - 1;
             const cut = k === 0 ? rect(-width / 2, top, width, foot / 2 - top) : rect(-width / 2, foot / 2, width, foot / 2 + 1);
@@ -129,10 +131,17 @@ export function ribAssembly(p: PopupParams, rings: Ring[], holes: Contour[], cen
             shapes = unionShapes([...shapes.flatMap(s => [s.outer, ...s.holes]), rect(hub + p.T, foot - .1, 2 * p.T, p.T + .1)]);
         if (shapes.length !== 1)
             throw Error('Support disconnected: increase ring width or reduce clearance.');
+        for(const j of joints.filter(j=>j.rib===k)){
+            const tab=rect(j.u-j.width/2,-j.height-p.T,j.width,p.T);
+            if(area(differenceShapes([tab],shapes.flatMap(s=>[s.outer,...s.holes])))>.005)
+                throw Error(`Ring L${String(j.ring+1).padStart(2,'0')} would remove a locating tab on R${k+1}. Widen rings or change the profile.`);
+        }
         shapes = lighten(shapes, p.T);
         const a = angle * Math.PI / 180, c = Math.cos(a), s = Math.sin(a), m = [c, 0, -s, s * p.T / 2, s, 0, c, -c * p.T / 2, 0, -1, 0, 0];
-        const text = ctx.text?.(`R${k + 1}`, 'archivo-black', Math.min(3, foot * .3));
-        parts.push({ id: `rib-${k + 1}-0`, name: `Rib R${k + 1}`, outer: shapes[0].outer, holes: shapes[0].holes, engrave: text?.contours.map(c => transform(c, { x: radial ? hub + 5 : -10, y: foot * .75 })), place: { x: 0, y: 0, z: 0, m } });
+        const text = ctx.text?.(`${labelPrefix}R${k + 1}`, 'archivo-black', Math.min(3, foot * .3)),bounds=text?bboxOf(text.contours):null;
+        const ink=text&&bounds?text.contours.map(c=>transform(c,{x:footStart+3-bounds.x0,y:foot*.6-bounds.y0})):[];
+        const engrave=intersectShapes(ink,shapes.flatMap(s=>[s.outer,...s.holes])).flatMap(s=>[s.outer,...s.holes]);
+        parts.push({ id: `rib-${k + 1}-0`, name: `Rib ${labelPrefix}R${k + 1}`, outer: shapes[0].outer, holes: shapes[0].holes, engrave, place: { x: 0, y: 0, z: 0, m } });
     }
     if (radial) {
         const slots = angles.map(angle => transform(rect(hub + p.T - fit / 2, -width / 2, 2 * p.T + fit, width), { rot: angle }));
