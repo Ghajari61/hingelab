@@ -2,10 +2,10 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Grid2x2, Maximize, Play, RotateCcw, Ruler, Square } from "lucide-react";
+import { Grid2x2, Maximize, Ruler, Square } from "lucide-react";
 import type { EditorPrefs } from "@/lib/prefs/editor";
 import { EDITOR_PREFS_EVENT, editorPrefs, saveEditorPrefs } from "@/lib/prefs/editorStore";
-import { EXPLODE_MS, type View3DState } from "./view3d";
+import type { View3DState } from "./view3d";
 
 interface ToolsProps {
   v: View3DState;
@@ -79,17 +79,9 @@ export function View3DTools({ v, flat = false, explodeLabel = "Explode", childre
       )}
       {children}
       {!(flat && v.flat) && explodeLabel && (
-        <>
-          <button
-            type="button" className="v3-tool v3-play" aria-pressed={v.explodeTarget > 0.5}
-            aria-label={v.explodeTarget > 0.5 ? "Put it back together" : `Open it out (${explodeLabel})`}
-            title={v.explodeTarget > 0.5 ? "Put it back together, animated" : "Open it out, animated: the lid opens, the walls fold down and the parts settle side by side"}
-            onClick={() => v.setExplode(v.explodeTarget > 0.5 ? 0 : 1, EXPLODE_MS)}
-          >{v.explodeTarget > 0.5 ? <RotateCcw size={15} aria-hidden /> : <Play size={15} aria-hidden />}</button>
-          <label className="v3-explode" title="Pull the parts apart">{explodeLabel}
-            <input type="range" min={0} max={1} step={0.01} value={v.explodeTarget} aria-label={explodeLabel} onChange={(e) => v.setExplode(parseFloat(e.target.value))} />
-          </label>
-        </>
+        <label className="v3-explode" title="Pull the parts apart where they stand">{explodeLabel}
+          <input type="range" min={0} max={1} step={0.01} value={v.explodeTarget} aria-label={explodeLabel} onChange={(e) => v.setExplode(parseFloat(e.target.value))} />
+        </label>
       )}
       <button
         type="button" className="v3-tool" aria-pressed={v.dims} aria-label="Dimensions"

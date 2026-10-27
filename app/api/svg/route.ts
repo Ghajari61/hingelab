@@ -4,6 +4,7 @@ import { currentPlan } from "@/lib/billing/plan";
 import { hasPro } from "@/lib/plans";
 import { LIMITS, rateLimit } from "@/lib/security/rateLimit";
 import { declaredLength, isCrossSite, isJSONRequest, siteOrigins } from "@/lib/security/request";
+import { downloadHeaders } from "@/lib/security/headers";
 import { laserSheetSvg } from "@/lib/security/svg";
 
 export const maxDuration = 60;
@@ -78,7 +79,8 @@ export async function POST(req: Request) {
       if (!sheet.ok) return Response.json({ error: sheet.error }, { status: 422 });
       return new Response(sheet.svg, {
         status: 200,
-        headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "no-store", "x-hingelab-model": route.id },
+        // an attachment under a sandbox CSP: model-written markup never runs as a page of our origin
+        headers: { ...downloadHeaders("image/svg+xml; charset=utf-8", "laser-sheet.svg"), "x-hingelab-model": route.id },
       });
     } catch (e) {
       last = e instanceof Error ? e.message : last;

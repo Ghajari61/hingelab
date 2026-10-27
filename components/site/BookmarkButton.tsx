@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { readBookmarks, toggleBookmark } from "@/lib/generators/nav";
+import { readBookmarks, toggleBookmark } from "@/lib/generators/localLists";
 
 export function BookmarkButton({ slug }: { slug: string }) {
   const [on, setOn] = useState(false);

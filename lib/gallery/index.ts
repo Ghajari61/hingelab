@@ -24,6 +24,6 @@ export function cleanEntry(raw: unknown, isProduct: (p: string) => boolean): Gal
   if (JSON.stringify(r.params).length > MAX_GALLERY_PARAMS) return { error: "This design is too large for the gallery. Leave the pictures out and try again." };
   const thumb = typeof r.thumb === "string" ? r.thumb : "";
   if (!/^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"[^>]*>[\s\S]*<\/svg>$/.test(thumb) || thumb.length > MAX_GALLERY_THUMB) return { error: "The design has no preview to show." };
-  if (/<script|<foreignObject|\son\w+=|javascript:|<image|href=/i.test(thumb)) return { error: "The design has no preview to show." };
+  if (/<\s*(?:[\w.-]+:)?(?:script|foreignObject|image|img|iframe|use)\b|[\s/"']on\w+\s*=|javascript:|href\s*=|<!(?!--)/i.test(thumb)) return { error: "The design has no preview to show." };
   return { product: r.product, name, params: r.params as Record<string, unknown>, thumb };
 }

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Download } from "lucide-react";
 import type { Units } from "@/components/editor/format";
 import { makeExport, makeSTLExport, type ExportFile, type LaserFromMaterial } from "@/lib/export/bundle";
-import { recordExport } from "@/lib/generators/nav";
+import { recordExport } from "@/lib/generators/localLists";
 import { loadMaterials } from "@/lib/materials/library";
 import { bedOf, CUSTOM_MACHINE, defaultExport, EXPORT_FORMATS, FORMAT_INFO, loadExport, overBed, saveExport, type ExportSettings, type Rect } from "@/lib/export/profiles";
 import { MACHINE_PROFILES } from "@/lib/studio/library";

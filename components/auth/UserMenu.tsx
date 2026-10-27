@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Bookmark, Clock3, CreditCard, Crown, FolderOpen, LogOut, Mail, Settings, UserRound } from "lucide-react";
 import { avatarBackground, avatarInitials } from "@/lib/account/avatar";
-import { hasPro, planOf } from "@/lib/plans";
+import { hasPro, effectivePlan } from "@/lib/plans";
 import { useAccount } from "./useAccount";
 
 /** A round avatar: the account's picture, or its initials on its own colour (also when the picture fails). */
@@ -50,7 +50,7 @@ export function UserMenu() {
 
   const meta = user.user_metadata as { full_name?: string; name?: string; avatar_url?: string; picture?: string } | undefined;
   const name = meta?.full_name || meta?.name || "";
-  const pro = hasPro(planOf(profile?.plan));
+  const pro = hasPro(effectivePlan(profile?.plan, profile?.current_period_end));
   return (
     <div className={`menu user-menu${open ? " open" : ""}`}>
       <button

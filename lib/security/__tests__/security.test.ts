@@ -62,6 +62,7 @@ describe("SVG output cannot be broken out of", () => {
   it("thumbnail markup with anything active is refused", () => {
     const ok = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect x="0" y="0" width="10" height="10" style="fill:var(--surface-sheet,#1F1D1A)"/><path d="M0 0L5 5" fill="url(#g)"/></svg>`;
     expect(inertSvgMarkup(ok)).toBe(ok);
+    expect(inertSvgMarkup(`<svg><rect fill="url('#g')"/><rect fill="url( #g)"/></svg>`)).toBeDefined();
     for (const bad of [
       `<svg><script>alert(1)</script></svg>`,
       `<svg onload="alert(1)"></svg>`,
@@ -70,9 +71,16 @@ describe("SVG output cannot be broken out of", () => {
       `<svg><foreignObject><img src=x onerror=alert(1)></foreignObject></svg>`,
       `<svg><use href="data:image/svg+xml,..."/></svg>`,
       `<svg><rect style="fill:url(https://evil.example/x)"/></svg>`,
+      `<svg><rect style="fill:url( 'https://evil.example/x')"/></svg>`,
       `<svg><animate attributeName="href" to="javascript:alert(1)"/></svg>`,
       `<svg><style>@import url(x)</style></svg>`,
       `<img src=x onerror=alert(1)>`,
+      `<svg><img/src/onerror=alert(1)></svg>`,
+      `<svg><svg/onload=alert(1)></svg>`,
+      `<svg><rect x="1"onclick="alert(1)"/></svg>`,
+      `<svg><x:script xmlns:x="http://www.w3.org/2000/svg">alert(1)</x:script></svg>`,
+      `<svg><x:a xmlns:x="http://www.w3.org/2000/svg" x:href="javascript:alert(1)"/></svg>`,
+      `<svg><!DOCTYPE x [<!ENTITY e "y">]></svg>`,
       "",
       null,
     ]) expect(inertSvgMarkup(bad as string)).toBeUndefined();
@@ -205,7 +213,9 @@ describe("headers", () => {
     expect(csp).toContain("connect-src 'self' https://abc.supabase.co wss://abc.supabase.co");
     expect(csp).not.toContain("'unsafe-eval'");
     expect(contentSecurityPolicy({ dev: true, preview: false, supabaseURL: "" })).toContain("'unsafe-eval'");
-    expect(contentSecurityPolicy({ dev: false, preview: false, supabaseURL: "", depthModelURL: "https://models.example.com/depth.onnx" })).toContain("connect-src 'self' https://models.example.com https://*.supabase.co");
+    expect(contentSecurityPolicy({ dev: false, preview: false, supabaseURL: "", depthModelURL: "https://models.example.com/depth.onnx" })).toContain("connect-src 'self' https://models.example.com https://huggingface.co");
+    // only our own Supabase project: an injected script could not post to someone else's
+    expect(csp).not.toContain("*.supabase.co");
     const keys = securityHeaders({ dev: false, https: true, preview: false, supabaseURL: "" }).map((h) => h.key);
     expect(keys).toEqual(expect.arrayContaining(["Strict-Transport-Security", "X-Frame-Options", "X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy"]));
     expect(keys).not.toContain("Content-Security-Policy");

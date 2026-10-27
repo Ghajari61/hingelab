@@ -633,9 +633,12 @@ async function generateGenerator(r: GenerateRequest, id: GeneratorId, product: D
   const over = batchLimitMessage(plan, designBatchCount(a.params));
   if (over) return { status: 403, body: { ...base(p, issues, applied), stats, locked: over } };
   if (lock && !hasPro(plan)) return { status: 403, body: { ...base(p, issues, applied), stats, locked: `${lock} Upgrade to Pro to preview and export it in the desktop app.` } };
-  const svg = genSVG(def, a.params, a.lay, "", a.sheets);
+  // Free gets the same watermarked sheet as the Hinge Box: clean cut files are a Pro feature on every product.
+  const raw = genSVG(def, a.params, a.lay, "", a.sheets);
+  const watermark = needsWatermark(plan);
+  const svg = watermark ? addWatermark(raw) : raw;
   return {
     status: 200,
-    body: { ...base(p, issues, applied), stats, svg, fileName: fileNameOf(def.fileName(a.params), id), ...sheetSize(svg), watermark: false, ...modelPart(r, (e) => generatorScene(out, a.params.T, e)) },
+    body: { ...base(p, issues, applied), stats, svg, fileName: fileNameOf(def.fileName(a.params), id), ...sheetSize(svg), watermark, ...modelPart(r, (e) => generatorScene(out, a.params.T, e)) },
   };
 }

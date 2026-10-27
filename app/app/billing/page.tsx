@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
 import { stripeConfigured } from "@/lib/stripe";
 import { lockedPriceCopyFor } from "@/lib/billing/grandfather";
-import { BUSINESS_SEATS, COMMERCIAL_LICENSE, PLAN_ROWS, PRICES, hasPro, planLabel, planOf } from "@/lib/plans";
+import { BUSINESS_SEATS, COMMERCIAL_LICENSE, PLAN_ROWS, PRICES, hasPro, planLabel, effectivePlan } from "@/lib/plans";
 import { AppHeader } from "@/components/site/AppHeader";
 import { ManageBilling, UpgradeButtons } from "@/components/billing/BillingActions";
 
@@ -22,7 +22,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
     .select("plan, plan_status, current_period_end, stripe_customer_id")
     .eq("id", session.user.id)
     .maybeSingle();
-  const plan = planOf(profile?.plan);
+  const plan = effectivePlan(profile?.plan, profile?.current_period_end);
   const paid = hasPro(plan);
   const label = planLabel(plan);
   const billing = stripeConfigured();

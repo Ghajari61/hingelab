@@ -1,3 +1,10 @@
+## Unreleased — Release check: security and speed
+
+- **Security.** AI Studio no longer refunds a job the browser walked away from mid-answer, so credits can't be dodged; the SVG safety check refuses more tricks (prefixed script elements, `<svg/onload>`, embedded images and forms, doctypes); the laser-sheet SVG service answers as a download that can never run as a page; gallery posts go in only through the site, after its checks; the browser may talk only to HingeLab's own database server.
+- **Pages load faster.** The site menu, the bookmark button and the editor no longer carry every product's preset list: site pages download about 65 KB less script (the home page 180 → 117 KB), and the editor 33 KB less. Preset and template links still open the right design.
+- **Plans and billing.** A paid plan on the website now ends with its paid period (plus three days), as in the desktop app, so a lost cancellation message can't keep it on; a lapsed plan can be bought again; two checkouts at once make one Stripe customer; Free exports from the desktop app carry the "Made with HingeLab" mark on every product, as they already did for the Hinge Box.
+- **Faster.** Part labels on a Pop-up (and any design with many long slots) are placed in about 2 s instead of half a minute; very large Pop-ups build three times faster.
+
 ## Unreleased — Pop-up: engineering review and true-to-life 3D
 
 - **The 3D shows how a pop-up is really assembled.** Hanging designs show their three cords running through every cord hole, a knot under each ring and the ring they hang from; lamps show the socket, its shade ring and the LED bulb; tealight holders show the tealight; a vase sleeve shows the glass vase standing inside it. Drawn only, never cut.
@@ -26,7 +33,9 @@
 
 ## 1.8.0 — 3D that opens out and moves smoothly
 
-- **Open it out.** A play button beside Explode in the 3D view animates the design apart and back together. A Hinge Box's lid swings open on its hinge (a lift-off or cap lid rises with a little tilt), a cabinet opens its door or slides its drawers out standing, then tips onto its back; the walls fold down outwards, each side towards its own side; then every part travels on a soft arc to its place on the sheet and lies flat side by side, with the hinge cuts drawn on once it lands. Generator designs (boxes, signs, toppers and the rest) do the same: walls fall outwards about their feet, then every part lands flat where the layout puts it. The Explode slider scrubs the same motion.
+## Unreleased — 3D that explodes gently and moves smoothly
+
+- **Explode in place.** The Explode slider pulls the design apart where it stands and glides there gently instead of jumping; the views widen to hold the opened design. (The play button that laid the parts out flat was removed at the owner's request.)
 - **Smooth movement.** Explode glides to where the slider asks instead of jumping, the views widen as the design opens out, and orbiting, panning and zooming ease to a stop instead of halting with the mouse.
 - **Idle turn.** After five seconds without the mouse or keys, the perspective view turns slowly round the design; any movement stops it. Reduced-motion settings turn the animations off.
 

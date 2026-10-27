@@ -1675,3 +1675,28 @@ The owner asked for the Pop-up to be reviewed as a product and for its 3D to be 
 - **Base plate** with ribs sits at −ribFoot − T; the **finial** has a 2T tab through a T+fit slot when the centre is clear.
 - **Checks**: `wall-gap` (bowls without a plant seat, slit > 12 mm), `hang-apart` (info), `base-plate` (info), `bulb` (centre must be ≥ bulb Ø + 20 mm; E14 45, E27 60). E27 lamp presets use an 80 mm centre.
 - Tested in `lib/generators/__tests__/popup.test.ts` ("Pop-up engineering and 3D"); all preset snapshots and thumbnails were regenerated.
+
+## D207. Pop-up bridge strain model (from the first Pop-up review)
+
+The first Pop-up review (PR #13) was written against an older Pop-up whose supports main has since replaced with the precision joint schedule (`ribAssembly`, `suspensionLayout`, `handleAssembly`). When it was combined for release only its bridge model was kept: `popup/engineering.ts` (guided-beam strain ε = 3·T·δ/L² against plywood 1 %, MDF 0.4 %, acrylic 0.6 %; `cutsToSnap`; `clearTurn`), used by the strain warning. Its rib, cord, post and handle rewrites were dropped in favour of main's, and D212 covers the later engineering fixes. Post and handle supports on main are crossed rib pairs, so they still set every ring's height.
+
+## D208. Explode stays in place; no play button
+
+The owner asked for the product to explode gently in place with the existing slider, and for the play button to go. This supersedes the opening-out part of D206.
+
+- The 3D editors no longer use the open-out choreography: the slider's eased value (`useView3D`, unchanged) drives the design's own in-place explode (Hinge Box: walls up a little, lid well clear, flip lid swings, drawers slide out; generators: their usual apart offsets; folding designs as before).
+- Designs whose scenes are rebuilt per explode value are wrapped by `rebuiltExplode` (lib/three/rebuilt.ts): one stable root that swaps in each build (closed and fully open builds kept), so QuadView treats them as exploding in place and widens the views to hold the opened design. QuadView repaints the look and display mode of each new build.
+- The play button is removed. `hingeUnfoldScene` and the generator unfold path stay in the library (tested) but are not wired to any view.
+
+## D213. Release check: one release branch, security fixes and speed
+
+Before a release the owner asked for a final technical and security check of the whole app and site.
+
+- **One branch to merge.** `claude/release-check` combines main with Name Charms and Family Names (#22, which already holds the Calibration removal #17), the Pop-up 3D work (#23, D212) and the explode-in-place slider from the first Pop-up review (#13, D207/D208). PRs #7, #9 and #11 are already contained in main.
+- **Checked**: types, lint (no errors), the full test suite, `next build`, every page in the sitemap and every internal link (no page errors or failed requests), every product's editor at desktop and phone width, 3D, explode and export for nine products, response headers. The perf budgets are over on shared first-load JS (an open item since D205, not a regression of this branch). Rust code is unchanged since 1.13.0; `cargo test` needs a Windows or WebKitGTK machine.
+- **Security fixes** (from an independent review; billing items were reported to the owner, not changed): no refund for client-aborted AI jobs; a stricter inert-SVG check; `/api/svg` as an attachment with the sandbox CSP; gallery inserts only through the server action with the service role (migration `20261026000100` drops the user insert policy); CSP `connect-src` limited to our own Supabase origin.
+- **Speed**: `rectInside` tests only holes near the label box and rejects a box a hole outline runs through; Pop-up clips only against slots near each ring and joint. Output is unchanged (Pop-up snapshots identical).
+- **Follow-up at the owner's request ("fix them all")**:
+  - Billing: `effectivePlan` (plan plus `current_period_end` and the 3-day grace) moved to `lib/plans.ts` and is used by the website's `currentPlan`, pages and client plan hooks as well as the desktop app. Checkout uses it, so a lapsed plan can be bought again; Stripe customer creation has an idempotency key and writes only an empty `stripe_customer_id`. Desktop generator exports are watermarked for Free like the Hinge Box.
+  - Bundle size: the menu links (`navLinks.ts`) and the local bookmarks and export history (`localLists.ts`) were split out of `nav.ts`, so pages no longer load the catalogue, the preset lists and Clipper: 178 → 114 KB on most pages, 180 → 117 KB on `/`. The editor shell no longer imports `START_PRESETS` (generators resolve `?preset=` ids once they load) or the template list (loaded on demand for `?template=`): 204 → 170.6 KB. The budget is now 172, Shadow Box 60, and every budget passes.
+  - Not possible from here: applying migration `20261026000100` needs the owner's Supabase login, or the Supabase connector. The code works with or without the migration. The Windows 1.14.0 installer was built and published by the owner in #24; the desktop app gets the server-side changes here (watermark, plan) without a new installer.
