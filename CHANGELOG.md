@@ -1,3 +1,11 @@
+## 1.22.0 — Pop-up joints and assembly order
+
+- **Full-thickness ring clearance.** Profile ribs now clear the complete vertical insertion path of the actual ring material, including curved and angled edges. This removes interference in Ripple, Snowflake Tree, Heart Basket and Pyramid. A geometry check rejects lost tabs, split rings and obstructed insertion paths.
+- **Separate rings ready to assemble.** Supported rings are released directly by the SVG by default. Temporary holding lands remain optional and must be removed flush before assembly. Negative joint clearance is rejected for rigid supports; slot dimensions use measured stock plus total clearance and the shared exporter applies kerf once.
+- **Numbered assembly.** Engraved L01-to-centre ring identifiers match the 3D part names, per-ring installation order, seat heights and finished widths. Nested sizes use S1/S2 prefixes on rings and ribs. Instructions cover crossed half-laps, radial hubs, rings, handles and finials; printable assembly cards are available.
+- **Existing files:** Pop-up files without the new release/numbering settings use separate rings and enabled engraving. Enable temporary holding lands to retain the former connected cutting blank, or disable ring identifiers for very small parts. Regenerate the full matching set of rings and supports; do not mix these revised ribs with older cut files.
+- All 36 presets and additional stock/clearance/support variants were checked digitally. Actual wood variation, glue strength and load capacity still require a physical test cut.
+
 ## 1.21.1 — Correct Pop-up geometry in 3D
 
 - **All 36 Pop-up previews now use the final cut material.** Nested ring openings no longer cancel against joint cuts and create phantom wooden islands, extra edges or filled-in holes. Slots, handle holes, cord holes and engraving are clipped to their actual rings.
