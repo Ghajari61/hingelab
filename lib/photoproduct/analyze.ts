@@ -1,4 +1,5 @@
 import "server-only";
+import {PhotoProviderSchema} from "./providerSchema";
 import { createHash } from "node:crypto";
 import { generateText, Output, type LanguageModel, type UserContent } from "ai";
 import { designRoutes, isBillingError, isBusyError } from "@/lib/ai/providers";
@@ -45,7 +46,7 @@ export async function analyzeProductPhotos(req:PhotoAnalysisRequest,userId:strin
  for(let i=0;i<routes.length;i++){
   try{
    let feedback="";for(let repair=0;repair<2;repair++){
-   const {output}=await generateText({...routes[i],system:PHOTO_SYSTEM,messages:[{role:"user",content:feedback?[...content,{type:"text",text:feedback}]:content}],output:Output.object({schema:GeneratedAnalysisSchema}),maxOutputTokens:16000,maxRetries:0,abortSignal:signal});
+   const {output}=await generateText({...routes[i],system:PHOTO_SYSTEM,messages:[{role:"user",content:feedback?[...content,{type:"text",text:feedback}]:content}],output:Output.object({schema:PhotoProviderSchema}),maxOutputTokens:16000,maxRetries:0,abortSignal:signal});
    const analysis=GeneratedAnalysisSchema.parse(output),ids=new Set(input.photos.map(p=>p.id));
    if(analysis.views.length!==ids.size||new Set(analysis.views.map(v=>v.photoId)).size!==ids.size||analysis.views.some(v=>!ids.has(v.photoId)))throw new Error("Incomplete reference analysis");
    const m=input.measurements;
