@@ -21,7 +21,7 @@ import { motif } from "../motifs";
 import { motifRef } from "../motifRef";
 import { fitBox, orient, orientHole, shapeOutline, type ShapeKind } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
-import { textBlock, weld } from "../weld";
+import { textBlock, weld, letterShapes, letterTraces } from "../weld";
 import { overlapScores } from "../weldScore";
 import { charmNames, type CharmParams } from "./params";
 import { characterIn, isCharacter, type Character } from "./characters";
@@ -191,12 +191,14 @@ export function hang(p: CharmParams, blank: Shape): Hung {
   return { shape: makeShape(body.outer, [...blank.holes, hole]), hole, keep: orient(circle(c[0], c[1], R + 0.5)), wall: h.wall };
 }
 
-interface Content { cs: Contour[]; blocks: { item: string; cs: Contour[] }[]; w: number; h: number; glyphs: Contour[][] }
+const contentGlyphs = (c: Content): Contour[][] => [...(c.glyphs.length ? c.glyphs : [c.blocks[0].cs]), ...(c.subGlyphs.length ? c.subGlyphs : [c.blocks[1].cs]), c.blocks[2].cs].filter(g => g.length);
+
+interface Content { cs: Contour[]; blocks: { item: string; cs: Contour[] }[]; w: number; h: number; glyphs: Contour[][]; subGlyphs: Contour[][] }
 
 /** The name, its second line and the accent motif as one block centred on (0, 0), at full size. */
 function content(p: CharmParams, ctx: BuildContext, name: string, missing: string[]): { c: Content | null; loading: boolean } {
   const style = { ...p.textStyle, ...p.textForm };
-  const t = name ? textBlock(ctx, name, p.names.fontId, p.names.size, { spacing: p.names.spacing, missing, style }) : { contours: [], width: 0, height: 0, loading: false };
+  const t = name ? textBlock(ctx, name, p.names.fontId, p.names.size, { spacing: p.names.spacing, missing, style, noWeld: p.style.noWeld }) : { contours: [], width: 0, height: 0, loading: false };
   const subH = (p.names.size * p.names.subSize) / 100;
   const s = p.names.sub.trim() && p.style.kind !== "letters" ? textBlock(ctx, p.names.sub, p.names.subFontId, subH, { missing }) : { contours: [], width: 0, height: 0, loading: false };
   const a = p.accent.kind !== "none" && p.style.kind !== "letters" ? motifRef(p.accent.kind, p.accent.art, ctx, missing) : { ref: null, loading: false };
@@ -223,8 +225,9 @@ function content(p: CharmParams, ctx: BuildContext, name: string, missing: strin
   const sh = (cs: Contour[]) => move(cs, -cx, -cy);
   nameCs = sh(nameCs); subCs = sh(subCs); acc = sh(acc);
   const glyphs = ("glyphs" in t && t.glyphs ? t.glyphs : []).map(sh);
+  const subGlyphs = ("glyphs" in s && s.glyphs ? s.glyphs : []).map(g => sh(move(g, 0, t.height / 2 + subH * 0.45 + s.height / 2)));
   return {
-    c: { cs: [...nameCs, ...subCs, ...acc], blocks: [{ item: "Name", cs: nameCs }, { item: "Second line", cs: subCs }, { item: "Motif", cs: acc }], w: b.x1 - b.x0, h: b.y1 - b.y0, glyphs },
+    c: { cs: [...nameCs, ...subCs, ...acc], blocks: [{ item: "Name", cs: nameCs }, { item: "Second line", cs: subCs }, { item: "Motif", cs: acc }], w: b.x1 - b.x0, h: b.y1 - b.y0, glyphs, subGlyphs },
     loading: false,
   };
 }
@@ -334,13 +337,22 @@ function cardHolder(p: CharmParams, outer: Contour, c: Content | null, id: strin
   if (c) {
     // The name sits across the lower part of the front, over the window's bottom edge.
     const keep = orient(rect(-10, -10, W + 20, H * 0.5 + 10));
-    const fit = fitContent(c.cs, blank, keep, p.shape.margin);
+    const scoreRegion = p.style.operation === "score" && frontShape
+      ? largest(differenceShapes(shapeContours([frontShape]), [orient(rect(-10, -10, W + 20, depth - k.lip + 10))]))
+      : null;
+    const fit = p.style.operation === "score"
+      ? scoreRegion ? fitContent(c.cs, scoreRegion, null, Math.min(p.shape.margin, (H - depth + k.lip) / 5)) : { s: 0, at: [0, 0] as Pt }
+      : fitContent(c.cs, blank, keep, p.shape.margin);
     if (fit.s > 0) {
       const placed = move(scaleAbout(c.cs, fit.s), fit.at[0], fit.at[1]);
-      const word = weld(placed, { border: Math.max(0.3, p.style.weld), minHole: 2, bridge: Math.max(2, p.style.weld * 3) });
-      if (word) {
-        const sc = overlapScores(c.glyphs.map((g) => move(scaleAbout(g, fit.s), fit.at[0], fit.at[1])));
-        parts.push({ id: `${id}-name`, name: `${label} name`, outer: word.outer, holes: word.holes, ...(sc.length ? { score: sc } : {}), material: "second", place: { ...at, z: 3 * p.T } });
+      const glyphs = contentGlyphs(c).map(g => move(scaleAbout(g, fit.s), fit.at[0], fit.at[1]));
+      if (p.style.operation === "score") {
+        const face = parts.find(pt => pt.id === `${id}-front`);
+        if (face) face.score = [...(face.score ?? []), ...letterTraces(placed, p.style.noWeld, glyphs)];
+      } else {
+        const words = letterShapes(placed, { noWeld: p.style.noWeld, border: Math.max(0.3, p.style.weld), minHole: 2, bridge: Math.max(2, p.style.weld * 3) }, glyphs);
+        const sc = p.style.noWeld ? [] : overlapScores(c.glyphs.map((g) => move(scaleAbout(g, fit.s), fit.at[0], fit.at[1])));
+        words.forEach((word, i) => parts.push({ id: `${id}-name${i ? `-${i + 1}` : ""}`, name: `${label} name${words.length > 1 ? ` ${i + 1}` : ""}`, outer: word.outer, holes: word.holes, ...(sc.length ? { score: sc } : {}), material: "second", place: { ...at, z: 3 * p.T } }));
       }
       letter = p.names.size * fit.s;
     }
@@ -388,22 +400,26 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
     if (letters) {
       // The welded name is the charm; a loop (or a hole in a ring) hangs it.
       if (!cn.c) continue;
-      const word = weld(cn.c.cs, { border: Math.max(0.3, p.style.weld), minHole: 2, bridge: Math.max(2.5, p.style.weld * 3) });
-      if (!word) continue;
-      let back = p.style.backing > 0 ? weld(cn.c.cs, { border: p.style.backing + p.style.weld, solid: true }) : word;
-      if (!back) continue;
-      const hung = hang({ ...p, hang: { ...p.hang, kind: p.hang.kind === "none" ? "none" : "loop" } }, back);
-      back = hung.shape;
+      const scoreOnly = p.style.operation === "score";
+      const words = letterShapes(cn.c.cs, { noWeld: p.style.noWeld, border: Math.max(0.3, p.style.weld), minHole: 2, bridge: Math.max(2.5, p.style.weld * 3) }, contentGlyphs(cn.c));
+      if (!words.length) continue;
+      const backing = scoreOnly ? Math.max(2, p.style.backing) : p.style.backing;
+      let back = backing > 0 ? weld(cn.c.cs, { border: backing + (p.style.noWeld || scoreOnly ? 0 : p.style.weld), solid: true }) : null;
+      // Hanging hardware belongs to the backing (or the largest loose piece), never every dot.
+      const largestIndex = words.reduce((j, w, i) => w.area > words[j].area ? i : j, 0);
+      const hung = hang({ ...p, hang: { ...p.hang, kind: p.hang.kind === "none" ? "none" : "loop" } }, back ?? words[largestIndex]);
+      if (back) back = hung.shape; else words[largestIndex] = hung.shape;
       info.wall = Math.min(info.wall, hung.wall);
-      const b = bboxOf([back.outer]);
+      const b = bboxOf(back ? [back.outer] : words.map(w => w.outer));
       const place = at(b.x1 - b.x0, b.y1 - b.y0);
       info.letter = Math.min(info.letter, p.names.size);
       info.width = Math.max(info.width, b.x1 - b.x0); info.height = Math.max(info.height, b.y1 - b.y0);
-      // Weld and score: where script letters overlap, the edge is scored so each letter still reads.
-      const scores = overlapScores(cn.c.glyphs);
-      const sc = scores.length ? { score: scores } : {};
-      parts.push({ id, name: p.style.backing > 0 ? `${label} back` : label, outer: back.outer, holes: back.holes, ...(p.style.backing > 0 ? {} : sc), place });
-      if (p.style.backing > 0) parts.push(second({ id: `${id}-front`, name: `${label} letters`, outer: word.outer, holes: word.holes, ...sc, place: { ...place, z: p.T } }));
+      const scores = p.style.noWeld ? [] : overlapScores(cn.c.glyphs);
+      if (back) parts.push({ id, name: `${label} back`, outer: back.outer, holes: back.holes, ...(scoreOnly ? { score: letterTraces(cn.c.cs, p.style.noWeld, contentGlyphs(cn.c)) } : {}), place });
+      if (!scoreOnly) words.forEach((word, i) => {
+        const pt: GenPart = { id: back ? `${id}-front${i ? `-${i + 1}` : ""}` : `${id}${i ? `-${i + 1}` : ""}`, name: `${label}${back ? " letters" : ""}${words.length > 1 ? ` ${i + 1}` : ""}`, outer: word.outer, holes: word.holes, ...(scores.length ? { score: scores } : {}), place: { ...place, z: back ? p.T : 0 } };
+        parts.push(back ? second(pt) : pt);
+      });
       info.count++;
       continue;
     }
@@ -475,7 +491,7 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
     const placeAt = (() => { const b = bboxOf([card.outer]); return at(b.x1 - b.x0 + (dangle && p.hang.side === "left" ? dw : 0), b.y1 - b.y0 + (foot ? 20 : 0) + (dangle && p.hang.side !== "left" ? dw : 0)); })();
     const marks: Pick<GenPart, "engrave" | "score"> = {};
     let holes = card.holes;
-    let front: Shape | null = null;
+    let fronts: Shape[] = [];
     let frontScore: Contour[] = [];
     if (cn.c) {
       // A character's name goes in its own area (the snowman's belly, the reindeer's muzzle), clear of its nose and buttons.
@@ -501,8 +517,12 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
             break;
           }
           case "layered":
-            front = weld(placed, { border: Math.max(0.3, p.style.weld), minHole: 2, bridge: Math.max(2, p.style.weld * 3) });
-            frontScore = overlapScores(cn.c.glyphs.map((g) => move(scaleAbout(g, fit.s), fit.at[0], fit.at[1])));
+            if (p.style.operation === "score") {
+              Object.assign(marks, tagMarks({ score: letterTraces(placed, p.style.noWeld, contentGlyphs(cn.c).map(g => move(scaleAbout(g, fit.s), fit.at[0], fit.at[1]))) }, blocks));
+            } else {
+              fronts = letterShapes(placed, { noWeld: p.style.noWeld, border: Math.max(0.3, p.style.weld), minHole: 2, bridge: Math.max(2, p.style.weld * 3) }, contentGlyphs(cn.c).map(g => move(scaleAbout(g, fit.s), fit.at[0], fit.at[1])));
+              frontScore = p.style.noWeld ? [] : overlapScores(cn.c.glyphs.map((g) => move(scaleAbout(g, fit.s), fit.at[0], fit.at[1])));
+            }
             break;
         }
       } else if (name && !info.squeezed.includes(name)) info.squeezed.push(name);
@@ -528,7 +548,7 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
       // Standing cards: the frame's y runs down from height -place.y, so the bottom edge meets the floor.
       const place = upright ? { x: pl.x, y: -b.y1, z: pl.y, upright: true } : pl;
       parts.push({ id: pid, name: `${label}${side}`, outer: card.outer, holes, ...marks, ...(upright ? { upright: true } : {}), place });
-      if (front) parts.push(second({ id: `${pid}-front`, name: `${label}${side} letters`, outer: front.outer, holes: front.holes, ...(frontScore.length ? { score: frontScore } : {}), place: { ...pl, z: p.T } }));
+      fronts.forEach((front, i) => parts.push(second({ id: `${pid}-front${i ? `-${i + 1}` : ""}`, name: `${label}${side} letters`, outer: front.outer, holes: front.holes, ...(frontScore.length ? { score: frontScore } : {}), place: upright ? { ...place, z: place.z + p.T } : { ...pl, z: p.T } })));
     }
     if (char && p.shape.paint) {
       // The hat, nose and buttons cut on their own, to paint or cut in another colour and glue in place.
@@ -568,6 +588,8 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
     ...(mixed ? [{ label: "Second material", value: `${m2.name} ${p.mat.T2} mm` }] : []),
   ];
   const assembly: string[] = [];
+  if (p.style.noWeld && letters && !p.style.backing && p.style.operation !== "score") assembly.push("No Weld cuts loose letters and dots. Mount each piece separately, or add a backing to make one hanging charm.");
+  if (p.style.operation === "score" && (letters || p.style.kind === "layered")) assembly.push("Score the letter outlines first, then cut the backing outline. There is no separate letter layer.");
   if (p.style.kind === "engrave" || p.style.kind === "score" || p.shape.frame) assembly.push("Engrave and score first, then cut, without moving the sheet.");
   if (mixed) assembly.push(`Cut the ${MATERIALS[p.material]?.name ?? "main"} sheet, then the ${m2.name} sheet.`, "Glue each letters piece on its charm with a thin line of clear epoxy or acrylic cement; press flat for an hour.");
   if (p.style.kind === "cutout" && !p.textForm.stencil) assembly.push("The middles of letters such as O and A fall out of cut-through names; turn on stencil bridges in Text style to keep them.");

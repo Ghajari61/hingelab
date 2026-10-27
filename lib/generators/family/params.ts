@@ -44,7 +44,7 @@ export interface FamilyParams extends GenBase {
     width: number;
     /** Tallest line, mm (short names are capped at this height). */
     maxLine: number;
-    weld: number;
+    weld: number; noWeld: boolean; operation: "cut" | "score";
     star: string;
     trunk: boolean;
     /** Words on the trunk (a year). */
@@ -54,7 +54,7 @@ export interface FamilyParams extends GenBase {
     diameter: number;
     /** Words in the middle disc (a year). */
     centre: string;
-    weld: number;
+    weld: number; noWeld: boolean; operation: "cut" | "score";
   };
   monogram: {
     /** Height of the big initial, mm. */
@@ -109,8 +109,8 @@ export const FAMILY_DEFAULTS: FamilyParams = {
   names: { list: "Olivia\nNoah\nAva\nLiam\nMum\nDad", fontId: "archivo-black", caps: true },
   mark: { kind: "engrave" },
   crossword: { tile: 14, letter: 62, round: 1.5, back: "outline", pad: 3, grid: true },
-  tree: { width: 100, maxLine: 16, weld: 0.7, star: "star", trunk: true, year: "2026" },
-  snowflake: { diameter: 110, centre: "2026", weld: 1.2 },
+  tree: { width: 100, maxLine: 16, weld: 0.7, noWeld: false, operation: "cut", star: "star", trunk: true, year: "2026" },
+  snowflake: { diameter: 110, centre: "2026", weld: 1.2, noWeld: false, operation: "cut" },
   monogram: { size: 90, letter: "", letterFont: "playfair-display", band: 26 },
   backer: { on: false, offset: 3 },
   ring: { diameter: 90, centre: "S", centreFont: "playfair-display", motif: "heart", art: { ...MOTIF_ART }, nameSize: 7, separator: "•", frame: true },
@@ -152,6 +152,10 @@ export function mergeFamily(raw: unknown): FamilyParams {
   const b = p.bunting;
   b.width = clamp(b.width, 30, 300); b.height = clamp(b.height, 30, 400); b.hole = clamp(b.hole, 2, 10); b.letter = clamp(b.letter, 30, 90);
   p.hang.hole = clamp(p.hang.hole, 1, 12); p.hang.wall = clamp(p.hang.wall, 1, 10);
+  p.tree.noWeld = p.tree.noWeld === true;
+  p.tree.operation = p.tree.operation === "score" ? "score" : "cut";
+  p.snowflake.noWeld = p.snowflake.noWeld === true;
+  p.snowflake.operation = p.snowflake.operation === "score" ? "score" : "cut";
   return p;
 }
 

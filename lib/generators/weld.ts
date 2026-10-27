@@ -7,6 +7,7 @@ import { dropSpecks, makeShape, offsetShapes, shapeContours, unionShapes } from 
 import type { Shape } from "@/lib/letters/types";
 import { bboxOf, distToContour, stadium, transform } from "./geom";
 import { orient } from "./shapes";
+import { tagItem } from "./items";
 import { caseText, isPlainStyle, styleContours, type FullTextStyle } from "./textStyle";
 import type { BuildContext, Contour, Pt } from "./types";
 
@@ -31,6 +32,8 @@ export interface TextBlockOptions {
   missing?: string[];
   /** Case, slant, width, thickening, curve or circle, and stencil bridges (the defaults change nothing). */
   style?: FullTextStyle;
+  /** Style each glyph in the whole text frame without merging neighbouring glyphs. */
+  noWeld?: boolean;
 }
 
 /** Lines of text (split on new lines) set as one block, centred on (0, 0). */
@@ -54,10 +57,17 @@ export function textBlock(ctx: BuildContext, text: string, fontId: string, size:
   });
   if (!cs.length) return { contours: [], width: 0, height: 0, loading: false };
   if (!isPlainStyle(o.style)) {
-    glyphs = undefined;
     const b0 = bboxOf(cs);
     const mx = (b0.x0 + b0.x1) / 2, my = (b0.y0 + b0.y1) / 2;
-    cs = styleContours(cs.map((c) => c.map(([x, y]) => [x - mx, y - my] as Pt)), o.style!);
+    const centre = (c: Contour) => c.map(([x, y]) => [x - mx, y - my] as Pt);
+    const frame = cs.map(centre);
+    if (o.noWeld && glyphs?.length) {
+      glyphs = glyphs.map(g => styleContours(g.map(centre), o.style!, frame));
+      cs = glyphs.flat();
+    } else {
+      glyphs = undefined;
+      cs = styleContours(frame, o.style!);
+    }
     if (!cs.length) return { contours: [], width: 0, height: 0, loading: false };
   }
   const b = bboxOf(cs);
@@ -140,6 +150,19 @@ export function weld(contours: Contour[], o: WeldOptions): Shape | null {
   if (o.solid && shapes.length === 1) shapes = [makeShape(shapes[0].outer, [])];
   if (!shapes.length) return null;
   return shapes.reduce((a, b) => (b.area > a.area ? b : a));
+}
+
+/** No Weld preserves each shaped glyph, its counters and every detached dot. Backers are separate. */
+export function letterShapes(contours: Contour[], o: WeldOptions & { noWeld?: boolean }, glyphs?: Contour[][]): Shape[] {
+  if (o.noWeld) return (glyphs?.length ? glyphs : [contours]).flatMap((g) => unionShapes(g));
+  const joined = weld(contours, o);
+  return joined ? [joined] : [];
+}
+
+/** Score nominal letter contours, including counters, without kerf or weld growth; tag for 3D marks. */
+export function letterTraces(contours: Contour[], noWeld = false, glyphs?: Contour[][]): Contour[] {
+  const shapes = noWeld ? (glyphs?.length ? glyphs : [contours]).flatMap((g) => unionShapes(g)) : unionShapes(contours);
+  return tagItem(shapeContours(shapes).map((c) => [...c, c[0]]), "Letters");
 }
 
 function areaOf(c: Contour) {

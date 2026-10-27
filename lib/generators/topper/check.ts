@@ -32,7 +32,7 @@ export function checkTopper(p: TopperParams, out: TopperOutput): Issue<TopperPar
       fixes: [{ id: "smaller", label: `Text height ${Math.floor(p.text.size * k)} mm`, safe: true, apply: (q) => ({ ...q, text: { ...q.text, size: Math.floor(q.text.size * k) }, motif: { ...q.motif, size: Math.floor(q.motif.size * k) } }) }],
     });
   }
-  if ((p.style.kind === "letters" || p.style.kind === "layered") && p.style.weld < 0.5) {
+  if ((p.style.kind === "letters" || p.style.kind === "layered") && !p.style.noWeld && p.style.operation !== "score" && p.style.weld < 0.5) {
     issues.push({
       code: "THIN_WELD", level: "info",
       message: "Thin letters break where they join; a weld of 0.8 mm or more makes the joins stronger.",

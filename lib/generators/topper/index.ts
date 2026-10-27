@@ -50,8 +50,10 @@ const sections: SectionSpec<TopperParams>[] = [
         help: "Letters cuts the text itself; Outline cuts a silhouette with the text engraved; Layered glues mirror letters onto a backing; Plate engraves the text on a shape.",
         options: [{ v: "letters", text: "Letters" }, { v: "outline", text: "Outline" }, { v: "layered", text: "Layered", title: "Two materials" }, { v: "plate", text: "Plate" }],
       },
-      { kind: "number", key: "style.weld", label: "Weld", unit: "mm", min: 0.2, max: 4, step: 0.1, show: (p) => p.style.kind === "letters" || p.style.kind === "layered", help: "How much the letters grow so neighbours fuse into one piece; thicker welds are stronger." },
-      { kind: "number", key: "style.border", label: "Border", unit: "mm", min: 1, max: 20, step: 0.5, show: (p) => p.style.kind === "outline" || p.style.kind === "layered", help: "Width of the silhouette around the letters." },
+      { kind: "toggle", key: "style.noWeld", label: "No Weld", show: (p) => p.style.kind === "letters" || p.style.kind === "layered", help: "Keep the original glyphs, dots and counters separate. Remembers the Weld value when switched off." },
+      { kind: "choice", key: "style.operation", label: "Letters", show: (p) => p.style.kind === "letters" || p.style.kind === "layered", options: [{ v: "cut", text: "Cut" }, { v: "score", text: "Score" }], help: "Cut makes letter pieces. Score traces the original letters on a backing without cutting them out; a backing is added where needed." },
+      { kind: "number", key: "style.weld", label: "Weld", unit: "mm", min: 0.2, max: 4, step: 0.1, show: (p) => !p.style.noWeld && p.style.operation !== "score" && (p.style.kind === "letters" || p.style.kind === "layered"), help: "How much the letters grow so neighbours fuse into one piece; thicker welds are stronger." },
+      { kind: "number", key: "style.border", label: "Border", unit: "mm", min: 1, max: 20, step: 0.5, show: (p) => p.style.kind === "outline" || p.style.kind === "layered" || (p.style.kind === "letters" && (p.style.noWeld || p.style.operation === "score")), help: "Width of the silhouette around the letters." },
       {
         kind: "choice", key: "style.mark", shuffle: true, label: "Text on the face", show: (p) => p.style.kind === "outline" || p.style.kind === "plate",
         help: "Engrave fills the letters, Score traces their outlines (quick on a diode laser), None leaves a plain silhouette.",
@@ -115,7 +117,7 @@ const sections: SectionSpec<TopperParams>[] = [
     ],
   },
   {
-    id: "mat", title: "Second material", open: false, show: (p) => (main(p) && p.style.kind === "layered") || (picks(p) && p.cupcake.layered),
+    id: "mat", title: "Second material", open: false, show: (p) => (main(p) && p.style.operation !== "score" && (p.style.kind === "layered" || (p.style.kind === "letters" && p.style.noWeld))) || (picks(p) && p.cupcake.layered),
     help: "The material of the front layer in layered designs: mirror, glitter or coloured acrylic, or wood.",
     fields: material2Fields<TopperParams>("mat"),
   },

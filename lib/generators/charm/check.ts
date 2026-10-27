@@ -92,7 +92,7 @@ export function checkCharm(p: CharmParams, out: CharmOutput): Issue<CharmParams>
       fixes: [{ id: "wide", label: "Charm 30 % wider", safe: true, apply: (q) => ({ ...q, shape: { ...q.shape, width: Math.ceil(q.shape.width * 1.3) } }) }],
     });
   }
-  if ((p.style.kind === "letters" || p.style.kind === "layered") && p.style.weld < 0.5) {
+  if ((p.style.kind === "letters" || p.style.kind === "layered") && !p.style.noWeld && p.style.operation !== "score" && p.style.weld < 0.5) {
     issues.push({ code: "CHARM_THIN_WELD", level: "info", message: "Thin welds snap where the letters join; 0.8 mm or more holds a name together.", fixes: [{ id: "weld", label: "Weld 0.8 mm", safe: true, apply: (q) => ({ ...q, style: { ...q.style, weld: 0.8 } }) }] });
   }
   if (p.style.kind === "cutout" && p.textForm.stencil === 0) {

@@ -25,6 +25,8 @@ export interface LetterParams {
   size: number;
   letterSpacing: number;
   weld: "word" | "letters";
+  noWeld: boolean;
+  operation: "cut" | "score";
   mode: LetterMode;
 
   thicken: number;
@@ -134,6 +136,8 @@ export interface SolidPart {
   name: string;
   outer: Contour;
   holes: Contour[];
+  /** Score-only text, kept together on a preview stock rectangle; the rectangle is never cut. */
+  scoreOnly?: Contour[];
   bbox: BBox;
   /** Engraving position (inside the material) and text size. */
   label: { x: number; y: number; size: number };

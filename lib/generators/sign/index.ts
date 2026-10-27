@@ -14,7 +14,7 @@ import { byId, withPattern } from "../pattern";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const boarded = (p: SignParams) => p.style.kind !== "word" && p.style.kind !== "neon";
-const twoMaterials = (p: SignParams) => p.style.kind === "layered" || p.style.kind === "inlay" || (boarded(p) && p.border.kind === "raised");
+const twoMaterials = (p: SignParams) => ((p.style.kind === "layered" || (p.style.kind === "word" && p.style.noWeld && p.mount.kind === "stand")) && p.style.operation !== "score") || p.style.kind === "inlay" || (boarded(p) && p.border.kind === "raised");
 
 const sections: SectionSpec<SignParams>[] = [
   {
@@ -32,8 +32,10 @@ const sections: SectionSpec<SignParams>[] = [
         options: [{ v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }],
       },
       { kind: "toggle", key: "style.mirror", label: "Mirror for back engraving", show: (p) => p.style.kind === "engraved" || p.style.kind === "neon", help: "Mirrors the marks so clear acrylic can be engraved from the back and read from the front." },
-      { kind: "toggle", key: "style.join", label: "One piece", show: (p) => p.style.kind === "layered", help: "Bridges the letters into one piece that is easy to line up; turn it off to cut every letter on its own." },
-      { kind: "number", key: "style.weld", label: "Weld", unit: "mm", min: 0.2, max: 4, step: 0.1, show: (p) => p.style.kind === "word" || p.style.kind === "layered", help: "How much the letters grow so neighbours fuse into one piece." },
+      { kind: "toggle", key: "style.join", label: "One piece", show: (p) => p.style.kind === "layered" && !p.style.noWeld && p.style.operation !== "score", help: "Bridges the letters into one piece that is easy to line up; turn it off to cut every letter on its own." },
+      { kind: "toggle", key: "style.noWeld", label: "No Weld", show: (p) => p.style.kind === "word" || p.style.kind === "layered", help: "Keep the original glyphs, dots and counters separate. Remembers the Weld value when switched off." },
+      { kind: "choice", key: "style.operation", label: "Letters", show: (p) => p.style.kind === "word" || p.style.kind === "layered", options: [{ v: "cut", text: "Cut" }, { v: "score", text: "Score" }], help: "Cut makes letter pieces. Score traces the original letters on a backing without cutting them out; a backing is added where needed." },
+      { kind: "number", key: "style.weld", label: "Weld", unit: "mm", min: 0.2, max: 4, step: 0.1, show: (p) => !p.style.noWeld && p.style.operation !== "score" && (p.style.kind === "word" || p.style.kind === "layered"), help: "How much the letters grow so neighbours fuse into one piece." },
       { kind: "number", key: "style.border", label: "Backer margin", unit: "mm", min: 2, max: 40, step: 0.5, show: (p) => p.style.kind === "neon", help: "How far the acrylic reaches past the letters; it is cut as one solid piece around them." },
     ],
   },

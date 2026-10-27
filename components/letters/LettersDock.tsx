@@ -93,7 +93,7 @@ export function LettersDock({
   return (
     <aside className="dock" aria-label="Panels">
 
-      <Sec step="design" title="Text" meta={params.text.trim() ? `${[...params.text.trim()].length} chars` : undefined} startOpen onReset={() => onResetSection("Text", ["sizeMode", "size", "letterSpacing", "thicken", "weld", "direction"])}>
+      <Sec step="design" title="Text" meta={params.text.trim() ? `${[...params.text.trim()].length} chars` : undefined} startOpen onReset={() => onResetSection("Text", ["sizeMode", "size", "letterSpacing", "thicken", "weld", "noWeld", "direction"])}>
         <textarea
           className="textin"
           dir="auto"
@@ -112,10 +112,11 @@ export function LettersDock({
           { v: "totalHeight", text: "Total height", title: "Size is the full height of the text, ascenders and descenders included" },
         ]} />
         <div className="grid2">{fields("text")}</div>
-        <Choice label="Weld" value={params.weld} def={LETTER_DEFAULTS.weld} onPick={(v) => onPatch({ weld: v }, true)} options={[
+        <CheckField label="No Weld" checked={!!params.noWeld} def={false} onChange={(on) => onPatch({ noWeld: on }, true)} />
+        {!params.noWeld && <Choice label="Weld" value={params.weld} def={LETTER_DEFAULTS.weld} onPick={(v) => onPatch({ weld: v }, true)} options={[
           { v: "word", text: "Whole word", title: "Letters that touch become one piece" },
           { v: "letters", text: "Each letter", title: "One piece per letter, even where letters touch" },
-        ]} />
+        ]} />}
         <Choice label="Direction" value={params.direction} def={LETTER_DEFAULTS.direction} onPick={(v) => onPatch({ direction: v }, true)} options={[
           { v: "auto", text: "Auto" },
           { v: "ltr", text: "Left to right" },
@@ -192,9 +193,11 @@ export function LettersDock({
           <p className="note">Margin is the border of sheet around the text.</p>
         </Sec>
       ) : (
-        <Sec step="design" title="Mode" meta="Solid" startOpen onReset={() => onResetSection("Mode", ["weldDots", "stencilBridge"])}>
-          <p className="note">Solid cuts each letter shape out as a flat piece, with counters as inner cuts.</p>
-          <CheckField label="Weld dots" checked={params.weldDots} def={LETTER_DEFAULTS.weldDots} onChange={(on) => onPatch({ weldDots: on }, true)} />
+        <Sec step="design" title="Mode" meta="Solid" startOpen onReset={() => onResetSection("Mode", ["weldDots", "stencilBridge", "operation"])}>
+          <p className="note">Cut makes flat letter pieces. Score traces the letters on your stock; the preview stock border is not a cut.</p>
+          <CheckField label="No Weld" checked={!!params.noWeld} def={false} onChange={(on) => onPatch({ noWeld: on }, true)} />
+          <Choice label="Letters" value={params.operation ?? "cut"} def="cut" onPick={(v) => onPatch({ operation: v }, true)} options={[{ v: "cut", text: "Cut" }, { v: "score", text: "Score" }]} />
+          {!params.noWeld && params.operation !== "score" && <CheckField label="Weld dots" checked={params.weldDots} def={LETTER_DEFAULTS.weldDots} onChange={(on) => onPatch({ weldDots: on }, true)} />}
           <div className="grid2">{fields("solid")}</div>
           <p className="note">Weld dots joins every separate piece of a word, dots and accents included, with small bridges so each word cuts as one part.</p>
         </Sec>

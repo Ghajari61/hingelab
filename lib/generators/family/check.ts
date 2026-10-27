@@ -50,7 +50,7 @@ export function checkFamily(p: FamilyParams, out: FamilyOutput): Issue<FamilyPar
   if (kind === "snowflake" && familyNames(p).length > 12) {
     issues.push({ code: "FAMILY_ARMS", level: "info", message: "A snowflake has at most 12 arms: the names after the twelfth are left out.", fixes: [{ id: "ring", label: "Put them round a ring", safe: true, apply: (q) => ({ ...q, layout: { kind: "ring" } }) }] });
   }
-  if (kind === "tree" && p.tree.weld < 0.5) {
+  if (kind === "tree" && !p.tree.noWeld && p.tree.operation !== "score" && p.tree.weld < 0.5) {
     issues.push({ code: "FAMILY_WELD", level: "info", message: "Thin welds snap where the names join; 0.7 mm or more holds the tree together.", fixes: [{ id: "weld", label: "Weld 0.8 mm", safe: true, apply: (q) => ({ ...q, tree: { ...q.tree, weld: 0.8 } }) }] });
   }
   if (Number.isFinite(info.wall) && info.wall < 2 - 0.05) {

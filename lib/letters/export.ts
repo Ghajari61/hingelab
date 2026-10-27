@@ -15,6 +15,11 @@ export function letterLayerContent(lay: Layout<LetterPart>, p: LetterParams): La
   const L: LayerContent = { outline: [], slots: [], hinge: [], labels: [], fills: [] };
   const hp = hingeParamsOf(p);
   for (const { pt, ox, oy } of lay.items) {
+    if (pt.kind === "solid" && pt.scoreOnly) {
+      (L.score ??= []).push(...pt.scoreOnly.map(c => polyD(c, ox, oy)));
+      L.fills.push(polyD(pt.outer, ox, oy));
+      continue;
+    }
     if (pt.kind === "solid" || pt.kind === "plate") {
       const outer = polyD(pt.outer, ox, oy);
       const holes = pt.holes.map(h => polyD(h, ox, oy));
@@ -100,7 +105,8 @@ export function exportLetterSVG(lay: Layout<LetterPart>, p: LetterParams, fontNa
   const size = p.sizeMode === "capHeight" ? `cap height ${r3(p.size)} mm` : `total height ${r3(p.size)} mm`;
   const mode = p.mode === "box" ? `letter box (${p.wallStyle === "hinge" ? "living-hinge walls" : "flat-panel walls"}), depth ${r3(p.depth)} mm, ${p.lid} lid` : p.mode;
   const order = p.mode === "box" && p.wallStyle === "hinge" ? "inner cuts, hinge, outline" : "inner cuts, outline";
-  const comment = `HingeLab letters: "${text}", ${fontName}, ${mode}, ${size}. Material ${p.T} mm, kerf ${p.K} mm (compensated). Cut order: ${order}.`;
+  const scoreOnly = p.mode === "solid" && p.operation === "score";
+  const comment = `HingeLab letters: "${text}", ${fontName}, ${mode}, ${size}. Material ${p.T} mm. ${scoreOnly ? "Score only: nominal paths, no kerf compensation, no cut outline." : `Kerf ${p.K} mm (compensated). Cut order: ${order}.`}`;
   const layers = p.mode === "box" && p.wallStyle === "hinge" ? p.layers : { ...p.layers, hinge: { ...p.layers.hinge, exp: false } };
   return layeredSVG(lay.width, lay.height, comment, letterLayerContent(lay, p), layers, p.labels);
 }

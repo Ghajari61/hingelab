@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.22.1",
-    "pub_date": "2026-10-27T18:12:20.925Z",
-    "notes": "Includes all Pop-up insertion-clearance, direct-release SVG, numbering and assembly-order improvements from 1.22.0. Clarifies the cut-file note: intentionally released rings should be kept for assembly; bridges are only for designs intended to stay connected.",
+    "version": "1.23.0",
+    "pub_date": "2026-10-27T18:52:12.361Z",
+    "notes": "Adds No Weld and Cut/Score lettering across Letters, charms, signs, cake toppers and family designs. Preserves detached dots and styled text. Score paths keep nominal dimensions and appear correctly on the wood in 3D.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.22.1_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWml5TjR6TTl5S0RnYU9nd2xrQmZkR3I1QUtsRHlEYUlGRGNYOStaUW9NYllBMmFIWDkvVDBXa0xNZ1NJL0FlWVF3Q3Z2eEtXajFuc1YycVI5UDlQbHcwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTI0NzEyCWZpbGU6SGluZ2VMYWJfMS4yMi4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIyLjEKUTVnWUNpVit2UEdValhPWDFJNm9LOEV2dHgreEhQNzNPMzFQYU5uVnNPVDJPb3F6cHFJWlh3ZEdtR2t3a0pQejlWcVRha2F3cDdwZ1Z4NTlEVzVIQ1E9PQo=",
-        "size": 11721922,
-        "sha256": "be62e00f309bbd92269483f7a1e66e0d18c0e061d3066b70cf436bc271ab656b"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.23.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmxZTzJKY3Z0VmNyUWcwNjNzOHgwNE84Unhvdm91cWlzUURjdGNhMllnNjd2Q0xMejNnWXR0Mmo3RzdSWEk5UE5EWEtVczkrKzdYeDBVUDI4azNiamdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTI3MDg5CWZpbGU6SGluZ2VMYWJfMS4yMy4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIzLjAKblV1WWd3TkgvZEtrdnJOYzR3UmFacE9sUW4zVURLNEd0QklHVU54dzRjVWhJUnpuS3pOV3ZyanVoMkFRYTN2bjB4QUxkbUFGNHFFT0E2R094LzVGQXc9PQo=",
+        "size": 11729292,
+        "sha256": "218d6d78baa5358a434e84f15e4aadfdc878347a6f186ce106d562a6fce67ee6"
       }
     }
   }

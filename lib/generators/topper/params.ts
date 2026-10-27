@@ -29,7 +29,7 @@ export interface TopperParams extends GenBase {
   style: {
     kind: TopperStyle;
     /** Letters style: how much the letters grow so they fuse, mm. */
-    weld: number;
+    weld: number; noWeld: boolean; operation: "cut" | "score";
     /** Outline, layered and plate styles: the border around the letters, mm. */
     border: number;
     /** How the text shows on a silhouette or plate. */
@@ -73,7 +73,7 @@ export const TOPPER_DEFAULTS: TopperParams = {
   layers: clone(HINGE.layers),
   kit: { kind: "topper" },
   text: { text: "Happy\nBirthday", fontId: "pacifico", size: 34, spacing: -0.5, lead: 1.25 },
-  style: { kind: "letters", weld: 1, border: 4, mark: "engrave" },
+  style: { kind: "letters", weld: 1, noWeld: false, operation: "cut", border: 4, mark: "engrave" },
   textStyle: { ...TEXT_STYLE },
   textForm: { ...TEXT_FORM },
   motif: { kind: "none", place: "above", size: 40, gap: 0, art: { ...MOTIF_ART } },
@@ -107,5 +107,7 @@ export function mergeTopper(raw: unknown): TopperParams {
   if (!(p.mat.mat2 in SECOND_MATERIALS)) p.mat.mat2 = d.mat.mat2;
   p.sticks.count = clamp(Math.round(p.sticks.count), 0, 3);
   p.cupcake.count = clamp(Math.round(p.cupcake.count), 1, 60);
+  p.style.noWeld = p.style.noWeld === true;
+  p.style.operation = p.style.operation === "score" ? "score" : "cut";
   return p;
 }

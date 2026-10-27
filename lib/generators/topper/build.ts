@@ -8,7 +8,7 @@ import { motif, motifSize, type MotifRef } from "../motifs";
 import { motifRef } from "../motifRef";
 import { orient, shapeOutline, type ShapeKind } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
-import { textBlock, weld, withSticks, type StickSpec } from "../weld";
+import { textBlock, weld, letterShapes, letterTraces, withSticks, type StickSpec } from "../weld";
 import type { TopperParams } from "./params";
 
 export interface TopperInfo {
@@ -86,7 +86,7 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
   let right = 0;
 
   if (p.kit.kind !== "cupcake") {
-    const t = textBlock(ctx, p.text.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, lead: p.text.lead, missing, style: { ...p.textStyle, ...p.textForm } });
+    const t = textBlock(ctx, p.text.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, lead: p.text.lead, missing, noWeld: p.style.noWeld, style: { ...p.textStyle, ...p.textForm } });
     const mr = motifRef(p.motif.kind, p.motif.art, ctx, missing);
     if (t.loading || mr.loading) loading = true;
     else {
@@ -99,12 +99,18 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
       const stick = { length: p.sticks.length, width: p.sticks.width, tip: p.sticks.tip };
       const cx = (cb.x0 + cb.x1) / 2;
       let back: Shape | null = null;
-      let front: Shape | null = null;
+      let fronts: Shape[] = [];
+      const glyphs = [...(t.glyphs ?? [t.contours]), ...(mot.length ? [mot] : [])];
+      const letterOptions = { noWeld: p.style.noWeld, border: Math.max(0.2, p.style.weld), minHole: 2, bridge: Math.max(2.5, p.style.weld * 2.5) };
       let faceMarks: Pick<GenPart, "engrave" | "score"> = {};
       const blocks = [{ item: "Text", cs: t.contours }, { item: "Motif", cs: mot }];
       switch (p.style.kind) {
         case "letters":
-          back = weld(all, { border: Math.max(0.2, p.style.weld), minHole: 2, bridge: Math.max(2.5, p.style.weld * 2.5) });
+          if (p.style.noWeld || p.style.operation === "score") {
+            back = weld(all, { border: Math.max(1.5, p.style.border), solid: true });
+            if (p.style.operation === "score") faceMarks = { score: letterTraces(all, p.style.noWeld, glyphs) };
+            else fronts = letterShapes(all, letterOptions, glyphs);
+          } else back = weld(all, letterOptions);
           break;
         case "outline":
           back = weld(all, { border: Math.max(1, p.style.border), solid: true });
@@ -112,7 +118,8 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
           break;
         case "layered":
           back = weld(all, { border: Math.max(1.5, p.style.border), solid: true });
-          front = weld(all, { border: Math.max(0.2, p.style.weld), minHole: 2, bridge: Math.max(2.5, p.style.weld * 2.5) });
+          if (p.style.operation === "score") faceMarks = { score: letterTraces(all, p.style.noWeld, glyphs) };
+          else fronts = letterShapes(all, letterOptions, glyphs);
           break;
         case "plate": {
           const pw = p.plate.auto ? info.contentW + 2 * p.plate.pad : p.plate.width;
@@ -136,7 +143,7 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
         info.height = b.y1 - b.y0;
         right = b.x1;
         parts.push(partFrom(back, { id: "topper", name: p.style.kind === "layered" ? "Back layer" : "Topper", ...faceMarks, place: { x: 0, y: 0, z: 0 } }));
-        if (front) parts.push(second(partFrom(front, { id: "front", name: "Front letters", place: { x: 0, y: 0, z: p.T } })));
+        fronts.forEach((front, i) => parts.push(second(partFrom(front, { id: `front${i ? `-${i + 1}` : ""}`, name: `Front letters${fronts.length > 1 ? ` ${i + 1}` : ""}`, place: { x: 0, y: 0, z: p.T } }))));
       }
     }
   }
@@ -194,6 +201,7 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
     ...(mixed ? [{ label: "Second material", value: `${m2.name} ${p.mat.T2} mm` }] : []),
   ];
   const assembly = [
+    ...(p.style.kind === "letters" && (p.style.noWeld || p.style.operation === "score") ? ["A silhouette backer carries the sticks; loose letters are glued to it, or their outlines are scored directly on it."] : []),
     ...(mixed ? [`Cut the ${MATERIALS[p.material]?.name ?? "main"} sheets, then the ${m2.name} sheets.`, "Glue each front layer onto its back with a thin line of clear epoxy or acrylic cement; press flat for an hour."] : []),
     ...(p.style.mark === "engrave" && p.style.kind !== "letters" ? ["Engrave first, then cut without moving the sheet."] : []),
     "Peel any masking, wipe the topper and slide the sticks straight down into the cake.",

@@ -15,7 +15,7 @@ export type SignMount = "none" | "holes" | "keyhole" | "hanging" | "standoff" | 
 export type MotifSide = "left" | "right" | "both" | "above" | "below" | "behind";
 
 export interface SignParams extends GenBase {
-  style: { kind: SignStyle; mark: SignMark; weld: number; border: number; mirror: boolean; join: boolean };
+  style: { kind: SignStyle; mark: SignMark; weld: number; noWeld: boolean; operation: "cut" | "score"; border: number; mirror: boolean; join: boolean };
   board: { shape: ShapeKind; auto: boolean; pad: number; width: number; height: number; corner: number };
   text: { text: string; fontId: string; size: number; spacing: number; lead: number; align: "left" | "center" | "right"; offset: number };
   textStyle: TextStyle;
@@ -38,7 +38,7 @@ export const SIGN_DEFAULTS: SignParams = {
   sheet: { ...SHEET_DEFAULTS },
   job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
-  style: { kind: "engraved", mark: "engrave", weld: 1, border: 5, mirror: false, join: true },
+  style: { kind: "engraved", mark: "engrave", weld: 1, noWeld: false, operation: "cut", border: 5, mirror: false, join: true },
   board: { shape: "arch", auto: true, pad: 18, width: 300, height: 200, corner: 6 },
   text: { text: "Welcome", fontId: "pacifico", size: 40, spacing: 0, lead: 1.3, align: "center", offset: 0 },
   textStyle: { ...TEXT_STYLE },
@@ -71,5 +71,7 @@ export function mergeSign(raw: unknown): SignParams {
   if (!BORDERS.includes(p.border.kind)) p.border.kind = d.border.kind;
   if (!MOUNTS.includes(p.mount.kind)) p.mount.kind = d.mount.kind;
   if (!(p.mat.mat2 in SECOND_MATERIALS)) p.mat.mat2 = d.mat.mat2;
+  p.style.noWeld = p.style.noWeld === true;
+  p.style.operation = p.style.operation === "score" ? "score" : "cut";
   return p;
 }

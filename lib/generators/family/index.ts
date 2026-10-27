@@ -69,7 +69,9 @@ const sections: SectionSpec<FamilyParams>[] = [
     fields: [
       { kind: "number", key: "tree.width", label: "Width", unit: "mm", min: 40, max: 400, step: 1, help: "Width of the widest line at the bottom." },
       { kind: "number", key: "tree.maxLine", label: "Tallest line", unit: "mm", min: 5, max: 80, step: 0.5, help: "Height of the tallest line; short names never grow past it." },
-      { kind: "number", key: "tree.weld", label: "Weld", unit: "mm", min: 0.2, max: 4, step: 0.1, help: "How much the letters grow so the lines fuse into one piece." },
+      { kind: "toggle", key: "tree.noWeld", label: "No Weld", help: "Keep the original glyphs, dots and counters separate. Remembers the Weld value when switched off." },
+      { kind: "choice", key: "tree.operation", label: "Letters", options: [{ v: "cut", text: "Cut" }, { v: "score", text: "Score" }], help: "Cut makes letter pieces. Score traces the original letters on a backing without cutting them out; a backing is added where needed." },
+      { kind: "number", key: "tree.weld", label: "Weld", unit: "mm", min: 0.2, max: 4, step: 0.1, show: (p) => !p.tree.noWeld && p.tree.operation !== "score", help: "How much the letters grow so the lines fuse into one piece." },
       { kind: "choice", key: "tree.star", shuffle: true, label: "Topper", rail: true, options: MOTIF_OPTIONS.filter((o) => !o.input), help: "The motif on top of the tree: a star, a snowflake, an angel's crown or none." },
       { kind: "toggle", key: "tree.trunk", label: "Trunk", help: "A trunk under the tree." },
       { kind: "text", key: "tree.year", label: "Trunk words", maxLength: 12, show: (p) => p.tree.trunk, placeholder: "A year", help: "Words cut through the trunk, such as the year." },
@@ -81,7 +83,9 @@ const sections: SectionSpec<FamilyParams>[] = [
     fields: [
       { kind: "number", key: "snowflake.diameter", label: "Diameter", unit: "mm", min: 50, max: 400, step: 1, help: "Size of the snowflake across." },
       { kind: "text", key: "snowflake.centre", label: "Centre words", maxLength: 8, placeholder: "A year", help: "Words cut through the middle disc, such as the year." },
-      { kind: "number", key: "snowflake.weld", label: "Weld", unit: "mm", min: 0.2, max: 4, step: 0.1, help: "How much the letters grow so the arms fuse into one piece." },
+      { kind: "toggle", key: "snowflake.noWeld", label: "No Weld", help: "Keep the original glyphs, dots and counters separate. Remembers the Weld value when switched off." },
+      { kind: "choice", key: "snowflake.operation", label: "Letters", options: [{ v: "cut", text: "Cut" }, { v: "score", text: "Score" }], help: "Cut makes letter pieces. Score traces the original letters on a backing without cutting them out; a backing is added where needed." },
+      { kind: "number", key: "snowflake.weld", label: "Weld", unit: "mm", min: 0.2, max: 4, step: 0.1, show: (p) => !p.snowflake.noWeld && p.snowflake.operation !== "score", help: "How much the letters grow so the arms fuse into one piece." },
     ],
   },
   {

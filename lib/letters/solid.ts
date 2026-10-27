@@ -235,11 +235,11 @@ export function labelPoint(s: Shape): Point {
 }
 
 /** Kerf-compensated solid parts: outers grow by K/2, holes shrink by K/2. */
-export function solidParts(shapes: Shape[], names: string[], K: number): SolidPart[] {
+export function solidParts(shapes: Shape[], names: string[], K: number, minArea = MIN_PIECE_AREA): SolidPart[] {
   const parts: SolidPart[] = [];
   const used = new Map<string, number>();
   shapes.forEach((s, i) => {
-    for (const o of dropSpecks(offsetShapes([s], halfKerf({ K })), MIN_PIECE_AREA)) {
+    for (const o of dropSpecks(offsetShapes([s], halfKerf({ K })), minArea)) {
       const base = names[i] || "Part";
       const k = (used.get(base) ?? 0) + 1;
       used.set(base, k);

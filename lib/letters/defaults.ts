@@ -13,6 +13,8 @@ export const LETTER_DEFAULTS: LetterParams = {
   size: 150,
   letterSpacing: 0,
   weld: "word",
+  noWeld: false,
+  operation: "cut",
   mode: "solid",
 
   thicken: 0,
@@ -81,6 +83,8 @@ export function mergeLetterParams(partial?: Partial<LetterParams> | null): Lette
     layers: Object.assign(clone(LETTER_DEFAULTS.layers), partial.layers || {}),
     marquee: Object.assign(clone(LETTER_DEFAULTS.marquee), partial.marquee || {}),
   });
+  out.noWeld = out.noWeld === true;
+  out.operation = out.operation === "score" ? "score" : "cut";
   if (out.corners !== "round") out.corners = "joint";
   const cut = cleanCutout(partial.cutout);
   if (cut) out.cutout = cut; else delete out.cutout;

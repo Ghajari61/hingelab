@@ -1,3 +1,10 @@
+## 1.23.0 — No Weld and letter Cut / Score
+
+- Added **No Weld** beside the Weld controls in Letters, Name Charms, Signs, Cake Toppers and Family Names trees/snowflakes. The previous weld setting is retained; separate glyphs, dots and counters are preserved, including styled and curved text.
+- Added **Cut / Score** for letter-based designs. Cut produces letter pieces; Score traces nominal letter contours on the backing without cutting a second letter layer. Toppers retain a structural backer for their stakes. Card-holder names are scored on retained wood clear of the window.
+- Solid Letters can now export score-only SVG: text placement and counters stay intact, no kerf is applied, and the preview stock rectangle is never exported as a cutting path. Score marks remain visible under viewport material changes.
+- Saved projects without the new settings keep their previous Cut and Weld behavior. Shared web controls and Windows settings use the same options.
+
 ## 1.22.1 — Clearer separate-part assembly note
 
 - The shared cut-file check now explains that pieces intentionally cut free, such as Pop-up rings, should be kept for assembly. It recommends adding bridges only when a connected design is intended. Manufacturing geometry and all 1.22.0 joint corrections are unchanged.
