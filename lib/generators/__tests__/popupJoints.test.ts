@@ -10,7 +10,7 @@ it('every ring has real tabs entering matching blank slots at the same height',(
   }
  }expect(tabs,'ring must positively locate on its support').toBeGreaterThan(0);}
 });
-it('a spiral cannot claim a precision ring-seat assembly',()=>{expect(POPUP.build(mergePopup({pattern:{kind:'spiral'}}),{}).error).toMatch(/spiral|ring/i);});
+it('a spiral cannot claim a precision ring-seat assembly',()=>{const p=mergePopup({pattern:{kind:'spiral'}});p.support.kind='ribs';expect(POPUP.build(p,{}).error).toMatch(/spiral|ring/i);});
 import{POPUP_PRESETS}from'../popup/presets';import{CTX}from'./ctx';
 function row(c:number[][],y:number){const xs:number[]=[];for(let i=0;i<c.length;i++){const a=c[i],b=c[(i+1)%c.length];if((a[1]<=y&&b[1]>y)||(b[1]<=y&&a[1]>y))xs.push(a[0]+(y-a[1])*(b[0]-a[0])/(b[1]-a[1]));}return xs.sort((a,b)=>a-b);}
 for(const preset of POPUP_PRESETS)it(`${preset.id}: tabs and support solids do not collide with assembled rings`,()=>{

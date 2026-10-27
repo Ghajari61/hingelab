@@ -3,6 +3,7 @@
  * stood on edge, engraving as a thin dark skin. Explode lifts each layer away from the one below.
  */
 import * as THREE from "three";
+import { applyRadialSurface } from '@/lib/three/radialSurface';
 import { unionShapes } from "@/lib/letters/polygon";
 import { finishScene, slab, slabs, type Scene3D } from "@/lib/three/flat";
 import { ITEM_SEP, itemOf, itemSkinName } from "./items";
@@ -35,7 +36,7 @@ function itemMesh(mesh: THREE.Mesh, look: THREE.MeshStandardMaterial): THREE.Mes
 }
 
 type View = NonNullable<GenPart["views3d"]>[number];
-type Shown = GenPart & { frames?: View["frames"]; apart?: View["apart"]; creases?: View["creases"] };
+type Shown = GenPart & { frames?: View["frames"]; apart?: View["apart"]; creases?: View["creases"]; radialSurface?: View['radialSurface'] };
 
 const CORD = new THREE.MeshStandardMaterial({ color: "#d9cbb4", roughness: 0.95 });
 const METAL = new THREE.MeshStandardMaterial({ color: "#9aa0a6", roughness: 0.35, metalness: 0.8 });
@@ -185,7 +186,7 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
   const loads: Promise<void>[] = [];
   // A part that bends is drawn as its flat pieces, each where it sits.
   const parts: Shown[] = out.parts.flatMap((p) => p.views3d?.length
-    ? p.views3d.map((v, i) => ({ ...p, name: v.name ?? p.name, id: `${p.id}-${i}`, outer: v.outer, holes: v.holes, cuts: undefined, score: undefined, engrave: v.engrave, images: undefined, pieces: undefined, place: v.place, views3d: undefined, frames: v.frames, apart: v.apart, creases: v.creases }))
+    ? p.views3d.map((v, i) => ({ ...p, name: v.name ?? p.name, id: `${p.id}-${i}`, outer: v.outer, holes: v.holes, cuts: undefined, score: undefined, engrave: v.engrave, images: undefined, pieces: undefined, place: v.place, views3d: undefined, frames: v.frames, apart: v.apart, creases: v.creases, radialSurface: v.radialSurface }))
     : [p]);
   // Folding faces: placed from their frames, so the fold and explode move them in place.
   const folding: { wrap: THREE.Object3D; frames: number[][]; apart: [number, number, number] }[] = [];
@@ -290,6 +291,7 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
     }
     if (p.creases?.length) spin.add(creaseLines(p.creases, t, `${p.name} creases`));
     spin.add(surface);
+    if(p.radialSurface)applyRadialSurface(spin,p.radialSurface);
     stand.add(spin);
     wrap.add(stand);
     inner.add(wrap);
