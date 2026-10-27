@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.20.0",
-    "pub_date": "2026-10-27T15:59:17.805Z",
-    "notes": "Wood Packaging replaces Paper Box with 70 editable wooden packaging presets, matching lids, joints and cut files. Pop-up ribs now use continuous solid frames with lightened windows in taller supports. Includes all changes from the latest merged website source.",
+    "version": "1.21.0",
+    "pub_date": "2026-10-27T16:34:33.599Z",
+    "notes": "Boxes and Wood Packaging are one product with 123 editable presets. Photo to Product has been removed. Existing box projects retain their settings.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.20.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmdyWmRBTmR5VnZQd3M4SEZHMTJVTkZaZnIvZ0JOcGpPZkMxb1BhSi9teWx5L1l3UGFQcnR3NWdVSW5wRmw3dkpUeG9QSkk2T1M5eFIvVlpzYjhFa2dFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTE2NzI5CWZpbGU6SGluZ2VMYWJfMS4yMC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIwLjAKdE5GUURKck5MTmxMR1F1Q2twV0E2Rm51Mjg3WnRHNXQ0VDlaYnJuZE9XdVgyZlVxejhtWFhCaENocm5vVmowY0dVenl5NjlxeVJxVTVtMXhiK0NrQVE9PQo=",
-        "size": 11969414,
-        "sha256": "7ef59376592427a87f7be6fb022e2e6d35d2eec14ca37fb304e19b47ef88a211"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.21.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmt0K3hEenlTTVlVUm1MQmlZZzZhM2hNRDlYR29jVzRhMzY5a1pOR3dEbFVyUVNhWTNzZ085WU9iaUZMeVFJUzVqOHJpZkh6ZFczckZzUEdpcHZkMXdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTE4ODU0CWZpbGU6SGluZ2VMYWJfMS4yMS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIxLjAKK0NIOEI4NXhTUGdRc25qUjVmRFBOeDdlZnM0YTI3Y3dOUzJnOFhWbGhTd1BZWHRjcFRkRnZQaXp3SGM4M29hMnlKdGxVS1JEc2J0TWNhMFNacjFaRHc9PQo=",
+        "size": 11854260,
+        "sha256": "5165ee5dde89b5f8c387289ec61876a28b3b69e553e94c52367456625f691683"
       }
     }
   }
