@@ -430,9 +430,13 @@ function thinPartList(parts: CutPart[], w: number): { name: string; id: string }
 
 /** Parts in sheet coordinates for the "lay flat" 3D view. */
 export function flatOf(lay: Layout<CutPart>) {
-  return lay.items.map(({ pt, ox, oy }) => ({
-    name: pt.name,
-    outer: (pt.outline[0] ?? []).map(([x, y]) => [x + ox, y + oy] as [number, number]),
-    holes: [...pt.outline.slice(1), ...pt.inner].map((c) => c.map(([x, y]) => [x + ox, y + oy] as [number, number])),
-  }));
+  return lay.items.flatMap(({ pt, ox, oy }) => {
+    // A cutting blank can release many solids (Pop-up rings, islands inside holes). Kerf
+    // compensation also returns multiple outer contours. Extruding the first outer with
+    // everything else as holes feeds nested/overlapping holes to the triangulator, producing
+    // phantom faces and very slow triangulation. Recover each solid with only its own holes.
+    const regions = unionShapes([...pt.outline, ...pt.inner], [], true);
+    const move = (c: Contour) => c.map(([x, y]) => [x + ox, y + oy] as [number, number]);
+    return regions.map(s => ({ name: pt.name, outer: move(s.outer), holes: s.holes.map(move) }));
+  });
 }

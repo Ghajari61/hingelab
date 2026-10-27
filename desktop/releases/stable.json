@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.23.0",
-    "pub_date": "2026-10-27T18:52:12.361Z",
-    "notes": "Adds No Weld and Cut/Score lettering across Letters, charms, signs, cake toppers and family designs. Preserves detached dots and styled text. Score paths keep nominal dimensions and appear correctly on the wood in 3D.",
+    "version": "1.23.1",
+    "pub_date": "2026-10-27T19:15:19.161Z",
+    "notes": "Fixes overlapping surfaces and diagonal lines in Lay Flat for Pop-up rings and nested cut regions. Speeds up 3D preview generation while preserving SVG toolpaths and assembly dimensions.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.23.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmxZTzJKY3Z0VmNyUWcwNjNzOHgwNE84Unhvdm91cWlzUURjdGNhMllnNjd2Q0xMejNnWXR0Mmo3RzdSWEk5UE5EWEtVczkrKzdYeDBVUDI4azNiamdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTI3MDg5CWZpbGU6SGluZ2VMYWJfMS4yMy4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIzLjAKblV1WWd3TkgvZEtrdnJOYzR3UmFacE9sUW4zVURLNEd0QklHVU54dzRjVWhJUnpuS3pOV3ZyanVoMkFRYTN2bjB4QUxkbUFGNHFFT0E2R094LzVGQXc9PQo=",
-        "size": 11729292,
-        "sha256": "218d6d78baa5358a434e84f15e4aadfdc878347a6f186ce106d562a6fce67ee6"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.23.1_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmhMYjhxc1dJamx5QzEzejg0NFIwNVh4Ny9ubFh2eGk3Z05JWVllTG9XRnZXczkwUmdrVUNKNGpuSjBiU3NMS0Zud29ZOElYT2RuR3BLOXlxbHM0Y2dnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTI4NDc2CWZpbGU6SGluZ2VMYWJfMS4yMy4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIzLjEKY3dXSG93SnA2QUlwWmJ5Qk9BeHlQS2dUbHZuY0dGOHROWENaaDdTcDM1QWg3ci8wVG1ldklISVc1c2Z0VzZEZDJVTVphcTNqUHdYTWRodWMzMmtxQVE9PQo=",
+        "size": 11725576,
+        "sha256": "efd154f177c704546ac2455d5298ee708cada34c19e4f0487bcda666e63527bd"
       }
     }
   }
