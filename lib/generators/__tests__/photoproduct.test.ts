@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import {PHOTO_PRESETS} from "../photoproduct/presets";
 import { PHOTO_PRODUCT } from "../photoproduct";
 import { CTX } from "./ctx";
 import { arrangeGenerator, genSVG } from "../output";
@@ -6,7 +7,7 @@ import { pointInContour, bboxOf } from "../geom";
 
 describe("Photo to Product manufacturing geometry", () => {
   it("builds every example as finite, connected physical parts with millimetre SVGs", () => {
-    for (const preset of PHOTO_PRODUCT.presets) {
+    for (const preset of PHOTO_PRESETS) {
       const p=PHOTO_PRODUCT.merge(preset.params),out=PHOTO_PRODUCT.build(p,CTX);
       expect(out.error,preset.id).toBeUndefined();expect(out.parts.length).toBeGreaterThan(0);
       for(const part of out.parts){

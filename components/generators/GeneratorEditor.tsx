@@ -581,14 +581,14 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const notice = !error && out?.notice ? out.notice : !error && !lay ? "Loading…" : null;
   const phoneSVG = useMemo(() => (phoneFlow.phone && lay && out && !out.notice ? genSVG(def, built, lay, "", arranged.sheets) : null), [phoneFlow.phone, def, built, lay, out, arranged.sheets]);
 
-  if (phoneFlow.phone) {
+  if (phoneFlow.phone && def.id !== "photoproduct") {
     return (
       <HelpContext.Provider value={help.ctx}>
         <PhoneFlow
           name={def.name} summary={def.summary(out ? built : params)} presets={def.presets} thumb={(pr) => `/presets/${def.id}/${pr.id}.svg`}
           current={lastPreset} onPreset={applyPreset}
           fields={<>
-            {def.id === "photoproduct" && <PhotoProductPanel params={params as unknown as PhotoProductParams} onApply={p => replace(p as unknown as P, true)} onGenerated={() => setViewMode("3d")} onPackage={exportPhotoPackage} disabled={shared.viewing} />}
+
             {def.id === 'popup' && <PopupTools params={params as unknown as PopupParams} onApply={p => replace(p as unknown as P, true)} />}
           <GeneratorDock
               simple def={def} params={params} defaults={defaults} out={out} units={units} layerKeys={layerKeys} onSet={setField}
@@ -622,7 +622,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       <div className="main">
         <GalleryRail title={PRODUCT_INFO[def.id].name} icon={PRODUCT_INFO[def.id].icon} groups={groups} history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }} inert={shared.viewing}>
           {def.id === "photoproduct" && <PhotoProductPanel params={params as unknown as PhotoProductParams} onApply={p => replace(p as unknown as P, true)} onGenerated={() => setViewMode("3d")} onPackage={exportPhotoPackage} disabled={shared.viewing} />}
-          <PresetLibrary product={def.id} presets={def.presets} onApply={applyPreset} getCategory={pr => categoryField?.kind === "choice" ? categoryField.options.find(o => o.v === String(getPath(def.merge(pr.params), categoryField.key)))?.text ?? def.name : def.name} />
+          {def.id !== "photoproduct" && <PresetLibrary product={def.id} presets={def.presets} onApply={applyPreset} getCategory={pr => categoryField?.kind === "choice" ? categoryField.options.find(o => o.v === String(getPath(def.merge(pr.params), categoryField.key)))?.text ?? def.name : def.name} />}
           {canShuffle && (
             <button type="button" className="btn-auto gen-shuffle" onClick={randomiseDesign} title="A new random design. Lock a setting (its lock icon) to keep it. Ctrl+Z undoes it.">
               <Dices size={15} aria-hidden /> Randomise design{prefs.locks.length ? ` · ${prefs.locks.length} locked` : ""}

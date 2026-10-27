@@ -1,15 +1,16 @@
 import { z } from "zod";
+import {GeneratedModelSchema} from "./generated";
 export const MAX_PHOTOS=5;
 export const MAX_PHOTO_CHARS=420_000;
 export const MAX_PHOTO_BODY=MAX_PHOTOS*MAX_PHOTO_CHARS+24_000;
 export const MAX_SOURCE_BYTES=12*1024*1024;
 export const PhotoSchema=z.object({id:z.string().regex(/^[\w-]{1,64}$/),name:z.string().min(1).max(120),data:z.string().max(MAX_PHOTO_CHARS),width:z.number().int().min(32).max(1600),height:z.number().int().min(32).max(1600),digest:z.string().regex(/^[a-f0-9]{64}$/)}).strict();
 export type ProductPhoto=z.infer<typeof PhotoSchema>;
-export const MeasurementsSchema=z.object({width:z.number().min(0).max(350).refine(v=>v===0||v>=25),depth:z.number().min(0).max(350).refine(v=>v===0||v>=25),height:z.number().min(0).max(100).refine(v=>v===0||v>=8),thickness:z.number().min(0).max(6).refine(v=>v===0||v>=1.5)}).strict();
+export const MeasurementsSchema=z.object({width:z.number().min(0).max(3000).refine(v=>v===0||v>=10),depth:z.number().min(0).max(3000).refine(v=>v===0||v>=10),height:z.number().min(0).max(3000).refine(v=>v===0||v>=1),thickness:z.number().min(0).max(30).refine(v=>v===0||v>=.5)}).strict();
 export const RequestSchema=z.object({photos:z.array(PhotoSchema).min(1).max(MAX_PHOTOS),note:z.string().max(800),measurements:MeasurementsSchema}).strict();
 export type PhotoAnalysisRequest=z.infer<typeof RequestSchema>;
 const explanation=z.string().max(240);
-export const AnalysisSchema=z.object({
+const LegacyAnalysisSchema=z.object({
   family:z.enum(["paw","heartbox","tag","unsupported"]),title:z.string().min(1).max(80),summary:z.string().max(600),
   width:z.number().min(25).max(350),depth:z.number().min(25).max(350),height:z.number().min(8).max(100),thickness:z.number().min(1.5).max(6),
   name:z.string().max(80),subtitle:z.string().max(80),font:z.enum(["pacifico","archivo-black","vazirmatn","lalezar"]),
@@ -21,6 +22,14 @@ export const AnalysisSchema=z.object({
   views:z.array(z.object({photoId:z.string().max(64),view:z.enum(["front","side","back","top","detail","unknown"]),quality:z.enum(["useful","blurry","duplicate","unrelated"]),evidence:explanation}).strict()).min(1).max(5),
   confidence:z.enum(["low","medium","high"]),
 }).strict();
+export const GeneratedAnalysisSchema=z.object({
+ family:z.enum(["custom","unreconstructable"]),title:z.string().min(1).max(80),summary:z.string().max(600),
+ width:z.number().min(10).max(3000),depth:z.number().min(10).max(3000),height:z.number().min(1).max(3000),thickness:z.number().min(.5).max(30),
+ observations:z.array(explanation).max(12),assumptions:z.array(explanation).min(1).max(12),uncertainties:z.array(explanation).max(12),
+ views:z.array(z.object({photoId:z.string().max(64),view:z.enum(["front","side","back","top","detail","unknown"]),quality:z.enum(["useful","blurry","duplicate","unrelated"]),evidence:explanation}).strict()).min(1).max(5),
+ confidence:z.enum(["low","medium","high"]),model:GeneratedModelSchema.nullable(),
+}).strict();
+export const AnalysisSchema=z.union([GeneratedAnalysisSchema,LegacyAnalysisSchema]);
 export type ProductAnalysis=z.infer<typeof AnalysisSchema>;
 
 /** Inspect raster headers before handing any bytes to an image decoder or model. */
