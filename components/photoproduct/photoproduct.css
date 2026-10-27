@@ -50,3 +50,10 @@
 @keyframes photo-product-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion:reduce) { .photo-product-spin { animation: none; } }
 @media (max-width:640px) { .photo-product-photo-actions button { width: 32px; height: 34px; } }
+
+.photo-product-origins { margin: 10px 0 0; display: grid; gap: 9px; font-size: 10px; }
+.photo-product-origins>div { display: flex; justify-content: space-between; gap: 8px; }
+.photo-product-origins dt { text-transform: capitalize; color: var(--fg-dim); }
+.photo-product-origins dd { margin: 0; text-align: right; }
+.photo-product-origins dd span { display: inline-block; margin-left: 4px; padding: 2px 4px; border-radius: 4px; background: var(--surface-field); color: var(--fg-dim); }
+.photo-product-origins small { display: block; margin-top: 4px; max-width: 130px; line-height: 1.4; color: var(--fg-dim); }

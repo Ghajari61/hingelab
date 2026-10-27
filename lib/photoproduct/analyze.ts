@@ -19,6 +19,7 @@ The generated engine is a parametric approximation, not photogrammetry or an exa
 Known measured dimensions supplied by the user are authoritative. Otherwise all dimensions and thickness are estimates: list that explicitly in assumptions. Width/depth mean nominal body footprint (including wings for paw), height means box wall-strip height excluding floor/rim/lid.
 Read the actual visible name; do not invent a person's name when text is absent or unreadable: return an empty name and explain uncertainty.
 Identify views and useful evidence for EVERY photo id, including duplicates, blurry or unrelated views. If no useful photos of a supported product remain, set unsupported. Record contradictions and hidden surfaces/joints in uncertainties. More photos do not prove absolute scale.
+Estimate editable construction parameters from the photos: frame width, hanging-hole diameter, motif radius, backing thickness, letter height, box rim width, honeycomb radius/web and lid side clearance. These are unmeasured estimates, not a claim of exact geometry. For unused fields use conservative defaults: frameWidth 4, holeDiameter 5, detailRadius 6, backThickness 2, letterHeight 16, rimWidth 10, hexRadius 8, hexWeb 3, lidClearance 0.4. All remain editable.
 Keep the result concise. List observed facts separately from assumptions. confidence describes recognition evidence only, not dimensional accuracy or physical validation. Do not add decorative features not supported by the photos. height for a flat product may use 30 as an unused default. shape may be rounded as an unused default for paw/heartbox. Booleans irrelevant to a family must be false.`;
 export async function analyzeProductPhotos(req:PhotoAnalysisRequest,userId:string,options:{model?:LanguageModel;signal?:AbortSignal}={}):Promise<{analysis:ProductAnalysis;provider:string}>{
  // Revalidate even when this function is called outside an HTTP route.
@@ -31,7 +32,7 @@ export async function analyzeProductPhotos(req:PhotoAnalysisRequest,userId:strin
  if(!routes.length)throw new PhotoAnalysisError("Photo analysis is not configured on this server. Your photos and existing model have been kept.",503);
  for(let i=0;i<routes.length;i++){
   try{
-   const {output}=await generateText({...routes[i],system:PHOTO_SYSTEM,messages:[{role:"user",content}],output:Output.object({schema:AnalysisSchema}),maxOutputTokens:3500,maxRetries:0,abortSignal:signal});
+   const {output}=await generateText({...routes[i],system:PHOTO_SYSTEM,messages:[{role:"user",content}],output:Output.object({schema:AnalysisSchema}),maxOutputTokens:4500,maxRetries:0,abortSignal:signal});
    const analysis=AnalysisSchema.parse(output),ids=new Set(input.photos.map(p=>p.id));
    if(analysis.views.length!==ids.size||new Set(analysis.views.map(v=>v.photoId)).size!==ids.size||analysis.views.some(v=>!ids.has(v.photoId)))throw new Error("Incomplete reference analysis");
    const m=input.measurements;

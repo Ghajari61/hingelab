@@ -53,6 +53,15 @@ export function PhotoProductPanel({params,onApply,onGenerated,onPackage,disabled
  }
  const result=params.analysis.result;
  const stale=!!result&&(result.views.length!==refs.length||result.views.some(v=>!refs.some(p=>p.id===v.photoId)));
+ let baseline: Record<string, unknown> | null = null;
+ try { if (params.analysis.baseline) baseline = JSON.parse(params.analysis.baseline); } catch { /* Older example projects have no generated baseline. */ }
+ const dimensionSources = (["width","depth",...(params.recipe === "heartbox" ? ["height"] : []),"thickness"] as const).map(key => {
+  const value = key === "thickness" ? params.T : params.size[key as "width"|"depth"|"height"];
+  const measured = params.measurements[key as keyof typeof params.measurements];
+  const prior = key === "thickness" ? baseline?.T : (baseline?.size as Record<string, unknown> | undefined)?.[key];
+  const source = measured > 0 && Math.abs(measured - value) < .001 ? "Measured" : (params.analysis.status === "example" || (result?.family === "unsupported" && !baseline)) ? "Example" : prior !== value ? "Edited" : "Estimated";
+  return { key, value, source, conflict: measured > 0 && Math.abs(measured-value) >= .001 ? measured : null };
+ });
  const known=(key:keyof PhotoProductParams["measurements"],raw:string)=>{
   const value=raw===""?0:Number(raw);if(!Number.isFinite(value))return;
   const next={...latest.current,measurements:{...latest.current.measurements,[key]:value}};
@@ -78,6 +87,7 @@ export function PhotoProductPanel({params,onApply,onGenerated,onPackage,disabled
   </li>)}</ol>}
   <p className="photo-product-tip">Front, side, back and connection details help. Additional views are optional.</p>
   <details className="photo-product-details"><summary>Known measurements <span>optional · mm</span></summary><p>Leave unknown values empty. These constrain the next analysis; dimensions remain editable in the settings.</p><div className="photo-product-measurements">{(["width","depth","height","thickness"] as const).map(key=><label key={key}>{key[0].toUpperCase()+key.slice(1)}<input aria-label={`Known ${key} in millimetres`} type="number" min="0" max={key==="thickness"?6:key==="height"?100:350} step={key==="thickness"?.1:1} value={params.measurements[key]||""} placeholder="Unknown" disabled={disabled||busy} onChange={e=>known(key,e.target.value)}/></label>)}</div></details>
+  <details className="photo-product-details"><summary>Dimension sources</summary><dl className="photo-product-origins">{dimensionSources.map(d=><div key={d.key}><dt>{d.key}</dt><dd>{d.value} mm <span>{d.source}</span>{d.conflict!==null&&<small>Known value: {d.conflict} mm; the next analysis will use it.</small>}</dd></div>)}</dl></details>
   <label className="photo-product-note">About this product <span>optional</span><textarea value={params.note} maxLength={800} rows={2} placeholder="A name, a known feature, or a detail to keep…" disabled={disabled||busy} onChange={e=>onApply({...params,note:e.target.value})}/></label>
   <label className="photo-product-preserve"><input type="checkbox" checked={preserve} onChange={e=>setPreserve(e.target.checked)} disabled={busy||disabled}/> Keep my edited settings when regenerating</label>
   {!preserve&&<p className="photo-product-caution">Generating again will replace manual design settings with the new suggestions. Known measurements remain authoritative.</p>}

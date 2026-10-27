@@ -12,7 +12,7 @@ export function photoBuildPackage(p:PhotoProductParams,a:GenArranged<PhotoProduc
  const manifest=parts.map((pt,i)=>({number:i+1,id:pt.id,name:pt.name,stock:pt.tag??pt.src.stock??p.material,thickness:pt.src.t??p.T,file:`parts/${String(i+1).padStart(2,"0")}-${slug(pt.id,"part")}.svg`}));
  parts.forEach((pt,i)=>{
   const w=pt.bbox.x1-pt.bbox.x0,h=pt.bbox.y1-pt.bbox.y0;
-  files[manifest[i].file]=strToU8(genSVG(PHOTO_PRODUCT,{...p,T:pt.src.t??p.T},{width:w+4,height:h+4,items:[{pt,i:0,w,h,ox:2-pt.bbox.x0,oy:2-pt.bbox.y0}]},"Individual part; kerf already applied once."));
+  files[manifest[i].file]=strToU8(genSVG(PHOTO_PRODUCT,{...p,T:pt.src.t??p.T,K:pt.src.material==="second"?p.paw.backKerf:p.K},{width:w+4,height:h+4,items:[{pt,i:0,w,h,ox:2-pt.bbox.x0,oy:2-pt.bbox.y0}]},"Individual part; kerf already applied once."));
  });
  files["parts.json"]=strToU8(JSON.stringify(manifest,null,2));
  files["assumptions.json"]=strToU8(JSON.stringify({status:"geometry checked; controller and physical construction unverified",measurements:p.measurements,analysis:p.analysis.result,dimensions:p.size,material:p.material,thickness:p.T,kerf:p.K},null,2));

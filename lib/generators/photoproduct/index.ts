@@ -1,3 +1,4 @@
+import { MATERIALS } from "@/lib/hinge/defaults";
 import type { GeneratorDef, SectionSpec } from "../types";
 import { namedFile } from "../util";
 import { buildPhotoProduct } from "./build";
@@ -23,6 +24,8 @@ const sections:SectionSpec<PhotoProductParams>[]=[
   {kind:"toggle",key:"paw.wings",label:"Memorial wings",help:"Add wings to the overall outline."},
   {kind:"toggle",key:"paw.connected",label:"Connect names and motifs",help:"Join the lettering and details to the frame to avoid floating islands."},
   {kind:"toggle",key:"paw.backing",label:"Colored backing",help:"Cut a second backing stock behind the windows."},
+  {kind:"choice",key:"paw.backMaterial",label:"Backing stock",show:p=>p.paw.backing,options:["acr2","birch3","bass3","card2"].map(v=>({v,text:MATERIALS[v].name})),apply:(p,v)=>({...p,paw:{...p.paw,backMaterial:v,backThickness:MATERIALS[v]?.T??p.paw.backThickness,backKerf:MATERIALS[v]?.K??p.paw.backKerf}}),help:"Second material, packed on its own sheets. Check its actual thickness and kerf."},
+  {kind:"number",key:"paw.backKerf",label:"Backing kerf",unit:"mm",min:0,max:2,step:.01,show:p=>p.paw.backing,help:"Measured kerf for the backing stock. Applied once and independently of the wooden front."},
   {kind:"choice",key:"paw.backColor",label:"Backing color",show:p=>p.paw.backing,options:[{v:"#258e92",text:"Teal"},{v:"#bbcafa",text:"Lavender"},{v:"#cc6f89",text:"Rose"},{v:"#d9b98c",text:"Natural"}],help:"Preview color of the backing stock. Select the actual matching stock before cutting."},
   {kind:"number",key:"paw.backThickness",label:"Backing thickness",unit:"mm",min:1,max:8,step:.5,show:p=>p.paw.backing,help:"Actual second-stock thickness; backing and front are nested separately."},
   {kind:"number",key:"paw.frame",label:"Frame width",unit:"mm",min:2,max:12,step:.5,help:"Material around the paw windows."},
@@ -51,7 +54,7 @@ const sections:SectionSpec<PhotoProductParams>[]=[
 export const PHOTO_PRODUCT:GeneratorDef<PhotoProductParams>={
  id:"photoproduct",name:"Photo to Product",version:1,defaults:()=>mergePhotoProduct({}),merge:mergePhotoProduct,sections,presets:PHOTO_PRESETS,
  build:buildPhotoProduct,fonts:p=>p.recipe!=="heartbox"&&(p.text.name.trim()||p.text.subtitle.trim())?[p.text.fontId]:[],
- check:p=>[{code:"PHOTO_ESTIMATE",level:"info",message:p.analysis.status==="ai"?"Photo-based reconstruction: verify estimated dimensions, hidden details and the actual material with a sample.":"Example recipe. Upload 1–5 product photos for real AI analysis; this preview was not generated from a photo.",fixes:[]},...(p.recipe==="heartbox"?[{code:"PHOTO_GLUE",level:"info" as const,message:"Glue assembly with seams at the cleft and tip; no press-fit tabs are implied. Test hinge flexure and lid fit before production.",fixes:[]}]:[])],
- fileName:p=>namedFile("photo-product",p.name,p.recipe),summary:p=>`${p.recipe} · ${p.size.width} × ${p.size.depth} mm · ${p.analysis.status==="ai"?"AI reconstruction":"example recipe"}`,
+ check:p=>[{code:"PHOTO_ESTIMATE",level:"info",message:p.analysis.result?.family==="unsupported"?"Unsupported product: the previous model is retained. This geometry was not reconstructed from the latest references.":p.analysis.status==="ai"?"Photo-based reconstruction: verify estimated dimensions, hidden details and the actual material with a sample.":"Example recipe. Upload 1–5 product photos for real AI analysis; this preview was not generated from a photo.",fixes:[]},...(p.recipe==="heartbox"?[{code:"PHOTO_GLUE",level:"info" as const,message:"Glue assembly with seams at the cleft and tip; no press-fit tabs are implied. Test hinge flexure and lid fit before production.",fixes:[]}]:[])],
+ fileName:p=>namedFile("photo-product",p.name,p.recipe),summary:p=>`${p.recipe} · ${p.size.width} × ${p.size.depth} mm · ${p.analysis.result?.family==="unsupported"?"previous model retained":p.analysis.status==="ai"?"AI reconstruction":"example recipe"}`,
  help:{intro:["Upload one to five views of one product. AI chooses a supported construction recipe, while deterministic geometry makes the actual editable parts, 3D model and SVG."],tips:["Absolute dimensions cannot be recovered without a known measurement. Enter measured dimensions when available.","Use front, back, side or connection details of the same product. Five photos do not guarantee exact reconstruction.","Paw ornaments, heart hinge boxes and simple tags are supported. Hidden joints are estimates.","The model is geometrically checked, not physically proven. Test material, kerf, glue and hinges on a sample."],keywords:["photo to product","multi-view","AI reconstruction","paw ornament","heart box"]},
 };

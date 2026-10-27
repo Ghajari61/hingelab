@@ -6,9 +6,9 @@ export function applyProductAnalysis(current:PhotoProductParams,raw:ProductAnaly
  const result=AnalysisSchema.parse(raw);
  if(result.family==="unsupported")return {params:{...current,analysis:{...current.analysis,status:"ai",result,provider}},preserved:[]};
  const proposal=mergePhotoProduct({...current,name:result.title,recipe:result.family,size:{width:result.width,depth:result.depth,height:result.height},T:result.thickness,
-  text:{...current.text,name:result.name,subtitle:result.subtitle,fontId:result.font},
-  paw:{...current.paw,wings:result.wings,connected:result.connected,detail:result.snowflakes?"snowflake":"none",backing:result.backing},
-  box:{...current.box,lid:result.honeycomb?"honeycomb":"solid"},tag:{...current.tag,shape:result.shape}});
+  text:{...current.text,name:result.name,subtitle:result.subtitle,fontId:result.font,size:result.letterHeight},
+  paw:{...current.paw,wings:result.wings,connected:result.connected,detail:result.snowflakes?"snowflake":"none",backing:result.backing,frame:result.frameWidth,hole:result.holeDiameter,detailSize:result.detailRadius,backThickness:result.backThickness},
+  box:{...current.box,lid:result.honeycomb?"honeycomb":"solid",rim:result.rimWidth,hex:result.hexRadius,web:result.hexWeb,clearance:result.lidClearance},tag:{...current.tag,shape:result.shape,hole:result.holeDiameter}});
  const baseline=JSON.stringify(geometrySettings(proposal));let next=proposal;const preserved:string[]=[];
  if(preserve){
   let previous:unknown=geometrySettings(PHOTO_DEFAULTS);

@@ -15,6 +15,8 @@ export const AnalysisSchema=z.object({
   name:z.string().max(80),subtitle:z.string().max(80),font:z.enum(["pacifico","archivo-black","vazirmatn","lalezar"]),
   wings:z.boolean(),connected:z.boolean(),snowflakes:z.boolean(),backing:z.boolean(),honeycomb:z.boolean(),
   shape:z.enum(["rounded","circle","heart","tag","hexagon","pill"]),
+  frameWidth:z.number().min(2).max(12),holeDiameter:z.number().min(2).max(10),detailRadius:z.number().min(3).max(12),backThickness:z.number().min(1).max(6),letterHeight:z.number().min(3).max(40),
+  rimWidth:z.number().min(6).max(18),hexRadius:z.number().min(4).max(18),hexWeb:z.number().min(2).max(8),lidClearance:z.number().min(.1).max(1.5),
   observations:z.array(explanation).max(12),assumptions:z.array(explanation).min(1).max(12),uncertainties:z.array(explanation).max(12),
   views:z.array(z.object({photoId:z.string().max(64),view:z.enum(["front","side","back","top","detail","unknown"]),quality:z.enum(["useful","blurry","duplicate","unrelated"]),evidence:explanation}).strict()).min(1).max(5),
   confidence:z.enum(["low","medium","high"]),

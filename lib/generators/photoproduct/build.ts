@@ -1,3 +1,4 @@
+import { MATERIALS } from "@/lib/hinge/defaults";
 import { differenceShapes, makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { bboxOf, circle, ellipse, pointInContour, rect, regularPolygon, stadium, transform } from "../geom";
 import { orient, shapeOutline } from "../shapes";
@@ -71,7 +72,7 @@ function pawProduct(p:PhotoProductParams,ctx:BuildContext):GenOutput{
  }
  const baseZ=p.paw.backing?p.paw.backThickness:0;
  const parts:GenPart[]=[];
- if(p.paw.backing)parts.push({id:"paw-backing",name:"01 · Colored backing",outer:backing[0].outer,holes:backing[0].holes,t:p.paw.backThickness,color:p.paw.backColor,stock:`backing-${p.paw.backThickness}mm`,place:{x:0,y:0,z:0},score:p.paw.connected?[]:details.map(closed)});
+ if(p.paw.backing)parts.push({id:"paw-backing",name:"01 · Colored backing",outer:backing[0].outer,holes:backing[0].holes,t:p.paw.backThickness,color:p.paw.backColor,stock:`${p.paw.backMaterial}-${p.paw.backThickness}mm`,material:"second",place:{x:0,y:0,z:0},score:p.paw.connected?[]:details.map(closed)});
  if(p.paw.connected){
   front=bridgeIslands(unionShapes([...shapeContours(front),...details]),Math.max(2,p.T*.65));
   front=differenceShapes(shapeContours(front),[hole]);
@@ -80,7 +81,7 @@ function pawProduct(p:PhotoProductParams,ctx:BuildContext):GenOutput{
  if(front.length!==1)return failed("The paw frame is disconnected.");
  parts.push({id:"paw-front",name:"02 · Paw front",outer:front[0].outer,holes:front[0].holes,t:p.T,stock:`front-${p.T}mm`,place:{x:0,y:0,z:baseZ}});
  if(!p.paw.connected)unionShapes(details).forEach((s,i)=>parts.push({id:`paw-detail-${i+1}`,name:`Detail ${i+1}`,outer:s.outer,holes:s.holes,t:p.T,stock:`front-${p.T}mm`,place:{x:0,y:0,z:baseZ}}));
- return {parts,stacked:true,stats:[{label:"Overall size",value:`${p.size.width} × ${p.size.depth} mm`},{label:"Hanging hole",value:`${p.paw.hole} mm`}],assembly:["01. Cut the backing and front from their labeled stocks. Internal contours first; outer boundaries last.","02. Sand the edges and dry-align both outlines and the hanging hole.",p.paw.connected?"03. Glue the connected front onto the colored backing, if enabled.":"03. Glue the frame and each separate name or motif detail onto the backing using the scored guides.","04. Let the adhesive cure before fitting a cord or ring. Test the actual stock and adhesive on a sample."]};
+ return {parts,stacked:true,...(p.paw.backing?{materials:{main:MATERIALS[p.material]?.name??p.material,second:`${MATERIALS[p.paw.backMaterial]?.name??p.paw.backMaterial} · actual ${p.paw.backThickness} mm`,secondK:p.paw.backKerf}}:{}),stats:[{label:"Overall size",value:`${p.size.width} × ${p.size.depth} mm`},{label:"Hanging hole",value:`${p.paw.hole} mm`}],assembly:["01. Cut the backing and front from their labeled stocks. Internal contours first; outer boundaries last.","02. Sand the edges and dry-align both outlines and the hanging hole.",p.paw.connected?"03. Glue the connected front onto the colored backing, if enabled.":"03. Glue the frame and each separate name or motif detail onto the backing using the scored guides.","04. Let the adhesive cure before fitting a cord or ring. Test the actual stock and adhesive on a sample."]};
 }
 
 const curveLength=(cs:Contour)=>cs.slice(1).reduce((n,p,i)=>n+Math.hypot(p[0]-cs[i][0],p[1]-cs[i][1]),0);
