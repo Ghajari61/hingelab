@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.16.0",
-    "pub_date": "2026-10-27T03:44:37.764Z",
-    "notes": "Template-free Photo to Product: AI-authored editable part assemblies from 1–5 photos, same-page 3D, custom parameters, individual part editing and optional laser SVG export.",
+    "version": "1.16.1",
+    "pub_date": "2026-10-27T04:35:47.005Z",
+    "notes": "Template-free Photo to Product with direct editable 3D, generated part parameters, true assembled dimensions and optional SVG fabrication exports.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.16.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmg0c0RxSHAvWEtQTklSTkF6dVdCTDc3d01iNFBFbkdISjhpRUdqVHdrY3lCMmQzZXJlNXBqSUNSL2VHeDlHcS9DckNOZjcyRDVwQk9weDJVN2ZRaHdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDcyNjU3CWZpbGU6SGluZ2VMYWJfMS4xNi4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE2LjAKY2VzUSs4OEtNVEI3am0yT09EUE45c250UzgvUGFhSnNMOTB3alNDQlh2d2Fxa1RRMWNmK0ZJdHJlTHIweXZVQXdhYTFqT3ltMDBMcXN6eW5DTldNRFE9PQo=",
-        "size": 11904555,
-        "sha256": "1997d0ae4ecd0a66be6e5f94720e00c3f844349da073c3a65a6564873dba20af"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.16.1_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm1vdElmZHZ2S3ErNEptVFR5MldoQTVpS3NINlhrRWFCTWFSTkRTQ0pvTHRxV3orSzN5bEFvWm1qN3BTZnN5dEROOEUyMFVITjAzUUE0bkdkZlkrRlEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDc1NjQ1CWZpbGU6SGluZ2VMYWJfMS4xNi4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE2LjEKckpnK3VZT3MwZTJqNWxCMnZ1S0RxN1E3MEdUV0wwRVBybzR4RjNTNkFkN050SFFBeU9wWG9ienBZUU9Od25tQ2VUSG9KMGs4SDhkY2NvQVZUYkRXRHc9PQo=",
+        "size": 11907526,
+        "sha256": "6a00cd7ae79c4eb500b7e881a6f33585e56a08b1e82af12f771dc104c7105d09"
       }
     }
   }

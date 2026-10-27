@@ -26,6 +26,12 @@ export function evaluateDimension(source:string,vars:Record<string,number>):numb
  function parse(min:number):number{let a=atom();const precedence:Record<string,number>={'+':1,'-':1,'*':2,'/':2,'%':2,'^':3};while(at<tokens.length){const op=tokens[at],p=precedence[op];if(!p||p<min)break;at++;const b=parse(p+(op==='^'?0:1));a=op==='+'?a+b:op==='-'?a-b:op==='*'?a*b:op==='/'?a/b:op==='%'?a%b:Math.pow(a,b);if(!Number.isFinite(a)||Math.abs(a)>1e7)throw Error('Dimension result exceeds limit');}return a;}
  const result=parse(0);if(at!==tokens.length||!Number.isFinite(result)||Math.abs(result)>1e7)throw Error('Invalid dimension result');return result;
 }
+/** Only expose an axis control when the AI's generated formulas actually use it. */
+export function generatedUsesVariable(model:GeneratedModel|null,name:"W"|"D"|"H"):boolean{
+ if(!model)return true;
+ const expressionStrings=model.parts.flatMap(p=>[p.count,p.width,p.height,p.thickness,...Object.values(p.pose),...[p.outline,...p.additions,...p.holes,...p.cuts,...p.score].flatMap(q=>[q.x,q.y,q.w,q.h,q.count,q.dx,q.dy]),...(p.engraving?[p.engraving.x,p.engraving.y,p.engraving.size]:[])]);
+ return expressionStrings.some(s=>new RegExp("\\b"+name+"\\b").test(s));
+}
 const area=(c:Contour)=>Math.abs(c.reduce((s,a,i)=>{const b=c[(i+1)%c.length];return s+a[0]*b[1]-b[0]*a[1]},0)/2);
 function validRing(c:Contour){
  if(c.length<3||area(c)<.1)throw Error('Part profile has no usable area');
@@ -62,6 +68,9 @@ export function buildGeneratedProduct(model:GeneratedModel,size:{width:number;de
  const b=bboxOf([shape[0].outer]);if(b.x1-b.x0>4000||b.y1-b.y0>4000)throw Error('Part exceeds size limit');
  parts.push({id:part.id+'-'+(i+1),name:String(parts.length+1).padStart(2,'0')+' · '+part.name+(n>1?' '+(i+1):''),outer:shape[0].outer,holes:shape[0].holes,cuts:paths(part.cuts),score:paths(part.score),engrave,t,stock:'wood-'+t+'mm',place:{x,y,z,m}});
  }}
- return {parts,stats:[{label:'Generated parts',value:String(parts.length)},{label:'Overall target',value:`${size.width} × ${size.depth} × ${size.height} mm`}],assembly:[...checked.assembly,...checked.limitations]};
+ const low=[Infinity,Infinity,Infinity],high=[-Infinity,-Infinity,-Infinity];
+ for(const part of parts){const m=part.place!.m!;for(const [x,y] of part.outer)for(const t of [0,part.t!])for(let axis=0;axis<3;axis++){const k=axis*4,a=m[k]*x+m[k+1]*y+m[k+2]*t+m[k+3];low[axis]=Math.min(low[axis],a);high[axis]=Math.max(high[axis],a);}}
+ const dimensions=high.map((a,i)=>Number((a-low[i]).toFixed(2)));
+ return {parts,stats:[{label:'Assembled size',value:dimensions.join(' × ')+' mm'},{label:'Generated parts' ,value:String(parts.length)},{label:'Photo estimate',value:`${size.width} × ${size.depth} × ${size.height} mm`}],assembly:[...checked.assembly,...checked.limitations]};
  }catch(e){return {parts:[],stats:[],error:e instanceof Error?e.message:'Invalid generated geometry'};}
 }
