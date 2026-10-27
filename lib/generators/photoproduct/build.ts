@@ -37,8 +37,19 @@ function pawProduct(p:PhotoProductParams,ctx:BuildContext):GenOutput{
  const map=(c:Contour):Contour=>c.map(([x,y])=>[(x-b.x0)*sx,(y-b.y0)*sy]);
  const outer=map(raw[0].outer),f=p.paw.frame/Math.min(sx,sy);
  if(f>9)return failed("The paw frame is too wide for these windows. Reduce frame width or increase the design size.");
- const windows=toes.map(([x,y,rx,ry,a])=>map(oval(x,y,rx-f,ry-f,a)));
- windows.push(map(ellipse(50,73,31-f,26-f,128)));
+ const inset=toes.map(([x,y,rx,ry,a])=>map(oval(x,y,rx-f,ry-f,a)));
+ inset.push(map(ellipse(50,73,31-f,26-f,128)));
+ // The toes overlap, and each window is inset only from its own toe: on larger paws neighbouring
+ // windows came within hundredths of a millimetre, a web the laser burns through. Each window
+ // keeps the frame width from every other one (trimmed symmetrically, so the paw stays balanced).
+ const grown=inset.map(w=>offsetShapes([makeShape(w,[])],p.paw.frame));
+ const windows:Contour[]=[];
+ for(let i=0;i<inset.length;i++){
+  const rest=grown.filter((_,j)=>j!==i).flatMap(g=>shapeContours(g));
+  const kept=differenceShapes([inset[i]],rest).sort((a,b)=>b.area-a.area)[0];
+  if(!kept||kept.area<12)return failed("The paw windows are too close together for this frame width. Reduce the frame width or enlarge the design.");
+  windows.push(kept.outer);
+ }
  const [hx,hy]=map([[50,5]])[0],hole=ellipse(hx,hy,p.paw.hole/2,p.paw.hole/2,96);
  if(!circle(hx,hy,p.paw.hole/2+2,.01).every(q=>pointInContour(q,outer)))return failed("The hanging hole needs at least 2 mm of surrounding material. Reduce its diameter or enlarge the design.");
  const backing=differenceShapes([outer],[hole]);
@@ -104,13 +115,21 @@ function heartBox(p:PhotoProductParams):GenOutput{
   {id:"floor",name:"01 · Floor",outer,holes:[],score:[closed(neutral)],place:{x:0,y:0,z:0}},
   {id:"top-rim",name:"02 · Top rim",outer:rimShape[0].outer,holes:rimShape[0].holes,place:{x:0,y:0,z:T+H}},
  ];
- const lid=offsetShapes([makeShape(outer,[])],1),safe=inset(p.box.rim+5),hexes:Contour[]=[];
+ const lid=offsetShapes([makeShape(outer,[])],1),safe=inset(p.box.rim+5);
+ let hexes:Contour[]=[],cell=p.box.hex;
  if(p.box.lid==="honeycomb"){
-  const R=p.box.hex,pitch=Math.sqrt(3)*R+p.box.web,rowPitch=1.5*(R+p.box.web/Math.sqrt(3));
-  const rows=Math.ceil(D/rowPitch)+2,cols=Math.ceil(W/pitch)+2;
-  for(let row=-1;row<rows;row++)for(let col=-1;col<cols;col++){
-   const hex=regularPolygon(6,R,0,col*pitch+(row%2?pitch/2:0),row*rowPitch);
-   if(safe[0]&&hex.every(q=>pointInContour(q,safe[0].outer)))hexes.push(hex);
+  // The grid is centred on the heart's axis and middle, so the pattern is symmetric left to right
+  // (it used to start at the corner and came out lopsided); on a small heart the cells shrink, down
+  // to 4 mm, before giving up, so the smallest supported box still gets its honeycomb.
+  const sb=safe[0]?bboxOf([safe[0].outer]):null;
+  for(let R=p.box.hex;sb&&R>=4-1e-9&&hexes.length<3;R-=.5){
+   hexes=[];cell=R;
+   const pitch=Math.sqrt(3)*R+p.box.web,rowPitch=1.5*(R+p.box.web/Math.sqrt(3)),cx=(sb.x0+sb.x1)/2,cy=(sb.y0+sb.y1)/2;
+   const rows=Math.ceil((sb.y1-sb.y0)/rowPitch/2)+1,cols=Math.ceil((sb.x1-sb.x0)/pitch/2)+1;
+   for(let row=-rows;row<=rows;row++)for(let col=-cols;col<=cols;col++){
+    const hex=regularPolygon(6,R,0,cx+col*pitch+(Math.abs(row)%2?pitch/2:0),cy+row*rowPitch);
+    if(hex.every(q=>pointInContour(q,safe[0].outer)))hexes.push(hex);
+   }
   }
   if(!hexes.length)return failed("No honeycomb cells fit. Reduce cell size or use a solid lid.");
  }
@@ -129,7 +148,7 @@ function heartBox(p:PhotoProductParams):GenOutput{
   }
   parts.push({id:`wall-${k+1}`,name:`0${k+5} · Hinge wall ${k+1}`,outer:rect(0,0,L,H),holes:[],cuts,views3d:views});
  });
- return {parts,stats:[{label:"Footprint",value:`${W} × ${D} mm`},{label:"Closed height",value:`${H+3*T} mm`},{label:"Neutral perimeter",value:`${curveLength(closed(neutral)).toFixed(3)} mm`},{label:"Lid side clearance",value:`${p.box.clearance} mm`}],assembly:["01. Cut the six labeled parts from the measured stock. Score and hinge cuts before outer profiles.","02. Test the slit pattern on a coupon of the actual plywood; bend behavior cannot be verified from a photo.","03. Dry-form both wall halves along the floor's scored neutral-path guide. The seams meet at the heart cleft and bottom tip.","04. Glue the walls to the floor and the rim above them. This is glue construction: there are no hidden tabs or press-fit joints.","05. Center the locating ring under the lid and glue it there. Its outer edge has the specified per-side clearance to the rim opening.","06. After curing, test the removable lid and gently sand if needed. Do not force plywood around the sharp seams."]};
+ return {parts,stats:[{label:"Footprint",value:`${W} × ${D} mm`},{label:"Closed height",value:`${H+3*T} mm`},{label:"Neutral perimeter",value:`${curveLength(closed(neutral)).toFixed(3)} mm`},{label:"Lid side clearance",value:`${p.box.clearance} mm`},...(p.box.lid==="honeycomb"&&cell<p.box.hex?[{label:"Honeycomb cells",value:`${cell} mm (reduced from ${p.box.hex} mm to fit)`}]:[])],assembly:["01. Cut the six labeled parts from the measured stock. Score and hinge cuts before outer profiles.","02. Test the slit pattern on a coupon of the actual plywood; bend behavior cannot be verified from a photo.","03. Dry-form both wall halves along the floor's scored neutral-path guide. The seams meet at the heart cleft and bottom tip.","04. Glue the walls to the floor and the rim above them. This is glue construction: there are no hidden tabs or press-fit joints.","05. Center the locating ring under the lid and glue it there. Its outer edge has the specified per-side clearance to the rim opening.","06. After curing, test the removable lid and gently sand if needed. Do not force plywood around the sharp seams."]};
 }
 export function buildPhotoProduct(p:PhotoProductParams,ctx:BuildContext):GenOutput{
  if(p.recipe==="custom"){

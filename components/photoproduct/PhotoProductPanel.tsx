@@ -5,7 +5,7 @@ import type { PhotoProductParams } from "@/lib/generators/photoproduct/params";
 import { normalizeProductPhoto } from "@/lib/photoproduct/upload";
 import { requestProductAnalysis } from "@/lib/photoproduct/client";
 import { applyProductAnalysis } from "@/lib/photoproduct/apply";
-import type { ProductPhoto } from "@/lib/photoproduct/contracts";
+import { MEASUREMENT_RANGES, measurementProblem, type ProductPhoto } from "@/lib/photoproduct/contracts";
 import "./photoproduct.css";
 import {GeneratedModelTools} from "./GeneratedModelTools";
 type Props={params:PhotoProductParams;onApply:(p:PhotoProductParams)=>void;onGenerated:()=>void;onPackage:()=>Promise<void>;disabled?:boolean};
@@ -38,6 +38,7 @@ export function PhotoProductPanel({params,onApply,onGenerated,onPackage,disabled
  function move(id:string,delta:number){const arr=[...refs],i=arr.findIndex(p=>p.id===id),j=i+delta;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];writePhotos(arr);}
  async function analyze(){
   if(!refs.length||busy||uploading||disabled)return;
+  const problem=measurementProblem(latest.current.measurements);if(problem){setError(problem);return;}
   const id=++serial.current,abort=new AbortController();controller.current=abort;setError(null);setMessage(null);setPhase("checking");
   const photos=[...refs],fingerprint=photos.map(p=>p.id+":"+p.digest).join("|");
   try{
@@ -87,7 +88,7 @@ export function PhotoProductPanel({params,onApply,onGenerated,onPackage,disabled
    </div>
   </li>)}</ol>}
   <p className="photo-product-tip">Front, side, back and connection details help. Additional views are optional.</p>
-  <details className="photo-product-details"><summary>Known measurements <span>optional · mm</span></summary><p>Leave unknown values empty. These constrain the next analysis; dimensions remain editable in the settings.</p><div className="photo-product-measurements">{(["width","depth","height","thickness"] as const).map(key=><label key={key}>{key[0].toUpperCase()+key.slice(1)}<input aria-label={`Known ${key} in millimetres`} type="number" min="0" max={key==="thickness"?30:3000} step={key==="thickness"?.1:1} value={params.measurements[key]||""} placeholder="Unknown" disabled={disabled||busy} onChange={e=>known(key,e.target.value)}/></label>)}</div></details>
+  <details className="photo-product-details"><summary>Known measurements <span>optional · mm</span></summary><p>Leave unknown values empty. These constrain the next analysis; dimensions remain editable in the settings.</p><div className="photo-product-measurements">{(["width","depth","height","thickness"] as const).map(key=><label key={key}>{key[0].toUpperCase()+key.slice(1)}<input aria-label={`Known ${key} in millimetres`} type="number" min="0" max={MEASUREMENT_RANGES[key][1]} step={key==="thickness"?.1:1} value={params.measurements[key]||""} placeholder="Unknown" disabled={disabled||busy} onChange={e=>known(key,e.target.value)}/></label>)}</div></details>
   <details className="photo-product-details"><summary>Reference dimension estimates</summary><dl className="photo-product-origins">{dimensionSources.map(d=><div key={d.key}><dt>{d.key}</dt><dd>{d.value} mm <span>{d.source}</span>{d.conflict!==null&&<small>Known value: {d.conflict} mm; the next analysis will use it.</small>}</dd></div>)}</dl></details>
   <label className="photo-product-note">About this product <span>optional</span><textarea value={params.note} maxLength={800} rows={2} placeholder="A name, a known feature, or a detail to keep…" disabled={disabled||busy} onChange={e=>onApply({...params,note:e.target.value})}/></label>
   <label className="photo-product-preserve"><input type="checkbox" checked={preserve} onChange={e=>setPreserve(e.target.checked)} disabled={busy||disabled}/> Keep my edited settings when regenerating</label>

@@ -1,7 +1,7 @@
 import {GeneratedModelSchema,type GeneratedModel} from "@/lib/photoproduct/generated";
 import { DEFAULTS, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
-import { AnalysisSchema, PhotoSchema, validatePhoto, type ProductAnalysis, type ProductPhoto } from "@/lib/photoproduct/contracts";
+import { AnalysisSchema, MEASUREMENT_RANGES, PhotoSchema, validatePhoto, type ProductAnalysis, type ProductPhoto } from "@/lib/photoproduct/contracts";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 export interface PhotoProductParams extends GenBase {
@@ -40,7 +40,7 @@ export function mergePhotoProduct(raw:unknown):PhotoProductParams{
  if(!["rounded","circle","heart","tag","hexagon","pill"].includes(p.tag.shape))p.tag.shape="rounded";
  p.tag.hole=n(p.tag.hole,5,2,10);
  p.references=(Array.isArray(p.references)?p.references:[]).slice(0,5).flatMap(ref=>{const q=PhotoSchema.safeParse(ref);return q.success&&!validatePhoto(q.data)?[q.data]:[];});
- for(const key of ["width","depth","height","thickness"] as const)p.measurements[key]=n(p.measurements[key],0,0,key==="thickness"?30:3000);
+ for(const key of ["width","depth","height","thickness"] as const)p.measurements[key]=n(p.measurements[key],0,0,MEASUREMENT_RANGES[key][1]);
  const model=GeneratedModelSchema.safeParse(p.generated);p.generated=model.success?model.data:null;
  const input=raw&&typeof raw==="object"?raw as Record<string,unknown>:{};const rawValues=input.values&&typeof input.values==="object"?input.values as Record<string,number>:{};p.values={};for(const q of p.generated?.parameters??[]){const value=rawValues[q.id];if(Number.isFinite(value))p.values[q.id]=Math.min(q.max,Math.max(q.min,value));}
  p.hiddenParts=(Array.isArray(p.hiddenParts)?p.hiddenParts:[]).filter(x=>typeof x==="string").slice(0,48);
