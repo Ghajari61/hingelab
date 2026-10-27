@@ -45,8 +45,13 @@ export async function analyzeProductPhotos(req:PhotoAnalysisRequest,userId:strin
  if(!routes.length)throw new PhotoAnalysisError("Photo analysis is not configured on this server. Your photos and existing model have been kept.",503);
  for(let i=0;i<routes.length;i++){
   try{
+   const routeModel=routes[i].model;
+   const routeName=typeof routeModel==="string"?routeModel:routeModel.modelId;
+   // Reserve most of the shared deadline for an interactive fallback when a Pro
+   // model is deliberating; give the fallback time to finish a whole part model.
+   const attemptBudget=/gemini.*pro/i.test(routeName)&&i<routes.length-1?20_000:110_000;
    let feedback="";for(let repair=0;repair<2;repair++){
-   const {output}=await generateText({...routes[i],system:PHOTO_SYSTEM,messages:[{role:"user",content:feedback?[...content,{type:"text",text:feedback}]:content}],output:Output.object({schema:PhotoProviderSchema}),maxOutputTokens:16000,maxRetries:0,abortSignal:AbortSignal.any([signal,AbortSignal.timeout(45_000)])});
+   const {output}=await generateText({...routes[i],system:PHOTO_SYSTEM,messages:[{role:"user",content:feedback?[...content,{type:"text",text:feedback}]:content}],output:Output.object({schema:PhotoProviderSchema}),maxOutputTokens:16000,maxRetries:0,abortSignal:AbortSignal.any([signal,AbortSignal.timeout(attemptBudget)])});
    const analysis=GeneratedAnalysisSchema.parse(output),ids=new Set(input.photos.map(p=>p.id));
    if(analysis.views.length!==ids.size||new Set(analysis.views.map(v=>v.photoId)).size!==ids.size||analysis.views.some(v=>!ids.has(v.photoId)))throw new Error("Incomplete reference analysis");
    const m=input.measurements;
