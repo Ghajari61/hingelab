@@ -1,22 +1,15 @@
 /**
- * Wood Packaging (D215): gift, product and shipping boxes in plywood. It used to be Paper Box
- * (folding cartons in card); the owner asked for packaging in wood instead. It keeps the product id
- * `paperbox`, so links, saved designs and the desktop catalogue keep working, and it is built on
- * the Boxes engine: the same finger joints, kerf, fit, lids, engraving and 3D, limited to the
- * packaging designs and with its own presets (the former cartons, each as its wooden equivalent).
+ * Hidden compatibility adapter for former Wood Packaging / Paper Box projects.
+ * Public menus offer Boxes & Packaging once. Old links and autosaves retain their dimensions
+ * and defaults, while using the same complete controls and library as the merged product.
  */
 import { BOXES } from "../boxes";
-import { mergeBoxes, type BoxesParams, type Design } from "../boxes/params";
-import type { GeneratorDef, SectionSpec } from "../types";
-import { mergeInto } from "../util";
-import { clone } from "@/lib/hinge/defaults";
-import { PAPERBOX_PRESETS } from "./presets";
+import { type BoxesParams, type Design } from "../boxes/params";
+import type { GeneratorDef } from "../types";
+import { packagingDefaults } from "./defaults";
 
 /** The Boxes designs that are packaging. */
 export const PACKAGING_DESIGNS: Design[] = ["box", "tray", "drawer", "hex", "insert", "stack", "book"];
-const PACKAGING_NAMES: Partial<Record<Design, string>> = {
-  box: "Box with lid", tray: "Tray or divided box", drawer: "Drawer box", hex: "Hexagon box", insert: "Divider insert", stack: "Stacking trays", book: "Book box",
-};
 
 /** Styles of the former Paper Box and the wooden box each one became (for saved designs). */
 const LEGACY: Record<string, { design: Design; lid?: BoxesParams["box"]["lid"] }> = {
@@ -53,54 +46,17 @@ export function fromPaper(raw: unknown): unknown {
   }
 }
 
-const PACKAGING_DEFAULTS: Partial<BoxesParams> = {
-  name: "Wooden gift box", design: "box",
-  box: { width: 120, depth: 90, height: 60, lid: "liftoff", clearance: 0.3, notch: false, pin: 3 },
-};
-
-/** Settings over the packaging defaults (a gift box with a lift-off lid), not the Boxes ones. */
+/** Compatibility adapter for old links, project files and their separate autosave. */
 export function mergePackaging(raw: unknown): BoxesParams {
-  const base = mergeBoxes(PACKAGING_DEFAULTS);
-  const p = mergeBoxes(mergeInto(clone(base), fromPaper(raw)));
-  if (!PACKAGING_DESIGNS.includes(p.design)) p.design = "box";
-  return p;
+  return packagingDefaults(fromPaper(raw));
 }
-
-/** The Boxes panels, with the design choice limited to packaging. */
-const sections: SectionSpec<BoxesParams>[] = BOXES.sections.map((s) => s.id !== "design" ? s : {
-  ...s,
-  help: "What to make: a box with a lift-off, sliding, pin-hinged, inset or closed lid, a tray or divided box, a drawer box, a hexagon box, a divider insert, stacking trays or a book box.",
-  fields: s.fields.map((f) => f.key !== "design" || f.kind !== "choice" ? f : {
-    ...f,
-    options: PACKAGING_DESIGNS.map((v) => ({ v, text: PACKAGING_NAMES[v]! })),
-    apply: (p: BoxesParams, v: string) => ({ ...p, design: v as Design }),
-  }),
-});
 
 export const PAPERBOX: GeneratorDef<BoxesParams> = {
   ...BOXES,
   id: "paperbox",
-  name: "Wood Packaging",
   defaults: () => mergePackaging({}),
   merge: mergePackaging,
   // saved paper designs are version 1 of this product and come through `fromPaper`
   migrate: (raw, from) => BOXES.migrate ? BOXES.migrate(fromPaper(raw), from) : fromPaper(raw),
-  sections,
-  presets: PAPERBOX_PRESETS,
   fileName: (p) => BOXES.fileName({ ...p, name: p.name || "packaging" }),
-  help: {
-    intro: [
-      "Wood Packaging makes gift, product and shipping boxes from plywood that slot together with finger joints: boxes with a lift-off, sliding, pin-hinged or inset lid, trays and divided boxes, drawer boxes, hexagon boxes, divider inserts, stacking trays and book boxes.",
-      "Every ready-made design is a familiar carton made in wood: two-piece gift boxes take a lift-off lid, tuck-end product boxes a sliding lid, mailers and clamshells a pin-hinged lid, and drawer boxes a sliding drawer. Enter the inside size of what goes in.",
-      "Lids carry engraved text, a motif or your logo, so a box can carry its brand without a printed label.",
-      "Joints, kerf and fit work as in the Boxes generator: cut one small box from your stock first and adjust the kerf until the fingers press together by hand.",
-    ],
-    tips: [
-      "3 mm plywood suits most packaging; for boxes under 50 mm use thinner stock or keep the fingers at about two material thicknesses.",
-      "A sliding lid needs about 0.4 mm clearance in plywood; a lift-off lid 0.3 mm.",
-      "Engrave the brand on the lid before cutting the box free, so the parts do not move.",
-      "Dry-fit before gluing, and glue with a thin bead.",
-    ],
-    keywords: ["packaging", "wooden box", "gift box", "product box", "sliding lid", "lift-off lid", "hinged lid", "drawer box", "jewellery box", "tea box", "wine box", "crate", "hexagon box", "insert", "branding", "plywood"],
-  },
 };

@@ -1,8 +1,7 @@
 "use client";
 
 import {PopupTools} from '@/components/popup/PopupTools';
-import type { PhotoProductParams } from "@/lib/generators/photoproduct/params";
-import type { GenOutput } from "@/lib/generators/types";
+import { findGeneratorPreset } from "@/lib/generators/presetLookup";
 import type {PopupParams} from '@/lib/generators/popup/params';
 import { platform } from "@hingelab/platform";
 import { useShortcutKey } from "@/components/shell/useShortcutKey";
@@ -71,7 +70,6 @@ import "./generators.css";
 
 addRailGroups(GEN_RAIL_GROUPS);
 
-const PhotoProductPanel = clientOnly(() => import("@/components/photoproduct/PhotoProductPanel"));
 const ExportDialog = clientOnly(() => import("@/components/shell/ExportDialog"));
 const JobEstimate = clientOnly(() => import("@/components/shell/JobEstimate"));
 const BatchDialog = clientOnly(() => import("./BatchDialog"));
@@ -131,7 +129,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const [tool, setTool] = useState<"hand" | "zoom">("hand");
   const [spaceDown, setSpaceDown] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>(def.id === "photoproduct" ? "3d" : "sheets");
+  const [viewMode, setViewMode] = useState<ViewMode>("sheets");
   const [seen3d, setSeen3d] = useState(false);
   if (viewMode === "3d" && !seen3d) setSeen3d(true);
   const [cursor, setCursor] = useState({ x: "—", y: "—" });
@@ -224,14 +222,6 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const model = "error" in arranged.result ? null : arranged.result;
   const out = model?.out ?? null;
   const built = arranged.params as P;
-  // While a font loads the last model stays in view, but only one of the same recipe: switching from a
-  // heart box to a paw must not keep showing the box.
-  const recipe = (params as unknown as { recipe?: string }).recipe;
-  const lastPhotoModel = useRef<{ out: GenOutput; T: number; recipe?: string } | null>(null);
-  useEffect(() => { if (def.id === "photoproduct" && out && !out.error && !out.notice) lastPhotoModel.current = { out, T: built.T, recipe: (built as unknown as { recipe?: string }).recipe }; }, [def.id, out, built]);
-  const lastSame = lastPhotoModel.current?.recipe === recipe ? lastPhotoModel.current : null;
-  const previewOut = def.id === "photoproduct" ? out ?? lastSame?.out ?? null : out;
-  const previewThickness = def.id === "photoproduct" && !out ? lastSame?.T ?? built.T : built.T;
   const error = fontError ?? ("error" in arranged.result ? arranged.result.error : null);
   const lay = model ? arranged.lay : null;
   const [nominal, setNominal] = useState(false);
@@ -343,16 +333,6 @@ function GenEditor({ def, onProduct, onHome, start }: {
     return w.svg;
   }
 
-  async function exportPhotoPackage() {
-    const svg = await cutSVG();
-    if (!svg || def.id !== "photoproduct") return;
-    const [{ photoBuildPackage }, { projectText }] = await Promise.all([import("@/lib/photoproduct/package"), import("@/components/shell/projectFile")]);
-    const project = await projectText({ app: "HingeLab", product: def.id, version: def.version }, params);
-    const bytes = photoBuildPackage(built as unknown as PhotoProductParams, arranged as unknown as import("@/lib/generators/output").GenArranged<PhotoProductParams>, svg, project);
-    const saved = await platform().saveFile({ name: def.fileName(built) + "-build.zip", data: bytes, mime: "application/zip", intent: "export" });
-    toastMsg(saved.message);
-  }
-
   async function exportNow() {
     const svg = await cutSVG();
     if (svg) offerFile(def.fileName(built) + ".svg", svg, "image/svg+xml");
@@ -428,7 +408,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
     if (!start || started.current) return;
     started.current = true;
     // Start presets with no settings (featured cards, links) take the built-in preset with that id.
-    const from = !start.params || Object.keys(start.params).length === 0 ? def.presets.find((x) => x.id === start.id) : start;
+    const from = !start.params || Object.keys(start.params).length === 0 ? findGeneratorPreset(def, start.id) : start;
     if (!from) return;
     const f = start.file;
     replace(def.merge(f && def.migrate ? def.migrate(from.params, f.version) : from.params) as P, true);
@@ -585,11 +565,11 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const notice = !error && out?.notice ? out.notice : !error && !lay ? "Loading…" : null;
   const phoneSVG = useMemo(() => (phoneFlow.phone && lay && out && !out.notice ? genSVG(def, built, lay, "", arranged.sheets) : null), [phoneFlow.phone, def, built, lay, out, arranged.sheets]);
 
-  if (phoneFlow.phone && def.id !== "photoproduct") {
+  if (phoneFlow.phone) {
     return (
       <HelpContext.Provider value={help.ctx}>
         <PhoneFlow
-          name={def.name} summary={def.summary(out ? built : params)} presets={def.presets} thumb={(pr) => `/presets/${def.id}/${pr.id}.svg`}
+          name={def.name} summary={def.summary(out ? built : params)} presets={def.presets} thumb={(pr) => `/presets/${def.id === "paperbox" ? "boxes" : def.id}/${pr.id}.svg`}
           current={lastPreset} onPreset={applyPreset}
           fields={<>
 
@@ -625,8 +605,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       />
       <div className="main">
         <GalleryRail title={PRODUCT_INFO[def.id].name} icon={PRODUCT_INFO[def.id].icon} groups={groups} history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }} inert={shared.viewing}>
-          {def.id === "photoproduct" && <PhotoProductPanel params={params as unknown as PhotoProductParams} joinery={out?.joinery} onApply={p => replace(p as unknown as P, true)} onGenerated={() => setViewMode("3d")} onPackage={exportPhotoPackage} disabled={shared.viewing} />}
-          {def.id !== "photoproduct" && <PresetLibrary product={def.id} presets={def.presets} onApply={applyPreset} getCategory={pr => categoryField?.kind === "choice" ? categoryField.options.find(o => o.v === String(getPath(def.merge(pr.params), categoryField.key)))?.text ?? def.name : def.name} />}
+          <PresetLibrary product={def.id === "paperbox" ? "boxes" : def.id} presets={def.presets} onApply={applyPreset} getCategory={pr => categoryField?.kind === "choice" ? categoryField.options.find(o => o.v === String(getPath(def.merge(pr.params), categoryField.key)))?.text ?? def.name : def.name} />
           {canShuffle && (
             <button type="button" className="btn-auto gen-shuffle" onClick={randomiseDesign} title="A new random design. Lock a setting (its lock icon) to keep it. Ctrl+Z undoes it.">
               <Dices size={15} aria-hidden /> Randomise design{prefs.locks.length ? ` · ${prefs.locks.length} locked` : ""}
@@ -637,9 +616,8 @@ function GenEditor({ def, onProduct, onHome, start }: {
           <ViewToggle value={viewMode} onChange={setViewMode} />
           <NestChip progress={nest.progress} onCancel={nest.cancel} />
           <div className="stage-3d" hidden={viewMode !== "3d"}>
-            {seen3d && <GeneratorView3D out={previewOut} lay={lay} T={previewThickness} material={params.material} units={units} frameKey={`${def.id}|${Math.round(lay?.width ?? 0)}x${Math.round(lay?.height ?? 0)}`} edit={{ def, params, set: replace as never }} />}
+            {seen3d && <GeneratorView3D out={out} lay={lay} T={built.T} material={params.material} units={units} frameKey={`${def.id}|${Math.round(lay?.width ?? 0)}x${Math.round(lay?.height ?? 0)}`} edit={{ def, params, set: replace as never }} />}
           </div>
-          {def.id === "photoproduct" && error && viewMode === "3d" && <p className="photo-product-stage-error" role="alert">{lastPhotoModel.current ? "Showing the last valid model. " : ""}{error} Export is unavailable until the settings are corrected.</p>}
           <section className="viewport" aria-label="Canvas">
             <div className="ruler-corner" />
             <div className="ruler h" ref={viewApi.rulerHRef} dangerouslySetInnerHTML={{ __html: rulerSvg(viewApi.rulerSize.w, true, viewApi.view, units) }} />

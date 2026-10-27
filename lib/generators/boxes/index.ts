@@ -351,7 +351,7 @@ const boxFonts = (p: BoxesParams): string[] => (p.design === "sign" && p.sign.te
 
 export const BOXES: GeneratorDef<BoxesParams> = {
   id: "boxes",
-  name: "Boxes",
+  name: "Boxes & Packaging",
   version: BOXES_VERSION,
   defaults: () => mergeBoxes({}),
   merge: mergeBoxes,
@@ -367,7 +367,8 @@ export const BOXES: GeneratorDef<BoxesParams> = {
   summary: (p) => `${DESIGN_NAMES[p.design]}, ${size(p)}`,
   help: {
     intro: [
-      "The Boxes generator makes classic laser-cut pieces that slot together: finger-jointed boxes with a closed, open, lift-off, sliding, pin-hinged or inset lid, trays with half-lap dividers (with a lid they make tea and card boxes), drawer boxes with up to four drawers, hexagon boxes, divider inserts for boxes you already have, money boxes, stacking trays, book boxes with a living-hinge spine, desk signs, three-layer photo frames, phone and tablet stands, key holders and bird houses.",
+      "One library includes wooden gift and product packaging, sliding sleeves, mailers, jewellery and tea boxes, drawer boxes and inserts. All designs share the same editable dimensions, joints, materials, engraving and 3D preview.",
+      "Boxes & Packaging makes classic laser-cut pieces that slot together: finger-jointed boxes with a closed, open, lift-off, sliding, pin-hinged or inset lid, trays with half-lap dividers (with a lid they make tea and card boxes), drawer boxes with up to four drawers, hexagon boxes, divider inserts for boxes you already have, money boxes, stacking trays, book boxes with a living-hinge spine, desk signs, three-layer photo frames, phone and tablet stands, key holders and bird houses.",
       "Boxes can use tab-and-slot joints instead of fingers on the bottom and top, and lids can carry engraved text, a motif and a border.",
       "A cut-out pattern (lattice, floral rosettes, Moroccan quatrefoils, honeycomb, circles, stars or woven leaves) can go through the walls and the lid; the lid's text then sits in a framed label in the middle of it.",
       "Finger joints are worked out per edge: each edge gets an odd number of equal fingers, and every finger belongs to exactly one panel, so the panels always mate. Enter inside sizes for things you have measured, or outside sizes to fit a space.",
@@ -380,7 +381,7 @@ export const BOXES: GeneratorDef<BoxesParams> = {
       "Dry-fit everything before gluing, and glue with a thin bead; squeeze-out is hard to clean between fingers.",
       "Open the 3D view to check how the parts go together before cutting.",
     ],
-    keywords: ["box", "finger joint", "tab and slot", "sliding lid", "hinged lid", "drawer", "hexagon box", "insert", "money box", "piggy bank", "pencil box", "tea box", "wine box", "stacking trays", "book box", "pierced", "fretwork", "lattice", "floral", "tray", "organiser", "divider", "sign", "photo frame", "phone stand", "key holder", "bird house", "boxes.py"],
+    keywords: ["packaging", "gift box", "product box", "branding", "plywood", "box", "finger joint", "tab and slot", "sliding lid", "hinged lid", "drawer", "hexagon box", "insert", "money box", "piggy bank", "pencil box", "tea box", "wine box", "stacking trays", "book box", "pierced", "fretwork", "lattice", "floral", "tray", "organiser", "divider", "sign", "photo frame", "phone stand", "key holder", "bird house", "boxes.py"],
   },
 };
 

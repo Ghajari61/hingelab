@@ -23,7 +23,6 @@ export interface GeneratorMeta {
 }
 
 export const GENERATORS: GeneratorMeta[] = [
-  { id: "photoproduct", n: 18, name: "Photo to Product", category: "Tools", plan: "pro", opens: { editor: "/app/editor/local?p=photoproduct" }, blurb: "Generate a custom editable part assembly from 1–5 wooden-product photos. No product templates." },
   { id: "popup", n: 15, name: "Pop-up", category: "Home", plan: "pro", opens: { editor: "/app/editor/local?p=popup" }, blurb: "One flat piece that lifts into a bowl, basket, tree, lampshade or ornament." },
   { id: "name-charms", n: 16, name: "Name Charms", category: "Lettering", plan: "free", opens: { editor: "/app/editor/local?p=charm" }, blurb: "Ornaments, keychains, earrings, bag tags, drink markers and place cards, one per name." },
   { id: "family-names", n: 17, name: "Family Names", category: "Lettering", plan: "free", opens: { editor: "/app/editor/local?p=family" }, blurb: "Name crosswords, name trees, snowflakes, rings, split monograms and bunting." },
@@ -31,14 +30,13 @@ export const GENERATORS: GeneratorMeta[] = [
   { id: "hinged-cover", n: 2, name: "Hinged Cover", category: "Hinges", plan: "pro", opens: { templates: "/templates?c=Living+hinges" }, blurb: "Journal, folder and menu covers with a flexible spine." },
   { id: "letters", n: 3, name: "Letters", category: "Lettering", plan: "pro", opens: { editor: "/app/editor/local?p=letters" }, blurb: "Letter boxes, solid and stencil letters in any script." },
   { id: "parametric", n: 4, name: "Parametric Slicer", category: "Sculpture", plan: "pro", opens: { editor: "/app/editor/local?p=parametric" }, blurb: "Sliced sculptures from 3D files, photos or formulas." },
-  { id: "finger-box", n: 5, name: "Finger-Joint Box", category: "Boxes", plan: "free", opens: { editor: "/app/editor/local?p=boxes&preset=small-box" }, blurb: "Classic finger-joint boxes with lids, dividers and feet." },
+  { id: "finger-box", n: 5, name: "Boxes & Packaging", category: "Boxes", plan: "free", opens: { editor: "/app/editor/local?p=boxes&preset=small-box" }, blurb: "Finger-jointed boxes and wooden packaging with lids, dividers, drawers, inserts and engraved branding." },
   { id: "tray", n: 6, name: "Tray & Organizer", category: "Home", plan: "free", opens: { editor: "/app/editor/local?p=boxes&preset=organiser" }, blurb: "Drawer trays and organizers with cross-halved dividers." },
   { id: "hinge-fill", n: 7, name: "Hinge Pattern Fill", category: "Hinges", plan: "pro", opens: "studio", blurb: "Fill any shape of your own with a living-hinge pattern." },
   { id: "lamp", n: 8, name: "Lamp & Lantern", category: "Home", plan: "pro", opens: { templates: "/templates?c=Lamps+%26+light" }, blurb: "Lanterns and shades with parametric perforation patterns." },
   { id: "jigsaw", n: 9, name: "Jigsaw Puzzle", category: "Games", plan: "free", freeLimit: "Free up to 50 pieces", opens: { editor: "/app/editor/local?p=puzzle" }, blurb: "Puzzles of any shape with shared single-line cuts." },
   { id: "keychain", n: 10, name: "Keychain", category: "Lettering", plan: "free", opens: { editor: "/app/editor/local?p=keychain" }, blurb: "Personalized name keychains, pet tags and charms with reinforced ring tabs." },
   { id: "shadow-box", n: 11, name: "3D Shadow Box", category: "Home", plan: "free", opens: { editor: "/app/editor/local?p=shadowbox" }, blurb: "Layered paper-cut panels from geometric patterns or your own picture, for a laser or a Cricut, with over a hundred ready-made designs." },
-  { id: "paper-box", n: 12, name: "Wood Packaging", category: "Boxes", plan: "free", opens: { editor: "/app/editor/local?p=paperbox" }, blurb: "Gift, product and shipping boxes in plywood: lift-off, sliding and hinged lids, drawer boxes and inserts, with an engraved brand." },
 ];
 
 export const generatorMeta = (id: string) => GENERATORS.find((g) => g.id === id);

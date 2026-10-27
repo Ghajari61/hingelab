@@ -6,18 +6,18 @@ import { CTX } from "./ctx";
 describe("Wood Packaging", () => {
   it("is plywood packaging built on the finger-joint engine", () => {
     const p = PAPERBOX.defaults();
-    expect(PAPERBOX.name).toBe("Wood Packaging");
+    expect(PAPERBOX.name).toBe("Boxes & Packaging");
     expect(p.material).toMatch(/birch|ply|bass|mdf/);
     expect(p.design).toBe("box");
     const field = PAPERBOX.sections.find((s) => s.id === "design")!.fields.find((f) => f.key === "design")!;
-    expect(field.kind === "choice" && field.options.map((o) => o.v)).toEqual(PACKAGING_DESIGNS);
-    expect(PAPERBOX.merge({ design: "bird" }).design).toBe("box");
+    expect(field.kind === "choice" && field.options.map((o) => o.v)).toEqual(expect.arrayContaining(PACKAGING_DESIGNS));
+    expect(PAPERBOX.merge({ design: "bird" }).design).toBe("bird");
   });
 
   it("builds every ready-made design without an error and with joints that fit the sheet", () => {
     expect(PAPERBOX.presets.length).toBeGreaterThanOrEqual(60);
     expect(new Set(PAPERBOX.presets.map((p) => p.id)).size).toBe(PAPERBOX.presets.length);
-    for (const pr of PAPERBOX.presets) {
+    for (const pr of PAPERBOX.presets.filter(p => p.id.startsWith("packaging-"))) {
       const p = PAPERBOX.merge(pr.params);
       const out = PAPERBOX.build(p, CTX);
       expect(out.error, pr.id).toBeUndefined();
@@ -27,7 +27,7 @@ describe("Wood Packaging", () => {
   }, 240000);
 
   it("exports a millimetre SVG with no paper creases", () => {
-    const p = PAPERBOX.merge(PAPERBOX.presets.find((x) => x.id === "tea-hinged")!.params);
+    const p = PAPERBOX.merge(PAPERBOX.presets.find((x) => x.id === "packaging-tea-hinged")!.params);
     const a = arrangeGenerator(PAPERBOX, p, CTX);
     const svg = genSVG(PAPERBOX, a.params, a.lay!);
     expect(svg).toMatch(/width="[\d.]+mm"/);

@@ -5,7 +5,7 @@ import { Box, Cake, Check, ChevronDown, Clock, Hash, KeyRound, Layers, Package, 
 import type { Params } from "@/lib/hinge";
 import { DEFAULTS } from "@/lib/hinge/defaults";
 import { HINGE_VARIANTS, hingeVariantOf, type HingeVariant } from "@/lib/hinge/presets";
-import { GENERATOR_IDS, GENERATOR_INFO, isGeneratorId, type GeneratorId, type GeneratorInfo } from "@/lib/generators/ids";
+import { GENERATOR_IDS, LEGACY_GENERATOR_IDS, GENERATOR_INFO, isGeneratorId, type GeneratorId, type GeneratorInfo } from "@/lib/generators/ids";
 import { canUsePattern, canUseShape, type Plan } from "@/lib/plans";
 import type { GalleryGroup } from "@/components/shell/GalleryRail";
 import { RandomMark } from "./ResetMark";
@@ -37,7 +37,7 @@ export const PRODUCT_INFO: Record<Product, { name: string; icon: ReactNode }> = 
   hinge: { name: "Hinge Box", icon: <Package size={16} aria-hidden /> },
   letters: { name: "Letters", icon: <Type size={16} aria-hidden /> },
   parametric: { name: "Parametric", icon: <Layers size={16} aria-hidden /> },
-  ...(Object.fromEntries(GENERATOR_IDS.map((id) => [id, { name: GENERATOR_INFO[id].name, icon: GEN_ICON[GENERATOR_INFO[id].icon] }])) as Record<GeneratorId, { name: string; icon: ReactNode }>),
+  ...(Object.fromEntries([...GENERATOR_IDS, ...LEGACY_GENERATOR_IDS].map((id) => [id, { name: GENERATOR_INFO[id].name, icon: GEN_ICON[GENERATOR_INFO[id].icon] }])) as Record<GeneratorId, { name: string; icon: ReactNode }>),
 };
 
 /** A ready-made design's picture for each product (public/presets), shown in the product picker. */
@@ -47,7 +47,6 @@ export const PRODUCT_PICTURE: Record<Product, string> = {
   sign: "/presets/sign/welcome-arch.svg", topper: "/presets/topper/happy-birthday.svg", popup: "/presets/popup/spiral-trivet-bowl.svg", charm: "/presets/charm/family-baubles.svg", family: "/presets/family/family-crossword.svg",
   clock: "/presets/clock/wall-roman.svg", puzzle: "/presets/puzzle/kids-12.svg", qr: "/presets/qr/keychain.svg",
   keyrack: "/presets/keyrack/home-sweet-home.svg", tablenum: "/presets/tablenum/wedding-arch.svg", trophy: "/presets/trophy/star-award.svg",
-  photoproduct: "/art/photo-to-product.svg",
   keychain: "/presets/keychain/name-rounded.svg",
 };
 
@@ -78,13 +77,13 @@ export function ProductTabs({ product, onProduct }: { product: Product; onProduc
   }, [open]);
   const tile = (p: Product) => (
     <button
-      key={p} type="button" className="pp-tile" aria-current={product === p || undefined}
+      key={p} type="button" className="pp-tile" aria-current={(product === "paperbox" ? "boxes" : product) === p || undefined}
       onClick={() => { setOpen(false); if (p !== product) onProduct(p); }}
     >
       <span className="pp-pic">
         <span className="pp-icon">{PRODUCT_INFO[p].icon}</span>
         <img src={PRODUCT_PICTURE[p]} alt="" width={150} height={100} loading="lazy" />
-        {product === p && <span className="pp-selected" aria-hidden><Check size={13} /></span>}
+        {(product === "paperbox" ? "boxes" : product) === p && <span className="pp-selected" aria-hidden><Check size={13} /></span>}
       </span>
       <span className="pp-name">{PRODUCT_INFO[p].name}</span>
       <small>{isGeneratorId(p) ? GENERATOR_INFO[p].blurb : CORE_BLURB[p as CoreProduct]}</small>

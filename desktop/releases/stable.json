@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.20.0",
-    "pub_date": "2026-10-27T15:59:17.805Z",
-    "notes": "Wood Packaging replaces Paper Box with 70 editable wooden packaging presets, matching lids, joints and cut files. Pop-up ribs now use continuous solid frames with lightened windows in taller supports. Includes all changes from the latest merged website source.",
+    "version": "1.21.0",
+    "pub_date": "2026-10-27T16:39:38.549Z",
+    "notes": "Boxes and Wood Packaging are one product with 123 editable presets. Photo to Product has been removed. Existing box projects retain their settings.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.20.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmdyWmRBTmR5VnZQd3M4SEZHMTJVTkZaZnIvZ0JOcGpPZkMxb1BhSi9teWx5L1l3UGFQcnR3NWdVSW5wRmw3dkpUeG9QSkk2T1M5eFIvVlpzYjhFa2dFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTE2NzI5CWZpbGU6SGluZ2VMYWJfMS4yMC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIwLjAKdE5GUURKck5MTmxMR1F1Q2twV0E2Rm51Mjg3WnRHNXQ0VDlaYnJuZE9XdVgyZlVxejhtWFhCaENocm5vVmowY0dVenl5NjlxeVJxVTVtMXhiK0NrQVE9PQo=",
-        "size": 11969414,
-        "sha256": "7ef59376592427a87f7be6fb022e2e6d35d2eec14ca37fb304e19b47ef88a211"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.21.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmp4bHF0eXk5Z0hhajhGTTJ2SEFETW4rODVxVmg0UjI3ZXp2Z0RQQVFWbzd0YVJqVVBsdm5ISy9FTEdackFyblZCOGF6WkdOb09yTUNGRnlEOVdIWkFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTE5MTU3CWZpbGU6SGluZ2VMYWJfMS4yMS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIxLjAKZDU3ZWNDRUhxOE9kaDVJTVNLNzVhS292ZW5UTEVKVUt0cno2VkFWckVSdHVIdDUyY2VNazYwWXlBSWxFWHFKVk9PKzhpTENETHZlUFkzbWpYdTdMQkE9PQo=",
+        "size": 11829270,
+        "sha256": "ca89ad04d5d8c88173b999c97f62c325c19c517bb2c56d3ea03baa107552b8c7"
       }
     }
   }
