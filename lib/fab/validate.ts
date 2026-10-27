@@ -336,7 +336,7 @@ function message(code: FabCode, f: Found, o: ValidateOptions): string {
     case "SHORT_SEGMENTS": return `${n} repeated point${s} (segments under ${SPECK} mm) slow the machine down (${who}).`;
     case "TOO_MANY_VERTICES": return `Very detailed parts (over ${(o.maxVertices ?? MAX_VERTICES).toLocaleString("en")} points each) slow LightBurn and the controller (${who}).`;
     case "HOLE_OUTSIDE": return `${n} inner cut${s} lie${n === 1 ? "s" : ""} outside ${n === 1 ? "its" : "their"} part (${who}).`;
-    case "LOOSE_ISLAND": return `${n} piece${s} sit${n === 1 ? "s" : ""} inside a hole of ${n === 1 ? "its" : "their"} part and will drop out: glue ${n === 1 ? "it" : "them"} in or add a bridge (${who}).`;
+    case "LOOSE_ISLAND": return `${n} piece${s} cut free inside another part (${who}). Keep ${n === 1 ? "it" : "them"} for assembly. Add bridges only if the design is intended to stay connected.`;
     case "NARROW": return `Features narrower than the ${o.minFeature} mm your material holds may break or burn away (${who}).`;
     case "OVERLAP": return `Parts overlap on the sheet, so cutting one spoils the other (${who}).`;
     case "OFF_SHEET": return `Parts run past the sheet's edge (${who}).`;

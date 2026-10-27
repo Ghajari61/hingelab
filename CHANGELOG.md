@@ -1,3 +1,7 @@
+## 1.22.1 — Clearer separate-part assembly note
+
+- The shared cut-file check now explains that pieces intentionally cut free, such as Pop-up rings, should be kept for assembly. It recommends adding bridges only when a connected design is intended. Manufacturing geometry and all 1.22.0 joint corrections are unchanged.
+
 ## 1.22.0 — Pop-up joints and assembly order
 
 - **Full-thickness ring clearance.** Profile ribs now clear the complete vertical insertion path of the actual ring material, including curved and angled edges. This removes interference in Ripple, Snowflake Tree, Heart Basket and Pyramid. A geometry check rejects lost tabs, split rings and obstructed insertion paths.
