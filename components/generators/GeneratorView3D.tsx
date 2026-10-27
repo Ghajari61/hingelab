@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Layout } from "@/lib/hinge";
 import { generatorGrips } from "@/lib/generators/grips3d";
-import { flatOf, type CutPart } from "@/lib/generators/output";
+import { flatOf, genSVG, type CutPart } from "@/lib/generators/output";
 import { generatorScene } from "@/lib/generators/scene3d";
 import type { AnyGenerator, GenBase, GenOutput } from "@/lib/generators/types";
 import { modelBox } from "@/lib/three/dims";
@@ -20,13 +20,14 @@ import type { Units } from "@/components/editor/format";
  * part, text, motif, number or picture shows handles that change the design's settings
  * (lib/generators/grips3d.ts).
  */
-export default function GeneratorView3D({ out, lay, T, material, units, frameKey, edit }: {
+export default function GeneratorView3D({ out, lay, T, material, units, frameKey, edit, cutFile }: {
   out: GenOutput | null;
   lay: Layout<CutPart> | null;
   T: number;
   material: string;
   units: Units;
   frameKey: string;
+  cutFile?: { def: AnyGenerator; params: GenBase };
   edit?: { def: AnyGenerator; params: GenBase; set: (p: GenBase, record: boolean) => void };
 }) {
   const v = useView3D();
@@ -40,11 +41,12 @@ export default function GeneratorView3D({ out, lay, T, material, units, frameKey
   const editable = !!edit;
   // Rigid and folding parts move in place without rebuilding their meshes at each animation frame.
   const flatLayout = flat ? lay : null;
+  const flatDef = flat ? cutFile?.def : undefined, flatParams = flat ? cutFile?.params : undefined;
   const scene = useMemo(() => {
     if (!out || out.error) return null;
-    if (flat && flatLayout) return flatScene(flatOf(flatLayout), T);
+    if (flat && flatLayout) return flatScene(flatOf(flatLayout), T, flatDef && flatParams ? { svg: genSVG(flatDef, flatParams, flatLayout), width: flatLayout.width, height: flatLayout.height } : undefined);
     return generatorScene(out, T, 0);
-  }, [out, flatLayout, T, flat]);
+  }, [out, flatLayout, T, flat, flatDef, flatParams]);
   useEffect(() => {
     const folder = scene && "fold" in scene ? scene.fold : undefined;
     if (!folder) return;

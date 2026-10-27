@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.24.0",
-    "pub_date": "2026-10-27T19:49:38.565Z",
-    "notes": "Consistent Lay Flat across products, Parametric multi-sheet 3D layout, correct stock thickness, and smoother geometry-reusing preview motion.",
+    "version": "1.24.1",
+    "pub_date": "2026-10-27T20:54:56.735Z",
+    "notes": "SVG and Lay Flat share sheet layout, exact curved notches, calibration pieces, copy IDs and exported score/engraving labels on the correct stock thickness.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.24.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm9HMUQzRWRqUno1a3k5TytWSWNKQ3JEV0IyTWFwTkxVNmwxeGdaRkRuWjJ2bEpNa1dlL0g3OUhtR3hXUE5NQldRZmdtTkF3QnE3MWhtRURNUCtZM0FBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTMwNTU4CWZpbGU6SGluZ2VMYWJfMS4yNC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI0LjAKVExpMkRVcWxCLzFJQ0ZpYWlTVk0wQkhpeStUY09lM09XRFFXVGo0V2hWdTFwSjV5eVlXSFNCcmFFQ0orQVdYZGpoLzlDZk5meGVhODl2MDVYM2lJQ2c9PQo=",
-        "size": 11729135,
-        "sha256": "c219d1d90043e92a170791621081ebaf62a7e7a87d253ded4c82ef92c6116472"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.24.1_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm0veklMRStwNjZodTB1VW1qbmQzNlIwSkY0NEhxdjhqOFRMT2JLVzZTSG4wb08zVjVtVEthbUNaRlJscUJBTGZLdEFJeWNNN1E0SmtyVkVIVVF2MXdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTM0NDUwCWZpbGU6SGluZ2VMYWJfMS4yNC4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI0LjEKUHhaenc2ZWEwY241azk2L3h5SXdTT2lkQWRPK2ZMUUdXdE5RME96KzdqbDFoaU5hV3FxUGgvMXg1TTBpZ0VOclhoUnZ6TzRwYnpWblNIbFh2SUUzQ3c9PQo=",
+        "size": 11729636,
+        "sha256": "fb795ab98e34ec82bd0ee5e0fb793a096b098e4b35f8b70bba62a626c3356d63"
       }
     }
   }

@@ -553,7 +553,7 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
         <div className={`stage${viewMode === "3d" ? " no-rulers" : ""}`}>
         <ViewToggle value={viewMode} onChange={setViewMode} />
         <div className="stage-3d" hidden={viewMode !== "3d"}>
-          {seen3d && <LetterPreview3D model={model} params={built} lay={lay} content={content} units={units} edit={{ params, set: replace }} />}
+          {seen3d && <LetterPreview3D model={model} params={built} lay={lay} units={units} edit={{ params, set: replace }} />}
         </div>
         <section className="viewport" aria-label="Canvas">
           <div className="ruler-corner" />

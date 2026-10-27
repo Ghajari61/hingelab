@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import type { MeshData, SliceResult } from "@/lib/parametric";
+import type { MeshData, SliceResult, ParametricParams } from "@/lib/parametric";
 import type { GripSet } from "@/lib/three/grips";
 import { useEditorPrefs } from "@/lib/prefs/editorStore";
 import QuadView, { type QuadModel } from "@/lib/three/QuadView";
@@ -20,7 +20,7 @@ const NO_SHEETS: { x: number; y: number }[] = [];
  * workspace. `explode` (mm) pushes the parts apart along their plane normals; clicking a part
  * reports its id.
  */
-export default function Viewport3D({ mesh, result, T, show, explode = 0, finish = "wood", heat = false, selected = [], onSelect, className = "pdbg-view", v, units = "mm", grips, sheetPositions = NO_SHEETS }: {
+export default function Viewport3D({ mesh, result, T, show, explode = 0, finish = "wood", heat = false, selected = [], onSelect, className = "pdbg-view", v, units = "mm", grips, sheetPositions = NO_SHEETS, cutParams }: {
   mesh: MeshData | null;
   result: SliceResult | null;
   T: number;
@@ -39,6 +39,7 @@ export default function Viewport3D({ mesh, result, T, show, explode = 0, finish 
   /** Handles on the model while a part is selected. */
   grips?: GripSet;
   sheetPositions?: { x: number; y: number }[];
+  cutParams?: ParametricParams;
 }) {
   const own = useView3D();
   const editorPrefs = useEditorPrefs();
@@ -90,7 +91,7 @@ export default function Viewport3D({ mesh, result, T, show, explode = 0, finish 
     const set = new Set(selected);
     parts.traverse(o => {
       const m = o as THREE.Mesh;
-      if (!m.isMesh) return;
+      if (!m.isMesh || m.userData.keepMaterial) return;
       m.userData.base ??= m.material;
       m.material = set.has(m.userData.partId as string) ? highlight : (m.userData.base as THREE.Material);
     });
@@ -128,15 +129,18 @@ export default function Viewport3D({ mesh, result, T, show, explode = 0, finish 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result]);
 
+  const flatParams = flat ? cutParams : undefined;
+
   // After the planes: a new slice is framed once its parts are in.
   useEffect(() => {
     // QuadView supplies edges on demand; do not build a second always-visible edge overlay.
-    const parts = result ? flat ? flatPartsObject(result, T, sheetPositions) : partsObject(result, T, 0, finish, false) : undefined;
+    const parts = result ? flat ? flatPartsObject(result, T, sheetPositions, flatParams) : partsObject(result, T, 0, finish, false) : undefined;
     if (parts && !flat) (parts as MovingParts).explode(explode);
     if (parts && flat) parts.traverse(o => {
-      if (o instanceof THREE.Mesh) (o.material as THREE.MeshStandardMaterial).color.setHex(FINISH_COLORS[finish][0]);
+      if (o instanceof THREE.Mesh && !o.userData.keepMaterial) (o.material as THREE.MeshStandardMaterial).color.setHex(FINISH_COLORS[finish][0]);
     });
     swap("parts", parts);
+    if (parts && "ready" in parts) (parts.ready as Promise<unknown> | undefined)?.then(() => { if (layers.current.parts === parts) redraw(); });
     paintSelection();
     // Frame only the destination mode: the old source/planes must not enlarge flat-sheet bounds.
     for (const k of ["model", "planes", "parts"] as const) if (layers.current[k]) layers.current[k]!.visible = flat ? k === "parts" : show[k];
@@ -145,7 +149,7 @@ export default function Viewport3D({ mesh, result, T, show, explode = 0, finish 
     previousFlat.current = flat;
     frameNext.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [result, T, finish, flat, sheetPositions]);
+  }, [result, T, finish, flat, sheetPositions, flatParams]);
 
   useEffect(() => {
     if (!flat) (layers.current.parts as MovingParts | undefined)?.explode(explode);

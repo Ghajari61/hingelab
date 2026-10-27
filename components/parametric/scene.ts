@@ -3,7 +3,10 @@
  * extruded to the sheet thickness at their assembly placement.
  */
 import * as THREE from "three";
-import type { MeshData, Part, Plane, SliceResult } from "@/lib/parametric";
+import type { MeshData, Part, Plane, SliceResult, ParametricParams } from "@/lib/parametric";
+import { calibrationBar } from '@/lib/fit/calibration';
+import { layoutSheets } from '@/lib/parametric/sheetLayout';
+import { allSheetsSVG } from '@/lib/parametric/export';
 import { placementOf } from "@/lib/parametric/slice/planes";
 import { toSheet } from "@/lib/parametric/nest";
 import { unionShapes } from "@/lib/letters/polygon";
@@ -79,7 +82,7 @@ export const FINISH_COLORS: Record<"wood" | "dark" | "white", [number, number]> 
 };
 
 /** The same transformed cut contours and sheet offsets as the SVG/canvas, including all sheets. */
-export function flatPartsObject(r: SliceResult, T: number, offsets: { x: number; y: number }[]): THREE.Group {
+export function flatPartsObject(r: SliceResult, T: number, offsets: { x: number; y: number }[], params?: ParametricParams): THREE.Group & { ready?: Promise<unknown> } {
   const byId = new Map(r.parts.map(p => [p.id, p]));
   const parts: FlatPart[] = [];
   r.sheets.forEach((sheet, i) => {
@@ -87,17 +90,25 @@ export function flatPartsObject(r: SliceResult, T: number, offsets: { x: number;
     if (!offset) throw new Error('Missing sheet position for Lay Flat');
     for (const item of sheet.items) {
       const part = byId.get(item.partId);
-      if (!part) continue;
-      const contours = part.cut ? [...part.cut.outline, ...part.cut.inner] : [part.shape.outer, ...part.shape.holes, ...part.innerCuts];
+      if (!part?.cut) continue;
+      const contours = [...part.cut.outline, ...part.cut.inner];
       const move = (c: [number, number][]) => c.map(q => {
         const [x, y] = toSheet(q, item);
         return [x + offset.x, y + offset.y] as [number, number];
       });
       for (const s of unionShapes(contours, [], true)) parts.push({ name: part.id, outer: move(s.outer), holes: s.holes.map(move) });
     }
+    if (sheet.calibration) {
+      const { x, y, w } = sheet.calibration;
+      const bar = calibrationBar(x + offset.x, y + offset.y, w, params?.material.K ?? 0);
+      for (const s of unionShapes(bar.cut, [], true)) parts.push({ name: `Calibration ${i + 1}`, outer: s.outer, holes: s.holes });
+    }
   });
-  const group = flatScene(parts, T).group;
-  group.traverse(o => { if (o instanceof THREE.Mesh) o.userData.partId = o.name; });
+  const layout = layoutSheets(r.sheets);
+  const scene = flatScene(parts, T, params ? { svg: allSheetsSVG(r, params), width: layout.W, height: layout.H } : undefined);
+  const group = scene.group as THREE.Group & { ready?: Promise<unknown> };
+  group.ready = scene.ready;
+  group.traverse(o => { if (o instanceof THREE.Mesh && !o.userData.noPick) o.userData.partId = o.name; });
   return group;
 }
 
@@ -204,6 +215,8 @@ export function disposeTree(o: THREE.Object3D) {
     const mat = m.material as THREE.Material | THREE.Material[] | undefined;
     const base = m.userData.base as THREE.Material | undefined;
     for (const material of new Set([...(Array.isArray(mat) ? mat : mat ? [mat] : []), ...(base ? [base] : [])])) {
+      const map = (material as THREE.MeshBasicMaterial).map;
+      if (map && !map.userData.shared) map.dispose();
       if (!material.userData.shared) material.dispose();
     }
   });

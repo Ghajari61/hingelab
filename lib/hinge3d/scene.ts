@@ -6,6 +6,8 @@
 import * as THREE from "three";
 import type { Edge, LayerContent, Layout, Model, Params, PlatePart, Point, WallPart } from "@/lib/hinge";
 import { buildCore } from "@/lib/hinge/core";
+import { layeredSVG, partOutlineD } from '@/lib/hinge/export';
+import { flattenPath } from '@/lib/export/dxf';
 import { honeyLattice } from "@/lib/hinge/hinge";
 import { clipHalf } from "@/lib/hinge/flip";
 import { builtParams } from "@/lib/hinge/model";
@@ -241,9 +243,9 @@ const bbox = (h: Point[]) => [Math.min(...h.map((q) => q[0])), Math.min(...h.map
 export function hingeFlatScene(lay: Layout, content: LayerContent | null, p: Params): Scene3D {
   const parts: FlatPart[] = lay.items.map(({ pt, ox, oy }) => {
     const sh = (q: Point): Point => [q[0] + ox, q[1] + oy];
-    if (pt.kind === "wall") return { name: pt.name, outer: pt.outline.map(sh), holes: (pt.holes ?? []).map((h) => h.map(sh)) };
-    return { name: pt.name, outer: (pt.pts ?? outline(pt.edges, pt.r)).map(sh), holes: pt.slots.map((s) => s.map(sh)) };
+    const outer = flattenPath(partOutlineD(pt, ox, oy))[0].pts;
+    return { name: pt.name, outer, holes: (pt.kind === 'wall' ? pt.holes ?? [] : pt.slots).map(h => h.map(sh)) };
   });
   const regions = parts.flatMap(pt => unionShapes([pt.outer, ...pt.holes], [], true).map(s => ({ ...s, name: pt.name })));
-  return flatScene(regions, p.T, content ? { d: content.hinge, width: lay.width, height: lay.height } : undefined);
+  return flatScene(regions, p.T, content ? { svg: layeredSVG(lay.width, lay.height, '', content, p.layers, p.labels), width: lay.width, height: lay.height } : undefined);
 }

@@ -4,6 +4,7 @@ import { arrangeGenerator, flatOf, genSVG } from '../output';
 import { flatScene } from '@/lib/three/flat';
 import { assertFlatSurface } from '@/lib/three/__tests__/previewAssertions';
 import { CTX } from './ctx';
+import { assertFlatMatchesSVG } from '@/lib/three/__tests__/flatExportAssertions';
 
 describe('every generator flat preview', () => {
  for (const def of ALL_GENERATORS) it(`${def.id}: defaults and every preset`, () => {
@@ -12,7 +13,7 @@ describe('every generator flat preview', () => {
    expect(a.lay, preset.id).not.toBeNull();
    expect('error' in a.result, preset.id).toBe(false);
    const scene=flatScene(flatOf(a.lay!),p.T);
-   try {assertFlatSurface(scene.group)} finally {scene.dispose()}
+   try {assertFlatSurface(scene.group); assertFlatMatchesSVG(scene.group, genSVG(def,a.params,a.lay!));} finally {scene.dispose()}
    expect(genSVG(def,p,a.lay!)).not.toMatch(/NaN|Infinity|undefined/);
   }
  },120000);
