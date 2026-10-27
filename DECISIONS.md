@@ -1687,3 +1687,12 @@ The owner asked for the product to explode gently in place with the existing sli
 - The 3D editors no longer use the open-out choreography: the slider's eased value (`useView3D`, unchanged) drives the design's own in-place explode (Hinge Box: walls up a little, lid well clear, flip lid swings, drawers slide out; generators: their usual apart offsets; folding designs as before).
 - Designs whose scenes are rebuilt per explode value are wrapped by `rebuiltExplode` (lib/three/rebuilt.ts): one stable root that swaps in each build (closed and fully open builds kept), so QuadView treats them as exploding in place and widens the views to hold the opened design. QuadView repaints the look and display mode of each new build.
 - The play button is removed. `hingeUnfoldScene` and the generator unfold path stay in the library (tested) but are not wired to any view.
+
+## D213. Release check: one release branch, security fixes and speed
+
+Before a release the owner asked for a final technical and security check of the whole app and site.
+
+- **One branch to merge.** `claude/release-check` combines main with Name Charms and Family Names (#22, which already holds the Calibration removal #17), the Pop-up 3D work (#23, D212) and the explode-in-place slider from the first Pop-up review (#13, D207/D208). PRs #7, #9 and #11 are already contained in main.
+- **Checked**: types, lint (no errors), the full test suite, `next build`, every page in the sitemap and every internal link (no page errors or failed requests), every product's editor at desktop and phone width, 3D, explode and export for nine products, response headers. The perf budgets are over on shared first-load JS (an open item since D205, not a regression of this branch). Rust code is unchanged since 1.13.0; `cargo test` needs a Windows or WebKitGTK machine.
+- **Security fixes** (from an independent review; billing items were reported to the owner, not changed): no refund for client-aborted AI jobs; a stricter inert-SVG check; `/api/svg` as an attachment with the sandbox CSP; gallery inserts only through the server action with the service role (migration `20261026000100` drops the user insert policy); CSP `connect-src` limited to our own Supabase origin.
+- **Speed**: `rectInside` tests only holes near the label box and rejects a box a hole outline runs through; Pop-up clips only against slots near each ring and joint. Output is unchanged (Pop-up snapshots identical).

@@ -1,3 +1,8 @@
+## Unreleased — Release check: security and speed
+
+- **Security.** AI Studio no longer refunds a job the browser walked away from mid-answer, so credits can't be dodged; the SVG safety check refuses more tricks (prefixed script elements, `<svg/onload>`, embedded images and forms, doctypes); the laser-sheet SVG service answers as a download that can never run as a page; gallery posts go in only through the site, after its checks; the browser may talk only to HingeLab's own database server.
+- **Faster.** Part labels on a Pop-up (and any design with many long slots) are placed in about 2 s instead of half a minute; very large Pop-ups build three times faster.
+
 ## Unreleased — Family Names and more Christmas charms
 
 - **New product: Family Names.** One list of names becomes one piece: a name crossword where every name crosses another, a Christmas tree built from the names, a snowflake with a name on each arm, a ring of names round "Mum" or an initial, a split monogram with the name across the initial, or bunting with a letter on each flag. Add a silhouette backer for two layers. 20 ready-made designs.
