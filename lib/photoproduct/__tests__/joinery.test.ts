@@ -64,4 +64,10 @@ describe('automatic paired photo-product joinery',()=>{
   expect(out.report.joints[0].kind).toBe('glue');expect(out.parts[0].holes).toHaveLength(0);
   expect(engineerJoinery([base(),wall()],{...DEFAULT_JOINERY,mode:'off'}).parts).toEqual([base(),wall()]);
  });
+ it('does not call a closed pocket a half-lap when existing windows prevent edge insertion',()=>{
+  const a=plate('a',100,120,4,[1,0,0,0,0,0,-1,2,0,1,0,0]);
+  a.holes=[rect(45,10,10,30).reverse(),rect(45,80,10,30).reverse()];
+  const b=plate('b',80,120,4,[0,0,1,48,1,0,0,-40,0,1,0,0]);
+  expect(engineerJoinery([a,b],DEFAULT_JOINERY).report.joints).toHaveLength(0);
+ });
 });

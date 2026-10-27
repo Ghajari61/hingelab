@@ -123,6 +123,8 @@ export function engineerJoinery(input:GenPart[],settings:JoinerySettings):{parts
    const shoulders=(p:GenPart,s:typeof sa,width:number,lo:number,hi:number)=>[-1,1].every(side=>filled(p,rectangle(s.p0,s.u,s.v,lo,hi,side*(width/2+c)+(side<0?-web:0),side*(width/2+c)+(side>0?web:0))));
    if(!shoulders(a,sa,b.t!,overlap.lo+web,overlap.hi-web)||!shoulders(b,sb,a.t!,overlap.lo+web,overlap.hi-web)||toolpathOverlap(a,ca)||toolpathOverlap(b,cb))continue;
    const nextA=cut(a,ca),nextB=cut(b,cb);if(!nextA||!nextB||area(contours(nextA))<.35*area(contours(a))||area(contours(nextB))<.35*area(contours(b)))continue;
+   // A half-lap must open through each exterior edge, not stop inside an existing window.
+   if(Math.abs(signedArea(nextA.outer))>=Math.abs(signedArea(a.outer))-.01||Math.abs(signedArea(nextB.outer))>=Math.abs(signedArea(b.outer))-.01)continue;
    parts[ai]=nextA;parts[bi]=nextB;insertions.set(a.id,mul(d,sign));insertions.set(b.id,mul(d,-sign));
    register('cross-lap',a,b,add(origin,mul(d,mid)),b.t!+settings.clearance,overlap.hi-overlap.lo,`Slide the open half-laps of ${a.name} and ${b.name} together to their shared midpoint. Each slot follows the other part's thickness.`,a.t!+settings.clearance);break;
   }
