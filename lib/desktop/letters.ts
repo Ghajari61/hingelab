@@ -60,6 +60,7 @@ export function lettersProduct(): DProduct {
         FONT_FIELD,
         { kind: "choice", key: "sizeMode", label: "Size measures", options: [{ v: "capHeight", text: "Cap height", title: "Size is the height of a capital letter such as H" }, { v: "totalHeight", text: "Total height", title: "Size is the full height of the text, ascenders and descenders included" }] },
         ...nums("text"),
+        { kind: "toggle", key: "noWeld", label: "No Weld", help: "Keep glyphs and detached dots separate; retain the previous weld settings." },
         { kind: "choice", key: "weld", label: "Weld", options: [{ v: "word", text: "Whole word", title: "Letters that touch become one piece" }, { v: "letters", text: "Each letter", title: "One piece per letter, even where letters touch" }] },
         { kind: "choice", key: "direction", label: "Direction", options: [{ v: "auto", text: "Auto" }, { v: "ltr", text: "Left to right" }, { v: "rtl", text: "Right to left" }] },
       ],
@@ -90,6 +91,7 @@ export function lettersProduct(): DProduct {
     {
       id: "solid", title: "Solid and stencil", help: "Bridges that hold pieces together.",
       fields: [
+        { kind: "choice", key: "operation", label: "Letters", options: [{ v: "cut", text: "Cut" }, { v: "score", text: "Score" }], help: "Score traces letters without cutting them out or applying kerf." },
         { kind: "toggle", key: "weldDots", label: "Weld dots", help: "Join every separate piece of a word, dots and accents included, with small bridges so each word cuts as one part." },
         { kind: "choice", key: "bridgesPerIsland", label: "Bridges per centre", options: [{ v: "1", text: "One", title: "One bridge across the thinnest stroke" }, { v: "2", text: "Two", title: "A second bridge at least 120° from the first" }] },
         ...nums("solid"),
@@ -125,7 +127,9 @@ function lettersForm(p: LetterParams): DForm {
   if (!p.marquee.enabled) hidden.push(...Object.values(MARQUEE_KEYS).map((k) => `marquee.${k}`));
   if (!cleanCutout(p.cutout)) hidden.push("cutout.on", "cutout.cell", "cutout.bar");
   if (p.mode !== "stencil") hidden.push("bridgesPerIsland");
-  if (p.mode !== "solid") hidden.push("weldDots");
+  if (p.mode !== "solid") hidden.push("weldDots", "operation");
+  if (p.noWeld) hidden.push("weld", "weldDots");
+  if (p.operation === "score") hidden.push("weldDots");
   const hiddenSections = [...(box ? ["solid"] : ["box", "joints"]), ...(box && p.wallStyle === "hinge" ? [] : ["hinge"])];
   const labels: Record<string, string> = { "marquee.enabled": `Marquee light holes in the ${p.lid === "open" ? "base" : "lid"}` };
   if (p.smallIslands === "flat") labels.stackIslands = `Stack to full height (${Math.max(1, Math.round(p.depth / p.T))} layers)`;

@@ -64,7 +64,8 @@ export default function LettersDebug() {
         <select value={p.fontId} onChange={(e) => set({ fontId: e.target.value })} aria-label="Font">
           {BUNDLED_FONTS.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
         </select>
-        <select value={p.weld} onChange={(e) => set({ weld: e.target.value as LetterParams["weld"] })} aria-label="Weld">
+        <label className="chk"><input type="checkbox" checked={!!p.noWeld} onChange={(e) => set({ noWeld: e.target.checked })} /> No Weld</label>
+        <select disabled={p.noWeld} value={p.weld} onChange={(e) => set({ weld: e.target.value as LetterParams["weld"] })} aria-label="Weld">
           <option value="word">Weld: word</option>
           <option value="letters">Weld: letters</option>
         </select>
@@ -86,7 +87,7 @@ export default function LettersDebug() {
             </select>
           </>
         )}
-        <label className="chk"><input type="checkbox" checked={p.weldDots} onChange={(e) => set({ weldDots: e.target.checked })} /> Weld dots</label>
+        <label className="chk"><input type="checkbox" disabled={p.noWeld} checked={p.weldDots} onChange={(e) => set({ weldDots: e.target.checked })} /> Weld dots</label>
         <label className="chk">Size <input type="text" size={4} value={p.size} onChange={(e) => set({ size: +e.target.value || 0 })} /></label>
         <label className="chk">Spacing <input type="text" size={3} value={p.letterSpacing} onChange={(e) => set({ letterSpacing: +e.target.value || 0 })} /></label>
         <label className="chk">Thicken <input type="text" size={3} value={p.thicken} onChange={(e) => set({ thicken: +e.target.value || 0 })} /></label>

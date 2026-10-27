@@ -32,6 +32,8 @@ export const LETTER_FIELDS: DField[] = [
   { kind: "choice", key: "lid", label: "Lid", options: [{ v: "open", text: "Open top" }, { v: "fixed", text: "Fixed lid" }, { v: "removable", text: "Removable lid" }] },
   { kind: "choice", key: "wallStyle", label: "Walls", options: [{ v: "hinge", text: "Bent living-hinge walls" }, { v: "faceted", text: "Flat wall panels" }] },
   { kind: "number", key: "letterSpacing", label: "Spacing", help: "Extra space between letters.", unit: "mm", min: -20, max: 100, step: 0.5 },
+  { kind: "toggle", key: "noWeld", label: "No Weld", help: "Keep glyphs and dots separate without connecting them." },
+  { kind: "choice", key: "operation", label: "Letters", options: [{ v: "cut", text: "Cut" }, { v: "score", text: "Score (solid letters)" }] },
   { kind: "toggle", key: "weldDots", label: "Weld dots", help: "Join the dots of i and j to the letters (solid script)." },
   { kind: "choice", key: "material", label: "Material", options: MATERIAL_OPTIONS },
 ];

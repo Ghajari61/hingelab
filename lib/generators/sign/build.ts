@@ -8,7 +8,7 @@ import { motif, motifSize, type MotifRef } from "../motifs";
 import { motifRef } from "../motifRef";
 import { orient, shapeOutline } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
-import { bottomAt, distTo, mirrorX, textBlock, weld, withSticks } from "../weld";
+import { bottomAt, distTo, mirrorX, textBlock, weld, letterShapes, letterTraces, withSticks } from "../weld";
 import type { SignParams } from "./params";
 
 export interface SignInfo {
@@ -84,7 +84,7 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
   const second = (pt: GenPart): GenPart => ({ ...pt, material: "second", color: m2.color, t: p.mat.T2 });
 
   // Text and motif, centred on (0, 0).
-  const t = textBlock(ctx, p.text.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, lead: p.text.lead, align: p.text.align, missing, style: { ...p.textStyle, ...p.textForm } });
+  const t = textBlock(ctx, p.text.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, lead: p.text.lead, align: p.text.align, missing, noWeld: p.style.noWeld, style: { ...p.textStyle, ...p.textForm } });
   const mr = motifRef(p.motif.kind, p.motif.art, ctx, missing);
   if (t.loading || mr.loading) return { parts: [], stats: [], notice: "Loading the font." };
   const hasText = t.contours.length > 0;
@@ -110,9 +110,13 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
   let boardHoles: Contour[] = [];
   let content: Contour[];
   let W: number, H: number;
+  const separateWord = p.style.kind === "word" && p.style.noWeld && p.style.operation !== "score" && !stand;
+  const wordBacker = p.style.kind === "word" && (p.style.operation === "score" || (p.style.noWeld && stand));
+  const glyphs = [...(t.glyphs ?? [t.contours]), ...(mot.length ? [mot] : [])];
+  let looseWord: Shape[] = [];
   if (cutout) {
     const neon = p.style.kind === "neon";
-    let s = neon
+    let s = neon || wordBacker
       ? weld(all, { border: Math.max(2, p.style.border), solid: true, bridge: Math.max(4, p.style.border) })
       : weld(all, { border: Math.max(0.2, p.style.weld), minHole: 2, bridge: Math.max(2.5, p.style.weld * 2.5) });
     if (!s) return { parts: [], stats: [], error: "The letters are too thin to cut. Raise the weld." };
@@ -122,11 +126,12 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
       const u = differenceShapes([orient(s.outer), bar], s.holes.map(orient));
       s = u.reduce((a, c) => (c.area > a.area ? c : a));
     }
-    const b = bboxOf([s.outer]);
+    const b = separateWord ? bboxOf(all) : bboxOf([s.outer]);
+    if (separateWord) looseWord = letterShapes(all, { noWeld: true, border: 0 }, glyphs).map(q => makeShape(transform(q.outer, { x: -b.x0, y: -b.y0 }), q.holes.map(h => transform(h, { x: -b.x0, y: -b.y0 }))));
     W = b.x1 - b.x0; H = b.y1 - b.y0;
     outline = transform(s.outer, { x: -b.x0, y: -b.y0 });
     boardHoles = s.holes.map((h) => transform(h, { x: -b.x0, y: -b.y0 }));
-    content = neon ? move(all, -b.x0, -b.y0) : [];
+    content = neon || wordBacker ? move(all, -b.x0, -b.y0) : [];
   } else {
     const auto = p.board.auto && all.length > 0;
     const arch = p.board.shape === "arch" ? 0.14 : 0;
@@ -140,6 +145,7 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
     const cy = H / 2 + (auto ? (contentW * arch) / 2 : 0) + (H * p.text.offset) / 100;
     content = move(all, W / 2 - ccx, cy - ccy);
   }
+  const contentGlyphs = content.length && all.length ? glyphs.map(g => move(g, content[0][0][0] - all[0][0][0], content[0][0][1] - all[0][0][1])) : [];
   info.W = W; info.H = H;
   const pad = cutout ? 0 : Math.max(6, p.board.pad * 0.6);
   info.roomW = W - 2 * pad;
@@ -218,7 +224,11 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
     }
     case "layered": {
       parts.push({ id: "board", name: "Board", outer: outline, holes: [...boardHoles, ...holes], engrave, score, place: place(z0) });
-      if (content.length && p.style.join) {
+      if (content.length && p.style.operation === "score") {
+        parts[parts.length - 1].score = [...score, ...letterTraces(content, p.style.noWeld, contentGlyphs)];
+      } else if (content.length && p.style.noWeld) {
+        letterShapes(content, { noWeld: true, border: 0 }, contentGlyphs).forEach((s, i) => parts.push(second({ id: `letter${i + 1}`, name: `Letter ${i + 1}`, outer: s.outer, holes: s.holes, place: place(z0 + T) })));
+      } else if (content.length && p.style.join) {
         const s = weld(content, { border: Math.max(0.2, p.style.weld), minHole: 2, bridge: Math.max(2.5, p.style.weld * 2.5) });
         if (s) parts.push(second({ id: "letters", name: "Letters", outer: s.outer, holes: s.holes, place: place(z0 + T) }));
       } else if (content.length) {
@@ -228,7 +238,12 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
       break;
     }
     case "word": {
-      parts.push({ id: "board", name: "Word", outer: outline, holes: boardHoles, place: place(z0) });
+      if (separateWord) {
+        looseWord.forEach((s, i) => parts.push({ id: `letter${i + 1}`, name: `Letter ${i + 1}`, outer: s.outer, holes: s.holes, place: place(z0) }));
+      } else {
+        parts.push({ id: "board", name: wordBacker ? "Word backer" : "Word", outer: outline, holes: boardHoles, ...(p.style.operation === "score" ? { score: letterTraces(content, p.style.noWeld, contentGlyphs) } : {}), place: place(z0) });
+        if (wordBacker && p.style.operation !== "score") letterShapes(content, { noWeld: true, border: 0 }, contentGlyphs).forEach((s, i) => parts.push(second({ id: `letter${i + 1}`, name: `Letter ${i + 1}`, outer: s.outer, holes: s.holes, place: place(z0 + T) })));
+      }
       break;
     }
     case "stencil": {

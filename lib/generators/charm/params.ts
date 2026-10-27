@@ -44,7 +44,7 @@ export interface CharmParams extends GenBase {
   style: {
     kind: CharmStyle;
     /** Letters style: how much the letters grow so they fuse, mm. */
-    weld: number;
+    weld: number; noWeld: boolean; operation: "cut" | "score";
     /** Letters style: a silhouette backing this much bigger (0 = none), mm. */
     backing: number;
   };
@@ -110,7 +110,7 @@ export const CHARM_DEFAULTS: CharmParams = {
   names: { list: "Olivia\nNoah\nAva\nLiam", fontId: "pacifico", size: 14, spacing: 0, sub: "", subFontId: "fredoka", subSize: 45, copies: 1 },
   textStyle: { ...TEXT_STYLE },
   textForm: { ...TEXT_FORM },
-  style: { kind: "engrave", weld: 0.8, backing: 0 },
+  style: { kind: "engrave", weld: 0.8, noWeld: false, operation: "cut", backing: 0 },
   shape: { kind: "circle", motif: "snowflake", art: { ...MOTIF_ART }, width: 70, height: 70, corner: 3, margin: 4, frame: true, hat: "tophat", paint: true },
   accent: { kind: "none", art: { ...MOTIF_ART }, place: "above", size: 14 },
   hang: { kind: "hole", side: "top", hole: 4, wall: 3 },
@@ -173,6 +173,8 @@ export function mergeCharm(raw: unknown): CharmParams {
   p.card.clearance = clamp(p.card.clearance, 0, 5); p.card.lip = clamp(p.card.lip, 1.5, 20);
   if (!isCharmShape(p.dangle.shape) || p.dangle.shape === "motif") p.dangle.shape = d.dangle.shape;
   p.dangle.size = clamp(p.dangle.size, 10, 80); p.dangle.hole = clamp(p.dangle.hole, 1.5, 8); p.dangle.text = p.dangle.text.slice(0, 12);
+  p.style.noWeld = p.style.noWeld === true;
+  p.style.operation = p.style.operation === "score" ? "score" : "cut";
   return p;
 }
 

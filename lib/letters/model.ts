@@ -29,7 +29,7 @@ export function computeLetterModel(p: LetterParams, font: LoadedFont, hb: HarfBu
     return { error: out.shaped.missing.length ? `${font.name} has none of these characters. Pick another font.` : "Nothing to cut: the text has no visible characters." };
   }
 
-  const sources = groupOutlines(out, p.text, p.weld);
+  const sources = groupOutlines(out, p.text, p.noWeld ? "letters" : p.weld);
   const m = minFeatureOf(p);
   const w = bridgeWidthOf(p);
   const shapes: Shape[] = [];
@@ -39,7 +39,8 @@ export function computeLetterModel(p: LetterParams, font: LoadedFont, hb: HarfBu
   const named: { shape: Shape; name: string }[] = [];
 
   sources.forEach((src, gi) => {
-    let gs = dropSpecks(offsetShapes(dropSpecks(unionShapes(src.contours), MIN_PIECE_AREA), p.thicken), MIN_PIECE_AREA);
+    const minArea = p.noWeld || (p.mode === "solid" && p.operation === "score") ? 0 : MIN_PIECE_AREA;
+    let gs = dropSpecks(offsetShapes(dropSpecks(unionShapes(src.contours), minArea), p.thicken), minArea);
     gs.forEach(s => (s.group = gi));
     shapes.push(...gs);
     islands.push(...gs.filter(s => s.area < p.islandArea));
@@ -51,7 +52,7 @@ export function computeLetterModel(p: LetterParams, font: LoadedFont, hb: HarfBu
     }
 
     let names = shapeLabels(gs, src);
-    if (p.mode === "solid" && p.weldDots && gs.length > 1) {
+    if (p.mode === "solid" && p.operation !== "score" && !p.noWeld && p.weldDots && gs.length > 1) {
       const wd = weldPieces(gs, w);
       bridges.push(...wd.bridges);
       if (wd.shapes.length > 1) issues.push({ lvl: "warn", msg: `Weld dots could not join every piece of “${src.text}”.` });
@@ -62,6 +63,7 @@ export function computeLetterModel(p: LetterParams, font: LoadedFont, hb: HarfBu
     gs.forEach((s, i) => named.push({ shape: s, name: names[i] }));
   });
 
+  if (!named.length) return { error: "No visible letter geometry remains. Increase the text size or reduce the stroke adjustment." };
   named.sort((a, b) => a.shape.bbox.x0 + a.shape.bbox.x1 - (b.shape.bbox.x0 + b.shape.bbox.x1));
 
   let parts: LetterPart[];
@@ -95,9 +97,15 @@ export function computeLetterModel(p: LetterParams, font: LoadedFont, hb: HarfBu
     issues.push(...st.issues);
     parts = [st.part];
   } else {
-    parts = solidParts(named.map(n => n.shape), named.map(n => n.name), p.K);
-    if (!p.weldDots && islands.length) {
-      issues.push({ lvl: "info", msg: `${islands.length} small piece${islands.length > 1 ? "s" : ""} (dots or accents) ${islands.length > 1 ? "are" : "is"} cut separately. Tick Weld dots to join them to the letters.` });
+    if (p.operation === "score") {
+      const traces = shapeContours(named.map(n => n.shape));
+      const b = bboxOfContours(traces), pad = 3;
+      const bbox = { x0: b.x0 - pad, y0: b.y0 - pad, x1: b.x1 + pad, y1: b.y1 + pad };
+      parts = [{ kind: "solid", name: "Scored text", outer: [[bbox.x0, bbox.y0], [bbox.x1, bbox.y0], [bbox.x1, bbox.y1], [bbox.x0, bbox.y1]], holes: [], scoreOnly: traces, bbox, label: { x: b.x0, y: b.y0, size: 3 } }];
+      issues.push({ lvl: "info", msg: "Score traces the letters without cutting them out. The stock rectangle in the preview is a guide and is not exported as a cut." });
+    } else parts = solidParts(named.map(n => n.shape), named.map(n => n.name), p.K, p.noWeld ? 0 : MIN_PIECE_AREA);
+    if (p.operation !== "score" && (!p.weldDots || p.noWeld) && islands.length) {
+      issues.push({ lvl: "info", msg: `${islands.length} small piece${islands.length > 1 ? "s" : ""} (dots or accents) ${islands.length > 1 ? "are" : "is"} cut separately. Turn off No Weld and tick Weld dots to join them to the letters.` });
     }
   }
 

@@ -23,7 +23,7 @@ import { motif, type MotifRef } from "../motifs";
 import { motifRef } from "../motifRef";
 import { orient, orientHole } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
-import { textBlock, weld } from "../weld";
+import { textBlock, weld, letterShapes, letterTraces } from "../weld";
 import { letterScores } from "../weldScore";
 import { fitContent, hang } from "../charm/build";
 import { mergeCharm } from "../charm/params";
@@ -81,8 +81,22 @@ function onCircle(cs: Contour[], R: number): Contour[] {
 }
 
 /** The parts for a welded piece: one cut piece, or a backer with the names in the second material on top. */
-function weldedParts(p: FamilyParams, piece: Shape, scores: Contour[], label: string, hangIt: boolean): { parts: GenPart[]; wall: number } {
+function weldedParts(p: FamilyParams, piece: Shape, scores: Contour[], label: string, hangIt: boolean, loose?: Shape[], scoreOnly = false): { parts: GenPart[]; wall: number } {
   const m2 = material2(p.mat.mat2);
+  if (loose || scoreOnly) {
+    const pieces = loose ?? [piece];
+    const hasBack = p.backer.on || scoreOnly;
+    const parts: GenPart[] = [];
+    let wall = Infinity;
+    if (hasBack) {
+      const back = largest(offsetShapes([makeShape(piece.outer, [])], Math.max(2, p.backer.offset), "round"))!;
+      const h = hangIt ? hangTop(p, back) : { shape: back, wall: Infinity };
+      wall = h.wall;
+      parts.push({ id: "backer", name: `${label} backer`, outer: h.shape.outer, holes: h.shape.holes, ...(scoreOnly ? { score: pieces.flatMap(s => letterTraces(shapeContours([s]))) } : {}), place: { x: 0, y: 0, z: 0 } });
+    }
+    if (!scoreOnly) pieces.forEach((s, i) => parts.push({ id: `piece-${i + 1}`, name: `${label} piece ${i + 1}`, outer: s.outer, holes: s.holes, ...(hasBack ? { material: "second", color: m2.color, t: p.mat.T2 } : {}), place: { x: 0, y: 0, z: hasBack ? p.T : 0 } }));
+    return { parts, wall };
+  }
   if (!p.backer.on) {
     const h = hangIt ? hangTop(p, piece) : { shape: piece, wall: Infinity };
     return { parts: [{ id: "piece", name: label, outer: h.shape.outer, holes: h.shape.holes, score: scores.length ? scores : undefined, place: { x: 0, y: 0, z: 0 } }], wall: h.wall };
@@ -212,6 +226,7 @@ export function buildFamily(p: FamilyParams, ctx: BuildContext): FamilyOutput {
     const welded = weld([...star, ...all, ...trunk], { border: t.weld, minHole: 2, bridge: Math.max(2, t.weld * 3) });
     if (!welded) return { parts: [], stats: [], error: "Type some names." };
     let piece = welded;
+    let letterHoles: Contour[] = [];
     const scores = letterScores(glyphs);
     if (t.trunk && t.year.trim()) {
       const yl = line(ctx, t.year, "archivo-black", t.width * 0.07, missing);
@@ -220,9 +235,11 @@ export function buildFamily(p: FamilyParams, ctx: BuildContext): FamilyOutput {
       const tb = bboxOf(trunk), wall = Math.max(2, t.weld * 2);
       const k = Math.min(1, (tb.x1 - tb.x0 - 2 * wall) / yl.w, (tb.y1 - tb.y0 - 2 * wall) / yl.h);
       const yr = move(scale(yl.cs, k), 0, (tb.y0 + tb.y1) / 2 + 0.5);
-      piece = makeShape(piece.outer, [...piece.holes, ...unionShapes(yr).map((s) => orientHole(s.outer))]);
+      letterHoles = unionShapes(yr).map(s => orientHole(s.outer));
+      piece = makeShape(piece.outer, [...piece.holes, ...letterHoles]);
     }
-    const w = weldedParts(p, piece, scores, "Name tree", true);
+    const loose = t.noWeld || t.operation === "score" ? letterShapes([...star, ...all, ...trunk], { noWeld: true, border: 0 }, [...glyphs, star, trunk].filter(g => g.length)).flatMap(s => letterHoles.length ? differenceShapes(shapeContours([s]), letterHoles.map(orient)) : [s]) : undefined;
+    const w = weldedParts(p, piece, scores, "Name tree", true, loose, t.operation === "score");
     info.wall = w.wall;
     parts.push(...w.parts);
   }
@@ -254,13 +271,16 @@ export function buildFamily(p: FamilyParams, ctx: BuildContext): FamilyOutput {
     const welded = weld([...hub, ...all, ...tips], { border: sf.weld, minHole: 2, bridge: Math.max(2, sf.weld * 3) });
     if (!welded) return { parts: [], stats: [], error: "Type some names." };
     let piece = welded;
+    let letterHoles: Contour[] = [];
     if (sf.centre.trim()) {
       const yl = line(ctx, sf.centre, "archivo-black", r0 * 0.55, missing);
       if (!yl) return loadingOut();
       const k = Math.min(1, (r0 * 1.6) / yl.w);
-      piece = makeShape(piece.outer, [...piece.holes, ...unionShapes(scale(yl.cs, k)).map((s) => orientHole(s.outer))]);
+      letterHoles = unionShapes(scale(yl.cs, k)).map(s => orientHole(s.outer));
+      piece = makeShape(piece.outer, [...piece.holes, ...letterHoles]);
     }
-    const w = weldedParts(p, piece, letterScores(glyphs), "Name snowflake", true);
+    const raw = sf.noWeld || sf.operation === "score" ? letterShapes([...hub, ...all, ...tips], { noWeld: true, border: 0 }, [...glyphs, hub, tips]).flatMap(s => letterHoles.length ? differenceShapes(shapeContours([s]), letterHoles.map(orient)) : [s]) : undefined;
+    const w = weldedParts(p, piece, letterScores(glyphs), "Name snowflake", true, raw, sf.operation === "score");
     info.wall = w.wall;
     parts.push(...w.parts);
   }
@@ -399,10 +419,12 @@ export function buildFamily(p: FamilyParams, ctx: BuildContext): FamilyOutput {
     ...(mixed ? [{ label: "Second material", value: `${m2.name} ${p.mat.T2} mm` }] : []),
   ];
   const assembly: string[] = [];
+  const loose = kind === "tree" ? p.tree.noWeld : kind === "snowflake" ? p.snowflake.noWeld : false;
+  if (loose && (kind === "tree" ? p.tree.operation : p.snowflake.operation) !== "score") assembly.push("No Weld keeps the letters, dots and ornaments as separate pieces. Glue them to the backing in the preview positions, or mount them individually.");
   if (parts.some((q) => q.engrave?.length || q.score?.length)) assembly.push("Engrave and score first, then cut, without moving the sheet.");
   if (mixed) assembly.push(`Cut the ${MATERIALS[p.material]?.name ?? "main"} sheet, then the ${m2.name} sheet.`, "Glue the names on the backer with a thin line of wood glue or clear epoxy, lined up by their outline; press flat for an hour.");
   if (kind === "bunting") assembly.push("Thread a cord through the two holes of each flag, front to back and out again, in order, leaving a little gap between flags.");
-  else if (p.hang.kind !== "none") assembly.push("Hang it with a ribbon or an ornament hook through the loop.");
+  else if (p.hang.kind !== "none" && Number.isFinite(info.wall)) assembly.push("Hang it with a ribbon or an ornament hook through the loop.");
   return {
     parts, stats, assembly, info, missing: missing.length ? missing : undefined,
     materials: mixed ? { main: MATERIALS[p.material]?.name ?? `Main material ${p.T} mm`, second: `${m2.name} ${p.mat.T2} mm`, secondK: m2.K } : undefined,

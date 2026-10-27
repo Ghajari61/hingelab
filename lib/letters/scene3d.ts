@@ -105,7 +105,30 @@ export function buildLetterScene(model: LetterModel, p: LetterParams, explode = 
       inner.add(slab(pt.outer, pt.holes, pieceZ || T, T * layers, WOOD.piece, pt.name));
     }
   } else {
-    for (const pt of model.parts) if (pt.kind === "solid") inner.add(slab(pt.outer, pt.holes, 0, T, WOOD.piece, pt.name));
+    for (const pt of model.parts) if (pt.kind === "solid") {
+      inner.add(slab(pt.outer, pt.holes, 0, T, WOOD.piece, pt.name));
+      if (pt.scoreOnly) {
+        // Thin mesh strips survive the desktop scene serializer as well as the web renderer.
+        const positions: number[] = [], halfWidth = 0.08;
+        for (const c of pt.scoreOnly) for (let i = 0; i < c.length; i++) {
+          const a = c[i], b = c[(i + 1) % c.length];
+          const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
+          if (len < 1e-8) continue;
+          const nx = -dy / len * halfWidth, ny = dx / len * halfWidth;
+          const q = [[a[0] + nx, -a[1] - ny], [b[0] + nx, -b[1] - ny], [b[0] - nx, -b[1] + ny], [a[0] - nx, -a[1] + ny]];
+          for (const j of [0, 1, 2, 0, 2, 3]) positions.push(q[j][0], q[j][1], T + 0.015);
+        }
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+        geometry.computeVertexNormals();
+        const marks = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: "#493322", roughness: 1, side: THREE.DoubleSide }));
+        marks.name = "Scored letter outlines";
+        marks.userData.keepMaterial = true;
+        marks.userData.noMeasure = true;
+        marks.userData.noPick = true;
+        inner.add(marks);
+      }
+    }
   }
 
   // centre on the origin, then stand the text up: letter z becomes scene y

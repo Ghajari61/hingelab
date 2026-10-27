@@ -118,14 +118,15 @@ export function stencilContours(cs: Contour[], w: number): Contour[] {
  * centre, then the curve (or the circle), then thickening and stencil bridges. The caller centres
  * and measures the result again.
  */
-export function styleContours(cs: Contour[], s: FullTextStyle): Contour[] {
+export function styleContours(cs: Contour[], s: FullTextStyle, frame?: Contour[]): Contour[] {
   if (!cs.length || isPlainStyle(s)) return cs;
   let out = cs;
   const k = (s.stretch ?? 100) / 100;
   const t = Math.tan(((s.slant ?? 0) * Math.PI) / 180);
   if (k !== 1 || t !== 0) out = out.map((c) => c.map(([x, y]) => [x * k - y * t, y] as Pt));
   if (s.arc || s.circle! > 0) {
-    const b = bboxOf(out);
+    // When styling a single unwelded glyph, curve it in the whole word's frame.
+    const b = bboxOf(frame ? frame.map(c => c.map(([x, y]) => [x * k - y * t, y] as Pt)) : out);
     const W = b.x1 - b.x0, H = b.y1 - b.y0;
     // A radius under 1.2 × the text height would fold the letters over; the curve stops there.
     const maxA = W / Math.max(1e-6, 1.2 * H);
