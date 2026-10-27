@@ -3,14 +3,14 @@
   "minimumVersion": "1.0.0",
   "latest": {
     "version": "1.21.0",
-    "pub_date": "2026-10-27T16:34:33.599Z",
+    "pub_date": "2026-10-27T16:39:38.549Z",
     "notes": "Boxes and Wood Packaging are one product with 123 editable presets. Photo to Product has been removed. Existing box projects retain their settings.",
     "platforms": {
       "windows-x86_64": {
         "url": "https://hingelab.vercel.app/downloads/HingeLab_1.21.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmt0K3hEenlTTVlVUm1MQmlZZzZhM2hNRDlYR29jVzRhMzY5a1pOR3dEbFVyUVNhWTNzZ085WU9iaUZMeVFJUzVqOHJpZkh6ZFczckZzUEdpcHZkMXdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTE4ODU0CWZpbGU6SGluZ2VMYWJfMS4yMS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIxLjAKK0NIOEI4NXhTUGdRc25qUjVmRFBOeDdlZnM0YTI3Y3dOUzJnOFhWbGhTd1BZWHRjcFRkRnZQaXp3SGM4M29hMnlKdGxVS1JEc2J0TWNhMFNacjFaRHc9PQo=",
-        "size": 11854260,
-        "sha256": "5165ee5dde89b5f8c387289ec61876a28b3b69e553e94c52367456625f691683"
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmp4bHF0eXk5Z0hhajhGTTJ2SEFETW4rODVxVmg0UjI3ZXp2Z0RQQVFWbzd0YVJqVVBsdm5ISy9FTEdackFyblZCOGF6WkdOb09yTUNGRnlEOVdIWkFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTE5MTU3CWZpbGU6SGluZ2VMYWJfMS4yMS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIxLjAKZDU3ZWNDRUhxOE9kaDVJTVNLNzVhS292ZW5UTEVKVUt0cno2VkFWckVSdHVIdDUyY2VNazYwWXlBSWxFWHFKVk9PKzhpTENETHZlUFkzbWpYdTdMQkE9PQo=",
+        "size": 11829270,
+        "sha256": "ca89ad04d5d8c88173b999c97f62c325c19c517bb2c56d3ea03baa107552b8c7"
       }
     }
   }
