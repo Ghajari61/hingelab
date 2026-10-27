@@ -1,3 +1,11 @@
+## 1.17.0 — Photo reconstruction and matching joints
+
+- Photo reconstruction now compares actual front, side, top and assembled model renders with the uploaded references before accepting a valid correction. A failed review keeps the usable draft and says the comparison was not completed.
+- Curved ribs can vary every profile vertex across the assembly instead of repeating one silhouette. Uploaded photos retain more edge detail within a bounded project size.
+- Automatic tab/slot and complementary half-lap joints follow real panel contacts and the mating material thickness. Total clearance, tab spacing and minimum material webs are editable; preview and SVG use the same geometry.
+- The assembly report distinguishes mechanical joints, adhesive contacts and unresolved pieces. Build packages include connection dimensions and assembly steps. Existing projects retain their original geometry until auto joinery is enabled.
+- Connections are geometrically checked; physical fit, insertion access, invisible construction and load strength still require a sample and review.
+
 ## Unreleased — Photo to Product: engineering review
 
 - **Paw ornaments hold together at every size.** On larger paws, or with a narrow frame, neighbouring windows came within hundredths of a millimetre of each other, a web the laser would burn through. Every window now keeps the frame width from the others.
