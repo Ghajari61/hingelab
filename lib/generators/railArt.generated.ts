@@ -12,8 +12,6 @@ export const GEN_RAIL_GROUPS: Record<string, string> = {
   "gen-keyrack-hooks.profile": "ball round square",
   "gen-keyrack-motif.kind": "anchor balloon balloons bell butterfly cake cap cloud compass crown cup cupcake dreamcatcher feet flame fleur flower gem gift girih heart hearts house infinity key lantern laurel leaf lotus mandala moon moonstar mosque mountains none note olive paisley paw picture rings snowflake sparkle star stars stroller sun text tree treeoflife triquetra",
   "gen-keyrack-pattern.pattern": "circles floral honeycomb lattice leaves motif none quatrefoil stars tile",
-  "gen-paperbox-pattern.pattern": "circles floral honeycomb lattice leaves motif none quatrefoil stars tile",
-  "gen-paperbox-style": "auto-bottom bag bakery carry cd-sleeve cell-insert clamshell cone cube display drawer gable hanging hexagon hinged-lid mailer pie pillow prism pyramid reverse-tuck seal-end shipping sleeve snap-lock straight-tuck takeout tray two-piece wine",
   "gen-popup-mode": "bowl hanging sleeve tiered tower",
   "gen-puzzle-engrave.kind": "image none numbers text",
   "gen-puzzle-frame.kind": "frame none tray",

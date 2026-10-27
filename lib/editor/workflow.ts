@@ -27,16 +27,11 @@ const GEN_STEPS: Record<string, Record<string, Step>> = {
   shadowbox: { depth: "dimensions", frame: "dimensions", build: "construction", lightbox: "construction", box: "construction" },
 };
 
-/** The step of a generator's section. Paper Box's style groups: "<style>-size" is its dimensions, the rest its construction. */
+/** The step of a generator's section (Wood Packaging uses the Boxes panels and their steps). */
 export function genSectionStep(gen: string, id: string, own?: Step): Step {
   if (own) return own;
-  const s = GEN_STEPS[gen]?.[id];
+  const s = GEN_STEPS[gen === "paperbox" ? "boxes" : gen]?.[id];
   if (s) return s;
-  if (gen === "paperbox") {
-    if (id === "board") return "material";
-    if (id === "style" || id === "window" || id === "pattern") return "design";
-    return id.endsWith("-size") ? "dimensions" : "construction";
-  }
   return "design";
 }
 
