@@ -16,7 +16,7 @@ import { rotatePoint } from "@/lib/nest/outline";
 import { finLabel } from "@/lib/parametric/label";
 import { isImageDataURL, xmlCommentText } from "@/lib/security/svg";
 import { repairLayout, type RepairCount } from "@/lib/fab/repair";
-import { bboxOf, pathD } from "./geom";
+import { bboxOf, pathD, rect } from "./geom";
 import { setPath } from "./path";
 import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, MAX_FEATURE, MAX_KERF, SHEET_EXTRAS, type BuildContext, type Contour, type GenBase, type GenImage, type GenOutput, type GenPart, type GeneratorDef, type JobExtras, type SheetExtras } from "./types";
 
@@ -159,6 +159,12 @@ export function partLabel(pt: CutPart): Contour[] {
   if (pt.cuts.length) return [];
   let shapes = unionShapes([...pt.outline, ...pt.inner], [], true);
   if (pt.engrave.length) shapes = differenceShapes(shapeContours(shapes), pt.engrave);
+  // Keep automatic names clear of existing scored markings, including numbered joint notches.
+  const scored = (pt.src.labelAvoidScore ? pt.score : []).filter(line => line.length > 1).map(line => {
+    const b = bboxOf([line]);
+    return rect(b.x0 - .5, b.y0 - .5, b.x1 - b.x0 + 1, b.y1 - b.y0 + 1);
+  });
+  if (scored.length) shapes = differenceShapes(shapeContours(shapes), scored);
   if (!shapes.length) return [];
   const s = shapes.reduce((a, b) => (b.area > a.area ? b : a));
   return finLabel(s, pt.name, { arrow: false, nearWall: false }) ?? [];

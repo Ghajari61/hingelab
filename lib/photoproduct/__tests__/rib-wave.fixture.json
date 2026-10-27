@@ -1,0 +1,127 @@
+{
+  "generated": {
+    "parameters": [
+      {
+        "id": "rib_count",
+        "label": "Number of Ribs",
+        "value": 36,
+        "min": 16,
+        "max": 64,
+        "step": 1
+      },
+      {
+        "id": "twist_max",
+        "label": "Total Twist Angle (deg)",
+        "value": 35,
+        "min": 0,
+        "max": 90,
+        "step": 1
+      },
+      {
+        "id": "ring_thick",
+        "label": "Rib Wall Thickness (mm)",
+        "value": 26,
+        "min": 15,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "dowel_diam",
+        "label": "Assembly Dowel Hole Diameter (mm)",
+        "value": 8,
+        "min": 4,
+        "max": 12,
+        "step": 1
+      }
+    ],
+    "parts": [
+      {
+        "id": "rib",
+        "name": "Twisted Loop Rib",
+        "count": "rib_count",
+        "width": "D * (0.8 + 0.2 * cos(pi * (i / (rib_count - 1) - 0.5)))",
+        "height": "H * (0.65 + 0.35 * (2 * (i / (rib_count - 1) - 0.5))^2)",
+        "thickness": "T",
+        "outline": {
+          "kind": "ellipse",
+          "x": "0",
+          "y": "0",
+          "w": "1",
+          "h": "1",
+          "points": [],
+          "count": "1",
+          "dx": "0",
+          "dy": "0"
+        },
+        "additions": [],
+        "holes": [
+          {
+            "kind": "ellipse",
+            "x": "ring_thick / pw",
+            "y": "ring_thick / ph",
+            "w": "1 - 2 * ring_thick / pw",
+            "h": "1 - 2 * ring_thick / ph",
+            "points": [],
+            "count": "1",
+            "dx": "0",
+            "dy": "0"
+          },
+          {
+            "kind": "ellipse",
+            "x": "0.5 - (dowel_diam / (2 * pw))",
+            "y": "(ring_thick / 2 - dowel_diam / 2) / ph",
+            "w": "dowel_diam / pw",
+            "h": "dowel_diam / ph",
+            "points": [],
+            "count": "1",
+            "dx": "0",
+            "dy": "0"
+          },
+          {
+            "kind": "ellipse",
+            "x": "0.5 - (dowel_diam / (2 * pw))",
+            "y": "1 - (ring_thick / 2 + dowel_diam / 2) / ph",
+            "w": "dowel_diam / pw",
+            "h": "dowel_diam / ph",
+            "points": [],
+            "count": "1",
+            "dx": "0",
+            "dy": "0"
+          }
+        ],
+        "cuts": [],
+        "score": [],
+        "engraving": null,
+        "pose": {
+          "x": "-(W / 2) + i * ((W - T) / (rib_count - 1))",
+          "y": "-pw / 2",
+          "z": "-ph / 2 + (H / 2) * (0.3 + 0.7 * (2 * (i / (rib_count - 1) - 0.5))^2)",
+          "rx": "90",
+          "ry": "-twist_max * (i / (rib_count - 1) - 0.5)",
+          "rz": "90",
+          "dx": "0",
+          "dy": "0",
+          "dz": "0",
+          "drz": "0"
+        }
+      }
+    ],
+    "assembly": [
+      "Sort the ring ribs sequentially from i = 0 to i = rib_count - 1 according to their indexed dimensions.",
+      "Thread flexible alignment dowels or rods (e.g., 8 mm flexible wooden dowel or threaded rod with spacers) through the lower and upper registration holes of each successive rib.",
+      "Position spacers between the ribs to maintain the nominal spacing shown in the reference.",
+      "Tighten end caps or secure with adhesive to lock the twisted organic form."
+    ],
+    "limitations": [
+      "Engine check: 36 separate assemblies remain; automatic joints do not connect every part. Review separate lids, supports and fasteners before cutting. Assembly is not verified.",
+      "The sculptural form relies on sequential rib morphing along a double-curved envelope; straight rigid combs would interrupt the pure hollow form, so flexible dowel rods or spacing blocks are required for physical assembly.",
+      "Twisting rib angles mean dowel holes accept flexible rods; for rigid straight dowels, hole clearances or angles must accommodate the curvature."
+    ]
+  },
+  "size": {
+    "width": 800,
+    "depth": 320,
+    "height": 340
+  },
+  "T": 6
+}

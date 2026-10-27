@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.17.0",
-    "pub_date": "2026-10-27T06:17:50.663Z",
-    "notes": "Photo to Product compares actual model views with your photos, supports changing rib profiles, and engineers matching tab/slot and half-lap joints from real contacts and stock thickness. Editable clearance and assembly reports update 3D and SVG together. Unresolved connections remain marked for review.",
+    "version": "1.18.0",
+    "pub_date": "2026-10-27T13:34:58.674Z",
+    "notes": "Curved support rails preserve photo-generated rib profiles and connect the 36-rib wave model with 76 insertable half-laps and two bonded side-laps. Editable stock, clearance and rail length; numbered notches and assembly guide; matching 3D and SVG. Physical fit requires a stock coupon and wood adhesive; decorative assembly, not load-rated seating.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.17.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmlraVBBMWNEeDluMm5KRERmT1V1UlVxYVc4bzFUVk4wdGxWdVdVOW1kVkZFaHJhNHBKRzJBQUg2dkU5MkRMK2EzQmpXcUV1QzBDMCt6NmFrNXJlU3cwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDgxODA4CWZpbGU6SGluZ2VMYWJfMS4xNy4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE3LjAKcSsrM3FBTFJyUDlCZUtpUE5rNG9EUnM4WlFYSXRlbXJ1TTl6NWpnVXpCRkVJQVdDSmRZMm54SmtBdktrMURHa0FndWZYSGhsc1hNMll2L1V3NUIzQ3c9PQo=",
-        "size": 11921059,
-        "sha256": "9a6898ea63ec1de429ad5d05e1e16ffffd43196757a71e8f72cd8257a0e567c0"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.18.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnJTR2VxSUZQdUR5N0Ftc0EvaHpDaDlVakZ0TzBJbkZGN3JrRklvZHpKVzVWUGNMQWg5djJUTThkcUFuQmRYaXJVNG0zVGppY2JKeEtJUThCMDFDeXdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTA4MDUzCWZpbGU6SGluZ2VMYWJfMS4xOC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE4LjAKUFZSTmJhZHRXWUN4bU9DZ0dFZXdIdXZPNFBRWVBNZjA3MFc2cDUwRHBsZXhhQlo4Y1QrRlFKUkU2QVJDNlZPZmduM1U3UWtBcWgzTG1aYUt3MTlVQXc9PQo=",
+        "size": 11929587,
+        "sha256": "837b4eb609714b144aee80575aa38368340d095bb8d5b8dd0622f9491de7c0be"
       }
     }
   }

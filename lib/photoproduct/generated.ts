@@ -5,6 +5,7 @@ import {orient} from '@/lib/generators/shapes';
 import {textBlock} from '@/lib/generators/weld';
 import type {BuildContext,Contour,GenOutput,GenPart,Pt} from '@/lib/generators/types';
 import {engineerJoinery,type JoinerySettings} from './joinery';
+import {engineerRibSupports} from './ribSupports';
 const expr=z.string().min(1).max(160);
 const coordinate=z.union([z.number().min(-4).max(4),expr]);
 const point=z.tuple([coordinate,coordinate]);
@@ -71,10 +72,11 @@ export function buildGeneratedProduct(model:GeneratedModel,size:{width:number;de
  const b=bboxOf([shape[0].outer]);if(b.x1-b.x0>4000||b.y1-b.y0>4000)throw Error('Part exceeds size limit');
  parts.push({id:part.id+'-'+(i+1),name:String(parts.length+1).padStart(2,'0')+' · '+part.name+(n>1?' '+(i+1):''),outer:shape[0].outer,holes:shape[0].holes,cuts:paths(part.cuts),score:paths(part.score),engrave,t,stock:'wood-'+t+'mm',place:{x,y,z,m}});
  }}
- const engineered=joinery?.mode==='auto'?engineerJoinery(parts,joinery):null;if(engineered)parts=engineered.parts;
+ const engineered=joinery?.mode==='auto'?(joinery.supports==='rib-rails'?engineerRibSupports(parts,joinery):engineerJoinery(parts,joinery)):null;if(engineered)parts=engineered.parts;
  const low=[Infinity,Infinity,Infinity],high=[-Infinity,-Infinity,-Infinity];
  for(const part of parts){const m=part.place!.m!;for(const [x,y] of part.outer)for(const t of [0,part.t!])for(let axis=0;axis<3;axis++){const k=axis*4,a=m[k]*x+m[k+1]*y+m[k+2]*t+m[k+3];low[axis]=Math.min(low[axis],a);high[axis]=Math.max(high[axis],a);}}
  const dimensions=high.map((a,i)=>Number((a-low[i]).toFixed(2)));
- return {parts,...(engineered?{joinery:engineered.report}:{}),stats:[{label:'Assembled size',value:dimensions.join(' × ')+' mm'},{label:'Generated parts' ,value:String(parts.length)},{label:'Photo estimate',value:`${size.width} × ${size.depth} × ${size.height} mm`},...(engineered?[{label:'Matched joints',value:String(engineered.report.joints.filter(j=>j.kind!=='glue').length)},{label:'Assembly groups',value:String(engineered.report.groups)}]:[])],assembly:[...checked.assembly,...(engineered?[...new Set(engineered.report.joints.map(j=>j.instruction)),...engineered.report.warnings]:[]),...checked.limitations]};
+ const assembly=engineered?.report.supportPlan?[...engineered.report.supportPlan.steps,...engineered.report.warnings]:[...checked.assembly,...(engineered?[...new Set(engineered.report.joints.map(j=>j.instruction)),...engineered.report.warnings]:[]),...checked.limitations];
+ return {parts,...(engineered?{joinery:engineered.report}:{}),stats:[{label:'Assembled size',value:dimensions.join(' × ')+' mm'},{label:'Generated parts' ,value:String(parts.length)},{label:'Photo estimate',value:`${size.width} × ${size.depth} × ${size.height} mm`},...(engineered?[{label:'Matched joints',value:String(engineered.report.joints.filter(j=>j.kind!=='glue').length)},{label:'Assembly groups',value:String(engineered.report.groups)}]:[])],assembly};
  }catch(e){return {parts:[],stats:[],error:e instanceof Error?e.message:'Invalid generated geometry'};}
 }
