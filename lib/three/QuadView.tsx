@@ -34,6 +34,8 @@ export const SHADE_NAMES: Record<Shade3D, string> = { shaded: "Shaded", edges: "
 export interface QuadModel {
   group: THREE.Object3D;
   dispose: () => void;
+  /** Stable world-space framing for an instructional animation (never fabrication dimensions). */
+  frameBounds?: THREE.Box3;
   /** 0 = assembled, 1 = fully exploded. Models without it are rebuilt by the caller instead. */
   explode?: (e: number) => void;
   /** Settles when late textures (pictures) have loaded, so the views draw again. */
@@ -211,6 +213,8 @@ interface Props {
   label?: string;
   /** Start of the listing photo's file name. */
   photoName?: string;
+  /** Pause the idle camera turn while following an assembly sequence. */
+  autoOrbit?: boolean;
   children?: React.ReactNode;
 }
 
@@ -280,8 +284,8 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
   const decimals = useRef(1);
   decimals.current = props.decimals ?? 1;
   const [photo, setPhoto] = useState(false);
-  const live = useRef({ explode, measure, look, shade, quad, active, photo });
-  live.current = { explode, measure, look, shade, quad, active, photo };
+  const live = useRef({ explode, measure, look, shade, quad, active, photo, autoOrbit:props.autoOrbit });
+  live.current = { explode, measure, look, shade, quad, active, photo, autoOrbit:props.autoOrbit };
   /** When the mouse or keys last moved the view (the idle turn waits IDLE_MS after it). */
   const idle = useRef(performance.now());
   const pokeRef = useRef<() => void>(() => {});
@@ -443,7 +447,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     for (const t of wake) el.addEventListener(t, poke, { passive: true });
     const timer = window.setInterval(() => {
       const p = panes.find((x) => x.def.id === "persp"), l = live.current;
-      if (!p || p.controls.autoRotate || still?.matches || document.visibilityState !== "visible") return;
+      if (!p || p.controls.autoRotate || l.autoOrbit===false || still?.matches || document.visibilityState !== "visible") return;
       if (!shown.current || drag.current || l.photo || !(l.quad || l.active === "persp")) return;
       if (performance.now() - idle.current < IDLE_MS) return;
       p.controls.autoRotate = true;
@@ -565,6 +569,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
   const measureBox = () => {
     const m = shown.current;
     if (!m) return null;
+    if (m.frameBounds) return m.frameBounds.clone();
     m.group.updateMatrixWorld(true);
     if (!m.explode) return modelBox(m.group);
     m.explode(0);
@@ -728,7 +733,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
   }, [explode]);
 
   // A new design or another layout wakes the view (the idle turn waits again).
-  useEffect(() => { pokeRef.current(); }, [model, quad, active]);
+  useEffect(() => { pokeRef.current(); }, [model, quad, active, props.autoOrbit]);
 
   // Panes change size when the layout changes; the observer redraws, this keeps the dimensions current.
   useEffect(() => { st.current?.request(); }, [quad, active, dims, units, measure]);
