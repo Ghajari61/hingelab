@@ -253,7 +253,7 @@ describe("desktop generate (server-side SVG)", () => {
     expect(manyPro.status).toBe(200);
     const copies = await gen({ product: "boxes", change: { key: "sheet.copies", value: 500 } });
     expect(copies.body.params.sheet).toMatchObject({ copies: 50 });
-    const qr = await gen({ product: "qr", preset: (await desktopCatalog()).products[3].presets[0].id });
+    const qr = await gen({ product: "qr", preset: (await desktopCatalog()).products.find(p => p.id === "qr")!.presets[0].id });
     expect(qr.status).toBe(200);
   });
 });
