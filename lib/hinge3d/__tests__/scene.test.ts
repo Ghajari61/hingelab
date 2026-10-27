@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import { computeModel, layerContent, layoutParts, mergeParams, type Model, type Params } from "@/lib/hinge";
 import { buildHingeScene, hingeFlatScene } from "../scene";
 import { applyLook, lookOf } from "@/lib/three/looks";
+import { HINGE_PRESETS, hingePresetParams } from "@/lib/hinge/presets";
+import { arrangeHinge } from "@/lib/fit/hinge";
+import { assertFlatSurface } from "@/lib/three/__tests__/previewAssertions";
 
 const build = (x: Partial<Params>) => {
   const p = mergeParams(x);
@@ -17,6 +20,14 @@ const meshes = (g: THREE.Object3D) => {
 };
 
 describe("Hinge Box 3D scene", () => {
+  it("every preset has non-overlapping flat solids and triangulated openings", () => {
+    for (const pr of HINGE_PRESETS) {
+      const p = hingePresetParams(pr.params), a = arrangeHinge(p);
+      expect(a.lay, pr.id).not.toBeNull();
+      const scene = hingeFlatScene(a.lay!, null, a.params);
+      try { assertFlatSurface(scene.group); } finally { scene.dispose(); }
+    }
+  }, 120000);
   it("stands as tall as the box and as wide as its plates, for every shape and lid", () => {
     for (const shape of ["rect", "pill", "poly", "cyl"] as const) {
       for (const lid of ["open", "fixed", "removable"] as const) {

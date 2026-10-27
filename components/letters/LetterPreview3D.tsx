@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { LayerContent, Layout, Point } from "@/lib/hinge";
+import type { LayerContent, Layout } from "@/lib/hinge";
 import type { LetterModel, LetterParams, LetterPart } from "@/lib/letters";
-import { buildLetterScene, WOOD } from "@/lib/letters/scene3d";
-import { flatScene, type FlatPart } from "@/lib/three/flat";
+import { buildLetterScene, letterFlatParts, WOOD } from "@/lib/letters/scene3d";
+import { flatScene } from "@/lib/three/flat";
 import { lookOf } from "@/lib/three/looks";
 import { letterGrips } from "@/lib/letters/grips";
 import { useEditorPrefs } from "@/lib/prefs/editorStore";
@@ -23,15 +23,6 @@ function tintLetters(group: { traverse: (f: (o: { name: string; userData: Record
   });
 }
 
-function flatParts(lay: Layout<LetterPart>): FlatPart[] {
-  return lay.items.map(({ pt, ox, oy }) => {
-    const sh = (q: Point): Point => [q[0] + ox, q[1] + oy];
-    if (pt.kind === "solid") return { name: pt.name, outer: pt.outer.map(sh), holes: pt.holes.map((h) => h.map(sh)) };
-    if (pt.kind === "plate") return { name: pt.name, outer: pt.outer.map(sh), holes: [...pt.holes, ...pt.slots].map((h) => h.map(sh)) };
-    return { name: pt.name, outer: pt.outline.map(sh), holes: [] };
-  });
-}
-
 /** The assembled letters (or their parts lying flat) in the shared 3D workspace; with `edit`, a selected part shows handles. */
 export default function LetterPreview3D({ model, params, lay, content, units, edit }: {
   model: LetterModel | null; params: LetterParams; lay: Layout<LetterPart> | null; content: LayerContent | null; units: Units;
@@ -45,16 +36,16 @@ export default function LetterPreview3D({ model, params, lay, content, units, ed
   const lid = params.mode === "box" && params.lid !== "open";
   const scene = useMemo(() => {
     if (!model) return null;
-    if (flat && lay) return flatScene(flatParts(lay), params.T, content && params.mode === "box" && params.wallStyle === "hinge" ? { d: content.hinge, width: lay.width, height: lay.height } : undefined);
-    const sc = buildLetterScene(model, params, lid ? explode : 0);
+    if (flat && lay) return flatScene(letterFlatParts(lay), params.T, content && params.mode === "box" && params.wallStyle === "hinge" ? { d: content.hinge, width: lay.width, height: lay.height } : undefined);
+    const sc = buildLetterScene(model, params, 0);
     tintLetters(sc.group as never);
     return sc;
-  }, [model, params, explode, flat, lay, content, lid]);
+  }, [model, params, flat, lay, content]);
   const key = flat && lay ? `flat|${Math.round(lay.width)}x${Math.round(lay.height)}` : `${params.text}|${params.mode}|${params.fontId}|${Math.round(params.size)}`;
   return (
     <QuadView
       decimals={editorPrefs.decimals}
-      {...quadProps(v)} id="preview3d" model={scene} look={lookOf(params.material)} frameKey={key} units={units}
+      {...quadProps(v)} id="preview3d" model={scene} look={lookOf(params.material)} frameKey={key} units={units} explode={lid ? explode : 0}
       measure={flat || !lid || explode === 0} label="Assembled letters in 3D: Top, Front, Left and Perspective views"
       onSelect={setSel} grips={grips}
     >

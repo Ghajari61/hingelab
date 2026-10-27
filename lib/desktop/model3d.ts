@@ -22,7 +22,7 @@ function items(s: Scene3D): Item[] {
   s.group.updateMatrixWorld(true);
   const inv = inner.matrixWorld.clone().invert();
   const out: Item[] = [];
-  inner.traverse((o) => {
+  inner.traverseVisible((o) => {
     if ((o as THREE.Mesh).isMesh || (o as THREE.LineSegments).isLineSegments) out.push({ o: o as THREE.Mesh, rel: inv.clone().multiply(o.matrixWorld) });
   });
   return out;

@@ -11,7 +11,6 @@ import { flatScene } from "@/lib/three/flat";
 import { lookOf } from "@/lib/three/looks";
 import { useEditorPrefs } from "@/lib/prefs/editorStore";
 import QuadView from "@/lib/three/QuadView";
-import { rebuiltExplode } from "@/lib/three/rebuilt";
 import { quadProps, useView3D } from "@/components/shell/view3d";
 import { View3DBarTools } from "@/components/shell/View3DTools";
 import type { Units } from "@/components/editor/format";
@@ -39,13 +38,13 @@ export default function GeneratorView3D({ out, lay, T, material, units, frameKey
   const folds = useMemo(() => !!out?.parts.some((p) => p.views3d?.some((q) => q.frames?.length)), [out]);
   useEffect(() => { setFold(1); }, [frameKey, folds]);
   const editable = !!edit;
-  // Folding boxes fold and explode in place; the rest are rebuilt as they pull apart where they
-  // stand, behind one root, so the views widen with them.
+  // Rigid and folding parts move in place without rebuilding their meshes at each animation frame.
+  const flatLayout = flat ? lay : null;
   const scene = useMemo(() => {
     if (!out || out.error) return null;
-    if (flat && lay) return flatScene(flatOf(lay), T);
-    return folds ? generatorScene(out, T, 0) : rebuiltExplode((e) => generatorScene(out, T, e));
-  }, [out, lay, T, flat, folds]);
+    if (flat && flatLayout) return flatScene(flatOf(flatLayout), T);
+    return generatorScene(out, T, 0);
+  }, [out, flatLayout, T, flat]);
   useEffect(() => {
     const folder = scene && "fold" in scene ? scene.fold : undefined;
     if (!folder) return;

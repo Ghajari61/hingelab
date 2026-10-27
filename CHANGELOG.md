@@ -1,3 +1,10 @@
+## 1.24.0 — Consistent Lay Flat and smoother 3D previews
+
+- Parametric now has Assembled / Lay flat views. Flat parts use the same cut contours, rotations and separated sheet positions as the cutting canvas, including nested islands and internal cuts.
+- Generic generators, Parametric and Letters move existing geometry while exploding or lifting lids instead of triangulating every animation frame. Assembled generic previews no longer rebuild for layout-only updates; Parametric no longer prepares duplicate edge overlays.
+- Lay Flat respects secondary-stock thickness. Hinge Box and Letters normalize disconnected regions and holes before extrusion; preview resources and shared materials survive design switches correctly.
+- Digitally checked 572 generic defaults/presets for overlapping filled regions, triangulated surface area and finite SVG paths; also checked all Hinge presets, Latin/Persian lettering modes and six Parametric methods. Local CPU motion measurements improved Pop-up from 10.92 to 0.033 ms and Puzzle from 23.82 to 0.024 ms per step (not total page-load or GPU times).
+
 ## 1.23.1 — Correct and faster Lay Flat previews
 
 - Fixed Pop-up rings and other disconnected cut regions appearing as overlapping surfaces, filled gaps and diagonal lines in Lay Flat. Each wooden region now keeps only its own holes, including nested islands, rotated parts and mirrored layouts.

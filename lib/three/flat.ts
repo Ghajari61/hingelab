@@ -23,6 +23,8 @@ export interface FlatPart {
   name: string;
   outer: Point[];
   holes: Point[][];
+  /** A secondary stock can differ from the design's default material. */
+  t?: number;
 }
 
 const toPath = (c: Point[], path: THREE.Path) => {
@@ -71,7 +73,7 @@ export function finishScene(inner: THREE.Group): Scene3D {
       for (const mat of ([] as THREE.Material[]).concat(m.material ?? [])) {
         const map = (mat as THREE.MeshBasicMaterial).map;
         if (map && !map.userData.shared) map.dispose();
-        mat.dispose();
+        if (!mat.userData.shared) mat.dispose();
       }
     }),
   };
@@ -107,7 +109,7 @@ export function cutOverlay(d: string[], width: number, height: number, z: number
 /** Parts lying flat as cut, `T` thick, hinge cuts drawn on them. */
 export function flatScene(parts: FlatPart[], T: number, cuts?: { d: string[]; width: number; height: number }): Scene3D {
   const inner = new THREE.Group();
-  for (const p of parts) if (p.outer.length > 2) inner.add(slab(p.outer, p.holes, 0, T, p.name));
+  for (const p of parts) if (p.outer.length > 2) inner.add(slab(p.outer, p.holes, 0, p.t ?? T, p.name));
   const ov = cuts ? cutOverlay(cuts.d, cuts.width, cuts.height, T + 0.05) : null;
   if (ov) inner.add(ov);
   return finishScene(inner);

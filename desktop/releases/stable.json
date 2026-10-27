@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.23.1",
-    "pub_date": "2026-10-27T19:15:19.161Z",
-    "notes": "Fixes overlapping surfaces and diagonal lines in Lay Flat for Pop-up rings and nested cut regions. Speeds up 3D preview generation while preserving SVG toolpaths and assembly dimensions.",
+    "version": "1.24.0",
+    "pub_date": "2026-10-27T19:49:38.565Z",
+    "notes": "Consistent Lay Flat across products, Parametric multi-sheet 3D layout, correct stock thickness, and smoother geometry-reusing preview motion.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.23.1_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmhMYjhxc1dJamx5QzEzejg0NFIwNVh4Ny9ubFh2eGk3Z05JWVllTG9XRnZXczkwUmdrVUNKNGpuSjBiU3NMS0Zud29ZOElYT2RuR3BLOXlxbHM0Y2dnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTI4NDc2CWZpbGU6SGluZ2VMYWJfMS4yMy4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIzLjEKY3dXSG93SnA2QUlwWmJ5Qk9BeHlQS2dUbHZuY0dGOHROWENaaDdTcDM1QWg3ci8wVG1ldklISVc1c2Z0VzZEZDJVTVphcTNqUHdYTWRodWMzMmtxQVE9PQo=",
-        "size": 11725576,
-        "sha256": "efd154f177c704546ac2455d5298ee708cada34c19e4f0487bcda666e63527bd"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.24.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm9HMUQzRWRqUno1a3k5TytWSWNKQ3JEV0IyTWFwTkxVNmwxeGdaRkRuWjJ2bEpNa1dlL0g3OUhtR3hXUE5NQldRZmdtTkF3QnE3MWhtRURNUCtZM0FBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTMwNTU4CWZpbGU6SGluZ2VMYWJfMS4yNC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI0LjAKVExpMkRVcWxCLzFJQ0ZpYWlTVk0wQkhpeStUY09lM09XRFFXVGo0V2hWdTFwSjV5eVlXSFNCcmFFQ0orQVdYZGpoLzlDZk5meGVhODl2MDVYM2lJQ2c9PQo=",
+        "size": 11729135,
+        "sha256": "c219d1d90043e92a170791621081ebaf62a7e7a87d253ded4c82ef92c6116472"
       }
     }
   }

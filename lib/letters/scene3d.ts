@@ -8,6 +8,10 @@ import * as THREE from "three";
 import { stackLayersOf, wallHeightOf } from "./defaults";
 import { ZONE_COLORS } from "./export";
 import type { Contour, LetterModel, LetterParams, Wall } from "./types";
+import type { Layout } from "@/lib/hinge";
+import type { LetterPart } from "./types";
+import type { FlatPart } from "@/lib/three/flat";
+import { unionShapes } from "./polygon";
 
 export const WOOD = { base: "#c99a63", lid: "#ddb27c", lip: "#b88a55", wall: "#d5a76f", piece: "#e6c08e" } as const;
 
@@ -16,6 +20,16 @@ export interface LetterScene {
   /** Size of the model as shown, mm: x, y (height), z. */
   size: [number, number, number];
   dispose: () => void;
+  explode: (amount: number) => void;
+}
+
+export function letterFlatParts(lay: Layout<LetterPart>): FlatPart[] {
+  return lay.items.flatMap(({ pt, ox, oy }) => {
+    const outer = pt.kind === "solid" || pt.kind === "plate" ? pt.outer : pt.outline;
+    const holes = pt.kind === "solid" ? pt.holes : pt.kind === "plate" ? [...pt.holes, ...pt.slots] : [];
+    const move = (c: Contour) => c.map(([x, y]) => [x + ox, y + oy] as [number, number]);
+    return unionShapes([outer, ...holes], [], true).map(s => ({ name: pt.name, outer: move(s.outer), holes: s.holes.map(move) }));
+  });
 }
 
 const toPath = (c: Contour, path: THREE.Path) => {
@@ -87,7 +101,7 @@ export function buildLetterScene(model: LetterModel, p: LetterParams, explode = 
   if (model.box) {
     const hBody = wallHeightOf(p);
     const hinge = model.box.style === "hinge";
-    const lift = explode * (hBody * 0.8 + 20);
+    const lift = 0;
     const top = T + hBody;
     let pieceZ = 0;
     for (const pt of model.parts) {
@@ -140,13 +154,21 @@ export function buildLetterScene(model: LetterModel, p: LetterParams, explode = 
   group.rotation.x = -Math.PI / 2;
   group.updateMatrixWorld(true);
 
+  const movable = inner.children.filter(o => /· lid(?: lip)?(?: \d+)?$/u.test(o.name) || (p.lid !== "open" && o.name.includes("· dot")));
+  const move = (amount: number) => {
+    const z = model.box ? Math.min(1, Math.max(0, amount)) * (wallHeightOf(p) * 0.8 + 20) : 0;
+    for (const o of movable) o.position.z = z;
+    group.updateMatrixWorld(true);
+  };
+  move(explode);
   const sz = new THREE.Box3().setFromObject(group).getSize(new THREE.Vector3());
 
   return {
     group,
     size: [sz.x, sz.y, sz.z],
+    explode: move,
     dispose: () => group.traverse(o => {
-      if (o instanceof THREE.Mesh) {
+      if (o instanceof THREE.Mesh || o instanceof THREE.LineSegments) {
         o.geometry.dispose();
         (o.material as THREE.Material).dispose();
       }

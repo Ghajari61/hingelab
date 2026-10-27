@@ -707,13 +707,13 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
         </GalleryRail>
         <div className={`stage pe-center${tab === "3d" ? " no-rulers" : ""}`}>
           <ViewToggle value={tab} onChange={setTab} sheetsLabel={`Sheets${result ? ` (${result.sheets.length})` : ""}`} tools={(
-            <View3DTools v={v3}>
+            <View3DTools v={v3} flat>
               <span className="v3-seg" role="group" aria-label="Show">
                 {(["model", "planes", "parts"] as const).map((k) => (
-                  <button key={k} type="button" aria-pressed={show[k]} onClick={() => setShow((s) => ({ ...s, [k]: !s[k] }))}>{k === "model" ? "Model" : k === "planes" ? "Planes" : "Parts"}</button>
+                  <button key={k} type="button" disabled={v3.flat} title={v3.flat ? "Available in Assembled view" : undefined} aria-pressed={show[k]} onClick={() => setShow((s) => ({ ...s, [k]: !s[k] }))}>{k === "model" ? "Model" : k === "planes" ? "Planes" : "Parts"}</button>
                 ))}
                 {result?.deviation && (
-                  <button type="button" aria-pressed={showHeat} title="How far the model's surface lies from the nearest part" onClick={() => setShowHeat(!showHeat)}>Deviation</button>
+                  <button type="button" disabled={v3.flat} aria-pressed={showHeat} title="How far the model's surface lies from the nearest part" onClick={() => setShowHeat(!showHeat)}>Deviation</button>
                 )}
               </span>
               <label className="pe-finish" title="How the parts look in this view (the cut files are the same)">Look
@@ -726,8 +726,8 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
           <div className="stage-chip"><span className="pe-stage">{busy || depthBusy ? (stage ?? "Slicing…") : res ? `${result!.stats.partCount} parts · ${Math.round(res.ms)} ms` : ""}</span>
             {(busy || depthBusy) && <span className="pe-progress" aria-hidden />}</div>
           <div className="pe-3d stage-3d" hidden={tab !== "3d"}>
-              <Viewport3D className="pe-view" mesh={result && !result.usesModel ? null : mesh} result={result} T={params.material.T} show={show} explode={exploded} finish={finish} selected={selected} onSelect={(id) => setSelected(id ? [id] : [])} heat={showHeat && !!result?.deviation} v={v3} units={units} grips={selected.length && !exploded ? parametricGrips(params, edit, units) : undefined} />
-              {showHeat && result?.deviation && (
+              <Viewport3D className="pe-view" mesh={result && !result.usesModel ? null : mesh} result={result} T={params.material.T} show={show} explode={exploded} finish={finish} selected={selected} onSelect={(id) => setSelected(id ? [id] : [])} heat={showHeat && !!result?.deviation} v={v3} units={units} sheetPositions={layout.rects} grips={selected.length && !exploded ? parametricGrips(params, edit, units) : undefined} />
+              {showHeat && !v3.flat && result?.deviation && (
                 <div className="pe-legend" data-testid="deviation-legend">
                   <span>0</span>
                   <span className="pe-legend-bar" aria-hidden />

@@ -437,6 +437,6 @@ export function flatOf(lay: Layout<CutPart>) {
     // phantom faces and very slow triangulation. Recover each solid with only its own holes.
     const regions = unionShapes([...pt.outline, ...pt.inner], [], true);
     const move = (c: Contour) => c.map(([x, y]) => [x + ox, y + oy] as [number, number]);
-    return regions.map(s => ({ name: pt.name, outer: move(s.outer), holes: s.holes.map(move) }));
+    return regions.map(s => ({ name: pt.name, outer: move(s.outer), holes: s.holes.map(move), t: pt.src.t }));
   });
 }
