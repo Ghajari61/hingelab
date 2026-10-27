@@ -8,8 +8,10 @@ import { applyProductAnalysis } from "@/lib/photoproduct/apply";
 import { MEASUREMENT_RANGES, measurementProblem, type ProductPhoto } from "@/lib/photoproduct/contracts";
 import "./photoproduct.css";
 import {GeneratedModelTools} from "./GeneratedModelTools";
-type Props={params:PhotoProductParams;onApply:(p:PhotoProductParams)=>void;onGenerated:()=>void;onPackage:()=>Promise<void>;disabled?:boolean};
-export function PhotoProductPanel({params,onApply,onGenerated,onPackage,disabled}:Props){
+import {PhotoJoineryPanel} from './PhotoJoineryPanel';
+import type {JoineryReport} from '@/lib/photoproduct/joinery';
+type Props={params:PhotoProductParams;joinery?:JoineryReport;onApply:(p:PhotoProductParams)=>void;onGenerated:()=>void;onPackage:()=>Promise<void>;disabled?:boolean};
+export function PhotoProductPanel({params,joinery,onApply,onGenerated,onPackage,disabled}:Props){
  const inputId=useId(),input=useRef<HTMLInputElement>(null),replaceInput=useRef<HTMLInputElement>(null),replaceId=useRef<string|null>(null);
  const latest=useRef(params),apply=useRef(onApply),serial=useRef(0),controller=useRef<AbortController|null>(null);latest.current=params;apply.current=onApply;
  const [selected,setSelected]=useState<string|null>(null),[error,setError]=useState<string|null>(null),[message,setMessage]=useState<string|null>(null);
@@ -98,6 +100,8 @@ export function PhotoProductPanel({params,onApply,onGenerated,onPackage,disabled
   {error&&<p className="photo-product-error" role="alert">{error}</p>}{message&&<p className="photo-product-message" role="status">{message}</p>}
   {params.recipe==="custom"&&!params.generated&&<p className="photo-product-example">Start with your photos. No ready-made model is loaded.</p>}
   <GeneratedModelTools params={params} onApply={onApply} onView={onGenerated} disabled={disabled||busy}/>
+  <PhotoJoineryPanel params={params} report={joinery} onApply={onApply} disabled={disabled||busy}/>
+  {result&&'review' in result&&result.review&&<p className={result.review.status==='compared'?'photo-product-message':'photo-product-caution'}><strong>{result.review.status==='compared'?'Visual comparison completed. ':'Visual comparison pending. '}</strong>{result.review.message}</p>}
   {result&&<details className="photo-product-report" open><summary>Analysis & assumptions</summary>{stale&&<p className="photo-product-caution">References changed since this analysis. Generate again to update it.</p>}<strong>{result.title}</strong><p>{result.summary}</p><p className="photo-product-evidence">Recognition evidence: {result.confidence}. This is not dimensional accuracy.</p>{[["Observed",result.observations],["Estimated / assumed",result.assumptions],["Uncertain",result.uncertainties]].map(([label,items])=><div key={label as string}><h4>{label as string}</h4><ul>{(items as string[]).map((item,i)=><li key={i}>{item}</li>)}</ul></div>)}<h4>Reference evidence</h4><ul>{result.views.map(v=><li key={v.photoId}>{refs.findIndex(p=>p.id===v.photoId)>=0?`Photo ${refs.findIndex(p=>p.id===v.photoId)+1}`:"Previous photo"}: {v.view}, {v.quality}. {v.evidence}</li>)}</ul></details>}
   {(params.recipe!=="custom"||params.generated)&&<button type="button" className="photo-product-package" disabled={disabled||busy||packing} onClick={()=>{setPacking(true);void onPackage().catch(e=>setError(e instanceof Error?e.message:"Package export failed.")).finally(()=>setPacking(false));}}>{packing?<LoaderCircle className="photo-product-spin" size={15} aria-hidden/>:null} Download build package (optional)</button>}
   <p className="photo-product-privacy">Analysis copies are saved with this project and sent to the configured AI service only when you analyze. Verify estimated dimensions and cut a sample before production.</p>

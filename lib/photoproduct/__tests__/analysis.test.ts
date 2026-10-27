@@ -30,7 +30,7 @@ describe("joint multi-view model analysis",()=>{
  it("sends all five photos in one request, validates their ids and keeps measured dimensions authoritative",async()=>{
   const ids=["p1","p2","p3","p4","p5"],m=mock(specification(ids));
   const out=await analyzeProductPhotos({photos:ids.map(photo),note:"same product",measurements:{...measurements,width:125}},"test",{model:m.model});
-  expect(m.calls).toHaveLength(1);expect(JSON.stringify(m.calls)).toContain("p5");expect(out.analysis.width).toBe(125);expect(out.analysis.uncertainties.join(" ")).toMatch(/Repeated photos/);
+  expect(m.calls).toHaveLength(2);expect(JSON.stringify(m.calls)).toContain("p5");expect(JSON.stringify(m.calls[1])).toContain('VISUAL CORRECTION PASS');expect(out.analysis.width).toBe(125);expect(out.analysis.uncertainties.join(" ")).toMatch(/Repeated photos/);expect('review' in out.analysis&&out.analysis.review?.status).toBe('compared');
  });
  it("refuses incomplete or contradictory reference bookkeeping",async()=>{
   const m=mock(specification(["wrong-id"]));await expect(analyzeProductPhotos({photos:[photo()],note:"",measurements},"test",{model:m.model})).rejects.toThrow(/valid product specification/);
@@ -58,4 +58,19 @@ describe("regeneration and persistence",()=>{
 
 describe("general photo model edit preservation",()=>{it("keeps manually edited part geometry and parameter values when regenerating",()=>{const old=specification();const {title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence}=old;const custom={family:"custom" as const,title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence,model:generatedTable()};const first=applyProductAnalysis(mergePhotoProduct({}),custom).params;first.generated!.parts[0].width="W-5";first.values.apron=55;const second=applyProductAnalysis(first,custom);expect(second.params.generated?.parts[0].width).toBe("W-5");expect(second.params.values.apron).toBe(55);expect(second.preserved).toContain("part.top");expect(applyProductAnalysis(first,custom,false).params.generated?.parts[0].width).toBe("W");});});
 
-it("automatically corrects a generated model whose first proposal fails geometry validation",async()=>{const old=specification();const {title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence}=old;let calls=0;const model=new MockLanguageModelV4({doGenerate:async()=>{calls++;const shape=generatedTable();if(calls===1)shape.parts[0].count="0";return {content:[{type:"text",text:JSON.stringify({family:"custom",title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence,model:shape})}],finishReason:{unified:"stop",raw:undefined},usage,warnings:[]} as never;}});const out=await analyzeProductPhotos({photos:[photo()],note:"",measurements},"test",{model});expect(out.analysis.family).toBe("custom");expect(calls).toBe(2);});
+it('keeps the valid draft if a visual revision breaks geometry, and does not claim a completed comparison',async()=>{
+ const {title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence}=specification();let calls=0;
+ const model=new MockLanguageModelV4({doGenerate:async()=>{const shape=generatedTable();if(++calls===2)shape.parts[0].width='1/0';return {content:[{type:'text',text:JSON.stringify({family:'custom',title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence,model:shape})}],finishReason:{unified:'stop',raw:undefined},usage,warnings:[]} as never;}});
+ const out=await analyzeProductPhotos({photos:[photo()],note:'',measurements},'test',{model});
+ expect('model' in out.analysis&&out.analysis.model?.parts[0].width).toBe('W');expect('review' in out.analysis&&out.analysis.review?.status).toBe('skipped');
+});
+
+it('accepts a valid shape correction while preserving measured dimensions and automatic joinery settings',async()=>{
+ const {title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence}=specification();let calls=0;
+ const model=new MockLanguageModelV4({doGenerate:async()=>{const shape=generatedTable();if(++calls===2)shape.parts[0].outline.kind='ellipse';return {content:[{type:'text',text:JSON.stringify({family:'custom',title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence,model:shape})}],finishReason:{unified:'stop',raw:undefined},usage,warnings:[]} as never;}});
+ const out=await analyzeProductPhotos({photos:[photo()],note:'',measurements:{...measurements,width:250}},'test',{model});
+ expect('model' in out.analysis&&out.analysis.model?.parts[0].outline.kind).toBe('ellipse');expect(out.analysis.width).toBe(250);
+ expect(applyProductAnalysis(mergePhotoProduct({}),out.analysis).params.joinery.mode).toBe('auto');
+});
+
+it("automatically corrects a generated model whose first proposal fails geometry validation",async()=>{const old=specification();const {title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence}=old;let calls=0;const model=new MockLanguageModelV4({doGenerate:async()=>{calls++;const shape=generatedTable();if(calls===1)shape.parts[0].count="0";return {content:[{type:"text",text:JSON.stringify({family:"custom",title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence,model:shape})}],finishReason:{unified:"stop",raw:undefined},usage,warnings:[]} as never;}});const out=await analyzeProductPhotos({photos:[photo()],note:"",measurements},"test",{model});expect(out.analysis.family).toBe("custom");expect(calls).toBe(3);});

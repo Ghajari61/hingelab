@@ -18,4 +18,5 @@ function providerGrammar<T>(node:T):T{
  if(node&&typeof node==='object')return Object.fromEntries(Object.entries(node).filter(([key])=>!['minimum','maximum','exclusiveMinimum','exclusiveMaximum','multipleOf','minItems','maxItems','minLength','maxLength','pattern','additionalItems'].includes(key)).map(([key,value])=>[key,providerGrammar(value)])) as T;
  return node;
 }
-export const PhotoProviderSchema=jsonSchema<z.infer<typeof GeneratedAnalysisSchema>>(async()=>providerGrammar(await zodSchema(GeneratedAnalysisSchema).jsonSchema),{validate(value){const result=GeneratedAnalysisSchema.safeParse(value);return result.success?{success:true,value:result.data}:{success:false,error:result.error};}});
+const ProviderAnalysisSchema=GeneratedAnalysisSchema.omit({review:true});
+export const PhotoProviderSchema=jsonSchema<z.infer<typeof ProviderAnalysisSchema>>(async()=>providerGrammar(await zodSchema(ProviderAnalysisSchema).jsonSchema),{validate(value){const result=ProviderAnalysisSchema.safeParse(value);return result.success?{success:true,value:result.data}:{success:false,error:result.error};}});
