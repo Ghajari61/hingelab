@@ -1,13 +1,13 @@
 import {describe,it,expect} from 'vitest';
 import fixture from './rib-wave.fixture.json';
 import {GeneratedModelSchema,buildGeneratedProduct} from '../generated';
-import {DEFAULT_JOINERY} from '../joinery';
+import {DEFAULT_JOINERY,toolpathOverlap} from '../joinery';
 import {engineerRibSupports,verifyRibInsertion} from '../ribSupports';
 import {CTX} from '@/lib/generators/__tests__/ctx';
-import {bboxOf} from '@/lib/generators/geom';
+import {bboxOf,rect} from '@/lib/generators/geom';
 import {differenceShapes,signedArea} from '@/lib/letters/polygon';
 import {PHOTO_PRODUCT} from '@/lib/generators/photoproduct';
-import {arrangeGenerator,genSVG} from '@/lib/generators/output';
+import {arrangeGenerator,genSVG,partLabel} from '@/lib/generators/output';
 import {photoBuildPackage} from '../package';
 import {unzipSync,strFromU8} from 'fflate';
 
@@ -53,6 +53,10 @@ describe('saved 36-rib sculpture assembly',()=>{
   const a=arrangeGenerator(PHOTO_PRODUCT,p,CTX);expect(a.result).not.toHaveProperty('error');expect(a.lay).toBeTruthy();
   if('error' in a.result)throw Error(a.result.error);
   expect(a.result.parts).toHaveLength(40);
+  for(const rail of a.result.parts.slice(36)){
+   const labels=partLabel(rail);expect(labels.length).toBeGreaterThan(0);expect(rail.score.length).toBeGreaterThan(0);
+   for(const line of labels){const b=bboxOf([line]);expect(toolpathOverlap({...rail.src,score:rail.score},rect(b.x0-.1,b.y0-.1,b.x1-b.x0+.2,b.y1-b.y0+.2))).toBe(false);}
+  }
   for(const pt of a.result.parts){const b=pt.bbox;expect(Math.min(b.x1-b.x0,b.y1-b.y0)).toBeLessThan(396);expect(Math.max(b.x1-b.x0,b.y1-b.y0)).toBeLessThan(596);}
   const svg=genSVG(PHOTO_PRODUCT,p,a.lay!),files=unzipSync(photoBuildPackage(p,a,svg,JSON.stringify({app:'HingeLab',version:2,product:'photoproduct',params:p})));
   expect(Object.keys(files).filter(n=>n.startsWith('parts/'))).toHaveLength(40);

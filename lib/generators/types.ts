@@ -113,6 +113,8 @@ export interface GenPart {
   cuts?: Contour[];
   /** Scored lines (open). */
   score?: Contour[];
+  /** Keep automatic part names clear of scored assembly marks. */
+  labelAvoidScore?: boolean;
   /** Engraved regions, filled (even-odd). */
   engrave?: Contour[];
   /** Engraved pictures. */

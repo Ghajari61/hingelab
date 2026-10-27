@@ -105,7 +105,7 @@ export function engineerRibSupports(input:GenPart[],settings:JoinerySettings):{p
     for(const x of [s.x-h,s.x+h]){lower.push([x,s.lo-1]);upper.push([x,s.hi]);}
    }
    lower[0][0]=upper[0][0]=x0;lower.at(-1)![0]=upper.at(-1)![0]=x1;
-   const id=`support-${track+1}-${section+1}`,name=`${String(input.length+rails.length+1).padStart(2,'0')} · Curved rail ${track+1}${String.fromCharCode(65+section)}`;
+   const id=`support-${track+1}-${section+1}`,name=`${String(input.length+rails.length+1).padStart(2,'0')}-R${track+1}${String.fromCharCode(65+section)}`;
    const original:GenPart={id,name,t,stock:`wood-${t}mm`,outer:positive([...lower,...upper.reverse()]),holes:[],place:{x:0,y:y+t/2,z:0,m:[1,0,0,0,0,0,-1,y+t/2,0,1,0,0]}};
    const top=Math.max(...original.outer.map(p=>p[1]))+1,railCuts:Contour[]=[];
    for(const s of stations){
@@ -115,6 +115,7 @@ export function engineerRibSupports(input:GenPart[],settings:JoinerySettings):{p
     addJoint(s.p.id,id,'cross-lap',[s.x,y,s.mid],s.hi-s.lo,`Lower ${s.p.name} vertically onto rail ${track+1}${String.fromCharCode(65+section)}. Bottom-open rib slot and top-open rail slot meet at Z=${s.mid.toFixed(3)} mm; ${t+c} mm nominal width. Bond after the complete dry-fit.`);
    }
    const rail=subtract(original,railCuts);
+   rail.labelAvoidScore=true;
    for(const s of stations)if(!filled(rail,box(s.x-t/2-c/2,s.mid-c/2-web,s.x+t/2+c/2,s.mid-c/2-.01)))throw Error('A support slot leaves too little material below it. Increase rib wall width.');
    // Score the matching manifest number below each notch, inside its checked solid web.
    rail.score=stations.flatMap(s=>{
