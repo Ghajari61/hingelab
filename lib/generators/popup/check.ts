@@ -13,7 +13,7 @@ export function checkPopup(p:PopupParams,out:GenOutput):Issue<PopupParams>[] {
  if(g.collapsed)add('collapse','Concave offsets collapsed before the requested ring count.',{label:'Reduce count',apply:q=>({...q,rings:{...q.rings,by:'count',count:Math.max(2,g.loops.length-1)}})});
  if(p.outline.width>p.bedW-10||p.outline.height>p.bedH-10)add('bed','Blank exceeds the selected bed; never split a connected blank automatically.',{label:'Scale outline to bed',safe:false,apply:q=>{const s=Math.min((q.bedW-10)/q.outline.width,(q.bedH-10)/q.outline.height);return {...q,outline:{...q.outline,width:q.outline.width*s,height:q.outline.height*s},rings:{...q.rings,center:q.rings.center*s,rim:q.rings.rim*s}};}});
  if(p.pattern.kind!=='rings'){
-  add('spiral','Continuous spiral: 3D shows a target form, not a bending simulation. No separate-ring supports are cut. Use a forming jig and test the actual stock for cracking, springback and load capacity.',undefined,'info');
+  add('spiral',p.spiral.supports?'Continuous spiral: contoured supports and keyed flat lands set the target height. Glue base mortises and supported strip contacts after dry-fitting. Test actual stock for cracking, springback and load capacity; the preview is not a bending simulation.':'Continuous spiral: 3D shows a target form. Enable Spiral supports for a cuttable base and ribs, or use your own forming jig. Test the actual stock for cracking, springback and load capacity.',undefined,'info');
   if(p.extras.socket!=='none'||p.extras.tealight)add('led','LED bulbs / LED tealights only. Keep heat sources away from wood and adhesives.');
   return issues;
  }

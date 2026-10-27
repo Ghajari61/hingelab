@@ -1,3 +1,10 @@
+## 1.25.0 — Supported Pop-up spirals
+
+- Spiral and Multi can now generate a permanent forming cradle: a base plate, three or four radial supports matching the chosen height profile, and headed retaining keys on flat rim/centre lands. The continuous strip remains intact.
+- Stock thickness and joint clearance drive matching tabs, eyes and mortises. Supports account for the full stock footprint and profile transitions; key insertion paths avoid raised sections and accessory openings. Narrow rims and insufficient base clearance produce actionable errors.
+- Base/support/key identifiers, matching mortise labels and step-by-step dry-fit/gluing instructions are included. Assembled, exploded, Lay Flat and SVG use the same parts. Manual forming remains available by disabling the cradle.
+- Added digital fit, insertion-path, interference and SVG parity checks for 2/3/4/6 mm stock, three/four supports, single/multi spirals and six height profiles. Actual wood bending, kerf and load capacity still require a physical prototype.
+
 ## 1.24.2 — Continuous Pop-up spirals
 
 - Selecting Spiral or Multi now switches away from separate-ring joints atomically, including saved designs with incompatible ribs, posts, feet or suspension holes. Returning to Rings restores rigid rib construction.

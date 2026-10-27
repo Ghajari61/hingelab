@@ -87,6 +87,16 @@ function transformAll(cs:Contour[],x:number,y:number){return cs.map(c=>transform
 
 export interface AssemblyGroup {label:string;order:ReturnType<typeof ringAssemblyOrder>;radial:boolean;}
 export function assemblySteps(p:PopupParams,parts:GenPart[],groups:AssemblyGroup[]):string[]{
+  if(p.pattern.kind!=='rings'&&p.spiral.supports)return [
+    `Measure the wood (${p.T.toFixed(2)} mm) and cut a coupon first. Mortise width is ${(p.T+p.support.fit).toFixed(2)} mm; total clearance ${p.support.fit.toFixed(2)} mm. Apply kerf compensation only once.`,
+    'Engrave the part identifiers, cut all internal slots and key eyes, then the outer outlines. Keep each continuous spiral blank intact.',
+    'For each size, lay B1 flat. Insert R1 and the other numbered supports vertically into the matching base mortises. Bottom tabs finish flush with the base underside. Dry-fit before gluing.',
+    `Pre-form the spiral gradually toward its ${p.profile.depth.toFixed(1)} mm target rise. Never force a flat blank down over tabs at different heights. Stop if the stock cracks or resists; change stock, spacing or target rise and prototype again.`,
+    'Lower the formed blank vertically onto the cradle. Align each rim slot R1, R2… with its rib. Where present, the centre tabs enter the flat centre lands. The contoured upper edges support the intermediate strip from below.',
+    'Slide each K-number key sideways through the matching tab eye, above the blank, until its head reaches the side of the tab. A is the rim key; B is an optional centre key. Do not hammer the keys. Their small clearance allows insertion.',
+    'After checking the target height, glue the base tab side faces and the rib-to-strip contact edges; keep glue out of the spiral cut gaps. Retaining keys prevent lift at the flat lands; secure them after the dry-fit for permanent assembly.',
+    'Fit optional handles and finials last. Test the actual material and load capacity before use. Supports set geometric heights but do not validate wood bending or load capacity. LED lighting only.'
+  ];
   if(p.pattern.kind!=='rings')return [
     `Measure the stock (${p.T.toFixed(2)} mm) and test the cut gap on a small sample. Apply kerf compensation only once.`,
     'Engrave first, cut the closed spiral slots next, then cut the exterior. Keep the blank supported on the laser bed.',

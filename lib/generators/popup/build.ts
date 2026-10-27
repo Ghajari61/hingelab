@@ -2,6 +2,7 @@ import {placePoint} from '../place';
 import {ringCode,ringAssemblyOrder,ringLabels,ringInsertionInterference,assemblySteps,assemblyCards,type AssemblyGroup} from './assembly';
 import {ribAssembly,handleAssembly,suspensionLayout,jointCoupons} from './supports';
 import {popupHardware} from './hardware';
+import {spiralSupports} from './spiralSupports';
 import type {Hardware3D} from '../types';
 import {differenceShapes,intersectShapes,makeShape,offsetShapes,unionShapes} from '@/lib/letters/polygon';
 import {circle,customOutline,ellipse,rect,regularPolygon,roundCorners,roundedRect,transform,TAU,pointInContour,distToContour,parsePathData} from '../geom';
@@ -68,7 +69,7 @@ export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0,
  if(p.support.kind==='tilt'){const length=100,h=length*Math.tan(p.support.angle*Math.PI/180);parts.push({id:'wedge',name:`Bevel jig ${p.support.angle} degrees`,outer:[[0,0],[length,0],[length,-h]],holes:[]});}
  if(p.support.kind==='handles'||p.extras.handles){const handles=handleAssembly(p,rings[0],holes);parts.push(...handles.parts);holes.push(...handles.slots);}
  const suspension=(p.support.kind==='cords'||p.extras.loop)?suspensionLayout(p,rings,holes,centerHole):null;if(suspension)holes.push(...suspension.slots);
- if(p.extras.base||p.extras.plantSeat){
+ if((p.extras.base||p.extras.plantSeat)&&!(p.pattern.kind!=='rings'&&p.spiral.supports)){
   // With ribs the space under the centre disc is theirs: the base goes on the floor, under the ribs, as wide as they stand.
   const ribbed=parts.some(v=>/^rib-/.test(v.id));const r=ribbed?Math.max(p.rings.center/2,Math.min(radius*.55,radius-p.rings.rim)):p.rings.center/2;
   parts.push({id:'base',name:ribbed?'Base plate (ribs stand on it)':'Base / plant seat',outer:circle(0,0,r),holes:[],place:{x:0,y:0,z:ribbed?-ribFoot(p)-p.T:rings.at(-1)!.height-p.T}});}
@@ -82,6 +83,9 @@ export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0,
   const clear=!centerHole&&!holes.some(h=>h.some(v=>Math.abs(v[0])<tabW&&Math.abs(v[1])<tabW));
   if(clear)holes.push(slot);
   parts.push({id:'finial',name:clear?'Top finial (tab in the centre slot)':'Glue-on top finial',outer:clear?merged.outer:body,holes:[circle(0,-w/2,1.5)],place:{x:0,y:-rings.at(-1)!.height-p.T,z:-p.T/2,upright:true}});}
+ const surface={samples:Array.from({length:129},(_,i)=>[p.rings.center/2+(radius-p.rings.rim-p.rings.center/2)*i/128,profileHeight(p,i/128)] as [number,number])};
+ const cradle=p.pattern.kind!=='rings'&&p.spiral.supports?spiralSupports(p,parts[0],surface,radius,centerHole,ctx,labelPrefix):null;
+ if(cradle){parts.push(...cradle.parts);holes.push(...cradle.slots);engrave.push(...cradle.marks);loading ||= cradle.loading;}
  // Finalise manufacturing geometry first. Do not union negative-wound central openings
  // with positive-wound cuts: that cancels the opening and turns inner holes into phantom wood.
  const validHoles=intersectShapes(holes,[outer]);
@@ -91,9 +95,8 @@ export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0,
  if(p.pattern.kind!=='rings'){
   const wood=unionShapes([outer,...parts[0].holes],[],true);
   if(wood.length!==1)throw Error('Spiral cuts separate the strip. Widen the spacing or reduce the cut gap/openings.');
-  const start=p.rings.center/2,end=radius-p.rings.rim;
-  const samples: [number,number][]=Array.from({length:129},(_,i)=>[start+(end-start)*i/128,profileHeight(p,i/128)]);
-  views.push({name:`Continuous ${labelPrefix}spiral`,outer,holes:parts[0].holes,engrave,place:{x:0,y:0,z:0},apart:[0,0,0],radialSurface:{samples}});
+
+  views.push({name:`Continuous ${labelPrefix}spiral`,outer,holes:parts[0].holes,engrave,place:{x:0,y:0,z:0},apart:[0,0,cradle?50:0],radialSurface:surface});
  }else{
  const spans=parts[0].holes.map(radialSpan);
  const order=[...rings].sort((a,b)=>a.height-b.height);
@@ -112,13 +115,13 @@ export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0,
  }
  }
  for(let i=1;i<parts.length;i++){
-  const part=parts[i],pl=part.place;
+  const part=parts[i],pl=part.place;if(part.apart)continue;
   if(pl?.m)part.apart=[pl.m[2]*35,pl.m[6]*35,-20];
   else if(pl?.upright)part.apart=[0,(i%2?1:-1)*35,25];
   else part.apart=[0,0,-25-i*6];
  }
  if(p.pattern.kind==='rings')for(const v of views)for(const rib of parts.filter(x=>/^rib-\d/.test(x.id)))if(ringInsertionInterference({...v,height:v.place.z},rib,p.T)>.005)throw Error(`${v.name} cannot descend onto ${rib.name}. Widen rings or change the outline/profile.`);
- return {...plan,parts,notches,missing,loading,suspension};}
+ return {...plan,parts,notches,missing,loading,suspension,cradle};}
 /**
  * The radii a contour's area spans about the centre (from 0 when it encloses the centre). A point on
  * an edge is within half the edge of a vertex, so the span is widened by that much.
@@ -126,7 +129,7 @@ export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0,
 function vertexSpan(c:Contour):[number,number]{let lo=Infinity,hi=0,e=0;for(let i=0;i<c.length;i++){const a=c[i],b=c[(i+1)%c.length],r=Math.hypot(a[0],a[1]);if(r<lo)lo=r;if(r>hi)hi=r;e=Math.max(e,Math.hypot(b[0]-a[0],b[1]-a[1]));}return [Math.max(0,lo-e/2-.01),hi+.01];}
 function radialSpan(c:Contour):[number,number]{const s=vertexSpan(c);return pointInContour([0,0],c)?[0,s[1]]:s;}
 /** The floor under a design: the ribs' feet reach below the rings. */
-const floorOf=(p:PopupParams)=>(['ribs','post','handles'].includes(p.support.kind)||p.extras.post)&&p.pattern.kind==='rings'?-ribFoot(p):0;
+const floorOf=(p:PopupParams)=>p.pattern.kind!=='rings'&&p.spiral.supports?-p.spiral.clearance-p.T:(['ribs','post','handles'].includes(p.support.kind)||p.extras.post)&&p.pattern.kind==='rings'?-ribFoot(p):0;
 export function buildPopup(p:PopupParams,ctx:BuildContext):GenOutput {
  try {
   const g=popupGeometry(p,ctx);
@@ -137,7 +140,7 @@ export function buildPopup(p:PopupParams,ctx:BuildContext):GenOutput {
   if(p.support.coupon)g.parts.push(...jointCoupons(p));
   if(p.sets.assemblyCard)g.parts.push(...assemblyCards(p,ctx,groups));
   return {parts:g.parts,hardware,missing:g.missing,notice:g.loading?'Loading engraving font…':undefined,
-   stats:[p.pattern.kind==='rings'?{label:'Rings',value:String(groups.reduce((n,g)=>n+g.order.length,0))}:{label:'Spiral turns / arm',value:(g.wanted/(p.pattern.kind==='multi'?p.pattern.arms:1)).toFixed(2)},{label:'Open height',value:`${p.profile.depth.toFixed(1)} mm`},{label:'Outer span',value:`${p.outline.width} × ${p.outline.height} mm`},{label:p.pattern.kind==='rings'?'Ring pitch':'Strip pitch',value:`${g.pitch.toFixed(2)} mm`},
+   stats:[...(g.cradle?[{label:'Spiral supports',value:String(p.spiral.count)},{label:'Joint slot',value:`${(p.T+p.support.fit).toFixed(2)} mm`},{label:'Base clearance',value:`${p.spiral.clearance.toFixed(1)} mm`}]:[]),p.pattern.kind==='rings'?{label:'Rings',value:String(groups.reduce((n,g)=>n+g.order.length,0))}:{label:'Spiral turns / arm',value:(g.wanted/(p.pattern.kind==='multi'?p.pattern.arms:1)).toFixed(2)},{label:'Open height',value:`${p.profile.depth.toFixed(1)} mm`},{label:'Outer span',value:`${p.outline.width} × ${p.outline.height} mm`},{label:p.pattern.kind==='rings'?'Ring pitch':'Strip pitch',value:`${g.pitch.toFixed(2)} mm`},
     ...(p.support.kind==='tilt'?[{label:'Tilt depth',value:`${tiltDepth(g.loops.length,p.rings.gap,p.support.angle).toFixed(1)} mm`}]:[]),
     ...(p.support.kind==='cords'&&p.sets.count===1?[{label:'Cord allowance',value:`3 × ${Math.ceil(Math.max(0,...spacings.map(s=>s.reduce((a,v)=>a+v,0)))+100)} mm; trim after fitting`},{label:'Knot spacing',value:(k=>!k.length?'none':Math.max(...k)-Math.min(...k)<1?`${Math.round(k[0])} mm`:`${Math.round(Math.min(...k))} to ${Math.round(Math.max(...k))} mm`)(spacings.flat())}]:[])],
    assembly:[...assemblySteps(p,g.parts,groups),
