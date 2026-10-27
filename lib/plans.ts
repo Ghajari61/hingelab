@@ -86,6 +86,24 @@ export function planOf(value: unknown): Plan {
   return value === "pro" || value === "business" || value === "lifetime" ? value : "free";
 }
 
+/** Pro stays on this long past the paid period while Stripe's renewal webhook is on its way. */
+export const PERIOD_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
+
+/**
+ * The plan a profile really has: Pro or Business only while `plan` (written by the Stripe webhook)
+ * says so and the paid period has not ended more than the grace period ago, so a missed downgrade
+ * webhook cannot keep a subscription on for ever. Lifetime never ends. Website and desktop app
+ * both use this.
+ */
+export function effectivePlan(plan: unknown, periodEnd: string | null | undefined, now = Date.now()): Plan {
+  const p = planOf(plan);
+  if (p === "lifetime") return "lifetime";
+  if (p !== "pro" && p !== "business") return "free";
+  if (!periodEnd) return p;
+  const end = Date.parse(periodEnd);
+  return Number.isNaN(end) || end + PERIOD_GRACE_MS >= now ? p : "free";
+}
+
 /** Pro, Founder Lifetime and Business all include today's Pro features. */
 export function hasPro(plan: Plan): boolean {
   return plan === "pro" || plan === "lifetime" || plan === "business";

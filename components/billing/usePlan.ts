@@ -1,7 +1,7 @@
 "use client";
 
 import { useAccount } from "@/components/auth/useAccount";
-import { planOf, type Plan } from "@/lib/plans";
+import { effectivePlan, type Plan } from "@/lib/plans";
 
 export type PlanState = {
   plan: Plan;
@@ -18,5 +18,5 @@ export type PlanState = {
 export function usePlan(): PlanState {
   const a = useAccount();
   if (!a.configured) return { plan: "pro", configured: false, signedIn: false, loading: false };
-  return { plan: planOf(a.profile?.plan), configured: true, signedIn: !!a.user, loading: a.loading };
+  return { plan: effectivePlan(a.profile?.plan, a.profile?.current_period_end), configured: true, signedIn: !!a.user, loading: a.loading };
 }

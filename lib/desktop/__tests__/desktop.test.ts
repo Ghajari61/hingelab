@@ -244,7 +244,10 @@ describe("desktop generate (server-side SVG)", () => {
     const clock = await gen({ product: "clock" });
     expect(clock.status).toBe(200);
     const web = await exportGeneratorForPlan("clock", clock.body.params, "pro");
-    expect(web.ok && web.svg).toBe(clock.body.svg);
+    // Free carries the mark the web export would add; Pro gets the web export exactly
+    expect(web.ok && addWatermark(web.svg)).toBe(clock.body.svg);
+    const clockPro = await gen({ product: "clock" }, "pro");
+    expect(web.ok && web.svg).toBe(clockPro.body.svg);
     expect(clock.body.stats.length).toBeGreaterThan(0);
     const many = await gen({ product: "puzzle", change: { key: "pieces.count", value: 120 } });
     expect(many.status).toBe(403);

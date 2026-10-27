@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { planOf, planRank, type Plan } from "@/lib/plans";
+import { effectivePlan, planRank, type Plan } from "@/lib/plans";
 import { checkoutPriceId, getStripe, siteURL, stripeConfigured, type CheckoutPlan } from "@/lib/stripe";
 import { LIMITS, rateLimit, tooManyRequests } from "@/lib/security/rateLimit";
 import { isCrossSite, isJSONRequest, siteOrigins } from "@/lib/security/request";
@@ -30,18 +30,26 @@ export async function POST(request: NextRequest) {
   const { user } = session;
   const admin = createAdminClient();
   const stripe = getStripe();
-  const { data: profile } = await admin.from("profiles").select("stripe_customer_id, plan").eq("id", user.id).single();
-  const current = planOf(profile?.plan);
+  const { data: profile } = await admin.from("profiles").select("stripe_customer_id, plan, current_period_end").eq("id", user.id).single();
+  // a subscription that lapsed (its webhook never came) can be bought again
+  const current = effectivePlan(profile?.plan, profile?.current_period_end);
   const blocked = checkoutBlocked(current, target);
   if (blocked) return NextResponse.json({ error: blocked }, { status: 409 });
 
   try {
     let customer = profile?.stripe_customer_id ?? null;
     if (!customer) {
-      const created = await stripe.customers.create({ email: user.email, metadata: { user_id: user.id } });
-      customer = created.id;
-      const { error } = await admin.from("profiles").update({ stripe_customer_id: customer }).eq("id", user.id);
+      // Two checkouts at once (a double click, two tabs) must not make two Stripe customers: the
+      // idempotency key makes Stripe hand both the same one, and only an empty column is written.
+      const created = await stripe.customers.create({ email: user.email, metadata: { user_id: user.id } }, { idempotencyKey: `hingelab-customer-${user.id}` });
+      const { data: saved, error } = await admin.from("profiles").update({ stripe_customer_id: created.id }).eq("id", user.id).is("stripe_customer_id", null).select("stripe_customer_id");
       if (error) throw error;
+      if (saved?.length) customer = created.id;
+      else {
+        const { data: again, error: readError } = await admin.from("profiles").select("stripe_customer_id").eq("id", user.id).single();
+        if (readError || !again?.stripe_customer_id) throw readError ?? new Error("no stripe customer");
+        customer = again.stripe_customer_id;
+      }
     }
 
     const base = siteURL(request.nextUrl.origin);

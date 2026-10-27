@@ -195,3 +195,15 @@ describe("desktop pictures in generators", () => {
     expect(traceForDesktop({ kind: "gif" }).status).toBe(400);
   });
 });
+
+describe("desktop generators carry the Free mark like the Hinge Box", () => {
+  it("watermarks a Free sign and keeps Pro clean", async () => {
+    const free = await gen({ product: "sign" });
+    expect(free.status, free.body.error ?? free.body.locked).toBe(200);
+    expect(free.body.watermark).toBe(true);
+    expect(free.body.svg).toContain("Made with HingeLab");
+    const pro = await gen({ product: "sign" }, "pro");
+    expect(pro.body.watermark).toBe(false);
+    expect(pro.body.svg).not.toContain("Made with HingeLab");
+  }, 60000);
+});

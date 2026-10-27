@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { planOf, type Plan } from "@/lib/plans";
+import { effectivePlan, type Plan } from "@/lib/plans";
+export { effectivePlan, PERIOD_GRACE_MS } from "@/lib/plans";
 import { bearer, isChallenge, isLoopbackRedirect, isToken, isVerifier, randomToken, sha256, verifyPkce } from "./pkce";
 import type { DesktopTokens } from "./types";
 
@@ -10,8 +11,6 @@ export const CODE_TTL = 120;
 export const ACCESS_TTL = 15 * 60;
 /** Refresh tokens rotate on every use and expire after 30 days without use. */
 export const REFRESH_TTL = 30 * 24 * 60 * 60;
-/** Pro stays on this long past the paid period while Stripe's renewal webhook is on its way. */
-export const PERIOD_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
 
 export type TokenError = { error: "invalid_request" | "invalid_grant" | "server_error"; status: number };
 
@@ -81,18 +80,6 @@ export async function revokeAllDesktopSessions(userId: string): Promise<number> 
   return data ?? 0;
 }
 
-/**
- * The plan the desktop app gets: Pro only while `profiles.plan` (written by the Stripe webhook) says
- * so and the paid period has not ended more than the grace period ago.
- */
-export function effectivePlan(plan: unknown, periodEnd: string | null | undefined, now = Date.now()): Plan {
-  const p = planOf(plan);
-  if (p === "lifetime") return "lifetime";
-  if (p !== "pro" && p !== "business") return "free";
-  if (!periodEnd) return p;
-  const end = Date.parse(periodEnd);
-  return Number.isNaN(end) || end + PERIOD_GRACE_MS >= now ? p : "free";
-}
 
 export async function desktopPlan(userId: string): Promise<Plan> {
   const { data, error } = await createAdminClient().from("profiles").select("plan, current_period_end").eq("id", userId).maybeSingle();
