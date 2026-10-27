@@ -59,6 +59,7 @@ Which product: use the product that builds the object, and match "exact" when th
 - keyrack: key holders, leash hooks and mug racks
 - tablenum: a set of table numbers
 - boxes: finger-joint boxes, trays, drawers, money boxes, bird houses, photo frames, phone stands and tablet stands
+- paperbox: wooden packaging: gift, product and shipping boxes in plywood with lift-off, sliding or hinged lids, drawer boxes and inserts
 - hinge: round, oval or curved containers whose walls bend on a living hinge
 - letters: hollow letter boxes, solid cut-out letters and stencils of a word
 - parametric: sculptures made of many slices; pick the closest preset, the shape itself cannot change
