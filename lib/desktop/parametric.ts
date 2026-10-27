@@ -316,8 +316,7 @@ async function textOutline(p: P): Promise<{ file: ArrayBuffer } | { error: strin
 
 /** The parts assembled, without edge lines (the app draws its own), named so explode can pair them. */
 function parametricScene(r: SliceResult, T: number, explode: number): Scene3D {
-  const parts = partsObject(r, T, explode * 40);
-  for (const c of [...parts.children]) if ((c as THREE.LineSegments).isLineSegments) parts.remove(c);
+  const parts = partsObject(r, T, explode * 40, "wood", false);
   let i = 0;
   parts.traverse((o) => {
     const m = o as THREE.Mesh;

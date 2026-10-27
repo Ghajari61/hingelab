@@ -5,7 +5,10 @@ import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { LETTER_DEFAULTS, computeLetterModel, loadFont, wallHeightOf } from "@/lib/letters";
 import type { LetterModel, LetterParams, LoadedFont } from "@/lib/letters";
-import { WOOD, buildLetterScene } from "@/lib/letters/scene3d";
+import { WOOD, buildLetterScene, letterFlatParts } from "@/lib/letters/scene3d";
+import { arrangeLetters } from "@/lib/fit/letters";
+import { flatScene } from "@/lib/three/flat";
+import { assertFlatSurface } from "@/lib/three/__tests__/previewAssertions";
 
 function fixture(file: string, id: string, name: string): LoadedFont {
   const b = readFileSync(join(__dirname, "fonts", file));
@@ -29,6 +32,27 @@ const meshes = (g: THREE.Object3D) => {
 };
 
 describe("letters 3D preview scene", () => {
+  it("lays Latin and Persian solids, stencils and box walls out without overlap", () => {
+    for (const text of ["Sam", "سام"]) for (const mode of ["solid", "stencil", "box"] as const) {
+      const p = params(text, { mode, fit: { mode: "auto", sheets: 1 } });
+      const a = arrangeLetters(p, p.fontId === "vazirmatn" ? vazir : fredoka, hb);
+      expect(a.lay).not.toBeNull();
+      const scene = flatScene(letterFlatParts(a.lay!), p.T);
+      try { assertFlatSurface(scene.group); } finally { scene.dispose(); }
+    }
+  });
+  it("lifts a lid without replacing its meshes and restores the assembled position", () => {
+    const p = params("Sam"), sc = buildLetterScene(model(p), p);
+    const ms = meshes(sc.group), geometries = ms.map(m => m.geometry);
+    const original = new THREE.Box3().setFromObject(sc.group);
+    try {
+      sc.explode(1);
+      expect(new THREE.Box3().setFromObject(sc.group).max.y).toBeGreaterThan(original.max.y + 20);
+      expect(meshes(sc.group).map(m => m.geometry)).toEqual(geometries);
+      sc.explode(0);
+      expect(new THREE.Box3().setFromObject(sc.group)).toEqual(original);
+    } finally { sc.dispose(); }
+  });
   it("a closed box stands as tall as its depth, with one mesh per plate and wall", () => {
     const p = params("Sam");
     const m = model(p);

@@ -5,6 +5,9 @@
 import * as THREE from "three";
 import type { MeshData, Part, Plane, SliceResult } from "@/lib/parametric";
 import { placementOf } from "@/lib/parametric/slice/planes";
+import { toSheet } from "@/lib/parametric/nest";
+import { unionShapes } from "@/lib/letters/polygon";
+import { flatScene, type FlatPart } from "@/lib/three/flat";
 
 export const PART_COLOR = 0xc9a36a;
 
@@ -75,12 +78,38 @@ export const FINISH_COLORS: Record<"wood" | "dark" | "white", [number, number]> 
   white: [0xefebe4, 0x9c968c],
 };
 
+/** The same transformed cut contours and sheet offsets as the SVG/canvas, including all sheets. */
+export function flatPartsObject(r: SliceResult, T: number, offsets: { x: number; y: number }[]): THREE.Group {
+  const byId = new Map(r.parts.map(p => [p.id, p]));
+  const parts: FlatPart[] = [];
+  r.sheets.forEach((sheet, i) => {
+    const offset = offsets[i];
+    if (!offset) throw new Error('Missing sheet position for Lay Flat');
+    for (const item of sheet.items) {
+      const part = byId.get(item.partId);
+      if (!part) continue;
+      const contours = part.cut ? [...part.cut.outline, ...part.cut.inner] : [part.shape.outer, ...part.shape.holes, ...part.innerCuts];
+      const move = (c: [number, number][]) => c.map(q => {
+        const [x, y] = toSheet(q, item);
+        return [x + offset.x, y + offset.y] as [number, number];
+      });
+      for (const s of unionShapes(contours, [], true)) parts.push({ name: part.id, outer: move(s.outer), holes: s.holes.map(move) });
+    }
+  });
+  const group = flatScene(parts, T).group;
+  group.traverse(o => { if (o instanceof THREE.Mesh) o.userData.partId = o.name; });
+  return group;
+}
+
+export type MovingParts = THREE.Group & { explode: (amount: number) => void };
+
 /** Parts extruded to T at their placement; `explode` pushes them apart along their normals. */
-export function partsObject(r: SliceResult, T: number, explode = 0, finish: keyof typeof FINISH_COLORS = "wood"): THREE.Group {
-  const grp = new THREE.Group();
+export function partsObject(r: SliceResult, T: number, explode = 0, finish: keyof typeof FINISH_COLORS = "wood", includeEdges = true): MovingParts {
+  const grp = new THREE.Group() as MovingParts;
+  const moves: { mesh: THREE.Object3D; line?: THREE.Object3D; base: THREE.Vector3; delta: THREE.Vector3 }[] = [];
   const [face, edgeColor] = FINISH_COLORS[finish] ?? FINISH_COLORS.wood;
   const mat = new THREE.MeshStandardMaterial({ color: face, roughness: finish === "dark" ? 0.55 : 0.75 });
-  const edge = new THREE.LineBasicMaterial({ color: edgeColor });
+  const edge = includeEdges ? new THREE.LineBasicMaterial({ color: edgeColor }) : undefined;
   // Each family of parallel planes spreads about its own middle.
   const famKey = (pl: Plane) => pl.normal.join(",");
   const fam = new Map<string, number[]>();
@@ -93,39 +122,53 @@ export function partsObject(r: SliceResult, T: number, explode = 0, finish: keyo
       g.computeVertexNormals();
       const mesh = new THREE.Mesh(g, card);
       // Nets move apart along their average normal.
-      if (explode) {
+      const delta = new THREE.Vector3();
+      {
         const n = new THREE.Vector3();
         const nm = g.getAttribute("normal");
         for (let i = 0; i < nm.count; i++) n.add(new THREE.Vector3(nm.getX(i), nm.getY(i), nm.getZ(i)));
-        if (n.lengthSq() > 0) mesh.position.copy(n.normalize().multiplyScalar(explode));
+        if (n.lengthSq() > 0) delta.copy(n.normalize());
       }
       mesh.userData.partId = part.id;
-      const line = new THREE.LineSegments(new THREE.EdgesGeometry(g, 1), edge);
-      line.position.copy(mesh.position);
-      grp.add(mesh, line);
+      const line = edge ? new THREE.LineSegments(new THREE.EdgesGeometry(g, 1), edge) : undefined;
+      line?.position.copy(mesh.position);
+      moves.push({ mesh, line, base: mesh.position.clone(), delta });
+      grp.add(mesh);
+      if (line) grp.add(line);
       continue;
     }
     const g = partGeometry(part, T);
     const mx = new THREE.Matrix4().fromArray(part.placement);
-    if (explode && part.plane >= 0) {
+    const delta = new THREE.Vector3();
+    if (part.plane >= 0) {
       const pl = r.planes[part.plane];
       // Radial and along-a-curve fins move outward along their own length instead.
       if (fanned(r, part)) {
-        mx.premultiply(new THREE.Matrix4().makeTranslation(pl.u[0] * explode, pl.u[1] * explode, pl.u[2] * explode));
+        delta.set(...pl.u);
       } else {
         const ids = fam.get(famKey(pl))!;
-        const d = (ids.indexOf(part.plane) - (ids.length - 1) / 2) * explode;
+        const d = ids.indexOf(part.plane) - (ids.length - 1) / 2;
         const n = pl.normal;
-        mx.premultiply(new THREE.Matrix4().makeTranslation(n[0] * d, n[1] * d, n[2] * d));
+        delta.set(n[0] * d, n[1] * d, n[2] * d);
       }
     }
     const mesh = new THREE.Mesh(g, mat);
     mesh.applyMatrix4(mx);
     mesh.userData.partId = part.id;
-    const line = new THREE.LineSegments(new THREE.EdgesGeometry(g, 30), edge);
-    line.applyMatrix4(mx);
-    grp.add(mesh, line);
+    const line = edge ? new THREE.LineSegments(new THREE.EdgesGeometry(g, 30), edge) : undefined;
+    line?.applyMatrix4(mx);
+    moves.push({ mesh, line, base: mesh.position.clone(), delta });
+    grp.add(mesh);
+    if (line) grp.add(line);
   }
+  grp.explode = amount => {
+    for (const { mesh, line, base, delta } of moves) {
+      mesh.position.copy(base).addScaledVector(delta, amount);
+      line?.position.copy(mesh.position);
+    }
+    grp.updateMatrixWorld(true);
+  };
+  grp.explode(explode);
   return grp;
 }
 
@@ -159,6 +202,9 @@ export function disposeTree(o: THREE.Object3D) {
     const m = c as THREE.Mesh;
     m.geometry?.dispose();
     const mat = m.material as THREE.Material | THREE.Material[] | undefined;
-    if (Array.isArray(mat)) mat.forEach(x => x.dispose()); else mat?.dispose();
+    const base = m.userData.base as THREE.Material | undefined;
+    for (const material of new Set([...(Array.isArray(mat) ? mat : mat ? [mat] : []), ...(base ? [base] : [])])) {
+      if (!material.userData.shared) material.dispose();
+    }
   });
 }

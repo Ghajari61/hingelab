@@ -189,8 +189,10 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
     : [p]);
   // Folding faces: placed from their frames, so the fold and explode move them in place.
   const folding: { wrap: THREE.Object3D; frames: number[][]; apart: [number, number, number] }[] = [];
+  const moving: ((e: number) => void)[] = [];
   let at = { fold, explode };
   const place = () => {
+    for (const move of moving) move(at.explode);
     for (const f of folding) placeWrap(f.wrap, frameAt(f.frames, at.fold), [f.apart[0] * at.explode, f.apart[1] * at.explode, f.apart[2] * at.explode]);
     inner.updateMatrixWorld(true);
   };
@@ -211,6 +213,14 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
     else if (pl.upright) wrap.position.set(pl.x, -z, -pl.y);
     else wrap.position.set(pl.x + apart[0] * explode, -pl.y - apart[1] * explode, z);
     if (pl.yaw) wrap.rotation.z = -(pl.yaw * Math.PI) / 180;
+    if (!p.frames?.length) {
+      if (pl.m) moving.push(e => placeWrap(wrap, pl.m!, [apart[0] * e, apart[1] * e, apart[2] * e]));
+      else {
+        const delta = !pl.upright || p.apart ? new THREE.Vector3(apart[0], -apart[1], apart[2]) : new THREE.Vector3(0, -apart[2], 0);
+        const origin = wrap.position.clone().addScaledVector(delta, -explode);
+        moving.push(e => { wrap.position.copy(origin).addScaledVector(delta, e); });
+      }
+    }
     const stand = new THREE.Group();
     if (pl.upright) stand.rotation.x = ((pl.tilt ?? 90) * Math.PI) / 180;
     const spin = new THREE.Group();
@@ -225,8 +235,8 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
         let px = 0, py = 0;
         for (const [x, y] of c) { px += x; py += y; }
         px /= c.length; py /= c.length;
-        const k = explode * 0.12;
-        const m = slab(c.map(([x, y]) => [x + (px - cx) * k, y + (py - cy) * k] as [number, number]), [], 0, t, `${p.name} piece ${i + 1}`);
+        const m = slab(c, [], 0, t, `${p.name} piece ${i + 1}`);
+        moving.push(e => { m.position.set((px - cx) * e * 0.12, -(py - cy) * e * 0.12, 0); });
         m.userData.tint = tint * (i % 2 ? 1.03 : 0.97);
         spin.add(m);
       });
@@ -247,36 +257,39 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
         spin.add(mesh);
       });
     }
-    const marked = !(p.pieces?.length && explode > 0);
-    const engrave = marked ? byItem(p.engrave ?? []) : new Map<string | undefined, Contour[]>();
+    const surface = new THREE.Group();
+    // Decorations stay attached to whole parts; puzzle-wide marks fade when pieces separate.
+    if (p.pieces?.length) moving.push(e => { surface.visible = e === 0; });
+    const engrave = byItem(p.engrave ?? []);
     for (const s of engrave.has(undefined) ? unionShapes(engrave.get(undefined)!, [], true) : []) {
       const e = slab(s.outer, s.holes, t, 0.2, `${p.name} engraving`);
       (e.material as THREE.Material).dispose();
       e.material = ENGRAVE;
       e.userData.keepMaterial = true;
       e.userData.noMeasure = true;
-      spin.add(e);
+      surface.add(e);
     }
     // Each text, motif or number is a part of its own, so it can be picked and sized on its own.
     for (const [item, cs] of engrave) if (item) {
       const shapes = unionShapes(cs, [], true);
-      if (shapes.length) spin.add(itemMesh(slabs(shapes, t, 0.2, itemSkinName(p.name, item)), ENGRAVE));
+      if (shapes.length) surface.add(itemMesh(slabs(shapes, t, 0.2, itemSkinName(p.name, item)), ENGRAVE));
     }
     // Scored items: their outlines, over a faint fill that picks them.
-    if (marked) for (const [item, cs] of byItem(p.score ?? [])) if (item) {
+    for (const [item, cs] of byItem(p.score ?? [])) if (item) {
       const shapes = unionShapes(cs, [], true);
       if (!shapes.length) continue;
       const fill = itemMesh(slabs(shapes, t, 0.05, itemSkinName(p.name, item)), SCORE_FILL);
       fill.add(scoreLines(cs, t + 0.06, `${fill.name} lines`));
-      spin.add(fill);
+      surface.add(fill);
     }
-    if (marked) for (const im of p.images ?? []) {
+    for (const im of p.images ?? []) {
       const item = itemOf(im);
       const m = pictureSkin(im, item ? t + 0.02 : t, item ? `${p.name}${ITEM_SEP}${item}` : `${p.name} picture`, loads);
       if (m && item) delete m.userData.noPick;
-      if (m) spin.add(m);
+      if (m) surface.add(m);
     }
     if (p.creases?.length) spin.add(creaseLines(p.creases, t, `${p.name} creases`));
+    spin.add(surface);
     stand.add(spin);
     wrap.add(stand);
     inner.add(wrap);
@@ -289,15 +302,13 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
   const showHardware = () => { if (hardware) hardware.visible = at.fold > 0.999 && at.explode < 0.001; };
   showHardware();
   if (!folding.length && lay) {
+    // The layout transition starts from an assembled model, independent of the initial slider.
+    at.explode = 0; place();
     const run = unfoldParts(inner, wraps, lay, T);
     run(0);
     const scene = finishScene(inner);
     run(explode);
     return { ...scene, explode: (e: number) => { at.explode = e; showHardware(); run(Math.min(1, Math.max(0, e))); }, ...(loads.length ? { ready: Promise.all(loads) } : {}) };
-  }
-  if (!folding.length) {
-    const scene = finishScene(inner);
-    return loads.length ? { ...scene, ready: Promise.all(loads) } : scene;
   }
   // Framed and centred on the folded box, so folding and exploding keep the box in its place.
   at = { fold: 1, explode: 0 };
@@ -308,8 +319,8 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
   place();
   showHardware();
   const hooks = {
-    fold: (a: number) => { at = { ...at, fold: a }; place(); showHardware(); },
-    explode: (e: number) => { at = { ...at, explode: e }; place(); showHardware(); },
+    ...(folding.length ? { fold: (a: number) => { at = { ...at, fold: a }; place(); showHardware(); } } : {}),
+    explode: (e: number) => { at = { ...at, explode: Math.min(1, Math.max(0, e)) }; place(); showHardware(); },
   };
   return { ...scene, ...hooks, ...(loads.length ? { ready: Promise.all(loads) } : {}) };
 }
@@ -393,9 +404,9 @@ function unfoldParts(inner: THREE.Group, wraps: { p: Shown; wrap: THREE.Object3D
   // cut parts no 3D part stands for (a bent part's flat strip) grow in place as the others land
   lay.items.forEach((it, j) => {
     if (used.has(j)) return;
-    const outer = it.pt.outline[0];
-    if (!outer || outer.length < 3) return;
-    const mesh = slab(outer, [...it.pt.outline.slice(1), ...it.pt.inner], 0, T, it.pt.name);
+    const regions = unionShapes([...it.pt.outline, ...it.pt.inner], [], true);
+    if (!regions.length) return;
+    const mesh = slabs(regions, 0, it.pt.src.t ?? T, it.pt.name);
     mesh.matrixAutoUpdate = false;
     inner.add(mesh);
     const at = new THREE.Vector3(it.ox - cx, -(it.oy - cy), 0);

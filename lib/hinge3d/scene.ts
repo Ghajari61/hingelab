@@ -9,6 +9,7 @@ import { buildCore } from "@/lib/hinge/core";
 import { honeyLattice } from "@/lib/hinge/hinge";
 import { clipHalf } from "@/lib/hinge/flip";
 import { builtParams } from "@/lib/hinge/model";
+import { unionShapes } from "@/lib/letters/polygon";
 import { finishScene, flatScene, slab, type FlatPart, type Scene3D } from "@/lib/three/flat";
 
 /** Points around the core at offset r: flat sides plus `perArc` points per quarter turn of corner. */
@@ -243,5 +244,6 @@ export function hingeFlatScene(lay: Layout, content: LayerContent | null, p: Par
     if (pt.kind === "wall") return { name: pt.name, outer: pt.outline.map(sh), holes: (pt.holes ?? []).map((h) => h.map(sh)) };
     return { name: pt.name, outer: (pt.pts ?? outline(pt.edges, pt.r)).map(sh), holes: pt.slots.map((s) => s.map(sh)) };
   });
-  return flatScene(parts, p.T, content ? { d: content.hinge, width: lay.width, height: lay.height } : undefined);
+  const regions = parts.flatMap(pt => unionShapes([pt.outer, ...pt.holes], [], true).map(s => ({ ...s, name: pt.name })));
+  return flatScene(regions, p.T, content ? { d: content.hinge, width: lay.width, height: lay.height } : undefined);
 }
