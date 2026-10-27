@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.14.0",
-    "pub_date": "2026-10-27T00:48:28.498Z",
-    "notes": "Name Charms (40 presets), Family Names (23 presets), and Pop-up engineering and 3D assembly improvements. Includes Keychain and the current product menu.",
+    "version": "1.15.0",
+    "pub_date": "2026-10-27T02:50:16.009Z",
+    "notes": "Photo to Product: 1–5 product photos, authenticated AI analysis, editable paw ornaments, heart hinge boxes and tags, 3D preview, known and estimated dimensions, and laser SVG build packages.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.14.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnNlNnZCYWVKa3FMTlU4WHBXQm9HWDNad3NTblNiTmRpMTFPa0VUeDBCa1pEaEdtUVJLZVlUUU5SQ0E1eTRucFl0V1FmTHlSZ2E4OEdnYXRCTjZzYlFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDYyMDc0CWZpbGU6SGluZ2VMYWJfMS4xNC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE0LjAKQlNuZlFPNWkvblZWb1hEZzZ2VjR0NUpTZWd0empTVlhGUFVlc3dtcUh0d2JoSkdMd3Q1NzQ1U0E0blBobGZMRStNeC8wWGcxa2hkTjN4RytwS21TQ3c9PQo=",
-        "size": 11793005,
-        "sha256": "8b1201cf910dfb7f6d4f4b893bf91638be2cbfe78d405d22b9959454010601ef"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.15.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnVTNVVVdG5mcHBPdlBtMWVxZFYxWVFQS3h5SDdlR1RoWnBEc3N3aGpxQTI0SnFwS3lDa05lMVFZcmhGMnNtb0tnaXNXeDJ6UVo3TnpBN1lReEdsZ0FnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDY5Mzc0CWZpbGU6SGluZ2VMYWJfMS4xNS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE1LjAKRGROWUpjc0c4WHc2Q0EzMndiNUVJZDdudExhR0taTG9YdkFrRUhaZVQ5ODRETlY0TW5wRHJSOVpLNm9jT2ZaMWV1SFlqMHNTUzYzU1Nlc2R5azFZQnc9PQo=",
+        "size": 11894530,
+        "sha256": "8322f3df2dc4ebd76a3407f30f7264b2e0cc25aa26e3c9c75a4778e107b1a5f4"
       }
     }
   }

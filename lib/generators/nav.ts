@@ -92,6 +92,7 @@ const ENTRIES: Omit<CatalogueEntry, "picture">[] = [
   fromCatalog("hinge-box", "hinge", "hinge", "laser"),
   fromCatalog("letters", "letters", "letters", "laser"),
   fromCatalog("parametric", "parametric", "parametric", "laser"),
+  fromGenerator("photoproduct", "laser", "Tools"),
   fromGenerator("shadowbox", "paper", "Home"),
   fromGenerator("boxes", "laser", "Boxes"),
   fromGenerator("paperbox", "paper", "Boxes"),

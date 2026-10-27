@@ -136,7 +136,7 @@ describe("desktop versions and releases", () => {
 describe("desktop catalog", () => {
   it("lists every product as plain JSON with no code in it", async () => {
     const c = await desktopCatalog();
-    expect(c.products.map((p) => p.id)).toEqual(["hinge", "clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "keychain", "popup", "charm", "family"]);
+    expect(c.products.map((p) => p.id)).toEqual(["hinge", "photoproduct", "clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "keychain", "popup", "charm", "family"]);
     expect(JSON.parse(JSON.stringify(c))).toEqual(c);
     const text = JSON.stringify(c);
     expect(text).not.toMatch(/=>|function\s*\(/);
@@ -256,7 +256,7 @@ describe("desktop generate (server-side SVG)", () => {
     expect(manyPro.status).toBe(200);
     const copies = await gen({ product: "boxes", change: { key: "sheet.copies", value: 500 } });
     expect(copies.body.params.sheet).toMatchObject({ copies: 50 });
-    const qr = await gen({ product: "qr", preset: (await desktopCatalog()).products[3].presets[0].id });
+    const qr = await gen({ product: "qr", preset: (await desktopCatalog()).products.find(p => p.id === "qr")!.presets[0].id });
     expect(qr.status).toBe(200);
   });
 });
