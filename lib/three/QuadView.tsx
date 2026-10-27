@@ -7,6 +7,7 @@
  */
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import * as THREE from "three";
+import { meshEdges } from './edges';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { Camera, Home } from "lucide-react";
@@ -232,14 +233,7 @@ const rebuilt = (m: QuadModel) => (m as { rebuilds?: boolean }).rebuilds === tru
 function paintShade(root: THREE.Object3D, shade: Shade3D) {
   for (const mesh of meshesOf(root)) {
     if (mesh.userData.noMeasure) continue;
-    let edges = mesh.getObjectByName("__edges") as THREE.LineSegments | undefined;
-    if (shade === "edges" && !edges) {
-      edges = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, 28), new THREE.LineBasicMaterial({ color: 0x1d1d1d, transparent: true, opacity: 0.55 }));
-      edges.name = "__edges";
-      edges.userData.keepMaterial = true;
-      edges.raycast = () => {};
-      mesh.add(edges);
-    }
+    const edges = shade === "edges" ? meshEdges(mesh) : mesh.getObjectByName("__edges");
     if (edges) edges.visible = shade === "edges";
   }
 }

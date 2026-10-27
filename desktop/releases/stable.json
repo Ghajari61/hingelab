@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.24.1",
-    "pub_date": "2026-10-27T20:54:56.735Z",
-    "notes": "SVG and Lay Flat share sheet layout, exact curved notches, calibration pieces, copy IDs and exported score/engraving labels on the correct stock thickness.",
+    "version": "1.24.2",
+    "pub_date": "2026-10-27T21:26:42.875Z",
+    "notes": "Fix Pop-up Spiral and Multi mode switching, continuous 3D strip previews, physical edges and SVG parity. Update compatible controls and prototype-forming instructions.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.24.1_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm0veklMRStwNjZodTB1VW1qbmQzNlIwSkY0NEhxdjhqOFRMT2JLVzZTSG4wb08zVjVtVEthbUNaRlJscUJBTGZLdEFJeWNNN1E0SmtyVkVIVVF2MXdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTM0NDUwCWZpbGU6SGluZ2VMYWJfMS4yNC4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI0LjEKUHhaenc2ZWEwY241azk2L3h5SXdTT2lkQWRPK2ZMUUdXdE5RME96KzdqbDFoaU5hV3FxUGgvMXg1TTBpZ0VOclhoUnZ6TzRwYnpWblNIbFh2SUUzQ3c9PQo=",
-        "size": 11729636,
-        "sha256": "fb795ab98e34ec82bd0ee5e0fb793a096b098e4b35f8b70bba62a626c3356d63"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.24.2_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnRlbVA1ZkljdlY2WHJrYmN2RHJDeGlCNWNYNmVOck9YTWlnaWdOVlFHa0hqMlJCYnM1MzZscSt4bklXdjd5WHRyRmZ5bzk1YVRJU3FFVDFEY2hJemd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTM2MzkxCWZpbGU6SGluZ2VMYWJfMS4yNC4yX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI0LjIKcVQ4M1NTczdzVUoxSTBLcXEzUUJpYzBJTkJvaGU1bkkvUlhKem1NazU3WWErZ2RWME5PNUpOeEh0WkhxM2ovZnM3SEdJaFpMVjJLSHA2ZTUvWVBQQ1E9PQo=",
+        "size": 11731441,
+        "sha256": "ecda28984f7f51c55f194705058581560dd4fa9f5aa5a26892168e1b3e5e6005"
       }
     }
   }

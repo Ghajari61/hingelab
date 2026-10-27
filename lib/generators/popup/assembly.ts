@@ -87,6 +87,14 @@ function transformAll(cs:Contour[],x:number,y:number){return cs.map(c=>transform
 
 export interface AssemblyGroup {label:string;order:ReturnType<typeof ringAssemblyOrder>;radial:boolean;}
 export function assemblySteps(p:PopupParams,parts:GenPart[],groups:AssemblyGroup[]):string[]{
+  if(p.pattern.kind!=='rings')return [
+    `Measure the stock (${p.T.toFixed(2)} mm) and test the cut gap on a small sample. Apply kerf compensation only once.`,
+    'Engrave first, cut the closed spiral slots next, then cut the exterior. Keep the blank supported on the laser bed.',
+    'Lift the continuous blank carefully. Keep the strip connected at its ends; there are no separate rings or ring-seat ribs to assemble.',
+    `Form gradually over a suitable jig toward the ${p.profile.depth.toFixed(1)} mm target height. The 3D shape is a target form, not a prediction of wood bending or springback. Stop if the stock cracks or resists; adjust spacing, height or material and test again.`,
+    'Fit any optional handles, finial or base only after the formed prototype is stable. Verify their seating before gluing.',
+    'Test actual stock and load capacity before use. Use LED lighting only.'
+  ];
   const ribbed=parts.some(v=>/(^|-)rib-\d/.test(v.id)),separate=p.pattern.kind==='rings'&&(ribbed||p.support.kind==='cords');
   const steps=[`Measure the stock: ${p.T.toFixed(2)} mm. Cut a joint coupon before the full design. Slot clearance is ${p.support.fit.toFixed(2)} mm total; apply kerf compensation only once.`,
     'Engrave identifiers first, cut internal slots and ring gaps next, then cut exterior outlines. Keep the released pieces supported on the laser bed.',

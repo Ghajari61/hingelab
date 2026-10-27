@@ -147,6 +147,8 @@ export interface GenPart {
    */
   /** `soft`: a piece of a curved surface, drawn without an outline of its own. */
   views3d?: {
+    /** Continuous target form of a cut sheet; flat export remains undeformed. */
+    radialSurface?: import('@/lib/three/radialSurface').RadialSurface;
     /** Assembly identifier displayed when the individual piece is selected. */
     name?: string;
     outer: Contour; holes: Contour[]; engrave?: Contour[]; place: NonNullable<GenPart["place"]>; soft?: boolean;

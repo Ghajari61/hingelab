@@ -1,3 +1,10 @@
+## 1.24.2 — Continuous Pop-up spirals
+
+- Selecting Spiral or Multi now switches away from separate-ring joints atomically, including saved designs with incompatible ribs, posts, feet or suspension holes. Returning to Rings restores rigid rib construction.
+- Assembled previews retain the continuous cut strip instead of splitting it into artificial rings. Physical edge overlays follow the curved sheet without showing triangulation diagonals; Lay Flat and SVG retain the same manufacturing contours.
+- Ring-only controls are hidden in spiral mode. Spiral spacing, arm counts, overlap guards and assembly instructions now describe the continuous-strip workflow. The 3D form is a target shape, not a material bending or load simulation; physical prototyping remains necessary.
+- Added regression checks for the reported Ripple bowl, single/multi spirals, circular and concave outlines, mode switches, exact SVG/flat geometry, continuous 3D, physical edges and invalid cut gaps. Existing Pop-up presets and shared preview checks remain green.
+
 ## 1.24.1 — SVG and Lay Flat parity
 
 - Combined Parametric SVGs, the cutting canvas, Lay Flat and per-sheet exports now share one sheet grid and millimetre coordinates. Calibration bars are included in 3D, and fractional placements are rounded consistently for single and combined files.

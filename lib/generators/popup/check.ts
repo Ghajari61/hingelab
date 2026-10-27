@@ -8,10 +8,15 @@ export function checkPopup(p:PopupParams,out:GenOutput):Issue<PopupParams>[] {
  const add=(code:string,message:string,fix?:{label:string;safe?:boolean;apply:(q:PopupParams)=>PopupParams},level:'warn'|'error'|'info'='warn')=>issues.push({code:'popup-'+code,level,message,fixes:fix?[{id:code,safe:true,...fix}]:[]});
  if(out.error){add('geometry',out.error,undefined,'error');return issues;}
  const g=ringPlan(p);if(g.pitch<1.5*p.T)add('ring-width','Ring pitch is below 1.5 × material thickness.',{label:'Widen rings',apply:q=>({...q,rings:{...q.rings,by:'width',width:Math.ceil(q.T*1.5+q.rings.gap)}})});
- if((p.bridges.keep||!setsHeights(p))&&p.bridges.width<Math.max(p.T*1.5,p.sheet?.minFeature??0))add('bridges','Bridge lands are narrower than the material minimum.',{label:'Widen bridge lands',apply:q=>({...q,bridges:{...q.bridges,width:Math.max(q.T*1.5,q.sheet?.minFeature??0)}})});
- if((p.bridges.keep||!setsHeights(p))&&p.bridges.length>g.pitch*.7)add('flexure-length','Bridge relief length is limited to 70% of ring pitch to keep adjacent slots apart.',undefined,'info');
+ if(p.pattern.kind==='rings'&&(p.bridges.keep||!setsHeights(p))&&p.bridges.width<Math.max(p.T*1.5,p.sheet?.minFeature??0))add('bridges','Bridge lands are narrower than the material minimum.',{label:'Widen bridge lands',apply:q=>({...q,bridges:{...q.bridges,width:Math.max(q.T*1.5,q.sheet?.minFeature??0)}})});
+ if(p.pattern.kind==='rings'&&(p.bridges.keep||!setsHeights(p))&&p.bridges.length>g.pitch*.7)add('flexure-length','Bridge relief length is limited to 70% of ring pitch to keep adjacent slots apart.',undefined,'info');
  if(g.collapsed)add('collapse','Concave offsets collapsed before the requested ring count.',{label:'Reduce count',apply:q=>({...q,rings:{...q.rings,by:'count',count:Math.max(2,g.loops.length-1)}})});
  if(p.outline.width>p.bedW-10||p.outline.height>p.bedH-10)add('bed','Blank exceeds the selected bed; never split a connected blank automatically.',{label:'Scale outline to bed',safe:false,apply:q=>{const s=Math.min((q.bedW-10)/q.outline.width,(q.bedH-10)/q.outline.height);return {...q,outline:{...q.outline,width:q.outline.width*s,height:q.outline.height*s},rings:{...q.rings,center:q.rings.center*s,rim:q.rings.rim*s}};}});
+ if(p.pattern.kind!=='rings'){
+  add('spiral','Continuous spiral: 3D shows a target form, not a bending simulation. No separate-ring supports are cut. Use a forming jig and test the actual stock for cracking, springback and load capacity.',undefined,'info');
+  if(p.extras.socket!=='none'||p.extras.tealight)add('led','LED bulbs / LED tealights only. Keep heat sources away from wood and adhesives.');
+  return issues;
+ }
  if(p.support.kind==='tilt'){const depth=tiltDepth(g.loops.length,p.rings.gap,p.support.angle);if(Math.abs(depth-p.profile.depth)>Math.max(2,p.profile.depth*.1))add('tilt-depth','Computed tilted-cut depth differs from the target.',{label:'Match bevel angle',apply:q=>({...q,support:{...q.support,angle:Math.max(1,Math.min(15,Math.atan(g.loops.length*q.rings.gap/Math.max(1,q.profile.depth))*180/Math.PI))}})});add('bevel','Tilted cuts require bevel-capable equipment; a normal laser cuts perpendicular to the sheet.');}
  if(setsHeights(p))add(p.bridges.keep?'snap-bridges':'released-rings',p.bridges.keep?'Remove holding lands flush before seating separate rings on the locating tabs.':'The SVG releases separate rings. Assemble the supports first, then follow the numbered ring order in Assembly.',undefined,'info');
  else{// Bridges are short guided beams (engineering.ts): with no support setting the heights they carry the whole drop.
@@ -31,6 +36,5 @@ export function checkPopup(p:PopupParams,out:GenOutput):Issue<PopupParams>[] {
   if(p.rings.center<need)add('bulb',`An LED bulb (about Ø ${bulb} mm) is wider than the hole under the centre disc (Ø ${p.rings.center} mm) and would touch the rings; keep 10 mm round it.`,{label:`Centre disc ${need} mm`,apply:q=>({...q,rings:{...q.rings,center:need}})});}
  if(p.extras.socket!=='none'||p.extras.tealight)add('led','LED bulbs / LED tealights only. Keep heat sources away from wood and adhesives.');
  if(p.mode==='sleeve'&&p.rings.center<p.extras.sleeveDiameter+4*p.T+1)add('sleeve','Sleeve opening needs material clearance.',{label:'Enlarge centre',safe:false,apply:q=>({...q,rings:{...q.rings,center:q.extras.sleeveDiameter+4*q.T+2}})});
- if(p.pattern.kind!=='rings')add('spiral','Spiral preview uses ring-height samples; strip twisting and material strain require a physical prototype.',undefined,'info');
  return issues;
 }
