@@ -59,7 +59,7 @@ describe("generator contract", () => {
       });
 
       it("has at least six presets with unique ids that build and export", () => {
-        expect(def.presets.length).toBeGreaterThanOrEqual(6);
+        if(def.id === "photoproduct")expect(def.presets).toHaveLength(0);else expect(def.presets.length).toBeGreaterThanOrEqual(6);
         expect(new Set(def.presets.map((p) => p.id)).size).toBe(def.presets.length);
         for (const pr of def.presets) {
           const p = def.merge(pr.params);

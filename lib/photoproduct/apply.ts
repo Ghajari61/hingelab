@@ -2,6 +2,7 @@ import { AnalysisSchema, type ProductAnalysis } from "./contracts";
 import { geometrySettings, mergePhotoProduct, PHOTO_DEFAULTS, type PhotoProductParams } from "@/lib/generators/photoproduct/params";
 import { getPath, setPath } from "@/lib/generators/path";
 const leaves=(v:unknown,prefix=""):string[]=>v&&typeof v==="object"&&!Array.isArray(v)?Object.entries(v).flatMap(([k,x])=>leaves(x,prefix?`${prefix}.${k}`:k)):[prefix];
+const fingerprint=(value:unknown)=>{let hash=2166136261;for(const c of JSON.stringify(value)){hash=Math.imul(hash^c.charCodeAt(0),16777619);}return hash>>>0;};
 export function applyProductAnalysis(current:PhotoProductParams,raw:ProductAnalysis,preserve=true,provider=""):{params:PhotoProductParams;preserved:string[]}{
  const result=AnalysisSchema.parse(raw);
  if(result.family==="unsupported"||result.family==="unreconstructable")return {params:{...current,analysis:{...current.analysis,status:"ai",result,provider}},preserved:[]};
@@ -15,7 +16,13 @@ export function applyProductAnalysis(current:PhotoProductParams,raw:ProductAnaly
    if(typeof prior.T==="number"&&current.T!==prior.T){next.T=current.T;preserved.push("T");}
    for(const q of result.model.parameters){const old=current.values[q.id];if(Number.isFinite(old)&&old>=q.min&&old<=q.max){next.values[q.id]=old;preserved.push(q.id);}}
   }
-  const baseline=JSON.stringify({size:{width:result.width,depth:result.depth,height:result.height},T:result.thickness});
+  if(preserve&&current.recipe==="custom"&&current.generated){
+   const hashes=prior.partHashes as Record<string,number>|undefined;
+   if(hashes)next.generated!.parts=next.generated!.parts.map(q=>{const old=current.generated!.parts.find(a=>a.id===q.id);if(old&&hashes[q.id]!==undefined&&hashes[q.id]!==fingerprint(old)){preserved.push("part."+q.id);return old;}return q;});
+   next.hiddenParts=current.hiddenParts.filter(id=>next.generated!.parts.some(q=>q.id===id));
+   if(typeof prior.name==="string"&&current.name!==prior.name){next.name=current.name;preserved.push("name");}
+  }
+  const baseline=JSON.stringify({name:result.title,partHashes:Object.fromEntries(result.model.parts.map(q=>[q.id,fingerprint(q)])),size:{width:result.width,depth:result.depth,height:result.height},T:result.thickness});
   for(const key of ["width","depth","height"] as const)if(current.measurements[key])next.size[key]=current.measurements[key];if(current.measurements.thickness)next.T=current.measurements.thickness;
   next.analysis={status:"ai",result,baseline,provider};return {params:next,preserved};
  }

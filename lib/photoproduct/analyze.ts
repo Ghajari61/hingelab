@@ -23,7 +23,7 @@ Analyze EVERY reference id once, report observed evidence separately from assume
 export async function analyzeProductPhotos(req:PhotoAnalysisRequest,userId:string,options:{model?:LanguageModel;signal?:AbortSignal}={}):Promise<{analysis:ProductAnalysis;provider:string}>{
  // Revalidate even when this function is called outside an HTTP route.
  const input=parsePhotoRequest(JSON.stringify(req));
- const signal=AbortSignal.any([AbortSignal.timeout(80_000),...(options.signal?[options.signal]:[])]);
+ const signal=AbortSignal.any([AbortSignal.timeout(125_000),...(options.signal?[options.signal]:[])]);
  const content:Exclude<UserContent,string>=[{type:"text",text:`Known measurements (0 means unknown), in mm: ${JSON.stringify(input.measurements)}.\nUser note: ${input.note||"None"}.\nThere are ${input.photos.length} reference photos. The first is the main reference.`}];
  for(const photo of input.photos){const match=/^data:([^;]+);base64,(.+)$/.exec(photo.data)!;content.push({type:"text",text:`Reference photo id: ${photo.id}`},{type:"file",mediaType:match[1],data:match[2]});}
  const user=createHash("sha256").update(`photo-product:${userId}`).digest("hex").slice(0,24);

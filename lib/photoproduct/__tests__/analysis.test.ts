@@ -55,3 +55,5 @@ describe("regeneration and persistence",()=>{
   expect(unsupported.recipe).toBe(current.recipe);expect(unsupported.text.name).toBe("Mine");
  });
 });
+
+describe("general photo model edit preservation",()=>{it("keeps manually edited part geometry and parameter values when regenerating",()=>{const old=specification();const {title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence}=old;const custom={family:"custom" as const,title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence,model:generatedTable()};const first=applyProductAnalysis(mergePhotoProduct({}),custom).params;first.generated!.parts[0].width="W-5";first.values.apron=55;const second=applyProductAnalysis(first,custom);expect(second.params.generated?.parts[0].width).toBe("W-5");expect(second.params.values.apron).toBe(55);expect(second.preserved).toContain("part.top");expect(applyProductAnalysis(first,custom,false).params.generated?.parts[0].width).toBe("W");});});

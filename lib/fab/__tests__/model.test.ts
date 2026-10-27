@@ -1,3 +1,4 @@
+import {generatedTable} from "@/lib/photoproduct/__tests__/generated-fixture";
 import { describe, expect, it } from "vitest";
 import { ALL_GENERATORS } from "@/lib/generators/all";
 import { arrangeGenerator, genSVG } from "@/lib/generators/output";
@@ -17,7 +18,7 @@ const layerPaths = (svg: string, id: string) => {
 
 describe("the fabrication model agrees with the layout, the status bar and the export", () => {
   it.each(ALL_GENERATORS.map((g) => [g.id, g] as const))("%s", (id, def) => {
-    const p = def.merge({});
+    const p = def.merge(def.id === "photoproduct" ? {recipe:"custom",generated:generatedTable(),size:{width:150,depth:100,height:100}} : {});
     const a = arrangeGenerator(def, p, CTX);
     const m = fabFromGenerator(id, p, a)!;
     expect(m).not.toBeNull();
