@@ -6,7 +6,7 @@ import * as THREE from "three";
 import { unionShapes } from "@/lib/letters/polygon";
 import { finishScene, slab, slabs, type Scene3D } from "@/lib/three/flat";
 import { ITEM_SEP, itemOf, itemSkinName } from "./items";
-import type { Contour, GenImage, GenOutput, GenPart } from "./types";
+import type { Contour, GenImage, GenOutput, GenPart, Hardware3D } from "./types";
 import type { Layout } from "@/lib/hinge";
 import type { CutPart } from "./output";
 
@@ -36,6 +36,61 @@ function itemMesh(mesh: THREE.Mesh, look: THREE.MeshStandardMaterial): THREE.Mes
 
 type View = NonNullable<GenPart["views3d"]>[number];
 type Shown = GenPart & { frames?: View["frames"]; apart?: View["apart"]; creases?: View["creases"] };
+
+const CORD = new THREE.MeshStandardMaterial({ color: "#d9cbb4", roughness: 0.95 });
+const METAL = new THREE.MeshStandardMaterial({ color: "#9aa0a6", roughness: 0.35, metalness: 0.8 });
+const BULB = new THREE.MeshStandardMaterial({ color: "#fff6dc", emissive: "#ffe9b0", emissiveIntensity: 0.6, roughness: 0.2, transparent: true, opacity: 0.85 });
+for (const m of [CORD, METAL, BULB]) m.userData.shared = true;
+
+/** Plan (x, y toward the viewer, z up) to the scene's axes (x, -y, z). */
+const v3 = (p: [number, number, number]) => new THREE.Vector3(p[0], -p[1], p[2]);
+
+/** Cords, knots, rings and sockets as meshes that keep their own materials and are not measured or picked. */
+function hardwareGroup(hw: Hardware3D[]): THREE.Group {
+  const g = new THREE.Group();
+  g.name = "Hardware";
+  const add = (mesh: THREE.Mesh, name: string) => {
+    mesh.name = name;
+    mesh.userData.keepMaterial = true;
+    mesh.userData.noMeasure = true;
+    mesh.userData.noPick = true;
+    g.add(mesh);
+  };
+  for (const h of hw) {
+    if (h.kind === "cord") {
+      for (let i = 0; i + 1 < h.pts.length; i++) {
+        const a = v3(h.pts[i]), b = v3(h.pts[i + 1]), L = a.distanceTo(b);
+        if (L < 1e-3) continue;
+        const m = new THREE.Mesh(new THREE.CylinderGeometry(h.d / 2, h.d / 2, L, 8, 1), CORD);
+        m.position.copy(a).add(b).multiplyScalar(0.5);
+        m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+        add(m, "Cord");
+      }
+    } else if (h.kind === "knot") {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(h.d / 2, 12, 8), CORD);
+      m.position.copy(v3(h.at));
+      add(m, "Knot");
+    } else if (h.kind === "ring") {
+      const m = new THREE.Mesh(new THREE.TorusGeometry(h.r, h.d / 2, 8, 32), METAL);
+      m.position.copy(v3(h.at));
+      m.rotation.x = Math.PI / 2;
+      add(m, "Hanging ring");
+    } else if (h.kind === "cylinder") {
+      const mat = h.metal ? METAL : h.glass
+        ? new THREE.MeshStandardMaterial({ color: h.color, roughness: 0.1, transparent: true, opacity: 0.35, depthWrite: false })
+        : new THREE.MeshStandardMaterial({ color: h.color, roughness: 0.6 });
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(h.r, h.r, h.h, 40, 1), mat);
+      m.position.copy(v3(h.at)).add(new THREE.Vector3(0, 0, h.h / 2));
+      m.rotation.x = Math.PI / 2;
+      add(m, "Fitting");
+    } else {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(h.r, 32, 20), BULB);
+      m.position.copy(v3(h.at));
+      add(m, "LED bulb");
+    }
+  }
+  return g;
+}
 
 /** A folded face's matrix at fold `a` (0..1), between its two nearest frames. */
 function frameAt(frames: number[][], a: number): number[] {
@@ -236,15 +291,21 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
     const scene = finishScene(inner);
     return loads.length ? { ...scene, ready: Promise.all(loads) } : scene;
   }
+  // Bought parts (cords, sockets) belong to the assembled design: shown only when it is fully open.
+  const hardware = out.hardware?.length ? hardwareGroup(out.hardware) : null;
+  if (hardware) inner.add(hardware);
+  const showHardware = () => { if (hardware) hardware.visible = at.fold > 0.999 && at.explode < 0.001; };
   // Framed and centred on the folded box, so folding and exploding keep the box in its place.
   at = { fold: 1, explode: 0 };
   place();
+  showHardware();
   const scene = finishScene(inner);
   at = { fold, explode };
   place();
+  showHardware();
   const hooks = {
-    fold: (a: number) => { at = { ...at, fold: a }; place(); },
-    explode: (e: number) => { at = { ...at, explode: e }; place(); },
+    fold: (a: number) => { at = { ...at, fold: a }; place(); showHardware(); },
+    explode: (e: number) => { at = { ...at, explode: e }; place(); showHardware(); },
   };
   return { ...scene, ...hooks, ...(loads.length ? { ready: Promise.all(loads) } : {}) };
 }

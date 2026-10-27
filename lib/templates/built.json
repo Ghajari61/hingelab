@@ -99,21 +99,21 @@
  },
  "popup-cupcake-tower-3-tiers": {
   "w": 600,
-  "h": 400,
+  "h": 830,
   "sheets": 2,
   "objects": 3,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
  },
  "popup-spiral-christmas-tree-with-star": {
   "w": 600,
-  "h": 400,
+  "h": 830,
   "sheets": 2,
   "objects": 4,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
  },
  "popup-snowflake-tree": {
   "w": 600,
-  "h": 400,
+  "h": 830,
   "sheets": 2,
   "objects": 3,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
@@ -122,7 +122,7 @@
   "w": 600,
   "h": 400,
   "sheets": 1,
-  "objects": 6,
+  "objects": 1,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
  },
  "popup-snowflake-bauble": {
@@ -206,12 +206,12 @@
   "w": 600,
   "h": 400,
   "sheets": 1,
-  "objects": 3,
+  "objects": 5,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
  },
  "popup-pagoda-tower-decor": {
   "w": 600,
-  "h": 400,
+  "h": 830,
   "sheets": 2,
   "objects": 4,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
@@ -234,7 +234,7 @@
   "w": 600,
   "h": 400,
   "sheets": 1,
-  "objects": 6,
+  "objects": 3,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
  },
  "popup-mandala-catch-all": {

@@ -20,7 +20,10 @@ function crossings(c: Contour, angle: number) { const q = transform(c, { rot: -a
 } return [Math.min(...hits), Math.max(...hits)]; }
 /** One joint schedule drives both mating cut files and their centred 3D placements. */
 export function ribAssembly(p: PopupParams, rings: Ring[], holes: Contour[], centerHole: number, foot: number, ctx: BuildContext) {
-    const count = ['post', 'handles'].includes(p.support.kind) || p.extras.post ? 2 : p.support.ribs, radial = count > 2, hub = radial ? 2 * p.T : 0, fit = p.support.fit;
+    // A sleeve's opening goes right through to the table: crossed ribs would block it, so its ribs
+    // stand radially on an annular hub round the opening (at least three of them).
+    const through = p.mode === 'sleeve' && centerHole > 0;
+    const count = through ? Math.max(3, p.support.ribs) : ['post', 'handles'].includes(p.support.kind) || p.extras.post ? 2 : p.support.ribs, radial = count > 2, hub = through ? centerHole / 2 + p.T : radial ? 2 * p.T : 0, fit = p.support.fit;
     let chosen: {
         joints: RingJoint[];
         angles: number[];
@@ -91,7 +94,8 @@ export function ribAssembly(p: PopupParams, rings: Ring[], holes: Contour[], cen
     if (radial) {
         const slots = angles.map(angle => transform(rect(hub + p.T - fit / 2, -width / 2, 2 * p.T + fit, width), { rot: angle }));
         const n = 96, r = hub + 5 * p.T;
-        parts.push({ id: 'rib-hub', name: 'Radial support hub', outer: Array.from({ length: n }, (_, i) => [r * Math.cos(i * 2 * Math.PI / n), r * Math.sin(i * 2 * Math.PI / n)]), holes: slots, place: { x: 0, y: 0, z: -foot - p.T } });
+        const ring = (rad: number) => Array.from({ length: n }, (_, i) => [rad * Math.cos(i * 2 * Math.PI / n), rad * Math.sin(i * 2 * Math.PI / n)] as [number, number]);
+        parts.push({ id: 'rib-hub', name: through ? 'Radial support ring (the object stands inside it)' : 'Radial support hub', outer: ring(r), holes: through ? [...slots, ring(centerHole / 2).reverse()] : slots, place: { x: 0, y: 0, z: -foot - p.T } });
     }
     return { parts, joints };
 }

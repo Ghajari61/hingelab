@@ -173,8 +173,22 @@ export interface GenStat {
   value: string;
 }
 
+/**
+ * Bought parts shown in the assembled 3D view only (never cut): cords threaded through holes with
+ * their knots, a hanging ring, a lamp socket and bulb, a tealight. Points are on plan (x right, y
+ * toward the viewer, z up), in mm, in the same frame as the parts' placements.
+ */
+export type Hardware3D =
+  | { kind: "cord"; pts: [number, number, number][]; d: number }
+  | { kind: "knot"; at: [number, number, number]; d: number }
+  | { kind: "ring"; at: [number, number, number]; r: number; d: number }
+  | { kind: "cylinder"; at: [number, number, number]; r: number; h: number; color: string; metal?: boolean; glass?: boolean }
+  | { kind: "bulb"; at: [number, number, number]; r: number };
+
 export interface GenOutput {
   parts: GenPart[];
+  /** Hardware drawn in the assembled 3D view (cords, knots, sockets); hidden while folding or exploded. */
+  hardware?: Hardware3D[];
   stats: GenStat[];
   /** Assembly steps, in order. */
   assembly?: string[];

@@ -1638,6 +1638,7 @@ The owner asked for exploded 3D views to open as an attractive animation that en
 - Tested in `lib/hinge3d/__tests__/unfold.test.ts` (assembled at 0 equals the static scene, finite and on the floor throughout, flat at the sheet thickness at 1, for lids, caps, cabinets, drawers and a generator box).
 
 
+<<<<<<< HEAD
 ## D209. The Calibration product is removed
 
 The owner asked for the Calibration section to be removed entirely.
@@ -1663,3 +1664,16 @@ From the Cuttle channel (its "12 Christmas best sellers" video and tutorial list
 - **Weld and score:** `ctx.text` and `textBlock` now also return each glyph's own outlines (`glyphs`, plain style only). Welded names score every letter's outline (`letterScores`) so they read on the cut piece; layered and letter-style charms score where script letters overlap (`overlapScores`).
 - **Name Charms additions:** a four-layer gift card holder (back with loop, pocket layer open at the top sized to the card plus clearance, front with a window a lip smaller, the name across the front; a thumb notch when the card sits inside); a dangle tag on a jump ring under the charm (or at the far end of a keychain), hung by its own loop; character shapes (snowman, reindeer, cat face, gingerbread) drawn from primitives, with eyes engraved, whiskers and icing scored, and the hat, nose and buttons cut as separate pieces (0.15 mm smaller) to paint, the name kept clear of them.
 - Not done in this round: the flat-pack (slot-fit) 3D ornaments; the work was stopped.
+=======
+## D212. Pop-up: assembly hardware in 3D and the engineering fixes
+
+The owner asked for the Pop-up to be reviewed as a product and for its 3D to be accurate.
+
+- **Hardware is drawn, not cut.** `GenOutput.hardware` (`Hardware3D`: cord, knot, ring, cylinder, bulb) is added to the folding 3D scene only when the design is fully raised and not exploded; it is never measured, picked or written to a cut file. `popupHardware` (lib/generators/popup/hardware.ts) threads three cords through the measured cord holes top-down to a gather point, and adds socket/bulb, tealight and the sleeve's vase.
+- **Nested sets** are offset in 3D (views, frames and support placements) side by side with a 30 mm gap.
+- **Sleeve** with a centre opening uses radial ribs round a hub ring with the opening cut in it.
+- **Dome** profile is a spherical cap with a 65° rim; **variable spacing** is equal arc length along the profile with a minimum ring width of max(0.4, (1.5T+gap)/pitch).
+- **Base plate** with ribs sits at −ribFoot − T; the **finial** has a 2T tab through a T+fit slot when the centre is clear.
+- **Checks**: `wall-gap` (bowls without a plant seat, slit > 12 mm), `hang-apart` (info), `base-plate` (info), `bulb` (centre must be ≥ bulb Ø + 20 mm; E14 45, E27 60). E27 lamp presets use an 80 mm centre.
+- Tested in `lib/generators/__tests__/popup.test.ts` ("Pop-up engineering and 3D"); all preset snapshots and thumbnails were regenerated.
+>>>>>>> origin/claude/popup-3d
