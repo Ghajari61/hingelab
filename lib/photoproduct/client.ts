@@ -2,7 +2,7 @@
 import { platform } from "@hingelab/platform";
 import { AnalysisSchema,parsePhotoRequest,type PhotoAnalysisRequest,type ProductAnalysis } from "./contracts";
 export async function requestProductAnalysis(body:PhotoAnalysisRequest,signal:AbortSignal):Promise<{analysis:ProductAnalysis;provider:string}>{
- const text=JSON.stringify(body);parsePhotoRequest(text);
+ const text=JSON.stringify({...body,features:'fidelity-joinery-v1'});parsePhotoRequest(text);
  const app=platform(),url=app.kind==="tauri"?"/api/desktop/photoproduct":"/api/ai/photoproduct";
  const init={method:"POST",headers:{"content-type":"application/json"},body:text};
  let rejectAbort:((reason:unknown)=>void)|null=null;

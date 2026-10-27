@@ -1,5 +1,5 @@
 import type {Contour,GenPart,Pt} from '@/lib/generators/types';
-import {differenceShapes,intersectShapes,unionShapes,signedArea,pointInShape,shapeContours} from '@/lib/letters/polygon';
+import {differenceShapes,intersectShapes,unionShapes,signedArea,pointInShape,pointInContour,shapeContours} from '@/lib/letters/polygon';
 
 export interface JoinerySettings {mode:'auto'|'off';clearance:number;tabWidth:number;spacing:number;minWeb:number}
 export const DEFAULT_JOINERY:JoinerySettings={mode:'auto',clearance:.15,tabWidth:3,spacing:12,minWeb:1};
@@ -22,7 +22,11 @@ function rectangle(a:Pt,u:Pt,v:Pt,l:number,r:number,b:number,t:number):Contour{r
 function filled(p:GenPart,c:Contour){return differenceShapes([positive(c)],contours(p)).reduce((s,q)=>s+q.area,0)<.01;}
 function replace(p:GenPart,cs:Contour[]):GenPart|null{const s=unionShapes(cs);return s.length===1&&s[0].area>1?{...p,outer:s[0].outer,holes:s[0].holes}:null;}
 function cut(p:GenPart,c:Contour):GenPart|null{return replace(p,shapeContours(differenceShapes(contours(p),[positive(c)])));}
-function toolpathOverlap(p:GenPart,c:Contour){return [...p.cuts??[],...p.score??[],...p.engrave??[]].some(line=>line.some(pt=>pointInShape(pt,{...shape(p),outer:c,holes:[]})));}
+function toolpathOverlap(p:GenPart,c:Contour){
+ const cross=(a:Pt,b:Pt,d:Pt)=>(b[0]-a[0])*(d[1]-a[1])-(b[1]-a[1])*(d[0]-a[0]);
+ const intersects=(a:Pt,b:Pt,d:Pt,e:Pt)=>Math.max(a[0],b[0])>=Math.min(d[0],e[0])&&Math.max(d[0],e[0])>=Math.min(a[0],b[0])&&Math.max(a[1],b[1])>=Math.min(d[1],e[1])&&Math.max(d[1],e[1])>=Math.min(a[1],b[1])&&cross(a,b,d)*cross(a,b,e)<=0&&cross(d,e,a)*cross(d,e,b)<=0;
+ return [...p.cuts??[],...p.score??[],...p.engrave??[]].some(line=>line.some(pt=>pointInContour(pt,c))||line.some((pt,i)=>i>0&&c.some((q,k)=>intersects(line[i-1],pt,q,c[(k+1)%c.length]))))||(p.engrave??[]).some(line=>line.length>=3&&c.some(pt=>pointInContour(pt,line)));
+}
 function connectedGroups(parts:GenPart[],joints:PhotoJoint[]){
  const sets=parts.map(p=>new Set([p.id]));for(const j of joints){const a=sets.find(s=>s.has(j.a))!,b=sets.find(s=>s.has(j.b))!;if(a!==b){for(const id of b)a.add(id);sets.splice(sets.indexOf(b),1);}}
  return sets;
@@ -43,12 +47,12 @@ export function engineerJoinery(input:GenPart[],settings:JoinerySettings):{parts
  const bounds=(p:GenPart)=>{const result=[[Infinity,-Infinity],[Infinity,-Infinity],[Infinity,-Infinity]];for(const [x,y] of p.outer)for(const t of [0,p.t!]){const v=partWorld(p,x,y,t);for(let k=0;k<3;k++){result[k][0]=Math.min(result[k][0],v[k]);result[k][1]=Math.max(result[k][1],v[k]);}}return result;};
  const boxes=input.map(bounds); // Original contacts only; newly added tabs must not create new candidates.
  let contacts=0;
- for(let ai=0;ai<parts.length;ai++)for(let bi=ai+1;bi<parts.length;bi++){
-  if(joints.length>=480){if(!warnings.length)warnings.push('Automatic joint limit reached; review remaining contacts.');break;}
+ pairs: for(let ai=0;ai<parts.length;ai++)for(let bi=ai+1;bi<parts.length;bi++){
+  if(joints.length>=480){warnings.push('Automatic joint limit reached; review remaining contacts.');break pairs;}
   const a=parts[ai],b=parts[bi],na=normal(a),nb=normal(b),alignment=Math.abs(dot(na,nb));
   // Reject distant pairs before any polygon work, including repeated rib arrays.
   const ba=boxes[ai],bb=boxes[bi];if(ba.some(([lo,hi],k)=>lo>bb[k][1]+.01||hi<bb[k][0]-.01))continue;
-  if(++contacts>1200){warnings.push('Contact complexity limit reached; review remaining parts.');break;}
+  if(++contacts>1200){warnings.push('Contact complexity limit reached; review remaining parts.');break pairs;}
   if(alignment>.99999){
    const z=local(a,partWorld(b,0,0))[2],end=z+dot(na,nb)*b.t!;
    if(Math.min(Math.abs(Math.min(z,end)-a.t!),Math.abs(Math.max(z,end)))>.01)continue;
@@ -72,6 +76,7 @@ export function engineerJoinery(input:GenPart[],settings:JoinerySettings):{parts
     if(Math.abs(c0[2]-face)>.01||Math.abs(c1[2]-face)>.01)continue;
     const step=Math.max(length+2*web,settings.spacing*t),n=Math.max(1,Math.floor((len-2*web+step-length)/step));
     for(let q=0;q<Math.min(n,32);q++){
+     if(joints.length>=480)break;
      const center=len/2+(q-(n-1)/2)*step,l=center-length/2,r=center+length/2;
      const root=rectangle(start,u,v,l-web,r+web,-Math.max(t,web),-.005);
      if(!filled(parts[si],root))continue;

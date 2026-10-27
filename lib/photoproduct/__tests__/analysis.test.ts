@@ -27,9 +27,13 @@ describe("photo input boundary",()=>{
  });
 });
 describe("joint multi-view model analysis",()=>{
+ it('keeps the previous response contract for clients that have not upgraded yet',async()=>{
+  const m=mock(specification());const out=await analyzeProductPhotos({photos:[photo()],note:'',measurements},'test',{model:m.model});
+  expect(m.calls).toHaveLength(1);expect(out.analysis).not.toHaveProperty('review');expect(JSON.stringify(m.calls)).toContain('numeric polygon coordinates only');
+ });
  it("sends all five photos in one request, validates their ids and keeps measured dimensions authoritative",async()=>{
   const ids=["p1","p2","p3","p4","p5"],m=mock(specification(ids));
-  const out=await analyzeProductPhotos({photos:ids.map(photo),note:"same product",measurements:{...measurements,width:125}},"test",{model:m.model});
+  const out=await analyzeProductPhotos({photos:ids.map(photo),note:"same product",features:"fidelity-joinery-v1",measurements:{...measurements,width:125}},"test",{model:m.model});
   expect(m.calls).toHaveLength(2);expect(JSON.stringify(m.calls)).toContain("p5");expect(JSON.stringify(m.calls[1])).toContain('VISUAL CORRECTION PASS');expect(out.analysis.width).toBe(125);expect(out.analysis.uncertainties.join(" ")).toMatch(/Repeated photos/);expect('review' in out.analysis&&out.analysis.review?.status).toBe('compared');
  });
  it("refuses incomplete or contradictory reference bookkeeping",async()=>{
@@ -61,16 +65,16 @@ describe("general photo model edit preservation",()=>{it("keeps manually edited 
 it('keeps the valid draft if a visual revision breaks geometry, and does not claim a completed comparison',async()=>{
  const {title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence}=specification();let calls=0;
  const model=new MockLanguageModelV4({doGenerate:async()=>{const shape=generatedTable();if(++calls===2)shape.parts[0].width='1/0';return {content:[{type:'text',text:JSON.stringify({family:'custom',title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence,model:shape})}],finishReason:{unified:'stop',raw:undefined},usage,warnings:[]} as never;}});
- const out=await analyzeProductPhotos({photos:[photo()],note:'',measurements},'test',{model});
+ const out=await analyzeProductPhotos({photos:[photo()],note:'',features:'fidelity-joinery-v1',measurements},'test',{model});
  expect('model' in out.analysis&&out.analysis.model?.parts[0].width).toBe('W');expect('review' in out.analysis&&out.analysis.review?.status).toBe('skipped');
 });
 
 it('accepts a valid shape correction while preserving measured dimensions and automatic joinery settings',async()=>{
  const {title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence}=specification();let calls=0;
  const model=new MockLanguageModelV4({doGenerate:async()=>{const shape=generatedTable();if(++calls===2)shape.parts[0].outline.kind='ellipse';return {content:[{type:'text',text:JSON.stringify({family:'custom',title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence,model:shape})}],finishReason:{unified:'stop',raw:undefined},usage,warnings:[]} as never;}});
- const out=await analyzeProductPhotos({photos:[photo()],note:'',measurements:{...measurements,width:250}},'test',{model});
+ const out=await analyzeProductPhotos({photos:[photo()],note:'',features:'fidelity-joinery-v1',measurements:{...measurements,width:250}},'test',{model});
  expect('model' in out.analysis&&out.analysis.model?.parts[0].outline.kind).toBe('ellipse');expect(out.analysis.width).toBe(250);
  expect(applyProductAnalysis(mergePhotoProduct({}),out.analysis).params.joinery.mode).toBe('auto');
 });
 
-it("automatically corrects a generated model whose first proposal fails geometry validation",async()=>{const old=specification();const {title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence}=old;let calls=0;const model=new MockLanguageModelV4({doGenerate:async()=>{calls++;const shape=generatedTable();if(calls===1)shape.parts[0].count="0";return {content:[{type:"text",text:JSON.stringify({family:"custom",title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence,model:shape})}],finishReason:{unified:"stop",raw:undefined},usage,warnings:[]} as never;}});const out=await analyzeProductPhotos({photos:[photo()],note:"",measurements},"test",{model});expect(out.analysis.family).toBe("custom");expect(calls).toBe(3);});
+it("automatically corrects a generated model whose first proposal fails geometry validation",async()=>{const old=specification();const {title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence}=old;let calls=0;const model=new MockLanguageModelV4({doGenerate:async()=>{calls++;const shape=generatedTable();if(calls===1)shape.parts[0].count="0";return {content:[{type:"text",text:JSON.stringify({family:"custom",title,summary,width,depth,height,thickness,observations,assumptions,uncertainties,views,confidence,model:shape})}],finishReason:{unified:"stop",raw:undefined},usage,warnings:[]} as never;}});const out=await analyzeProductPhotos({photos:[photo()],note:"",features:"fidelity-joinery-v1",measurements},"test",{model});expect(out.analysis.family).toBe("custom");expect(calls).toBe(3);});

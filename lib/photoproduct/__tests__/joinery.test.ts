@@ -53,6 +53,8 @@ describe('automatic paired photo-product joinery',()=>{
   expect(engineerJoinery([base(),detached],DEFAULT_JOINERY).report.unconnected).toHaveLength(2);
   const pierced=base();pierced.holes=[rect(10,30,100,20).reverse()];
   expect(engineerJoinery([pierced,wall()],DEFAULT_JOINERY).report.joints).toHaveLength(0);
+  const scored=base();scored.score=[[[0,38],[120,38]]];
+  expect(engineerJoinery([scored,wall()],DEFAULT_JOINERY).report.joints).toHaveLength(0);
   const thin=plate('thin',20,20,3,[1,0,0,0,0,1,0,0,0,0,1,0]);
   expect(engineerJoinery([thin,wall()],DEFAULT_JOINERY).report.joints).toHaveLength(0);
  });

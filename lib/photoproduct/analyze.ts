@@ -42,6 +42,8 @@ Analyze EVERY reference id once, report observed evidence separately from assume
 export async function analyzeProductPhotos(req:PhotoAnalysisRequest,userId:string,options:{model?:LanguageModel;signal?:AbortSignal;visualReview?:boolean}={}):Promise<{analysis:ProductAnalysis;provider:string}>{
  // Revalidate even when this function is called outside an HTTP route.
  const input=parsePhotoRequest(JSON.stringify(req));
+ const enhanced=input.features==='fidelity-joinery-v1';
+ const system=PHOTO_SYSTEM+(enhanced?'':'\nCLIENT COMPATIBILITY: This client accepts numeric polygon coordinates only. Use numbers in every points tuple; no arithmetic expressions in coordinates. Use profile width/height and pose expressions for variations.');
  const deadline=Date.now()+165_000;
  const signal=AbortSignal.any([AbortSignal.timeout(165_000),...(options.signal?[options.signal]:[])]);
  const content:Exclude<UserContent,string>=[{type:"text",text:`Known measurements (0 means unknown), in mm: ${JSON.stringify(input.measurements)}.\nUser note: ${input.note||"None"}.\nThere are ${input.photos.length} reference photos. The first is the main reference.`}];
@@ -64,13 +66,14 @@ export async function analyzeProductPhotos(req:PhotoAnalysisRequest,userId:strin
    const attemptBudget=routes[i].id.startsWith("google")&&i===0&&routes.length>1?20_000:110_000;
    const providerOptions=routeName==="gemini-3.8-flash"?{...routes[i].providerOptions,google:{...routes[i].providerOptions.google,thinkingConfig:{thinkingLevel:"low"}}}:routeName==="gemini-2.5-flash"?{...routes[i].providerOptions,google:{...routes[i].providerOptions.google,thinkingConfig:{thinkingBudget:2048}}}:routes[i].providerOptions;
    let feedback="";for(let repair=0;repair<2;repair++){
-   const {output}=await generateText({...routes[i],providerOptions,system:PHOTO_SYSTEM,messages:[{role:"user",content:feedback?[...content,{type:"text",text:feedback}]:content}],output:Output.object({schema:PhotoProviderSchema}),maxOutputTokens:16000,maxRetries:0,abortSignal:AbortSignal.any([signal,AbortSignal.timeout(attemptBudget)])});
+   const {output}=await generateText({...routes[i],providerOptions,system,messages:[{role:"user",content:feedback?[...content,{type:"text",text:feedback}]:content}],output:Output.object({schema:PhotoProviderSchema}),maxOutputTokens:16000,maxRetries:0,abortSignal:AbortSignal.any([signal,AbortSignal.timeout(attemptBudget)])});
    let analysis=GeneratedAnalysisSchema.parse(output);const ids=new Set(input.photos.map(p=>p.id));
    if(analysis.views.length!==ids.size||new Set(analysis.views.map(v=>v.photoId)).size!==ids.size||analysis.views.some(v=>!ids.has(v.photoId)))throw new Error("Incomplete reference analysis");
    const m=input.measurements;
    analysis.width=m.width||analysis.width;analysis.depth=m.depth||analysis.depth;analysis.height=m.height||analysis.height;analysis.thickness=m.thickness||analysis.thickness;
    if(!analysis.views.some(v=>v.quality==="useful")){analysis.family="unreconstructable";analysis.model=null;}
    if(analysis.family==="custom"&&!analysis.model)throw new Error("Missing generated geometry");
+   if(!enhanced&&analysis.model?.parts.some(p=>[p.outline,...p.additions,...p.holes,...p.cuts,...p.score].some(q=>q.points.some(pt=>pt.some(v=>typeof v!=='number'))))){if(repair===0){feedback='This older client requires numeric coordinates in every polygon points tuple. Return the same product using only numeric points.';continue;}throw new PhotoAnalysisError('Please update HingeLab to open the new editable geometry.',422);}
    const digests=input.photos.map(p=>createHash("sha256").update(p.data).digest("hex"));
    if(new Set(digests).size<digests.length)analysis.uncertainties=[...analysis.uncertainties,"Repeated photos add no independent geometric evidence."].slice(0,12);
    let geometry:GenOutput|undefined;
@@ -82,7 +85,7 @@ export async function analyzeProductPhotos(req:PhotoAnalysisRequest,userId:strin
     if(geometry.error&&repair===0){feedback=`Your previous proposed model failed geometry validation: ${geometry.error}. Correct the actual part geometry/expressions without changing the product. Previous model: ${JSON.stringify(analysis)}`;continue;}
     if(geometry.error)throw new PhotoAnalysisError(`The photos were analyzed, but the proposed construction needs adjustment: ${geometry.error}`,422);
    }
-   if(geometry&&options.visualReview!==false){
+   if(geometry&&enhanced&&options.visualReview!==false){
     analysis.review={status:'skipped',message:'A valid draft was built; visual comparison was unavailable. Review it against the reference before cutting.'};
     const remaining=deadline-Date.now()-2000;
     if(remaining>15_000)try{

@@ -15,7 +15,7 @@ export function measurementProblem(m:{width:number;depth:number;height:number;th
  for(const key of ["width","depth","height","thickness"] as const){const v=m[key],[lo,hi]=MEASUREMENT_RANGES[key];if(v&&(!Number.isFinite(v)||v<lo||v>hi))return `Known ${key} must be between ${lo} and ${hi} mm, or left empty.`;}
  return null;
 }
-export const RequestSchema=z.object({photos:z.array(PhotoSchema).min(1).max(MAX_PHOTOS),note:z.string().max(800),measurements:MeasurementsSchema}).strict();
+export const RequestSchema=z.object({photos:z.array(PhotoSchema).min(1).max(MAX_PHOTOS),note:z.string().max(800),measurements:MeasurementsSchema,features:z.literal('fidelity-joinery-v1').optional()}).strict();
 export type PhotoAnalysisRequest=z.infer<typeof RequestSchema>;
 const explanation=z.string().max(240);
 const LegacyAnalysisSchema=z.object({
