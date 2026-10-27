@@ -37,6 +37,7 @@ export default function GeneratorView3D({ out, lay, T, material, units, frameKey
   // A box that folds (Paper Box): 0 % is the flat net, 100 % the folded box; it folds and explodes in place.
   const [fold, setFold] = useState(1);
   const folds = useMemo(() => !!out?.parts.some((p) => p.views3d?.some((q) => q.frames?.length)), [out]);
+  useEffect(() => { setFold(1); }, [frameKey, folds]);
   const editable = !!edit;
   // Folding boxes fold and explode in place; the rest are rebuilt as they pull apart where they
   // stand, behind one root, so the views widen with them.
@@ -68,8 +69,8 @@ export default function GeneratorView3D({ out, lay, T, material, units, frameKey
     >
       <View3DBarTools v={v} flat>
         {folds && !flat && (
-          <label className="v3-explode" title="0 % is flat, 100 % is the assembled target">{edit?.def.id === 'popup' ? 'Open ↔ flat' : 'Fold'}
-            <input type="range" min={0} max={1} step={0.01} value={fold} aria-label={edit?.def.id === 'popup' ? 'Open pop-up' : 'Fold'} aria-valuetext={`${Math.round(fold * 100)} %`} onChange={(e) => setFold(parseFloat(e.target.value))} />
+          <label className="v3-explode" title="0 % is flat, 100 % is the assembled target">Fold
+            <input type="range" min={0} max={1} step={0.01} value={fold} aria-label="Fold" aria-valuetext={`${Math.round(fold * 100)} %`} onChange={(e) => setFold(parseFloat(e.target.value))} />
           </label>
         )}
       </View3DBarTools>

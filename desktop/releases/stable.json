@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.21.0",
-    "pub_date": "2026-10-27T16:39:38.549Z",
-    "notes": "Boxes and Wood Packaging are one product with 123 editable presets. Photo to Product has been removed. Existing box projects retain their settings.",
+    "version": "1.21.1",
+    "pub_date": "2026-10-27T17:15:57.552Z",
+    "notes": "Corrects phantom wood, nested holes and extra edges in all 36 Pop-up previews. Rigid rings, ribs and accessories explode correctly. Updated thumbnails; verified SVG output and joints.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.21.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmp4bHF0eXk5Z0hhajhGTTJ2SEFETW4rODVxVmg0UjI3ZXp2Z0RQQVFWbzd0YVJqVVBsdm5ISy9FTEdackFyblZCOGF6WkdOb09yTUNGRnlEOVdIWkFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTE5MTU3CWZpbGU6SGluZ2VMYWJfMS4yMS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIxLjAKZDU3ZWNDRUhxOE9kaDVJTVNLNzVhS292ZW5UTEVKVUt0cno2VkFWckVSdHVIdDUyY2VNazYwWXlBSWxFWHFKVk9PKzhpTENETHZlUFkzbWpYdTdMQkE9PQo=",
-        "size": 11829270,
-        "sha256": "ca89ad04d5d8c88173b999c97f62c325c19c517bb2c56d3ea03baa107552b8c7"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.21.1_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm9pZXZrQTNBcEwwdmM4dkRtQkZJeHFRTXF6ZDRFNkJVQ1lOZDUwQWZoTk45UXZqYWEwdWJlTHE3WjMrT0FmUW9nR0IrMFBwdzJTUFJBbVFPN29KUFFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTIxMzE5CWZpbGU6SGluZ2VMYWJfMS4yMS4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIxLjEKUWV4TVlzVEl6VDFPMHA2RVBaTWlnQXdGV2JUV0Ntcm5nT2JySFBjS1Z3b2NEOFFqUnpCeC84NERmWTNHNEFzd0YvZmhGY01BV1o4SXpnbmVidUliQ3c9PQo=",
+        "size": 11712700,
+        "sha256": "11d6151214ebe0c9aefabe9faeafb1f1d2b3710abc4a0d15ff1978e3b5d8d263"
       }
     }
   }

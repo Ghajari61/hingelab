@@ -1,3 +1,9 @@
+## 1.21.1 — Correct Pop-up geometry in 3D
+
+- **All 36 Pop-up previews now use the final cut material.** Nested ring openings no longer cancel against joint cuts and create phantom wooden islands, extra edges or filled-in holes. Slots, handle holes, cord holes and engraving are clipped to their actual rings.
+- **Rigid parts stay rigid.** Assembled and Lay flat show the two real states. Explode separates every ring, rib and accessory; the misleading slider that pushed rings through their supports is removed. Assembled pendants keep their cords and fittings.
+- Refreshed every Pop-up thumbnail. Existing SVG cutting geometry and kerf compensation remain unchanged and validated against all preset snapshots. Holding lands still need to be cut before assembly; workshop fit and load testing remain necessary.
+
 ## 1.21.0 — Unified Boxes & Packaging
 
 - **Boxes and Wood Packaging are one product.** The shared Boxes & Packaging library includes every former box and packaging preset, with editable sizes, joints, lids, engraving, sheet layouts, SVG export and 3D preview. Existing packaging project files, links and local drafts retain their original settings.

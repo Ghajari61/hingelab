@@ -139,6 +139,8 @@ export interface GenPart {
      */
     m?: number[];
   };
+  /** Exploded-view displacement in plan axes (x, y toward viewer, z up), mm. */
+  apart?: [number, number, number];
   /**
    * A part that bends (a book cover round its spine) is drawn in 3D as these flat pieces instead,
    * each in its own frame and place; the cut file keeps the one part.
