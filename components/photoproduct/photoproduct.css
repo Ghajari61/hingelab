@@ -1,0 +1,52 @@
+.photo-product-panel { display: grid; gap: 12px; padding: 2px 2px 14px; min-width: 0; font-size: 12px; }
+.photo-product-intro h3 { margin: 8px 0 6px; font-size: 20px; line-height: 1.15; letter-spacing: -.04em; color: var(--fg); }
+.photo-product-intro p { margin: 0; line-height: 1.5; color: var(--fg-dim); }
+.photo-product-eyebrow { display: flex; align-items: center; gap: 6px; color: var(--accent); font-size: 9px; font-weight: 750; letter-spacing: .08em; }
+.photo-product-drop { border: 1px dashed color-mix(in srgb, var(--accent) 35%, var(--line)); border-radius: 14px; background: color-mix(in srgb, var(--accent) 4%, var(--panel)); transition: background 150ms; }
+.photo-product-drop.is-dragging { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); }
+.photo-product-upload { display: grid; justify-items: center; gap: 8px; width: 100%; padding: 18px 8px; color: var(--accent); background: transparent; border: 0; cursor: pointer; border-radius: 14px; }
+.photo-product-upload strong { font-size: 12px; }
+.photo-product-upload span { color: var(--fg-dim); font-size: 10px; }
+.photo-product-upload:disabled { opacity: .55; cursor: default; }
+.photo-product-reference { margin: 0; background: var(--canvas-bg); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.photo-product-reference img { display: block; width: 100%; height: 150px; object-fit: contain; }
+.photo-product-reference figcaption { padding: 6px 8px; color: var(--fg-dim); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.photo-product-photos { display: grid; gap: 8px; list-style: none; padding: 0; margin: 0; }
+.photo-product-photos li { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 4px; background: var(--surface-field); border: 1px solid var(--line); border-radius: 10px; }
+.photo-product-thumb { position: relative; flex: 0 0 55px; height: 44px; padding: 0; border: 1px solid transparent; border-radius: 7px; overflow: hidden; background: var(--panel); cursor: pointer; }
+.photo-product-thumb[aria-pressed="true"] { border-color: var(--accent); }
+.photo-product-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.photo-product-thumb span { position: absolute; bottom: 0; left: 0; right: 0; font-size: 8px; color: white; background: #43347bcc; }
+.photo-product-photo-actions { display: flex; flex-wrap: wrap; justify-content: end; gap: 1px; }
+.photo-product-photo-actions button { display: grid; place-items: center; width: 27px; height: 30px; border: 0; border-radius: 6px; background: transparent; color: var(--fg-dim); cursor: pointer; }
+.photo-product-photo-actions button:hover:not(:disabled) { background: var(--surface-hover); color: var(--accent); }
+.photo-product-photo-actions button:disabled { opacity: .3; cursor: default; }
+.photo-product-tip,.photo-product-privacy { font-size: 10px; line-height: 1.5; color: var(--fg-dim); margin: 0; }
+.photo-product-details,.photo-product-report { border: 1px solid var(--line); border-radius: 10px; padding: 10px; color: var(--fg); }
+.photo-product-details summary,.photo-product-report summary { font-weight: 650; cursor: pointer; }
+.photo-product-details summary span,.photo-product-note>span { display: block; margin-top: 3px; font-size: 10px; font-weight: 400; color: var(--fg-dim); }
+.photo-product-details p,.photo-product-report p { font-size: 11px; line-height: 1.5; color: var(--fg-dim); }
+.photo-product-measurements { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.photo-product-measurements label { display: grid; gap: 4px; font-size: 10px; }
+.photo-product-measurements input,.photo-product-note textarea { box-sizing: border-box; width: 100%; min-width: 0; background: var(--surface-field); color: var(--fg); border: 1px solid var(--line); padding: 8px; border-radius: 7px; font: inherit; }
+.photo-product-note { display: grid; gap: 4px; font-weight: 600; }
+.photo-product-note textarea { margin-top: 3px; resize: vertical; font-weight: 400; line-height: 1.5; }
+.photo-product-preserve { display: flex; align-items: start; gap: 6px; color: var(--fg-dim); font-size: 11px; line-height: 1.4; }
+.photo-product-preserve input { accent-color: var(--accent); margin-top: 2px; }
+.photo-product-analyze,.photo-product-package,.photo-product-cancel { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 8px; border-radius: 9px; font: 600 12px var(--font-ui); cursor: pointer; }
+.photo-product-analyze { background: var(--accent); color: #fff; border: 1px solid var(--accent); }
+.photo-product-package,.photo-product-cancel { background: var(--panel); color: var(--fg); border: 1px solid var(--line); }
+.photo-product-analyze:disabled,.photo-product-package:disabled { opacity: .5; cursor: default; }
+.photo-product-error,.photo-product-message,.photo-product-caution,.photo-product-example { border-radius: 8px; padding: 9px; margin: 0; font-size: 11px; line-height: 1.5; }
+.photo-product-error { background: #b9232310; color: var(--fg); border: 1px solid #b9232355; }
+.photo-product-caution,.photo-product-example { background: #b87b1012; border: 1px solid #b87b1040; color: var(--fg-dim); }
+.photo-product-message { background: color-mix(in srgb, var(--accent) 7%, var(--panel)); color: var(--fg); }
+.photo-product-report>strong { display: block; margin-top: 12px; }
+.photo-product-report h4 { margin: 12px 0 4px; font-size: 11px; }
+.photo-product-report ul { margin: 0; padding-left: 15px; font-size: 10px; line-height: 1.5; color: var(--fg-dim); }
+.photo-product-panel :is(button,input,textarea,summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.photo-product-spin { animation: photo-product-spin 1.4s linear infinite; }
+.photo-product-stage-error { position: absolute; z-index: 5; bottom: 16px; left: 16px; right: 16px; padding: 10px; background: var(--panel); border: 1px solid #b9232355; border-radius: 9px; color: var(--fg); font-size: 12px; }
+@keyframes photo-product-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) { .photo-product-spin { animation: none; } }
+@media (max-width:640px) { .photo-product-photo-actions button { width: 32px; height: 34px; } }

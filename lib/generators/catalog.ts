@@ -23,6 +23,7 @@ export interface GeneratorMeta {
 }
 
 export const GENERATORS: GeneratorMeta[] = [
+  { id: "photoproduct", n: 18, name: "Photo to Product", category: "Tools", plan: "pro", opens: { editor: "/app/editor/local?p=photoproduct" }, blurb: "Reconstruct supported products from 1–5 photos as editable 3D and fabrication parts." },
   { id: "popup", n: 15, name: "Pop-up", category: "Home", plan: "pro", opens: { editor: "/app/editor/local?p=popup" }, blurb: "One flat piece that lifts into a bowl, basket, tree, lampshade or ornament." },
   { id: "name-charms", n: 16, name: "Name Charms", category: "Lettering", plan: "free", opens: { editor: "/app/editor/local?p=charm" }, blurb: "Ornaments, keychains, earrings, bag tags, drink markers and place cards, one per name." },
   { id: "family-names", n: 17, name: "Family Names", category: "Lettering", plan: "free", opens: { editor: "/app/editor/local?p=family" }, blurb: "Name crosswords, name trees, snowflakes, rings, split monograms and bunting." },

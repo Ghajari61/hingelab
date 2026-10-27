@@ -1,0 +1,64 @@
+import { z } from "zod";
+export const MAX_PHOTOS=5;
+export const MAX_PHOTO_CHARS=420_000;
+export const MAX_PHOTO_BODY=MAX_PHOTOS*MAX_PHOTO_CHARS+24_000;
+export const MAX_SOURCE_BYTES=12*1024*1024;
+export const PhotoSchema=z.object({id:z.string().regex(/^[\w-]{1,64}$/),name:z.string().min(1).max(120),data:z.string().max(MAX_PHOTO_CHARS),width:z.number().int().min(32).max(1600),height:z.number().int().min(32).max(1600),digest:z.string().regex(/^[a-f0-9]{64}$/)}).strict();
+export type ProductPhoto=z.infer<typeof PhotoSchema>;
+export const MeasurementsSchema=z.object({width:z.number().min(0).max(350).refine(v=>v===0||v>=25),depth:z.number().min(0).max(350).refine(v=>v===0||v>=25),height:z.number().min(0).max(100).refine(v=>v===0||v>=8),thickness:z.number().min(0).max(6).refine(v=>v===0||v>=1.5)}).strict();
+export const RequestSchema=z.object({photos:z.array(PhotoSchema).min(1).max(MAX_PHOTOS),note:z.string().max(800),measurements:MeasurementsSchema}).strict();
+export type PhotoAnalysisRequest=z.infer<typeof RequestSchema>;
+const explanation=z.string().max(240);
+export const AnalysisSchema=z.object({
+  family:z.enum(["paw","heartbox","tag","unsupported"]),title:z.string().min(1).max(80),summary:z.string().max(600),
+  width:z.number().min(25).max(350),depth:z.number().min(25).max(350),height:z.number().min(8).max(100),thickness:z.number().min(1.5).max(6),
+  name:z.string().max(80),subtitle:z.string().max(80),font:z.enum(["pacifico","archivo-black","vazirmatn","lalezar"]),
+  wings:z.boolean(),connected:z.boolean(),snowflakes:z.boolean(),backing:z.boolean(),honeycomb:z.boolean(),
+  shape:z.enum(["rounded","circle","heart","tag","hexagon","pill"]),
+  observations:z.array(explanation).max(12),assumptions:z.array(explanation).min(1).max(12),uncertainties:z.array(explanation).max(12),
+  views:z.array(z.object({photoId:z.string().max(64),view:z.enum(["front","side","back","top","detail","unknown"]),quality:z.enum(["useful","blurry","duplicate","unrelated"]),evidence:explanation}).strict()).min(1).max(5),
+  confidence:z.enum(["low","medium","high"]),
+}).strict();
+export type ProductAnalysis=z.infer<typeof AnalysisSchema>;
+
+/** Inspect raster headers before handing any bytes to an image decoder or model. */
+export function rasterSize(bytes:Uint8Array):{width:number;height:number;mime:string}|null{
+ const dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),n=bytes.length;
+ if(n>24&&dv.getUint32(0)===0x89504e47&&dv.getUint32(4)===0x0d0a1a0a)return {width:dv.getUint32(16),height:dv.getUint32(20),mime:"image/png"};
+ if(n>12&&bytes[0]===255&&bytes[1]===216){
+  let i=2;
+  while(i+4<n){
+   if(bytes[i]!==255){i++;continue;}const m=bytes[i+1];
+   if(m===0xd9||m===0xda)break;
+   if(m===0xd8||m===1||(m>=0xd0&&m<=0xd7)){i+=2;continue;}
+   const length=dv.getUint16(i+2);if(length<2||i+2+length>n)return null;
+   if(m>=0xc0&&m<=0xcf&&![0xc4,0xc8,0xcc].includes(m)&&length>=8)return {width:dv.getUint16(i+7),height:dv.getUint16(i+5),mime:"image/jpeg"};
+   i+=length+2;
+  }
+ }
+ if(n>=30&&String.fromCharCode(...bytes.slice(0,4))==="RIFF"&&String.fromCharCode(...bytes.slice(8,12))==="WEBP"){
+  const type=String.fromCharCode(...bytes.slice(12,16));
+  if(type==="VP8X")return {width:1+bytes[24]+256*bytes[25]+65536*bytes[26],height:1+bytes[27]+256*bytes[28]+65536*bytes[29],mime:"image/webp"};
+  if(type==="VP8 "&&bytes[23]===0x9d&&bytes[24]===1&&bytes[25]===0x2a)return {width:dv.getUint16(26,true)&0x3fff,height:dv.getUint16(28,true)&0x3fff,mime:"image/webp"};
+  if(type==="VP8L"&&bytes[20]===0x2f)return {width:1+((bytes[21]|bytes[22]<<8)&0x3fff),height:1+((bytes[22]>>6|bytes[23]<<2|bytes[24]<<10)&0x3fff),mime:"image/webp"};
+ }
+ return null;
+}
+export function photoBytes(data:string):{bytes:Uint8Array;mime:string}|null{
+ const m=/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(data);if(!m||m[2].length%4!==0)return null;
+ try{const binary=atob(m[2]);return {bytes:Uint8Array.from(binary,c=>c.charCodeAt(0)),mime:m[1]};}catch{return null;}
+}
+export function validatePhoto(photo:ProductPhoto):string|null{
+ const decoded=photoBytes(photo.data);if(!decoded)return "Use a JPEG, PNG or WebP photo.";
+ const size=rasterSize(decoded.bytes);
+ if(!size||size.mime!==decoded.mime||size.width!==photo.width||size.height!==photo.height)return "The photo header or dimensions are invalid.";
+ if(size.width<32||size.height<32||size.width>1600||size.height>1600||size.width*size.height>2_560_000)return "Photo dimensions exceed the analysis limit.";
+ return null;
+}
+export function parsePhotoRequest(text:string):PhotoAnalysisRequest{
+ if(text.length>MAX_PHOTO_BODY)throw Error("The photo set is too large.");
+ let raw:unknown;try{raw=JSON.parse(text);}catch{throw Error("Send valid JSON.");}
+ const checked=RequestSchema.safeParse(raw);if(!checked.success)throw Error("Upload 1–5 normalized photos and valid dimensions.");
+ const ids=new Set<string>();for(const photo of checked.data.photos){const error=validatePhoto(photo);if(error)throw Error(error);if(ids.has(photo.id))throw Error("Each photo needs a unique identifier.");ids.add(photo.id);}
+ return checked.data;
+}

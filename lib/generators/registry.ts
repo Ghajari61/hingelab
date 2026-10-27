@@ -6,6 +6,7 @@ import type { GeneratorId } from "./ids";
 import type { AnyGenerator } from "./types";
 
 export const loadGenerator: Record<GeneratorId, () => Promise<AnyGenerator>> = {
+  photoproduct: () => import("./photoproduct").then(m => m.PHOTO_PRODUCT as AnyGenerator),
   keychain: () => import("./keychain").then((m) => m.KEYCHAIN as AnyGenerator),
   popup: () => import("./popup").then((m) => m.POPUP as AnyGenerator),
   charm: () => import("./charm").then((m) => m.CHARM as AnyGenerator),

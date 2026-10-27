@@ -14,7 +14,10 @@ use crate::error::{CmdError, CmdResult};
 use crate::{files, projects, AppState};
 
 /// The API calls the page may make, by method and exact path. Everything else is refused here.
-const API_ALLOW: &[(&str, &str)] = &[("POST", "/api/export")];
+const API_ALLOW: &[(&str, &str)] = &[
+    ("POST", "/api/export"),
+    ("POST", "/api/desktop/photoproduct"),
+];
 
 /// Largest request body the page may send (the export route's own limit is 4.4 MB).
 const MAX_API_BODY: usize = 5 * 1024 * 1024;
@@ -151,6 +154,8 @@ mod tests {
     #[test]
     fn only_listed_api_calls_pass() {
         assert!(api_allowed("POST", "/api/export"));
+        assert!(api_allowed("POST", "/api/desktop/photoproduct"));
+        assert!(!api_allowed("GET", "/api/desktop/photoproduct"));
         for (m, p) in [("GET", "/api/export"), ("POST", "/api/export/"), ("POST", "/api/export?x=1"), ("POST", "/api/desktop/token"), ("POST", "/api/stripe/checkout"), ("DELETE", "/api/projects")] {
             assert!(!api_allowed(m, p), "{m} {p}");
         }
