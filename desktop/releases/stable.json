@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.24.2",
-    "pub_date": "2026-10-27T21:26:42.875Z",
-    "notes": "Fix Pop-up Spiral and Multi mode switching, continuous 3D strip previews, physical edges and SVG parity. Update compatible controls and prototype-forming instructions.",
+    "version": "1.25.0",
+    "pub_date": "2026-10-27T22:04:44.014Z",
+    "notes": "Add Spiral and Multi forming bases, contoured supports and thickness-aware keyed joints. Include part identifiers, glue and assembly instructions, exact SVG/Lay Flat parts and improved insertion clearance checks.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.24.2_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnRlbVA1ZkljdlY2WHJrYmN2RHJDeGlCNWNYNmVOck9YTWlnaWdOVlFHa0hqMlJCYnM1MzZscSt4bklXdjd5WHRyRmZ5bzk1YVRJU3FFVDFEY2hJemd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTM2MzkxCWZpbGU6SGluZ2VMYWJfMS4yNC4yX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI0LjIKcVQ4M1NTczdzVUoxSTBLcXEzUUJpYzBJTkJvaGU1bkkvUlhKem1NazU3WWErZ2RWME5PNUpOeEh0WkhxM2ovZnM3SEdJaFpMVjJLSHA2ZTUvWVBQQ1E9PQo=",
-        "size": 11731441,
-        "sha256": "ecda28984f7f51c55f194705058581560dd4fa9f5aa5a26892168e1b3e5e6005"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.25.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmt3eW9aYzFSaDlvdGdVQiszL1NjaTFocTM4MEFicEJON29KbG9zUlU0SFM3cE1pQzd6dFh1ZnhWNmVjRzRnWkVHTVVuNExVdGh2clBUaFdtQXVhbmdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTM4NjYzCWZpbGU6SGluZ2VMYWJfMS4yNS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI1LjAKU1VQeG0xdTlrKzRqd2xBd2c1MVoyQXFPQmdncGVKY1R6Qkk5a2x6c1dYVldaOWg4NTB3dHdwSTdFUHNaWG5pSnQ4RDY3RXU5MmV2R2lXVmtjTWlMQlE9PQo=",
+        "size": 11738734,
+        "sha256": "6b9eca454fb44074a3ba7e943bc5314d5b4fb7512ae1de2dcedac6444dafb8b2"
       }
     }
   }

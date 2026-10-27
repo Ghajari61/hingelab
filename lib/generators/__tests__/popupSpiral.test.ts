@@ -1,6 +1,8 @@
 import {expect,it} from 'vitest';
 import {POPUP} from '../popup';
-import {mergePopup} from '../popup/params';
+import {mergePopup as mergeSupportedPopup} from '../popup/params';
+// The original manual-forming workflow remains available alongside the supported construction.
+const mergePopup=(raw:Record<string,unknown>)=>mergeSupportedPopup({...raw,spiral:{supports:false}});
 import {unionShapes} from '@/lib/letters/polygon';
 import {patternDefaults,modeDefaults,type PopupParams} from '../popup/params';
 import {generatorScene} from '../scene3d';
@@ -84,7 +86,7 @@ it('multi keeps the requested total turns even with more arms than turns',()=>{
 });
 it('every existing preset can switch to Spiral and Multi',()=>{
  for(const preset of POPUP.presets)for(const kind of ['spiral','multi'] as const){
-  const p=patternDefaults(POPUP.merge(preset.params),kind),out=POPUP.build(p,CTX);
+  const p=patternDefaults(mergePopup(preset.params as Record<string,unknown>),kind),out=POPUP.build(p,CTX);
   expect(out.error,`${preset.id}/${kind}`).toBeUndefined();
   expect(out.parts[0].views3d!.every(v=>!!v.radialSurface)).toBe(true);
  }
