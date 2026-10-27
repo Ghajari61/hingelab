@@ -45,8 +45,8 @@ export async function analyzeProductPhotos(req:PhotoAnalysisRequest,userId:strin
  // Keep the configured primary/vendor order. Prefer the already-configured bounded-
  // reasoning Flash fallback before other long-deliberating Google aliases.
  if(!options.model&&routes[0]?.id.startsWith("google")){
-  const fast=routes.findIndex(r=>{const m=r.model;return (typeof m==="string"?m:m.modelId)==="gemini-2.5-flash";});
-  if(fast>1)routes=[routes[0],routes[fast],...routes.filter((_,i)=>i!==0&&i!==fast)];
+  const preferred=["gemini-3.8-flash","gemini-2.5-flash"].flatMap(name=>routes.filter((r,i)=>i>0&&(typeof r.model==="string"?r.model:r.model.modelId)===name));
+  if(preferred.length)routes=[routes[0],...preferred,...routes.slice(1).filter(r=>!preferred.includes(r))];
  }
  if(!routes.length)throw new PhotoAnalysisError("Photo analysis is not configured on this server. Your photos and existing model have been kept.",503);
  for(let i=0;i<routes.length;i++){
@@ -56,7 +56,7 @@ export async function analyzeProductPhotos(req:PhotoAnalysisRequest,userId:strin
    // Reserve most of the shared deadline for an interactive fallback when a Pro
    // model is deliberating; give the fallback time to finish a whole part model.
    const attemptBudget=routes[i].id.startsWith("google")&&i===0&&routes.length>1?20_000:110_000;
-   const providerOptions=routeName==="gemini-2.5-flash"?{...routes[i].providerOptions,google:{...routes[i].providerOptions.google,thinkingConfig:{thinkingBudget:2048}}}:routes[i].providerOptions;
+   const providerOptions=routeName==="gemini-3.8-flash"?{...routes[i].providerOptions,google:{...routes[i].providerOptions.google,thinkingConfig:{thinkingLevel:"low"}}}:routeName==="gemini-2.5-flash"?{...routes[i].providerOptions,google:{...routes[i].providerOptions.google,thinkingConfig:{thinkingBudget:2048}}}:routes[i].providerOptions;
    let feedback="";for(let repair=0;repair<2;repair++){
    const {output}=await generateText({...routes[i],providerOptions,system:PHOTO_SYSTEM,messages:[{role:"user",content:feedback?[...content,{type:"text",text:feedback}]:content}],output:Output.object({schema:PhotoProviderSchema}),maxOutputTokens:16000,maxRetries:0,abortSignal:AbortSignal.any([signal,AbortSignal.timeout(attemptBudget)])});
    const analysis=GeneratedAnalysisSchema.parse(output),ids=new Set(input.photos.map(p=>p.id));
