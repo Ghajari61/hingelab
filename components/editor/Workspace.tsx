@@ -10,8 +10,6 @@ import { chooseInitial } from "@/lib/projects/sync";
 import { openNewCloudProject } from "./cloud";
 import type { ProductId } from "@/lib/supabase/types";
 import { isGeneratorId } from "@/lib/generators/ids";
-import { START_LAZY, START_PRESETS } from "@/lib/generators/startPresets";
-import { TEMPLATE_PRESETS } from "@/lib/templates/presets";
 import { HINGE_PRESETS } from "@/lib/hinge/presets";
 import { AI_START_KEY } from "@/lib/ai/types";
 import type { StartChoice } from "@/components/shell/StartGallery";
@@ -58,9 +56,8 @@ function urlPreset(p: Product | null): StartChoice | null {
   try {
     const q = search();
     if (q.get("ai") === "1") return aiStart(p);
-    const tid = q.get("template");
-    const t = tid && Object.prototype.hasOwnProperty.call(TEMPLATE_PRESETS, tid) ? TEMPLATE_PRESETS[tid] : undefined;
-    if (t && t.product === p) return { product: p, preset: { id: `template-${tid}`, name: t.name, note: t.note, params: t.params } };
+    // templates load their settings first (see `templateWait`): the list would weigh on every editor
+    if (q.get("template")) return null;
     // A Hinge Box ready-made box (links from the collection pages).
     if (p === "hinge") {
       const hp = HINGE_PRESETS.find((x) => x.id === q.get("preset"));
@@ -69,10 +66,9 @@ function urlPreset(p: Product | null): StartChoice | null {
     if (!isGeneratorId(p)) return null;
     const id = q.get("preset");
     if (!id) return null;
-    const preset = START_PRESETS[p].find((x) => x.id === id);
-    if (preset) return { product: p, preset: preset as StartChoice["preset"] };
-    // Presets the shell does not carry are looked up by id once the generator loads.
-    return START_LAZY[p] && /^[a-z0-9-]{1,60}$/.test(id) ? { product: p, preset: { id, name: id, note: "", params: {} } } : null;
+    // The shell carries no generator preset lists (they would load with every editor): the
+    // generator looks the preset up by id once it loads, and ignores an id it does not know.
+    return /^[a-z0-9-]{1,60}$/.test(id) ? { product: p, preset: { id, name: id, note: "", params: {} } } : null;
   } catch {
     return null;
   }
@@ -117,6 +113,16 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
   const [start, setStart] = useState<StartChoice | null>(() => (doc ? null : urlPreset(product)));
   // A share link (`#share=…`) opens its design read-only; the decoder loads only for such links.
   const [opening, setOpening] = useState(() => !doc && !!product && /(?:^#|&)share=/.test(window.location.hash));
+  // `?template=<id>`: the template list loads, then the editor opens on that template's settings.
+  const [templateWait, setTemplateWait] = useState(() => !doc && !!product && !!search().get("template"));
+  useEffect(() => {
+    if (!templateWait || !product) return;
+    const tid = search().get("template") ?? "";
+    void import("@/lib/templates/presets").then(({ TEMPLATE_PRESETS }) => {
+      const t = Object.prototype.hasOwnProperty.call(TEMPLATE_PRESETS, tid) ? TEMPLATE_PRESETS[tid] : undefined;
+      if (t && t.product === product) setStart({ product, preset: { id: `template-${tid}`, name: t.name, note: t.note, params: t.params } });
+    }, () => {}).finally(() => setTemplateWait(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // `?open=1`: a project file opened in another section waits in IndexedDB.
   const [handoff, setHandoff] = useState(() => !doc && !!product && search().get("open") === "1");
   useEffect(() => {
@@ -197,6 +203,7 @@ export default function Workspace({ cloud = null }: { cloud?: CloudDoc | null })
 
   if (opening) return <div className="boot">Opening the shared design…</div>;
   if (handoff) return <div className="boot">Opening the project file…</div>;
+  if (templateWait) return <div className="boot">Opening the template…</div>;
   if (desktopOpen) {
     return (
       <div className="boot" role="status">

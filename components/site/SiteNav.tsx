@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Menu, Search, X } from "lucide-react";
 import { useAccount } from "@/components/auth/useAccount";
-import { NAV_GROUPS } from "@/lib/generators/nav";
+import { NAV_GROUPS } from "@/lib/generators/navLinks";
 
 /** Make / Community / Learn. Desktop menus, plus a drawer on a narrow screen. */
 export function SiteNav() {

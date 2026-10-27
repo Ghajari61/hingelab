@@ -1,6 +1,8 @@
 ## Unreleased — Release check: security and speed
 
 - **Security.** AI Studio no longer refunds a job the browser walked away from mid-answer, so credits can't be dodged; the SVG safety check refuses more tricks (prefixed script elements, `<svg/onload>`, embedded images and forms, doctypes); the laser-sheet SVG service answers as a download that can never run as a page; gallery posts go in only through the site, after its checks; the browser may talk only to HingeLab's own database server.
+- **Pages load faster.** The site menu, the bookmark button and the editor no longer carry every product's preset list: site pages download about 65 KB less script (the home page 180 → 117 KB), and the editor 33 KB less. Preset and template links still open the right design.
+- **Plans and billing.** A paid plan on the website now ends with its paid period (plus three days), as in the desktop app, so a lost cancellation message can't keep it on; a lapsed plan can be bought again; two checkouts at once make one Stripe customer; Free exports from the desktop app carry the "Made with HingeLab" mark on every product, as they already did for the Hinge Box.
 - **Faster.** Part labels on a Pop-up (and any design with many long slots) are placed in about 2 s instead of half a minute; very large Pop-ups build three times faster.
 
 ## Unreleased — Family Names and more Christmas charms
