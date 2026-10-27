@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.13.0",
-    "pub_date": "2026-10-26T14:50:17.902Z",
-    "notes": "New Keychain generator: 18 shapes, 24 editable presets, names and subtitles, motifs, engraved or raised lettering, reinforced ring tabs, batch names and SVG export. Replaces Calibration in product menus.",
+    "version": "1.14.0",
+    "pub_date": "2026-10-27T00:48:28.498Z",
+    "notes": "Name Charms (40 presets), Family Names (23 presets), and Pop-up engineering and 3D assembly improvements. Includes Keychain and the current product menu.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.13.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnEzSGlqUlBMTFVTZUZnRERZbU9CcmpkQXVDeEMyZjd4VTBKWVkwUnJELzRJSU0veHB3cWdIZWFXa1p0T2kyeXZKWEQ2ZGdtMkEyajlHRy9zaUZYUXdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDI2MTYxCWZpbGU6SGluZ2VMYWJfMS4xMy4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjEzLjAKN3c3cUxqdkw1bzlaK2lrdGYvVUZCOVo0ajB1TlIvc0lqYjM2RzZrYkN1K3dtLzBMYzE0RWZPaG9PUXVQRXNlMmJrSW9KamxHQUpEaG0wZlFBRGdsQXc9PQo=",
-        "size": 11724255,
-        "sha256": "a3297bb04568eba77259c3b2e621cecea689cb8e68dd838eb4c1b8323c317fda"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.14.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnNlNnZCYWVKa3FMTlU4WHBXQm9HWDNad3NTblNiTmRpMTFPa0VUeDBCa1pEaEdtUVJLZVlUUU5SQ0E1eTRucFl0V1FmTHlSZ2E4OEdnYXRCTjZzYlFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDYyMDc0CWZpbGU6SGluZ2VMYWJfMS4xNC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE0LjAKQlNuZlFPNWkvblZWb1hEZzZ2VjR0NUpTZWd0empTVlhGUFVlc3dtcUh0d2JoSkdMd3Q1NzQ1U0E0blBobGZMRStNeC8wWGcxa2hkTjN4RytwS21TQ3c9PQo=",
+        "size": 11793005,
+        "sha256": "8b1201cf910dfb7f6d4f4b893bf91638be2cbfe78d405d22b9959454010601ef"
       }
     }
   }
