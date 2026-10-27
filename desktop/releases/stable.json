@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.19.0",
-    "pub_date": "2026-10-27T15:22:37.116Z",
-    "notes": "Animated 3D assembly for photo-generated ribs with checked curved supports: numbered step-by-step insertion, adhesive faces, curing checkpoint, playback controls and reduced-motion support.",
+    "version": "1.20.0",
+    "pub_date": "2026-10-27T15:59:17.805Z",
+    "notes": "Wood Packaging replaces Paper Box with 70 editable wooden packaging presets, matching lids, joints and cut files. Pop-up ribs now use continuous solid frames with lightened windows in taller supports. Includes all changes from the latest merged website source.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.19.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm9NZXIrTklUditTemxuZk1RcDJyekJvaGtqV0ZHbzhQMXlqaDJhbisyY0p3WDU5bEhrSTNqTkNuRmZNVzV0TGd3Tm1weldyVnZ3enhtNTE4MCtOZHdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTE0NTA4CWZpbGU6SGluZ2VMYWJfMS4xOS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE5LjAKMmtkMDFUVTlvbHRMVzRXOW1ldlBMbGVXYi9uSksvSmlCdEhOZHh0VXgwdFNtZnVqc1BzaVQ2QUpSdlhaekU2cGJETEYvN1l2Y05oOWNqdTJGZlV6RHc9PQo=",
-        "size": 11932313,
-        "sha256": "263842030bc69d8797ec4e22e4ec46e96f8491cb4a731ba5412237e195063c59"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.20.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmdyWmRBTmR5VnZQd3M4SEZHMTJVTkZaZnIvZ0JOcGpPZkMxb1BhSi9teWx5L1l3UGFQcnR3NWdVSW5wRmw3dkpUeG9QSkk2T1M5eFIvVlpzYjhFa2dFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTE2NzI5CWZpbGU6SGluZ2VMYWJfMS4yMC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjIwLjAKdE5GUURKck5MTmxMR1F1Q2twV0E2Rm51Mjg3WnRHNXQ0VDlaYnJuZE9XdVgyZlVxejhtWFhCaENocm5vVmowY0dVenl5NjlxeVJxVTVtMXhiK0NrQVE9PQo=",
+        "size": 11969414,
+        "sha256": "7ef59376592427a87f7be6fb022e2e6d35d2eec14ca37fb304e19b47ef88a211"
       }
     }
   }
