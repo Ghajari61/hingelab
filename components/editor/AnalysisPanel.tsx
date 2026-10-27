@@ -31,7 +31,7 @@ export function AnalysisPanel({ model, error, units, material }: { model: Model 
       <p className="note">
         The minimum radius is an engineering estimate from torsion-bar strain. Estimate; tested on this material: {cal
           ? `yes (${cal.date.slice(0, 10)}${cal.hingeRadius != null ? `, your test strip bent to R ${fmtLen(cal.hingeRadius, units)}` : ""}).`
-          : "no. Cut the Calibration coupons' hinge strip in your own material."}
+          : "no. Bend a test piece in your own material to check."}
       </p>
     </>
   );

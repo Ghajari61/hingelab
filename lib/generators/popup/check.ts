@@ -15,7 +15,17 @@ export function checkPopup(p:PopupParams,out:GenOutput):Issue<PopupParams>[] {
  if(setsHeights(p))add('snap-bridges','The supports set every ring\'s height: cut sacrificial bridge lands before placing separate rings on the locating tabs.',undefined,'info');
  else if(p.profile.depth/g.loops.length>p.bridges.length*.3)add('strain','Target lift may exceed bridge flexure. Validate with a coupon; supports do not make brittle bridges flexible.',{label:'Reduce target depth',apply:q=>({...q,profile:{...q.profile,depth:g.loops.length*q.bridges.length*.25}})});
  if(!setsHeights(p)&&p.profile.kind!=='linear')add('support','This profile needs independent support at its ring heights.',{label:'Use profile ribs',apply:q=>({...q,support:{...q.support,kind:'ribs'}})});
+ {// Neighbouring rings at different heights leave a slit in the wall: small things fall out of a bowl.
+  let step=0;for(let i=0;i+1<g.rings.length;i++)step=Math.max(step,Math.abs(g.rings[i].height-g.rings[i+1].height));const slit=step-p.T;
+  if(p.mode==='bowl'&&p.profile.kind!=='pagoda'&&!p.extras.plantSeat&&slit>12)add('wall-gap',`The wall opens up to ${slit.toFixed(0)} mm between rings near the rim; small things fall through. Narrower rings close the steps.`,{label:'Narrower rings',apply:q=>({...q,rings:{...q.rings,by:'width',width:Math.max(Math.ceil(1.5*q.T+q.rings.gap),Math.round(g.pitch*Math.min(.8,12/Math.max(1,slit))*10)/10),variable:true}})});
+  if(p.mode==='hanging'&&step>6*g.pitch)add('hang-apart',`Neighbouring rings hang up to ${step.toFixed(0)} mm apart; narrower rings make the shape read as one piece.`,{label:'Narrower rings',apply:q=>({...q,rings:{...q.rings,by:'width',width:Math.max(Math.ceil(1.5*q.T+q.rings.gap),Math.round(g.pitch*.7*10)/10),variable:true}})},'info');}
+ if(p.extras.base&&(['ribs','post','handles'].includes(p.support.kind)||p.extras.post))add('base-plate','With ribs the base is a floor plate under them; glue the ribs to it after dry-fitting.',undefined,'info');
  if((p.engraving.text||p.engraving.rim||p.engraving.monogram)&&p.engraving.size<4)add('text','Engraving is very small.',{label:'Enlarge text',apply:q=>({...q,engraving:{...q.engraving,size:4}})});
+ if(p.extras.socket!=='none'&&p.mode==='hanging'){
+  // The bulb hangs below the centre disc, inside the rings: the ring under the disc has a hole the
+  // size of the disc, so a bulb wider than that (less a heat gap) touches it.
+  const bulb=p.extras.socket==='E14'?45:p.extras.socket==='E27'?60:p.extras.socketDiameter+20,need=bulb+20;
+  if(p.rings.center<need)add('bulb',`An LED bulb (about Ø ${bulb} mm) is wider than the hole under the centre disc (Ø ${p.rings.center} mm) and would touch the rings; keep 10 mm round it.`,{label:`Centre disc ${need} mm`,apply:q=>({...q,rings:{...q.rings,center:need}})});}
  if(p.extras.socket!=='none'||p.extras.tealight)add('led','LED bulbs / LED tealights only. Keep heat sources away from wood and adhesives.');
  if(p.mode==='sleeve'&&p.rings.center<p.extras.sleeveDiameter+4*p.T+1)add('sleeve','Sleeve opening needs material clearance.',{label:'Enlarge centre',safe:false,apply:q=>({...q,rings:{...q.rings,center:q.extras.sleeveDiameter+4*q.T+2}})});
  if(p.pattern.kind!=='rings')add('spiral','Spiral preview uses ring-height samples; strip twisting and material strain require a physical prototype.',undefined,'info');

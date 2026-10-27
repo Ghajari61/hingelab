@@ -1637,3 +1637,41 @@ The owner asked for exploded 3D views to open as an attractive animation that en
 - **QuadView**: damped OrbitControls (the render loop runs while they settle, otherwise it still renders only on change); the perspective view auto-rotates (≈3.6°/s, time-based) after 5 s without pointer, wheel or key input, only while that view is shown and not for reduced motion; views reframe on the closed box widening to the fully opened box as the model opens, always holding the model as it is; the floor and shadows are sized for the opened-out model.
 - Tested in `lib/hinge3d/__tests__/unfold.test.ts` (assembled at 0 equals the static scene, finite and on the floor throughout, flat at the sheet thickness at 1, for lids, caps, cabinets, drawers and a generator box).
 
+
+## D209. The Calibration product is removed
+
+The owner asked for the Calibration section to be removed entirely.
+
+- Gone: the Calibration generator (kerf strips, fit ladder, hinge strip; `lib/generators/calibration`, its presets and pictures), its Test & Calibration card and Studio starter, the Tools entry in the product menu, the "Record coupon results" form in My materials, and the links to them (Learn › Kerf & fit tools, the start screen, the hinge analysis note).
+- Kept: the sheet's **Calibration bar** extra (a ruler strip on exported sheets, `lib/fit/calibration.ts`), the kerf form on /learn/kerf, and a material's stored `calibration` record (old saves still load and still show "tested on your machine"); nothing new writes it.
+- Saved designs or links that ask for the `calibration` generator fall back like any unknown product id. The kerf-once export test uses a test-only strips design (`lib/export/__tests__/strips.ts`).
+
+## D210. Name Charms: personalised small pieces from one list of names
+
+After reviewing Cuttle, the owner asked for new, attractive, well-engineered products with many presets. Personalised name pieces are Cuttle's best sellers and HingeLab had none, so the first is one generator (`charm`) for the whole family: ornaments, keychains, earrings, bag tags, drink markers, place cards and gift tags.
+
+- **One list, many pieces:** each line of the names list is one charm (a pair for earrings), with copies of each; since the list already does this, the sheet's batch (ZIP per name) is not offered.
+- **Engineering rules in the build:** a hole keeps its `wall` to the real outline (it moves inwards on stars and hearts until it has it, and the panel reports the wall it got); a loop is a ring of the same wall on the edge; the name is fitted inside the outline minus the margin and the hole's keep-out, shrinking from its set height (checks warn under a legible height per style); earrings report their weight (area × thickness × the stock's density) and warn over 5 g; drink-marker clips check the arm's root strain as it opens over the stem (curved cantilever ε ≈ 1.5·w·δ/L²) against the stock's limit, with a fix that solves for the opening; place-card slots are the stock plus a clearance, cross-halved with a foot so the card stands; bag tags get a strap slot kept clear like a hole.
+- **Styles:** engrave, score, cut-out (letter middles fall out unless stencil bridges are on), layered (letters in a second material, Pro like other two-material designs), and letters (the welded name is the charm, with a ring loop, optionally on a silhouette backing).
+- 28 presets across the seven kinds, preset pictures, a card in the product menu (Lettering) and tests in `lib/generators/__tests__/charm.test.ts` (holes, loops, fitting, styles, clip strain and its fix, place-card slots, bag-tag slot, earring weight, every preset without a warning).
+
+## D211. Family Names, gift card holders, dangles, characters and weld-and-score
+
+From the Cuttle channel (its "12 Christmas best sellers" video and tutorial list), the owner asked for our own versions of the laser products shown. Original designs and code; nothing copied.
+
+- **Family Names** (`family`): a list of names made into one piece. Crossword: greedy placement over several orders (fewest names left out, then the smallest, squarest grid), names never run side by side, tiles welded with an outline or plate backing, grid scored. Name tree: names sorted shortest to longest into a triangle, star topper, year cut through the trunk. Snowflake: a name along each arm (5–12) round a disc with the year; letter height capped by the arm spacing at the hub. Ring: names round a circular plate, a word or motif in the middle. Split monogram: an initial with a band carrying the name, hung from the top point nearest the centre of mass. Bunting: a flag per letter with two cord holes. Tree, snowflake and monogram take an offset silhouette backer (names in the second material).
+- **Weld and score:** `ctx.text` and `textBlock` now also return each glyph's own outlines (`glyphs`, plain style only). Welded names score every letter's outline (`letterScores`) so they read on the cut piece; layered and letter-style charms score where script letters overlap (`overlapScores`).
+- **Name Charms additions:** a four-layer gift card holder (back with loop, pocket layer open at the top sized to the card plus clearance, front with a window a lip smaller, the name across the front; a thumb notch when the card sits inside); a dangle tag on a jump ring under the charm (or at the far end of a keychain), hung by its own loop; character shapes (snowman, reindeer, cat face, gingerbread) drawn from primitives, with eyes engraved, whiskers and icing scored, and the hat, nose and buttons cut as separate pieces (0.15 mm smaller) to paint, the name kept clear of them.
+- Not done in this round: the flat-pack (slot-fit) 3D ornaments; the work was stopped.
+
+## D212. Pop-up: assembly hardware in 3D and the engineering fixes
+
+The owner asked for the Pop-up to be reviewed as a product and for its 3D to be accurate.
+
+- **Hardware is drawn, not cut.** `GenOutput.hardware` (`Hardware3D`: cord, knot, ring, cylinder, bulb) is added to the folding 3D scene only when the design is fully raised and not exploded; it is never measured, picked or written to a cut file. `popupHardware` (lib/generators/popup/hardware.ts) threads three cords through the measured cord holes top-down to a gather point, and adds socket/bulb, tealight and the sleeve's vase.
+- **Nested sets** are offset in 3D (views, frames and support placements) side by side with a 30 mm gap.
+- **Sleeve** with a centre opening uses radial ribs round a hub ring with the opening cut in it.
+- **Dome** profile is a spherical cap with a 65° rim; **variable spacing** is equal arc length along the profile with a minimum ring width of max(0.4, (1.5T+gap)/pitch).
+- **Base plate** with ribs sits at −ribFoot − T; the **finial** has a 2T tab through a T+fit slot when the centre is clear.
+- **Checks**: `wall-gap` (bowls without a plant seat, slit > 12 mm), `hang-apart` (info), `base-plate` (info), `bulb` (centre must be ≥ bulb Ø + 20 mm; E14 45, E27 60). E27 lamp presets use an 80 mm centre.
+- Tested in `lib/generators/__tests__/popup.test.ts` ("Pop-up engineering and 3D"); all preset snapshots and thumbnails were regenerated.

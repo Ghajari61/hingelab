@@ -20,16 +20,13 @@ function seeded(seed: number) {
   };
 }
 
-/** Nothing to randomise: calibration coupons are measured against the sizes they were cut at. */
-const FIXED = new Set<string>(["calibration"]);
 
 describe("Randomise design in every generator", () => {
   for (const id of GENERATOR_IDS) {
     it(`${id}: offers style settings, keeps the text, and every new design builds`, async () => {
       const def = (await loadGenerator[id]()) as AnyGenerator;
       const fields = shuffleFields(def);
-      if (FIXED.has(id)) expect(fields, id).toEqual([]);
-      else expect(fields.length, id).toBeGreaterThan(0);
+      expect(fields.length, id).toBeGreaterThan(0);
       const texts = def.sections.flatMap((s) => s.fields).filter((f) => f.kind === "text");
       const base = def.defaults() as P;
       for (let i = 0; i < 25; i++) {

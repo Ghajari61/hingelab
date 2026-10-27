@@ -6,6 +6,8 @@ import { KEYCHAIN_PRESETS } from "./keychain/presets";
  */
 import { BOXES_PRESETS } from "./boxes/presets";
 import { POPUP_PRESETS } from "./popup/presets";
+import { CHARM_PRESETS } from "./charm/presets";
+import { FAMILY_PRESETS } from "./family/presets";
 import { CLOCK_PRESETS } from "./clock/presets";
 import { KEYRACK_PRESETS } from "./keyrack/presets";
 import { PUZZLE_PRESETS } from "./puzzle/presets";
@@ -15,13 +17,14 @@ import { TABLENUM_PRESETS } from "./tablenum/presets";
 import { TROPHY_PRESETS } from "./trophy/presets";
 import { TOPPER_PRESETS } from "./topper/presets";
 import { PAPERBOX_PRESETS } from "./paperbox/presets";
-import { CALIBRATION_PRESETS } from "./calibration/presets";
 import type { GeneratorId } from "./ids";
 import type { GenPreset } from "./types";
 
 export const START_PRESETS: Record<GeneratorId, GenPreset<unknown>[]> = {
   keychain: KEYCHAIN_PRESETS as GenPreset<unknown>[],
   popup: POPUP_PRESETS as GenPreset<unknown>[],
+  charm: CHARM_PRESETS as GenPreset<unknown>[],
+  family: FAMILY_PRESETS as GenPreset<unknown>[],
   clock: CLOCK_PRESETS as GenPreset<unknown>[],
   puzzle: PUZZLE_PRESETS as GenPreset<unknown>[],
   qr: QR_PRESETS as GenPreset<unknown>[],
@@ -33,7 +36,6 @@ export const START_PRESETS: Record<GeneratorId, GenPreset<unknown>[]> = {
   trophy: TROPHY_PRESETS as GenPreset<unknown>[],
   shadowbox: [],
   paperbox: PAPERBOX_PRESETS as GenPreset<unknown>[],
-  calibration: CALIBRATION_PRESETS as GenPreset<unknown>[],
 };
 
 export interface LazyStart {

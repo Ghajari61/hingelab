@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Box, Cake, Check, ChevronDown, Clock, Hash, KeyRound, Layers, Package, Puzzle, QrCode, Ruler, Signpost, SquareStack, Trophy, Type } from "lucide-react";
+import { Box, Cake, Check, ChevronDown, Clock, Hash, KeyRound, Layers, Package, Puzzle, QrCode, Ruler, Shapes, Signpost, SquareStack, Tag, Trophy, Type } from "lucide-react";
 import type { Params } from "@/lib/hinge";
 import { DEFAULTS } from "@/lib/hinge/defaults";
 import { HINGE_VARIANTS, hingeVariantOf, type HingeVariant } from "@/lib/hinge/presets";
@@ -16,7 +16,7 @@ export type Opt = { v: string; text: string; title?: string; icon?: ReactNode; o
 export type CoreProduct = "hinge" | "letters" | "parametric";
 export type Product = CoreProduct | GeneratorId;
 export const CORE_PRODUCTS: CoreProduct[] = ["hinge", "letters", "parametric"];
-export const ALL_PRODUCTS: Product[] = [...CORE_PRODUCTS, ...GENERATOR_IDS.filter(id => id !== "calibration")];
+export const ALL_PRODUCTS: Product[] = [...CORE_PRODUCTS, ...GENERATOR_IDS];
 
 const GEN_ICON: Record<GeneratorInfo["icon"], ReactNode> = {
   clock: <Clock size={16} aria-hidden />,
@@ -29,7 +29,9 @@ const GEN_ICON: Record<GeneratorInfo["icon"], ReactNode> = {
   hash: <Hash size={16} aria-hidden />,
   trophy: <Trophy size={16} aria-hidden />,
   layers: <SquareStack size={16} aria-hidden />,
-  ruler: <Ruler size={16} aria-hidden />,};
+  ruler: <Ruler size={16} aria-hidden />,
+  tag: <Tag size={16} aria-hidden />,
+};
 
 export const PRODUCT_INFO: Record<Product, { name: string; icon: ReactNode }> = {
   hinge: { name: "Hinge Box", icon: <Package size={16} aria-hidden /> },
@@ -42,11 +44,10 @@ export const PRODUCT_INFO: Record<Product, { name: string; icon: ReactNode }> = 
 export const PRODUCT_PICTURE: Record<Product, string> = {
   hinge: "/presets/hinge/gift-box.svg", letters: "/presets/letters/hello-sign.svg", parametric: "/presets/parametric/head-stack.svg",
   shadowbox: "/presets/shadowbox/star-tunnel.svg", boxes: "/presets/boxes/small-box.svg", paperbox: "/presets/paperbox/jewelry-6x6x3.svg",
-  sign: "/presets/sign/welcome-arch.svg", topper: "/presets/topper/happy-birthday.svg", popup: "/presets/popup/spiral-trivet-bowl.svg",
+  sign: "/presets/sign/welcome-arch.svg", topper: "/presets/topper/happy-birthday.svg", popup: "/presets/popup/spiral-trivet-bowl.svg", charm: "/presets/charm/family-baubles.svg", family: "/presets/family/family-crossword.svg",
   clock: "/presets/clock/wall-roman.svg", puzzle: "/presets/puzzle/kids-12.svg", qr: "/presets/qr/keychain.svg",
   keyrack: "/presets/keyrack/home-sweet-home.svg", tablenum: "/presets/tablenum/wedding-arch.svg", trophy: "/presets/trophy/star-award.svg",
   keychain: "/presets/keychain/name-rounded.svg",
-  calibration: "/presets/calibration/plywood-3.svg",
 };
 
 const CORE_BLURB: Record<CoreProduct, string> = {

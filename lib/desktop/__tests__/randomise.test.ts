@@ -9,10 +9,10 @@ describe("desktop Randomise", () => {
   it("marks the settings Randomise may change, and seeds with their own dice", async () => {
     const c = await desktopCatalog();
     const fields = (id: string) => c.products.find((p) => p.id === id)!.sections.flatMap((s) => s.fields);
-    // The product menu now offers Keychain in place of the legacy calibration tool.
-    expect(c.products.some(p => p.id === "calibration")).toBe(false);
+    // The product menu offers Keychain; the old Calibration tool is gone.
+    expect(c.products.some(p => (p.id as string) === "calibration")).toBe(false);
     expect(c.products.some(p => p.id === "keychain")).toBe(true);
-    for (const p of c.products.filter((x) => x.id !== "hinge" && x.id !== "calibration")) {
+    for (const p of c.products.filter((x) => x.id !== "hinge")) {
       expect(fields(p.id).some((f) => f.kind !== "text" && f.shuffle), p.id).toBe(true);
       expect(fields(p.id).some((f) => f.kind === "text" && "shuffle" in f), p.id).toBe(false);
     }

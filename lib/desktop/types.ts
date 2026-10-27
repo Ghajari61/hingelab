@@ -3,7 +3,7 @@
  * shipping anything from the server.
  */
 
-export type DesktopProductId = "hinge" | "keychain" | "clock" | "puzzle" | "qr" | "boxes" | "topper" | "keyrack" | "sign" | "tablenum" | "trophy" | "shadowbox" | "popup" | "paperbox" | "calibration" | "letters" | "parametric";
+export type DesktopProductId = "hinge" | "keychain" | "clock" | "puzzle" | "qr" | "boxes" | "topper" | "keyrack" | "sign" | "tablenum" | "trophy" | "shadowbox" | "popup" | "charm" | "family" | "paperbox" | "letters" | "parametric";
 /** Everything the workspace opens: the products, and "art", a drawing from the AI designer. */
 export type WorkspaceProductId = DesktopProductId | "art";
 export type DesktopPlan = "free" | "pro";
@@ -65,7 +65,7 @@ export interface DProduct {
   id: WorkspaceProductId;
   name: string;
   blurb: string;
-  icon: "box" | "clock" | "puzzle" | "qr" | "cake" | "key" | "sign" | "hash" | "trophy" | "layers" | "ruler" | "wand" | "type" | "shapes";
+  icon: "box" | "clock" | "puzzle" | "qr" | "cake" | "key" | "sign" | "hash" | "trophy" | "layers" | "ruler" | "tag" | "wand" | "type" | "shapes";
   sections: DSection[];
   presets: DPreset[];
   /** The whole design can be scaled (GenerateRequest.scale): the 3D gizmo's fallback. */

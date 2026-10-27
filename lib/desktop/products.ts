@@ -39,7 +39,7 @@ import type { DCatalog, D3Model, DesktopProductId, DField, DForm, DIssue, DPictu
 
 export const FONTS_BY_STYLE = FONT_CATEGORIES.flatMap((c) => BUNDLED_FONTS.filter((f) => f.category === c.id));
 
-const DESKTOP_GENERATORS: readonly GeneratorId[] = GENERATOR_IDS.filter(id => id !== "calibration");
+const DESKTOP_GENERATORS: readonly GeneratorId[] = GENERATOR_IDS;
 export const DESKTOP_PRODUCTS: DesktopProductId[] = ["hinge", ...DESKTOP_GENERATORS, "letters", "parametric"];
 export const CATALOG_VERSION = 1;
 

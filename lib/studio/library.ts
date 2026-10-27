@@ -1,7 +1,6 @@
 /**
  * Built-in sheet presets, material presets and machine profiles (spec §3, §5.8, §11.5).
- * Cut settings are starting points only; the Test & Calibration generator writes measured values
- * into the user's own copies.
+ * Cut settings are starting points only; measured values go into the user's own copies.
  */
 import { MATERIALS } from "@/lib/hinge/defaults";
 

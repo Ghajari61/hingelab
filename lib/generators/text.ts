@@ -25,6 +25,7 @@ export function makeTextFn(hb: HarfBuzz, fontOf: (id: string) => LoadedFont | nu
       width: bb.x1 - bb.x0,
       height: bb.y1 - bb.y0,
       missing: out.shaped.missing,
+      glyphs: out.glyphs.map((g) => g.contours.map((c) => c.map(([x, y]) => [x - cx, y - cy] as [number, number]))).filter((g) => g.length),
     };
     cache.set(key, shape);
     return shape;

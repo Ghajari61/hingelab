@@ -520,12 +520,17 @@ export const POPUP_PRESETS:PopupPreset[] = [
         "width": 140,
         "height": 140
       },
+      "rings": {
+        "center": 30,
+        "rim": 8,
+        "width": 6.5
+      },
       "support": {
         "kind": "cords"
       },
       "name": "Snowflake Bauble",
       "profile": {
-        "depth": 70
+        "depth": 60
       }
     }
   },
@@ -659,7 +664,7 @@ export const POPUP_PRESETS:PopupPreset[] = [
         "kind": "rings"
       },
       "rings": {
-        "center": 55
+        "center": 80
       },
       "extras": {
         "socket": "E27"
@@ -691,7 +696,7 @@ export const POPUP_PRESETS:PopupPreset[] = [
         "depth": 170
       },
       "rings": {
-        "center": 55
+        "center": 80
       },
       "extras": {
         "socket": "E27"
@@ -719,7 +724,7 @@ export const POPUP_PRESETS:PopupPreset[] = [
         "depth": 140
       },
       "rings": {
-        "center": 55
+        "center": 80
       },
       "extras": {
         "socket": "E27"
@@ -803,10 +808,21 @@ export const POPUP_PRESETS:PopupPreset[] = [
     "params": {
       "mode": "sleeve",
       "rings": {
-        "center": 70
+        "center": 70,
+        "width": 9
       },
       "profile": {
-        "kind": "vase"
+        "kind": "vase",
+        "depth": 150,
+        "belly": 0.5,
+        "neck": 0.2
+      },
+      "support": {
+        "kind": "ribs",
+        "ribs": 3
+      },
+      "extras": {
+        "sleeveDiameter": 55
       },
       "name": "Vase Sleeve"
     }
