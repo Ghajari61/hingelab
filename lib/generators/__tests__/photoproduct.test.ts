@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import {PHOTO_PRESETS} from "../photoproduct/presets";
 import { PHOTO_PRODUCT } from "../photoproduct";
 import { CTX } from "./ctx";
 import { arrangeGenerator, genSVG } from "../output";
@@ -6,7 +7,7 @@ import { pointInContour, bboxOf } from "../geom";
 
 describe("Photo to Product manufacturing geometry", () => {
   it("builds every example as finite, connected physical parts with millimetre SVGs", () => {
-    for (const preset of PHOTO_PRODUCT.presets) {
+    for (const preset of PHOTO_PRESETS) {
       const p=PHOTO_PRODUCT.merge(preset.params),out=PHOTO_PRODUCT.build(p,CTX);
       expect(out.error,preset.id).toBeUndefined();expect(out.parts.length).toBeGreaterThan(0);
       for(const part of out.parts){
@@ -72,10 +73,10 @@ describe("Photo to Product: engineering review", () => {
     expect(small.parts.find(x=>x.id==="lid")!.holes.length).toBeGreaterThan(2);
   });
   it("names the known measurement that is out of range instead of a generic error", () => {
-    expect(measurementProblem({width:20,depth:0,height:0,thickness:0})).toMatch(/width must be between 25 and 350/);
-    expect(measurementProblem({width:0,depth:0,height:0,thickness:8})).toMatch(/thickness/);
+    expect(measurementProblem({width:5,depth:0,height:0,thickness:0})).toMatch(/width must be between 10 and 3000/);
+    expect(measurementProblem({width:0,depth:0,height:0,thickness:40})).toMatch(/thickness/);
     expect(measurementProblem({width:120,depth:100,height:30,thickness:3})).toBeNull();
-    expect(PHOTO_PRODUCT.merge({measurements:{width:900,height:900,thickness:30}}).measurements).toMatchObject({width:350,height:100,thickness:6});
+    expect(PHOTO_PRODUCT.merge({measurements:{width:9000,height:9000,thickness:90}}).measurements).toMatchObject({width:3000,height:3000,thickness:30});
   });
   it("checks a reference photo once, not on every edit", () => {
     // a 64 x 64 white JPEG

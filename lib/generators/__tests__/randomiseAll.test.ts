@@ -22,7 +22,7 @@ function seeded(seed: number) {
 
 
 describe("Randomise design in every generator", () => {
-  for (const id of GENERATOR_IDS) {
+  for (const id of GENERATOR_IDS.filter(id => id !== "photoproduct")) {
     it(`${id}: offers style settings, keeps the text, and every new design builds`, async () => {
       const def = (await loadGenerator[id]()) as AnyGenerator;
       const fields = shuffleFields(def);

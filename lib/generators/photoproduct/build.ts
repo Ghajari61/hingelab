@@ -1,3 +1,4 @@
+import {buildGeneratedProduct} from "@/lib/photoproduct/generated";
 import { MATERIALS } from "@/lib/hinge/defaults";
 import { differenceShapes, makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { bboxOf, circle, ellipse, pointInContour, rect, regularPolygon, stadium, transform } from "../geom";
@@ -150,6 +151,11 @@ function heartBox(p:PhotoProductParams):GenOutput{
  return {parts,stats:[{label:"Footprint",value:`${W} × ${D} mm`},{label:"Closed height",value:`${H+3*T} mm`},{label:"Neutral perimeter",value:`${curveLength(closed(neutral)).toFixed(3)} mm`},{label:"Lid side clearance",value:`${p.box.clearance} mm`},...(p.box.lid==="honeycomb"&&cell<p.box.hex?[{label:"Honeycomb cells",value:`${cell} mm (reduced from ${p.box.hex} mm to fit)`}]:[])],assembly:["01. Cut the six labeled parts from the measured stock. Score and hinge cuts before outer profiles.","02. Test the slit pattern on a coupon of the actual plywood; bend behavior cannot be verified from a photo.","03. Dry-form both wall halves along the floor's scored neutral-path guide. The seams meet at the heart cleft and bottom tip.","04. Glue the walls to the floor and the rim above them. This is glue construction: there are no hidden tabs or press-fit joints.","05. Center the locating ring under the lid and glue it there. Its outer edge has the specified per-side clearance to the rim opening.","06. After curing, test the removable lid and gently sand if needed. Do not force plywood around the sharp seams."]};
 }
 export function buildPhotoProduct(p:PhotoProductParams,ctx:BuildContext):GenOutput{
+ if(p.recipe==="custom"){
+  if(!p.generated)return {parts:[],stats:[{label:"Photo to Product",value:"Upload photos to generate your model"}]};
+  const active={...p.generated,parts:p.generated.parts.filter(q=>!p.hiddenParts.includes(q.id))};
+  return buildGeneratedProduct(active,p.size,p.T,p.values,ctx);
+ }
  if(!Number.isFinite(p.T)||p.T<=0)return failed("Set a positive material thickness.");
  if(p.recipe==="paw")return pawProduct(p,ctx);
  if(p.recipe==="heartbox")return heartBox(p);

@@ -16,7 +16,7 @@ describe("public catalogue", () => {
   it("gives every card that opens a design a picture that exists", () => {
     for (const c of CATALOGUE) {
       if (c.slug === "photo-layers" || c.slug === "engrave-prep") { expect(c.picture).toBeNull(); continue; }
-      expect(c.picture, c.slug).toMatch(/^\/presets\/[a-z]+\/[a-z0-9-]+\.svg$/);
+      if(c.slug === "photoproduct")expect(c.picture).toBe("/art/photo-to-product.svg");else expect(c.picture, c.slug).toMatch(/^\/presets\/[a-z]+\/[a-z0-9-]+\.svg$/);
       expect(existsSync(join(process.cwd(), "public", c.picture!)), c.picture!).toBe(true);
     }
     for (const c of COLLECTIONS) expect(existsSync(join(process.cwd(), "public", c.picture ?? "-")), `${c.slug}: ${c.picture}`).toBe(true);

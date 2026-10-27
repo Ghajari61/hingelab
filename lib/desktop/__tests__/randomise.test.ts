@@ -13,7 +13,7 @@ describe("desktop Randomise", () => {
     expect(c.products.some(p => (p.id as string) === "calibration")).toBe(false);
     expect(c.products.some(p => p.id === "keychain")).toBe(true);
     for (const p of c.products.filter((x) => x.id !== "hinge")) {
-      expect(fields(p.id).some((f) => f.kind !== "text" && f.shuffle), p.id).toBe(true);
+      expect(fields(p.id).some((f) => f.kind !== "text" && f.shuffle), p.id).toBe(p.id !== "photoproduct");
       expect(fields(p.id).some((f) => f.kind === "text" && "shuffle" in f), p.id).toBe(false);
     }
     expect(fields("puzzle").some((f) => f.kind === "number" && f.random)).toBe(true);
