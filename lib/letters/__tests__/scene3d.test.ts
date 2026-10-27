@@ -9,6 +9,8 @@ import { WOOD, buildLetterScene, letterFlatParts } from "@/lib/letters/scene3d";
 import { arrangeLetters } from "@/lib/fit/letters";
 import { flatScene } from "@/lib/three/flat";
 import { assertFlatSurface } from "@/lib/three/__tests__/previewAssertions";
+import { assertFlatMatchesSVG } from '@/lib/three/__tests__/flatExportAssertions';
+import { exportLetterSVG } from '../export';
 
 function fixture(file: string, id: string, name: string): LoadedFont {
   const b = readFileSync(join(__dirname, "fonts", file));
@@ -38,7 +40,7 @@ describe("letters 3D preview scene", () => {
       const a = arrangeLetters(p, p.fontId === "vazirmatn" ? vazir : fredoka, hb);
       expect(a.lay).not.toBeNull();
       const scene = flatScene(letterFlatParts(a.lay!), p.T);
-      try { assertFlatSurface(scene.group); } finally { scene.dispose(); }
+      try { assertFlatSurface(scene.group); assertFlatMatchesSVG(scene.group, exportLetterSVG(a.lay!,a.params)); } finally { scene.dispose(); }
     }
   });
   it("lifts a lid without replacing its meshes and restores the assembled position", () => {

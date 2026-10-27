@@ -5,6 +5,7 @@
  */
 import * as THREE from "three";
 import type { Point } from "@/lib/hinge";
+import { flatArtwork } from './flatArtwork';
 
 export interface Scene3D {
   group: THREE.Group;
@@ -107,10 +108,12 @@ export function cutOverlay(d: string[], width: number, height: number, z: number
 }
 
 /** Parts lying flat as cut, `T` thick, hinge cuts drawn on them. */
-export function flatScene(parts: FlatPart[], T: number, cuts?: { d: string[]; width: number; height: number }): Scene3D {
+export function flatScene(parts: FlatPart[], T: number, cuts?: { d?: string[]; svg?: string; width: number; height: number }): Scene3D {
   const inner = new THREE.Group();
   for (const p of parts) if (p.outer.length > 2) inner.add(slab(p.outer, p.holes, 0, p.t ?? T, p.name));
-  const ov = cuts ? cutOverlay(cuts.d, cuts.width, cuts.height, T + 0.05) : null;
+  const ov = cuts?.d ? cutOverlay(cuts.d, cuts.width, cuts.height, T + 0.05) : null;
   if (ov) inner.add(ov);
-  return finishScene(inner);
+  const art = cuts?.svg ? flatArtwork(cuts.svg, parts, T, cuts.width, cuts.height) : null;
+  if (art) inner.add(art.group);
+  return { ...finishScene(inner), ready: art?.ready };
 }

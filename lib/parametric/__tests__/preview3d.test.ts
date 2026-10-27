@@ -5,16 +5,19 @@ import { mergeParametricParams } from '../defaults';
 import { flatPartsObject, partsObject, disposeTree } from '@/components/parametric/scene';
 import { assertFlatSurface } from '@/lib/three/__tests__/previewAssertions';
 import { manifold } from './helpers';
+import { layoutSheets } from '../sheetLayout';
+import { allSheetsSVG } from '../export';
+import { assertFlatMatchesSVG } from '@/lib/three/__tests__/flatExportAssertions';
 
 describe('parametric preview', () => {
  for (const method of ['parallel','stacked','waffle','radial','curveNormal','folded'] as const) it(`${method}: cut layout and reusable motion`, async () => {
   const p=mergeParametricParams({method,source:{kind:'library',id:'sphere',detail:6}});
   const r=computeParametric(p,await loadSource(p),await manifold());
-  let y=0;
-  const offsets=r.sheets.map(s=>{const at={x:0,y};y+=s.height+40;return at});
-  const flat=flatPartsObject(r,p.material.T,offsets), assembled=partsObject(r,p.material.T,0,'wood',false);
+  const offsets=layoutSheets(r.sheets).rects;
+  const flat=flatPartsObject(r,p.material.T,offsets,p), assembled=partsObject(r,p.material.T,0,'wood',false);
   try {
    assertFlatSurface(flat);
+   assertFlatMatchesSVG(flat,allSheetsSVG(r,p));
    const geometry:THREE.BufferGeometry[]=[];
    expect(assembled.children.some(o=>o instanceof THREE.LineSegments),'the shared viewport owns edge overlays').toBe(false);
    assembled.traverse(o=>{if(o instanceof THREE.Mesh)geometry.push(o.geometry)});

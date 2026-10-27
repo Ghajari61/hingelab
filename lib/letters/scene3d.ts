@@ -12,6 +12,8 @@ import type { Layout } from "@/lib/hinge";
 import type { LetterPart } from "./types";
 import type { FlatPart } from "@/lib/three/flat";
 import { unionShapes } from "./polygon";
+import { outlinePath } from '@/lib/hinge/wall';
+import { flattenPath } from '@/lib/export/dxf';
 
 export const WOOD = { base: "#c99a63", lid: "#ddb27c", lip: "#b88a55", wall: "#d5a76f", piece: "#e6c08e" } as const;
 
@@ -28,7 +30,8 @@ export function letterFlatParts(lay: Layout<LetterPart>): FlatPart[] {
     const outer = pt.kind === "solid" || pt.kind === "plate" ? pt.outer : pt.outline;
     const holes = pt.kind === "solid" ? pt.holes : pt.kind === "plate" ? [...pt.holes, ...pt.slots] : [];
     const move = (c: Contour) => c.map(([x, y]) => [x + ox, y + oy] as [number, number]);
-    return unionShapes([outer, ...holes], [], true).map(s => ({ name: pt.name, outer: move(s.outer), holes: s.holes.map(move) }));
+    const cutOuter = pt.kind === 'strip' ? flattenPath(outlinePath(pt, ox, oy))[0].pts : move(outer);
+    return unionShapes([cutOuter, ...holes.map(move)], [], true).map(s => ({ name: pt.name, outer: s.outer, holes: s.holes }));
   });
 }
 

@@ -346,8 +346,10 @@ export function genSVG<P extends GenBase>(def: GeneratorDef<P>, p: P, lay: Layou
   s += `<!-- ${xmlCommentText(esc(note))} -->\n`;
   const tagOf = lay.items.map((it) => {
     if (!sheets?.length) return "";
-    const si = sheets.findIndex((r) => it.oy + it.pt.bbox.y0 >= r.y - 1e-6 && it.oy + it.pt.bbox.y0 <= r.y + r.h + 1e-6);
-    return ` data-part="${esc(it.pt.src.id)}"${si >= 0 ? ` data-sheet="${si + 1}"` : ""}`;
+    const x = it.ox + it.pt.bbox.x0, y = it.oy + it.pt.bbox.y0;
+    const si = sheets.findIndex(r => x >= r.x - 1e-6 && x <= r.x + r.w + 1e-6 && y >= r.y - 1e-6 && y <= r.y + r.h + 1e-6);
+    const id = it.pt.id === 'calibration' ? `calibration-${si + 1}` : it.pt.id;
+    return ` data-part="${esc(id)}"${si >= 0 ? ` data-sheet="${si + 1}"` : ""}`;
   });
   const layer = (key: LayerKey, paths: string[], fill: boolean, own: number[] = []) => {
     if (!p.layers[key].exp || !paths.length) return;

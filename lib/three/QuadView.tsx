@@ -231,6 +231,7 @@ const rebuilt = (m: QuadModel) => (m as { rebuilds?: boolean }).rebuilds === tru
 
 function paintShade(root: THREE.Object3D, shade: Shade3D) {
   for (const mesh of meshesOf(root)) {
+    if (mesh.userData.noMeasure) continue;
     let edges = mesh.getObjectByName("__edges") as THREE.LineSegments | undefined;
     if (shade === "edges" && !edges) {
       edges = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, 28), new THREE.LineBasicMaterial({ color: 0x1d1d1d, transparent: true, opacity: 0.55 }));

@@ -1,4 +1,4 @@
-import type { ExportLayer, LayerContent, Layers, Layout, Model, Params, Point } from "./types";
+import type { ExportLayer, LayerContent, Layers, Layout, Model, Params, Point, Part } from "./types";
 import { roundedPath, roundedPointsXY } from "./core";
 import { polyD } from "./polygon";
 import { colSegments, hingeCutPaths } from "./hinge";
@@ -24,6 +24,12 @@ function marks(L: LayerContent, pt: { engrave?: Point[][]; score?: Point[][] }, 
   for (const s of pt.score ?? []) (L.score ??= []).push(polyD(s, ox, oy));
 }
 
+/** The compensated outline shared with the flat 3D preview (including directional kerf). */
+export function partOutlineD(pt: Part, ox = 0, oy = 0): string {
+  if (pt.kind === 'wall') return outlinePath(pt, ox, oy);
+  return pt.pts ? polyD(pt.pts, ox, oy) : pt.ek ? polyD(roundedPointsXY(pt.edges, pt.r, pt.ek[0], pt.ek[1]), ox, oy) : roundedPath(pt.edges, pt.r, ox, oy);
+}
+
 /**
  * Path and label data in sheet coordinates, shared by the canvas and the SVG exporter. `ctx` shapes
  * the text under the box; without it (fonts still loading) the text is left out.
@@ -33,7 +39,7 @@ export function layerContent(model: Model, lay: Layout, p: Params, ctx?: BuildCo
   for (const it of lay.items) {
     const pt = it.pt, ox = it.ox, oy = it.oy;
     if (pt.kind === "wall") {
-      const d = outlinePath(pt, ox, oy);
+      const d = partOutlineD(pt, ox, oy);
       L.outline.push(d); L.fills.push(d);
       const lp = pt.lattice ? { ...p, ...pt.lattice } : p;
       for (const c of pt.cols) L.hinge.push(...hingeCutPaths(c.x, colSegments(c.kind, pt.hs ?? model.hs, pt.hBody, lp.bridge), pt.hBody, lp, ox, oy));
@@ -41,7 +47,7 @@ export function layerContent(model: Model, lay: Layout, p: Params, ctx?: BuildCo
       marks(L, pt, ox, oy);
       if (pt.label) L.labels.push({ x: pt.label.x + ox, y: pt.label.y + oy, text: pt.name, size: pt.label.vertical ? clamp(pt.hBody / 11, 2.5, 5) : clamp(pt.hBody / 7, 3, 7), rot: pt.label.vertical ? -90 : 0 });
     } else {
-      const d = pt.pts ? polyD(pt.pts, ox, oy) : pt.ek ? polyD(roundedPointsXY(pt.edges, pt.r, pt.ek[0], pt.ek[1]), ox, oy) : roundedPath(pt.edges, pt.r, ox, oy);
+      const d = partOutlineD(pt, ox, oy);
       L.outline.push(d); L.fills.push(d);
       for (const s of pt.slots) L.slots.push(polyD(s, ox, oy));
       for (const s of pt.hinge ?? []) L.hinge.push(polyD(s, ox, oy));

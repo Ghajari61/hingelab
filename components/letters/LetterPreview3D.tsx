@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { LayerContent, Layout } from "@/lib/hinge";
+import type { Layout } from "@/lib/hinge";
 import type { LetterModel, LetterParams, LetterPart } from "@/lib/letters";
 import { buildLetterScene, letterFlatParts, WOOD } from "@/lib/letters/scene3d";
 import { flatScene } from "@/lib/three/flat";
+import { exportLetterSVG } from '@/lib/letters/export';
 import { lookOf } from "@/lib/three/looks";
 import { letterGrips } from "@/lib/letters/grips";
 import { useEditorPrefs } from "@/lib/prefs/editorStore";
@@ -24,8 +25,8 @@ function tintLetters(group: { traverse: (f: (o: { name: string; userData: Record
 }
 
 /** The assembled letters (or their parts lying flat) in the shared 3D workspace; with `edit`, a selected part shows handles. */
-export default function LetterPreview3D({ model, params, lay, content, units, edit }: {
-  model: LetterModel | null; params: LetterParams; lay: Layout<LetterPart> | null; content: LayerContent | null; units: Units;
+export default function LetterPreview3D({ model, params, lay, units, edit }: {
+  model: LetterModel | null; params: LetterParams; lay: Layout<LetterPart> | null; units: Units;
   edit?: { params: LetterParams; set: (p: LetterParams, record: boolean) => void };
 }) {
   const v = useView3D();
@@ -36,11 +37,11 @@ export default function LetterPreview3D({ model, params, lay, content, units, ed
   const lid = params.mode === "box" && params.lid !== "open";
   const scene = useMemo(() => {
     if (!model) return null;
-    if (flat && lay) return flatScene(letterFlatParts(lay), params.T, content && params.mode === "box" && params.wallStyle === "hinge" ? { d: content.hinge, width: lay.width, height: lay.height } : undefined);
+    if (flat && lay) return flatScene(letterFlatParts(lay), params.T, { svg: exportLetterSVG(lay, params), width: lay.width, height: lay.height });
     const sc = buildLetterScene(model, params, 0);
     tintLetters(sc.group as never);
     return sc;
-  }, [model, params, flat, lay, content]);
+  }, [model, params, flat, lay]);
   const key = flat && lay ? `flat|${Math.round(lay.width)}x${Math.round(lay.height)}` : `${params.text}|${params.mode}|${params.fontId}|${Math.round(params.size)}`;
   return (
     <QuadView

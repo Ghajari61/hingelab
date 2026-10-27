@@ -79,7 +79,7 @@ export function makeExport(svg: string, sheets: Rect[] | null | undefined, s: Ex
     if (skipped && s.format === "lbrn2") notes.push("Text and pictures are not in the LightBurn file: import the SVG into LightBurn for those.");
     if (set && mat) notes.push(`Your laser settings for “${mat.name}” are in the LightBurn file. Check them in LightBurn before you cut.`);
   }
-  if (!split && rects.length > 1 && s.format !== "pdf") notes.push(`The ${rects.length} sheets are stacked in one file. Choose One file per sheet to cut them one at a time.`);
+  if (!split && rects.length > 1 && s.format !== "pdf") notes.push(`The ${rects.length} sheets are arranged in one file. Choose One file per sheet to cut them one at a time.`);
   if (files.length === 1) return { file: files[0], count: 1, notes };
   const zip: Record<string, Uint8Array> = {};
   for (const fl of files) zip[fl.name] = typeof fl.data === "string" ? strToU8(fl.data) : fl.data;

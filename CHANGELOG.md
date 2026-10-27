@@ -1,3 +1,10 @@
+## 1.24.1 — SVG and Lay Flat parity
+
+- Combined Parametric SVGs, the cutting canvas, Lay Flat and per-sheet exports now share one sheet grid and millimetre coordinates. Calibration bars are included in 3D, and fractional placements are rounded consistently for single and combined files.
+- Lay Flat displays the actual exported score paths, engraving, images and part labels, including mixed material thicknesses. Export switches control the displayed operations; textures are released when changing designs.
+- Hinge Box and Letter walls use the exported curved notch outlines. Hinge plates also respect directional kerf. Repeated generator parts retain unique copy IDs and correct sheet IDs in SVG metadata.
+- Added cut-file readback comparisons of closed regions, openings, dimensions and spacing across all 572 generator defaults/presets, Hinge presets, Latin/Persian letter modes and six Parametric methods. Also checked numbering, mirroring, nesting, calibration and split-sheet exports. These are digital geometry checks, not physical laser calibration.
+
 ## 1.24.0 — Consistent Lay Flat and smoother 3D previews
 
 - Parametric now has Assembled / Lay flat views. Flat parts use the same cut contours, rotations and separated sheet positions as the cutting canvas, including nested islands and internal cuts.

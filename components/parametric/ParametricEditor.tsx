@@ -14,7 +14,7 @@ import { toSheet } from "@/lib/parametric/nest";
 import { formatOf } from "@/lib/parametric/source/mesh";
 import { packOutline } from "@/lib/parametric/source/outlineBytes";
 import { packDepth, unpackDepth } from "@/lib/parametric/source/relief";
-import type { MeshData, ParametricParams, Sheet, SliceResult } from "@/lib/parametric/types";
+import type { MeshData, ParametricParams, SliceResult } from "@/lib/parametric/types";
 import { syncShapes } from "@/lib/parametric/shapes";
 import { clone } from "@/lib/hinge";
 import { hasPro, parametricLock, parametricLocks } from "@/lib/plans";
@@ -64,7 +64,7 @@ const Viewport3D = clientOnly(() => import("./Viewport3D"), { loading: () => <di
 import { parametricGrips } from "./grips";
 import type { DesignTab } from "./DesignStudio";
 import type { Finish } from "@/lib/parametric/presets";
-import { SHEET_SPACING } from "@/lib/fit/arrange";
+import { layoutSheets } from "@/lib/parametric/sheetLayout";
 
 const ExportDialog = lazy(() => import("@/components/shell/ExportDialog"));
 const ShareDialog = lazy(() => import("@/components/shell/ShareDialog"));
@@ -79,31 +79,12 @@ const readFinish = (): Finish => {
 const KEY = "hingelab-parametric-v1";
 const MAX_MODEL_BYTES = 100 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 30 * 1024 * 1024;
-const SHEET_GAP = 40;
 
 function loadInitial(cloud: CloudDoc | null) {
   const stored = readStored<ParametricParams>(KEY);
   const units = (stored?.units === "in" ? "in" : "mm") as Units;
   if (cloud) return { params: mergeParametricParams(cloud.params as Partial<ParametricParams>), units };
   return { params: mergeParametricParams(stored?.params), units };
-}
-
-/** Sheets in rows, left to right, `SHEET_GAP` mm apart. */
-function layoutSheets(sheets: Sheet[]) {
-  const cols = Math.max(1, Math.ceil(Math.sqrt(sheets.length)));
-  const rects: { x: number; y: number; w: number; h: number }[] = [];
-  let y = 0, W = 0;
-  for (let r = 0; r * cols < sheets.length; r++) {
-    let x = 0, rowH = 0;
-    for (const s of sheets.slice(r * cols, (r + 1) * cols)) {
-      rects.push({ x, y, w: s.width, h: s.height });
-      x += s.width + SHEET_GAP;
-      rowH = Math.max(rowH, s.height);
-    }
-    W = Math.max(W, x - SHEET_GAP);
-    y += rowH + SHEET_GAP;
-  }
-  return { rects, W, H: Math.max(0, y - SHEET_GAP) };
 }
 
 export default function ParametricEditor({ onProduct, onHome, start, cloud = null }: {
@@ -414,11 +395,6 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
     if (!out) return null;
     return typeof out.data === "string" ? out.data : new TextDecoder().decode(out.data);
   }
-  /** Where each sheet is in the all-sheets SVG: stacked top to bottom. */
-  const stacked = useMemo(() => {
-    let y = 0;
-    return (result?.sheets ?? []).map((sh) => { const r = { x: 0, y, w: sh.width, h: sh.height }; y += sh.height + SHEET_SPACING; return r; });
-  }, [result]);
   function exportZipNow() { void exportWith({ kind: "zip" }, `${base()}.zip`, "application/zip", () => exportZip(result!, params)); }
   /** The assembled piece as a GLB model: Pro, like every export, and built here. */
   async function exportGLBNow() {
@@ -726,7 +702,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
           <div className="stage-chip"><span className="pe-stage">{busy || depthBusy ? (stage ?? "Slicing…") : res ? `${result!.stats.partCount} parts · ${Math.round(res.ms)} ms` : ""}</span>
             {(busy || depthBusy) && <span className="pe-progress" aria-hidden />}</div>
           <div className="pe-3d stage-3d" hidden={tab !== "3d"}>
-              <Viewport3D className="pe-view" mesh={result && !result.usesModel ? null : mesh} result={result} T={params.material.T} show={show} explode={exploded} finish={finish} selected={selected} onSelect={(id) => setSelected(id ? [id] : [])} heat={showHeat && !!result?.deviation} v={v3} units={units} sheetPositions={layout.rects} grips={selected.length && !exploded ? parametricGrips(params, edit, units) : undefined} />
+              <Viewport3D className="pe-view" mesh={result && !result.usesModel ? null : mesh} result={result} T={params.material.T} show={show} explode={exploded} finish={finish} selected={selected} onSelect={(id) => setSelected(id ? [id] : [])} heat={showHeat && !!result?.deviation} v={v3} units={units} sheetPositions={layout.rects} cutParams={params} grips={selected.length && !exploded ? parametricGrips(params, edit, units) : undefined} />
               {showHeat && !v3.flat && result?.deviation && (
                 <div className="pe-legend" data-testid="deviation-legend">
                   <span>0</span>
@@ -836,8 +812,8 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
       {exporting && (
         <Suspense fallback={null}>
           <ExportDialog
-            getSVG={exportedAllSVG} localSVG={() => (result ? allSheetsSVG(result, params) : null)} sheets={stacked}
-            size={{ w: Math.max(0, ...stacked.map((r) => r.w)), h: stacked.length ? stacked[stacked.length - 1].y + stacked[stacked.length - 1].h : 0 }}
+            getSVG={exportedAllSVG} localSVG={() => (result ? allSheetsSVG(result, params) : null)} sheets={layout.rects}
+            size={{ w: layout.W, h: layout.H }}
             base={base()} units={units} material={params.material.id} thickness={params.material.T} onClose={() => setExporting(false)} toast={toastMsg}
           />
         </Suspense>

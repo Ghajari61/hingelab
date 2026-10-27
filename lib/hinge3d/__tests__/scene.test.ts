@@ -6,6 +6,8 @@ import { applyLook, lookOf } from "@/lib/three/looks";
 import { HINGE_PRESETS, hingePresetParams } from "@/lib/hinge/presets";
 import { arrangeHinge } from "@/lib/fit/hinge";
 import { assertFlatSurface } from "@/lib/three/__tests__/previewAssertions";
+import { assertFlatMatchesSVG } from '@/lib/three/__tests__/flatExportAssertions';
+import { exportSVG } from '@/lib/hinge/export';
 
 const build = (x: Partial<Params>) => {
   const p = mergeParams(x);
@@ -25,7 +27,7 @@ describe("Hinge Box 3D scene", () => {
       const p = hingePresetParams(pr.params), a = arrangeHinge(p);
       expect(a.lay, pr.id).not.toBeNull();
       const scene = hingeFlatScene(a.lay!, null, a.params);
-      try { assertFlatSurface(scene.group); } finally { scene.dispose(); }
+      try { assertFlatSurface(scene.group); if (!('error' in a.result)) assertFlatMatchesSVG(scene.group, exportSVG(a.result,a.lay!,a.params)); } finally { scene.dispose(); }
     }
   }, 120000);
   it("stands as tall as the box and as wide as its plates, for every shape and lid", () => {

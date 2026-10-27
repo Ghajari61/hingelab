@@ -5,7 +5,7 @@
 import { strToU8, zipSync } from "fflate";
 import { EXPORT_LAYERS, r3, type LayerContent, type Layers } from "@/lib/hinge";
 import { signedArea } from "@/lib/letters/polygon";
-import { SHEET_SPACING } from "@/lib/fit/arrange";
+import { layoutSheets, SHEET_GAP } from './sheetLayout';
 import { calibrationBar } from "@/lib/fit/calibration";
 import { xmlCommentText } from "@/lib/security/svg";
 import { addWatermark } from "@/lib/plans";
@@ -28,12 +28,15 @@ export interface SheetPaths {
 }
 
 /** Paths of one sheet in sheet mm, by layer. Outer contours go to the outline layer, holes and slots to inner cuts. */
-export function sheetPaths(sheet: Sheet, parts: Map<string, Part>, K = 0): SheetPaths {
+export function sheetPaths(sheet: Sheet, parts: Map<string, Part>, K = 0, origin = { x: 0, y: 0 }): SheetPaths {
   const out: SheetPaths = { outline: [], inner: [], engrave: [], score: [], fills: [] };
+  // Round in sheet coordinates first, so individual sheets and a combined file have identical
+  // toolpaths even when a placement or an oversized sheet has fractional dimensions.
+  const place = ([x, y]: Point): Point => [r3(x) + origin.x, r3(y) + origin.y];
   for (const it of sheet.items) {
     const part = parts.get(it.partId);
     if (!part?.cut) continue;
-    const tf = (c: Contour) => c.map(q => toSheet(q, it));
+    const tf = (c: Contour) => c.map(q => place(toSheet(q, it)));
     const outers = part.cut.outline.filter(c => signedArea(c) > 0).map(tf);
     const holes = part.cut.outline.filter(c => signedArea(c) <= 0).map(tf);
     out.outline.push(...outers.map(closedD));
@@ -45,16 +48,15 @@ export function sheetPaths(sheet: Sheet, parts: Map<string, Part>, K = 0): Sheet
   if (sheet.calibration) {
     const { x, y, w } = sheet.calibration;
     const bar = calibrationBar(x, y, w, K);
-    out.outline.push(...bar.cut.map(closedD));
-    out.score.push(...bar.score.map(openD));
+    out.outline.push(...bar.cut.map(c => closedD(c.map(place))));
+    out.score.push(...bar.score.map(c => openD(c.map(place))));
   }
   return out;
 }
 
 /** Sheet paths in the shared LayerContent shape, for the editor canvas (engrave and score go to `hinge`, drawn as hairlines). */
 export function sheetLayerContent(sheet: Sheet, parts: Map<string, Part>, ox: number, oy: number, K = 0): LayerContent {
-  const cal = sheet.calibration && { ...sheet.calibration, x: sheet.calibration.x + ox, y: sheet.calibration.y + oy };
-  const s = sheetPaths({ ...sheet, calibration: cal, items: sheet.items.map(it => ({ ...it, x: it.x + ox, y: it.y + oy })) }, parts, K);
+  const s = sheetPaths(sheet, parts, K, { x: ox, y: oy });
   return { outline: s.outline, slots: s.inner, hinge: [...s.engrave, ...s.score], labels: [], fills: s.fills };
 }
 
@@ -70,24 +72,20 @@ export function sheetSVG(result: SliceResult, sheetIndex: number, p: ParametricP
 }
 
 /**
- * Every sheet in one layered SVG, stacked top to bottom with a gap as on the canvas (the main
+ * Every sheet in one layered SVG, in the same grid as the canvas and Lay Flat (the main
  * export; the ZIP and single sheets are extras).
  */
 export function allSheetsSVG(result: SliceResult, p: ParametricParams, opts: { watermark?: boolean } = {}): string {
   const parts = new Map(result.parts.map(q => [q.id, q]));
   const S: SheetPaths = { outline: [], inner: [], engrave: [], score: [], fills: [] };
-  let y = 0, W = 0;
-  for (const sh of result.sheets) {
-    const cal = sh.calibration && { ...sh.calibration, y: sh.calibration.y + y };
-    const one = sheetPaths({ ...sh, calibration: cal, items: sh.items.map(it => ({ ...it, y: it.y + y })) }, parts, p.material.K);
+  const { rects, W, H } = layoutSheets(result.sheets);
+  for (const [i, sh] of result.sheets.entries()) {
+    const one = sheetPaths(sh, parts, p.material.K, rects[i]);
     for (const k of ["outline", "inner", "engrave", "score", "fills"] as const) S[k].push(...one[k]);
-    W = Math.max(W, sh.width);
-    y += sh.height + SHEET_SPACING;
   }
-  const H = Math.max(0, y - SHEET_SPACING);
   const n = result.sheets.length;
   const sizes = result.sheets.map(sh => `${r3(sh.width)} × ${r3(sh.height)}${sh.oversize ? " (OVERSIZE)" : ""}`).join(", ");
-  const comment = `HingeLab Parametric: ${p.name}, ${n} sheet${n === 1 ? "" : "s"} stacked top to bottom ${SHEET_SPACING} mm apart (${sizes} mm). Material ${p.material.T} mm, kerf ${p.material.K} mm (compensated). Parts: ${result.parts.map(q => q.id).join(", ")}. Cut order: inner cuts, ${S.score.length ? "score, " : ""}engrave, outline.`;
+  const comment = `HingeLab Parametric: ${p.name}, ${n} sheet${n === 1 ? "" : "s"} in rows ${SHEET_GAP} mm apart (${sizes} mm), matching Lay Flat. Material ${p.material.T} mm, kerf ${p.material.K} mm (compensated). Parts: ${result.parts.map(q => q.id).join(", ")}. Cut order: inner cuts, ${S.score.length ? "score, " : ""}engrave, outline.`;
   return layeredSVG(W, H, comment, S, p, opts);
 }
 
