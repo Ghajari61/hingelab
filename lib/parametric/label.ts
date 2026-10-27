@@ -102,10 +102,26 @@ export function wallArrow(x: number, y: number, len: number): Contour[] {
 /** Whether the rectangle lies inside the shape (sampled every 1 mm). */
 export function rectInside(s: Shape, x0: number, y0: number, x1: number, y1: number) {
   const nx = Math.max(2, Math.ceil((x1 - x0) / 1)), ny = Math.max(2, Math.ceil((y1 - y0) / 1));
+  // Only the holes whose boxes meet the rectangle can hold a sample: a pop-up blank has dozens of
+  // long ring slots, and testing every one at every sample made labelling take half a minute.
+  const boxes = holeBoxes(s);
+  const local: Shape = { ...s, holes: s.holes.filter((_, k) => { const b = boxes[k]; return b[2] >= x0 && b[0] <= x1 && b[3] >= y0 && b[1] <= y1; }) };
+  // a hole whose outline runs through the rectangle rules it out at once, without sampling
+  for (const h of local.holes) for (const [x, y] of h) if (x > x0 && x < x1 && y > y0 && y < y1) return false;
   for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {
-    if (!pointInShape([x0 + ((x1 - x0) * i) / nx, y0 + ((y1 - y0) * j) / ny], s)) return false;
+    if (!pointInShape([x0 + ((x1 - x0) * i) / nx, y0 + ((y1 - y0) * j) / ny], local)) return false;
   }
   return true;
+}
+
+const HOLE_BOXES = new WeakMap<Shape, [number, number, number, number][]>();
+function holeBoxes(s: Shape) {
+  let b = HOLE_BOXES.get(s);
+  if (!b) {
+    b = s.holes.map(h => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of h) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } return [x0, y0, x1, y1] as [number, number, number, number]; });
+    HOLE_BOXES.set(s, b);
+  }
+  return b;
 }
 
 /**

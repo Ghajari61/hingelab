@@ -25,7 +25,10 @@ export function isImageDataURL(s: unknown): s is string {
 }
 
 /** Anything that can run script or load a resource inside inline SVG. */
-const ACTIVE = /<\s*\/?\s*(?:script|foreignobject|iframe|object|embed|image|use|a|animate\w*|set|style|link|meta|base|feimage)\b|\son[a-z]+\s*=|javascript:|(?:xlink:)?href\s*=|url\s*\(\s*['"]?\s*(?!#)/i;
+// Element names may carry a namespace prefix (`<x:script>`), and HTML parsers accept `/` or a quote
+// before an attribute (`<svg/onload=…>`), so both are matched; doctypes and processing instructions
+// (entities, external stylesheets) are refused too.
+const ACTIVE = /<\s*\/?\s*(?:[\w.-]+:)?(?:script|foreignobject|iframe|object|embed|image|img|video|audio|source|use|a|animate\w*|set|style|link|meta|base|feimage|form|input)\b|[\s/"']on[a-z]+\s*=|javascript:|(?:[\w.-]+:)?href\s*=|url\s*\(\s*['"]?\s*(?!#)|<!(?!--)|<\?xml-stylesheet/i;
 
 /**
  * Markup HingeLab built from numbers (project thumbnails) right before it goes into innerHTML.

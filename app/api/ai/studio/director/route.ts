@@ -33,7 +33,9 @@ export async function POST(request: NextRequest) {
   try {
     return json(await directorTurn(parsed.data, userId, AbortSignal.any([request.signal, AbortSignal.timeout(80_000)])), 200, { "x-hingelab-plan": plan });
   } catch (e) {
-    await refundCredits(plan, userId, cost);
+    // A client that hangs up mid-job is not refunded: the provider has done (and billed) the work, and
+    // refunding aborts would let anyone run jobs without spending credits.
+    if (!request.signal.aborted) await refundCredits(plan, userId, cost);
     if (e instanceof StudioError) return json({ error: e.message }, e.status);
     console.error("ai studio director failed", e);
     return json({ error: "The Creative Director could not answer. Try again." }, 500);

@@ -49,7 +49,7 @@ export function contentSecurityPolicy({ dev, https, preview, supabaseURL, depthM
     "style-src": "'self' 'unsafe-inline'",
     "font-src": "'self' data:",
     "img-src": `'self' data: blob: https://*.googleusercontent.com${toolbar} ${preview ? "https://vercel.com" : ""}`.trim(),
-    "connect-src": `'self' ${supabase} ${originOf(depthModelURL)} https://*.supabase.co wss://*.supabase.co https://huggingface.co https://*.huggingface.co https://*.hf.co${dev ? " ws: http://127.0.0.1:* http://localhost:*" : ""}${toolbar}`.replace(/\s+/g, " "),
+    "connect-src": `'self' ${supabase} ${originOf(depthModelURL)} https://huggingface.co https://*.huggingface.co https://*.hf.co${dev ? " ws: http://127.0.0.1:* http://localhost:*" : ""}${toolbar}`.replace(/\s+/g, " "),
     "worker-src": "'self' blob:",
     "frame-src": `'self'${toolbar}`,
     "frame-ancestors": "'self'",

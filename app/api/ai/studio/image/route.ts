@@ -40,7 +40,9 @@ export async function POST(request: NextRequest) {
   try {
     return json(await studioImage(d, userId, AbortSignal.any([request.signal, AbortSignal.timeout(110_000)]), undefined, plan), 200, { "x-hingelab-plan": plan });
   } catch (e) {
-    await refundCredits(plan, userId, cost);
+    // A client that hangs up mid-job is not refunded: the provider has done (and billed) the work, and
+    // refunding aborts would let anyone run jobs without spending credits.
+    if (!request.signal.aborted) await refundCredits(plan, userId, cost);
     if (e instanceof StudioError) return json({ error: e.message }, e.status);
     console.error("ai studio image failed", e);
     return json({ error: "The picture could not be made. Try again." }, 500);

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { serverFlags } from "@/lib/flags";
 import { cleanEntry, GALLERY_PAGE, type GalleryItem } from "@/lib/gallery";
 import { isShareProduct } from "@/lib/share";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getUser } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/types";
 
@@ -17,9 +18,13 @@ export async function publishDesignAction(raw: unknown): Promise<GalleryResult<{
   if ("error" in entry) return { ok: false, error: entry.error };
   const session = await getUser();
   if (!session) return { ok: false, error: "Sign in to publish to the gallery." };
-  const { data, error } = await session.supabase
+  // Published only through here, after the flag and `cleanEntry`: users have no insert policy of their
+  // own (migration 20261026000100), so the row goes in with the service role for the signed-in user.
+  let admin: ReturnType<typeof createAdminClient>;
+  try { admin = createAdminClient(); } catch { return { ok: false, error: "Could not publish the design. Try again." }; }
+  const { data, error } = await admin
     .from("gallery_designs")
-    .insert({ product: entry.product, name: entry.name, params: entry.params as Json, thumbnail: entry.thumb })
+    .insert({ user_id: session.user.id, product: entry.product, name: entry.name, params: entry.params as Json, thumbnail: entry.thumb })
     .select("id")
     .single();
   if (error || !data) return { ok: false, error: error?.code === "P0001" ? error.message : "Could not publish the design. Try again." };
