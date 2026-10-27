@@ -1,3 +1,11 @@
+## Unreleased — Photo to Product: engineering review
+
+- **Paw ornaments hold together at every size.** On larger paws, or with a narrow frame, neighbouring windows came within hundredths of a millimetre of each other, a web the laser would burn through. Every window now keeps the frame width from the others.
+- **Honeycomb lids are centred and symmetric**, and the smallest supported heart box (95 × 85 mm) gets smaller cells instead of an error, so an AI analysis of a small box no longer fails at the last step.
+- **Clear measurement messages:** a known width, depth, height or thickness outside its range now says which one and what range, instead of "Upload 1–5 normalized photos and valid dimensions".
+- **Lighter projects:** reference photos are kept at 1024 px (about 0.8 MB for five, was 1.9 MB of the browser's 5 MB local storage), and each photo is checked once instead of on every edit.
+- Switching between paw, heart box and tag no longer shows the previous product while a font loads.
+
 ## Unreleased — Release check: security and speed
 
 - **Security.** AI Studio no longer refunds a job the browser walked away from mid-answer, so credits can't be dodged; the SVG safety check refuses more tricks (prefixed script elements, `<svg/onload>`, embedded images and forms, doctypes); the laser-sheet SVG service answers as a download that can never run as a page; gallery posts go in only through the site, after its checks; the browser may talk only to HingeLab's own database server.

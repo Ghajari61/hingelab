@@ -1,6 +1,6 @@
 import { DEFAULTS, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
-import { AnalysisSchema, PhotoSchema, validatePhoto, type ProductAnalysis, type ProductPhoto } from "@/lib/photoproduct/contracts";
+import { AnalysisSchema, MEASUREMENT_RANGES, PhotoSchema, validatePhoto, type ProductAnalysis, type ProductPhoto } from "@/lib/photoproduct/contracts";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 export interface PhotoProductParams extends GenBase {
@@ -38,7 +38,7 @@ export function mergePhotoProduct(raw:unknown):PhotoProductParams{
  if(!["rounded","circle","heart","tag","hexagon","pill"].includes(p.tag.shape))p.tag.shape="rounded";
  p.tag.hole=n(p.tag.hole,5,2,10);
  p.references=(Array.isArray(p.references)?p.references:[]).slice(0,5).flatMap(ref=>{const q=PhotoSchema.safeParse(ref);return q.success&&!validatePhoto(q.data)?[q.data]:[];});
- for(const key of ["width","depth","height","thickness"] as const)p.measurements[key]=n(p.measurements[key],0,0,key==="thickness"?8:key==="height"?160:400);
+ for(const key of ["width","depth","height","thickness"] as const)p.measurements[key]=n(p.measurements[key],0,0,MEASUREMENT_RANGES[key][1]);
  const result=AnalysisSchema.safeParse(p.analysis.result);p.analysis.result=result.success?result.data:null;
  p.analysis.status=p.analysis.status==="ai"&&p.analysis.result?"ai":"example";p.analysis.baseline=p.analysis.baseline.slice(0,10_000);p.analysis.provider=p.analysis.provider.slice(0,80);p.note=p.note.slice(0,800);
  return p;

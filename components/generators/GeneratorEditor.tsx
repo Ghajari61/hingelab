@@ -224,10 +224,14 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const model = "error" in arranged.result ? null : arranged.result;
   const out = model?.out ?? null;
   const built = arranged.params as P;
-  const lastPhotoModel = useRef<{ out: GenOutput; T: number } | null>(null);
-  useEffect(() => { if (def.id === "photoproduct" && out && !out.error && !out.notice) lastPhotoModel.current = { out, T: built.T }; }, [def.id, out, built.T]);
-  const previewOut = def.id === "photoproduct" ? out ?? lastPhotoModel.current?.out ?? null : out;
-  const previewThickness = def.id === "photoproduct" && !out ? lastPhotoModel.current?.T ?? built.T : built.T;
+  // While a font loads the last model stays in view, but only one of the same recipe: switching from a
+  // heart box to a paw must not keep showing the box.
+  const recipe = (params as unknown as { recipe?: string }).recipe;
+  const lastPhotoModel = useRef<{ out: GenOutput; T: number; recipe?: string } | null>(null);
+  useEffect(() => { if (def.id === "photoproduct" && out && !out.error && !out.notice) lastPhotoModel.current = { out, T: built.T, recipe: (built as unknown as { recipe?: string }).recipe }; }, [def.id, out, built]);
+  const lastSame = lastPhotoModel.current?.recipe === recipe ? lastPhotoModel.current : null;
+  const previewOut = def.id === "photoproduct" ? out ?? lastSame?.out ?? null : out;
+  const previewThickness = def.id === "photoproduct" && !out ? lastSame?.T ?? built.T : built.T;
   const error = fontError ?? ("error" in arranged.result ? arranged.result.error : null);
   const lay = model ? arranged.lay : null;
   const [nominal, setNominal] = useState(false);

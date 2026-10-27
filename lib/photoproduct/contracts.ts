@@ -6,6 +6,13 @@ export const MAX_SOURCE_BYTES=12*1024*1024;
 export const PhotoSchema=z.object({id:z.string().regex(/^[\w-]{1,64}$/),name:z.string().min(1).max(120),data:z.string().max(MAX_PHOTO_CHARS),width:z.number().int().min(32).max(1600),height:z.number().int().min(32).max(1600),digest:z.string().regex(/^[a-f0-9]{64}$/)}).strict();
 export type ProductPhoto=z.infer<typeof PhotoSchema>;
 export const MeasurementsSchema=z.object({width:z.number().min(0).max(350).refine(v=>v===0||v>=25),depth:z.number().min(0).max(350).refine(v=>v===0||v>=25),height:z.number().min(0).max(100).refine(v=>v===0||v>=8),thickness:z.number().min(0).max(6).refine(v=>v===0||v>=1.5)}).strict();
+/** Accepted known measurements, mm (0 = unknown). The panel, the merge and the server share them. */
+export const MEASUREMENT_RANGES={width:[25,350],depth:[25,350],height:[8,100],thickness:[1.5,6]} as const;
+/** A plain message for the first known measurement outside its range, or null. */
+export function measurementProblem(m:{width:number;depth:number;height:number;thickness:number}):string|null{
+ for(const key of ["width","depth","height","thickness"] as const){const v=m[key],[lo,hi]=MEASUREMENT_RANGES[key];if(v&&(!Number.isFinite(v)||v<lo||v>hi))return `Known ${key} must be between ${lo} and ${hi} mm, or left empty.`;}
+ return null;
+}
 export const RequestSchema=z.object({photos:z.array(PhotoSchema).min(1).max(MAX_PHOTOS),note:z.string().max(800),measurements:MeasurementsSchema}).strict();
 export type PhotoAnalysisRequest=z.infer<typeof RequestSchema>;
 const explanation=z.string().max(240);
@@ -48,9 +55,22 @@ export function rasterSize(bytes:Uint8Array):{width:number;height:number;mime:st
 }
 export function photoBytes(data:string):{bytes:Uint8Array;mime:string}|null{
  const m=/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(data);if(!m||m[2].length%4!==0)return null;
- try{const binary=atob(m[2]);return {bytes:Uint8Array.from(binary,c=>c.charCodeAt(0)),mime:m[1]};}catch{return null;}
+ try{const binary=atob(m[2]),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return {bytes,mime:m[1]};}catch{return null;}
 }
+/**
+ * Settings are merged on every edit and each merge re-checks the reference photos: decoding up to
+ * five 400 KB data URLs each time froze the editor for seconds. A photo's check depends only on its
+ * data and stated size, so results are kept for the last few photos seen.
+ */
+const CHECKED=new Map<string,{width:number;height:number;result:string|null}>();
 export function validatePhoto(photo:ProductPhoto):string|null{
+ const hit=CHECKED.get(photo.data);
+ if(hit&&hit.width===photo.width&&hit.height===photo.height)return hit.result;
+ const result=checkPhoto(photo);
+ CHECKED.set(photo.data,{width:photo.width,height:photo.height,result});if(CHECKED.size>12)CHECKED.delete(CHECKED.keys().next().value!);
+ return result;
+}
+function checkPhoto(photo:ProductPhoto):string|null{
  const decoded=photoBytes(photo.data);if(!decoded)return "Use a JPEG, PNG or WebP photo.";
  const size=rasterSize(decoded.bytes);
  if(!size||size.mime!==decoded.mime||size.width!==photo.width||size.height!==photo.height)return "The photo header or dimensions are invalid.";
@@ -60,7 +80,8 @@ export function validatePhoto(photo:ProductPhoto):string|null{
 export function parsePhotoRequest(text:string):PhotoAnalysisRequest{
  if(text.length>MAX_PHOTO_BODY)throw Error("The photo set is too large.");
  let raw:unknown;try{raw=JSON.parse(text);}catch{throw Error("Send valid JSON.");}
- const checked=RequestSchema.safeParse(raw);if(!checked.success)throw Error("Upload 1–5 normalized photos and valid dimensions.");
+ const checked=RequestSchema.safeParse(raw);
+ if(!checked.success){const m=(raw as {measurements?:unknown})?.measurements;const problem=m&&typeof m==="object"?measurementProblem(m as {width:number;depth:number;height:number;thickness:number}):null;throw Error(problem??"Upload 1–5 normalized photos and valid dimensions.");}
  const ids=new Set<string>();for(const photo of checked.data.photos){const error=validatePhoto(photo);if(error)throw Error(error);if(ids.has(photo.id))throw Error("Each photo needs a unique identifier.");ids.add(photo.id);}
  return checked.data;
 }
