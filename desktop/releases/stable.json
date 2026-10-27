@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.16.1",
-    "pub_date": "2026-10-27T04:35:47.005Z",
-    "notes": "Template-free Photo to Product with direct editable 3D, generated part parameters, true assembled dimensions and optional SVG fabrication exports.",
+    "version": "1.17.0",
+    "pub_date": "2026-10-27T06:17:50.663Z",
+    "notes": "Photo to Product compares actual model views with your photos, supports changing rib profiles, and engineers matching tab/slot and half-lap joints from real contacts and stock thickness. Editable clearance and assembly reports update 3D and SVG together. Unresolved connections remain marked for review.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.16.1_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm1vdElmZHZ2S3ErNEptVFR5MldoQTVpS3NINlhrRWFCTWFSTkRTQ0pvTHRxV3orSzN5bEFvWm1qN3BTZnN5dEROOEUyMFVITjAzUUE0bkdkZlkrRlEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDc1NjQ1CWZpbGU6SGluZ2VMYWJfMS4xNi4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE2LjEKckpnK3VZT3MwZTJqNWxCMnZ1S0RxN1E3MEdUV0wwRVBybzR4RjNTNkFkN050SFFBeU9wWG9ienBZUU9Od25tQ2VUSG9KMGs4SDhkY2NvQVZUYkRXRHc9PQo=",
-        "size": 11907526,
-        "sha256": "6a00cd7ae79c4eb500b7e881a6f33585e56a08b1e82af12f771dc104c7105d09"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.17.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmlraVBBMWNEeDluMm5KRERmT1V1UlVxYVc4bzFUVk4wdGxWdVdVOW1kVkZFaHJhNHBKRzJBQUg2dkU5MkRMK2EzQmpXcUV1QzBDMCt6NmFrNXJlU3cwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDgxODA4CWZpbGU6SGluZ2VMYWJfMS4xNy4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE3LjAKcSsrM3FBTFJyUDlCZUtpUE5rNG9EUnM4WlFYSXRlbXJ1TTl6NWpnVXpCRkVJQVdDSmRZMm54SmtBdktrMURHa0FndWZYSGhsc1hNMll2L1V3NUIzQ3c9PQo=",
+        "size": 11921059,
+        "sha256": "9a6898ea63ec1de429ad5d05e1e16ffffd43196757a71e8f72cd8257a0e567c0"
       }
     }
   }

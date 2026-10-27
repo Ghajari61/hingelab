@@ -625,7 +625,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       />
       <div className="main">
         <GalleryRail title={PRODUCT_INFO[def.id].name} icon={PRODUCT_INFO[def.id].icon} groups={groups} history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }} inert={shared.viewing}>
-          {def.id === "photoproduct" && <PhotoProductPanel params={params as unknown as PhotoProductParams} onApply={p => replace(p as unknown as P, true)} onGenerated={() => setViewMode("3d")} onPackage={exportPhotoPackage} disabled={shared.viewing} />}
+          {def.id === "photoproduct" && <PhotoProductPanel params={params as unknown as PhotoProductParams} joinery={out?.joinery} onApply={p => replace(p as unknown as P, true)} onGenerated={() => setViewMode("3d")} onPackage={exportPhotoPackage} disabled={shared.viewing} />}
           {def.id !== "photoproduct" && <PresetLibrary product={def.id} presets={def.presets} onApply={applyPreset} getCategory={pr => categoryField?.kind === "choice" ? categoryField.options.find(o => o.v === String(getPath(def.merge(pr.params), categoryField.key)))?.text ?? def.name : def.name} />}
           {canShuffle && (
             <button type="button" className="btn-auto gen-shuffle" onClick={randomiseDesign} title="A new random design. Lock a setting (its lock icon) to keep it. Ctrl+Z undoes it.">

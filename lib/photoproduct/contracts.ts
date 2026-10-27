@@ -15,7 +15,7 @@ export function measurementProblem(m:{width:number;depth:number;height:number;th
  for(const key of ["width","depth","height","thickness"] as const){const v=m[key],[lo,hi]=MEASUREMENT_RANGES[key];if(v&&(!Number.isFinite(v)||v<lo||v>hi))return `Known ${key} must be between ${lo} and ${hi} mm, or left empty.`;}
  return null;
 }
-export const RequestSchema=z.object({photos:z.array(PhotoSchema).min(1).max(MAX_PHOTOS),note:z.string().max(800),measurements:MeasurementsSchema}).strict();
+export const RequestSchema=z.object({photos:z.array(PhotoSchema).min(1).max(MAX_PHOTOS),note:z.string().max(800),measurements:MeasurementsSchema,features:z.literal('fidelity-joinery-v1').optional()}).strict();
 export type PhotoAnalysisRequest=z.infer<typeof RequestSchema>;
 const explanation=z.string().max(240);
 const LegacyAnalysisSchema=z.object({
@@ -36,6 +36,7 @@ export const GeneratedAnalysisSchema=z.object({
  observations:z.array(explanation).max(12),assumptions:z.array(explanation).min(1).max(12),uncertainties:z.array(explanation).max(12),
  views:z.array(z.object({photoId:z.string().max(64),view:z.enum(["front","side","back","top","detail","unknown"]),quality:z.enum(["useful","blurry","duplicate","unrelated"]),evidence:explanation}).strict()).min(1).max(5),
  confidence:z.enum(["low","medium","high"]),model:GeneratedModelSchema.nullable(),
+ review:z.object({status:z.enum(['compared','skipped']),message:z.string().max(240)}).strict().optional(),
 }).strict();
 export const AnalysisSchema=z.union([GeneratedAnalysisSchema,LegacyAnalysisSchema]);
 export type ProductAnalysis=z.infer<typeof AnalysisSchema>;

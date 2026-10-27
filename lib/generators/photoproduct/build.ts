@@ -154,7 +154,7 @@ export function buildPhotoProduct(p:PhotoProductParams,ctx:BuildContext):GenOutp
  if(p.recipe==="custom"){
   if(!p.generated)return {parts:[],stats:[{label:"Photo to Product",value:"Upload photos to generate your model"}]};
   const active={...p.generated,parts:p.generated.parts.filter(q=>!p.hiddenParts.includes(q.id))};
-  return buildGeneratedProduct(active,p.size,p.T,p.values,ctx);
+  return buildGeneratedProduct(active,p.size,p.T,p.values,ctx,p.joinery);
  }
  if(!Number.isFinite(p.T)||p.T<=0)return failed("Set a positive material thickness.");
  if(p.recipe==="paw")return pawProduct(p,ctx);

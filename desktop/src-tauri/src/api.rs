@@ -175,7 +175,7 @@ impl Api {
         let mut token = self.access_token(None).await?;
         for attempt in 0..2 {
             let mut req = self.http.request(method.clone(), self.url(path)).bearer_auth(&token);
-            if path == "/api/desktop/photoproduct" { req = req.timeout(Duration::from_secs(150)); }
+            if path == "/api/desktop/photoproduct" { req = req.timeout(Duration::from_secs(190)); }
             if let Some(ct) = content_type {
                 req = req.header(header::CONTENT_TYPE, ct);
             }

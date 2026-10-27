@@ -187,6 +187,8 @@ export type Hardware3D =
 
 export interface GenOutput {
   parts: GenPart[];
+  /** Paired nominal joinery generated from a photo assembly, before kerf compensation. */
+  joinery?: import('@/lib/photoproduct/joinery').JoineryReport;
   /** Hardware drawn in the assembled 3D view (cords, knots, sockets); hidden while folding or exploded. */
   hardware?: Hardware3D[];
   stats: GenStat[];

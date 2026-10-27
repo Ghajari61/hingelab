@@ -2,10 +2,10 @@
 import { MAX_PHOTO_CHARS,MAX_SOURCE_BYTES,rasterSize,type ProductPhoto } from "./contracts";
 /**
  * Each reference is kept in the project (and its local autosave): five photos at 1280 px came to
- * about 1.9 MB, close to the browser's 5 MB local storage. 1024 px and about 210 KB per photo is
- * ample for recognising a product and keeps a full set near 1 MB.
+ * about 1.9 MB, close to the browser's 5 MB local storage. Keep more edge detail at 1280 px while
+ * bounding the five-image set near 1.3 MB; reduce scale before crushing small features with JPEG.
  */
-const TARGET_EDGE=1024,TARGET_CHARS=210_000;
+const TARGET_EDGE=1280,TARGET_CHARS=260_000;
 export async function normalizeProductPhoto(file:File):Promise<ProductPhoto>{
  if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw Error("Choose JPEG, PNG or WebP photos. SVG and animated formats are not accepted.");
  if(!file.size||file.size>MAX_SOURCE_BYTES)throw Error("Each original photo must be under 12 MB.");
@@ -20,9 +20,9 @@ export async function normalizeProductPhoto(file:File):Promise<ProductPhoto>{
    width=Math.round(bitmap.width*scale);height=Math.round(bitmap.height*scale);
    if(width<32||height<32)throw Error("This photo is too narrow for product analysis.");
    canvas.width=width;canvas.height=height;ctx.fillStyle="#ffffff";ctx.fillRect(0,0,width,height);ctx.drawImage(bitmap,0,0,width,height);
-   data=canvas.toDataURL("image/jpeg",Math.max(.48,.86-attempt*.08));
+   data=canvas.toDataURL("image/jpeg",Math.max(.72,.92-attempt*.05));
    if(data.length<=TARGET_CHARS)break;
-   if(attempt>3)scale*=.8;
+   if(attempt>=3)scale*=.85;
   }
   if(data.length>MAX_PHOTO_CHARS)throw Error("This photo could not be reduced to the analysis limit.");
   const binary=Uint8Array.from(atob(data.split(",")[1]),c=>c.charCodeAt(0));
