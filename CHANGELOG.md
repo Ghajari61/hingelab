@@ -1,3 +1,9 @@
+## Unreleased — Wood Packaging, sturdier Pop-up ribs, Photo to Product removed
+
+- **Paper Box is now Wood Packaging.** Gift, product and shipping boxes in plywood with finger joints: lift-off, sliding, pin-hinged, inset or closed lids, trays and divided boxes, drawer boxes, hexagon boxes, divider inserts, stacking trays and book boxes, with your brand engraved on the lid. All the paper designs became their wooden equivalents (70 ready-made boxes): two-piece boxes take a lift-off lid, tuck-end cartons a sliding lid, mailers and clamshells a hinged lid, drawer cartons and sleeves a wooden drawer. Designs saved as paper boxes open as the matching wooden box at the same inside size. Bags, cones, pillow boxes, pyramids and other paper-only forms are gone.
+- **Pop-up ribs are one solid frame.** Each rib used to be a comb: a 0.6 mm slit between every two rings ran almost to its foot, so a tower's rib was a row of 9 mm strips joined only at the bottom. The rib is now solid below its treads; tall ribs (towers, tiered stands, the vase sleeve) are lightened with round-cornered windows inside a 12 mm frame and struts, so the stands look like stands and use less wood. The rib's foot no longer stands 0.3 mm proud of the outer tread.
+- **Photo to Product is removed.**
+
 ## 1.17.0 — Photo reconstruction and matching joints
 
 - Photo reconstruction now compares actual front, side, top and assembled model renders with the uploaded references before accepting a valid correction. A failed review keeps the usable draft and says the comparison was not completed.

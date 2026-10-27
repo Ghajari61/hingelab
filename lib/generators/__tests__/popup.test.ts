@@ -48,3 +48,36 @@ describe('Pop-up engineering and 3D',()=>{
  it('a vase sleeve stands on radial ribs round an open ring, nothing crosses the opening',()=>{const p=presetP('vase-sleeve'),out=POPUP.build(p,CTX);expect(out.error).toBeUndefined();const hub=out.parts.find(v=>v.id==='rib-hub')!;expect(hub.holes.some(h=>Math.abs(Math.max(...h.map(q=>Math.hypot(q[0],q[1])))-p.extras.sleeveDiameter/2)<.5)).toBe(true);for(const r of out.parts.filter(v=>/^rib-\d/.test(v.id)))expect(Math.min(...r.outer.map(q=>q[0])),r.id).toBeGreaterThan(p.extras.sleeveDiameter/2);expect(profileHeight(p,1)).toBeGreaterThanOrEqual(150);});
  it('a finial stands on a tab through a slot in the top disc; a base goes on the floor under ribs',()=>{const p=presetP('pagoda-tower-decor'),out=POPUP.build(p,CTX);const f=out.parts.find(v=>v.id==='finial')!;expect(Math.max(...f.outer.map(q=>q[1]))).toBeCloseTo(p.T,6);expect(out.parts[0].holes.some(h=>{const b=bboxOf([h]);return Math.abs(b.x0+b.x1)<1e-6&&Math.abs(b.x1-b.x0-(2*p.T+p.support.fit))<1e-6;})).toBe(true);const b=POPUP.build(mergePopup({extras:{base:true}}),CTX).parts.find(v=>v.id==='base')!;expect(b.place!.z).toBeLessThan(0);});
 });
+
+import { lighten } from "../popup/supports";
+import { distToContour } from "../geom";
+describe("Pop-up ribs are one solid frame", () => {
+  it("has no slit narrower than the stock anywhere in a rib (they were combs of 9 mm strips)", () => {
+    for (const pr of POPUP_PRESETS) {
+      const p = POPUP.merge(pr.params), out = POPUP.build(p, CTX);
+      for (const rib of out.parts.filter((x) => /^rib-\d/.test(x.id))) {
+        const o = rib.outer;
+        for (let i = 0; i < o.length; i++) {
+          const a = o[i], b = o[(i + 1) % o.length], c = o[(i + 2) % o.length], d = o[(i + 3) % o.length];
+          // a narrow U: down a long edge, a short step across, back up a long edge
+          const slit = Math.abs(a[0] - b[0]) < 1e-6 && Math.abs(c[0] - d[0]) < 1e-6 && Math.abs(c[1] - b[1]) < 1e-6 && Math.abs(c[0] - b[0]) < p.T
+            && Math.abs(b[1] - a[1]) > 5 && Math.abs(d[1] - c[1]) > 5 && Math.sign(b[1] - a[1]) !== Math.sign(d[1] - c[1]);
+          expect(slit, `${pr.id} ${rib.id} at x=${a[0].toFixed(1)}`).toBe(false);
+        }
+      }
+    }
+  }, 240000);
+  it("lightens tall ribs with windows that keep a frame of at least 4 T round every edge", () => {
+    for (const id of ["cupcake-tower-3-tiers", "spiral-christmas-tree-with-star", "pyramid", "vase-sleeve"]) {
+      const p = POPUP.merge(POPUP_PRESETS.find((x) => x.id === id)!.params), out = POPUP.build(p, CTX);
+      const ribs = out.parts.filter((x) => /^rib-\d/.test(x.id));
+      expect(ribs.every((r) => r.holes.length > 0), id).toBe(true);
+      const band = Math.max(10, 4 * p.T);
+      for (const r of ribs) for (const h of r.holes) for (const q of h) expect(distToContour(q, r.outer), id).toBeGreaterThan(band - .5);
+    }
+    // a low bowl rib stays solid
+    const bowl = POPUP.build(POPUP.merge(POPUP_PRESETS.find((x) => x.id === "nut-snack-bowl")!.params), CTX);
+    expect(bowl.parts.filter((x) => /^rib-\d/.test(x.id)).every((r) => r.holes.length === 0)).toBe(true);
+    expect(lighten([], 3)).toEqual([]);
+  }, 240000);
+});

@@ -1712,3 +1712,19 @@ The owner asked for an analysis of the new Photo to Product product (#26).
 - **Preview**: the last model is kept during a font load only for the same recipe.
 - **Checked and fine**: heart-box hinge radius away from the two seams is at least 17.6 mm (95 × 85) to 52 mm (300 × 280), well inside what a 2.5 mm slit pitch in 3 mm plywood bends; the wall strips match the neutral path; the lid locator sits inside the rim opening with its clearance; the analysis route has authentication, origin, size and AI-allowance checks, revalidates photos on the server, treats text in photos as untrusted, and checks the proposed geometry before answering; share links leave the photos out unless "keep pictures" is ticked.
 - **Not a bug**: in headless testing an edit seemed to freeze the editor for about 8 s. That was the 3D view's idle turn rendered in software WebGL; with reduced motion the same edit took 134 ms.
+
+## D215. Wood Packaging replaces Paper Box; Photo to Product removed
+
+The owner asked for Photo to Product to go ("it does not work properly") and for Paper Box to become packaging in wood, with every paper design converted.
+
+- **Photo to Product** (generator, analysis routes, panel, presets, pictures, tests) is removed from the web app, the catalogue and the desktop catalogue. Saved designs and links for it open the default editor. The desktop app's native route allowlist keeps `/api/desktop/photoproduct` until its next build (the route is gone, so it answers 404).
+- **Wood Packaging** keeps the id `paperbox` (links, saved designs, desktop catalogue) and is the Boxes engine with the design choice limited to packaging (box, tray, drawer, hex, insert, stack, book), its own defaults (a gift box with a lift-off lid) and presets. Converting rather than writing a new engine reuses tested finger joints, kerf, fit, lids, engraving and 3D. Paper style → wood: two-piece, cube, bakery, pie, shipping, carry → lift-off lid; tuck, snap-lock, auto-bottom, seal-end, hanging, CD sleeve → sliding lid; mailer, clamshell, hinged-lid → pin hinge; drawer and sleeve → drawer box; tray, display, wine → tray; hexagon → hexagon box (across flats = √3 × side); cell insert → insert. Sizes are the carton's inside sizes, raised to the joints' minimums (box 20 × 20 × 15, drawer 60 × 50 × 30). Bags, cones, pillow boxes, pyramids, prisms, takeout pails, gable boxes, cereal and tissue cartons have no wooden equivalent and were dropped (84 → 70 presets, all warning-free). `fromPaper` opens designs saved by the paper version at the same inside size. The paper engine (`lib/paperbox`) is deleted.
+
+## D216. Pop-up ribs: solid below the treads, windows in tall ribs
+
+A full review of the Pop-up after the owner reported that design problems remained.
+
+- **The comb.** `ribAssembly` gave each ring a block from its inner to its outer crossing, minus half the ring gap at each end, so between every two rings a 0.6 mm slit ran from the treads to the foot. Ribs were rows of strips about 9 mm wide (170 mm tall on the cupcake tower) joined only by the foot; the pictures showed them as stripes. Neighbouring blocks are now bridged up to the lower of their two treads; above that the gap remains as the taller ring's riser. A test fails on the old code and passes on the new.
+- **Tall ribs** (190 to 390 cm² of solid plywood on towers and stands) are lightened by `lighten`: windows are the rib inset by 4 T (at least 10 mm), cut into 50 mm columns with struts of the same width and rounded by T × 2; windows under 4 band² are skipped; the rib must stay one piece. Low bowl ribs stay solid.
+- The foot now ends flush with the outermost treads.
+- Pop-up snapshots, preset pictures and template metadata were regenerated.
