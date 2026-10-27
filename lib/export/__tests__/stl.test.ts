@@ -1,3 +1,4 @@
+import {generatedTable} from "@/lib/photoproduct/__tests__/generated-fixture";
 import { describe, expect, it } from "vitest";
 import { ALL_GENERATORS } from "@/lib/generators/all";
 import { arrangeGenerator, genSVG } from "@/lib/generators/output";
@@ -45,7 +46,7 @@ describe("STL export", () => {
 
   it("every generator's default design exports as a closed STL", async () => {
     for (const def of ALL_GENERATORS) {
-      const p = def.merge(undefined);
+      const p = def.merge(def.id === "photoproduct" ? {recipe:"custom",generated:generatedTable(),size:{width:150,depth:100,height:100}} : {});
       const lay = arrangeGenerator(def, p, CTX).lay!;
       const r = await makeSTLExport(genSVG(def, p, lay), { ...defaultExport(), format: "stl" }, "x", p.T);
       expect(r.file.name, def.id).toBe("x.stl");

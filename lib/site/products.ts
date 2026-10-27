@@ -26,7 +26,7 @@ const FEATURED: Record<string, string> = {
   topper: "happy-birthday", keyrack: "home-sweet-home", sign: "welcome-arch", tablenum: "wedding-arch", trophy: "star-award", shadowbox: "star-tunnel", paperbox: "tea-box", charm: "family-baubles", family: "family-crossword",
 };
 
-const pic = (id: string, ids: string[]) => `/presets/${id}/${ids.includes(FEATURED[id]) ? FEATURED[id] : ids[0]}.svg`;
+const pic = (id: string, ids: string[]) => id === "photoproduct" ? "/art/photo-to-product.svg" : `/presets/${id}/${ids.includes(FEATURED[id]) ? FEATURED[id] : ids[0]}.svg`;
 
 export function siteProducts(): SiteProduct[] {
   const core: SiteProduct[] = [

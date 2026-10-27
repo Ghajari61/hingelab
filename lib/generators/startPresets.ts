@@ -1,4 +1,4 @@
-import { PHOTO_PRESETS } from "./photoproduct/presets";
+
 import { KEYCHAIN_PRESETS } from "./keychain/presets";
 /**
  * Presets the start page and `?preset=` links read, kept small for the editor shell. Most generators list
@@ -22,7 +22,7 @@ import type { GeneratorId } from "./ids";
 import type { GenPreset } from "./types";
 
 export const START_PRESETS: Record<GeneratorId, GenPreset<unknown>[]> = {
-  photoproduct: PHOTO_PRESETS as GenPreset<unknown>[],
+  photoproduct: [],
   keychain: KEYCHAIN_PRESETS as GenPreset<unknown>[],
   popup: POPUP_PRESETS as GenPreset<unknown>[],
   charm: CHARM_PRESETS as GenPreset<unknown>[],

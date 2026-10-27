@@ -5,7 +5,7 @@ import { aiAllowance, aiConfigured, aiLimitMessage } from "@/lib/ai/request";
 import { declaredLength, isCrossSite, isJSONRequest, siteOrigins } from "@/lib/security/request";
 import { MAX_PHOTO_BODY } from "@/lib/photoproduct/contracts";
 import { analyzeProductPhotos, PhotoAnalysisError } from "@/lib/photoproduct/analyze";
-export const maxDuration=120;
+export const maxDuration=180;
 const json=(body:unknown,status=200,headers:Record<string,string>={})=>NextResponse.json(body,{status,headers:{"cache-control":"no-store",...headers}});
 export async function POST(request:NextRequest){
  if(isCrossSite(request,siteOrigins()))return json({error:"Cross-site requests are not allowed."},403);

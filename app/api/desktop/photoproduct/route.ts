@@ -5,7 +5,7 @@ import { aiAllowance, aiConfigured, aiLimitMessage } from "@/lib/ai/request";
 import { declaredLength, isJSONRequest } from "@/lib/security/request";
 import { MAX_PHOTO_BODY } from "@/lib/photoproduct/contracts";
 import { analyzeProductPhotos, PhotoAnalysisError } from "@/lib/photoproduct/analyze";
-export const maxDuration=120;
+export const maxDuration=180;
 export async function POST(request:Request){
  const who=await requireDesktopUser(request);if(who instanceof Response)return who;
  if(!isJSONRequest(request))return desktopError("invalid","Send JSON.",415);

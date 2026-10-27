@@ -141,7 +141,7 @@ describe("desktop catalog", () => {
     const text = JSON.stringify(c);
     expect(text).not.toMatch(/=>|function\s*\(/);
     for (const p of c.products) {
-      expect(p.presets.length).toBeGreaterThan(0);
+      if(p.id === "photoproduct")expect(p.presets).toHaveLength(0);else expect(p.presets.length).toBeGreaterThan(0);
       for (const s of p.sections) for (const f of s.fields) if (f.kind === "number") expect(f.min, `${p.id} ${f.key}`).toBeLessThanOrEqual(f.max);
     }
     const hinge = c.products[0];
@@ -287,7 +287,7 @@ describe("desktop 3D model", () => {
       const r = await gen({ product: p.id, model: true }, "pro");
       expect(r.status, p.id).toBe(200);
       const objs = r.body.model?.objects ?? [];
-      expect(objs.length, p.id).toBeGreaterThan(0);
+      if(p.id === "photoproduct")expect(objs).toHaveLength(0);else expect(objs.length, p.id).toBeGreaterThan(0);
       expect(JSON.stringify(r.body.model).length, p.id).toBeLessThan(800_000);
       for (const o of objs) {
         expect(o.m.length).toBe(16);

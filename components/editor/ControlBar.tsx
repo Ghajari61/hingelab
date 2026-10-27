@@ -47,7 +47,7 @@ export const PRODUCT_PICTURE: Record<Product, string> = {
   sign: "/presets/sign/welcome-arch.svg", topper: "/presets/topper/happy-birthday.svg", popup: "/presets/popup/spiral-trivet-bowl.svg", charm: "/presets/charm/family-baubles.svg", family: "/presets/family/family-crossword.svg",
   clock: "/presets/clock/wall-roman.svg", puzzle: "/presets/puzzle/kids-12.svg", qr: "/presets/qr/keychain.svg",
   keyrack: "/presets/keyrack/home-sweet-home.svg", tablenum: "/presets/tablenum/wedding-arch.svg", trophy: "/presets/trophy/star-award.svg",
-  photoproduct: "/presets/photoproduct/studio-paw-ornament.svg",
+  photoproduct: "/art/photo-to-product.svg",
   keychain: "/presets/keychain/name-rounded.svg",
 };
 
