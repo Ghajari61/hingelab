@@ -1,4 +1,3 @@
-import { PHOTO_PRODUCT } from "./photoproduct";
 import { KEYCHAIN } from "./keychain";
 /** Every generator, loaded eagerly: for tests, the help centre (server) and scripts only. */
 import { BOXES } from "./boxes";
@@ -17,4 +16,4 @@ import { TOPPER } from "./topper";
 import { TROPHY } from "./trophy";
 import type { AnyGenerator } from "./types";
 
-export const ALL_GENERATORS: AnyGenerator[] = [PHOTO_PRODUCT, KEYCHAIN, POPUP, CLOCK, PUZZLE, QR, BOXES, TOPPER, KEYRACK, SIGN, TABLENUM, TROPHY, SHADOWBOX, PAPERBOX, CHARM, FAMILY];
+export const ALL_GENERATORS: AnyGenerator[] = [KEYCHAIN, POPUP, CLOCK, PUZZLE, QR, BOXES, TOPPER, KEYRACK, SIGN, TABLENUM, TROPHY, SHADOWBOX, PAPERBOX, CHARM, FAMILY];

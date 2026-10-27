@@ -81,7 +81,6 @@ const CORE_PICTURE: Record<string, string> = { hinge: "gift-box", letters: "hell
 
 /** The picture of the preset a card opens: its own preset, else the product's featured or first one. */
 export function pictureOf(href: string, cover?: string): string | null {
-  if(new URL(href,"https://hingelab.local").searchParams.get("p")==="photoproduct")return "/art/photo-to-product.svg";
   const u = new URL(href, "https://hingelab.local");
   const product = u.searchParams.get("p");
   if (!product) return null;
@@ -93,7 +92,6 @@ const ENTRIES: Omit<CatalogueEntry, "picture">[] = [
   fromCatalog("hinge-box", "hinge", "hinge", "laser"),
   fromCatalog("letters", "letters", "letters", "laser"),
   fromCatalog("parametric", "parametric", "parametric", "laser"),
-  fromGenerator("photoproduct", "laser", "Tools"),
   fromGenerator("shadowbox", "paper", "Home"),
   fromGenerator("boxes", "laser", "Boxes"),
   fromGenerator("paperbox", "paper", "Boxes"),
