@@ -198,17 +198,18 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
   parts.forEach((p) => {
     const pl = p.place ?? { x: 0, y: 0, z: 0 };
     const t = p.t ?? T;
-    const z = pl.z + explode * 30 * levels.indexOf(pl.z);
+    const apart = p.apart ?? [0, 0, 30 * levels.indexOf(pl.z)];
+    const z = pl.z + explode * apart[2];
     const wrap = new THREE.Group();
     wrap.name = p.name;
     wrap.userData.partId = p.id;
     if (p.frames?.length) folding.push({ wrap, frames: p.frames, apart: p.apart ?? [0, 0, 0] });
     else if (pl.m) {
       // A folded face: the plan matrix, between the scene's axes (x, -y, z) and the part's (u, -v, h).
-      const a = p.apart ?? [0, 0, 30 * levels.indexOf(pl.z)];
-      placeWrap(wrap, pl.m, [a[0] * explode, a[1] * explode, a[2] * explode]);
-    } else if (pl.upright) wrap.position.set(pl.x, -z, -pl.y);
-    else wrap.position.set(pl.x, -pl.y, z);
+      placeWrap(wrap, pl.m, [apart[0] * explode, apart[1] * explode, apart[2] * explode]);
+    } else if (pl.upright && p.apart) wrap.position.set(pl.x + apart[0] * explode, -pl.z - apart[1] * explode, -pl.y + apart[2] * explode);
+    else if (pl.upright) wrap.position.set(pl.x, -z, -pl.y);
+    else wrap.position.set(pl.x + apart[0] * explode, -pl.y - apart[1] * explode, z);
     if (pl.yaw) wrap.rotation.z = -(pl.yaw * Math.PI) / 180;
     const stand = new THREE.Group();
     if (pl.upright) stand.rotation.x = ((pl.tilt ?? 90) * Math.PI) / 180;
@@ -281,21 +282,23 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
     inner.add(wrap);
     wraps.push({ p, wrap, content: stand });
   });
+  // Non-folding assemblies also need their purchased fittings. Previously the early return
+  // below discarded them as soon as an assembly used rigid pieces instead of fold frames.
+  const hardware = out.hardware?.length ? hardwareGroup(out.hardware) : null;
+  if (hardware) inner.add(hardware);
+  const showHardware = () => { if (hardware) hardware.visible = at.fold > 0.999 && at.explode < 0.001; };
+  showHardware();
   if (!folding.length && lay) {
     const run = unfoldParts(inner, wraps, lay, T);
     run(0);
     const scene = finishScene(inner);
     run(explode);
-    return { ...scene, explode: (e: number) => run(Math.min(1, Math.max(0, e))), ...(loads.length ? { ready: Promise.all(loads) } : {}) };
+    return { ...scene, explode: (e: number) => { at.explode = e; showHardware(); run(Math.min(1, Math.max(0, e))); }, ...(loads.length ? { ready: Promise.all(loads) } : {}) };
   }
   if (!folding.length) {
     const scene = finishScene(inner);
     return loads.length ? { ...scene, ready: Promise.all(loads) } : scene;
   }
-  // Bought parts (cords, sockets) belong to the assembled design: shown only when it is fully open.
-  const hardware = out.hardware?.length ? hardwareGroup(out.hardware) : null;
-  if (hardware) inner.add(hardware);
-  const showHardware = () => { if (hardware) hardware.visible = at.fold > 0.999 && at.explode < 0.001; };
   // Framed and centred on the folded box, so folding and exploding keep the box in its place.
   at = { fold: 1, explode: 0 };
   place();
