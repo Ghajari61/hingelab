@@ -15,7 +15,17 @@ function badge(text:string,width:number){
  ctx.strokeStyle='#fff';ctx.lineWidth=4;ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 42px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,96,47);
  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false,depthWrite:false}));
- sprite.scale.set(width,width*88/192,1);sprite.renderOrder=12;sprite.userData.noMeasure=true;sprite.userData.noPick=true;return sprite;
+ sprite.scale.set(width,width*88/192,1);sprite.renderOrder=12;sprite.userData.noMeasure=true;sprite.userData.noPick=true;
+ // Keep numbers legible when the full sculpture is fitted into a narrow editor pane.
+ const viewport=new THREE.Vector4(),viewPosition=new THREE.Vector3();
+ sprite.onBeforeRender=(renderer,_scene,camera)=>{
+  renderer.getCurrentViewport(viewport);
+  sprite.getWorldPosition(viewPosition).applyMatrix4(camera.matrixWorldInverse);
+  const depth=(camera as THREE.PerspectiveCamera).isPerspectiveCamera?Math.abs(viewPosition.z):1;
+  const height=24*2*depth/(Math.max(1,viewport.w/renderer.getPixelRatio())*camera.projectionMatrix.elements[5]);
+  sprite.scale.set(height*192/88,height,1);sprite.updateMatrixWorld(true);
+ };
+ return sprite;
 }
 function glueSurface(p:GluePatch){
  const shape=new THREE.Shape(p.outer.map(([x,y])=>new THREE.Vector2(x,y)));
@@ -35,12 +45,12 @@ export function ribAssemblyScene(out:GenOutput,T:number,look:LookId,plan:RibAsse
  const partNodes=new Map<string,THREE.Object3D>();
  scene.group.traverse(o=>{if(typeof o.userData.partId==='string')partNodes.set(o.userData.partId,o);});
  const originals=new Map([...partNodes].map(([id,node])=>[id,node.matrix.clone()]));
- const materials=new Map<string,{mesh:THREE.Mesh;material:THREE.MeshStandardMaterial;opacity:number;transparent:boolean;shadow:boolean}[]>();
+ const materials=new Map<string,{mesh:THREE.Mesh;material:THREE.MeshStandardMaterial;opacity:number;transparent:boolean;depthWrite:boolean;shadow:boolean}[]>();
  for(const [id,node] of partNodes){
   const list:NonNullable<ReturnType<typeof materials.get>>=[];
   node.traverse(o=>{
    const mesh=o as THREE.Mesh;if(!mesh.isMesh||mesh.userData.keepMaterial)return;
-   for(const material of ([] as THREE.Material[]).concat(mesh.material))list.push({mesh,material:material as THREE.MeshStandardMaterial,opacity:material.opacity,transparent:material.transparent,shadow:mesh.castShadow});
+   for(const material of ([] as THREE.Material[]).concat(mesh.material))list.push({mesh,material:material as THREE.MeshStandardMaterial,opacity:material.opacity,transparent:material.transparent,depthWrite:material.depthWrite,shadow:mesh.castShadow});
   });materials.set(id,list);
  }
  const labels=new Map<string,{sprite:THREE.Sprite;z:number}>();
@@ -61,7 +71,7 @@ export function ribAssemblyScene(out:GenOutput,T:number,look:LookId,plan:RibAsse
    const ghost=!state.active&&!state.seated;
    node.visible=!ghost||state.overview||display.ghosts;
    for(const item of materials.get(state.id)??[]){
-    item.material.opacity=ghost?(state.overview?.22:.075):item.opacity;item.material.transparent=ghost||item.transparent;item.material.depthWrite=!ghost;
+    item.material.opacity=ghost?(state.overview ? .22 : .075):item.opacity;item.material.transparent=ghost||item.transparent;item.material.depthWrite=!ghost&&item.depthWrite;
     item.material.emissive?.setHex(state.active?0x66400c:0x000000);item.mesh.castShadow=!ghost&&item.shadow;
    }
    const label=labels.get(state.id);if(label){label.sprite.visible=node.visible&&(state.active||(display.labels&&state.seated));label.sprite.position.z=label.z+state.lift;}
