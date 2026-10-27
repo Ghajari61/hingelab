@@ -1,128 +1,141 @@
+/**
+ * Wood Packaging presets. They are the former Paper Box designs made in plywood: each carton
+ * became the wooden box that does the same job (D215). Two-piece boxes take a lift-off lid, tuck
+ * and hanging cartons a sliding lid, mailers, clamshells and hinged-lid boxes a pin hinge, drawer
+ * boxes and sleeves a wooden drawer, trays a tray, hexagons a hexagon box and cell inserts a divider
+ * insert. Sizes stay the inside sizes of the carton, raised to what the joints need where a carton
+ * was smaller. Paper-only forms (bags, cones, pillow boxes, pyramids, prisms, takeout pails, gable
+ * boxes, cereal and tissue cartons) have no wooden equivalent and were left out.
+ */
+import type { BoxesParams, LidKind, TrayLid } from "../boxes/params";
 import type { GenPreset } from "../types";
-import type { PaperBoxParams } from "./params";
 
-type More = Record<string, number | string | boolean>;
-/** A preset: style, inside size (mm), board, the style's own settings, and any window or pattern. */
-const P = (id: string, name: string, note: string, style: string, L: number, W: number, H: number, paper = "350", more: More = {}, look: Partial<Pick<PaperBoxParams, "window" | "pattern">> = {}): GenPreset<PaperBoxParams> => ({
-  id, name, note,
-  params: { name, style, paper, T: THICK[paper], styles: { [style]: { L, W, H, dims: "inner", ...more } }, ...look } as Partial<PaperBoxParams>,
-});
-const THICK: Record<string, number> = { "200": 0.25, "250": 0.32, "300": 0.4, "350": 0.45, "400": 0.52, kraft300: 0.45, chip1: 1, eflute: 1.6, bflute: 3 };
-const win = (on: string, shape: string, size: number) => ({ window: { on, shape, size, corner: 6 } }) as Partial<PaperBoxParams>;
-const pat = (on: string, pattern: string, cell: number, bar: number, more: Record<string, unknown> = {}) => ({ pattern: { pattern, on, cell, bar, shape: "full", size: 70, mark: "cut", motif: "heart", ...more } }) as unknown as Partial<PaperBoxParams>;
+type P = GenPreset<BoxesParams>;
+type Extra = Partial<Pick<BoxesParams, "engrave" | "joint">>;
+const finger = (min: number) => (min < 60 ? 6 : min < 120 ? 8 : 12);
 
-/** Presets whose flat net is larger than the default 600 × 400 mm sheet get a sheet that holds it. */
-const SHEETS: Record<string, [number, number]> = {
-  "small-mailer": [900, 600], "jewelry-mailer": [900, 600], "book-mailer": [900, 600], "tshirt-mailer": [900, 700], "cosmetics-mailer": [900, 700], "subscription-box": [1300, 900],
-  "pizza-box": [1000, 900], "cereal-box": [900, 700], "tissue-box": [900, 500], "rsc-small": [900, 450], "fol-carton": [1000, 650], "open-crate": [1150, 450],
-  "counter-display": [600, 520], "chocolate-drawer": [700, 450], "hamper-tray": [600, 450], "cake-gable": [600, 450],
-  "cake-box": [900, 700], "cupcake-bakery": [800, 650], "pastry-box": [800, 600], "pie-box": [800, 700], "tart-box": [600, 500], "burger-box": [600, 600],
-  "sandwich-clamshell": [700, 600], "tea-hinged": [700, 600], "cosmetics-hinged": [800, 700], "lunch-carry": [800, 600], "wine-2": [1000, 700], "wine-4": [1000, 800],
-  "gift-bag": [900, 600], "small-bag": [700, 500], "ornament-insert": [700, 500], "jar-insert": [600, 500], "star-pyramid": [600, 500], "popcorn-cone": [600, 500],
-};
+/** A box with a lid, inside sizes in millimetres. */
+function box(id: string, name: string, note: string, w: number, d: number, h: number, lid: LidKind, more: Extra = {}): P {
+  const W = Math.max(20, w), D = Math.max(20, d), H = Math.max(15, h);
+  return {
+    id, name, note,
+    params: {
+      name, design: "box", joint: { finger: finger(Math.min(W, D, H)), ...(more.joint ?? {}) } as BoxesParams["joint"],
+      box: { width: W, depth: D, height: H, lid, clearance: lid === "sliding" || lid === "pin" ? 0.4 : 0.3, notch: lid === "sliding" || lid === "pin", pin: 3 },
+      ...(more.engrave ? { engrave: more.engrave } : {}),
+    } as Partial<BoxesParams>,
+  };
+}
 
-const LIST: GenPreset<PaperBoxParams>[] = [
-  {"id": "studio-accessory-drawer", "name": "Accessory drawer carton", "note": "Sliding 120 x 80 x 35 mm accessory carton with 0.5 mm clearance.", "params": {"name": "Accessory drawer carton", "style": "drawer", "paper": "chip1", "T": 1, "styles": {"drawer": {"L": 120, "W": 80, "H": 35, "dims": "inner", "clearance": 0.5}}}},
-  {"id": "studio-voucher-pillow", "name": "Voucher pillow carton", "note": "130 x 90 x 22 mm pillow carton for vouchers and small gifts.", "params": {"name": "Voucher pillow carton", "style": "pillow", "paper": "300", "T": 0.4, "styles": {"pillow": {"L": 130, "W": 90, "H": 22, "dims": "inner"}}}},
-  {"id": "studio-sample-sleeve", "name": "Craft sample sleeve", "note": "110 x 70 x 25 mm sleeve for a craft sample pack.", "params": {"name": "Craft sample sleeve", "style": "sleeve", "paper": "300", "T": 0.4, "styles": {"sleeve": {"L": 110, "W": 70, "H": 25, "dims": "inner"}}}},
-  // Two-piece gift boxes
-  P("jewelry-6x6x3", "Jewelry gift box 6×6×3", "Two-piece box, 60 × 60 × 30 mm inside", "two-piece", 60, 60, 30, "chip1", { clearance: 0.5 }),
-  P("ring-box", "Ring box", "Small two-piece box, 50 × 50 × 40 mm", "two-piece", 50, 50, 40, "chip1"),
-  P("watch-box", "Watch box", "Two-piece box for a watch, 110 × 80 × 70 mm", "two-piece", 110, 80, 70, "chip1"),
-  P("cupcake-box", "Cupcake box", "One cupcake, lift-off lid, 100 × 100 × 90 mm", "two-piece", 100, 100, 90, "400", { lidH: 30 }),
-  P("cookie-box", "Cookie box", "Flat two-piece box, 150 × 150 × 50 mm", "two-piece", 150, 150, 50, "400"),
-  P("chocolate-box", "Chocolate box", "Shallow box for a chocolate tray, 180 × 120 × 30 mm", "two-piece", 180, 120, 30, "400", { lidH: 30 }),
-  P("nowruz-gift", "Nowruz gift box", "Square two-piece gift box, 120 × 120 × 60 mm", "two-piece", 120, 120, 60, "chip1", { lidH: 25 }),
-  P("shirt-box", "Shirt box", "Large flat lid-and-base box in E-flute, 300 × 220 × 50 mm", "two-piece", 300, 220, 50, "eflute", { clearance: 1 }),
-  P("phone-box", "Phone box", "Two-piece box for a phone, 160 × 80 × 25 mm", "two-piece", 160, 80, 25, "chip1", { lidH: 25 }),
-  P("gift-card-box", "Gift card box", "Slim two-piece box for a gift card, 110 × 80 × 20 mm", "two-piece", 110, 80, 20, "400", { lidH: 20 }),
-  // Tuck-end cartons
-  P("soap-box", "Soap box", "Reverse tuck carton for a bar of soap, 90 × 60 × 30 mm", "reverse-tuck", 90, 30, 60),
-  P("tea-box", "Tea box", "Tall reverse tuck carton for tea bags, 70 × 70 × 120 mm", "reverse-tuck", 70, 70, 120),
-  P("candle-box", "Candle box", "Square carton for a jar candle, 85 × 85 × 100 mm", "reverse-tuck", 85, 85, 100, "400"),
-  P("perfume-box", "Perfume box", "Straight tuck carton, clean front, 55 × 55 × 130 mm", "straight-tuck", 55, 55, 130),
-  P("cream-jar-box", "Cream jar box", "Cube carton for a cosmetic jar, 60 × 60 × 60 mm", "reverse-tuck", 60, 60, 60),
-  P("lipstick-box", "Lipstick box", "Slim straight tuck carton, 25 × 25 × 85 mm", "straight-tuck", 25, 25, 85, "300", { glueW: 10, tuckR: 3 }),
-  P("business-card-box", "Business card box", "Holds about 100 cards, 92 × 25 × 57 mm", "reverse-tuck", 92, 25, 57, "350", { glueW: 12 }),
-  P("playing-card-box", "Playing card box", "Fits a poker deck, 66 × 22 × 92 mm", "reverse-tuck", 66, 22, 92, "300", { glueW: 12, tuckR: 4 }),
-  P("pharmacy-box", "Pharmacy box", "Straight tuck carton for blister packs, 80 × 30 × 100 mm", "straight-tuck", 80, 30, 100, "300"),
-  P("toothpaste-box", "Toothpaste box", "Long carton, 40 × 35 × 180 mm", "reverse-tuck", 40, 35, 180, "300"),
-  P("bulb-box", "Light bulb box", "Square carton, 65 × 65 × 110 mm", "reverse-tuck", 65, 65, 110),
-  // Mailers
-  P("small-mailer", "Small mailer", "Shipping box, 150 × 100 × 50 mm in E-flute", "mailer", 150, 100, 50, "eflute"),
-  P("book-mailer", "Book mailer", "Flat mailer for a book, 240 × 170 × 40 mm", "mailer", 240, 170, 40, "eflute"),
-  P("subscription-box", "Subscription box", "Gift or subscription mailer, 250 × 200 × 80 mm", "mailer", 250, 200, 80, "eflute"),
-  P("tshirt-mailer", "T-shirt mailer", "Shallow mailer for a folded T-shirt, 280 × 220 × 40 mm", "mailer", 280, 220, 40, "eflute"),
-  P("jewelry-mailer", "Jewelry mailer", "Small card mailer, 120 × 120 × 40 mm", "mailer", 120, 120, 40, "400", { slitLock: true }),
-  P("cosmetics-mailer", "Cosmetics mailer", "Kraft mailer for a skincare set, 200 × 150 × 70 mm", "mailer", 200, 150, 70, "kraft300"),
-  P("pizza-box", "Pizza box", "Corrugated mailer for a 30 cm pizza, 300 × 300 × 40 mm", "mailer", 300, 300, 40, "eflute"),
-  // Lock bottoms and seal ends
-  P("mug-box", "Mug box", "Snap-lock bottom for a mug, 100 × 100 × 110 mm", "snap-lock", 100, 100, 110, "400"),
-  P("jar-box", "Jar box", "Snap-lock bottom for a jar of honey, 75 × 75 × 100 mm", "snap-lock", 75, 75, 100, "400"),
-  P("bottle-box", "Bottle box", "Auto bottom for a bottle, 70 × 70 × 180 mm", "auto-bottom", 70, 70, 180, "400"),
-  P("candle-auto-box", "Candle box (auto bottom)", "Pops square when opened, 85 × 85 × 100 mm", "auto-bottom", 85, 85, 100, "400"),
-  P("cereal-box", "Cereal box", "Glued seal ends, 190 × 60 × 270 mm", "seal-end", 190, 60, 270, "300"),
-  P("tissue-box", "Tissue box", "Seal-end carton with an oval opening on top, 230 × 120 × 60 mm", "seal-end", 230, 120, 60, "350", {}, win("top", "oval", 55)),
-  P("window-cookie-box", "Window cookie box", "Reverse tuck with a window in the front, 120 × 60 × 160 mm", "reverse-tuck", 120, 60, 160, "400", {}, win("front", "rounded", 62)),
-  // Hanging boxes
-  P("earbuds-box", "Earbuds box", "Hanging box with a euro slot, 70 × 30 × 100 mm", "hanging", 70, 30, 100, "350"),
-  P("toy-box-window", "Toy box with window", "Hanging box with a front window, 90 × 40 × 140 mm", "hanging", 90, 40, 140, "400", { hangH: 40 }, win("front", "rounded", 70)),
-  // Hexagon and pillow
-  P("hex-candle-box", "Hexagon candle box", "Six-sided box, 45 mm sides × 110 mm", "hexagon", 45, 45, 110, "350"),
-  P("hex-favour-box", "Hexagon favour box", "Little hexagon with stars on the sides, 30 mm sides × 60 mm", "hexagon", 30, 30, 60, "300", {}, pat("sides", "stars", 9, 1.5)),
-  P("gift-card-pillow", "Gift card pillow box", "Pillow box for a gift card, 110 × 80 × 20 mm", "pillow", 110, 80, 20, "300"),
-  P("favour-pillow", "Favour pillow box", "Pillow box for sweets and favours, 140 × 90 × 30 mm", "pillow", 140, 90, 30, "300"),
-  // Shipping cartons
-  P("rsc-small", "Small shipping carton", "Regular slotted carton, 200 × 150 × 100 mm", "shipping", 200, 150, 100, "eflute"),
-  P("fol-carton", "Full overlap carton", "Strong carton with full-width flaps, 250 × 180 × 150 mm", "shipping", 250, 180, 150, "eflute", { flaps: "fol" }),
-  P("open-crate", "Open-top crate", "Half-slotted carton, open on top, 300 × 200 × 120 mm", "shipping", 300, 200, 120, "eflute", { flaps: "hsc" }),
-  // Drawers, sleeves and trays
-  P("matchbox", "Matchbox", "Drawer box, 55 × 35 × 15 mm", "drawer", 55, 35, 15, "350", { clearance: 0.4, notch: 6 }),
-  P("jewelry-drawer", "Jewelry drawer box", "Sliding drawer for jewellery, 100 × 70 × 30 mm", "drawer", 100, 70, 30, "chip1"),
-  P("chocolate-drawer", "Chocolate drawer box", "Drawer box with a window on top, 160 × 110 × 30 mm", "drawer", 160, 110, 30, "chip1", {}, win("top", "rounded", 60)),
-  P("soap-sleeve", "Soap sleeve", "Printed band round a bar of soap, 90 × 60 × 30 mm", "sleeve", 90, 60, 30, "300"),
-  P("cookie-sleeve", "Cookie box sleeve", "Sleeve for a two-piece box, 160 × 120 × 40 mm", "sleeve", 160, 120, 40, "350"),
-  P("hamper-tray", "Hamper tray", "Open tray for a gift hamper, 250 × 180 × 60 mm", "tray", 250, 180, 60, "chip1"),
-  P("sorting-tray", "Sorting tray", "Shallow desk tray, 150 × 100 × 30 mm", "tray", 150, 100, 30, "chip1"),
-  // Gable and display
-  P("cake-gable", "Cake slice gable box", "Carry box with a handle, 120 × 90 × 100 mm", "gable", 120, 90, 100, "400"),
-  P("party-gable", "Party favour gable box", "Little carry box, 70 × 50 × 70 mm", "gable", 70, 50, 70, "350", { handleH: 28 }),
-  P("counter-display", "Counter display", "Shop counter tray with a header, 220 × 160 × 90 mm", "display", 220, 160, 90, "eflute"),
-  P("candy-display", "Candy display", "Small counter display, 180 × 120 × 70 mm", "display", 180, 120, 70, "400", { front: 30, header: 70 }),
-  // Polygons and favours
-  P("cube-favour", "Cube favour box", "Wedding or party favour, 60 mm cube", "cube", 60, 60, 60, "300"),
-  P("dice-box", "Dice gift box", "Small cube with dots on every side, 50 mm", "cube", 50, 50, 50, "300", {}, pat("all", "circles", 9, 3)),
-  P("pyramid-favour", "Pyramid favour box", "Four triangles to a point, 70 mm base × 80 mm", "pyramid", 70, 70, 80, "300"),
-  P("star-pyramid", "Starry pyramid", "Pyramid with stars cut in its sides, 90 mm base × 110 mm", "pyramid", 90, 90, 110, "300", {}, pat("all", "stars", 10, 2)),
-  P("chocolate-prism", "Chocolate bar prism", "Triangular box for a chocolate bar, 200 mm long, 40 mm sides", "prism", 200, 40, 0, "350"),
-  P("pen-prism", "Pen box prism", "Slim triangular box for a pen, 160 mm long, 28 mm sides", "prism", 160, 28, 0, "300"),
-  P("candy-cone", "Candy cone", "Paper cone for sweets, 80 mm across × 160 mm", "cone", 80, 80, 160, "250"),
-  P("popcorn-cone", "Popcorn cone", "Larger cone, 110 mm across × 200 mm", "cone", 110, 110, 200, "300"),
-  // Food and bakery
-  P("cake-box", "Cake box with window", "One-piece cake box, tab-locked corners and a lid window, 200 × 200 × 100 mm", "bakery", 200, 200, 100, "400"),
-  P("cupcake-bakery", "Cupcake box with window", "Bakery box for four cupcakes, 180 × 180 × 90 mm", "bakery", 180, 180, 90, "400", { lock: "hook" }),
-  P("pastry-box", "Pastry box", "Plain bakery box, no window, 250 × 150 × 70 mm", "bakery", 250, 150, 70, "400", { lidWindow: false }),
-  P("pie-box", "Pie box", "Shallow box with a round window and thumb notch, 230 × 230 × 50 mm", "pie", 230, 230, 50, "400"),
-  P("tart-box", "Tart box", "Small pie box, 140 × 140 × 40 mm", "pie", 140, 140, 40, "400"),
-  P("burger-box", "Burger box", "Clamshell with a front lock, 120 × 120 × 80 mm", "clamshell", 120, 120, 80, "400"),
-  P("sandwich-clamshell", "Sandwich clamshell", "Long clamshell for a sandwich, 180 × 100 × 70 mm", "clamshell", 180, 100, 70, "400", { lock: "hook" }),
-  P("noodle-pail", "Noodle takeout pail", "Chinese takeout box with handle holes, 80 × 65 × 90 mm", "takeout", 80, 65, 90, "400"),
-  P("favour-pail", "Party favour pail", "Little takeout pail, 55 × 45 × 60 mm", "takeout", 55, 45, 60, "350", { flare: 12 }),
-  // Lidded gift boxes
-  P("tea-hinged", "Tea gift box", "Glued tray with a hinged lid, 160 × 110 × 60 mm", "hinged-lid", 160, 110, 60, "400"),
-  P("jewelry-hinged", "Jewellery box, hinged lid", "Chipboard box with a lip lid and thumb notch, 100 × 80 × 40 mm", "hinged-lid", 100, 80, 40, "chip1", { lidFront: "lip", notch: true }),
-  P("cosmetics-hinged", "Cosmetics set box", "Hinged lid with a window, 200 × 140 × 60 mm", "hinged-lid", 200, 140, 60, "400", { lidWindow: true }),
-  // Carry, wine and bags
-  P("lunch-carry", "Lunch carry box", "Flat top with a handle, 160 × 90 × 110 mm", "carry", 160, 90, 110, "400"),
-  P("wine-2", "Two-bottle wine carrier", "Crash-lock bottom, handle and a divider, E-flute", "wine", 0, 0, 250, "eflute", { bottles: "2" }),
-  P("wine-4", "Four-bottle carrier", "Crossed dividers for four bottles, E-flute", "wine", 0, 0, 240, "eflute", { bottles: "4" }),
-  P("gift-bag", "Gift bag", "Kraft bag with a folded top band and rope holes, 200 × 90 × 250 mm", "bag", 200, 90, 250, "kraft300"),
-  P("small-bag", "Small favour bag", "Little paper bag, 120 × 60 × 160 mm", "bag", 120, 60, 160, "kraft300", { cuff: 25 }),
-  // Flat and inserts
-  P("cd-sleeve", "CD sleeve", "Card sleeve with a thumb notch, 125 × 125 mm", "cd-sleeve", 125, 1, 125, "250"),
-  P("voucher-envelope", "Gift voucher envelope", "Sleeve with a tuck flap, 170 × 1 × 90 mm", "cd-sleeve", 170, 1, 90, "250", { closure: "flap" }),
-  P("ornament-insert", "Ornament cell insert", "Six cells for baubles, 240 × 160 × 70 mm", "cell-insert", 240, 160, 70, "chip1", { cols: 3, rows: 2 }),
-  P("jar-insert", "Jar divider insert", "Four cells for jars, 160 × 160 × 80 mm", "cell-insert", 160, 160, 80, "chip1", { cols: 2, rows: 2 }),
+function tray(id: string, name: string, note: string, w: number, d: number, h: number, cols = 1, rows = 1, lid: TrayLid = "none", more: Extra = {}): P {
+  const W = Math.max(40, w), D = Math.max(40, d), H = Math.max(15, h);
+  return {
+    id, name, note,
+    params: { name, design: "tray", joint: { finger: finger(Math.min(W, D, H)) } as BoxesParams["joint"], tray: { width: W, depth: D, height: H, cols, rows, dividers: 100, lid }, ...(more.engrave ? { engrave: more.engrave } : {}) } as Partial<BoxesParams>,
+  };
+}
+
+function drawer(id: string, name: string, note: string, w: number, d: number, h: number, pull: BoxesParams["drawer"]["pull"] = "notch"): P {
+  const W = Math.max(60, w), D = Math.max(50, d), H = Math.max(30, h);
+  return { id, name, note, params: { name, design: "drawer", joint: { finger: finger(Math.min(W, D, H)) } as BoxesParams["joint"], drawer: { width: W, depth: D, height: H, drawers: 1, pull, clearance: 0.5 } } as Partial<BoxesParams> };
+}
+
+function hex(id: string, name: string, note: string, side: number, h: number): P {
+  const across = Math.max(40, Math.round(side * Math.sqrt(3)));
+  return { id, name, note, params: { name, design: "hex", hex: { width: across, height: Math.max(15, h), lid: "liftoff", clearance: 0.3 } } as Partial<BoxesParams> };
+}
+
+function insert(id: string, name: string, note: string, w: number, d: number, h: number, cols: number, rows: number): P {
+  return { id, name, note, params: { name, design: "insert", insert: { width: w, depth: d, height: h, cols, rows, clearance: 0.5 } } as Partial<BoxesParams> };
+}
+
+const mark = (text: string, fontId = "pacifico", size = 16): Extra => ({ engrave: { text, fontId, size } as BoxesParams["engrave"] });
+const s = (w: number, d: number, h: number) => `${w} × ${d} × ${h} mm inside`;
+
+export const PAPERBOX_PRESETS: P[] = [
+  // the product collection's studio pieces
+  drawer("studio-accessory-drawer", "Accessory drawer box", "Wooden sleeve with a sliding drawer and finger notch, 120 × 80 × 35 mm.", 120, 80, 35),
+  box("studio-voucher-box", "Voucher gift box", "Slim box with a sliding, engraved lid for vouchers and small gifts, 130 × 90 × 22 mm.", 130, 90, 22, "sliding", mark("For you")),
+  drawer("studio-sample-sleeve", "Craft sample box", "Drawer box for a craft sample pack, 110 × 70 × 30 mm.", 110, 70, 30),
+
+  // gift boxes with a lift-off lid (were two-piece cartons)
+  box("jewelry-6x6x3", "Jewellery gift box 6×6×3", `Lift-off lid with a lip, ${s(60, 60, 30)}.`, 60, 60, 30, "liftoff"),
+  box("ring-box", "Ring box", `Small box with a lift-off lid, ${s(50, 50, 40)}.`, 50, 50, 40, "liftoff"),
+  box("watch-box", "Watch box", `Lift-off lid, engraved, ${s(110, 80, 70)}.`, 110, 80, 70, "liftoff", mark("Time")),
+  box("cupcake-box", "Cupcake box", `One cupcake under a lift-off lid, ${s(100, 100, 90)}.`, 100, 100, 90, "liftoff"),
+  box("cookie-box", "Cookie box", `Flat box with a lift-off lid, ${s(150, 150, 50)}.`, 150, 150, 50, "liftoff", mark("Cookies")),
+  box("chocolate-box", "Chocolate box", `Shallow box for a chocolate tray, ${s(180, 120, 30)}.`, 180, 120, 30, "liftoff"),
+  box("nowruz-gift", "Nowruz gift box", `Square gift box with a lift-off lid, ${s(120, 120, 60)}.`, 120, 120, 60, "liftoff"),
+  box("shirt-box", "Shirt box", `Large flat box with a lift-off lid, ${s(300, 220, 50)}.`, 300, 220, 50, "liftoff"),
+  box("phone-box", "Phone box", `Lift-off lid, for a phone, ${s(160, 80, 25)}.`, 160, 80, 25, "liftoff"),
+  box("gift-card-box", "Gift card box", `Slim box with a lift-off lid, ${s(110, 80, 20)}.`, 110, 80, 20, "liftoff"),
+  box("cube-favour", "Cube favour box", "Wedding or party favour, a 60 mm cube with a lift-off lid.", 60, 60, 60, "liftoff"),
+  box("dice-box", "Dice gift box", "Small 50 mm cube with a lift-off lid.", 50, 50, 50, "liftoff"),
+  box("cake-box", "Cake box", `Square box with a lift-off lid, ${s(200, 200, 100)}.`, 200, 200, 100, "liftoff"),
+  box("cupcake-bakery", "Four-cupcake box", `Lift-off lid, room for four cupcakes, ${s(180, 180, 90)}.`, 180, 180, 90, "liftoff"),
+  box("pastry-box", "Pastry box", `Lift-off lid, ${s(250, 150, 70)}.`, 250, 150, 70, "liftoff"),
+  box("pie-box", "Pie box", `Shallow square box with a lift-off lid, ${s(230, 230, 50)}.`, 230, 230, 50, "liftoff"),
+  box("tart-box", "Tart box", `Small shallow box with a lift-off lid, ${s(140, 140, 40)}.`, 140, 140, 40, "liftoff"),
+  box("rsc-small", "Small shipping crate", `Plain crate with a lift-off lid, ${s(200, 150, 100)}.`, 200, 150, 100, "liftoff"),
+  box("fol-carton", "Storage crate", `Strong crate with a lift-off lid, ${s(250, 180, 150)}.`, 250, 180, 150, "liftoff"),
+  box("lunch-carry", "Lunch box", `Lift-off lid, ${s(160, 90, 110)}.`, 160, 90, 110, "liftoff"),
+  box("open-crate", "Open-top crate", `Crate open on top, ${s(300, 200, 120)}.`, 300, 200, 120, "open"),
+
+  // product boxes with a sliding lid (were tuck-end, snap-lock, auto-bottom and hanging cartons)
+  box("soap-box", "Soap box", `Sliding lid with a finger notch, ${s(90, 60, 30)}.`, 90, 60, 30, "sliding", mark("Soap")),
+  box("tea-box", "Tea box", `Tall box with a sliding lid on top, ${s(70, 70, 120)}.`, 70, 70, 120, "sliding", mark("Tea")),
+  box("candle-box", "Candle box", `For a jar candle, sliding lid, ${s(85, 85, 100)}.`, 85, 85, 100, "sliding"),
+  box("perfume-box", "Perfume box", `Tall box with a sliding lid, ${s(55, 55, 130)}.`, 55, 55, 130, "sliding"),
+  box("cream-jar-box", "Cream jar box", `Cube box for a cosmetic jar, sliding lid, ${s(60, 60, 60)}.`, 60, 60, 60, "sliding"),
+  box("lipstick-box", "Lipstick box", `Slim tall box with a sliding lid, ${s(25, 25, 85)}.`, 25, 25, 85, "sliding"),
+  box("business-card-box", "Business card box", `Holds about 100 cards, sliding lid, ${s(92, 57, 25)}.`, 92, 57, 25, "sliding"),
+  box("playing-card-box", "Playing card box", `Fits a poker deck, sliding lid, ${s(92, 66, 22)}.`, 92, 66, 22, "sliding"),
+  box("pharmacy-box", "Remedy box", `Sliding lid, ${s(100, 80, 30)}.`, 100, 80, 30, "sliding"),
+  box("toothpaste-box", "Long product box", `Long box with a sliding lid, ${s(180, 40, 35)}.`, 180, 40, 35, "sliding"),
+  box("bulb-box", "Light bulb box", `Square box with a sliding lid, ${s(65, 65, 110)}.`, 65, 65, 110, "sliding"),
+  box("mug-box", "Mug box", `Sliding lid, for a mug, ${s(100, 100, 110)}.`, 100, 100, 110, "sliding"),
+  box("jar-box", "Honey jar box", `Sliding lid, ${s(75, 75, 100)}.`, 75, 75, 100, "sliding", mark("Honey")),
+  box("bottle-box", "Bottle box", `Lying down with a sliding lid, for a small bottle, ${s(180, 70, 70)}.`, 180, 70, 70, "sliding"),
+  box("candle-auto-box", "Candle gift box", `Sliding, engraved lid, ${s(85, 85, 100)}.`, 85, 85, 100, "sliding", mark("Light")),
+  box("window-cookie-box", "Tall cookie box", `Sliding lid, ${s(120, 60, 160)}.`, 120, 60, 160, "sliding"),
+  box("earbuds-box", "Earbuds box", `Small box with a sliding lid, ${s(70, 30, 100)}.`, 70, 30, 100, "sliding"),
+  box("toy-box-window", "Toy box", `Sliding lid, ${s(90, 40, 140)}.`, 90, 40, 140, "sliding"),
+  box("cd-sleeve", "CD box", "Flat box for a CD or photos, sliding lid, 130 × 130 × 22 mm inside.", 130, 130, 22, "sliding"),
+  box("voucher-envelope", "Voucher box", "Flat box for a gift voucher, sliding lid, 175 × 95 × 22 mm inside.", 175, 95, 22, "sliding", mark("Gift")),
+
+  // boxes with a pin-hinged lid (were mailers, clamshells and hinged-lid cartons)
+  box("small-mailer", "Small hinged box", `Pin-hinged lid, ${s(150, 100, 50)}.`, 150, 100, 50, "pin"),
+  box("book-mailer", "Book box", `Flat box with a pin-hinged lid, for a book, ${s(240, 170, 40)}.`, 240, 170, 40, "pin"),
+  box("subscription-box", "Subscription box", `Pin-hinged lid, engraved, ${s(250, 200, 80)}.`, 250, 200, 80, "pin", mark("Thank you")),
+  box("tshirt-mailer", "T-shirt box", `Shallow box with a pin-hinged lid, ${s(280, 220, 40)}.`, 280, 220, 40, "pin"),
+  box("jewelry-mailer", "Jewellery hinged box", `Small pin-hinged box, ${s(120, 120, 40)}.`, 120, 120, 40, "pin"),
+  box("cosmetics-mailer", "Cosmetics set box", `Pin-hinged lid, ${s(200, 150, 70)}.`, 200, 150, 70, "pin"),
+  box("pizza-box", "Serving box", `Flat square box with a pin-hinged lid, ${s(300, 300, 40)}.`, 300, 300, 40, "pin"),
+  box("burger-box", "Snack box", `Pin-hinged lid, ${s(120, 120, 80)}.`, 120, 120, 80, "pin"),
+  box("sandwich-clamshell", "Sandwich box", `Long box with a pin-hinged lid, ${s(180, 100, 70)}.`, 180, 100, 70, "pin"),
+  box("tea-hinged", "Tea gift box", `Pin-hinged lid, engraved, ${s(160, 110, 60)}.`, 160, 110, 60, "pin", mark("Tea")),
+  box("jewelry-hinged", "Jewellery box, hinged lid", `Pin-hinged lid and a finger notch, ${s(100, 80, 40)}.`, 100, 80, 40, "pin"),
+  box("cosmetics-hinged", "Cosmetics box, hinged lid", `Pin-hinged lid, ${s(200, 140, 60)}.`, 200, 140, 60, "pin"),
+
+  // drawer boxes (were drawer cartons and sleeves)
+  drawer("matchbox", "Matchbox", "The smallest wooden drawer box, 60 × 50 × 30 mm.", 55, 35, 15),
+  drawer("jewelry-drawer", "Jewellery drawer box", "Sliding drawer for jewellery, 100 × 70 × 30 mm.", 100, 70, 30),
+  drawer("chocolate-drawer", "Chocolate drawer box", "Drawer box, 160 × 110 × 30 mm.", 160, 110, 30),
+  drawer("soap-sleeve", "Soap drawer box", "A wooden sleeve with a drawer for a bar of soap, 90 × 60 × 30 mm.", 90, 60, 30),
+  drawer("cookie-sleeve", "Cookie drawer box", "Sleeve and drawer, 160 × 120 × 40 mm.", 160, 120, 40),
+
+  // trays
+  tray("hamper-tray", "Hamper tray", `Open tray for a gift hamper, ${s(250, 180, 60)}.`, 250, 180, 60),
+  tray("sorting-tray", "Sorting tray", `Shallow desk tray, ${s(150, 100, 30)}.`, 150, 100, 30),
+  tray("counter-display", "Counter display tray", `Shop counter tray with three compartments, ${s(220, 160, 90)}.`, 220, 160, 90, 3, 1),
+  tray("candy-display", "Candy display tray", `Small counter tray, 2 × 2 compartments, ${s(180, 120, 70)}.`, 180, 120, 70, 2, 2),
+  tray("wine-2", "Two-bottle wine box", "Two bottles lying side by side under a sliding lid, 340 × 200 × 100 mm inside.", 340, 200, 100, 1, 2, "sliding"),
+
+  // hexagon boxes
+  hex("hex-candle-box", "Hexagon candle box", "Six-sided box with a lift-off lid, 78 mm across and 110 mm deep.", 45, 110),
+  hex("hex-favour-box", "Hexagon favour box", "Little hexagon box with a lift-off lid, 52 mm across and 60 mm deep.", 30, 60),
+
+  // divider inserts
+  insert("ornament-insert", "Ornament cell insert", "Six cells for baubles in a 240 × 160 mm box, 70 mm tall.", 240, 160, 70, 3, 2),
+  insert("jar-insert", "Jar divider insert", "Four cells for jars in a 160 × 160 mm box, 80 mm tall.", 160, 160, 80, 2, 2),
 ];
-
-export const PAPERBOX_PRESETS: GenPreset<PaperBoxParams>[] = LIST.map((p) => (SHEETS[p.id] ? { ...p, params: { ...p.params, bedW: SHEETS[p.id][0], bedH: SHEETS[p.id][1] } } : p));

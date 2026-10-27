@@ -1,4 +1,4 @@
-import { differenceShapes, unionShapes, intersectShapes } from '@/lib/letters/polygon';
+import { differenceShapes, unionShapes, intersectShapes, offsetShapes } from '@/lib/letters/polygon';
 import { rect, transform, signedArea } from '../geom';
 import type { BuildContext, Contour, GenPart } from '../types';
 import type { PopupParams } from './params';
@@ -22,6 +22,27 @@ function crossings(c: Contour, angle: number) { const q = transform(c, { rot: -a
 const boxOf = (c: Contour, pad = 0) => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of c) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } return [x0 - pad, y0 - pad, x1 + pad, y1 + pad]; };
 /** The contours whose boxes meet `c`'s: the only ones a clip against `c` can touch (a big pop-up has hundreds of slots). */
 export function nearContours(cs: Contour[], c: Contour, pad = 0.01): Contour[] { const [a0, b0, a1, b1] = boxOf(c, pad); return cs.filter(h => { const [x0, y0, x1, y1] = boxOf(h); return x1 >= a0 && x0 <= a1 && y1 >= b0 && y0 <= b1; }); }
+/**
+ * Tall ribs (towers, tiered stands, sleeves) were solid plates of 190 to 390 cm², which hid the rings
+ * and doubled the wood. They keep a frame of at least 4 T (12 mm in 3 mm plywood) along every edge,
+ * slot, tread and half-lap, with upright struts every 50 mm, and lose the rest as round-cornered
+ * windows. Ribs too low for a window to leave its frame stay solid.
+ */
+export function lighten(shapes: ReturnType<typeof unionShapes>, T: number): ReturnType<typeof unionShapes> {
+    const band = Math.max(10, 4 * T), r = band / 2, strut = band, pitch = 50;
+    const contours = (sh: ReturnType<typeof unionShapes>) => sh.flatMap(s => [s.outer, ...s.holes]);
+    const inner = offsetShapes(shapes, -band, 'miter');
+    if (!inner.length) return shapes;
+    const b = inner.flatMap(s => s.outer).reduce((m, [x, y]) => ({ x0: Math.min(m.x0, x), x1: Math.max(m.x1, x), y0: Math.min(m.y0, y), y1: Math.max(m.y1, y) }), { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity });
+    if (b.y1 - b.y0 < 3 * band) return shapes;
+    const cols: Contour[] = [];
+    for (let x = b.x0; x < b.x1; x += pitch) cols.push(rect(x + strut / 2, b.y0 - 1, pitch - strut, b.y1 - b.y0 + 2));
+    let windows = intersectShapes(contours(inner), cols);
+    windows = offsetShapes(offsetShapes(windows, -r), r).filter(w => w.area > 4 * band * band);
+    if (!windows.length) return shapes;
+    const out = differenceShapes(contours(shapes), contours(windows));
+    return out.length === 1 ? out : shapes;
+}
 /** One joint schedule drives both mating cut files and their centred 3D placements. */
 export function ribAssembly(p: PopupParams, rings: Ring[], holes: Contour[], centerHole: number, foot: number, ctx: BuildContext) {
     // A sleeve's opening goes right through to the table: crossed ribs would block it, so its ribs
@@ -74,13 +95,28 @@ export function ribAssembly(p: PopupParams, rings: Ring[], holes: Contour[], cen
     for (let k = 0; k < count; k++) {
         const angle = angles[k], sections = rings.map(r => ({ r, out: crossings(r.outer, angle), inside: r.inner ? crossings(r.inner, angle) : [-centerHole / 2, centerHole / 2] }));
         const end = Math.max(...sections.map(v => v.out[1])), start = radial ? hub : Math.min(...sections.map(v => v.out[0]));
-        const blocks: Contour[] = [rect(start, 0, end - start, foot)];
+        // the foot ends where the outermost treads do, flush with them (it stood 0.3 mm proud)
+        const g2 = p.rings.gap / 2, footStart = radial ? start : start + g2;
+        const blocks: Contour[] = [rect(footStart, 0, end - g2 - footStart, foot)];
+        const treads: { lo: number; hi: number; h: number }[] = [];
         for (const { r, out, inside } of sections)
             for (const sign of radial ? [1] : [-1, 1]) {
                 const lo = sign > 0 ? Math.max(inside[1] + p.rings.gap / 2, hub) : out[0] + p.rings.gap / 2, hi = sign > 0 ? out[1] - p.rings.gap / 2 : inside[0] - p.rings.gap / 2;
-                if (hi > lo)
+                if (hi > lo) {
                     blocks.push(rect(lo, -r.height, hi - lo, r.height + foot));
+                    treads.push({ lo, hi, h: r.height });
+                }
             }
+        // Each ring's block stops half a ring gap short of the next, so the rib used to be a comb: a
+        // 0.6 mm slit between every two rings ran from the treads down to the foot, leaving strips about
+        // 9 mm wide (170 mm tall on a tower) joined only at the bottom. Below the lower of two
+        // neighbouring treads the rib is now solid; above it the gap stays, as the riser of the taller ring.
+        treads.sort((a, b) => a.lo - b.lo);
+        for (let i = 0; i + 1 < treads.length; i++) {
+            const a = treads[i], b = treads[i + 1], h = Math.min(a.h, b.h);
+            if (b.lo > a.hi && b.lo - a.hi < 2 * p.rings.gap + 1)
+                blocks.push(rect(a.hi - .05, -h, b.lo - a.hi + .1, h + foot));
+        }
         for (const j of joints.filter(j => j.rib === k))
             blocks.push(rect(j.u - j.width / 2, -j.height - p.T, j.width, p.T + .1));
         let shapes = unionShapes(blocks);
@@ -93,6 +129,7 @@ export function ribAssembly(p: PopupParams, rings: Ring[], holes: Contour[], cen
             shapes = unionShapes([...shapes.flatMap(s => [s.outer, ...s.holes]), rect(hub + p.T, foot - .1, 2 * p.T, p.T + .1)]);
         if (shapes.length !== 1)
             throw Error('Support disconnected: increase ring width or reduce clearance.');
+        shapes = lighten(shapes, p.T);
         const a = angle * Math.PI / 180, c = Math.cos(a), s = Math.sin(a), m = [c, 0, -s, s * p.T / 2, s, 0, c, -c * p.T / 2, 0, -1, 0, 0];
         const text = ctx.text?.(`R${k + 1}`, 'archivo-black', Math.min(3, foot * .3));
         parts.push({ id: `rib-${k + 1}-0`, name: `Rib R${k + 1}`, outer: shapes[0].outer, holes: shapes[0].holes, engrave: text?.contours.map(c => transform(c, { x: radial ? hub + 5 : -10, y: foot * .75 })), place: { x: 0, y: 0, z: 0, m } });

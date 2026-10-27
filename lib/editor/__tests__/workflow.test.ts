@@ -15,7 +15,7 @@ describe("editor workflow", () => {
   });
   it("respects explicit product sections and own advanced flags", () => {
     expect(genSectionStep("popup", "profile", "dimensions")).toBe("dimensions");
-    expect(genSectionStep("paperbox", "mailer-size")).toBe("dimensions");
+    expect(genSectionStep("paperbox", "box")).toBe("dimensions");
     expect(isAdvancedKey("popup", "support.fit")).toBe(true);
     expect(isAdvancedKey("popup", "support.fit", false)).toBe(false);
   });
