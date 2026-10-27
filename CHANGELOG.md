@@ -1,3 +1,10 @@
+## 1.19.0 — Animated assembly inside the 3D workspace
+
+- Photo-generated parallel ribs with verified curved supports now have an **Assembly guide** in the 3D toolbar. The saved 40-piece sculpture uses 43 stages: preparation, four support sections, two alignment ribs, an explicit curing checkpoint, the remaining ribs and a final review.
+- Numbered cutting parts move down onto their actual matching joints. Cyan adhesive faces show the rail overlaps and slot shoulders; numbering follows the SVG export. Animation never changes the fabrication geometry.
+- Play/pause, previous/next, step selection, progress scrubbing, three playback speeds, remaining-part ghosts and optional full numbering make the sequence easy to inspect. Playback pauses when hidden and respects reduced-motion settings.
+- The guide requires a complete verified support assembly. Dry fitting, adhesive cure time, secure mounting and physical strength still require workshop verification; animation is not a load or adhesive certification.
+
 ## 1.18.0 — Curved supports for photo-generated ribs
 
 - Optional curved support construction preserves parallel rib shapes and placements, adds two support tracks and paired bottom-open / top-open half-laps, and splits long rails into overlapping sheet-sized sections.
