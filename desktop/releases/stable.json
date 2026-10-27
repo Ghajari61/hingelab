@@ -3,14 +3,14 @@
   "minimumVersion": "1.0.0",
   "latest": {
     "version": "1.16.1",
-    "pub_date": "2026-10-27T04:26:20.172Z",
-    "notes": "Template-free Photo to Product with AI-authored editable parts, direct 3D preview, effective dimension controls, true assembled measurements and optional SVG cutting exports.",
+    "pub_date": "2026-10-27T04:35:47.005Z",
+    "notes": "Template-free Photo to Product with direct editable 3D, generated part parameters, true assembled dimensions and optional SVG fabrication exports.",
     "platforms": {
       "windows-x86_64": {
         "url": "https://hingelab.vercel.app/downloads/HingeLab_1.16.1_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm5taHJGenZUYjA0dm1VR1V3UTI1Q2orQkVycW1VS09mc1E2aFZ1S2lSZnRSMWVnaC96NlN1UzRIUm15WE44dTluRXNuWHJhOUxlNURLbDR6bThqcXdFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDc1MTA4CWZpbGU6SGluZ2VMYWJfMS4xNi4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE2LjEKaXl6cWZySHJsY3FIV0hGY25SNXJlMjY1c0VHWW5QU2IvWkFhVm92dDF2Nlp0d2NKbEdDbkdrOVJGTkRhYXBKd2VZUkphUlYzaFVHcUVOMi84ZFJLQ3c9PQo=",
-        "size": 11907236,
-        "sha256": "92e50cc475faa3635af370cd7699905353939416eb754534c41baa0d8dc3b244"
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm1vdElmZHZ2S3ErNEptVFR5MldoQTVpS3NINlhrRWFCTWFSTkRTQ0pvTHRxV3orSzN5bEFvWm1qN3BTZnN5dEROOEUyMFVITjAzUUE0bkdkZlkrRlEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDc1NjQ1CWZpbGU6SGluZ2VMYWJfMS4xNi4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjE2LjEKckpnK3VZT3MwZTJqNWxCMnZ1S0RxN1E3MEdUV0wwRVBybzR4RjNTNkFkN050SFFBeU9wWG9ienBZUU9Od25tQ2VUSG9KMGs4SDhkY2NvQVZUYkRXRHc9PQo=",
+        "size": 11907526,
+        "sha256": "6a00cd7ae79c4eb500b7e881a6f33585e56a08b1e82af12f771dc104c7105d09"
       }
     }
   }
