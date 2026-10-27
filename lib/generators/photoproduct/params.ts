@@ -1,4 +1,5 @@
 import {GeneratedModelSchema,type GeneratedModel} from "@/lib/photoproduct/generated";
+import {DEFAULT_JOINERY,type JoinerySettings} from "@/lib/photoproduct/joinery";
 import { DEFAULTS, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import { AnalysisSchema, MEASUREMENT_RANGES, PhotoSchema, validatePhoto, type ProductAnalysis, type ProductPhoto } from "@/lib/photoproduct/contracts";
@@ -7,6 +8,7 @@ import { mergeInto } from "../util";
 export interface PhotoProductParams extends GenBase {
  recipe:"custom"|"paw"|"heartbox"|"tag";
  generated:GeneratedModel|null; values:Record<string,number>; hiddenParts:string[];
+ joinery:JoinerySettings;
  size:{width:number;depth:number;height:number};
  text:{name:string;subtitle:string;fontId:string;size:number};
  paw:{wings:boolean;frame:number;detail:"snowflake"|"heart"|"none";detailSize:number;connected:boolean;backing:boolean;backThickness:number;backMaterial:string;backKerf:number;backColor:string;hole:number};
@@ -19,7 +21,7 @@ export interface PhotoProductParams extends GenBase {
 }
 export const PHOTO_DEFAULTS:PhotoProductParams={
  name:"Photo product",material:"birch3",T:3,K:DEFAULTS.K,bedW:600,bedH:400,gap:4,fit:{...FIT_OFF},sheet:{...SHEET_DEFAULTS},job:{...JOB_EXTRAS},layers:clone(DEFAULTS.layers),
- recipe:"custom",generated:null,values:{},hiddenParts:[],size:{width:100,depth:105,height:30},text:{name:"Lucy",subtitle:"",fontId:"pacifico",size:16},
+ recipe:"custom",generated:null,values:{},hiddenParts:[],joinery:{...DEFAULT_JOINERY},size:{width:100,depth:105,height:30},text:{name:"Lucy",subtitle:"",fontId:"pacifico",size:16},
  paw:{wings:false,frame:4,detail:"snowflake",detailSize:6,connected:true,backing:true,backThickness:2,backMaterial:"acr2",backKerf:.1,backColor:"#258e92",hole:5},
  box:{rim:10,lid:"honeycomb",hex:8,web:3,clearance:.4,pitch:2.5,slit:11,bridge:2,edge:3.5},tag:{shape:"rounded",hole:5},
  references:[],measurements:{width:0,depth:0,height:0,thickness:0},analysis:{status:"example",result:null,baseline:"",provider:""},note:"",
@@ -42,10 +44,13 @@ export function mergePhotoProduct(raw:unknown):PhotoProductParams{
  p.references=(Array.isArray(p.references)?p.references:[]).slice(0,5).flatMap(ref=>{const q=PhotoSchema.safeParse(ref);return q.success&&!validatePhoto(q.data)?[q.data]:[];});
  for(const key of ["width","depth","height","thickness"] as const)p.measurements[key]=n(p.measurements[key],0,0,MEASUREMENT_RANGES[key][1]);
  const model=GeneratedModelSchema.safeParse(p.generated);p.generated=model.success?model.data:null;
+ const j=p.joinery;j.mode=j.mode==='off'?'off':'auto';j.clearance=n(j.clearance,.15,0,1);j.tabWidth=n(j.tabWidth,3,2,8);j.spacing=n(j.spacing,12,6,30);j.minWeb=n(j.minWeb,1,.5,3);
+ // Existing saved models keep their original cutting contours until auto joinery is enabled.
+ if(raw&&typeof raw==='object'&&'generated' in raw&&!('joinery' in raw))j.mode='off';
  const input=raw&&typeof raw==="object"?raw as Record<string,unknown>:{};const rawValues=input.values&&typeof input.values==="object"?input.values as Record<string,number>:{};p.values={};for(const q of p.generated?.parameters??[]){const value=rawValues[q.id];if(Number.isFinite(value))p.values[q.id]=Math.min(q.max,Math.max(q.min,value));}
  p.hiddenParts=(Array.isArray(p.hiddenParts)?p.hiddenParts:[]).filter(x=>typeof x==="string").slice(0,48);
  const result=AnalysisSchema.safeParse(p.analysis.result);p.analysis.result=result.success?result.data:null;
  p.analysis.status=p.analysis.status==="ai"&&p.analysis.result?"ai":"example";p.analysis.baseline=p.analysis.baseline.slice(0,10_000);p.analysis.provider=p.analysis.provider.slice(0,80);p.note=p.note.slice(0,800);
  return p;
 }
-export function geometrySettings(p:PhotoProductParams){return {recipe:p.recipe,size:p.size,T:p.T,text:p.text,paw:p.paw,box:p.box,tag:p.tag,generated:p.generated,values:p.values};}
+export function geometrySettings(p:PhotoProductParams){return {recipe:p.recipe,size:p.size,T:p.T,text:p.text,paw:p.paw,box:p.box,tag:p.tag,generated:p.generated,values:p.values,joinery:p.joinery};}

@@ -4,8 +4,10 @@ import {rect,ellipse,bboxOf,pointInContour} from '@/lib/generators/geom';
 import {orient} from '@/lib/generators/shapes';
 import {textBlock} from '@/lib/generators/weld';
 import type {BuildContext,Contour,GenOutput,GenPart,Pt} from '@/lib/generators/types';
+import {engineerJoinery,type JoinerySettings} from './joinery';
 const expr=z.string().min(1).max(160);
-const point=z.tuple([z.number().min(-4).max(4),z.number().min(-4).max(4)]);
+const coordinate=z.union([z.number().min(-4).max(4),expr]);
+const point=z.tuple([coordinate,coordinate]);
 const profile=z.object({kind:z.enum(['rectangle','ellipse','polygon']),x:expr,y:expr,w:expr,h:expr,points:z.array(point).max(160),count:expr,dx:expr,dy:expr}).strict();
 export const GeneratedModelSchema=z.object({
  parameters:z.array(z.object({id:z.string().regex(/^[a-z][a-z0-9_]{0,23}$/),label:z.string().min(1).max(60),value:z.number().finite().min(-4000).max(4000),min:z.number().finite().min(-4000).max(4000),max:z.number().finite().min(-4000).max(4000),step:z.number().min(.01).max(100)}).strict()).max(24),
@@ -29,7 +31,7 @@ export function evaluateDimension(source:string,vars:Record<string,number>):numb
 /** Only expose an axis control when the AI's generated formulas actually use it. */
 export function generatedUsesVariable(model:GeneratedModel|null,name:"W"|"D"|"H"):boolean{
  if(!model)return true;
- const expressionStrings=model.parts.flatMap(p=>[p.count,p.width,p.height,p.thickness,...Object.values(p.pose),...[p.outline,...p.additions,...p.holes,...p.cuts,...p.score].flatMap(q=>[q.x,q.y,q.w,q.h,q.count,q.dx,q.dy]),...(p.engraving?[p.engraving.x,p.engraving.y,p.engraving.size]:[])]);
+ const expressionStrings=model.parts.flatMap(p=>[p.count,p.width,p.height,p.thickness,...Object.values(p.pose),...[p.outline,...p.additions,...p.holes,...p.cuts,...p.score].flatMap(q=>[q.x,q.y,q.w,q.h,q.count,q.dx,q.dy,...q.points.flat().filter((p):p is string=>typeof p==='string')]),...(p.engraving?[p.engraving.x,p.engraving.y,p.engraving.size]:[])]);
  return expressionStrings.some(s=>new RegExp("\\b"+name+"\\b").test(s));
 }
 const area=(c:Contour)=>Math.abs(c.reduce((s,a,i)=>{const b=c[(i+1)%c.length];return s+a[0]*b[1]-b[0]*a[1]},0)/2);
@@ -38,12 +40,12 @@ function validRing(c:Contour){
  const cross=(a:Pt,b:Pt,c:Pt)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
  for(let i=0;i<c.length;i++)for(let j=i+2;j<c.length;j++){if(i===0&&j===c.length-1)continue;const a=c[i],b=c[(i+1)%c.length],d=c[j],e=c[(j+1)%c.length];if(cross(a,b,d)*cross(a,b,e)<-1e-9&&cross(d,e,a)*cross(d,e,b)<-1e-9)throw Error('Self-intersecting profile');}
 }
-export function buildGeneratedProduct(model:GeneratedModel,size:{width:number;depth:number;height:number},T:number,values:Record<string,number>,ctx:BuildContext):GenOutput{
+export function buildGeneratedProduct(model:GeneratedModel,size:{width:number;depth:number;height:number},T:number,values:Record<string,number>,ctx:BuildContext,joinery?:JoinerySettings):GenOutput{
  try{
  if(![size.width,size.depth,size.height,T].every(Number.isFinite)||Math.min(size.width,size.depth,size.height)<1||T<.5||T>50)throw Error('Invalid overall dimensions or thickness');
  const checked=GeneratedModelSchema.parse(model),scope:Record<string,number>={W:size.width,D:size.depth,H:size.height,T};
  for(const p of checked.parameters){const v=values[p.id]??p.value;if(!Number.isFinite(v)||v<p.min||v>p.max)throw Error(p.label+' is outside its limits');scope[p.id]=v;}
- const parts:GenPart[]=[];let operations=0,vertices=0;
+ let parts:GenPart[]=[];let operations=0,vertices=0;
  const count=(text:string,v:Record<string,number>,max:number)=>{const x=evaluateDimension(text,v);if(!Number.isInteger(x)||x<1||x>max)throw Error('Repeat count exceeds limit');return x;};
  for(const part of checked.parts){const n=count(part.count,scope,128);if(parts.length+n>160)throw Error('Part count limit is 160');
  for(let i=0;i<n;i++){
@@ -52,7 +54,8 @@ export function buildGeneratedProduct(model:GeneratedModel,size:{width:number;de
  const profiles=(p:z.infer<typeof profile>,open=false):Contour[]=>{const rings:Contour[]=[];for(let j=0;j<count(p.count,v,128);j++){
  if(++operations>6000)throw Error('Geometry complexity limit');const q={...v,j},e=(s:string)=>evaluateDimension(s,q),x=(e(p.x)+j*e(p.dx))*w,y=(e(p.y)+j*e(p.dy))*h,a=e(p.w)*w,b=e(p.h)*h;
  if(a<=0||b<=0||Math.max(Math.abs(x),Math.abs(y),a,b)>8000)throw Error('Profile dimensions exceed limit');
- const c:Contour=p.kind==='rectangle'?rect(x,y,a,b):p.kind==='ellipse'?ellipse(x+a/2,y+b/2,a/2,b/2,80):p.points.map(([u,k])=>[x+u*a,y+k*b] as Pt);
+ const coord=(s:number|string)=>{const value=typeof s==='number'?s:e(s);if(!Number.isFinite(value)||Math.abs(value)>4)throw Error('Profile coordinate exceeds limit');return value;};
+ const c:Contour=p.kind==='rectangle'?rect(x,y,a,b):p.kind==='ellipse'?ellipse(x+a/2,y+b/2,a/2,b/2,80):p.points.map(([u,k])=>[x+coord(u)*a,y+coord(k)*b] as Pt);
  if(c.length<(open?2:3))throw Error('Profile needs more points');vertices+=c.length;if(vertices>100000)throw Error('Geometry vertex limit');if(!open)validRing(c);rings.push(c);
  }return rings;};
  const outline=profiles(part.outline);if(outline.length!==1)throw Error('Each repeated part must have one outline');
@@ -68,9 +71,10 @@ export function buildGeneratedProduct(model:GeneratedModel,size:{width:number;de
  const b=bboxOf([shape[0].outer]);if(b.x1-b.x0>4000||b.y1-b.y0>4000)throw Error('Part exceeds size limit');
  parts.push({id:part.id+'-'+(i+1),name:String(parts.length+1).padStart(2,'0')+' · '+part.name+(n>1?' '+(i+1):''),outer:shape[0].outer,holes:shape[0].holes,cuts:paths(part.cuts),score:paths(part.score),engrave,t,stock:'wood-'+t+'mm',place:{x,y,z,m}});
  }}
+ const engineered=joinery?.mode==='auto'?engineerJoinery(parts,joinery):null;if(engineered)parts=engineered.parts;
  const low=[Infinity,Infinity,Infinity],high=[-Infinity,-Infinity,-Infinity];
  for(const part of parts){const m=part.place!.m!;for(const [x,y] of part.outer)for(const t of [0,part.t!])for(let axis=0;axis<3;axis++){const k=axis*4,a=m[k]*x+m[k+1]*y+m[k+2]*t+m[k+3];low[axis]=Math.min(low[axis],a);high[axis]=Math.max(high[axis],a);}}
  const dimensions=high.map((a,i)=>Number((a-low[i]).toFixed(2)));
- return {parts,stats:[{label:'Assembled size',value:dimensions.join(' × ')+' mm'},{label:'Generated parts' ,value:String(parts.length)},{label:'Photo estimate',value:`${size.width} × ${size.depth} × ${size.height} mm`}],assembly:[...checked.assembly,...checked.limitations]};
+ return {parts,...(engineered?{joinery:engineered.report}:{}),stats:[{label:'Assembled size',value:dimensions.join(' × ')+' mm'},{label:'Generated parts' ,value:String(parts.length)},{label:'Photo estimate',value:`${size.width} × ${size.depth} × ${size.height} mm`},...(engineered?[{label:'Matched joints',value:String(engineered.report.joints.filter(j=>j.kind!=='glue').length)},{label:'Assembly groups',value:String(engineered.report.groups)}]:[])],assembly:[...checked.assembly,...(engineered?[...new Set(engineered.report.joints.map(j=>j.instruction)),...engineered.report.warnings]:[]),...checked.limitations]};
  }catch(e){return {parts:[],stats:[],error:e instanceof Error?e.message:'Invalid generated geometry'};}
 }

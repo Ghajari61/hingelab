@@ -15,6 +15,7 @@ export function photoBuildPackage(p:PhotoProductParams,a:GenArranged<PhotoProduc
   files[manifest[i].file]=strToU8(genSVG(PHOTO_PRODUCT,{...p,T:pt.src.t??p.T,K:pt.src.material==="second"?p.paw.backKerf:p.K},{width:w+4,height:h+4,items:[{pt,i:0,w,h,ox:2-pt.bbox.x0,oy:2-pt.bbox.y0}]},"Individual part; kerf already applied once."));
  });
  files["parts.json"]=strToU8(JSON.stringify(manifest,null,2));
+ if(a.result.out.joinery)files["connections.json"]=strToU8(JSON.stringify({settings:p.joinery,...a.result.out.joinery},null,2));
  files["assumptions.json"]=strToU8(JSON.stringify({status:"geometry checked; controller and physical construction unverified",measurements:p.measurements,analysis:p.analysis.result,photoEstimatedDimensions:p.size,assembledStats:a.result.out.stats,material:p.material,thickness:p.T,kerf:p.K},null,2));
  files["ASSEMBLY-PREVIEW.svg"]=strToU8(assembledSVG(a.result.out,p.T));
  files["README.txt"]=strToU8([
