@@ -1,11 +1,11 @@
 import type {Contour,GenPart,Pt} from '@/lib/generators/types';
 import {differenceShapes,intersectShapes,unionShapes,signedArea,pointInShape,pointInContour,shapeContours} from '@/lib/letters/polygon';
 
-export interface JoinerySettings {mode:'auto'|'off';clearance:number;tabWidth:number;spacing:number;minWeb:number}
-export const DEFAULT_JOINERY:JoinerySettings={mode:'auto',clearance:.15,tabWidth:3,spacing:12,minWeb:1};
+export interface JoinerySettings {mode:'auto'|'off';clearance:number;tabWidth:number;spacing:number;minWeb:number;supports?:'off'|'rib-rails';railLength?:number}
+export const DEFAULT_JOINERY:JoinerySettings={mode:'auto',clearance:.15,tabWidth:3,spacing:12,minWeb:1,supports:'off',railLength:500};
 type V=[number,number,number];
 export interface PhotoJoint {id:string;kind:'tab-slot'|'cross-lap'|'glue';a:string;b:string;at:V;slotWidth:number;mateSlotWidth?:number;depth:number;instruction:string}
-export interface JoineryReport {joints:PhotoJoint[];unconnected:string[];groups:number;warnings:string[];clearance:number}
+export interface JoineryReport {joints:PhotoJoint[];unconnected:string[];groups:number;warnings:string[];clearance:number;supportPlan?:{ribCount:number;railCount:number;maxRailLength:number;tracks:number[];insertionClearance:number;steps:string[]}}
 const add=(a:V,b:V):V=>a.map((x,i)=>x+b[i]) as V;
 const sub=(a:V,b:V):V=>a.map((x,i)=>x-b[i]) as V;
 const mul=(a:V,k:number):V=>a.map(x=>x*k) as V;
@@ -22,7 +22,7 @@ function rectangle(a:Pt,u:Pt,v:Pt,l:number,r:number,b:number,t:number):Contour{r
 function filled(p:GenPart,c:Contour){return differenceShapes([positive(c)],contours(p)).reduce((s,q)=>s+q.area,0)<.01;}
 function replace(p:GenPart,cs:Contour[]):GenPart|null{const s=unionShapes(cs);return s.length===1&&s[0].area>1?{...p,outer:s[0].outer,holes:s[0].holes}:null;}
 function cut(p:GenPart,c:Contour):GenPart|null{return replace(p,shapeContours(differenceShapes(contours(p),[positive(c)])));}
-function toolpathOverlap(p:GenPart,c:Contour){
+export function toolpathOverlap(p:GenPart,c:Contour){
  const cross=(a:Pt,b:Pt,d:Pt)=>(b[0]-a[0])*(d[1]-a[1])-(b[1]-a[1])*(d[0]-a[0]);
  const intersects=(a:Pt,b:Pt,d:Pt,e:Pt)=>Math.max(a[0],b[0])>=Math.min(d[0],e[0])&&Math.max(d[0],e[0])>=Math.min(a[0],b[0])&&Math.max(a[1],b[1])>=Math.min(d[1],e[1])&&Math.max(d[1],e[1])>=Math.min(a[1],b[1])&&cross(a,b,d)*cross(a,b,e)<=0&&cross(d,e,a)*cross(d,e,b)<=0;
  return [...p.cuts??[],...p.score??[],...p.engrave??[]].some(line=>line.some(pt=>pointInContour(pt,c))||line.some((pt,i)=>i>0&&c.some((q,k)=>intersects(line[i-1],pt,q,c[(k+1)%c.length]))))||(p.engrave??[]).some(line=>line.length>=3&&c.some(pt=>pointInContour(pt,line)));

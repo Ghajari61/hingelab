@@ -1,3 +1,11 @@
+## 1.18.0 — Curved supports for photo-generated ribs
+
+- Optional curved support construction preserves parallel rib shapes and placements, adds two support tracks and paired bottom-open / top-open half-laps, and splits long rails into overlapping sheet-sized sections.
+- The saved 36-rib wave sculpture now has four support sections, 76 paired joints and two adhesive side-laps in one connected assembly. The entire downward insertion path is checked from actual solid geometry, with no unconnected parts or rib/rail interference.
+- Editable section length, stock thickness, fit clearance and minimum web rebuild the construction. Unsupported orientations, crowded ribs and insufficient material stop export with a clear message.
+- Numbered assembly instructions, connection dimensions and labels accompany the cutting files. Per-part package exports now preserve enabled labels as well as the sheet export.
+- Physical cutting, adhesive strength and load capacity remain unverified. This assembly is a decorative sculpture, not certified seating.
+
 ## 1.17.0 — Photo reconstruction and matching joints
 
 - Photo reconstruction now compares actual front, side, top and assembled model renders with the uploaded references before accepting a valid correction. A failed review keeps the usable draft and says the comparison was not completed.

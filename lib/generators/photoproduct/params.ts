@@ -45,6 +45,7 @@ export function mergePhotoProduct(raw:unknown):PhotoProductParams{
  for(const key of ["width","depth","height","thickness"] as const)p.measurements[key]=n(p.measurements[key],0,0,MEASUREMENT_RANGES[key][1]);
  const model=GeneratedModelSchema.safeParse(p.generated);p.generated=model.success?model.data:null;
  const j=p.joinery;j.mode=j.mode==='off'?'off':'auto';j.clearance=n(j.clearance,.15,0,1);j.tabWidth=n(j.tabWidth,3,2,8);j.spacing=n(j.spacing,12,6,30);j.minWeb=n(j.minWeb,1,.5,3);
+ j.supports=j.supports==='rib-rails'?'rib-rails':'off';j.railLength=n(j.railLength??500,500,100,2000);
  // Existing saved models keep their original cutting contours until auto joinery is enabled.
  if(raw&&typeof raw==='object'&&'generated' in raw&&!('joinery' in raw))j.mode='off';
  const input=raw&&typeof raw==="object"?raw as Record<string,unknown>:{};const rawValues=input.values&&typeof input.values==="object"?input.values as Record<string,number>:{};p.values={};for(const q of p.generated?.parameters??[]){const value=rawValues[q.id];if(Number.isFinite(value))p.values[q.id]=Math.min(q.max,Math.max(q.min,value));}

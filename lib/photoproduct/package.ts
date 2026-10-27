@@ -1,5 +1,5 @@
 import { zipSync,strToU8 } from "fflate";
-import { genSVG,type GenArranged } from "@/lib/generators/output";
+import { genSVG,partLabel,type GenArranged } from "@/lib/generators/output";
 import { assembledSVG } from "@/lib/generators/thumb";
 import { slug } from "@/lib/generators/util";
 import { PHOTO_PRODUCT } from "@/lib/generators/photoproduct";
@@ -12,10 +12,12 @@ export function photoBuildPackage(p:PhotoProductParams,a:GenArranged<PhotoProduc
  const manifest=parts.map((pt,i)=>({number:i+1,id:pt.id,name:pt.name,stock:pt.tag??pt.src.stock??p.material,thickness:pt.src.t??p.T,file:`parts/${String(i+1).padStart(2,"0")}-${slug(pt.id,"part")}.svg`}));
  parts.forEach((pt,i)=>{
   const w=pt.bbox.x1-pt.bbox.x0,h=pt.bbox.y1-pt.bbox.y0;
-  files[manifest[i].file]=strToU8(genSVG(PHOTO_PRODUCT,{...p,T:pt.src.t??p.T,K:pt.src.material==="second"?p.paw.backKerf:p.K},{width:w+4,height:h+4,items:[{pt,i:0,w,h,ox:2-pt.bbox.x0,oy:2-pt.bbox.y0}]},"Individual part; kerf already applied once."));
+  const labeled=p.sheet?.labels?{...pt,score:[...pt.score,...partLabel(pt)]}:pt;
+  files[manifest[i].file]=strToU8(genSVG(PHOTO_PRODUCT,{...p,T:pt.src.t??p.T,K:pt.src.material==="second"?p.paw.backKerf:p.K},{width:w+4,height:h+4,items:[{pt:labeled,i:0,w,h,ox:2-pt.bbox.x0,oy:2-pt.bbox.y0}]},"Individual part; kerf already applied once."));
  });
  files["parts.json"]=strToU8(JSON.stringify(manifest,null,2));
  if(a.result.out.joinery)files["connections.json"]=strToU8(JSON.stringify({settings:p.joinery,...a.result.out.joinery},null,2));
+ if(a.result.out.joinery?.supportPlan)files['SUPPORT-ASSEMBLY.txt']=strToU8(a.result.out.joinery.supportPlan.steps.join('\n\n'));
  files["assumptions.json"]=strToU8(JSON.stringify({status:"geometry checked; controller and physical construction unverified",measurements:p.measurements,analysis:p.analysis.result,photoEstimatedDimensions:p.size,assembledStats:a.result.out.stats,material:p.material,thickness:p.T,kerf:p.K},null,2));
  files["ASSEMBLY-PREVIEW.svg"]=strToU8(assembledSVG(a.result.out,p.T));
  files["README.txt"]=strToU8([
