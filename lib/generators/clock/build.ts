@@ -5,6 +5,7 @@ import { markLetters } from "../textOps";
  * standard quartz movement, a keyhole hanger and a slot-in desk stand. mm, y down, centre (0, 0).
  */
 import { intersectShapes, makeShape, offsetShapes, unionShapes } from "@/lib/letters/polygon";
+import type { Shape } from "@/lib/letters/types";
 import {
   TAU, arc, bboxOf, circle, contourGap, customOutline, deg, distToContour, pointInContour, rect, regularPolygon, roundCorners,
   roundedRect, signedArea, stadium, transform,
@@ -79,6 +80,67 @@ export function faceOutline(p: ClockParams): Contour | null {
   }
 }
 
+/**
+ * Whether a point lies inside every one of `ins` (null ones skipped) except the second, which it
+ * must lie outside: the numerals' band. Rasterised once at MASK_STEP mm by scanlines, so each test is
+ * a lookup; a cell counts only if its centre and its four neighbours are in, which keeps the test on
+ * the safe side of the edges by about one cell.
+ */
+const MASK_STEP = 0.5;
+function bandMask(outline: Contour, [faceIn, bandOut, opening]: (Contour | null)[]): (q: Pt) => boolean {
+  const b = bboxOf([outline]), x0 = b.x0 - 1, y0 = b.y0 - 1;
+  const W = Math.ceil((b.x1 + 1 - x0) / MASK_STEP) + 1, H = Math.ceil((b.y1 + 1 - y0) / MASK_STEP) + 1;
+  const fill = (c: Contour) => {
+    const g = new Uint8Array(W * H);
+    for (let j = 0; j < H; j++) {
+      const y = y0 + (j + 0.5) * MASK_STEP, xs: number[] = [];
+      for (let i = 0, k = c.length - 1; i < c.length; k = i++) {
+        const [ax, ay] = c[k], [bx, by] = c[i];
+        if ((ay > y) !== (by > y)) xs.push(ax + ((y - ay) * (bx - ax)) / (by - ay));
+      }
+      xs.sort((p, q) => p - q);
+      for (let t = 0; t + 1 < xs.length; t += 2) {
+        const i0 = Math.max(0, Math.ceil((xs[t] - x0) / MASK_STEP - 0.5)), i1 = Math.min(W - 1, Math.floor((xs[t + 1] - x0) / MASK_STEP - 0.5));
+        for (let i = i0; i <= i1; i++) g[j * W + i] = 1;
+      }
+    }
+    return g;
+  };
+  const ok = new Uint8Array(W * H).fill(1);
+  [faceIn, bandOut, opening].forEach((c, n) => {
+    if (!c) return;
+    const g = fill(c);
+    for (let i = 0; i < ok.length; i++) if (n === 1 ? g[i] : !g[i]) ok[i] = 0;
+  });
+  if (!faceIn) ok.fill(0);
+  const at = (i: number, j: number) => i >= 0 && j >= 0 && i < W && j < H && ok[j * W + i] === 1;
+  return ([x, y]) => {
+    const i = Math.floor((x - x0) / MASK_STEP), j = Math.floor((y - y0) / MASK_STEP);
+    return at(i, j) && at(i + 1, j) && at(i - 1, j) && at(i, j + 1) && at(i, j - 1);
+  };
+}
+
+/** Convex hull of points (monotone chain), counter-clockwise. */
+function hullOf(pts: Pt[]): Contour {
+  const q = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  if (q.length < 3) return q;
+  const cross = (o: Pt, a: Pt, b: Pt) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo: Pt[] = [], hi: Pt[] = [];
+  for (const p of q) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
+  for (const p of q.reverse()) { while (hi.length >= 2 && cross(hi[hi.length - 2], hi[hi.length - 1], p) <= 0) hi.pop(); hi.push(p); }
+  return [...lo.slice(0, -1), ...hi.slice(0, -1)];
+}
+
+/** A closed contour's corners plus points every `step` mm along its edges. */
+function sampled(c: Contour, step: number): Contour {
+  const out: Pt[] = [];
+  for (let i = 0; i < c.length; i++) {
+    const a = c[i], b = c[(i + 1) % c.length], n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / step));
+    for (let k = 0; k < n; k++) out.push([a[0] + ((b[0] - a[0]) * k) / n, a[1] + ((b[1] - a[1]) * k) / n]);
+  }
+  return out;
+}
+
 /** Unit vector for a clock angle (degrees clockwise from twelve), y down. */
 const dirOf = (a: number): Pt => [Math.sin(deg(a)), -Math.cos(deg(a))];
 
@@ -116,10 +178,18 @@ export function markerDepth(p: ClockParams): number {
 
 const rot = (c: Contour, a: number) => transform(c, { rot: a });
 
-interface Markers { engrave: Contour[]; score: Contour[]; holes: Contour[]; missing: string[]; loading: boolean }
+interface Markers {
+  engrave: Contour[]; score: Contour[]; holes: Contour[]; missing: string[]; loading: boolean;
+  /** The smallest numeral height used, mm: below the set size when a numeral had to shrink to fit its band. */
+  numeralSize?: number;
+}
 
 /** How far inside the ring's inner edge markers on the back plate stay, mm (so the ring never covers them). */
 export const RING_CLEAR = 3;
+/** How far numerals stay in from the face's edge and the ring's opening, and apart from each other, mm. */
+export const EDGE_CLEAR = 1.5;
+/** Radius round the centre kept free of numerals, for the movement's nut and the hands' bosses, mm. */
+const HUB_CLEAR = 24;
 
 /**
  * Where the outer end of the markers sits along angle `a`: the edge gap in from the face's edge, but
@@ -131,7 +201,7 @@ function markerAnchor(p: ClockParams, outline: Contour, clear: Contour | null, a
   return clear ? Math.min(r, edgeDistance(clear, a) - RING_CLEAR) : r;
 }
 
-function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext, clear: Contour | null = null): Markers {
+function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext, clear: Contour | null = null, band: Contour | null = null): Markers {
   const m = p.markers, res: Markers = { engrave: [], score: [], holes: [], missing: [], loading: false };
   if (m.style === "none" && !m.minutes) return res;
   let item = "Ticks";
@@ -164,19 +234,67 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext, clear
   // Numerals first, so no tick (an hour tick or a minute tick) is drawn into one: wide numerals
   // such as XII or VIII reach the neighbouring minute marks, and an engraved overlap would burn twice
   // (or show as a gap in the letter).
-  const numerals: Contour[][] = [];
+  // Every numeral lies wholly on its band: inside the face's outline (less EDGE_CLEAR), outside the
+  // ring's opening when the markers are on the ring, inside the opening when they are on the back
+  // plate, and clear of the other numerals. One that does not fit where its edge gap puts it (a
+  // wide VIII on a narrow ring, the notch of a heart, the point at its tip) moves along its angle
+  // to the nearest place it fits. Only when one fits nowhere are all the numerals drawn smaller,
+  // together, so they keep one size.
+  const largest = (cs: Shape[]) => cs.reduce<Contour | null>((b, x) => (!b || Math.abs(signedArea(x.outer)) > Math.abs(signedArea(b)) ? x.outer : b), null);
+  const faceIn = largest(offsetShapes([makeShape(outline, [])], -EDGE_CLEAR));
+  const bandOut = band ? largest(offsetShapes([makeShape(band, [])], EDGE_CLEAR)) : null;
+  const onBand = bandMask(outline, [faceIn, bandOut, opening]);
+  interface Glyph { a: number; dir: Pt; extent: number; base: Contour[]; hull: Contour }
+  const glyphs: Glyph[] = [];
   if (numeralHours.length) {
     if (!ctx.text) res.loading = true;
     else for (const h of numeralHours) {
       const s = numeral(m.numerals, h), shape = ctx.text(s, m.fontId, m.size);
       if (!shape) { res.loading = true; continue; }
       for (const c of shape.missing) if (!res.missing.includes(c)) res.missing.push(c);
-      const a = h * 30, [dx, dy] = dirOf(a);
-      const extent = m.follow ? shape.height : Math.abs(shape.width * dx) + Math.abs(shape.height * dy);
-      const r = anchor(a) - extent / 2;
-      const at = (c: Contour) => (m.follow ? rot(c, a) : c).map(([x, y]) => [x + dx * r, y + dy * r] as Pt);
-      numerals.push(pull(shape.contours.map(at), a));
+      const a = h * 30, dir = dirOf(a);
+      const extent = m.follow ? shape.height : Math.abs(shape.width * dir[0]) + Math.abs(shape.height * dir[1]);
+      const base = shape.contours.map((c) => (m.follow ? rot(c, a) : c));
+      glyphs.push({ a, dir, extent, base, hull: sampled(hullOf(base.flat()), 1.5) });
     }
+  }
+  const move = (cs: Contour[], k: number, r: number, [dx, dy]: Pt) => cs.map((c) => c.map(([x, y]) => [x * k + dx * r, y * k + dy * r] as Pt));
+  /** The radius nearest the edge gap's where the numeral, k times its size, lies wholly on the band. */
+  const radiusFor = (g: Glyph, k: number, hub: number): number | null => {
+    const r0 = anchor(g.a) - (g.extent * k) / 2, reach = Math.max(2 * m.size + g.extent, anchor(g.a));
+    for (let i = 0; i <= reach * 2; i++) {
+      const r = r0 + (i % 2 ? -1 : 1) * Math.ceil(i / 2) * 0.5;
+      // never under the hands' hub (the nut and the hands' bosses)
+      if (r < hub + g.extent * k * 0.5) continue;
+      if (move([g.hull], k, r, g.dir)[0].every(onBand)) return r;
+    }
+    return null;
+  };
+  const apart = (x: Contour[], y: Contour[]) => {
+    const p = bboxOf(x), o = bboxOf(y);
+    if (p.x1 + EDGE_CLEAR < o.x0 || o.x1 + EDGE_CLEAR < p.x0 || p.y1 + EDGE_CLEAR < o.y0 || o.y1 + EDGE_CLEAR < p.y0) return true;
+    return x.every((c) => y.every((g) => !c.some((q) => pointInContour(q, g)) && !g.some((q) => pointInContour(q, c)) && contourGap(c, g) >= EDGE_CLEAR));
+  };
+  let numerals: Contour[][] = [];
+  if (glyphs.length) {
+    // The largest size at which every numeral has a place on the band; then, smaller still if need
+    // be, the largest at which they also keep apart (failing that, the first one stands).
+    // Clear of the hands' hub if the band allows it; on a small opening, anywhere on the band.
+    let first: { cs: Contour[][]; k: number } | null = null, best: { cs: Contour[][]; k: number } | null = null;
+    for (const hub of [HUB_CLEAR, 0]) {
+      for (let k = 1; k >= 0.3 - 1e-9 && !best; k -= 0.05) {
+        const rs: number[] = [];
+        for (const g of glyphs) { const r = radiusFor(g, k, hub); if (r === null) break; rs.push(r); }
+        if (rs.length < glyphs.length) continue;
+        const placed = glyphs.map((g, i) => move(g.base, k, rs[i], g.dir));
+        first ??= { cs: placed, k };
+        if (placed.every((x, i) => placed.every((y, j) => j <= i || apart(x, y)))) best = { cs: placed, k };
+      }
+      if (best || first) break;
+    }
+    const pick = best ?? first;
+    numerals = pick ? pick.cs : glyphs.map((g) => pull(move(g.base, 1, anchor(g.a) - g.extent / 2, g.dir), g.a));
+    if (pick && pick.k < 1 - 1e-9) res.numeralSize = Math.floor(m.size * pick.k * 2) / 2;
   }
   const gap = Math.max(1, m.tickWidth * 0.6);
   const boxes = numerals.map((cs) => { const b = bboxOf(cs); return { cs, x0: b.x0 - gap, y0: b.y0 - gap, x1: b.x1 + gap, y1: b.y1 + gap }; });
@@ -294,6 +412,8 @@ export interface ClockGeometry {
   missing: string[];
   loading: boolean;
   inscription: Inscription | null;
+  /** Height the smallest numeral had to shrink to, to fit its band (unset when none did), mm. */
+  numeralSize?: number;
 }
 
 /**
@@ -336,7 +456,7 @@ export function clockGeometry(p: ClockParams, ctx: BuildContext = {}): (ClockGeo
   // would put them under the ring moves them in (`straddle` reports that it did).
   const clear = markersOn === "back" ? ringInner : null;
   const straddle = layered && !onRing && p.markers.inset < f.ring + RING_CLEAR;
-  const markers = buildMarkers(p, outline, ctx, clear);
+  const markers = buildMarkers(p, outline, ctx, clear, markersOn === "ring" ? ringInner : null);
   const inscription = buildInscription(p, outline, ringInner, ctx, clear);
   const insEngrave = inscription?.engrave ?? [];
   const insScore = inscription?.score ?? [];
@@ -386,11 +506,11 @@ export function clockGeometry(p: ClockParams, ctx: BuildContext = {}): (ClockGeo
     });
   }
   const missing = [...markers.missing, ...(inscription?.missing ?? []).filter((c) => !markers.missing.includes(c))];
-  return { parts, outline, ringInner, markersOn, straddle, keyholeFits, hangerHidden, missing, loading: markers.loading || !!inscription?.loading, inscription };
+  return { parts, outline, ringInner, markersOn, straddle, keyholeFits, hangerHidden, missing, loading: markers.loading || !!inscription?.loading, inscription, numeralSize: markers.numeralSize };
 }
 
 /** The build output plus where the inscription ended up (for the checks). */
-export type ClockOutput = GenOutput & { inscription?: { R: number; span: number; size: number } };
+export type ClockOutput = GenOutput & { inscription?: { R: number; span: number; size: number }; numeralSize?: number };
 
 export function buildClock(p: ClockParams, ctx: BuildContext): ClockOutput {
   const g = clockGeometry(p, ctx);
@@ -415,5 +535,6 @@ export function buildClock(p: ClockParams, ctx: BuildContext): ClockOutput {
     notice: g.loading ? "Loading the font…" : undefined,
     missing: g.missing,
     inscription: g.inscription && !g.inscription.loading ? { R: g.inscription.R, span: g.inscription.span, size: g.inscription.size } : undefined,
+    ...(g.numeralSize !== undefined ? { numeralSize: g.numeralSize } : {}),
   };
 }

@@ -2,7 +2,8 @@
 import { describe, expect, it } from "vitest";
 import { intersectShapes, unionShapes } from "@/lib/letters/polygon";
 import { CLOCK } from "../clock";
-import { signedArea } from "../geom";
+import { distToContour as distT, pointInContour as pointInContourT, signedArea } from "../geom";
+import { clockGeometry as clockGeometryT } from "../clock/build";
 import { itemOf } from "../items";
 import type { Contour, GenPart } from "../types";
 import { CTX } from "./ctx";
@@ -63,4 +64,29 @@ describe("clock pattern", () => {
       expect(pattern.filter((v) => v !== mode).length, JSON.stringify(raw)).toBe(plain);
     }
   });
+});
+
+describe("clock numerals on their band", () => {
+  const SHAPES = ["round", "cloud", "heart", "flower", "square", "polygon", "scallop"];
+  const inside = (q: [number, number], c: Contour) => pointInContourT(q, c);
+  it("keeps every numeral wholly on the face (and on the ring, off its opening) and apart from the others", () => {
+    for (const shape of SHAPES) for (const layers of ["single", "ring"]) for (const size of [20, 30]) for (const follow of [false, true]) {
+      const raw = { face: { shape, layers, size: 300 }, markers: { style: "numerals", numerals: "roman", size, follow, minutes: true } };
+      const p = CLOCK.merge(raw), out = CLOCK.build(p, CTX);
+      const label = JSON.stringify(raw);
+      const g = clockGeometryT(p, CTX);
+      if ("error" in g) throw Error(label);
+      const part = out.parts.find((q) => q.id === (g.markersOn === "ring" ? "ring" : g.markersOn === "back" ? "back" : "face"))!;
+      const nums = marks(part).filter((c) => itemOf(c) === "Numerals");
+      expect(nums.length, label).toBeGreaterThan(11);
+      for (const c of nums) for (const q of c) {
+        expect(inside(q, g.outline) && distT(q, g.outline) >= 1.4, `${label} outside the face`).toBe(true);
+        if (g.markersOn === "ring") expect(!inside(q, g.ringInner!) && distT(q, g.ringInner!) >= 1.4, `${label} on the opening`).toBe(true);
+        if (g.markersOn === "back") expect(inside(q, g.ringInner!), `${label} under the ring`).toBe(true);
+      }
+      // numerals never overlap each other
+      const blocks = unionShapes(nums, [], true);
+      expect(area(nums), label).toBeCloseTo(blocks.reduce((n, s) => n + s.area, 0), 0);
+    }
+  }, 120_000);
 });

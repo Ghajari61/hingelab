@@ -86,6 +86,20 @@ export function checkClock(p: ClockParams, out: GenOutput): CIssue[] {
     }
   }
 
+  // Numerals drawn smaller than set, to stay on the face (or the ring) and clear of each other.
+  const shrunk = (out as ClockOutput).numeralSize;
+  if (shrunk !== undefined && shrunk < m.size) {
+    const size = Math.max(4, shrunk);
+    issues.push({
+      code: "NUMERALS_SHRUNK", level: "info",
+      message: `Some numerals are drawn smaller (down to ${size} mm) so they stay wholly on the ${g.markersOn === "ring" ? "ring" : "face"}.`,
+      fixes: [
+        { id: "numerals-size", label: `Make all the numerals ${size} mm`, safe: true, apply: (q) => withMarkers(q, { size }) },
+        ...(g.markersOn === "ring" ? [{ id: "wider-ring", label: `Widen the ring to ${Math.ceil(f.ring + m.size - size + 4)} mm`, safe: false, apply: (q: ClockParams) => withFace(q, { ring: Math.ceil(q.face.ring + q.markers.size - size + 4) }) }] : []),
+      ],
+    });
+  }
+
   // Markers that reach the hands' hub.
   if (m.style !== "none" && rIn - effInset - markerDepth(p) < 24) {
     issues.push({
