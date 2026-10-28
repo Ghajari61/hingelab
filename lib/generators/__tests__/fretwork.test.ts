@@ -74,7 +74,8 @@ describe("Boxes: patterns and the book box", () => {
     const cover = out.parts.find((q) => q.id === "cover")!;
     expect(out.parts.map((q) => q.id)).toEqual(["cover", "head", "tail", "fore"]);
     expect(cover.cuts!.length).toBeGreaterThan(20);
-    expect(cover.views3d).toHaveLength(3);
+    // back cover, the spine bent in 16 strips, front cover
+    expect(cover.views3d).toHaveLength(18);
     const tabs = out.parts.filter((q) => q.id !== "cover").reduce((n, q) => n + q.outer.filter(([, y]) => y > p.book.thickness - 2 * p.T + 1e-6).length / 2, 0);
     const slots = cover.holes.filter((h) => h.length === 4).length;
     expect(slots).toBe(tabs);
