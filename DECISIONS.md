@@ -1727,3 +1727,12 @@ A full review of the Pop-up after the owner reported that design problems remain
 - **Tall ribs** (190 to 390 cm² of solid plywood on towers and stands) are lightened by `lighten`: windows are the rib inset by 4 T (at least 10 mm), cut into 50 mm columns with struts of the same width and rounded by T × 2; windows under 4 band² are skipped; the rib must stay one piece. Low bowl ribs stay solid.
 - The foot now ends flush with the outermost treads.
 - Pop-up snapshots, preset pictures and template metadata were regenerated.
+
+## D217. Pop-up spirals form like a spring
+
+The owner reported that the Spiral model was broken in 3D and asked for the whole spiral section to be reviewed.
+
+- **Shape.** A cut strip cannot tilt across its own width the way a radial profile does; pulled up, each turn stays level and rises with its centreline. `formRadius` brackets a point between the two slot crossings on its ray and uses the turn's centre radius, with turn centres mapped onto the full slot span so the first and last turns meet the lands. `formHeight` is the profile at that radius. Rings keep the radial profile.
+- **Mesh.** `formable` subdivides the extruded geometry by longest-edge bisection with shared midpoints until every edge is under 12 mm and within 0.2 mm of the form (edges under 1 mm are left), then normals are recomputed. About 30–40 k triangles per spiral, about 0.3 s per scene. Edges are split the same way; the flat shapes are kept in `userData.flatShapes`.
+- **Supports.** `stepSaddle` samples the form along each rib (0.25 mm, including the strip's width either side) and turns it into flat treads at the run's lowest height with risers on the lower side, so nothing penetrates the strip.
+
