@@ -604,13 +604,15 @@ function GenEditor({ def, onProduct, onHome, start }: {
         onSave={saveProject} onOpen={openProject}
       />
       <div className="main">
-        <GalleryRail title={PRODUCT_INFO[def.id].name} icon={PRODUCT_INFO[def.id].icon} groups={groups} history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }} inert={shared.viewing}>
-          <PresetLibrary product={def.id === "paperbox" ? "boxes" : def.id} presets={def.presets} onApply={applyPreset} getCategory={pr => categoryField?.kind === "choice" ? categoryField.options.find(o => o.v === String(getPath(def.merge(pr.params), categoryField.key)))?.text ?? def.name : def.name} />
-          {canShuffle && (
+        <GalleryRail
+          title={PRODUCT_INFO[def.id].name} icon={PRODUCT_INFO[def.id].icon} groups={groups} history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }} inert={shared.viewing}
+          lead={canShuffle && (
             <button type="button" className="btn-auto gen-shuffle" onClick={randomiseDesign} title="A new random design. Lock a setting (its lock icon) to keep it. Ctrl+Z undoes it.">
               <Dices size={15} aria-hidden /> Randomise design{prefs.locks.length ? ` · ${prefs.locks.length} locked` : ""}
             </button>
           )}
+        >
+          <PresetLibrary product={def.id === "paperbox" ? "boxes" : def.id} presets={def.presets} onApply={applyPreset} getCategory={pr => categoryField?.kind === "choice" ? categoryField.options.find(o => o.v === String(getPath(def.merge(pr.params), categoryField.key)))?.text ?? def.name : def.name} />
         </GalleryRail>
         <div className={`stage${viewMode === "3d" ? " no-rulers" : ""}`}>
           <ViewToggle value={viewMode} onChange={setViewMode} />

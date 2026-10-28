@@ -53,12 +53,18 @@ function CardArt({ pic, children }: { pic?: string; children: ReactNode }) {
 
 export type History = { canUndo: boolean; canRedo: boolean; undo: () => void; redo: () => void };
 
-/** Left rail: undo/redo on top, then the product's big choices as picture cards (Atomm-style), grouped. */
-export function GalleryRail({ title, icon, groups, history, children, inert }: {
+/**
+ * Left rail, the same order in every editor: undo/redo on top, then `lead` (Randomise), then the
+ * product's big choices as picture cards (Atomm-style), grouped, then `children` (the presets) last.
+ */
+export function GalleryRail({ title, icon, groups, history, lead, children, inert }: {
   title: string;
   icon?: ReactNode;
   groups: GalleryGroup[];
   history: History;
+  /** First, above the choices: the Randomise button. */
+  lead?: ReactNode;
+  /** Last, below the choices: the preset library. */
   children?: ReactNode;
   /** A shared design being viewed: nothing here can be changed. */
   inert?: boolean;
@@ -74,7 +80,7 @@ export function GalleryRail({ title, icon, groups, history, children, inert }: {
         </span>
       </div>
       <div className="gallery-scroll">
-        {children}
+        {lead}
         {groups.map((g) => {
           const home = g.home === undefined ? undefined : g.options.find((o) => o.v === g.home);
           return (
@@ -116,6 +122,7 @@ export function GalleryRail({ title, icon, groups, history, children, inert }: {
           </section>
           );
         })}
+        {children}
       </div>
     </aside>
   );

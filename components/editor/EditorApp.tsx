@@ -509,11 +509,13 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
           groups={hingeGroups({ params, plan: account.plan, onShape: (v) => setChoice("shape", v), onLid: (v) => setChoice("lid", v), onPattern: (v) => setChoice("pattern", v), onVariant: (v) => { patch({ ...params, ...v.params }, true); toastMsg(`${v.name} hinge style`); }, onRandom: randomPattern })}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
           inert={shared.viewing}
+          lead={(
+            <button type="button" className="btn-auto gen-shuffle" onClick={randomBox} title="A whole new box idea: tissue box, money box, lantern, planter and more. Your material and sheet stay. Ctrl+Z undoes it.">
+              <Dices size={15} aria-hidden /> Randomise box
+            </button>
+          )}
         >
           <PresetLibrary product="hinge" presets={HINGE_PRESETS} getCategory={pr => ({ rect: "Rounded boxes", cyl: "Cylinders", pill: "Pill cases", poly: "Polygon boxes" })[hingePresetParams(pr.params).shape] ?? "Other shapes"} onApply={(pr, keep) => { const next = hingePresetParams(pr.params); patch(keep ? keepSetup(params, next) : next, true); toastMsg(`Opened “${pr.name}”. Ctrl+Z undoes it.`); }} />
-          <button type="button" className="btn-auto gen-shuffle" onClick={randomBox} title="A whole new box idea: tissue box, money box, lantern, planter and more. Your material and sheet stay. Ctrl+Z undoes it.">
-            <Dices size={15} aria-hidden /> Randomise box
-          </button>
         </GalleryRail>
         <div className={`stage${viewMode === "3d" ? " no-rulers" : ""}`}>
         <ViewToggle value={viewMode} onChange={setViewMode} />
