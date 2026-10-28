@@ -13,6 +13,7 @@ import { buildBoxV2, buildDrawer, buildHex, buildInsert, buildMoney, buildStack,
 import { pierce, pierceLid, pierceWalls, pierced } from "./pierce";
 import { FRET_NAMES, type KeepOut } from "../fretwork";
 import { buildBook } from "./book";
+import { buildCard, buildCoaster } from "./holders";
 import { DESIGN_NAMES, FIT_MM, FIT_NAMES, type BoxesParams } from "./params";
 import { patternTile, patternUnit } from "../pattern";
 
@@ -357,6 +358,8 @@ const PANELS: Partial<Record<BoxesParams["design"], { walls: string[]; lid: stri
   sign: { walls: ["plate"], lid: [], front: ["plate"] },
   insert: { walls: ["div*"], lid: [], front: ["div*"] },
   frame: { walls: ["front"], lid: [], front: ["front"] },
+  card: { walls: ["side-l", "side-r"], lid: [], front: ["front"] },
+  coaster: { walls: ["end-l", "end-r", "post*"], lid: ["coaster*"], front: ["front", "post1"] },
 };
 const matches = (id: string, pats: string[]) => pats.some((q) => {
   const [a, b = ""] = q.split("*");
@@ -395,7 +398,7 @@ function piercePanels(p: BoxesParams, out: BoxesOutput): BoxesOutput {
 }
 
 /** Designs whose parts lock together with fingers, tabs or slots (the fit setting applies to them). */
-const JOINTED = new Set<BoxesParams["design"]>(["box", "tray", "drawer", "hex", "insert", "money", "stack", "book", "bird", "sign", "stand"]);
+const JOINTED = new Set<BoxesParams["design"]>(["box", "tray", "drawer", "hex", "insert", "money", "stack", "book", "bird", "sign", "stand", "card", "coaster"]);
 
 /** A part grown by `e` mm on every edge (holes shrink by the same), so its joints go tighter. */
 function fitPart(pt: GenPart, e: number): GenPart {
@@ -421,6 +424,8 @@ function buildDesign(p: BoxesParams, ctx: BuildContext): BoxesOutput {
     case "frame": return buildFrame(p);
     case "stand": return buildStand(p);
     case "keys": return buildKeys(p, ctx);
+    case "card": return buildCard(p, ctx);
+    case "coaster": return buildCoaster(p, ctx);
     default: return { parts: [], stats: [], error: `Unknown design ${DESIGN_NAMES[p.design as keyof typeof DESIGN_NAMES] ?? p.design}.` };
   }
 }

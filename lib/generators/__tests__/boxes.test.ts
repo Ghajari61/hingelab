@@ -279,3 +279,82 @@ describe("Boxes output", () => {
     await expect(svg).toMatchFileSnapshot("./golden/boxes-default.svg");
   });
 });
+
+describe("Business card and coaster holders", () => {
+  const CARDS: unknown[] = [
+    { design: "card" },
+    { design: "card", card: { bays: 3, profile: "slant", lip: "scallop", crest: "arch" } },
+    { design: "card", card: { tiered: true, bays: 2, profile: "step", lip: "wave", crest: "wave" } },
+    { design: "card", card: { portrait: true, profile: "arch", lip: "straight", crest: "peak", corner: 12 } },
+    { design: "card", card: { profile: "scoop", depth: 60, front: 30 }, engrave: { text: "Studio", size: 8 } },
+  ];
+  const COASTERS: unknown[] = [
+    { design: "coaster" },
+    { design: "coaster", coaster: { style: "posts", posts: 6, shape: "round" } },
+    { design: "coaster", coaster: { style: "posts", posts: 3, shape: "square", postWidth: 70 } },
+    { design: "coaster", coaster: { style: "caddy", shape: "square", deco: "sunburst" } },
+    { design: "coaster", coaster: { style: "caddy", shape: "round", handle: false, set: false, thick: 5 } },
+    { design: "coaster", coaster: { style: "layers", shape: "round", deco: "dots" } },
+    { design: "coaster", coaster: { style: "layers", shape: "square", open: false, count: 4 } },
+  ];
+
+  it("every member's tabs fill the slots of the sides (and the dividers' the floor)", () => {
+    for (const raw of CARDS) expect(mortisesFilled(build(raw), ["side-l", "side-r", "floor", "floor2"]), JSON.stringify(raw)).toEqual([]);
+    for (const raw of COASTERS.slice(3, 5)) expect(mortisesFilled(build(raw), ["end-l", "end-r"]), JSON.stringify(raw)).toEqual([]);
+  });
+
+  it("the posts' tabs fill the turned slots of the base", () => {
+    for (const raw of COASTERS.slice(0, 3)) {
+      const out = build(raw), base = out.parts.find((p) => p.id === "base")!;
+      for (const slot of base.holes.filter((h) => h.length === 4)) {
+        const c = slot.reduce((a, q) => [a[0] + q[0] / 4, a[1] + q[1] / 4], [0, 0]);
+        expect(holders(out.parts, world(base.place!, c[0], c[1], T0 / 2)).map((p) => p.id)[0], JSON.stringify(raw)).toMatch(/^post\d$/);
+      }
+    }
+  });
+
+  it("no two parts share material, coasters included", () => {
+    for (const raw of [...CARDS, ...COASTERS]) expect(overlaps(build(raw), 2.6), JSON.stringify(raw)).toEqual([]);
+  }, 60_000);
+
+  it("the coasters sit inside the holder, the front faces the viewer", () => {
+    for (const raw of COASTERS) {
+      const out = build(raw);
+      const coasters = out.parts.filter((p) => p.id.startsWith("coaster"));
+      const p = mergeBoxes(raw);
+      expect(coasters.length).toBe(p.coaster.set ? p.coaster.count : 0);
+      for (const c of coasters) {
+        const mid = world(c.place!, p.coaster.size / 2, p.coaster.size / 2, T0 / 2);
+        expect(holders(out.parts, mid).map((q) => q.id)).toEqual([c.id]);
+      }
+    }
+    const card = build({ design: "card" });
+    const y = (id: string) => world(card.parts.find((q) => q.id === id)!.place!, 20, 5, T0 / 2)[1];
+    expect(y("front")).toBeGreaterThan(y("back"));
+  });
+
+  it("options change the cut: lip, crest, profile, bays and rows", () => {
+    const key = (raw: unknown) => JSON.stringify(build(raw).parts.map((p) => p.outer.length + p.holes.length));
+    const base = key({ design: "card" });
+    for (const card of [{ lip: "straight" }, { crest: "arch" }, { profile: "slant" }, { bays: 2 }, { tiered: true }]) expect(key({ design: "card", card }), JSON.stringify(card)).not.toBe(base);
+    const ids = (raw: unknown) => build(raw).parts.map((p) => p.id);
+    expect(ids({ design: "card", card: { bays: 3, tiered: true } }).filter((i) => i.startsWith("div")).length).toBe(4);
+    expect(ids({ design: "coaster", coaster: { style: "layers", count: 6 } }).filter((i) => i.startsWith("ring")).length).toBe(Math.ceil((6 * 3 + 8) / 3));
+  });
+
+  it("engraves the card holder's front and every coaster", () => {
+    const card = build({ design: "card", card: { front: 30 }, engrave: { text: "Hi", motif: "heart" } });
+    expect(card.parts.find((p) => p.id === "front")!.engrave?.length).toBeGreaterThan(0);
+    const set = build({ design: "coaster", coaster: { deco: "rings" }, engrave: { text: "Hi" } });
+    for (const c of set.parts.filter((p) => p.id.startsWith("coaster"))) expect(c.engrave?.length).toBeGreaterThan(3);
+    const scored = build({ design: "coaster", coaster: { deco: "sunburst" }, engrave: { mark: "score" } });
+    expect(scored.parts.find((p) => p.id === "coaster1")!.score?.length).toBe(24);
+  });
+
+  it("warns when the front's engraving does not fit, with a fix", () => {
+    const p = mergeBoxes({ design: "card", engrave: { text: "A very long company name", size: 14 } });
+    expect(issuesOf(p).map((i) => i.code)).toContain("LID_ART_WIDE");
+    const fixed = autoFixAll(p, issuesOf).params;
+    expect(issuesOf(fixed).filter((i) => i.level !== "info").map((i) => i.code)).toEqual([]);
+  });
+});

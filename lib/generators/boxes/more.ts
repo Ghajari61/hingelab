@@ -61,7 +61,7 @@ const turn = (c: Contour, h: number): Contour => c.map(([u, v]) => [h - v, u] as
 export const lidWalls = (lid: LidKind | "none") => (lid === "closed" || lid === "pin" || lid === "inset" ? 2 : 1);
 
 /** An engraved band `inset` mm in from the outline, `width` mm wide. */
-function band(outline: Contour, inset: number, width = 1.2): Contour[] {
+export function band(outline: Contour, inset: number, width = 1.2): Contour[] {
   const base = [makeShape(outline, [])];
   const outer = offsetShapes(base, -inset), inner = offsetShapes(base, -(inset + width));
   if (!outer.length) return [];
@@ -92,13 +92,13 @@ export function lidArt(p: BoxesParams, ctx: BuildContext): Art {
 export const hasArt = (p: BoxesParams) => !!p.engrave.text.trim() || isMotifKind(p.engrave.motif) || p.engrave.border > 0;
 
 /** Engraving for a face of w × h whose outline is `outline`, art centred on (cx, cy). */
-const engraveOn = (p: BoxesParams, art: Art, outline: Contour, cx: number, cy: number) => [
+export const engraveOn = (p: BoxesParams, art: Art, outline: Contour, cx: number, cy: number) => [
   ...(p.engrave.border > 0 ? band(outline, p.engrave.border) : []),
   ...art.cs.map((c, i) => tagItem([shiftC(c, cx, cy)], i < (art.motifs ?? 0) ? "Motif" : "Text")[0]),
 ];
 
 /** Puts the lid art on a part: engraved, or its outlines scored. */
-function markLid(part: GenPart, p: BoxesParams, cs: Contour[]) {
+export function markLid(part: GenPart, p: BoxesParams, cs: Contour[]) {
   if (p.engrave.mark !== "score") { part.engrave = cs; return; }
   if (cs.length) part.score = [...(part.score ?? []), ...tagByPlace(shapeContours(unionShapes(cs)).map((c) => [...c, c[0]]), blocksOf(cs))];
 }

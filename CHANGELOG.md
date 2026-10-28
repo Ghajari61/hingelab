@@ -1,3 +1,17 @@
+## Unreleased — Business card and coaster holders
+
+- Boxes & Packaging has two new designs, each with eight or seven presets and a picture for each option in the left panel.
+- **Business card holder.** Two shaped sides with the front, floor and back tabbed through them.
+  - Sides: slant, wave, arch, scoop or step.
+  - Front edge: straight, a thumb notch, a scallop or a wave. Back edge above the sides: flat, an arch, a peak or a wave.
+  - One to four bays with dividers, an optional raised second row, upright (portrait) cards, and any card size (85 × 55, 88.9 × 50.8, 91 × 55 mm and so on).
+  - The engraving (text, a motif or your own logo, a border) goes on the front, and the cut-out pattern on the sides.
+- **Coaster holder** for round or square coasters.
+  - Holders: a caddy with tall ends and a carry handle, a base with three to eight posts (on a square holder they widen into walls), or rings stacked and glued into a cup with a finger opening.
+  - Optional windows and a push hole in the base.
+  - The coasters can be cut too, engraved with rings, a sunburst or dots, plus the lid engraving or a cut-out pattern engraved on every coaster. Or the holder can be sized for coasters you already have.
+- Existing designs, presets and saved files are unchanged.
+
 ## 1.27.1 — Consistent editor navigation
 
 - Clock: on a layered face (Ring on back, Ring and centre), markers that would sit under the ring were partly hidden by it. They now stay wholly inside the ring's opening, 3 mm in from its edge, and the inscription moves in with them. The check now says so and offers to widen the ring to put them on it. No built-in preset changes.

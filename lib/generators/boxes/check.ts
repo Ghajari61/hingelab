@@ -13,6 +13,9 @@ const jointed = (p: BoxesParams) => ["box", "tray", "bird", "drawer", "money", "
 /** Lowest drawer that still holds something, mm inside. */
 export const MIN_DRAWER = 20;
 
+/** Where the engraving goes, in words. */
+const artFace = (p: BoxesParams) => (p.design === "money" || p.design === "card" ? "front" : p.design === "coaster" ? "coasters" : "lid");
+
 export function checkBoxes(p: BoxesParams, out: BoxesOutput): Issue<BoxesParams>[] {
   const issues: Issue<BoxesParams>[] = [];
   const info = out.info;
@@ -66,7 +69,7 @@ export function checkBoxes(p: BoxesParams, out: BoxesOutput): Issue<BoxesParams>
     const size = Math.max(4, Math.floor(p.engrave.size * k)), motifSize = Math.max(8, Math.floor(p.engrave.motifSize * k));
     issues.push({
       code: "LID_ART_WIDE", level: "warn",
-      message: `The engraving is ${info.textWidth.toFixed(0)} mm wide and runs off the ${p.design === "money" ? "front" : "lid"}.`,
+      message: `The engraving is ${info.textWidth.toFixed(0)} mm wide and runs off the ${artFace(p)}.`,
       fixes: [{ id: "smaller", label: "Smaller engraving", safe: true, apply: (q) => ({ ...q, engrave: { ...q.engrave, size: Math.min(q.engrave.size, size), motifSize: Math.min(q.engrave.motifSize, motifSize) } }) }],
     });
   } else if (lidArt && info.artHeight && info.artRoom && info.artHeight > info.artRoom + 0.5) {
@@ -74,7 +77,7 @@ export function checkBoxes(p: BoxesParams, out: BoxesOutput): Issue<BoxesParams>
     const size = Math.max(4, Math.floor(p.engrave.size * k)), motifSize = Math.max(8, Math.floor(p.engrave.motifSize * k));
     issues.push({
       code: "LID_ART_TALL", level: "warn",
-      message: `The engraving is ${info.artHeight.toFixed(0)} mm tall and does not fit the ${p.design === "money" ? "front" : "lid"}.`,
+      message: `The engraving is ${info.artHeight.toFixed(0)} mm tall and does not fit the ${artFace(p)}.`,
       fixes: [{ id: "smaller", label: "Smaller engraving", safe: true, apply: (q) => ({ ...q, engrave: { ...q.engrave, size: Math.min(q.engrave.size, size), motifSize: Math.min(q.engrave.motifSize, motifSize) } }) }],
     });
   }
