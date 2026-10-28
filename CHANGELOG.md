@@ -1,3 +1,7 @@
+## 1.27.5 — Cleaner clock layouts
+
+- Clock ticks stay clear of numerals, and cut-out patterns now use whole shapes only. Five presets no longer place ticks over the numerals.
+
 ## 1.27.4 — Book box spine in 3D
 
 - The book box spine now bends around the curved edge in the 3D preview, connecting both covers.

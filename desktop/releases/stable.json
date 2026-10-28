@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.27.4",
-    "pub_date": "2026-10-28T22:41:14.485Z",
-    "notes": "Fixes the 3D book box so its spine bends around the half-circle edge and joins the two covers.",
+    "version": "1.27.5",
+    "pub_date": "2026-10-28T23:19:22.876Z",
+    "notes": "Clock ticks now stay clear of numerals, and clock cut-out patterns use whole shapes only.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.4_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnZrVEltOTBlUWRJcE0wSmhXM0VvdTlhekJycEt1MEVtOEJkM21DV3Vmd1MvdlBMMVVFUnNHRWZHdURicDVqWTBXdW9WcG4vam93QWZsc0RaZE9aSlFrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjI3MjY3CWZpbGU6SGluZ2VMYWJfMS4yNy40X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI3LjQKckZ4NlExN1ZvQlQ2c1Z0dGxueEVVU3FON0pnU3IwYTRaSVlGcHRIcTBXS0pmUkFFREVPK0Zaeiswc2NFS1grbjRzcGRsTENteUpXMkNnV3U2NG1QRHc9PQo=",
-        "size": 11851405,
-        "sha256": "cf28459929a4b8d3ea38a3e7ae209811a7032671ad43c005e234d5bea574d4f3"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.5_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnVPdEJlU0x3ODlrUjJvdndSWjhsWnM3UFd0SkdoaDBvdjFMcURrMTJVOE9xQUx5ZUF2QlJlM29TSjVkVlhJNk9YRUxiN0tzTlpRRWkwUHg2aWo5VGdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjI5NTU3CWZpbGU6SGluZ2VMYWJfMS4yNy41X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI3LjUKeEVyWlArKzQ2VUlkZkV3TGNCK3dUd1ovM2NROTlWclRsSEpqOEhhdGk1dEl3ckxRVHBCSVZyZEJreTZBRThSbVJzVENXYUdlUkJpL2RWTGx0OWdMQUE9PQo=",
+        "size": 11855580,
+        "sha256": "57fefda61490b11154d3bee23f65b4af891fbf2ecc59fcf3033cf84c75cb9dd1"
       }
     }
   }
