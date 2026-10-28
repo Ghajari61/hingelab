@@ -1,8 +1,8 @@
 import {placePoint} from '../place';
 import {ringCode,ringAssemblyOrder,ringLabels,ringInsertionInterference,assemblySteps,assemblyCards,type AssemblyGroup} from './assembly';
 import {ribAssembly,handleAssembly,suspensionLayout,jointCoupons} from './supports';
-import {popupHardware} from './hardware';
-import {spiralSupports} from './spiralSupports';
+import {accessorySolids,popupHardware} from './hardware';
+import {spiralRimMin,spiralSupports} from './spiralSupports';
 import type {Hardware3D} from '../types';
 import {differenceShapes,intersectShapes,makeShape,offsetShapes,unionShapes} from '@/lib/letters/polygon';
 import {circle,customOutline,ellipse,rect,regularPolygon,roundCorners,roundedRect,transform,TAU,pointInContour,distToContour,parsePathData} from '../geom';
@@ -86,7 +86,7 @@ export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0,
  const surface={samples:Array.from({length:129},(_,i)=>[p.rings.center/2+(radius-p.rings.rim-p.rings.center/2)*i/128,profileHeight(p,i/128)] as [number,number]),
   // a continuous spiral forms like a stretched spring: each turn level, rising along its length
   ...(p.pattern.kind!=='rings'?{spiral:{start:p.rings.center/2,end:radius-p.rings.rim,count:plan.wanted,arms:p.pattern.kind==='multi'?p.pattern.arms:1}}:{})};
- const cradle=p.pattern.kind!=='rings'&&p.spiral.supports?spiralSupports(p,parts[0],surface,radius,centerHole,ctx,labelPrefix):null;
+ const cradle=p.pattern.kind!=='rings'&&p.spiral.supports?spiralSupports(p,parts[0],surface,radius,centerHole,ctx,labelPrefix,accessorySolids(p,{rings},floorOf(p))):null;
  if(cradle){parts.push(...cradle.parts);holes.push(...cradle.slots);engrave.push(...cradle.marks);loading ||= cradle.loading;}
  // Finalise manufacturing geometry first. Do not union negative-wound central openings
  // with positive-wound cuts: that cancels the opening and turns inner holes into phantom wood.
@@ -161,11 +161,18 @@ function addNestedSet(p:PopupParams,parts:GenPart[],ctx:BuildContext){
  // Remove the centre of each larger blank, retaining an annulus large enough for its own rings.
  const all:GenPart[]=[];
  for(let i=0;i<p.sets.count;i++){
-  const width=p.outline.width*p.sets.scale**i,next=width*p.sets.scale;
-  const center=i<p.sets.count-1?next+2*p.gap:Math.min(p.rings.center,width*.25);
-  const q={...p,outline:{...p.outline,width,height:width},rings:{...p.rings,center,rim:Math.min(p.rings.rim,width*.07),by:'width' as const,width:Math.max(p.T*1.5,Math.min(p.rings.width,width*.06))},profile:{...p.profile,depth:p.profile.depth*p.sets.scale**i},sets:{...p.sets,count:1}};
+  const width=p.outline.width*p.sets.scale**i,next=width*p.sets.scale,inner=i<p.sets.count-1;
+  // the opening the next size is cut from (its outline plus the part gap on each side)
+  const opening=next+2*p.gap;
+  // A continuous strip needs solid land between the opening and the start of its slots: started at
+  // the opening's edge, the first turn runs along it closer than the cut gap and leaves a sliver
+  // loose. Its supports also need a rim wide enough for their tabs at every size.
+  const spiral=p.pattern.kind!=='rings',land=spiral?Math.max(2*p.T,p.sheet?.minFeature??0,4*p.rings.gap):0;
+  const center=inner?opening+2*land:Math.min(p.rings.center,width*.25);
+  const rim=spiral&&p.spiral.supports?Math.max(Math.min(p.rings.rim,width*.07),Math.ceil(spiralRimMin({...p,outline:{...p.outline,width,height:width}},width/2)*2)/2):Math.min(p.rings.rim,width*.07);
+  const q={...p,outline:{...p.outline,width,height:width},rings:{...p.rings,center,rim,by:'width' as const,width:Math.max(p.T*1.5,Math.min(p.rings.width,width*.06))},profile:{...p.profile,depth:p.profile.depth*p.sets.scale**i},sets:{...p.sets,count:1}};
   if(width-center<4*p.T+2*q.rings.rim)throw Error('Nested sizes leave too little material. Reduce set count or use a larger outer width.');
-  const label=`S${i+1}-`,g=popupGeometry(q,ctx,i<p.sets.count-1?center:0,label),blank=g.parts[0];
+  const label=`S${i+1}-`,g=popupGeometry(q,ctx,inner?(spiral?opening:center):0,label),blank=g.parts[0];
   loading ||= g.loading;groups.push({label,order:ringAssemblyOrder(g.rings,g.parts[0].views3d),radial:g.parts.some(v=>v.id==='rib-hub')});
   // Cut nested in one blank, but each size is its own piece: in 3D they stand side by side.
   if(i>0)dx+=p.outline.width*p.sets.scale**(i-1)/2+width/2+30;

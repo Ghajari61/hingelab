@@ -84,7 +84,8 @@ describe("sheet extras", () => {
           expect(svg, pr.id).toMatch(/Calibration bar/);
           expect(svg, pr.id).not.toMatch(/NaN|Infinity|undefined/);
         }
-      }, 60000);
+      // outline nesting of every preset: about 25 s alone for Pop-up and Shadow Box, more in a full parallel run
+      }, 120000);
 
       it("part labels go on the score layer, inside their parts", () => {
         const p = def.defaults();
