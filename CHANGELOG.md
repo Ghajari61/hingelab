@@ -1,4 +1,4 @@
-## 1.27.1 — Consistent editor navigation
+## 1.27.2 — Clock marker clearance
 
 - Clock: on a layered face (Ring on back, Ring and centre), markers that would sit under the ring were partly hidden by it. They now stay wholly inside the ring's opening, 3 mm in from its edge, and the inscription moves in with them. The check now says so and offers to widen the ring to put them on it. No built-in preset changes.
 - The left panel of every editor (all generators, Hinge Box, Letters and Parametric, on the website and in the Windows app) is now in the same order: Randomise first, then the picture-card settings, then the presets. Before, the presets came first and Randomise sat below them.
