@@ -1,4 +1,6 @@
-## 1.27.3 — Business card and coaster holders
+## 1.27.4 — Book box spine in 3D
+
+- The book box spine now bends around the curved edge in the 3D preview, connecting both covers.
 
 - Boxes & Packaging has two new designs, each with eight or seven presets and a picture for each option in the left panel.
 - **Business card holder.** Two shaped sides with the front, floor and back tabbed through them.
