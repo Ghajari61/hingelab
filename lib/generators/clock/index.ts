@@ -238,4 +238,4 @@ export const CLOCK: GeneratorDef<ClockParams> = withPattern(CLOCK_BASE, [
   { v: "back", text: "Back plate", match: byId("back") },
   { v: "ring", text: "Ring", match: byId("ring") },
   { v: "base", text: "Stand base", match: byId("base") },
-], { edge: (p) => Math.max(4, ((p as { pattern?: { bar: number } }).pattern?.bar ?? 3) + 3), help: "A decorative pattern cut through the face (round the numerals and the hands' hole), the back plate, the ring or the stand's base, or engraved or scored." });
+], { whole: true, edge: (p) => Math.max(4, ((p as { pattern?: { bar: number } }).pattern?.bar ?? 3) + 3), help: "A decorative pattern cut through the face (round the numerals and the hands' hole), the back plate, the ring or the stand's base, or engraved or scored." });

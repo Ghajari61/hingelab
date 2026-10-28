@@ -5,7 +5,7 @@
  * shapes that would cross the region's edge or a kept area (a label, a knob) are left out.
  */
 import { differenceShapes, intersectShapes, makeShape, offsetShapes, shapeContours, signedArea, unionShapes } from "@/lib/letters/polygon";
-import { circle, regularPolygon } from "./geom";
+import { circle, pointInContour, regularPolygon } from "./geom";
 import { motif } from "./motifs";
 import type { Contour, Pt } from "./types";
 
@@ -29,6 +29,8 @@ export interface FretSpec {
   grid?: FretGrid;
   /** A motif turned by this many degrees (missing: 0). */
   turn?: number;
+  /** Keep only whole shapes at the edge of the area instead of cutting them to it (not for tiles). */
+  whole?: boolean;
 }
 
 /** An axis-aligned area to keep solid. */
@@ -200,6 +202,12 @@ export function fretHoles(spec: FretSpec, x0: number, y0: number, x1: number, y1
     return intersectShapes(groups.flat(), win).map((s) => s.outer).filter((c) => Math.abs(signedArea(c)) >= 2 * bar * bar && c.every(within));
   }
   const out: Contour[] = [];
+  if (spec.whole) {
+    // Whole shapes only: a star or heart cut by the window's edge reads as broken, so it is left out.
+    const inWin = (q: Pt) => win.filter((w) => pointInContour(q, w)).length % 2 === 1;
+    for (const g of groups) if (g.length && g.every((c) => c.every((q) => within(q) && inWin(q)))) out.push(...g);
+    return out;
+  }
   for (const g of groups) for (const c of g) {
     // A sliver at the window's edge would burn away: keep pieces with some body (or half their hole).
     const least = Math.min(minArea, 0.5 * Math.abs(signedArea(c)));
