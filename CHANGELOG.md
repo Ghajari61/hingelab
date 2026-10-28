@@ -1,4 +1,4 @@
-## Unreleased — Pop-up spiral 3D
+## 1.25.1 — Pop-up spiral 3D
 
 - The assembled spiral was drawn by lifting the blank's cap triangles only at their corners. Those triangles join far-apart points of the strip, so the surface sagged up to 19 mm from the target form and looked crumpled. Formed parts are now subdivided where the form bends (every edge under 12 mm, within 0.2 mm of the form) and shade smoothly; cut edges stay sharp.
 - The strip now forms like a spring: each turn is level across its width and its height follows the turn's centreline, instead of tilting like a cone across every turn. The first and last turns meet the centre disc and rim without a step.
