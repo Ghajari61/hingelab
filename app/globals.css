@@ -86,7 +86,7 @@ details.sec > summary .sec-rst { margin-inline-start: 0; }
 .lck[aria-pressed="true"] { opacity: 1; color: var(--accent); }
 .rowlabel .lck, h3 .lck { display: inline-grid; padding: 0 0 0 6px; vertical-align: -1px; }
 .fld.wide { grid-column: 1 / -1; }
-.fld[hidden] { display: none; }
+.fld[hidden], .grid2[hidden] { display: none; }
 .fld.invalid .in { border-color: var(--err); }
 .fld-msg { grid-column: 1 / -1; margin: -4px 0 0; color: var(--warn); font-size: 11.5px; line-height: 1.35; }
 .slider { position: relative; height: 20px; cursor: pointer; touch-action: none; outline: none; min-width: 0; }

@@ -201,15 +201,21 @@ export function GeneratorDock({
     );
   };
 
-  /** Number fields go two to a row; everything else takes the full width. */
+  /**
+   * Number fields go two to a row; everything else takes the full width. A picture choice also sits
+   * in the left rail as cards, and its section keeps it as a list too: skipping it left sections whose
+   * other settings wait on that choice (a cut-out pattern still at "None", a puzzle frame, a motif)
+   * open but empty.
+   */
   const body = (fields: FieldSpec<P>[]) => {
     const out: ReactNode[] = [];
-    let run: ReactNode[] = [];
-    const flush = () => { if (run.length) out.push(<div className="grid2" key={`g${out.length}`}>{run}</div>); run = []; };
+    let run: ReactNode[] = [], shown = false;
+    // a row whose number fields are all hidden is hidden too, or its margin leaves a gap
+    const flush = () => { if (run.length) out.push(<div className="grid2" key={`g${out.length}`} hidden={!shown}>{run}</div>); run = []; shown = false; };
     for (const f of fields) {
-      if (f.kind === "choice" && f.rail) continue;
       if (f.kind === "number") {
         run.push(field(f));
+        if (!f.show || f.show(params)) shown = true;
         if (f.random && (!f.show || f.show(params))) {
           run.push(
             <button

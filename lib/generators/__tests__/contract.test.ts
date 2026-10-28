@@ -69,6 +69,18 @@ describe("generator contract", () => {
           expect(svg, pr.id).not.toMatch(/NaN|Infinity|undefined/);
           expect(def.fileName(p), pr.id).toMatch(/^[a-z0-9-]+$/);
         }
+        // a full build and arrangement of every preset (36 Pop-ups take about 12 s alone)
+      }, 60_000);
+
+      it("no section opens empty, in the defaults or any preset", () => {
+        // The editor's panels skip a section only when it is hidden or holds nothing but rail
+        // choices (those live in the left rail alone); any other section must show a setting.
+        for (const [id, params] of [["defaults", def.defaults()], ...def.presets.map((pr) => [pr.id, def.merge(pr.params)] as const)] as const) {
+          for (const s of def.sections) {
+            if ((s.show && !s.show(params as never)) || s.fields.every((f) => f.kind === "choice" && f.rail)) continue;
+            expect(s.fields.some((f) => !f.show || f.show(params as never)), `${id}: ${s.title}`).toBe(true);
+          }
+        }
       });
 
       it("has a help article", () => {
