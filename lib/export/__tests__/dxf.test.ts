@@ -7,7 +7,7 @@ import { mergeParametricParams } from "@/lib/parametric/defaults";
 import { computeParametric, loadSource } from "@/lib/parametric/engine";
 import { allSheetsSVG, sheetSVG } from "@/lib/parametric/export";
 import { manifold } from "@/lib/parametric/__tests__/helpers";
-import { SHEET_SPACING } from "@/lib/fit/arrange";
+import { layoutSheets } from "@/lib/parametric/sheetLayout";
 import { addWatermark } from "@/lib/plans";
 import { aciOf, flattenPath, svgToDXF } from "../dxf";
 
@@ -164,15 +164,18 @@ describe("DXF export", () => {
     }, 60_000);
   }
 
-  it("Parametric: all sheets in one SVG, stacked, and as DXF", async () => {
+  it("Parametric: all sheets in one SVG, in Lay Flat rows, and as DXF", async () => {
     const d = mergeParametricParams();
     const p = mergeParametricParams({ method: "folded", source: { kind: "library", id: "torus" }, material: { ...d.material, T: 0.3, K: 0.05, sheetW: 300, sheetH: 200 } });
     const r = computeParametric(p, await loadSource(p), await manifold());
     expect(r.sheets.length).toBeGreaterThan(1);
     const all = allSheetsSVG(r, p);
     const { W, H } = dims(all);
-    expect(W).toBeCloseTo(Math.max(...r.sheets.map((s) => s.width)), 3);
-    expect(H).toBeCloseTo(r.sheets.reduce((a, s) => a + s.height, 0) + SHEET_SPACING * (r.sheets.length - 1), 3);
+    // sheets sit in the same rows as Lay Flat (1.24.1), not in one tall stack
+    const grid = layoutSheets(r.sheets);
+    expect(W).toBeCloseTo(grid.W, 3);
+    expect(H).toBeCloseTo(grid.H, 3);
+    expect(W).toBeGreaterThanOrEqual(Math.max(...r.sheets.map((s) => s.width)) - 1e-3);
     const per = r.sheets.reduce((a, _, i) => a + visiblePaths(sheetSVG(r, i, p)).length, 0);
     expect(visiblePaths(all).length).toBe(per);
     expect(all).not.toMatch(/NaN|undefined/);

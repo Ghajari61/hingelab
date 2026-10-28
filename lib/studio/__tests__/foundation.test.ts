@@ -116,10 +116,10 @@ describe("library and layers", () => {
     expect(new Set(MACHINE_PROFILES.map((m) => m.laser))).toEqual(new Set(["co2", "diode", "fiber"]));
     expect(fmtLength(toMM(1, "in"), "in", true)).toBe("1 in");
   });
-  it("lists the ten generators with existing plans and Pop-up", () => {
-    expect(GENERATORS).toHaveLength(16);
-    expect(GENERATORS.filter((g) => g.plan === "free").map((g) => g.id).sort()).toEqual(["family-names", "finger-box", "jigsaw", "keychain", "name-charms", "paper-box", "shadow-box", "tray"]);
-    expect(GENERATORS.map((g) => g.n)).toEqual([18, 15, 16, 17, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  it("lists the generators with existing plans and Pop-up", () => {
+    expect(GENERATORS).toHaveLength(14);
+    expect(GENERATORS.filter((g) => g.plan === "free").map((g) => g.id).sort()).toEqual(["family-names", "finger-box", "jigsaw", "keychain", "name-charms", "shadow-box", "tray"]);
+    expect(GENERATORS.map((g) => g.n)).toEqual([15, 16, 17, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
   });
 });
 
