@@ -1754,3 +1754,19 @@ The owner reported sections that open empty (screenshot: Cut-out pattern).
 - **Errors with fixes.** In a sweep of 3232 single-setting changes from the defaults, Pop-up gave errors from one click: tealight, E27 or custom socket, the Leaf outline, narrow rings, a small centre, a thin rim and 5 nested sets. `checkPopup` now attaches a fix to these geometry errors. Each fix searches for the smallest change that builds: a centre disc in 2 mm steps, two ribs, wider rings and rim, fewer nested sets, or an outline scaled up by 25 % at a time. A test covers each case. Leaf is now r = 0.8 + 0.2 cos 2a, where it was 0.65 + 0.35 cos 2a; no preset uses it. The other single-click errors (QR content to fill in, custom outlines to paste, values at the extremes of a range) ask for input and stay as they are.
 - **Checked in a browser.** All 18 editors were opened with every section expanded; no section was empty. A crawl of 187 site and studio pages found no page errors.
 
+## D220. One layout for the site and the app
+
+The owner asked for the whole site and app UI to be checked and made consistent.
+
+- **Audit.** Playwright opened 31 pages (site, studio and five editors) at 1440 × 900 and 390 × 844. It recorded page-level horizontal scroll, elements past the window, clipped text, broken images, page errors, fonts and font sizes, and took screenshots. No page scrolled sideways and no image was broken.
+- **Problems found and fixed.**
+  - `.studio-top nav` (class plus element) outranked the shared `.ia-nav { display: none }` rule for narrow screens, so the app header showed its desktop menu over the phone Menu button. The old rules are now scoped to `nav:not(.ia-nav)`.
+  - Privacy and Terms used `SiteHeader sections={false}`.
+  - `.page.landing` was not a column, so the footer floated on short pages.
+  - The Gallery had its own padding and title size.
+  - The Kerf form used the sign-in form's class.
+  - The Materials table had no styles.
+  - On phones, the status bar pushed the fit state off-screen.
+- **Type scale.** 26 distinct sizes, including 0.5 px steps that rendered unevenly side by side, were reduced to a 15-step whole-pixel scale. `lib/__tests__/typeScale.test.ts` checks every stylesheet against it. Half-pixel sizes were rounded up; 19 and 21 px titles went down to 18 and 20 so headings do not wrap more on phones. The exceptions are the site logo, now 20 px, and the 22 px headings in the AI info panel and the Boxes page header.
+- **Left as is.** Pages that say a feature is not ready (Gallery "not open yet", Contact without an address) are content for the owner to decide on. The Studio header stays smaller than the marketing header because it is app chrome, but both now use the same navigation and Menu button.
+

@@ -171,6 +171,8 @@
   --text-ui: 13px;
   --text-small: 12px;
   --text-label: 11px;
+  /* Type scale: whole pixels only. 10 11 12 13 14 15 16 17 18 20 22 24 28 34 46 (clamp for page titles).
+     Half-pixel sizes rendered unevenly next to their neighbours; lib/__tests__/typeScale.test.ts keeps them out. */
 
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   /* Panels, menus and dialogs: 150-200 ms, ease-out. The canvas does not animate. */
