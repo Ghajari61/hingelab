@@ -1,3 +1,4 @@
+import { noWeldField } from "../textOps";
 import { rect, roundedRect } from "../geom";
 import { material2Fields } from "../material2";
 import { MOTIF_OPTIONS, motifArt } from "../motifs";
@@ -24,6 +25,7 @@ const sections: SectionSpec<TrophyParams>[] = [
         options: [{ v: "single", text: "Single" }, { v: "mixed", text: "Mixed", title: "Two materials" }, { v: "layered", text: "Layered", title: "Two materials" }],
       },
       { kind: "choice", key: "mark.kind", shuffle: true, label: "Marks", options: [{ v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }], help: "Engrave fills the text and laurel; Score traces them." },
+      noWeldField<TrophyParams>("mark.noWeld", (p) => p.mark.kind === "score", "text", ["score"]),
     ],
   },
   {
@@ -138,6 +140,7 @@ const TROPHY_BASE: GeneratorDef<TrophyParams> = {
       "Cut it from one material, cut the figure from acrylic and the base from wood, or glue a mirror-acrylic emblem and name plate onto a wooden figure. The slot is the figure's own thickness plus a clearance you set, so mixed thicknesses still fit snugly.",
     ],
     tips: [
+      "With Marks set to Score, No Weld traces each glyph's own outline, so overlapping script letters keep their edges.",
       "For mirror or clear acrylic figures, a clearance of 0.05 mm gives a tight push fit; plywood likes 0.1 to 0.15 mm.",
       "A club or school logo makes a fine emblem: choose Motif, then Your picture; its outline is cut and its details are engraved or scored.",
       "Three tiers with a 5 to 8 mm step look like a turned plinth.",

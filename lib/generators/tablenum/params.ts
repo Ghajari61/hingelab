@@ -1,3 +1,4 @@
+import { cleanNoWeld } from "../textOps";
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import { isMotifKind } from "../motifs";
@@ -36,6 +37,8 @@ export interface TablenumParams extends GenBase {
     spacing: number;
     nameSize: number;
     mark: TableMark;
+    /** Raised numbers as separate glyph pieces; scored numbers keep each glyph's outline. */
+    noWeld: boolean;
   };
   textStyle: TextStyle;
   textForm: TextForm;
@@ -62,7 +65,7 @@ export const TABLENUM_DEFAULTS: TablenumParams = {
   batch: { mode: "range", from: 1, to: 6, pad: 0, list: "", names: "" },
   build: { kind: "stand", double: false },
   plate: { shape: "arch", auto: true, pad: 16, width: 110, height: 150, corner: 4 },
-  text: { label: "Table", labelFont: "pacifico", labelSize: 18, labelBelow: false, fontId: "archivo-black", size: 60, spacing: 0, nameSize: 10, mark: "engrave" },
+  text: { label: "Table", labelFont: "pacifico", labelSize: 18, labelBelow: false, fontId: "archivo-black", size: 60, spacing: 0, nameSize: 10, mark: "engrave", noWeld: false },
   textStyle: { ...TEXT_STYLE },
   textForm: { ...TEXT_FORM },
   motif: { kind: "none", place: "above", size: 22, gap: 4, art: { ...MOTIF_ART } },
@@ -86,6 +89,7 @@ export function mergeTablenum(raw: unknown): TablenumParams {
   p.textStyle = cleanTextStyle(p.textStyle);
   p.textForm = cleanTextForm(p.textForm);
   if (!MARKS.includes(p.text.mark)) p.text.mark = d.text.mark;
+  p.text.noWeld = cleanNoWeld(p.text.noWeld);
   if (!isShapeKind(p.plate.shape)) p.plate.shape = d.plate.shape;
   if (p.motif.kind !== "none" && !isMotifKind(p.motif.kind)) p.motif.kind = "none";
   p.motif.art = cleanMotifArt(p.motif.art);

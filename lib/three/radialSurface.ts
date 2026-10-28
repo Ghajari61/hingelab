@@ -94,8 +94,10 @@ export function applyRadialSurface(group:THREE.Object3D,surface:RadialSurface):v
   for(let i=0;i<pos.count;i++)pos.setZ(i,pos.getZ(i)+H(surface,pos.getX(i),pos.getY(i)));
   pos.needsUpdate=true;g.computeBoundingBox();g.computeBoundingSphere();
  };
- const meshes:THREE.Mesh[]=[];
- group.traverse(o=>{if(o instanceof THREE.Mesh)meshes.push(o);});
+ const meshes:THREE.Mesh[]=[],lines:THREE.LineSegments[]=[];
+ // score lines on the part bend with it (split where the form bends, like the cut edges)
+ group.traverse(o=>{if(o instanceof THREE.Mesh)meshes.push(o);else if(o instanceof THREE.LineSegments&&o.name!=='__edges')lines.push(o);});
+ for(const l of lines){const g=splitSegments(l.geometry,surface);deform(g);l.geometry=g;}
  for(const mesh of meshes){
   // Extract physical edges before warping: the curved caps' triangulation is not a cut line.
   if(!mesh.userData.noMeasure){const edges=splitSegments(new THREE.EdgesGeometry(mesh.geometry,28),surface);deform(edges);meshEdges(mesh,edges);}

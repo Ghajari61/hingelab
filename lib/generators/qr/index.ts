@@ -1,3 +1,4 @@
+import { letterMarkField } from "../textOps";
 import { shapeContours } from "@/lib/letters/polygon";
 import { arc, circle, deg, ellipse, rect, roundedRect, stadium } from "../geom";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
@@ -111,6 +112,7 @@ const sections: SectionSpec<QrParams>[] = [
         kind: "choice", key: "label.style", shuffle: true, label: "Label style", show: (p) => !!p.label.text.trim() && p.output.kind === "engrave",
         help: "Plain engraved text, or a solid engraved bar with the text left bare, like a “Scan me” banner.", options: [{ v: "plain", text: "Plain" }, { v: "bar", text: "Bar" }],
       },
+      letterMarkField<QrParams>("label.mark", "Label mark", (p) => !!p.label.text.trim() && p.output.kind === "engrave" && p.label.style === "plain"),
     ],
   },
   {
@@ -207,6 +209,7 @@ const QR_BASE: GeneratorDef<QrParams> = {
       "Every design is checked: module size for the output, the clear space around the code, the size of a centre logo against the error correction, and stencil bridges.",
     ],
     tips: [
+      "On an engraved plate a plain label can be scored instead (Label mark); a bar label stays engraved, because its text is knocked out of the bar.",
       "Scan the screen before you cut: hold a phone up to the canvas; if it reads there, the plate will read too.",
       "Contrast matters more than size: engrave dark and even, or use a black backplate under a light top plate.",
       "Keep modules at least 0.6 mm for engraving and 1.2 mm for cut-outs; a shorter web address makes fewer, larger modules.",

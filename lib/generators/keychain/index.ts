@@ -1,3 +1,4 @@
+import {noWeldField} from "../textOps";
 import type { GeneratorDef, SectionSpec } from "../types";
 import { SHAPE_KINDS, SHAPE_NAMES, shapeArt } from "../shapes";
 import { MOTIF_IDS, MOTIF_NAMES } from "../motifs";
@@ -22,6 +23,7 @@ const sections:SectionSpec<KeychainParams>[]=[
  ]},
  {id:"style",title:"Decoration",open:true,help:"Choose filled engraving, outline scoring or separately cut raised details.",fields:[
   {kind:"choice",key:"style",label:"Lettering finish",options:[{v:"engrave",text:"Engraved"},{v:"score",text:"Outline score"},{v:"layered",text:"Raised letters"}],help:"Raised letters are real cut parts, glued over alignment marks on the body."},
+  noWeldField<KeychainParams>("text.noWeld",p=>p.style==="layered","raised letters",["raised"]),
   {kind:"choice",key:"border",label:"Border",options:[{v:"none",text:"None"},{v:"score",text:"Score"},{v:"engrave",text:"Engrave"}],help:"Optional inset decorative border."},
   {kind:"choice",key:"motif",label:"Symbol",shuffle:true,options:[{v:"none",text:"None"},...MOTIF_IDS.map(v=>({v,text:MOTIF_NAMES[v]}))],help:"A decorative symbol above the name, fitted with the text."},
  ]},
@@ -36,5 +38,6 @@ export const KEYCHAIN:GeneratorDef<KeychainParams>={
  build:buildKeychain,check:()=>[],fonts:p=>p.text.name.trim()||p.text.subtitle.trim()?[p.text.fontId]:[],batch:()=>"text.name",
  art:(key,value)=>key==="shape"?shapeArt(value as KeychainParams["shape"]):[],
  fileName:p=>namedFile("keychain",p.name,p.shape),summary:p=>`${SHAPE_NAMES[p.shape]} · ${p.width} × ${p.height} mm · ${p.style}`,
- help:{intro:["Create personalized laser-cut keychains with names, motifs and a reinforced ring tab. Text is exported as vector paths, not installed-font text."],tips:["Measure the wire on your split ring and test a sample before a production run.","Use Job options to generate a batch of names or repeat copies on a sheet.","For raised lettering, glue every small detail over its scored guide. Choose engraving for very small text.","Body size excludes the ring tab. The preview and SVG include the complete outline."],keywords:["keychain","keyring","name tag","pet tag","bag charm"]},
+ help:{intro:["Create personalized laser-cut keychains with names, motifs and a reinforced ring tab. Text is exported as vector paths, not installed-font text."],tips:[
+      "No Weld (with Raised letters): every glyph, dot and counter is cut as its own raised piece instead of fusing where letters touch.","Measure the wire on your split ring and test a sample before a production run.","Use Job options to generate a batch of names or repeat copies on a sheet.","For raised lettering, glue every small detail over its scored guide. Choose engraving for very small text.","Body size excludes the ring tab. The preview and SVG include the complete outline."],keywords:["keychain","keyring","name tag","pet tag","bag charm"]},
 };

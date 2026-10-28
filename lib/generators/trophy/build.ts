@@ -1,3 +1,4 @@
+import { markLetters } from "../textOps";
 import { MATERIALS } from "@/lib/hinge/defaults";
 import { differenceShapes, makeShape, offsetShapes, shapeContours, signedArea, unionShapes } from "@/lib/letters/polygon";
 import type { Shape } from "@/lib/letters/types";
@@ -36,7 +37,6 @@ export type TrophyOutput = GenOutput & { info?: TrophyInfo };
 
 const r0 = (v: number) => Math.round(v);
 const move = (cs: Contour[], dx: number, dy: number) => cs.map((c) => c.map(([x, y]) => [x + dx, y + dy] as Pt));
-const closed = (c: Contour): Contour => [...c, c[0]];
 const biggest = (s: Shape[]) => s.reduce((a, b) => (b.area > a.area ? b : a));
 const TAB_W = 16;
 
@@ -182,19 +182,26 @@ export function buildTrophy(p: TrophyParams, ctx: BuildContext): TrophyOutput {
 
   // Engraving.
   const marks: Contour[] = [];
+  // each glyph's outlines (the emblem's detail and the wreath are one glyph each), for No Weld scoring
+  const markGlyphs: Contour[][] = [];
+  const glyphsOf = (b: { contours: Contour[]; glyphs?: Contour[][] }, dx: number, dy: number) => (b.glyphs?.length ? b.glyphs : [b.contours]).map((g) => move(g, dx, dy));
   const blocks: ItemBlock[] = [];
-  if (em.detail) marks.push(...move(em.detail, ex - eb.x0, -eb.y0));
+  if (em.detail) { const d = move(em.detail, ex - eb.x0, -eb.y0); marks.push(...d); markGlyphs.push(d); }
   if (et) {
     const cs = move(et.contours, ex + em.cx, em.cy);
     blocks.push({ item: "Emblem text", cs });
     marks.push(...cs);
+    markGlyphs.push(...glyphsOf(et, ex + em.cx, em.cy));
   }
   if (p.emblem.laurel) {
     const r = em.room * 0.95;
     const wreath = motif("laurel", r * 2, ex + em.cx, em.cy);
-    marks.push(...shapeContours(differenceShapes(wreath.map(orient), et ? shapeContours(offsetShapes(unionShapes(move(et.contours, ex + em.cx, em.cy)), 2)) : [])));
+    const w = shapeContours(differenceShapes(wreath.map(orient), et ? shapeContours(offsetShapes(unionShapes(move(et.contours, ex + em.cx, em.cy)), 2)) : []));
+    marks.push(...w);
+    markGlyphs.push(w);
   }
   const plateMarks: Contour[] = [];
+  const plateGlyphs: Contour[][] = [];
   if (lines.length) {
     let y = plateTop + p.plate.pad;
     const kinds = [p.plate.title.trim() && "Title", p.plate.name.trim() && "Name", p.plate.year.trim() && "Year"].filter((k): k is string => !!k);
@@ -202,15 +209,16 @@ export function buildTrophy(p: TrophyParams, ctx: BuildContext): TrophyOutput {
       const cs = move(b.contours, FW / 2, y + b.height / 2);
       blocks.push({ item: kinds[i], cs });
       plateMarks.push(...cs);
+      plateGlyphs.push(...glyphsOf(b, FW / 2, y + b.height / 2));
       y += b.height + gap * 1.4;
     });
   }
   const layered = p.build.kind === "layered";
   const faceMarks = layered ? [] : [...marks, ...plateMarks];
-  const markOf = (cs: Contour[], items: ItemBlock[] = []): Pick<GenPart, "engrave" | "score"> => {
+  const faceGlyphs = layered ? [] : [...markGlyphs, ...plateGlyphs];
+  const markOf = (cs: Contour[], items: ItemBlock[] = [], glyphs?: Contour[][]): Pick<GenPart, "engrave" | "score"> => {
     if (!cs.length) return {};
-    const u = shapeContours(unionShapes(cs));
-    return tagMarks(p.mark.kind === "engrave" ? { engrave: u } : { score: u.map(closed) }, items);
+    return tagMarks(markLetters({ contours: cs, glyphs }, p.mark.kind, p.mark.noWeld), items);
   };
 
   // Base tiers.
@@ -224,25 +232,26 @@ export function buildTrophy(p: TrophyParams, ctx: BuildContext): TrophyOutput {
     const slotted = tiers === 1 || k > 0;
     const holes = slotted ? tabs.xs.map((x) => rect(x + bx - inset - tabs.w / 2 - p.base.fit / 2, d / 2 - slotW / 2, tabs.w + p.base.fit, slotW)) : [];
     const top = k === tiers - 1;
-    const baseMarks = top && bt ? markOf(move(bt.contours, w / 2, d / 2 + slotW / 2 + Math.max(4, (d / 2 - slotW / 2) * 0.45))) : {};
+    const by = d / 2 + slotW / 2 + Math.max(4, (d / 2 - slotW / 2) * 0.45);
+    const baseMarks = top && bt ? markOf(move(bt.contours, w / 2, by), [], glyphsOf(bt, w / 2, by)) : {};
     parts.push({ id: `tier${k + 1}`, name: tiers > 1 ? `Base tier ${k + 1}` : "Base", outer: baseOutline(p.base.shape, w, d, p.base.corner), holes, ...baseMarks, place: { x: inset, y: inset, z: k * T } });
   }
 
   // The figure, standing in the slot.
   const lift = tiers * T;
   const fz = depth / 2 - Tf / 2;
-  const fig: GenPart = { id: "figure", name: "Figure", outer: figure.outer, holes: figure.holes, ...markOf(faceMarks, blocks), place: { x: bx, y: -(footY + lift), z: fz, upright: true } };
+  const fig: GenPart = { id: "figure", name: "Figure", outer: figure.outer, holes: figure.holes, ...markOf(faceMarks, blocks, faceGlyphs), place: { x: bx, y: -(footY + lift), z: fz, upright: true } };
   parts.unshift(mixed ? second(fig) : fig);
   if (layered) {
     const inset = Math.max(2, Math.min(EW, EH) * 0.05);
     const front = offsetShapes([makeShape(transform(em.shape.outer, { x: ex - eb.x0, y: -eb.y0 }), [])], -inset);
     if (front.length) {
       const f = biggest(front);
-      parts.splice(1, 0, second({ id: "emblem", name: "Emblem front", outer: f.outer, holes: emHoles, ...markOf(marks, blocks), place: { x: bx, y: -(footY + lift), z: fz + T, upright: true } }));
+      parts.splice(1, 0, second({ id: "emblem", name: "Emblem front", outer: f.outer, holes: emHoles, ...markOf(marks, blocks, markGlyphs), place: { x: bx, y: -(footY + lift), z: fz + T, upright: true } }));
     }
     if (plateH) {
       const pl = orient(shapeOutline("rounded", plateW - 6, plateH - 6, Math.max(0, p.plate.corner - 2)).map(([x, y]) => [x + FW / 2 - plateW / 2 + 3, y + plateTop + 3] as Pt));
-      parts.splice(2, 0, second({ id: "plate", name: "Name plate", outer: pl, holes: [], ...markOf(plateMarks, blocks), place: { x: bx, y: -(footY + lift), z: fz + T, upright: true } }));
+      parts.splice(2, 0, second({ id: "plate", name: "Name plate", outer: pl, holes: [], ...markOf(plateMarks, blocks, plateGlyphs), place: { x: bx, y: -(footY + lift), z: fz + T, upright: true } }));
     }
   }
 

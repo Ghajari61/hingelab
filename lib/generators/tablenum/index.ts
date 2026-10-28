@@ -5,6 +5,7 @@ import { motifArtFields, motifFonts } from "../motifArt";
 import { SHAPE_KINDS, SHAPE_NAMES, shapeArt, type ShapeKind } from "../shapes";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { textStyleSection } from "../textStyle";
+import { noWeldField } from "../textOps";
 import { fitArt, namedFile, slug } from "../util";
 import { buildTablenum, type TablenumOutput } from "./build";
 import { checkTablenum } from "./check";
@@ -72,6 +73,7 @@ const sections: SectionSpec<TablenumParams>[] = [
         help: "Engrave fills the letters, Score traces them, Raised cuts them from the second material to glue on.",
         options: [{ v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }, { v: "raised", text: "Raised", title: "Two materials" }],
       },
+      noWeldField<TablenumParams>("text.noWeld", (p) => p.text.mark !== "engrave", "number, label and motif"),
     ],
   },
   textStyleSection(),
@@ -185,6 +187,7 @@ const TABLENUM_BASE: GeneratorDef<TablenumParams> = {
       "Each plate can stand in a slotted base of one to three layers (stepped or straight), fold into a tent card on a living hinge so it reads from both sides, or be a plaque for a holder or a ribbon. Add a label such as Table, a second line per table, a motif and a border; engrave, score or raise the numbers in mirror acrylic.",
     ],
     tips: [
+      "No Weld (under Text, for Score and Raised): raised numbers are cut as one piece per glyph, dot and counter instead of one welded number, and scored numbers keep each glyph's own outline. Engraving is unchanged.",
       "Make one spare of the most-used numbers in case one gets knocked over.",
       "For tent cards, use 3 mm plywood or MDF and bend slowly; acrylic will snap.",
       "A two-layer base hides the tab ends and lets the plates lift out for storage.",

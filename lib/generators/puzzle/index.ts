@@ -1,3 +1,4 @@
+import { letterMarkField, noWeldField } from "../textOps";
 import { circle, rect, roundedRect } from "../geom";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { fitArt, namedFile } from "../util";
@@ -83,6 +84,8 @@ const sections: SectionSpec<PuzzleParams>[] = [
       { kind: "font", key: "engrave.fontId", shuffle: true, label: "Font", show: (p) => p.engrave.kind === "text" || p.engrave.kind === "numbers", sample: (p) => (p.engrave.kind === "numbers" ? "123" : p.engrave.text || "Aa"), help: "The typeface of the text or numbers (the same fonts as Letters)." },
       { kind: "number", key: "engrave.size", label: "Text height", unit: "mm", min: 4, max: 300, step: 1, show: engraves("text"), help: "Cap height of the text." },
       { kind: "number", key: "engrave.numberSize", label: "Number height", unit: "mm", min: 2, max: 30, step: 0.5, show: engraves("numbers"), help: "Height of the piece numbers." },
+      letterMarkField<PuzzleParams>("engrave.mark", "Mark", (p) => p.engrave.kind === "text" || p.engrave.kind === "numbers"),
+      noWeldField<PuzzleParams>("engrave.noWeld", (p) => (p.engrave.kind === "text" || p.engrave.kind === "numbers") && p.engrave.mark === "score", "text", ["score"]),
     ],
   },
 ];
@@ -164,6 +167,7 @@ const PUZZLE_BASE: GeneratorDef<PuzzleParams> = {
       `Free accounts export puzzles of up to ${FREE_PIECES} pieces; larger puzzles need Pro.`,
     ],
     tips: [
+      "Text and piece numbers can be scored instead of engraved (Engraving › Mark); No Weld then keeps each glyph's own outline. Scoring is much quicker than engraving a large text.",
       "3 mm plywood or MDF works well; keep pieces at least 15 mm across and tab necks wider than the material is thick.",
       "Engrave the picture first and cut without moving the sheet, so the picture lines up with the pieces.",
       "For a photo, raise the contrast before you load it; engraving flattens mid-greys.",

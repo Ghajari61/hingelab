@@ -1,3 +1,4 @@
+import { letterMarkField, noWeldField } from "../textOps";
 import { circle, transform } from "../geom";
 import { HEART_PATH as HEART, fitArt as fit, namedFile } from "../util";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
@@ -75,6 +76,7 @@ const sections: SectionSpec<ClockParams>[] = [
       { kind: "number", key: "markers.dot", label: "Dot size", unit: "mm", min: 2, max: 60, step: 0.5, show: (p) => p.markers.style === "dots", help: "Diameter of the hour dots; the dots at 12, 3, 6 and 9 are larger." },
       { kind: "toggle", key: "markers.minutes", shuffle: true, label: "Minute ticks", help: "Adds a short tick for every minute between the hours." },
       { kind: "toggle", key: "markers.cut", label: "Cut through", show: (p) => p.markers.style !== "none" || p.markers.minutes, help: "Cuts the markers out instead of engraving them, so the layer behind shows through." },
+      letterMarkField<ClockParams>("markers.mark", "Mark", (p) => (p.markers.style !== "none" || p.markers.minutes) && (p.markers.style === "numerals" || p.markers.style === "mixed" || !p.markers.cut)),
       { kind: "toggle", key: "markers.follow", shuffle: true, label: "Follow the dial", show: hasNumerals, help: "Turns each numeral so its top points outward, as on classic dials, instead of standing upright." },
     ],
   },
@@ -91,6 +93,8 @@ const sections: SectionSpec<ClockParams>[] = [
       { kind: "font", key: "inscription.fontId", shuffle: true, label: "Font", show: hasInscription, sample: (p) => p.inscription.text || "Aa", help: "Typeface of the text (the same fonts as Letters)." },
       { kind: "number", key: "inscription.size", label: "Text height", unit: "mm", min: 3, max: 80, step: 0.5, show: hasInscription, help: "Cap height of the text." },
       { kind: "number", key: "inscription.gap", label: "Gap to markers", unit: "mm", min: 0, max: 100, step: 0.5, show: hasInscription, help: "Space between the markers and the text; a larger gap moves the text toward the centre." },
+      letterMarkField<ClockParams>("inscription.mark", "Mark", hasInscription),
+      noWeldField<ClockParams>("inscription.noWeld", (p) => hasInscription(p) && p.inscription.mark === "score", "inscription", ["score"]),
     ],
   },
   {
@@ -216,6 +220,7 @@ const CLOCK_BASE: GeneratorDef<ClockParams> = {
       "Buy the movement first and check its shaft length: the face must be no thicker at the centre than the thread can clamp. Measure the hand holes if your movement's hands are not the usual size and enter them under Movement → Custom sizes.",
     ],
     tips: [
+      "Numerals and engraved ticks or dots can be scored instead of engraved (Markers › Mark), and so can the inscription, with No Weld for each glyph's own outline.",
       "Ring layers give depth: glue the ring onto the back plate, and cut the markers through the ring so the back plate shows behind them.",
       "Cut the hands from thin material (1.5–3 mm) and keep them light; long, heavy hands stall a standard movement.",
       "Engrave the markers before cutting the outline, so the part does not move between jobs.",

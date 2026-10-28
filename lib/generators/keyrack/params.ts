@@ -1,3 +1,4 @@
+import { cleanNoWeld } from "../textOps";
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import { clamp } from "../common";
@@ -17,7 +18,7 @@ export type Mount = "keyhole" | "holes" | "none";
 
 export interface KeyrackParams extends GenBase {
   board: { shape: ShapeKind; width: number; height: number; corner: number; frame: boolean };
-  text: { text: string; fontId: string; size: number; spacing: number; mark: Mark; y: number };
+  text: { text: string; fontId: string; size: number; spacing: number; mark: Mark; y: number; /** Raised letters as separate glyph pieces; scored letters keep each glyph's outline. */ noWeld: boolean };
   textStyle: TextStyle;
   textForm: TextForm;
   motif: { kind: string; side: MotifSide; size: number; gap: number; art: MotifArt };
@@ -57,7 +58,7 @@ export const KEYRACK_DEFAULTS: KeyrackParams = {
   job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   board: { shape: "rounded", width: 260, height: 120, corner: 8, frame: false },
-  text: { text: "Home Sweet Home", fontId: "pacifico", size: 20, spacing: 0, mark: "engrave", y: 30 },
+  text: { text: "Home Sweet Home", fontId: "pacifico", size: 20, spacing: 0, mark: "engrave", y: 30, noWeld: false },
   textStyle: { ...TEXT_STYLE },
   textForm: { ...TEXT_FORM },
   motif: { kind: "house", side: "left", size: 30, gap: 6, art: { ...MOTIF_ART } },
@@ -78,6 +79,7 @@ export function mergeKeyrack(raw: unknown): KeyrackParams {
   const p = mergeInto(clone(d), raw);
   if (!isShapeKind(p.board.shape)) p.board.shape = d.board.shape;
   if (!MARKS.includes(p.text.mark)) p.text.mark = d.text.mark;
+  p.text.noWeld = cleanNoWeld(p.text.noWeld);
   p.textStyle = cleanTextStyle(p.textStyle);
   p.textForm = cleanTextForm(p.textForm);
   if (!STYLES.includes(p.hooks.style)) p.hooks.style = d.hooks.style;

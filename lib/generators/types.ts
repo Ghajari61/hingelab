@@ -151,7 +151,10 @@ export interface GenPart {
     radialSurface?: import('@/lib/radialProfile').FormedSurface;
     /** Assembly identifier displayed when the individual piece is selected. */
     name?: string;
-    outer: Contour; holes: Contour[]; engrave?: Contour[]; place: NonNullable<GenPart["place"]>; soft?: boolean;
+    outer: Contour; holes: Contour[]; engrave?: Contour[];
+    /** Score lines on this piece (tagged by item), in its outline's frame. */
+    score?: Contour[];
+    place: NonNullable<GenPart["place"]>; soft?: boolean;
     /** Its placement matrix from flat (first) to folded (last), evenly spaced, for the fold slider. */
     frames?: number[][];
     /** How far it moves when the view is fully exploded, mm (x, y toward the viewer, z up). */

@@ -1,3 +1,4 @@
+import {cleanNoWeld} from "../textOps";
 import { DEFAULTS, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import { isShapeKind, type ShapeKind } from "../shapes";
@@ -7,7 +8,7 @@ import { mergeInto } from "../util";
 export interface KeychainParams extends GenBase {
   shape: ShapeKind; width: number; height: number; corner: number; margin: number;
   style: "engrave" | "score" | "layered";
-  text: { name: string; subtitle: string; fontId: string; size: number; spacing: number };
+  text: { name: string; subtitle: string; fontId: string; size: number; spacing: number; /** Raised letters: each glyph its own piece instead of fusing where letters touch. */ noWeld: boolean };
   ring: { side: "left" | "right" | "top"; diameter: number; wall: number };
   border: "none" | "score" | "engrave";
   motif: "none" | MotifId;
@@ -16,7 +17,7 @@ export const KEYCHAIN_DEFAULTS: KeychainParams = {
   name: "Personal keychain", material: "birch3", T: 3, K: DEFAULTS.K, bedW:600, bedH:400, gap:4,
   fit:{...FIT_OFF}, sheet:{...SHEET_DEFAULTS}, job:{...JOB_EXTRAS}, layers:clone(DEFAULTS.layers),
   shape:"rounded", width:65, height:28, corner:6, margin:3,
-  style:"engrave", text:{name:"SAM",subtitle:"",fontId:"archivo-black",size:12,spacing:0},
+  style:"engrave", text:{name:"SAM",subtitle:"",fontId:"archivo-black",size:12,spacing:0,noWeld:false},
   ring:{side:"left",diameter:5,wall:3}, border:"score", motif:"none",
 };
 export function mergeKeychain(raw: unknown): KeychainParams {
@@ -28,6 +29,7 @@ export function mergeKeychain(raw: unknown): KeychainParams {
   p.text.name=p.text.name.slice(0,80);p.text.subtitle=p.text.subtitle.slice(0,80);
   if(!isShapeKind(p.shape))p.shape="rounded";
   if(!["engrave","score","layered"].includes(p.style))p.style="engrave";
+  p.text.noWeld=cleanNoWeld(p.text.noWeld);
   if(!["none","score","engrave"].includes(p.border))p.border="none";
   if(!["left","right","top"].includes(p.ring.side))p.ring.side="left";
   if(!isMotifId(p.motif))p.motif="none";

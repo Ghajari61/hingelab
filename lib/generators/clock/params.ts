@@ -1,3 +1,4 @@
+import { cleanMark, cleanNoWeld } from "../textOps";
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
@@ -66,6 +67,8 @@ export interface ClockParams extends GenBase {
     tickWidth: number;
     dot: number;
     cut: boolean;
+    /** Engraved markers (numerals always, ticks and dots unless cut through): filled or scored outlines. */
+    mark: "engrave" | "score";
     /** Numerals turn to follow the dial (their tops point outward) instead of standing upright. */
     follow: boolean;
   };
@@ -77,6 +80,9 @@ export interface ClockParams extends GenBase {
     size: number;
     /** Gap between the markers and the text, mm. */
     gap: number;
+    mark: "engrave" | "score";
+    /** Scored text keeps each glyph's own outline. */
+    noWeld: boolean;
   };
   hands: {
     style: HandStyle;
@@ -103,8 +109,8 @@ export const CLOCK_DEFAULTS: ClockParams = {
   job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   face: { shape: "round", size: 300, sides: 6, corner: 6, rays: 24, depth: 22, path: "", layers: "ring", ring: 40, centre: 60 },
-  markers: { style: "numerals", numerals: "roman", quarters: false, fontId: "archivo-black", size: 20, inset: 8, minutes: true, tickLength: 10, tickWidth: 3, dot: 8, cut: false, follow: false },
-  inscription: { text: "", at: "top", fontId: "archivo-black", size: 10, gap: 6 },
+  markers: { style: "numerals", numerals: "roman", quarters: false, fontId: "archivo-black", size: 20, inset: 8, minutes: true, tickLength: 10, tickWidth: 3, dot: 8, cut: false, follow: false, mark: "engrave" },
+  inscription: { text: "", at: "top", fontId: "archivo-black", size: 10, gap: 6, mark: "engrave", noWeld: false },
   hands: { style: "spade", hour: 70, minute: 100, width: 10, tail: 20 },
   movement: { ...MOVEMENTS[0] },
   hanger: "keyhole",
@@ -117,5 +123,9 @@ export function mergeClock(raw: unknown): ClockParams {
   if (m && isObj(raw) && isObj(raw.movement) && !("shaft" in raw.movement)) p.movement = { ...m };
   // Numeral sets that were removed (Persian, Eastern Arabic) become Western digits.
   if (!(["arabic", "roman", "roman-iv"] as string[]).includes(p.markers.numerals)) p.markers.numerals = "arabic";
+  // saves from before scoring engrave, as they always did
+  p.markers.mark = cleanMark(p.markers.mark, ["engrave", "score"] as const, "engrave");
+  p.inscription.mark = cleanMark(p.inscription.mark, ["engrave", "score"] as const, "engrave");
+  p.inscription.noWeld = cleanNoWeld(p.inscription.noWeld);
   return p;
 }

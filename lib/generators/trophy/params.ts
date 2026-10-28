@@ -1,3 +1,4 @@
+import { cleanNoWeld } from "../textOps";
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import { isMotifKind } from "../motifs";
@@ -46,7 +47,8 @@ export interface TrophyParams extends GenBase {
   /** Stem between the emblem and the plate or base, mm. */
   stem: { width: number; height: number };
   base: { tiers: number; shape: BaseShape; width: number; depth: number; step: number; corner: number; fit: number; text: string };
-  mark: { kind: "engrave" | "score" };
+  /** No Weld scores each glyph's own outline (overlapping script letters keep their edges). */
+  mark: { kind: "engrave" | "score"; noWeld: boolean };
   mat: { mat2: string; T2: number };
 }
 
@@ -67,7 +69,7 @@ export const TROPHY_DEFAULTS: TrophyParams = {
   plate: { on: true, name: "Alex Morgan", title: "Player of the Year", year: "2026", fontId: "archivo-black", titleFont: "pacifico", nameSize: 9, titleSize: 8, width: 90, pad: 6, corner: 4 },
   stem: { width: 24, height: 12 },
   base: { tiers: 2, shape: "rounded", width: 120, depth: 60, step: 6, corner: 6, fit: 0.1, text: "" },
-  mark: { kind: "engrave" },
+  mark: { kind: "engrave", noWeld: false },
   mat: { mat2: "acrylic-gold", T2: 3 },
 };
 
@@ -84,6 +86,7 @@ export function mergeTrophy(raw: unknown): TrophyParams {
   p.emblem.art = cleanMotifArt(p.emblem.art);
   if (!BASES.includes(p.base.shape)) p.base.shape = d.base.shape;
   if (p.mark.kind !== "engrave" && p.mark.kind !== "score") p.mark.kind = d.mark.kind;
+  p.mark.noWeld = cleanNoWeld(p.mark.noWeld);
   if (!(p.mat.mat2 in SECOND_MATERIALS)) p.mat.mat2 = d.mat.mat2;
   p.base.tiers = clamp(Math.round(p.base.tiers), 1, 3);
   p.emblem.points = clamp(Math.round(p.emblem.points), 4, 12);

@@ -1,3 +1,4 @@
+import { cleanMark, cleanNoWeld } from "../textOps";
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
@@ -59,6 +60,10 @@ export interface PuzzleParams extends GenBase {
     fontId: string;
     size: number;
     numberSize: number;
+    /** Text and numbers: engraved (filled) or scored (outlines). */
+    mark: "engrave" | "score";
+    /** Scored text keeps each glyph's own outline. */
+    noWeld: boolean;
   };
 }
 
@@ -78,11 +83,13 @@ export const PUZZLE_DEFAULTS: PuzzleParams = {
   pieces: { auto: true, count: 48, cols: 8, rows: 6 },
   tabs: { style: "classic", size: 20, jitter: 4, seed: 1 },
   frame: { kind: "none", border: 15, clearance: 0.4, corner: 6 },
-  engrave: { kind: "none", image: "", aspect: 1.5, zoom: 100, text: "", fontId: "fredoka", size: 30, numberSize: 5 },
+  engrave: { kind: "none", image: "", aspect: 1.5, zoom: 100, text: "", fontId: "fredoka", size: 30, numberSize: 5, mark: "engrave", noWeld: false },
 };
 
 export function mergePuzzle(raw: unknown): PuzzleParams {
   const p = mergeInto(clone(PUZZLE_DEFAULTS), raw);
   if (p.engrave.image && !isImageDataURL(p.engrave.image)) p.engrave = { ...p.engrave, image: "" };
+  p.engrave.mark = cleanMark(p.engrave.mark, ["engrave", "score"] as const, "engrave");
+  p.engrave.noWeld = cleanNoWeld(p.engrave.noWeld);
   return p;
 }
