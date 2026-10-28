@@ -6,7 +6,7 @@ import { markLetters } from "../textOps";
  */
 import { intersectShapes, makeShape, offsetShapes, unionShapes } from "@/lib/letters/polygon";
 import {
-  TAU, arc, bboxOf, circle, customOutline, deg, distToContour, pointInContour, rect, regularPolygon, roundCorners,
+  TAU, arc, bboxOf, circle, contourGap, customOutline, deg, distToContour, pointInContour, rect, regularPolygon, roundCorners,
   roundedRect, signedArea, stadium, transform,
 } from "../geom";
 import { tagItem } from "../items";
@@ -161,10 +161,37 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext, clear
   const tickHours = m.style === "ticks" ? [...Array(12).keys()] : m.style === "mixed" ? [1, 2, 4, 5, 7, 8, 10, 11] : m.style === "numerals" && m.quarters ? [1, 2, 4, 5, 7, 8, 10, 11] : [];
   const dotHours = m.style === "dots" ? [...Array(12).keys()] : [];
 
+  // Numerals first, so no tick (an hour tick or a minute tick) is drawn into one: wide numerals
+  // such as XII or VIII reach the neighbouring minute marks, and an engraved overlap would burn twice
+  // (or show as a gap in the letter).
+  const numerals: Contour[][] = [];
+  if (numeralHours.length) {
+    if (!ctx.text) res.loading = true;
+    else for (const h of numeralHours) {
+      const s = numeral(m.numerals, h), shape = ctx.text(s, m.fontId, m.size);
+      if (!shape) { res.loading = true; continue; }
+      for (const c of shape.missing) if (!res.missing.includes(c)) res.missing.push(c);
+      const a = h * 30, [dx, dy] = dirOf(a);
+      const extent = m.follow ? shape.height : Math.abs(shape.width * dx) + Math.abs(shape.height * dy);
+      const r = anchor(a) - extent / 2;
+      const at = (c: Contour) => (m.follow ? rot(c, a) : c).map(([x, y]) => [x + dx * r, y + dy * r] as Pt);
+      numerals.push(pull(shape.contours.map(at), a));
+    }
+  }
+  const gap = Math.max(1, m.tickWidth * 0.6);
+  const boxes = numerals.map((cs) => { const b = bboxOf(cs); return { cs, x0: b.x0 - gap, y0: b.y0 - gap, x1: b.x1 + gap, y1: b.y1 + gap }; });
+  /** A tick that would touch a numeral (or come within `gap` of it). */
+  const hitsNumeral = (c: Contour) => {
+    const b = bboxOf([c]);
+    return boxes.some((n) => b.x1 > n.x0 && b.x0 < n.x1 && b.y1 > n.y0 && b.y0 < n.y1
+      && n.cs.some((g) => c.some((q) => pointInContour(q, g)) || contourGap(c, g) < gap));
+  };
+  const tick = (c: Contour, a: number) => { const [q] = pull([c], a); if (hitsNumeral(q)) return; if (m.cut) res.holes.push(tagItem([q], item)[0]); else mark([q], item); };
+
   for (const h of tickHours) {
     const a = h * 30, r = anchor(a), q = h % 3 === 0 && m.style === "ticks";
     const w = m.tickWidth * (q ? 1.6 : 1), l = m.tickLength * (q ? 1.25 : 1);
-    put(rot(rect(-w / 2, -r, w, l), a), a);
+    tick(rot(rect(-w / 2, -r, w, l), a), a);
   }
   for (const h of dotHours) {
     item = "Dots";
@@ -177,24 +204,11 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext, clear
     for (let i = 0; i < 60; i++) {
       if (i % 5 === 0) continue;
       const a = i * 6;
-      put(rot(rect(-w / 2, -anchor(a), w, l), a), a);
+      tick(rot(rect(-w / 2, -anchor(a), w, l), a), a);
     }
   }
-  if (numeralHours.length) {
-    if (!ctx.text) { res.loading = true; return res; }
-    for (const h of numeralHours) {
-      const s = numeral(m.numerals, h), shape = ctx.text(s, m.fontId, m.size);
-      if (!shape) { res.loading = true; continue; }
-      for (const c of shape.missing) if (!res.missing.includes(c)) res.missing.push(c);
-      const a = h * 30, [dx, dy] = dirOf(a);
-      const extent = m.follow ? shape.height : Math.abs(shape.width * dx) + Math.abs(shape.height * dy);
-      const r = anchor(a) - extent / 2;
-      const at = (c: Contour) => (m.follow ? rot(c, a) : c).map(([x, y]) => [x + dx * r, y + dy * r] as Pt);
-      // a numeral is scored as one shape (its glyphs welded), engraved as before
-      const placed = pull(shape.contours.map(at), a);
-      mark(placed, "Numerals", [placed]);
-    }
-  }
+  // a numeral is scored as one shape (its glyphs welded), engraved as before
+  for (const placed of numerals) mark(placed, "Numerals", [placed]);
   return res;
 }
 

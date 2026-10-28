@@ -148,7 +148,7 @@ export function patternArea(part: GenPart, edge: number, win: Contour | null, ce
  * The pattern on one part, `edge` mm clear of its outline, of what it carries, and of `keep`;
  * returns how many shapes it made. The window shape sits in the middle of the face inside the edge.
  */
-export function patternOn(pp: PatternParams, part: GenPart, edge: number, unit?: Contour[], keep: KeepOut[] = [], solid: Contour[] = [], tile?: FretTile): number {
+export function patternOn(pp: PatternParams, part: GenPart, edge: number, unit?: Contour[], keep: KeepOut[] = [], solid: Contour[] = [], tile?: FretTile, whole = false): number {
   if (pp.pattern === "none" || (pp.pattern === "motif" && !unit?.length) || (pp.pattern === "tile" && !tile)) return 0;
   const b = boxOf([part.outer]);
   const x0 = b.x0 + edge, y0 = b.y0 + edge, x1 = b.x1 - edge, y1 = b.y1 - edge;
@@ -157,7 +157,7 @@ export function patternOn(pp: PatternParams, part: GenPart, edge: number, unit?:
   const win = windowShape(pp.shape, (x0 + x1) / 2, (y0 + y1) / 2, Math.min(x1 - x0, y1 - y0) * Math.min(100, Math.max(20, pp.size)) / 100);
   const area = patternArea(part, edge, win, cell, solid);
   if (!area.length) return 0;
-  const holes = fretHoles({ kind: pp.pattern, cell, bar: Math.max(0.5, pp.bar), unit, tile, grid: pp.grid, turn: pp.turn }, x0, y0, x1, y1, keep, (q) => pointInContour(q, part.outer), area);
+  const holes = fretHoles({ kind: pp.pattern, cell, bar: Math.max(0.5, pp.bar), unit, tile, grid: pp.grid, turn: pp.turn, whole }, x0, y0, x1, y1, keep, (q) => pointInContour(q, part.outer), area);
   markShapes(pp.mark, part, holes);
   return holes.length;
 }
@@ -259,7 +259,7 @@ export function patternArt(value: string): { d: string; fill?: boolean }[] {
  * the pattern applied after the build to the parts of the chosen target. `edge` is how far the
  * pattern stays from a part's outline (joints, slots and the rim), mm.
  */
-export function withPattern<P extends GenBase>(def: GeneratorDef<P>, targets: PatternTarget[], opts: { edge?: (p: P) => number; help?: string; barHelp?: string; keep?: (p: P, part: GenPart) => Contour[] } = {}): GeneratorDef<P> {
+export function withPattern<P extends GenBase>(def: GeneratorDef<P>, targets: PatternTarget[], opts: { edge?: (p: P) => number; help?: string; barHelp?: string; keep?: (p: P, part: GenPart) => Contour[]; whole?: boolean } = {}): GeneratorDef<P> {
   type Q = P & { pattern: PatternParams };
   const pp = (p: P) => (p as Q).pattern ?? PATTERN_DEFAULTS;
   const edge = opts.edge ?? ((p: P) => Math.max(4, (p.T ?? 3) + pp(p).bar + 1));
@@ -285,7 +285,7 @@ export function withPattern<P extends GenBase>(def: GeneratorDef<P>, targets: Pa
       let n = 0, on = 0;
       for (const part of out.parts) {
         if (part.pieces?.length || !chosen.some((t) => t.match(part))) continue;
-        n += patternOn(q, part, e, unit, [], [...stackedOn(part, out.parts, p.T ?? 3), ...(opts.keep?.(p, part) ?? [])], tile);
+        n += patternOn(q, part, e, unit, [], [...stackedOn(part, out.parts, p.T ?? 3), ...(opts.keep?.(p, part) ?? [])], tile, opts.whole);
         on++;
       }
       const what = q.mark === "engrave" ? "engraved shapes" : q.mark === "score" ? "scored shapes" : "holes";
