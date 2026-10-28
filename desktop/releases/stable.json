@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.27.0",
-    "pub_date": "2026-10-28T20:19:24.706Z",
-    "notes": "Adds engraving, scoring and raised text operations across eight more generators, alongside the latest HingeLab design and workflow improvements.",
+    "version": "1.27.1",
+    "pub_date": "2026-10-28T21:09:44.428Z",
+    "notes": "Makes the left panel consistent across every editor: Randomise first, then visual settings, then presets.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmo5WTJNZ3VlYmlqcTRxZEg2K085aVpBVjdPaklwaHMxb3FjS3dRRFlBQVA1cUtvdUo2R0ZZTXBhRlBFQ1I2RVdiaDVTSng1MzMyVWI4NDZxaXZ4NlFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjE4Njk3CWZpbGU6SGluZ2VMYWJfMS4yNy4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI3LjAKTk9qaFJWaWphWEhYZWYwYVZjMXhvR1JhSjIyVmRnS2J4YzJLclNlMWtQV0hCckNwSXZKTEFTWVEzN0Rjc0N6T3hhUHRob09SbUNvVzlRdndaLyszREE9PQo=",
-        "size": 11753524,
-        "sha256": "392a12ac7bb87c1f6d5627dd41122abb2c61fd882e3001a3949b8c159d32912a"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.1_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnZiZlpKSEJLb0hwQmwyTmxGQ0FTdEFoSDVPdWJBWnZUUDJrSXBKb1diRitnaWFhWEl2eFVUbytFNGp6cEV3M0NDUGoyUmF5VW9tRnVFZERlOFhIcUFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjIxNzcyCWZpbGU6SGluZ2VMYWJfMS4yNy4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI3LjEKUHZ2QnlSd1B3NEVKUDVjSUhBT0RaQWhvMzdsaVBUTVpGcDlkZnNYd1paSWI1Z3F3eGRveWx4ajN6YWxuNTE4SVZpaFVySzJsdGRJK0lsRmNVTHdoQmc9PQo=",
+        "size": 11753575,
+        "sha256": "0107ad42bc9955cdf26ced3d03092ba65f547c0fdb703b593849e809f322e5f5"
       }
     }
   }
