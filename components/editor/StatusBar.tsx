@@ -12,10 +12,10 @@ export function StatusBar({
 }) {
   return (
     <footer className="statusbar" tabIndex={0} aria-label="Status">
-      <span>X <span className="num">{x}</span></span>
-      <span>Y <span className="num">{y}</span></span>
-      <span>Zoom <span className="num">{zoom}</span></span>
-      {parts && <span>Parts <span className="num">{parts.count}</span> · Used <span className="num">{parts.used}</span></span>}
+      <span className="sb-wide">X <span className="num">{x}</span></span>
+      <span className="sb-wide">Y <span className="num">{y}</span></span>
+      <span className="sb-wide">Zoom <span className="num">{zoom}</span></span>
+      {parts && <span>Parts <span className="num">{parts.count}</span><span className="sb-wide"> · Used <span className="num">{parts.used}</span></span></span>}
       <span><span className={fit.cls}>{fit.cls === "s-err" ? fit.text : `● ${fit.text}`}</span></span>
       <span className="push">{saved}</span>
     </footer>

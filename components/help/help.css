@@ -36,7 +36,7 @@
 .help-field { background: var(--surface-panel); padding: 8px 12px; display: grid; gap: 2px; }
 .help-field dt { display: flex; align-items: baseline; gap: 10px; }
 .help-field dt span { margin-inline-start: auto; font: 12px/1.4 "Source Code Pro", monospace; color: var(--text-secondary); white-space: nowrap; }
-.help-field dd { margin: 0; color: var(--text-secondary); font-size: 13.5px; }
+.help-field dd { margin: 0; color: var(--text-secondary); font-size: 14px; }
 .help-related ul { margin: 0; padding-inline-start: 20px; }
 .help-related a, .help-block a { color: var(--accent-hi); }
 
