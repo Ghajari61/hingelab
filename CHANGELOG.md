@@ -13,6 +13,7 @@
   - Optional windows and a push hole in the base.
   - The coasters can be cut too, engraved with rings, a sunburst or dots, plus the lid engraving or a cut-out pattern engraved on every coaster. Or the holder can be sized for coasters you already have.
 - Existing designs, presets and saved files are unchanged.
+- The left panel of every editor no longer scrolls sideways: the cards always fit its full width (picture cards with fixed-size images could push it wider than the panel).
 - Book box: the 3D view shows the spine bent round its curve, joining the two covers, instead of a flat panel standing apart from them. The cut file is unchanged.
 - Clock: hour and minute ticks no longer run into the numerals. A wide numeral such as XII or VIII used to overlap the minute marks beside it, so the engraving burned twice or left gaps in the letters. Those ticks are now left out. A cut-out pattern on a clock now uses whole shapes only, so no star or circle is cut off at the edge of its area. Five clock presets lose the ticks that overlapped their numerals.
 
