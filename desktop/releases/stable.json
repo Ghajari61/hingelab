@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.27.5",
-    "pub_date": "2026-10-28T23:19:22.876Z",
-    "notes": "Clock ticks now stay clear of numerals, and clock cut-out patterns use whole shapes only.",
+    "version": "1.27.6",
+    "pub_date": "2026-10-28T23:24:30.654Z",
+    "notes": "Left-panel cards now fit the available width without horizontal scrolling.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.5_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnVPdEJlU0x3ODlrUjJvdndSWjhsWnM3UFd0SkdoaDBvdjFMcURrMTJVOE9xQUx5ZUF2QlJlM29TSjVkVlhJNk9YRUxiN0tzTlpRRWkwUHg2aWo5VGdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjI5NTU3CWZpbGU6SGluZ2VMYWJfMS4yNy41X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI3LjUKeEVyWlArKzQ2VUlkZkV3TGNCK3dUd1ovM2NROTlWclRsSEpqOEhhdGk1dEl3ckxRVHBCSVZyZEJreTZBRThSbVJzVENXYUdlUkJpL2RWTGx0OWdMQUE9PQo=",
-        "size": 11855580,
-        "sha256": "57fefda61490b11154d3bee23f65b4af891fbf2ecc59fcf3033cf84c75cb9dd1"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.6_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnNJNGprMFExM2lPS1F3U2luS2VlSXRwcU9QTktzcHoxbTdYVWljSUlvNGh6QlFadnd1YzFBTFoyMFNiOGgwVkpWdTEyaDhpbWw0NUtGRk9QMzhBdFE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjI5ODY1CWZpbGU6SGluZ2VMYWJfMS4yNy42X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI3LjYKTjZUU0tLSXZPdVNHZ3ZiblJiQ0pNL21BV3dyUjl5dUJZcS9KWmpNZENaKzJramRVQmFCQk9CSGxIVE40a1pVbGpZUmlJNVp5bmRodGtUd05weUV4QlE9PQo=",
+        "size": 11854627,
+        "sha256": "923a6d794287aff9625c40adf840c72da4bad1a6a34406531cc38a060591ebaf"
       }
     }
   }

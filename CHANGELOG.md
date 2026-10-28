@@ -1,3 +1,7 @@
+## 1.27.6 — Left panel fits its width
+
+- Left-panel cards now fit the available width without horizontal scrolling.
+
 ## 1.27.5 — Cleaner clock layouts
 
 - Clock ticks stay clear of numerals, and cut-out patterns now use whole shapes only. Five presets no longer place ticks over the numerals.
