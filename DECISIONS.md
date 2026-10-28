@@ -1745,3 +1745,12 @@ A 700 mm ring bowl took 27 s to build (two tests sat at their 20 s limit). Nearl
 - **Result.** 27 s → 5 s. The SVGs of all 36 presets plus 700 mm, 500 mm wavy heart, sleeve and handles designs are byte-identical before and after.
 - After 1.21.0, the AI product list drops `paperbox`. The hidden adapter still opens old links.
 
+## D219. Rail choices also appear in their sections
+
+The owner reported sections that open empty (screenshot: Cut-out pattern).
+
+- **Cause.** `GeneratorDock` skipped every `rail: true` choice, because the left rail already shows it as picture cards. In 22 sections across 13 products, every other field waits on that choice (for example a pattern still at None), so the section opened with nothing in it. The dock now lists the rail choice as well. Sections made only of rail choices are still left out of the dock. A row of number fields that are all hidden is hidden too, so it leaves no gap.
+- **Contract.** A new contract test fails for any section that is shown while none of its fields are visible, in the defaults or in any preset, for every generator. It caught Pop-up "Spiral supports", which was shown for rings with all its fields hidden; that section now has `show` set to non-ring patterns.
+- **Errors with fixes.** In a sweep of 3232 single-setting changes from the defaults, Pop-up gave errors from one click: tealight, E27 or custom socket, the Leaf outline, narrow rings, a small centre, a thin rim and 5 nested sets. `checkPopup` now attaches a fix to these geometry errors. Each fix searches for the smallest change that builds: a centre disc in 2 mm steps, two ribs, wider rings and rim, fewer nested sets, or an outline scaled up by 25 % at a time. A test covers each case. Leaf is now r = 0.8 + 0.2 cos 2a, where it was 0.65 + 0.35 cos 2a; no preset uses it. The other single-click errors (QR content to fill in, custom outlines to paste, values at the extremes of a range) ask for input and stay as they are.
+- **Checked in a browser.** All 18 editors were opened with every section expanded; no section was empty. A crawl of 187 site and studio pages found no page errors.
+

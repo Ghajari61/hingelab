@@ -1,12 +1,44 @@
 import type {Issue} from '@/lib/issues';
 import type {GenOutput} from '../types';
-import {ringPlan,setsHeights,tiltDepth} from './build';
+import {buildPopup,ringPlan,setsHeights,tiltDepth} from './build';
 import {bridgeStrain} from './engineering';
 import type {PopupParams} from './params';
+/** The opening cut through the centre disc (lamp socket, tealight or sleeve), as the build makes it. */
+const centreOpening=(p:PopupParams)=>p.mode==='sleeve'?p.extras.sleeveDiameter:p.extras.socket!=='none'?(p.extras.socket==='E14'?28:p.extras.socket==='E27'?40:p.extras.socketDiameter):p.extras.tealight?p.extras.tealightDiameter:0;
+/**
+ * A one-click way out of the build errors a single choice can cause, so switching on a tealight or
+ * a socket, or picking a narrow outline, never leaves the design stuck on an error.
+ */
+function geometryFix(p:PopupParams,error:string):{label:string;apply:(q:PopupParams)=>PopupParams}|undefined {
+ // the smallest centre disc, in 2 mm steps, that holds the opening and still takes the rib joints
+ if(/Centre opening needs a wider centre disc/.test(error))return {label:'Widen the centre disc',apply:q=>{
+  const from=Math.ceil(centreOpening(q)+2*q.T+2);let r=q;
+  for(let c=from;c<=from+60;c+=2){r={...q,rings:{...q.rings,center:c}};if(!buildPopup(r,{}).error)return r;}
+  return r;
+ }};
+ if(/Centre disc and rim leave no room for rings/.test(error)){
+  // the smallest centre that still holds the opening, the narrowest rim, then enough width
+  return {label:'Make room for the rings',apply:q=>{
+   const center=Math.max(5,Math.ceil(centreOpening(q)?centreOpening(q)+2*q.T+2:Math.min(q.rings.center,20))),rim=Math.max(3,Math.min(q.rings.rim,6));
+   let r={...q,rings:{...q.rings,center,rim}};
+   for(let k=0;k<10;k++){if(!buildPopup(r,{}).error)return r;r={...r,outline:{...r.outline,width:Math.round(r.outline.width*1.25),height:Math.round(r.outline.height*1.25)}};}
+   return r;
+  }};
+ }
+ // two ribs first (more room for each joint), then wider rings and a wider centre disc
+ if(/No safe ring-to-rib joint layout/.test(error))return {label:p.support.ribs>2?'Use two ribs and wider rings':'Widen the rings',apply:q=>{
+  let r:PopupParams={...q,support:{...q.support,ribs:2}};
+  for(let k=0;k<12&&buildPopup(r,{}).error;k++)r={...r,rings:{...r.rings,by:'width',width:Math.max(r.rings.width+2,Math.ceil(3*r.T)),rim:Math.max(r.rings.rim,8),center:Math.max(r.rings.center,30)+(k>5?4:0)},
+   // nested sets share the joints of a smaller copy: fewer copies once wider rings alone do not help
+   sets:{...r.sets,count:k>3?Math.max(1,r.sets.count-1):r.sets.count}};
+  return r;
+ }};
+ return undefined;
+}
 export function checkPopup(p:PopupParams,out:GenOutput):Issue<PopupParams>[] {
  const issues:Issue<PopupParams>[]=[];
  const add=(code:string,message:string,fix?:{label:string;safe?:boolean;apply:(q:PopupParams)=>PopupParams},level:'warn'|'error'|'info'='warn')=>issues.push({code:'popup-'+code,level,message,fixes:fix?[{id:code,safe:true,...fix}]:[]});
- if(out.error){add('geometry',out.error,undefined,'error');return issues;}
+ if(out.error){add('geometry',out.error,geometryFix(p,out.error),'error');return issues;}
  const g=ringPlan(p);if(g.pitch<1.5*p.T)add('ring-width','Ring pitch is below 1.5 × material thickness.',{label:'Widen rings',apply:q=>({...q,rings:{...q.rings,by:'width',width:Math.ceil(q.T*1.5+q.rings.gap)}})});
  if(p.pattern.kind==='rings'&&(p.bridges.keep||!setsHeights(p))&&p.bridges.width<Math.max(p.T*1.5,p.sheet?.minFeature??0))add('bridges','Bridge lands are narrower than the material minimum.',{label:'Widen bridge lands',apply:q=>({...q,bridges:{...q.bridges,width:Math.max(q.T*1.5,q.sheet?.minFeature??0)}})});
  if(p.pattern.kind==='rings'&&(p.bridges.keep||!setsHeights(p))&&p.bridges.length>g.pitch*.7)add('flexure-length','Bridge relief length is limited to 70% of ring pitch to keep adjacent slots apart.',undefined,'info');

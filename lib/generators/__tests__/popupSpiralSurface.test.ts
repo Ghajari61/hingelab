@@ -72,3 +72,16 @@ it("the form follows the cut slots, also with fewer turns than arms", () => {
     expect(triangles, `${arms} arms, ${count} turns`).toBeLessThan(150000);
   }
 }, 120000);
+
+it("a single choice that breaks the Pop-up offers a fix that builds", () => {
+  for (const raw of [{ extras: { tealight: true } }, { extras: { socket: "E27" } }, { extras: { socket: "custom", socketDiameter: 70 } }, { outline: { width: 60, height: 60 } }, { support: { ribs: 4 }, rings: { width: 2 } }]) {
+    const p = POPUP.merge(raw), out = POPUP.build(p, CTX);
+    if (!out.error) continue;
+    const issue = POPUP.check(p, out).find((i) => i.level === "error");
+    expect(issue?.fixes.length, `${JSON.stringify(raw)}: ${out.error}`).toBeGreaterThan(0);
+    const q = issue!.fixes[0].apply(p);
+    expect(POPUP.build(q, CTX).error, JSON.stringify(raw)).toBeUndefined();
+  }
+  // every outline builds at the default size
+  for (const shape of ["circle", "ellipse", "rounded", "polygon", "star", "heart", "flower", "leaf", "pumpkin", "snowflake"]) expect(POPUP.build(POPUP.merge({ outline: { shape } }), CTX).error, shape).toBeUndefined();
+}, 120000);
