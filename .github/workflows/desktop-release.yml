@@ -30,6 +30,21 @@ jobs:
         with:
           workspaces: desktop/src-tauri
       - run: npm ci
+      # The licence check reads the crates offline (as on a release PC); a clean runner fetches them first.
+      - name: Fetch Rust crates
+        run: cargo fetch --locked --manifest-path desktop/src-tauri/Cargo.toml
+
+      # Without the updater key no installer can be published: say so plainly instead of failing inside the build.
+      - name: Check release secrets
+        shell: bash
+        env:
+          HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+        run: |
+          if [ "$HAS_UPDATER_KEY" != "true" ]; then
+            echo "::error::Repository secret TAURI_SIGNING_PRIVATE_KEY (and TAURI_SIGNING_PRIVATE_KEY_PASSWORD if the key has one) is not set. Add the updater key from the release PC (%USERPROFILE%\.hingelab\updater) under Settings > Secrets and variables > Actions, or build on the release PC with npm run desktop:build."
+            exit 1
+          fi
+          echo "::notice::Updater key present; Authenticode signing configured: $HAS_SIGNING"
 
       # The Trusted Signing dlib for signtool (only when signing is configured).
       - name: Trusted Signing client
