@@ -1,8 +1,11 @@
-## Unreleased — Pop-up spiral 3D, faster large Pop-ups
+## Unreleased — Faster large Pop-ups
 
 - Large ring Pop-ups build about five times faster (a 700 mm bowl: 27 s → 5 s). Rib joint searches, insertion reliefs and ring labels now clip only the slots that can reach the part being checked, instead of every slot on the sheet. Cut files are byte-identical for all Pop-up presets and four large or unusual designs.
 - The AI designer no longer lists Wooden Packaging as a separate product; packaging requests go to Boxes & Packaging, matching the menus since 1.21.0. Old packaging links still open.
 - Tests brought up to date with 1.21.0 and 1.24.1: product list, AI menu, the Boxes golden file header and the Parametric all-sheets file, which now uses the Lay Flat rows. The forty-design Shadow Box Randomise check gets a 60 s limit.
+
+## 1.25.1 — Pop-up spiral 3D
+
 - The assembled spiral was drawn by lifting the blank's cap triangles only at their corners. Those triangles join far-apart points of the strip, so the surface sagged up to 19 mm from the target form and looked crumpled. Formed parts are now subdivided where the form bends (every edge under 12 mm, within 0.2 mm of the form) and shade smoothly; cut edges stay sharp.
 - The strip now forms like a spring: each turn is level across its width and its height follows the turn's centreline, instead of tilting like a cone across every turn. The first and last turns meet the centre disc and rim without a step.
 - Spiral supports follow the turns with flat treads and risers on the lower side, so the strip rests on every turn without passing into it. Rim and centre tabs overlap the support body by 0.3 mm.
