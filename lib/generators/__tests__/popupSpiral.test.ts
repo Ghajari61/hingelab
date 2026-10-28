@@ -39,7 +39,7 @@ for(const [kind,arms] of [['spiral',2],['multi',2],['multi',3],['multi',4]] as c
    assertFlatMatchesSVG(flat.group,genSVG(POPUP,a.params,a.lay!));
    const zs:number[]=[];let meshes=0;
    scene.group.traverse(o=>{if(!(o instanceof THREE.Mesh))return;meshes++;const pos=o.geometry.getAttribute('position');for(let i=0;i<pos.count;i++)zs.push(pos.getZ(i));});
-   expect(meshes).toBe(1);expect(Math.max(...zs)-Math.min(...zs)).toBeCloseTo(p.profile.depth+p.T,3);
+   expect(meshes).toBe(1);expect(zs.reduce((m,z)=>Math.max(m,z),-Infinity)-zs.reduce((m,z)=>Math.min(m,z),Infinity)).toBeCloseTo(p.profile.depth+p.T,3);
    const before=new THREE.Box3().setFromObject(scene.group);scene.explode?.(1);
    expect(new THREE.Box3().setFromObject(scene.group).equals(before)).toBe(true);
   }finally{scene.dispose();flat.dispose();}
@@ -74,9 +74,12 @@ it('curved caps show physical edges, never triangulation diagonals',()=>{
   const edges=o.getObjectByName('__edges') as THREE.LineSegments;
   expect(edges).toBeTruthy();
   // Flat source boundaries are unchanged by curvature; only their heights move.
-  const source=new THREE.ExtrudeGeometry((o.geometry as THREE.ExtrudeGeometry).parameters.shapes,{depth:p.T,bevelEnabled:false,curveSegments:1});
+  const source=new THREE.ExtrudeGeometry(o.userData.flatShapes,{depth:p.T,bevelEnabled:false,curveSegments:1});
   const expected=new THREE.EdgesGeometry(source,28);
-  try{expect(edges.geometry.getAttribute('position').count).toBe(expected.getAttribute('position').count);}finally{source.dispose();expected.dispose();}
+  // The drawn edges are the flat cut edges, split where the form bends: the same lines seen from
+  // above (their plan length), with no triangulation diagonals added.
+  const planLength=(g:THREE.BufferGeometry)=>{const q=g.getAttribute('position');let n=0;for(let i=0;i+1<q.count;i+=2)n+=Math.hypot(q.getX(i+1)-q.getX(i),q.getY(i+1)-q.getY(i));return n;};
+  try{expect(planLength(edges.geometry)).toBeCloseTo(planLength(expected),0);}finally{source.dispose();expected.dispose();}
  });}finally{scene.dispose();}
 });
 it('multi keeps the requested total turns even with more arms than turns',()=>{

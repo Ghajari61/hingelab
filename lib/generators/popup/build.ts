@@ -83,7 +83,9 @@ export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0,
   const clear=!centerHole&&!holes.some(h=>h.some(v=>Math.abs(v[0])<tabW&&Math.abs(v[1])<tabW));
   if(clear)holes.push(slot);
   parts.push({id:'finial',name:clear?'Top finial (tab in the centre slot)':'Glue-on top finial',outer:clear?merged.outer:body,holes:[circle(0,-w/2,1.5)],place:{x:0,y:-rings.at(-1)!.height-p.T,z:-p.T/2,upright:true}});}
- const surface={samples:Array.from({length:129},(_,i)=>[p.rings.center/2+(radius-p.rings.rim-p.rings.center/2)*i/128,profileHeight(p,i/128)] as [number,number])};
+ const surface={samples:Array.from({length:129},(_,i)=>[p.rings.center/2+(radius-p.rings.rim-p.rings.center/2)*i/128,profileHeight(p,i/128)] as [number,number]),
+  // a continuous spiral forms like a stretched spring: each turn level, rising along its length
+  ...(p.pattern.kind!=='rings'?{spiral:{start:p.rings.center/2,end:radius-p.rings.rim,count:plan.wanted,arms:p.pattern.kind==='multi'?p.pattern.arms:1}}:{})};
  const cradle=p.pattern.kind!=='rings'&&p.spiral.supports?spiralSupports(p,parts[0],surface,radius,centerHole,ctx,labelPrefix):null;
  if(cradle){parts.push(...cradle.parts);holes.push(...cradle.slots);engrave.push(...cradle.marks);loading ||= cradle.loading;}
  // Finalise manufacturing geometry first. Do not union negative-wound central openings

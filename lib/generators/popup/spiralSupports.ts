@@ -1,5 +1,5 @@
 import {differenceShapes,intersectShapes,unionShapes,offsetShapes,totalArea} from '@/lib/letters/polygon';
-import {radialHeight,type RadialSurface} from '@/lib/radialProfile';
+import {formHeight,radialHeight,type FormedSurface as RadialSurface} from '@/lib/radialProfile';
 import {bboxOf,circle,rect,transform} from '../geom';
 import type {BuildContext,Contour,GenPart} from '../types';
 import type {PopupParams} from './params';
@@ -15,7 +15,8 @@ const area=(s:ReturnType<typeof unionShapes>)=>totalArea(s);
 /** Lower envelope across the entire stock thickness, not just the rib's centreline.
  * Split at every profile knot entering/leaving that span. Chords within each interval lie below
  * the concave minimum of the linear/radial branches, so the support cannot penetrate the sheet. */
-export function spiralSaddle(surface:RadialSurface,T:number,lo:number,hi:number):Contour {
+export function spiralSaddle(surface:RadialSurface,T:number,lo:number,hi:number,angle=0):Contour {
+ if(surface.spiral)return stepSaddle(surface,T,lo,hi,angle);
  const r1=(u:number)=>Math.hypot(u,T/2);
  const height=(u:number)=>Math.min(radialHeight(surface,u),radialHeight(surface,r1(u)),
   ...surface.samples.filter(([r])=>r>u&&r<r1(u)).map(([,z])=>z));
@@ -23,6 +24,39 @@ export function spiralSaddle(surface:RadialSurface,T:number,lo:number,hi:number)
  for(let u=lo+1;u<hi;u++)xs.add(u);
  for(const [r] of surface.samples)for(const u of [r,Math.sqrt(Math.max(0,r*r-T*T/4))])if(u>lo&&u<hi)xs.add(u);
  return [...xs].sort((a,b)=>a-b).map(u=>[u,-height(u)]);
+}
+
+/**
+ * The top of a support under a continuous spiral: each strip turn it passes under sits level, at its
+ * own height, so the top steps from turn to turn at the slots (a smooth saddle cut through the
+ * higher side of every turn). The lowest height across the support's thickness is used, and each
+ * riser stands on the lower side of its step, so it never rises into the strip; risers fall within
+ * 0.25 mm of the slot.
+ */
+function stepSaddle(surface:RadialSurface,T:number,lo:number,hi:number,angle:number):Contour {
+ const a=angle*Math.PI/180;
+ const height=(u:number)=>{const d=Math.atan2(T/2,Math.max(u,1e-6));return Math.min(...[-d,0,d].map(o=>formHeight(surface,u*Math.cos(a+o),u*Math.sin(a+o))));};
+ const n=Math.max(2,Math.ceil((hi-lo)/.25)),us:number[]=[],hs:number[]=[];
+ for(let i=0;i<=n;i++){const u=lo+(hi-lo)*i/n;us.push(u);hs.push(height(u));}
+ // runs of one turn (no jump between samples), each a flat tread at the run's lowest height:
+ // polygon clean-up merges nearly collinear points, and a chord across a slightly varying turn
+ // would rise a hundredth into it
+ const runs:{from:number;to:number;h:number}[]=[];
+ for(let i=0;i<=n;i++){
+  const last=runs[runs.length-1];
+  // a tread is level to 0.05 mm: a turn that rises slowly into the rim gets small steps of its own
+  if(last&&Math.abs(hs[i]-hs[i-1])<=.05&&Math.abs(hs[i]-hs[last.from])<=.05){last.to=i;last.h=Math.min(last.h,hs[i]);}
+  else runs.push({from:i,to:i,h:hs[i]});
+ }
+ const out:Contour=[];
+ runs.forEach((r,k)=>{
+  // the riser between two treads stands on the lower one's side of the gap
+  const next=runs[k+1];
+  const x0=k===0?us[0]:(runs[k-1].h<r.h?us[r.from]:us[r.from-1]);
+  const x1=!next?us[n]:(next.h<r.h?us[r.to+1]:us[r.to]);
+  out.push([x0,-r.h],[x1,-r.h]);
+ });
+ return out;
 }
 
 /** A permanent, glued forming cradle. Only flat centre/rim lands get keyed tabs; no spiral turn
@@ -77,12 +111,15 @@ export function spiralSupports(p:PopupParams,blank:GenPart,surface:RadialSurface
   const text=ctx.text?.(prefix+code,'archivo-black',size);if(!text){loading=true;return [];}
   const b=bboxOf(text.contours);return contours(intersectShapes(text.contours.map(c=>transform(c,{x:x-b.x0,y:y-b.y0})),solid));
  };
- const saddle=spiralSaddle(surface,T,lo,hi);
+ const saddles:Contour[]=[];
  for(let i=0;i<n;i++){
   const angle=angles[i],a=angle*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+  // each support follows the turns it actually passes under (they differ from rib to rib)
+  const saddle=spiralSaddle(surface,T,lo,hi,angle);saddles.push(saddle);
   const body:Contour=[...saddle,[hi,foot],[lo,foot]],tabs:Contour[]=[],eyes:Contour[]=[];
   for(const j of joints.filter(v=>v.rib===i)){
-   tabs.push(rect(j.u-tab/2,-j.height-3*T-fit,tab,3*T+fit+.02));eyes.push(j.eye);
+   // the tab reaches 0.3 mm into the body: a tread may sit up to 0.05 mm low (level steps) plus the 0.01 mm relief
+   tabs.push(rect(j.u-tab/2,-j.height-3*T-fit,tab,3*T+fit+.3));eyes.push(j.eye);
    // A headed retaining key passes horizontally through the tab eye above the flat land.
    const key=contours(unionShapes([rect(-T/2,-T/2-fit,T,3.5*T+fit),rect(-T,-1.5*T-fit,2*T,T+.01)]));
    const keyShape=unionShapes(key)[0];
@@ -122,6 +159,6 @@ export function spiralSupports(p:PopupParams,blank:GenPart,surface:RadialSurface
   const text=ctx.text?.(prefix+`R${j.rib+1}`,'archivo-black',Math.min(2.5,T));
   if(text){const b=bboxOf(text.contours);marks.push(...text.contours.map(c=>transform(c,{x:j.u-b.x0,y:2*T-b.y0,rot:0})).map(c=>transform(c,{rot:j.angle})));}
  }
- return {parts,slots:joints.map(j=>j.slot),joints,baseJoints,saddle,loading,
+ return {parts,slots:joints.map(j=>j.slot),joints,baseJoints,saddle:saddles[0],saddles,loading,
   marks:contours(intersectShapes(marks,contours(differenceShapes(wood,joints.map(j=>j.slot))))) };
 }

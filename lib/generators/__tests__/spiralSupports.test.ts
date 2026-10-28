@@ -5,7 +5,7 @@ import {popupGeometry} from '../popup/build';
 import {placePoint,unplacePoint} from '../place';
 import {pointInContour,bboxOf,transform,circle} from '../geom';
 import {spiralSupports} from '../popup/spiralSupports';
-import {radialHeight} from '@/lib/radialProfile';
+import {formHeight,radialHeight} from '@/lib/radialProfile';
 import {unionShapes,intersectShapes,totalArea} from '@/lib/letters/polygon';
 import {arrangeGenerator,flatOf,genSVG} from '../output';
 import {flatScene} from '@/lib/three/flat';
@@ -83,7 +83,7 @@ for(const kind of ['spiral','multi'] as const)for(const profile of ['dome','bell
  for(const rib of ribs){
   const bounds=bboxOf([rib.outer]);
   for(let u=bounds.x0+.01;u<bounds.x1;u+=.45)for(const h of [.001,p.T*.25,p.T*.5,p.T*.75,p.T-.001]){
-   const xy=placePoint(rib.place!,u,0,h),z=radialHeight(surface,Math.hypot(xy[0],xy[1]));
+   const xy=placePoint(rib.place!,u,0,h),z=formHeight(surface,xy[0],xy[1]);
    if(!inWood(b.outer,b.holes,[xy[0],xy[1]]))continue;
    for(const lift of [0,p.T,3*p.T])for(const dz of [.005,p.T*.5,p.T-.005])expect(inWood(rib.outer,rib.holes,[u,-z-lift-dz]),`${rib.id} at ${u}/${h}/${z}, insertion lift ${lift}`).toBe(false);
   }
