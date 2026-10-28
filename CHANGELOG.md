@@ -1,4 +1,4 @@
-## Unreleased — Faster large Pop-ups
+## 1.25.2 — No empty sections, faster large Pop-ups
 
 - Sections no longer open empty. A section whose settings depended on a picture choice from the left panel (Cut-out pattern on 11 products, Puzzle Frame and Engraving, QR Output, Motif and Build on signs, toppers, table numbers and charms, Shadow Box Pattern, Charm Style) showed only its header until a choice was made there. The choice now also appears as a list at the top of its section. Rows of hidden number fields no longer leave gaps.
 - Pop-up: Spiral supports are hidden while the pattern is Rings, because they only apply to spirals. Switching on a tealight or lamp socket, a very small or narrow outline, narrow rings, a thin rim or several nested sets no longer leave the design stuck on an error: each error offers a one-click fix that builds, such as widening the centre disc, using two ribs and wider rings, or enlarging the outline. The Leaf outline is less pinched in the middle, so it builds at the default size.
