@@ -358,3 +358,27 @@ describe("Business card and coaster holders", () => {
     expect(issuesOf(fixed).filter((i) => i.level !== "info").map((i) => i.code)).toEqual([]);
   });
 });
+
+describe("Book box in 3D", () => {
+  it("draws the spine bent round the half circle, joining the two covers", () => {
+    for (const raw of [{ design: "book" }, { design: "book", book: { thickness: 30, height: 200 } }]) {
+      const p = mergeBoxes(raw), out = build(raw), r = p.book.thickness / 2;
+      const views = out.parts.find((q) => q.id === "cover")!.views3d!;
+      const strips = views.filter((v) => v.place.m);
+      expect(strips.length).toBeGreaterThan(8);
+      for (const s of strips) {
+        const b = bboxOf([s.outer]);
+        for (const [u, h, R] of [[(b.x0 + b.x1) / 2, 0, r], [(b.x0 + b.x1) / 2, T0, r - T0]] as const) {
+          const [x, , z] = world(s.place, u, 10, h);
+          expect(Math.hypot(x - r, z - r)).toBeCloseTo(R, 0);
+          expect(x).toBeLessThanOrEqual(r + 1e-6);
+        }
+      }
+      // The ends meet the back cover (z = 0) and the front cover (z = thickness) at x = r.
+      const ends = strips.flatMap((s) => { const b = bboxOf([s.outer]); return [world(s.place, b.x0, 0, 0), world(s.place, b.x1, 0, 0)]; });
+      expect(Math.min(...ends.map((e) => Math.hypot(e[0] - r, e[2])))).toBeLessThan(0.5);
+      expect(Math.min(...ends.map((e) => Math.hypot(e[0] - r, e[2] - p.book.thickness)))).toBeLessThan(0.5);
+      expect(views.some((v) => !v.place.m && v.place.upright)).toBe(false);
+    }
+  });
+});

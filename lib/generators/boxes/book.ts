@@ -25,6 +25,20 @@ function tabsOn(a: number, b: number, w: number): number[] {
   return Array.from({ length: n }, (_, i) => a + (L * (i + 0.5)) / n);
 }
 
+/**
+ * The bent spine in 3D: narrow flat strips round the half circle (radius r, centred at x = r,
+ * z = r) from the front cover's edge, past x = 0, to the back cover's. Each strip's thickness runs
+ * toward the centre, so its placement turns without mirroring.
+ */
+function spineStrips(r: number, T: number, Hc: number, n = 16): NonNullable<GenPart["views3d"]> {
+  const da = Math.PI / n, ws = 2 * r * Math.sin(da / 2);
+  return Array.from({ length: n }, (_, k) => {
+    const a = Math.PI / 2 + da * (k + 0.5), nx = Math.cos(a), nz = Math.sin(a), tx = -nz, tz = nx;
+    const px = r + r * nx, pz = r + r * nz;
+    return { outer: rect(0, 0, ws, Hc), holes: [], place: { x: 0, y: 0, z: 0, m: [tx, 0, -nx, px - (tx * ws) / 2, 0, 1, 0, 0, tz, 0, -nz, pz - (tz * ws) / 2] } };
+  });
+}
+
 export function buildBook(p: BoxesParams, ctx: BuildContext): V2Output {
   const T = p.T, bk = p.book, W = bk.width, Hc = bk.height, Dk = bk.thickness, over = Math.max(0, bk.over);
   const r = Dk / 2, h = Dk - 2 * T, rr = r - T, Lc = W - r, Ls = Math.PI * (r - T / 2);
@@ -81,7 +95,7 @@ export function buildBook(p: BoxesParams, ctx: BuildContext): V2Output {
   const inFront = (c: Contour) => c.every(([x]) => x >= fx - 1e-6);
   cover.views3d = [
     { outer: rect(0, 0, Lc, Hc), holes: holes.filter((c) => !inFront(c)).map((c) => c.map(([x, y]) => [Lc - x, y] as Pt).reverse()), place: flat(r, 0, 0) },
-    { outer: rect(0, 0, Hc, Dk), holes: [], place: wall(T, Dk, 0, 90) },
+    ...spineStrips(r, T, Hc),
     { outer: rect(0, 0, Lc, Hc), holes: holes.filter(inFront).map((c) => shift(c, -fx, 0)), engrave: engrave.map((c) => shift(c, -fx, 0)), place: flat(r, 0, Dk - T) },
   ];
 
