@@ -42,6 +42,15 @@ jobs:
           $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe | Where-Object { $_.FullName -match "x64" } | Sort-Object FullName -Descending | Select-Object -First 1
           "SIGNTOOL=$($signtool.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
+      - name: Diagnose release prerequisites
+        shell: bash
+        env:
+          HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+          HAS_UPDATER_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD != '' }}
+        run: |
+          echo "::notice::updater key secret set: $HAS_UPDATER_KEY; password set: $HAS_UPDATER_PASSWORD; authenticode configured: $HAS_SIGNING"
+          if node scripts/licenses.mjs --cargo > lic.log 2>&1; then echo "::notice::licences --cargo: ok"; else echo "::error::licences --cargo failed: $(grep -m1 -i error lic.log | tr -d '\r' | cut -c1-200)"; fi
+
       - name: Build, sign and scan
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
