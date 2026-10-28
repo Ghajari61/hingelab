@@ -1736,3 +1736,12 @@ The owner reported that the Spiral model was broken in 3D and asked for the whol
 - **Mesh.** `formable` subdivides the extruded geometry by longest-edge bisection with shared midpoints until every edge is under 12 mm and within 0.2 mm of the form (edges under 1 mm are left), then normals are recomputed. About 30–40 k triangles per spiral, about 0.3 s per scene. Edges are split the same way; the flat shapes are kept in `userData.flatShapes`.
 - **Supports.** `stepSaddle` samples the form along each rib (0.25 mm, including the strip's width either side) and turns it into flat treads at the run's lowest height with risers on the lower side, so nothing penetrates the strip.
 
+## D218. Pop-up clips only the slots that can reach a part
+
+A 700 mm ring bowl took 27 s to build (two tests sat at their 20 s limit). Nearly all of it went to Clipper subtracting every slot on the sheet (about 200 slots, 25 k points) from every ring for every rib angle, joint candidate and label position.
+
+- **Rib strips.** Anything checked along a rib (joint clearances, insertion reliefs) lies inside a strip round the rib's axis. The slots are clipped to that strip once per angle (`stripCuts`, cached per angle in `ribAssembly`), and each check uses only the pieces whose boxes meet it.
+- **Ring material.** `ringCuts` keeps a slot for a ring only when its box meets the ring, it is not wholly inside the disc the ring's opening clears round the centre, and it is not wholly outside the disc round the ring (unless it surrounds the centre). Each test is exact for rings centred on the origin, and falls back to the box test when the opening does not contain the centre. Label candidates subtract only the material contours whose boxes meet them.
+- **Result.** 27 s → 5 s. The SVGs of all 36 presets plus 700 mm, 500 mm wavy heart, sleeve and handles designs are byte-identical before and after.
+- After 1.21.0, the AI product list drops `paperbox`. The hidden adapter still opens old links.
+

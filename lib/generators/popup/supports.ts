@@ -3,7 +3,8 @@ import { bboxOf, rect, transform, signedArea } from '../geom';
 import type { BuildContext, Contour, GenPart } from '../types';
 import type { PopupParams } from './params';
 import type { Ring } from './build';
-import { insertionReliefs } from './assembly';
+import { insertionReliefs, nearContours, stripCuts } from './assembly';
+export { nearContours };
 export interface RingJoint {
     ring: number;
     rib: number;
@@ -19,10 +20,6 @@ function crossings(c: Contour, angle: number) { const q = transform(c, { rot: -a
     if ((a[1] <= 0 && b[1] > 0) || (b[1] <= 0 && a[1] > 0))
         hits.push(a[0] - a[1] * (b[0] - a[0]) / (b[1] - a[1]));
 } return [Math.min(...hits), Math.max(...hits)]; }
-/** Bounding box of a contour, padded by `pad`. */
-const boxOf = (c: Contour, pad = 0) => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of c) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } return [x0 - pad, y0 - pad, x1 + pad, y1 + pad]; };
-/** The contours whose boxes meet `c`'s: the only ones a clip against `c` can touch (a big pop-up has hundreds of slots). */
-export function nearContours(cs: Contour[], c: Contour, pad = 0.01): Contour[] { const [a0, b0, a1, b1] = boxOf(c, pad); return cs.filter(h => { const [x0, y0, x1, y1] = boxOf(h); return x1 >= a0 && x0 <= a1 && y1 >= b0 && y0 <= b1; }); }
 /**
  * Tall ribs (towers, tiered stands, sleeves) were solid plates of 190 to 390 cm², which hid the rings
  * and doubled the wood. They keep a frame of at least 4 T (12 mm in 3 mm plywood) along every edge,
@@ -56,6 +53,9 @@ export function ribAssembly(p: PopupParams, rings: Ring[], holes: Contour[], cen
     } | undefined;
     // each ring's own material, worked out once (the search below tries many slot positions)
     const regions = rings.map(ring => differenceShapes([ring.outer], ring.inner ? [ring.inner] : []).flatMap(s => [s.outer, ...s.holes]));
+    // the cuts along each rib direction, clipped once to a strip wider than any joint's clearance
+    const reach = Math.max(...rings.map(r => bboxOf([r.outer])).map(b => Math.max(-b.x0, b.x1, -b.y0, b.y1))) + 1;
+    const along = new Map<number, Contour[]>(), cutsAt = (angle: number) => { const key = ((angle % 360) + 360) % 360; let c = along.get(key); if (!c) { c = stripCuts(holes, key, p.T + fit + 2 * Math.max(.5, p.T * .25) + 1, reach).pieces; along.set(key, c); } return c; };
     for (let rotation = 0; rotation < 180; rotation += 5) {
         const joints: RingJoint[] = [], angles = Array.from({ length: count }, (_, k) => rotation + k * (radial ? 360 / count : 90));
         let valid = true;
@@ -71,7 +71,7 @@ export function ribAssembly(p: PopupParams, rings: Ring[], holes: Contour[], cen
                             const u = lo + span * t;
                             const slot = transform(rect(u - (width + fit) / 2, -(p.T + fit) / 2, width + fit, p.T + fit), { rot: angles[k] });
                             const clearance = transform(rect(u - (width + fit) / 2 - margin, -(p.T + fit) / 2 - margin, width + fit + 2 * margin, p.T + fit + 2 * margin), { rot: angles[k] });
-                            const near = nearContours(holes, clearance);
+                            const near = nearContours(cutsAt(angles[k]), clearance);
                             if (area(differenceShapes(clearance.length ? [clearance] : [], region)) < .001 && (!near.length || area(intersectShapes([clearance], near)) < .001)) {
                                 joint = { ring: i, rib: k, u, width, height: ring.height, angle: angles[k], slot };
                                 break;

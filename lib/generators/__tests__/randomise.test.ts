@@ -47,7 +47,8 @@ describe("Randomise design", () => {
       expect("error" in a.result ? a.result.error : null).toBeNull();
     }
     expect(seen.size).toBeGreaterThanOrEqual(4);
-  });
+    // forty full Shadow Box builds: about 14 s alone, more when the whole suite runs in parallel
+  }, 60_000);
 
   it("locked settings never change, and the same seed gives the same design", () => {
     const base = def.merge({ design: { pattern: "mandala", min: 30, max: 100 }, look: { palette: "ocean" } }) as P;

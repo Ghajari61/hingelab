@@ -1,9 +1,48 @@
 import { differenceShapes, intersectShapes, shapeContours, unionShapes } from '@/lib/letters/polygon';
-import { bboxOf, rect, transform } from '../geom';
+import { bboxOf, pointInContour, rect, transform } from '../geom';
 import { placePoint } from '../place';
 import type { BuildContext, Contour, GenPart } from '../types';
 import type { Ring } from './build';
 import type { PopupParams } from './params';
+
+/** Bounding box of a contour, padded by `pad`. */
+const boxOf = (c: Contour, pad = 0) => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of c) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } return [x0 - pad, y0 - pad, x1 + pad, y1 + pad]; };
+/** The contours whose boxes meet `c`'s: the only ones a clip against `c` can touch (a big pop-up has hundreds of slots). */
+export function nearContours(cs: Contour[], c: Contour, pad = 0.01): Contour[] { const [a0, b0, a1, b1] = boxOf(c, pad); return cs.filter(h => { const [x0, y0, x1, y1] = boxOf(h); return x1 >= a0 && x0 <= a1 && y1 >= b0 && y0 <= b1; }); }
+
+/**
+ * The cuts clipped to a strip of half-width `half` along the ray at `angle` (degrees) out to
+ * `reach`. Anything that lies inside the strip meets exactly these pieces of the cuts. Ring slots
+ * are long arcs whose boxes meet most of the strip, so clipping them once is much cheaper than
+ * clipping every slot against every block.
+ */
+export function stripCuts(cuts:Contour[],angle:number,half:number,reach:number):{strip:Contour;pieces:Contour[]} {
+  const strip=transform(rect(-reach,-half,2*reach,2*half),{rot:angle});
+  const near=nearContours(cuts,strip);
+  return {strip,pieces:near.length?shapeContours(intersectShapes(near,[strip])):[]};
+}
+
+/** Distance from the origin to the nearest point of a contour's boundary. */
+function clearRadius(c:Contour) {
+  let d=Infinity;
+  for(let i=0;i<c.length;i++){const [ax,ay]=c[i],[bx,by]=c[(i+1)%c.length],ex=bx-ax,ey=by-ay,l=ex*ex+ey*ey;
+    const t=l?Math.max(0,Math.min(1,-(ax*ex+ay*ey)/l)):0;d=Math.min(d,Math.hypot(ax+t*ex,ay+t*ey));}
+  return d;
+}
+/**
+ * The cuts that can reach a ring (rings and slots are centred on the origin): those whose boxes meet
+ * its outline, less those wholly outside the disc round it and those wholly inside the disc its
+ * opening clears round the centre (a disc that touches no edge of the opening lies inside it).
+ * Subtracting every slot of a large bowl from every ring dominated its build time.
+ */
+export function ringCuts(r:{outer:Contour;inner?:Contour|null},cuts:Contour[]):Contour[] {
+  // the ring lies inside the disc through its farthest corner; a cut whose edges all stay outside
+  // that disc and that does not surround the centre cannot reach it
+  const reach=Math.max(...r.outer.map(([x,y])=>Math.hypot(x,y)))+.01;
+  let near=nearContours(cuts,r.outer).filter(c=>clearRadius(c)<=reach||pointInContour([0,0],c));
+  if(r.inner&&pointInContour([0,0],r.inner)){const clear=clearRadius(r.inner)-.01;near=near.filter(c=>c.some(([x,y])=>Math.hypot(x,y)>=clear));}
+  return near;
+}
 
 /** Project each connected polygon onto the rib axis. Unlike a centre-line crossing this
  * includes every point through the full stock thickness, including angled and curved edges. */
@@ -20,8 +59,16 @@ function projectedSpans(material:Contour[], angle:number, thickness:number) {
 export function insertionReliefs(p:PopupParams,rings:Ring[],cuts:Contour[],angle:number):Contour[] {
   const top=-Math.max(...rings.map(r=>r.height))-p.T-1;
   const pad=Math.min(.03,Math.max(0,p.support.fit)/4);
+  // Only wood under the rib matters: clip each ring to a strip round the rib axis (wider than the
+  // projected band) and subtract only the cuts that reach it. A 700 mm bowl has hundreds of slots,
+  // and subtracting all of them from every ring for every rib took most of half a minute.
+  const reach=Math.max(...rings.map(r=>{const b=bboxOf([r.outer]);return Math.max(-b.x0,b.x1,-b.y0,b.y1);}))+1;
+  const {strip,pieces:near}=stripCuts(cuts,angle,p.T+1,reach);
   return rings.flatMap(r=>{
-    const solid=differenceShapes(shapeContours(differenceShapes([r.outer],r.inner?[r.inner]:[])),cuts);
+    // the ring under the strip is two short blocks; only cuts whose boxes meet them can change them
+    const under=shapeContours(intersectShapes(shapeContours(differenceShapes([r.outer],r.inner?[r.inner]:[])),[strip]));
+    const touching=[...new Set(under.flatMap(c=>nearContours(near,c)))];
+    const solid=touching.length?differenceShapes(under,touching):intersectShapes(under,[strip]);
     // Clip just inside the exact-fit boundary: zero-area contact at a slot edge must
     // not join both sides into one projected component (Clipper grid is 0.001 mm).
     return projectedSpans(shapeContours(solid),angle,p.T+pad*2-.002)
@@ -62,7 +109,7 @@ function rayRadius(c:Contour,a:number) {
 export function ringLabels(p:PopupParams,rings:Ring[],cuts:Contour[],ctx:BuildContext,prefix='') {
   const contours:Contour[]=[];let loading=false;
   for(const [i,r] of rings.entries()){
-    const material=shapeContours(differenceShapes(shapeContours(differenceShapes([r.outer],r.inner?[r.inner]:[])),cuts));
+    const material=shapeContours(differenceShapes(shapeContours(differenceShapes([r.outer],r.inner?[r.inner]:[])),ringCuts(r,cuts)));
     let placed=false;
     for(const size of [2.4,2,1.6]){
       const text=ctx.text?.(prefix+ringCode(i),'archivo-black',size);
@@ -75,7 +122,7 @@ export function ringLabels(p:PopupParams,rings:Ring[],cuts:Contour[],ctx:BuildCo
         const ink=centred.map(c=>transform(c,{rot:angle+90,x:radius*Math.cos(a),y:radius*Math.sin(a)}));
         // Include a small blank border round the label.
         const padded=transform(rect(-(b.x1-b.x0)/2-.2,-(b.y1-b.y0)/2-.2,b.x1-b.x0+.4,b.y1-b.y0+.4),{rot:angle+90,x:radius*Math.cos(a),y:radius*Math.sin(a)});
-        if(differenceShapes([padded],material).reduce((n,s)=>n+s.area,0)<.001){contours.push(...ink);placed=true;break;}
+        if(differenceShapes([padded],nearContours(material,padded)).reduce((n,s)=>n+s.area,0)<.001){contours.push(...ink);placed=true;break;}
       }
       if(placed)break;
     }
