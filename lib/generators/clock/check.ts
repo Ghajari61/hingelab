@@ -45,6 +45,8 @@ export function checkClock(p: ClockParams, out: GenOutput): CIssue[] {
   }
 
   // The movement box must hide behind the face.
+  // the edge gap the markers actually have: just inside the ring's opening when they were moved there
+  const effInset = g.straddle ? Math.max(m.inset, p.face.ring + 3) : m.inset;
   const rIn = inradius(g.outline), box = (MOVEMENT_BOX / 2) * Math.SQRT2 + 2;
   if (rIn < box) {
     const s = box / Math.max(rIn, 1);
@@ -55,22 +57,22 @@ export function checkClock(p: ClockParams, out: GenOutput): CIssue[] {
     });
   }
 
-  // Markers that cross the inner edge of the ring are cut in half by it.
-  if (g.straddle && m.style !== "none") {
+  // Markers whose edge gap would put them under the ring are drawn inside its opening instead.
+  if (g.straddle && (m.style !== "none" || m.minutes)) {
     const depth = markerDepth(p);
     issues.push({
-      code: "MARKERS_STRADDLE_RING", level: "warn",
-      message: "The markers cross the inner edge of the ring, so part of each one is hidden.",
+      code: "MARKERS_STRADDLE_RING", level: "info",
+      message: "The markers would sit under the ring, so they are placed just inside its opening, where they show. Widen the ring to put them on the ring instead.",
       fixes: [
-        { id: "wider-ring", label: `Widen the ring to ${Math.ceil(m.inset + depth + 3)} mm`, safe: true, apply: (q) => withFace(q, { ring: Math.ceil(q.markers.inset + markerDepth(q) + 3) }) },
-        { id: "inset-markers", label: "Move the markers inside the ring", safe: false, apply: (q) => withMarkers(q, { inset: Math.ceil(q.face.ring + 3) }) },
+        { id: "wider-ring", label: `Widen the ring to ${Math.ceil(m.inset + depth + 3)} mm`, safe: false, apply: (q) => withFace(q, { ring: Math.ceil(q.markers.inset + markerDepth(q) + 3) }) },
+        { id: "inset-markers", label: "Set the edge gap to the ring's opening", safe: false, apply: (q) => withMarkers(q, { inset: Math.ceil(q.face.ring + 3) }) },
       ],
     });
   }
 
   // Numerals bumping into each other on a small face.
   if ((m.style === "numerals" || m.style === "mixed") && g.outline.length) {
-    const r = Math.max(1, rIn - m.inset - m.size * 0.65);
+    const r = Math.max(1, rIn - effInset - m.size * 0.65);
     const step = m.style === "mixed" || m.quarters ? 90 : 30;
     const room = 2 * r * Math.sin((step * Math.PI) / 360) - 3;
     const wide = widestNumeral(p);
@@ -85,7 +87,7 @@ export function checkClock(p: ClockParams, out: GenOutput): CIssue[] {
   }
 
   // Markers that reach the hands' hub.
-  if (m.style !== "none" && rIn - m.inset - markerDepth(p) < 24) {
+  if (m.style !== "none" && rIn - effInset - markerDepth(p) < 24) {
     issues.push({
       code: "MARKERS_CENTRE", level: "warn",
       message: "The markers reach the middle of the face, where the movement's nut and hands sit.",
