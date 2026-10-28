@@ -3,6 +3,8 @@ import {ringCode,ringAssemblyOrder,ringLabels,ringInsertionInterference,assembly
 import {ribAssembly,handleAssembly,suspensionLayout,jointCoupons} from './supports';
 import {accessorySolids,popupHardware} from './hardware';
 import {spiralRimMin,spiralSupports} from './spiralSupports';
+import {clipLines,markLetters} from '../textOps';
+import {tagItem} from '../items';
 import type {Hardware3D} from '../types';
 import {differenceShapes,intersectShapes,makeShape,offsetShapes,unionShapes} from '@/lib/letters/polygon';
 import {circle,customOutline,ellipse,rect,regularPolygon,roundCorners,roundedRect,transform,TAU,pointInContour,distToContour,parsePathData} from '../geom';
@@ -62,6 +64,8 @@ export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0,
  const views:NonNullable<GenPart['views3d']>=[];
  const missing:string[]=[];let loading=false;let engrave:Contour[]=[];for(const [text,onRim] of [[p.engraving.text||p.engraving.monogram,false],[p.engraving.rim,true]] as const){if(!text)continue;const shaped=ctx.text?.(text.slice(0,100),p.engraving.fontId,p.engraving.size);if(!shaped){loading=true;continue;}missing.push(...shaped.missing);engrave.push(...(onRim?bendAround(shaped.contours,radius-p.rings.rim/2,'top'):shaped.contours));}
  if(p.engraving.motif!=='none'){const n=p.engraving.fill?12:1;for(let i=0;i<n;i++){const a=i*TAU/n,r=n===1?0:radius-p.rings.rim/2,s=Math.min(8,p.rings.center/6);const shape=p.engraving.motif==='hearts'?'heart':p.engraving.motif==='leaves'?'pill':'star';const motif=transform(shapeOutline(shape,s*2,s*2,0),{x:r*Math.cos(a)-s,y:r*Math.sin(a)-s});if(p.engraving.motif==='mandala'){for(let j=0;j<8;j++)engrave.push(transform(ellipse(0,s*.6,s*.25,s*.55),{rot:j*45,x:r*Math.cos(a),y:r*Math.sin(a)}));}else if(p.engraving.motif==='snowflakes'){for(let j=0;j<3;j++)engrave.push(transform(rect(-s,-.45,s*2,.9),{rot:j*60,x:r*Math.cos(a),y:r*Math.sin(a)}));}else if(p.engraving.motif==='nowruz'){for(let j=-2;j<=2;j++)engrave.push(transform(ellipse(j*s*.3,0,s*.1,s*(.6-Math.abs(j)*.1)),{x:r*Math.cos(a),y:r*Math.sin(a)}));engrave.push(rect(-s,s*.5,2*s,s*.2));}else if(p.engraving.motif==='crescent'){const cres=differenceShapes([circle(0,0,s)],[circle(s*.5,-s*.2,s*.85)]);engrave.push(...cres.flatMap(v=>[v.outer,...v.holes]));}else engrave.push(motif);}}
+ // Scored engraving traces the lettering and motifs instead (kept to the wood once every cut is known).
+ const scoreUser=p.engraving.mark==='score'?engrave:[];if(scoreUser.length)engrave=[];
  engrave=intersectShapes(engrave,[outer]).flatMap(s=>[s.outer,...s.holes]);if(holes.length&&engrave.length)engrave=differenceShapes(engrave,holes).flatMap(s=>[s.outer,...s.holes]);
  const parts:GenPart[]=[{id:'blank',name:'Blank',outer,holes,engrave,views3d:views}];
  const notches:{radius:number;height:number}[]=[];
@@ -93,12 +97,13 @@ export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0,
  const validHoles=intersectShapes(holes,[outer]);
  parts[0].holes=unionShapes(validHoles.flatMap(s=>[s.outer,...s.holes])).flatMap(s=>[s.outer,...s.holes]);
  engrave=differenceShapes(engrave,parts[0].holes).flatMap(s=>[s.outer,...s.holes]);parts[0].engrave=engrave;
+ const score=scoreUser.length?tagItem(clipLines(markLetters({contours:scoreUser},'score').score??[],outer,parts[0].holes),'Engraving'):[];if(score.length)parts[0].score=score;
  if(p.support.labels&&p.pattern.kind==='rings'){const marks=ringLabels(p,rings,parts[0].holes,ctx,labelPrefix);engrave.push(...marks.contours);loading ||= marks.loading;parts[0].engrave=engrave;}
  if(p.pattern.kind!=='rings'){
   const wood=unionShapes([outer,...parts[0].holes],[],true);
   if(wood.length!==1)throw Error('Spiral cuts separate the strip. Widen the spacing or reduce the cut gap/openings.');
 
-  views.push({name:`Continuous ${labelPrefix}spiral`,outer,holes:parts[0].holes,engrave,place:{x:0,y:0,z:0},apart:[0,0,cradle?50:0],radialSurface:surface});
+  views.push({name:`Continuous ${labelPrefix}spiral`,outer,holes:parts[0].holes,engrave,...(score.length?{score}:{}),place:{x:0,y:0,z:0},apart:[0,0,cradle?50:0],radialSurface:surface});
  }else{
  const spans=parts[0].holes.map(radialSpan);
  const order=[...rings].sort((a,b)=>a.height-b.height);
@@ -110,6 +115,7 @@ export function popupGeometry(p:PopupParams,ctx:BuildContext={},nestedOpening=0,
   if(p.pattern.kind==='rings'&&setsHeights(p)&&pieces.length!==1)throw Error(`Ring ${labelPrefix}${ringCode(rings.indexOf(ring))} is split by its cutouts. Widen the ring or reduce openings.`);
   for(const s of pieces)views.push({name:`Ring ${labelPrefix}${ringCode(rings.indexOf(ring))}`,outer:s.outer,holes:s.holes,
    engrave:intersectShapes(engrave,[s.outer,...s.holes]).flatMap(q=>[q.outer,...q.holes]),
+   ...(score.length?{score:tagItem(clipLines(score,s.outer,s.holes),'Engraving')}:{}),
    place:{x:0,y:0,z:ring.height,m:matrix(ring.height)},
    // These are rigid rings after the holding lands have been cut, not a bending sheet.
    // Use Assembled / Lay flat for the two real states; Explode lifts each ring off its seat.
@@ -181,7 +187,8 @@ function addNestedSet(p:PopupParams,parts:GenPart[],ctx:BuildContext){
   for(const v of extra)shiftPlace(v.place,dx);
   all.push(blank);parts.push(...extra);hardware.push(...popupHardware(q,g,dx,floorOf(q)));
  }
- parent.outer=all[0].outer;parent.holes=[...all[0].holes,...all.slice(1).flatMap(v=>[v.outer,...v.holes])];parent.engrave=all.flatMap(v=>v.engrave??[]);parent.views3d=all.flatMap(v=>v.views3d??[]);parent.name='Nested annular blanks (open centres)';
+ parent.outer=all[0].outer;parent.holes=[...all[0].holes,...all.slice(1).flatMap(v=>[v.outer,...v.holes])];parent.engrave=all.flatMap(v=>v.engrave??[]);
+ const scores=all.flatMap(v=>v.score??[]);if(scores.length)parent.score=scores;else delete parent.score;parent.views3d=all.flatMap(v=>v.views3d??[]);parent.name='Nested annular blanks (open centres)';
  // Discard supports of the original unmodified single-size blank.
  const keep=parts.filter(v=>v===parent||v.id.startsWith('set-'));parts.splice(0,parts.length,...keep);
  return {hardware,groups,loading};

@@ -1,3 +1,17 @@
+## 1.27.0 — Text operations in more generators
+
+Shared Engrave, Score and raised-letter operations with No Weld (`lib/generators/textOps.ts`, built on the existing weld and score geometry) now cover eight more generators. Sign, Cake Topper, Name Charms and Family Names already had them and are unchanged.
+
+- Table Numbers and Key Rack: No Weld for Score and Raised. Raised numbers and letters are cut as one second-material piece per glyph, dot and counter instead of one welded piece, laid out on their own sheets; scored lettering keeps each glyph's own outline, so joined scripts and accents still read.
+- Keychain: No Weld for raised letters, so every glyph is its own piece instead of fusing where letters touch.
+- Trophy: No Weld for scored marks (each glyph's own outline).
+- Puzzle: the engraved text and piece numbers can be scored instead, with No Weld.
+- Clock: numerals and engraved ticks or dots can be scored (Markers › Mark), and so can the inscription, with No Weld. Ticks and dots cut through stay cut.
+- QR Code: a plain label on an engraved plate can be scored. A bar label stays engraved.
+- Pop-up: the centre text, monogram, rim text and motifs can be scored. Scored lines stop at the slots and openings, and in 3D they follow the formed rings or spiral.
+- Saved designs open exactly as before: the new settings default to Engrave and welded, and unknown values fall back to them. Every default and preset of every generator produces byte-identical SVG to 1.26.0.
+- Not covered: Boxes already has Engrave/Score for its engraving but no No Weld. Shadow Box words, hook labels on the Key Rack, and part identifiers are unchanged. Letters, Hinge Box and Parametric have their own controls.
+
 ## 1.26.0 — Spiral and Multi for every Pop-up preset
 
 - All 36 Pop-up presets now build as Spiral and as Multi with 2, 3 and 4 arms, with supports, a matching SVG and Lay Flat, and a coherent 3D assembly. Each of the 144 combinations is checked on every test run.

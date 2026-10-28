@@ -1,3 +1,4 @@
+import { markLetters, moveLettering } from "../textOps";
 /**
  * Jigsaw puzzle (spec §7.9). A grid over the outline; every shared edge is one seeded Bezier tab
  * curve, generated once and re-rolled until no piece outline crosses itself. The cuts are exported
@@ -416,6 +417,7 @@ export function buildPuzzle(p: PuzzleParams, ctx: BuildContext): PuzzleOutput {
   // Engraving.
   const T = p.T;
   const engrave: Contour[] = [];
+  const score: Contour[] = [];
   const images: GenImage[] = [];
   const missing: string[] = [];
   let loading = false, textWidth = 0;
@@ -437,7 +439,9 @@ export function buildPuzzle(p: PuzzleParams, ctx: BuildContext): PuzzleOutput {
         for (const c of s.missing) if (!missing.includes(c)) missing.push(c);
         textWidth = Math.max(textWidth, s.width);
         const cy = BH / 2 + (k - (lines.length - 1) / 2) * gap;
-        for (const c of s.contours) engrave.push(...tagItem([c.map(([x, y]) => [x + BW / 2, y + cy] as Pt)], "Text"));
+        const at = (c: Contour) => c.map(([x, y]) => [x + BW / 2, y + cy] as Pt);
+        if (E2.mark === "score") score.push(...tagItem(markLetters(moveLettering(s, at), "score", E2.noWeld).score ?? [], "Text"));
+        else for (const c of s.contours) engrave.push(...tagItem([at(c)], "Text"));
       });
     }
   }
@@ -452,7 +456,9 @@ export function buildPuzzle(p: PuzzleParams, ctx: BuildContext): PuzzleOutput {
         const s = ctx.text!(String(n + 1), E2.fontId, E2.numberSize);
         if (!s) { loading = true; return; }
         for (const c of s.missing) if (!missing.includes(c)) missing.push(c);
-        for (const c of s.contours) engrave.push(...tagItem([c.map(([x, y]) => [x + o.at[0], y + o.at[1]] as Pt)], "Numbers"));
+        const at = (c: Contour) => c.map(([x, y]) => [x + o.at[0], y + o.at[1]] as Pt);
+        if (E2.mark === "score") score.push(...tagItem(markLetters(moveLettering(s, at), "score", E2.noWeld).score ?? [], "Numbers"));
+        else for (const c of s.contours) engrave.push(...tagItem([at(c)], "Numbers"));
       });
     }
   }
@@ -460,7 +466,7 @@ export function buildPuzzle(p: PuzzleParams, ctx: BuildContext): PuzzleOutput {
   // Parts.
   const tray = p.frame.kind === "tray", framed = p.frame.kind !== "none";
   const parts: GenPart[] = [{
-    id: "puzzle", name: "Puzzle", outer: outline, holes: [], cuts, engrave, images, pieces,
+    id: "puzzle", name: "Puzzle", outer: outline, holes: [], cuts, engrave, ...(score.length ? { score } : {}), images, pieces,
     place: { x: 0, y: 0, z: tray ? T : 0 },
   }];
   if (framed) {

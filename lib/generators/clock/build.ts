@@ -1,3 +1,4 @@
+import { markLetters } from "../textOps";
 /**
  * Clock geometry: a face (round, square, polygon, sunburst, gear, scalloped, flower, heart, cloud or a custom outline),
  * optionally layered (back plate + ring, + centre disc), hour markers, hands with holes for a
@@ -115,13 +116,19 @@ export function markerDepth(p: ClockParams): number {
 
 const rot = (c: Contour, a: number) => transform(c, { rot: a });
 
-interface Markers { engrave: Contour[]; holes: Contour[]; missing: string[]; loading: boolean }
+interface Markers { engrave: Contour[]; score: Contour[]; holes: Contour[]; missing: string[]; loading: boolean }
 
 function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext): Markers {
-  const m = p.markers, res: Markers = { engrave: [], holes: [], missing: [], loading: false };
+  const m = p.markers, res: Markers = { engrave: [], score: [], holes: [], missing: [], loading: false };
   if (m.style === "none" && !m.minutes) return res;
   let item = "Ticks";
-  const put = (c: Contour) => (m.cut ? res.holes : res.engrave).push(tagItem([c], item)[0]);
+  // scored markers: each tick, dot and numeral traced on its own (they never overlap one another)
+  const scoring = m.mark === "score";
+  const mark = (cs: Contour[], what: string, glyphs?: Contour[][]) => {
+    if (scoring) res.score.push(...tagItem(markLetters({ contours: cs, glyphs }, "score", true).score ?? [], what));
+    else res.engrave.push(...tagItem(cs, what));
+  };
+  const put = (c: Contour) => (m.cut ? res.holes.push(tagItem([c], item)[0]) : mark([c], item));
   const anchor = (a: number) => markerEdge(p, outline, a) - m.inset;
   const numeralHours = m.style === "numerals" ? (m.quarters ? [0, 3, 6, 9] : [...Array(12).keys()]) : m.style === "mixed" ? [0, 3, 6, 9] : [];
   const tickHours = m.style === "ticks" ? [...Array(12).keys()] : m.style === "mixed" ? [1, 2, 4, 5, 7, 8, 10, 11] : m.style === "numerals" && m.quarters ? [1, 2, 4, 5, 7, 8, 10, 11] : [];
@@ -155,14 +162,16 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext): Mark
       const a = h * 30, [dx, dy] = dirOf(a);
       const extent = m.follow ? shape.height : Math.abs(shape.width * dx) + Math.abs(shape.height * dy);
       const r = anchor(a) - extent / 2;
-      for (const c of shape.contours) res.engrave.push(...tagItem([(m.follow ? rot(c, a) : c).map(([x, y]) => [x + dx * r, y + dy * r] as Pt)], "Numerals"));
+      const at = (c: Contour) => (m.follow ? rot(c, a) : c).map(([x, y]) => [x + dx * r, y + dy * r] as Pt);
+      // a numeral is scored as one shape (its glyphs welded), engraved as before
+      mark(shape.contours.map(at), "Numerals", [shape.contours.map(at)]);
     }
   }
   return res;
 }
 
 /** Where the inscription runs: its centre-line radius, its extent across the line, and the angle it spans. */
-export interface Inscription { engrave: Contour[]; R: number; size: number; span: number; missing: string[]; loading: boolean }
+export interface Inscription { engrave: Contour[]; score: Contour[]; R: number; size: number; span: number; missing: string[]; loading: boolean }
 
 /** The inscription bent along the dial inside the markers (and inside the ring on a layered face, where it shows). */
 export function buildInscription(p: ClockParams, outline: Contour, ringInner: Contour | null, ctx: BuildContext): Inscription | null {
@@ -172,11 +181,18 @@ export function buildInscription(p: ClockParams, outline: Contour, ringInner: Co
   const band = p.markers.style === "none" && !p.markers.minutes ? 0 : p.markers.inset + markerDepth(p);
   let R = markerEdge(p, outline, a) - band - ins.gap - ins.size * 0.6;
   if (ringInner) R = Math.min(R, edgeDistance(ringInner, a) - 2 - ins.size * 0.6);
-  if (!ctx.text) return { engrave: [], R, size: ins.size, span: 0, missing: [], loading: true };
+  if (!ctx.text) return { engrave: [], score: [], R, size: ins.size, span: 0, missing: [], loading: true };
   const shape = ctx.text(ins.text.replace(/\s+/g, " ").trim(), ins.fontId, ins.size);
-  if (!shape) return { engrave: [], R, size: ins.size, span: 0, missing: [], loading: true };
+  if (!shape) return { engrave: [], score: [], R, size: ins.size, span: 0, missing: [], loading: true };
   const span = arcSpan(shape.width, R);
-  return { engrave: R > ins.size ? tagItem(bendAround(shape.contours, R, ins.at), "Inscription") : [], R, size: shape.height, span, missing: shape.missing, loading: false };
+  if (!(R > ins.size)) return { engrave: [], score: [], R, size: shape.height, span, missing: shape.missing, loading: false };
+  if (ins.mark !== "score") return { engrave: tagItem(bendAround(shape.contours, R, ins.at), "Inscription"), score: [], R, size: shape.height, span, missing: shape.missing, loading: false };
+  // bent contour by contour, so each glyph's outlines stay together for No Weld
+  const glyphs = shape.glyphs?.length ? shape.glyphs : [shape.contours];
+  const bent = bendAround(glyphs.flat(), R, ins.at);
+  let k = 0;
+  const bentGlyphs = glyphs.map((g) => g.map(() => bent[k++]));
+  return { engrave: [], score: tagItem(markLetters({ contours: bent, glyphs: bentGlyphs }, "score", ins.noWeld).score ?? [], "Inscription"), R, size: shape.height, span, missing: shape.missing, loading: false };
 }
 
 /** The movement's minute-hand hole: a circle with two flats. */
@@ -277,6 +293,8 @@ export function clockGeometry(p: ClockParams, ctx: BuildContext = {}): (ClockGeo
   const markersOn: ClockGeometry["markersOn"] = !layered ? "face" : onRing ? "ring" : "back";
   const inscription = buildInscription(p, outline, ringInner, ctx);
   const insEngrave = inscription?.engrave ?? [];
+  const insScore = inscription?.score ?? [];
+  const withScore = (cs: Contour[]) => (cs.length ? { score: cs } : {});
   const hangerHidden = !hanger || p.stand || (!!ringInner && hanger.every((q) => !pointInContour(q, ringInner!) && distToContour(q, ringInner!) >= 1.5));
 
   // The stand: a tab under the back plate that pushes through a slot in the base.
@@ -290,18 +308,19 @@ export function clockGeometry(p: ClockParams, ctx: BuildContext = {}): (ClockGeo
   const backHoles = [shaft, ...(hanger ? [hanger] : [])];
   if (!layered) {
     parts.push({
-      id: "face", name: "Face", outer: backOuter, holes: [...backHoles, ...(markers.holes)], engrave: [...markers.engrave, ...insEngrave], place: placeAt(0),
+      id: "face", name: "Face", outer: backOuter, holes: [...backHoles, ...(markers.holes)], engrave: [...markers.engrave, ...insEngrave], ...withScore([...markers.score, ...insScore]), place: placeAt(0),
     });
   } else {
     parts.push({
       id: "back", name: "Back plate", outer: backOuter,
       holes: [...backHoles, ...(markersOn === "back" ? markers.holes : [])],
       engrave: [...(markersOn === "back" ? markers.engrave : []), ...insEngrave],
+      ...withScore([...(markersOn === "back" ? markers.score : []), ...insScore]),
       place: placeAt(0),
     });
     parts.push({
       id: "ring", name: "Ring", outer: outline, holes: [ringInner!, ...(markersOn === "ring" ? markers.holes : [])],
-      engrave: markersOn === "ring" ? markers.engrave : [], place: placeAt(T),
+      engrave: markersOn === "ring" ? markers.engrave : [], ...withScore(markersOn === "ring" ? markers.score : []), place: placeAt(T),
     });
     if (f.layers === "stack") {
       parts.push({ id: "centre", name: "Centre disc", outer: circle(0, 0, f.centre / 2), holes: [circle(0, 0, mv.shaft / 2, 0.01)], place: placeAt(T) });

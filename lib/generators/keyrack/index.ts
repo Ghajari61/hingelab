@@ -1,3 +1,4 @@
+import { noWeldField } from "../textOps";
 import { rect } from "../geom";
 import { material2Fields } from "../material2";
 import { MOTIF_OPTIONS, motifArt } from "../motifs";
@@ -40,6 +41,7 @@ const sections: SectionSpec<KeyrackParams>[] = [
         help: "Engrave fills the letters, Score traces them, Raised cuts them from the second material to glue on, None leaves the board plain.",
         options: [{ v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }, { v: "raised", text: "Raised", title: "Two materials" }, { v: "none", text: "None" }],
       },
+      noWeldField<KeyrackParams>("text.noWeld", (p) => p.text.mark === "score" || p.text.mark === "raised", "text and motif"),
       { kind: "number", key: "text.y", label: "Height on board", unit: "%", min: 5, max: 95, step: 1, help: "Where the text sits, from the top of the board." },
       { kind: "choice", key: "motif.kind", shuffle: true, label: "Motif", rail: true, options: MOTIF_OPTIONS, help: "A picture beside or above the text: a built-in motif, your own picture or your own text." },
       ...motifArtFields<KeyrackParams>("motif.kind", "motif.art"),
@@ -146,6 +148,7 @@ const KEYRACK_BASE: GeneratorDef<KeyrackParams> = {
       "Hooks are cut from the same sheet and slot through the board (rounded J, square or ball-end profiles), or the board gets holes for wooden dowel pegs or pilot holes for brass cup hooks. Names can be engraved above each hook, a shelf with brackets can be added on top, and keyhole slots hang it on two hidden screws.",
     ],
     tips: [
+      "No Weld (under Text, for Score and Raised): raised letters are cut as separate glyph pieces in the second material, and scored letters keep each glyph's own outline, so joined script still reads.",
       "Cut hooks from 4 to 6 mm plywood for heavy bunches; 3 mm hooks suit single keys.",
       "Glue each hook from the back with wood glue and let it set before hanging keys.",
       "Mark the keyhole spacing on the wall with a strip of masking tape laid over the board.",

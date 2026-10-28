@@ -7,7 +7,8 @@ import { motif, motifSize } from "../motifs";
 import { motifRef } from "../motifRef";
 import { orient, shapeOutline, type ShapeKind } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
-import { tabsUnder, textBlock, weld, withSticks } from "../weld";
+import { tabsUnder, textBlock, withSticks } from "../weld";
+import { markLetters, raisedLetters } from "../textOps";
 import { MAX_TABLES, tableList, type TablenumParams } from "./params";
 
 export interface TablenumInfo {
@@ -76,41 +77,51 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
   const mid = mr.ref;
   // Which run of each table's contours is its label, number, name and motif (for the 3D view's items).
   const ranges: { item: string; from: number; to: number }[][] = [];
+  const glyphsOf: Contour[][][] = [];
   const blocks = tables.map(({ main, sub }) => {
-    const lab = p.text.label.trim() ? textBlock(ctx, p.text.label, p.text.labelFont, p.text.labelSize, { missing, style: { ...p.textStyle, ...p.textForm } }) : null;
-    const num = textBlock(ctx, main, p.text.fontId, p.text.size, { spacing: p.text.spacing, missing, style: { ...p.textStyle, ...p.textForm } });
-    const nm = sub ? textBlock(ctx, sub, p.text.labelFont, p.text.nameSize, { missing, style: { ...p.textStyle, ...p.textForm } }) : null;
+    const nw = p.text.noWeld;
+    const lab = p.text.label.trim() ? textBlock(ctx, p.text.label, p.text.labelFont, p.text.labelSize, { missing, noWeld: nw, style: { ...p.textStyle, ...p.textForm } }) : null;
+    const num = textBlock(ctx, main, p.text.fontId, p.text.size, { spacing: p.text.spacing, missing, noWeld: nw, style: { ...p.textStyle, ...p.textForm } });
+    const nm = sub ? textBlock(ctx, sub, p.text.labelFont, p.text.nameSize, { missing, noWeld: nw, style: { ...p.textStyle, ...p.textForm } }) : null;
     for (const b of [lab, num, nm]) if (b?.loading) loading = true;
     const stack = (p.text.labelBelow ? [num, lab, nm] : [lab, num, nm]).filter((b): b is NonNullable<typeof b> => !!b && b.contours.length > 0);
     const gaps = stack.map((b) => Math.max(3, b.height * 0.28));
     let y = 0, numY = 0;
     const placed: Contour[] = [];
+    // each glyph's outlines (a motif is one glyph), moved with the contours, for No Weld
+    let groups: Contour[][] = [];
     const run: { item: string; from: number; to: number }[] = [];
     stack.forEach((b, i) => {
       if (i) y += gaps[i];
       run.push({ item: b === num ? "Number" : b === lab ? "Label" : "Name", from: placed.length, to: placed.length + b.contours.length });
       placed.push(...move(b.contours, 0, y + b.height / 2));
+      groups.push(...(b.glyphs?.length ? b.glyphs : [b.contours]).map((g) => move(g, 0, y + b.height / 2)));
       if (b === num) numY = y + b.height / 2;
       y += b.height;
     });
     let cs = move(placed, 0, -y / 2);
+    groups = groups.map((g) => move(g, 0, -y / 2));
     numY -= y / 2;
+    const addMotif = (m: Contour[]) => { cs.push(...m); groups.push(m); };
     const texts = cs.length;
     if (mid && cs.length) {
       const bb = bboxOf(cs), s = motifSize(mid, p.motif.size), g = p.motif.gap;
-      if (p.motif.place === "above") cs.push(...motif(mid, p.motif.size, 0, bb.y0 - g - s.h / 2));
-      if (p.motif.place === "below") cs.push(...motif(mid, p.motif.size, 0, bb.y1 + g + s.h / 2));
+      if (p.motif.place === "above") addMotif(motif(mid, p.motif.size, 0, bb.y0 - g - s.h / 2));
+      if (p.motif.place === "below") addMotif(motif(mid, p.motif.size, 0, bb.y1 + g + s.h / 2));
       if (p.motif.place === "both") {
         const nb = bboxOf(num.contours.length ? num.contours : cs);
         const half = (nb.x1 - nb.x0) / 2;
-        cs.push(...motif(mid, p.motif.size, -half - g - s.w / 2, numY), ...motif(mid, p.motif.size, half + g + s.w / 2, numY, true));
+        addMotif(motif(mid, p.motif.size, -half - g - s.w / 2, numY));
+        addMotif(motif(mid, p.motif.size, half + g + s.w / 2, numY, true));
       }
     }
     if (cs.length) {
       const bb = bboxOf(cs);
       cs = move(cs, -(bb.x0 + bb.x1) / 2, -(bb.y0 + bb.y1) / 2);
+      groups = groups.map((g) => move(g, -(bb.x0 + bb.x1) / 2, -(bb.y0 + bb.y1) / 2));
     }
     ranges.push([...run, { item: "Motif", from: texts, to: cs.length }]);
+    glyphsOf.push(groups);
     return cs;
   });
   const items = (cs: Contour[], i: number): ItemBlock[] => ranges[i].map((r) => ({ item: r.item, cs: cs.slice(r.from, r.to) }));
@@ -145,11 +156,14 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
     else border.engrave = shapeContours(differenceShapes(shapeContours(inset), shapeContours(offsetShapes(inset, -2.5))));
   }
 
-  const marks = (cs: Contour[]): Pick<GenPart, "engrave" | "score"> => {
+  const marks = (cs: Contour[], glyphs: Contour[][]): Pick<GenPart, "engrave" | "score"> => {
     if (!cs.length || p.text.mark === "raised") return {};
-    const u = shapeContours(unionShapes(cs));
-    return p.text.mark === "engrave" ? { engrave: u } : { score: u.map(closed) };
+    return markLetters({ contours: cs, glyphs }, p.text.mark, p.text.noWeld);
   };
+  // the raised number: one welded piece, or with No Weld every glyph and dot as its own piece
+  const raised = (cs: Contour[], glyphs: Contour[][]) => raisedLetters({ contours: cs, glyphs }, { border: 0.6, minHole: 2, noWeld: p.text.noWeld });
+  const pieceId = (id: string, k: number, n: number) => (n > 1 ? `${id}-${k + 1}` : id);
+  const pieceName = (name: string, k: number, n: number) => (n > 1 ? `${name}, piece ${k + 1}` : name);
   const join = (a: Pick<GenPart, "engrave" | "score">, b: Pick<GenPart, "engrave" | "score">) => ({
     engrave: [...(a.engrave ?? []), ...(b.engrave ?? [])],
     score: [...(a.score ?? []), ...(b.score ?? [])],
@@ -170,6 +184,7 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
 
   tables.forEach((t, i) => {
     const cs = move(blocks[i], W / 2, contentY);
+    const gs = glyphsOf[i].map((g) => move(g, W / 2, contentY));
     const X = i * pitchX;
     const tag = tables.length > 1 ? ` ${t.main}` : "";
     const id = (s: string) => `${s}-${i + 1}`;
@@ -180,15 +195,15 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
       const outer = unionShapes([orient(rot180([A], W / 2, H / 2)[0]), orient(rect(0, H - 1, W, band + 2)), orient(B)]).reduce((a, b) => (b.area > a.area ? b : a)).outer;
       const front = move(cs, 0, H + band);
       const back = rot180(cs, W / 2, H / 2);
+      const gFront = gs.map((g) => move(g, 0, H + band)), gBack = gs.map((g) => rot180(g, W / 2, H / 2));
       const bA = border.score ? { score: rot180(border.score, W / 2, H / 2) } : border.engrave ? { engrave: rot180(border.engrave, W / 2, H / 2) } : {};
       const bB = border.score ? { score: move(border.score, 0, H + band) } : border.engrave ? { engrave: move(border.engrave, 0, H + band) } : {};
-      const m = join(join(tagMarks(marks(front), items(front, i)), tagMarks(marks(back), items(back, i))), join(bA, bB));
+      const m = join(join(tagMarks(marks(front, gFront), items(front, i)), tagMarks(marks(back, gBack), items(back, i))), join(bA, bB));
       parts.push({ id: id("card"), name: `Tent card${tag}`, outer, holes: [], cuts: hingeSlits(W, H + 1, H + band - 1, p.hinge), ...m, place: { x: X, y: 0, z: 0 } });
       if (p.text.mark === "raised" && cs.length) {
-        const s = weld(front, { border: 0.6, minHole: 2 });
-        const s2 = weld(back, { border: 0.6, minHole: 2 });
-        if (s) parts.push(second({ id: id("front"), name: `Front number${tag}`, outer: s.outer, holes: s.holes, place: { x: X, y: 0, z: T } }));
-        if (s2) parts.push(second({ id: id("back"), name: `Back number${tag}`, outer: s2.outer, holes: s2.holes, place: { x: X, y: 0, z: T } }));
+        const f = raised(front, gFront), b = raised(back, gBack);
+        f.forEach((s, k) => parts.push(second({ id: pieceId(id("front"), k, f.length), name: pieceName(`Front number${tag}`, k, f.length), outer: s.outer, holes: s.holes, place: { x: X, y: 0, z: T } })));
+        b.forEach((s, k) => parts.push(second({ id: pieceId(id("back"), k, b.length), name: pieceName(`Back number${tag}`, k, b.length), outer: s.outer, holes: s.holes, place: { x: X, y: 0, z: T } })));
       }
       return;
     }
@@ -205,13 +220,13 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
     const lift = plaque ? 0 : layers * T;
     const z0 = plaque ? 0 : depth / 2 - (plates * T) / 2;
     const place = (z: number) => ({ x: X, y: -H - lift, z, upright: true });
-    const m = join(tagMarks(marks(cs), items(cs, i)), border);
+    const m = join(tagMarks(marks(cs, gs), items(cs, i)), border);
     for (let k = 0; k < plates; k++) {
       const z = z0 + (plates === 2 ? (k ? 0 : T) : 0);
       parts.push({ id: id(k ? "back" : "plate"), name: `${k ? "Back" : "Plate"}${tag}`, outer, holes, ...m, place: place(z) });
       if (p.text.mark === "raised" && cs.length) {
-        const s = weld(cs, { border: 0.6, minHole: 2 });
-        if (s) parts.push(second({ id: id(k ? "back-number" : "number"), name: `${k ? "Back number" : "Number"}${tag}`, outer: s.outer, holes: s.holes, place: place(k ? z0 - p.mat.T2 : z + T) }));
+        const r = raised(cs, gs);
+        r.forEach((s, j) => parts.push(second({ id: pieceId(id(k ? "back-number" : "number"), j, r.length), name: pieceName(`${k ? "Back number" : "Number"}${tag}`, j, r.length), outer: s.outer, holes: s.holes, place: place(k ? z0 - p.mat.T2 : z + T) })));
       }
     }
     if (!plaque) {

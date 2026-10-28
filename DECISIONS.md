@@ -1784,3 +1784,22 @@ The owner asked for every built-in Pop-up preset to work as Spiral and as Multi 
 - **Tests.** Four files run 144 preset checks. `popupSpiralFixes.test.ts` covers nesting (3 arm counts × 3 set counts × 3 scales), the switch, its note and the saved-design behaviour, fittings clearance for E27, E14, tealight and sleeve, and batch spacing with fittings for Rings, Spiral and Multi plus a Keychain batch. It also covers surface deviation.
 - **Limit.** These are digital fit checks against target geometry. Real bending, springback, kerf and joint fit in the user's stock still need a test cut.
 
+## D222. One set of text operations for the generators
+
+The owner asked for text operations everywhere: Engrave, Score and raised (separately cut) letters with No Weld, with two-material layers, 3D and migration of old saves.
+
+- **Audit.** Sign, Cake Topper, Name Charms and Family Names already had No Weld and Cut/Score, built on `letterShapes`, `letterTraces` and `overlapScores` in `weld.ts` and `weldScore.ts`. Table Numbers and Key Rack had Engrave/Score/Raised but welded both: raised letters were one grown piece, and score traced the union. Trophy had Engrave/Score, welded. Keychain had raised details from a union. Puzzle, Clock (numerals and inscription), QR (label) and Pop-up could only engrave their lettering.
+- **Shared module.** `textOps.ts` uses those primitives and adds nothing new to the geometry.
+  - `markLetters` returns the engrave union, or score traces: welded, or per glyph with No Weld.
+  - `raisedLetters` returns one welded piece, or one piece per glyph, dot and counter.
+  - `clipLines` keeps score lines on a part's wood.
+  - `moveLettering` and `joinLettering` move and combine lettering together with its glyphs.
+  - `noWeldField` and `letterMarkField` give every generator the same wording.
+  - `cleanMark` and `cleanNoWeld` handle migration: only an explicit `true` turns No Weld on, and unknown marks fall back to Engrave.
+- **Glyphs.** No Weld needs each glyph's outlines. Builders carry a parallel glyph list through the same moves, rotations, bends and fit scaling as the contours; a motif counts as one glyph. `textBlock` is asked for glyphs when styled text could otherwise lose them. Without glyphs, No Weld falls back to the welded result rather than failing.
+- **3D.** `views3d` pieces can carry `score`, so a part drawn as several pieces (Pop-up rings and spirals) shows its scored lines. `applyRadialSurface` also bends score lines, so they follow a formed sheet. Scored items are tagged, so the 3D view names them and draws their lines.
+- **Layered materials.** Raised pieces are `material: "second"` parts, as before, and are packed on their own sheets.
+- **Unchanged.** A dump of every default and preset of every generator (572 cases) is byte-identical to main. No existing design changes unless a new setting is switched on.
+- **Tests.** `textOperationsAll.test.ts` covers shared geometry, each integration, SVG/Lay Flat parity of cut regions plus equality of the score layer, 3D lines, one material per sheet, and migration. `textOperationsPresets.test.ts` runs every preset of the eight generators with the operations on.
+- **Not covered.** Boxes (has Engrave/Score, no No Weld), Shadow Box words, Key Rack hook labels, part identifiers, Letters, Hinge Box and Parametric.
+

@@ -1,3 +1,4 @@
+import {raisedLetters} from "../textOps";
 import { differenceShapes, makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { bboxOf, circle, ellipse, rect, pointInContour } from "../geom";
 import { orient, shapeOutline } from "../shapes";
@@ -30,16 +31,20 @@ export function buildKeychain(p:KeychainParams,ctx:BuildContext):GenOutput {
   if(title.loading||sub.loading)return {parts:[],stats:[],notice:"Loading the font."};
   if(missing.length)return fail("This font cannot draw: "+missing.join(" ")+". Choose a font that supports your text.");
   const content:Contour[]=[...title.contours];
-  if(sub.contours.length)content.push(...sub.contours.map(c=>c.map(([x,y])=>[x,y+title.height/2+3+sub.height/2] as Pt)));
-  if(p.motif!=="none")content.push(...motif(p.motif,Math.min(14,H*.35),0,-title.height/2-9));
+  // each glyph's outlines (a motif is one glyph), moved with the content, for No Weld raised letters
+  const groups:Contour[][]=title.glyphs?.length?[...title.glyphs]:title.contours.length?[title.contours]:[];
+  const below=(c:Contour)=>c.map(([x,y])=>[x,y+title.height/2+3+sub.height/2] as Pt);
+  if(sub.contours.length){content.push(...sub.contours.map(below));groups.push(...(sub.glyphs?.length?sub.glyphs:[sub.contours]).map(g=>g.map(below)));}
+  if(p.motif!=="none"){const m=motif(p.motif,Math.min(14,H*.35),0,-title.height/2-9);content.push(...m);groups.push(m);}
   const safe=differenceShapes(shapeContours(offsetShapes([makeShape(base,[])],-p.margin)), [circle(cx,cy,r+p.margin)]);
   if(!safe.length)return fail("Reduce the content margin or increase the body size.");
-  let fitted:Contour[]=[];
+  let fitted:Contour[]=[],fittedGroups:Contour[][]=[];
   if(content.length){
     const b=bboxOf(content),mx=(b.x0+b.x1)/2,my=(b.y0+b.y1)/2;
     let scale=Math.min(1,(W-2*p.margin)/Math.max(1,b.x1-b.x0),(H-2*p.margin)/Math.max(1,b.y1-b.y0));
     for(let i=0;i<60;i++,scale*=.92){
-      fitted=content.map(c=>c.map(([x,y])=>[(x-mx)*scale+W/2,(y-my)*scale+H/2] as Pt));
+      const fit=(c:Contour)=>c.map(([x,y])=>[(x-mx)*scale+W/2,(y-my)*scale+H/2] as Pt);
+      fitted=content.map(fit);fittedGroups=groups.map(g=>g.map(fit));
       if(differenceShapes(fitted,shapeContours(safe)).reduce((n,s)=>n+s.area,0)<.001)break;
       if(i===59)return fail("The text cannot fit this shape. Increase its size or shorten the text.");
     }
@@ -54,7 +59,9 @@ export function buildKeychain(p:KeychainParams,ctx:BuildContext):GenOutput {
   if(p.style==="score")score.push(...fitted.map(closed));
   if(p.style==="layered"){
     score.push(...fitted.map(closed));
-    unionShapes(fitted).forEach((s,i)=>parts.push({id:`detail-${i+1}`,name:`Raised detail ${i+1}`,outer:s.outer,holes:s.holes,place:{x:0,y:0,z:p.T},tone:.65}));
+    // touching glyphs fuse into one detail; with No Weld every glyph, dot and counter stays its own piece
+    const details=p.text.noWeld?raisedLetters({contours:fitted,glyphs:fittedGroups},{border:0,noWeld:true}):unionShapes(fitted);
+    details.forEach((s,i)=>parts.push({id:`detail-${i+1}`,name:`Raised detail ${i+1}`,outer:s.outer,holes:s.holes,place:{x:0,y:0,z:p.T},tone:.65}));
   }
   return {parts,stats:[{label:"Body",value:`${W} × ${H} mm`},{label:"Ring hole",value:`${p.ring.diameter} mm`},{label:"Ring wall",value:`${p.ring.wall} mm`}],assembly:["Cut internal holes before the outer contour. Engrave or score before releasing the part.",...(p.style==="layered"?["Use the scored guides to glue the raised details onto the body. Small letter counters are separate parts."]:[]),"Sand edges, finish the wood, then thread a split ring through the hole. Test a sample with your actual material and hardware."]};
 }

@@ -1,3 +1,4 @@
+import { markLetters, raisedLetters } from "../textOps";
 import { MATERIALS } from "@/lib/hinge/defaults";
 import { makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { bboxOf, circle, pointInContour, rect, roundedRect, stadium } from "../geom";
@@ -7,7 +8,7 @@ import { motif, motifSize } from "../motifs";
 import { motifRef } from "../motifRef";
 import { orient, shapeOutline } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
-import { textBlock, weld } from "../weld";
+import { textBlock } from "../weld";
 import type { KeyrackParams } from "./params";
 
 export interface KeyrackInfo {
@@ -62,26 +63,31 @@ export function buildKeyrack(p: KeyrackParams, ctx: BuildContext): KeyrackOutput
   const m2 = material2(p.mat.mat2);
 
   // Text and motif, centred as a group.
-  const t = textBlock(ctx, p.text.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, missing, style: { ...p.textStyle, ...p.textForm } });
+  const t = textBlock(ctx, p.text.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, missing, noWeld: p.text.noWeld, style: { ...p.textStyle, ...p.textForm } });
   const mr = motifRef(p.motif.kind, p.motif.art, ctx, missing);
   if (t.loading || mr.loading) loading = true;
   let content: Contour[] = [...t.contours];
+  // each glyph's outlines (a motif is one glyph), moved with the content, for No Weld
+  let glyphs: Contour[][] = t.glyphs?.length ? [...t.glyphs] : t.contours.length ? [t.contours] : [];
+  const addMotif = (m: Contour[]) => { content.push(...m); glyphs.push(m); };
   if (mr.ref) {
     const id = mr.ref, sz = p.motif.size;
     const s = motifSize(id, sz), g = p.motif.gap, w = t.width, h = t.height;
     const has = t.contours.length > 0;
     switch (has ? p.motif.side : "above") {
-      case "left": content.push(...motif(id, sz, -w / 2 - g - s.w / 2, 0)); break;
-      case "right": content.push(...motif(id, sz, w / 2 + g + s.w / 2, 0)); break;
-      case "both": content.push(...motif(id, sz, -w / 2 - g - s.w / 2, 0), ...motif(id, sz, w / 2 + g + s.w / 2, 0, true)); break;
-      case "above": content.push(...motif(id, sz, 0, has ? -h / 2 - g - s.h / 2 : 0)); break;
+      case "left": addMotif(motif(id, sz, -w / 2 - g - s.w / 2, 0)); break;
+      case "right": addMotif(motif(id, sz, w / 2 + g + s.w / 2, 0)); break;
+      case "both": addMotif(motif(id, sz, -w / 2 - g - s.w / 2, 0)); addMotif(motif(id, sz, w / 2 + g + s.w / 2, 0, true)); break;
+      case "above": addMotif(motif(id, sz, 0, has ? -h / 2 - g - s.h / 2 : 0)); break;
     }
   }
   let contentW = 0;
   if (content.length) {
     const cb = bboxOf(content);
     contentW = cb.x1 - cb.x0;
-    content = move(content, W / 2 - (cb.x0 + cb.x1) / 2, (H * p.text.y) / 100 - (cb.y0 + cb.y1) / 2);
+    const dx = W / 2 - (cb.x0 + cb.x1) / 2, dy = (H * p.text.y) / 100 - (cb.y0 + cb.y1) / 2;
+    content = move(content, dx, dy);
+    glyphs = glyphs.map((g) => move(g, dx, dy));
   }
 
   // Hooks.
@@ -147,10 +153,10 @@ export function buildKeyrack(p: KeyrackParams, ctx: BuildContext): KeyrackOutput
 
   const engrave: Contour[] = [];
   const score: Contour[] = [];
-  if (content.length) {
-    const u = shapeContours(unionShapes(content));
-    if (p.text.mark === "engrave") engrave.push(...u);
-    if (p.text.mark === "score") score.push(...u.map(closed));
+  if (content.length && (p.text.mark === "engrave" || p.text.mark === "score")) {
+    const m = markLetters({ contours: content, glyphs }, p.text.mark, p.text.noWeld);
+    engrave.push(...(m.engrave ?? []));
+    score.push(...(m.score ?? []));
   }
   if (labels.length) {
     const u = shapeContours(unionShapes(labels));
@@ -162,11 +168,10 @@ export function buildKeyrack(p: KeyrackParams, ctx: BuildContext): KeyrackOutput
   parts.unshift({ id: "board", name: "Board", outer: outline, holes, engrave, score, place: { x: 0, y: -H, z: 0, upright: true } });
   let mixed = false;
   if (p.text.mark === "raised" && content.length) {
-    const s = weld(content, { border: 0.8, minHole: 2 });
-    if (s) {
-      parts.splice(1, 0, { id: "letters", name: "Raised letters", outer: s.outer, holes: s.holes, material: "second", color: m2.color, t: p.mat.T2, place: { x: 0, y: -H, z: T, upright: true } });
-      mixed = true;
-    }
+    // one welded piece, or with No Weld every glyph and dot as its own piece
+    const pieces = raisedLetters({ contours: content, glyphs }, { border: 0.8, minHole: 2, noWeld: p.text.noWeld });
+    pieces.forEach((s, k) => parts.splice(1 + k, 0, { id: pieces.length > 1 ? `letters-${k + 1}` : "letters", name: pieces.length > 1 ? `Raised letters, piece ${k + 1}` : "Raised letters", outer: s.outer, holes: s.holes, material: "second", color: m2.color, t: p.mat.T2, place: { x: 0, y: -H, z: T, upright: true } }));
+    mixed = pieces.length > 0;
   }
 
   const spacing = xs.length > 1 ? xs[1] - xs[0] : 0;

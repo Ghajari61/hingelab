@@ -1,3 +1,4 @@
+import { cleanMark } from "../textOps";
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
@@ -76,6 +77,8 @@ export interface QrParams extends GenBase {
     size: number;
     /** Plain text, or the text knocked out of an engraved bar. */
     style: LabelStyle;
+    /** A plain label on an engraved plate: engraved (filled) or scored (outlines). */
+    mark: "engrave" | "score";
   };
   logo: {
     kind: LogoKind;
@@ -110,11 +113,14 @@ export const QR_DEFAULTS: QrParams = {
   code: { ecc: "M", style: "square", size: 50, quiet: 4, dot: 85, invert: false },
   output: { kind: "engrave", bridge: 20 },
   plate: { shape: "rect", padding: 5, corner: 4, frame: false, frameWidth: 1.2, frameStyle: "line" },
-  label: { text: "", position: "below", fontId: "fredoka", size: 6, style: "plain" },
+  label: { text: "", position: "below", fontId: "fredoka", size: 6, style: "plain", mark: "engrave" },
   logo: { kind: "none", size: 20, text: "HL" },
   keyring: { kind: "none", diameter: 5 },
 };
 
 export function mergeQr(raw: unknown): QrParams {
-  return mergeInto(clone(QR_DEFAULTS), raw);
+  const p = mergeInto(clone(QR_DEFAULTS), raw);
+  // saves from before scoring keep their engraved label
+  p.label.mark = cleanMark(p.label.mark, ["engrave", "score"] as const, "engrave");
+  return p;
 }
