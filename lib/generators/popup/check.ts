@@ -2,6 +2,7 @@ import type {Issue} from '@/lib/issues';
 import type {GenOutput} from '../types';
 import {buildPopup,ringPlan,setsHeights,tiltDepth} from './build';
 import {bridgeStrain} from './engineering';
+import {spiralRimMin} from './spiralSupports';
 import type {PopupParams} from './params';
 /** The opening cut through the centre disc (lamp socket, tealight or sleeve), as the build makes it. */
 const centreOpening=(p:PopupParams)=>p.mode==='sleeve'?p.extras.sleeveDiameter:p.extras.socket!=='none'?(p.extras.socket==='E14'?28:p.extras.socket==='E27'?40:p.extras.socketDiameter):p.extras.tealight?p.extras.tealightDiameter:0;
@@ -26,6 +27,8 @@ function geometryFix(p:PopupParams,error:string):{label:string;apply:(q:PopupPar
   }};
  }
  // two ribs first (more room for each joint), then wider rings and a wider centre disc
+ // a spiral's rim tabs: the narrowest rim that holds them on this outline
+ if(/Outer rim is too narrow/.test(error))return {label:'Widen the outer rim',apply:q=>{let radius=0;try{radius=ringPlan(q).radius;}catch{radius=Math.min(q.outline.width,q.outline.height)/2;}return {...q,rings:{...q.rings,rim:Math.ceil(spiralRimMin(q,radius)*2)/2}};}};
  if(/No safe ring-to-rib joint layout/.test(error))return {label:p.support.ribs>2?'Use two ribs and wider rings':'Widen the rings',apply:q=>{
   let r:PopupParams={...q,support:{...q.support,ribs:2}};
   for(let k=0;k<12&&buildPopup(r,{}).error;k++)r={...r,rings:{...r.rings,by:'width',width:Math.max(r.rings.width+2,Math.ceil(3*r.T)),rim:Math.max(r.rings.rim,8),center:Math.max(r.rings.center,30)+(k>5?4:0)},

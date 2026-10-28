@@ -521,7 +521,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       const options: Opt[] = c.options.map((o) => ({
         v: o.v, text: o.text, title: o.title,
         icon: <ArtIcon paths={def.art?.(c.key, o.v) ?? []} />,
-        onClick: () => (c.apply ? replace(c.apply(params, o.v), true) : setField(c.key, o.v, true)),
+        onClick: () => { if (!c.apply) return setField(c.key, o.v, true); const next = c.apply(params, o.v); replace(next, true); const note = c.note?.(params, next); if (note) toastMsg(note); },
       }));
       groups.push({
         label: c.label, name: c.label, art: `gen-${def.id}`, pics: `gen-${def.id}-${c.key}`, value: String(getPath(params, c.key)), options, cols: options.length === 3 || options.length >= 5 ? 3 : 2,
@@ -576,7 +576,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
             {def.id === 'popup' && <PopupTools params={params as unknown as PopupParams} onApply={p => replace(p as unknown as P, true)} />}
           <GeneratorDock
               simple def={def} params={params} defaults={defaults} out={out} units={units} layerKeys={layerKeys} onSet={setField}
-              onApply={(next) => replace(next, true)} onMaterial={(mid, info) => replace(genWithMaterial(params, mid, info), true)}
+              onApply={(next, note) => { replace(next, true); if (note) toastMsg(note); }} onMaterial={(mid, info) => replace(genWithMaterial(params, mid, info), true)}
               fonts={{
                 uploads: fontFiles.uploads,
                 onUpload: async (key, file) => { const id = await fontFiles.add(file); if (id) setField(key, id, true); },
@@ -662,7 +662,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
             units={units}
             layerKeys={layerKeys}
             onSet={setField}
-            onApply={(next) => replace(next, true)}
+            onApply={(next, note) => { replace(next, true); if (note) toastMsg(note); }}
             onMaterial={(mid, info) => replace(genWithMaterial(params, mid, info), true)}
             fonts={{
               uploads: fontFiles.uploads,

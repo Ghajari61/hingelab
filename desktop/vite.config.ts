@@ -10,7 +10,8 @@ const repo = resolve(__dirname, "..");
  * (Parametric), preset and option pictures. Copied into the app; the rest of public/ (installers,
  * help screenshots, the 50 MB photo-depth model) stays on the website.
  */
-const PUBLIC_DIRS = ["fonts", "hb", "manifold", "presets", "rail", "art"];
+// (public/art went with Photo to Product in 1.21.0; listing it broke a clean app build)
+const PUBLIC_DIRS = ["fonts", "hb", "manifold", "presets", "rail"];
 
 const TYPES: Record<string, string> = { ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".ttf": "font/ttf", ".otf": "font/otf", ".woff2": "font/woff2", ".wasm": "application/wasm", ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json" };
 

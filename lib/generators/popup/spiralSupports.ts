@@ -4,6 +4,7 @@ import {bboxOf,circle,rect,transform} from '../geom';
 import type {BuildContext,Contour,GenPart} from '../types';
 import type {PopupParams} from './params';
 import {lighten,nearContours} from './supports';
+import {ACCESSORY_CLEARANCE,type AccessorySolid} from './hardware';
 
 export interface SpiralJoint {
  rib:number;angle:number;u:number;height:number;anchor:'rim'|'centre';slot:Contour;eye:Contour;keyId:string;
@@ -61,7 +62,29 @@ function stepSaddle(surface:RadialSurface,T:number,lo:number,hi:number,angle:num
 
 /** A permanent, glued forming cradle. Only flat centre/rim lands get keyed tabs; no spiral turn
  * is severed or falsely treated as a rigid ring. The base and all mating slots share one schedule. */
-export function spiralSupports(p:PopupParams,blank:GenPart,surface:RadialSurface,radius:number,opening:number,ctx:BuildContext,prefix='') {
+/** The narrowest outer rim that holds a rim tab: the tab and its clearance, the cut gap, the
+ * minimum land each side, and the sagitta of the curved outline across the padded slot's width. */
+export function spiralRimMin(p:PopupParams,radius:number):number {
+ const margin=Math.max(.6,.4*p.T,p.sheet?.minFeature??0),halfPad=(p.T+p.support.fit)/2+margin;
+ return p.rings.gap/2+3*p.T+p.support.fit+2*margin+(radius-Math.sqrt(Math.max(0,radius*radius-halfPad*halfPad)));
+}
+
+/** Whether a box in (radius, height) space comes within the clearance of a fitting. A support sits on
+ * a radial line, so its nearest point to the axis is at radius `u0` across its whole thickness. */
+function hitsFitting(a:AccessorySolid,u0:number,u1:number,z0:number,z1:number):boolean {
+ const c=ACCESSORY_CLEARANCE;
+ if(a.kind==='cylinder')return u0<a.r+c&&z1>a.z0-c&&z0<a.z1+c;
+ const du=Math.max(0,u0),dz=Math.max(z0-a.zc,0,a.zc-z1);
+ return Math.hypot(du,dz)<a.r+c&&u1>=0;
+}
+/** A fitting's keep-out in a support's own plane (u along the radius, v = -height). */
+function fittingKeepout(a:AccessorySolid):Contour {
+ const c=ACCESSORY_CLEARANCE;
+ if(a.kind==='sphere')return circle(0,-a.zc,a.r+c);
+ return rect(-a.r-c,-(a.z1+c),2*(a.r+c),a.z1-a.z0+2*c);
+}
+
+export function spiralSupports(p:PopupParams,blank:GenPart,surface:RadialSurface,radius:number,opening:number,ctx:BuildContext,prefix='',fittings:AccessorySolid[]=[]) {
  const {T}=p,fit=p.support.fit,n=p.spiral.count,foot=p.spiral.clearance;
  if(!Number.isInteger(n)||n<3||n>4)throw Error('Use 3 or 4 spiral support ribs.');
  if(!Number.isFinite(foot)||foot<2*T||foot>150)throw Error(`Spiral base clearance must be at least ${(2*T).toFixed(1)} mm (twice the stock thickness), and at most 150 mm.`);
@@ -71,8 +94,10 @@ export function spiralSupports(p:PopupParams,blank:GenPart,surface:RadialSurface
  if(hi-lo<tab+2*margin)throw Error('The spiral support is too short. Enlarge the outline or reduce the centre opening.');
  const wood=[blank.outer,...blank.holes];
  const baseOuter=circle(0,0,radius),baseHoles:Contour[]=opening?[circle(0,0,opening/2)]:[];
- const rimLo=end+p.rings.gap/2+tab/2+fit/2+margin,rimHi=hi-tab/2-fit/2;
- if(rimLo>rimHi)throw Error(`Outer rim is too narrow for ${T} mm stock. Increase it to at least ${(tab+fit+2*margin+p.rings.gap/2+T*T/(8*radius)).toFixed(1)} mm.`);
+ // the padded rim slot's outer corners, half its width off the radius, stay inside the outline
+ const halfPad=(T+fit)/2+margin;
+ const rimLo=end+p.rings.gap/2+tab/2+fit/2+margin,rimHi=Math.sqrt(Math.max(0,radius*radius-halfPad*halfPad))-tab/2-fit/2-margin;
+ if(rimLo>rimHi)throw Error(`Outer rim is too narrow for ${T} mm stock. Increase it to at least ${(Math.ceil(spiralRimMin(p,radius)*10)/10).toFixed(1)} mm.`);
  let chosen:{joints:SpiralJoint[];angles:number[]}|undefined;
  for(let turn=0;turn<360/n;turn+=5){
   const angles=Array.from({length:n},(_,i)=>turn+i*360/n),joints:SpiralJoint[]=[];
@@ -90,6 +115,8 @@ export function spiralSupports(p:PopupParams,blank:GenPart,surface:RadialSurface
      if(area(differenceShapes([padded],[blank.outer]))>.001||area(intersectShapes([padded],nearContours(blank.holes,padded)))>.001)continue;
      if(slot.some(([x,y])=>Math.abs(radialHeight(surface,Math.hypot(x,y))-h)>.001))continue;
      if(joints.some(j=>area(intersectShapes([padded],[j.slot]))>.001))continue;
+     // the tab, its key and the key's way in stay clear of the fittings round the centre
+     if(fittings.some(a=>hitsFitting(a,u-tab/2-fit/2-margin,u+tab/2+fit/2+margin,h-.3,h+4*T+fit)))continue;
      // Keep the entire sideways key-insertion sweep on a flat land, clear of accessory tabs.
      const sweep=transform(rect(u-T-margin,-5*T-fit-margin,2*T+2*margin,8*T+fit+2*margin),{rot:angle});
      const sweepMin=u-T-margin,sweepMax=Math.hypot(u+T+margin,5*T+fit+margin);
@@ -132,13 +159,19 @@ export function spiralSupports(p:PopupParams,blank:GenPart,surface:RadialSurface
    const slot=transform(rect(u-(tab+fit)/2,-(T+fit)/2,tab+fit,T+fit),{rot:angle});
    const padded=transform(rect(u-(tab+fit)/2-margin,-(T+fit)/2-margin,tab+fit+2*margin,T+fit+2*margin),{rot:angle});
    if(area(differenceShapes([padded],[baseOuter,...baseHoles]))>.001)throw Error('Base mortises need more surrounding material. Enlarge the outline or reduce the centre opening.');
+   const clash=fittings.find(a=>hitsFitting(a,u-tab/2,u+tab/2,-foot-T,-foot+.02));
+   if(clash)throw Error(`A spiral support's base joint meets the ${clash.what}. Enlarge the outline or reduce the centre opening.`);
    baseJoints.push({rib:i,u,angle,slot});baseHoles.push(slot);
    tabs.push(rect(u-tab/2,foot-.02,tab,T+.02));
   }
   // A 0.01 mm normal relief absorbs the polygon kernel's 0.001 mm rounding even at steep
   // profile transitions. Locating tabs are added afterwards and keep their exact joint sizes.
   const relieved=contours(offsetShapes(unionShapes([body]),-.01,'miter'));
-  const solids=lighten(differenceShapes(contours(unionShapes([...relieved,...tabs])),eyes),T);
+  // the support is cut back round the fittings (a bulb hanging under the centre, a socket's shade
+  // ring, a tealight, a vase) with a clearance; its joints were chosen clear of them
+  const carved=differenceShapes(contours(unionShapes([...relieved,...tabs])),[...eyes,...fittings.map(fittingKeepout)]);
+  if(fittings.length&&carved.length!==1)throw Error(`A spiral support would be cut in two by the clearance round the ${fittings.map(a=>a.what).join(' and ')}. Enlarge the centre disc or base clearance, or use a smaller fitting.`);
+  const solids=lighten(carved,T);
   if(solids.length!==1)throw Error('A spiral support split at a joint. Increase base clearance or reduce the openings.');
   const solid=solids[0],m=[c,0,-s,s*T/2,s,0,c,-c*T/2,0,-1,0,0];
   parts.push({id:`spiral-rib-${i+1}`,name:`Spiral support ${prefix}R${i+1}`,outer:solid.outer,holes:solid.holes,

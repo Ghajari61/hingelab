@@ -66,7 +66,8 @@ export function GeneratorDock({
   layerKeys: LayerKey[];
   /** Write one setting (dot path); `record` makes it an undo step. */
   onSet: (key: string, value: unknown, record: boolean, mat?: boolean) => void;
-  onApply: (next: P) => void;
+  /** A whole new set of settings; `note` says what changed besides the field picked. */
+  onApply: (next: P, note?: string) => void;
   onMaterial: (id: string, info: MaterialInfo | null) => void;
   onResetSection: (title: string, keys: string[]) => void;
   sheet: SheetProps;
@@ -100,7 +101,7 @@ export function GeneratorDock({
       return <CheckField key={f.key} label={f.label} title={f.help} checked={!!value} def={dflt === undefined ? undefined : !!dflt} onChange={(on) => onSet(f.key, on, true)} extra={lock && <LockToggle {...lock} label={f.label} />} />;
     }
     if (f.kind === "choice") {
-      const pick = (v: string) => (f.apply ? onApply(f.apply(params, v) as P) : onSet(f.key, v, true));
+      const pick = (v: string) => { if (!f.apply) return onSet(f.key, v, true); const next = f.apply(params, v) as P; onApply(next, f.note?.(params, next)); };
       const seg = f.options.length <= 4 && f.options.every((o) => o.text.length <= 16);
       const lock = lockOf(f);
       const home = f.options.find((o) => o.v === dflt);

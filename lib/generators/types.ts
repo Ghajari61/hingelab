@@ -263,6 +263,8 @@ export interface ChoiceSpec<P> extends FieldCommon<P> {
   rail?: boolean;
   /** Picking writes more than the key (for example a movement's sizes). */
   apply?: (p: P, v: string) => P;
+  /** What `apply` changed besides the choice itself, shown to the user (before, after); none when nothing else changed. */
+  note?: (before: P, after: P) => string | undefined;
   /** Randomise design picks one of the (non-Pro) options. */
   shuffle?: true;
 }

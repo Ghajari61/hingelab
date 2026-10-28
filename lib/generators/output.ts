@@ -18,6 +18,7 @@ import { isImageDataURL, xmlCommentText } from "@/lib/security/svg";
 import { repairLayout, type RepairCount } from "@/lib/fab/repair";
 import { bboxOf, pathD, rect } from "./geom";
 import { setPath } from "./path";
+import { batchOffsets, shiftHardware, shiftPart } from "./batch3d";
 import { MAX_BATCH, MAX_BATCH_TEXT, MAX_COPIES, MAX_FEATURE, MAX_KERF, SHEET_EXTRAS, type BuildContext, type Contour, type GenBase, type GenImage, type GenOutput, type GenPart, type GeneratorDef, type JobExtras, type SheetExtras } from "./types";
 
 /** Layer names in the generators' panels and SVG files (keys and colours shared with every product). */
@@ -234,9 +235,12 @@ export function buildBatch<P extends GenBase>(def: GeneratorDef<P>, q: P, ctx: B
   if (bad) return bad;
   const first = outs[0];
   const missing = [...new Set(outs.flatMap((o) => o.missing ?? []))];
+  // each name is a whole assembly of its own: in 3D they stand in a row, each with its fittings
+  const dx = batchOffsets(outs);
   return {
     ...first,
-    parts: outs.flatMap((o, k) => o.parts.map((pt) => ({ ...pt, id: `${pt.id}~n${k + 1}`, name: `${pt.name} (${names[k]})`, place: pt.place }))),
+    parts: outs.flatMap((o, k) => o.parts.map((pt) => ({ ...shiftPart(pt, dx[k]), id: `${pt.id}~n${k + 1}`, name: `${pt.name} (${names[k]})` }))),
+    ...(outs.some((o) => o.hardware?.length) ? { hardware: outs.flatMap((o, k) => shiftHardware(o.hardware ?? [], dx[k])) } : {}),
     stats: [...first.stats, { label: "Batch", value: `${names.length} name${names.length > 1 ? "s" : ""}, one set each` }],
     notice: outs.find((o) => o.notice)?.notice,
     missing,
