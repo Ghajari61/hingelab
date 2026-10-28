@@ -1,4 +1,4 @@
-import { circle, rect, regularPolygon, roundedRect } from "../geom";
+import { circle, rect, regularPolygon, roundedRect, stadium } from "../geom";
 import { MOTIF_OPTIONS, isMotifKind } from "../motifs";
 import { motifArtFields, motifFonts } from "../motifArt";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
@@ -7,7 +7,7 @@ import { buildBoxes, type BoxesOutput } from "./build";
 import { checkBoxes } from "./check";
 import { fingerPanel } from "./joints";
 import { hasArt } from "./more";
-import { BOXES_DEFAULTS, BOXES_VERSION, DESIGN_NAMES, FIT_NAMES, LID_NAMES, PIERCE_SHAPES, migrateBoxes, mergeBoxes, type BoxesParams, type Design, type JointFit, type LidKind, type PierceShape } from "./params";
+import { BOXES_DEFAULTS, BOXES_VERSION, CARD_CRESTS, CARD_LIPS, CARD_PROFILES, COASTER_DECOS, COASTER_STYLES, DESIGN_NAMES, FIT_NAMES, LID_NAMES, PIERCE_SHAPES, migrateBoxes, mergeBoxes, type BoxesParams, type CardProfile, type CoasterStyle, type Design, type JointFit, type LidKind, type PierceShape } from "./params";
 import { BOXES_PRESETS } from "./presets";
 import { FRET_KINDS, fretSample } from "../fretwork";
 import { PATTERN_HELP, patternOptions, repeatFields } from "../pattern";
@@ -15,14 +15,14 @@ import { PATTERN_HELP, patternOptions, repeatFields } from "../pattern";
 const is = (...d: Design[]) => (p: BoxesParams) => d.includes(p.design);
 /** Designs with an engraved face: a lid, the cabinet top, or the money box's front. */
 const engraved = (p: BoxesParams) =>
-  (p.design === "box" && p.box.lid !== "open") || (p.design === "tray" && p.tray.lid !== "none") || p.design === "drawer" || (p.design === "hex" && p.hex.lid === "liftoff") || p.design === "money" || (p.design === "stack" && p.stack.lid) || p.design === "book";
+  (p.design === "box" && p.box.lid !== "open") || (p.design === "tray" && p.tray.lid !== "none") || p.design === "drawer" || (p.design === "hex" && p.hex.lid === "liftoff") || p.design === "money" || (p.design === "stack" && p.stack.lid) || p.design === "book" || p.design === "card" || (p.design === "coaster" && p.coaster.set);
 /** Names a design switch may replace: the user has not named the piece yet. */
 const BUILT_IN_NAMES = new Set<string>([BOXES_DEFAULTS.name, ...Object.values(DESIGN_NAMES), ...BOXES_PRESETS.map((p) => p.params.name ?? "")]);
 
 const sections: SectionSpec<BoxesParams>[] = [
   {
     id: "design", title: "Design", open: true,
-    help: "What to make: a finger-jointed box, a tray with dividers, a drawer box, a hexagon box, a divider insert, a money box, stacking trays, a book box, a desk sign, a photo frame, a phone stand, a key holder or a bird house.",
+    help: "What to make: a finger-jointed box, a tray with dividers, a drawer box, a hexagon box, a divider insert, a money box, stacking trays, a book box, a desk sign, a photo frame, a phone stand, a key holder, a bird house, a business card holder or a coaster holder.",
     fields: [
       {
         kind: "choice", key: "design", label: "Design", rail: true,
@@ -159,7 +159,7 @@ const sections: SectionSpec<BoxesParams>[] = [
       { kind: "choice", key: "pierce.motif", label: "Motif", show: (p) => p.pierce.pattern === "motif", help: "The shape that repeats: one from the library, a picture of yours (traced into outlines) or your own words.", options: MOTIF_OPTIONS.filter((o) => o.v !== "none") },
       ...motifArtFields<BoxesParams>("pierce.motif", "pierce.art", (p) => p.pierce.pattern === "motif" || p.pierce.pattern === "tile", (p) => p.pierce.pattern === "tile"),
       ...repeatFields<BoxesParams>("pierce", (p) => p.pierce.pattern),
-      { kind: "choice", key: "pierce.on", label: "Put it on", show: (p) => p.pierce.pattern !== "none", help: "The walls (a sign or key board, a frame's front, a stand's sides, the dividers), the lid (a book box's front cover, a bird house's roof, a cabinet's top), both, or only the front.", options: [{ v: "both", text: "Walls and lid" }, { v: "walls", text: "Walls" }, { v: "lid", text: "Lid" }, { v: "front", text: "Front" }, { v: "front-lid", text: "Front and lid" }] },
+      { kind: "choice", key: "pierce.on", label: "Put it on", show: (p) => p.pierce.pattern !== "none", help: "The walls (a sign or key board, a frame's front, a stand's or card holder's sides, a coaster holder's ends or posts, the dividers), the lid (a book box's front cover, a bird house's roof, a cabinet's top, the coasters), both, or only the front.", options: [{ v: "both", text: "Walls and lid" }, { v: "walls", text: "Walls" }, { v: "lid", text: "Lid" }, { v: "front", text: "Front" }, { v: "front-lid", text: "Front and lid" }] },
       { kind: "choice", key: "pierce.shape", label: "Shape", show: (p) => p.pierce.pattern !== "none", help: "Fill the whole face, or only a shape in its middle: a circle, heart, star, hexagon or diamond.", options: (Object.keys(PIERCE_SHAPES) as PierceShape[]).map((v) => ({ v, text: PIERCE_SHAPES[v] })) },
       { kind: "number", key: "pierce.size", label: "Shape size", unit: "%", min: 20, max: 100, step: 1, show: (p) => p.pierce.pattern !== "none" && p.pierce.shape !== "full", help: "The shape's size as a share of the face (inside the joints)." },
       { kind: "choice", key: "pierce.mark", label: "Mark", show: (p) => p.pierce.pattern !== "none", help: "Cut the pattern through, engrave it, or score its outlines. Engraved and scored patterns keep the box closed and strong.", options: [{ v: "cut", text: "Cut out" }, { v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }] },
@@ -238,6 +238,46 @@ const sections: SectionSpec<BoxesParams>[] = [
     ],
   },
   {
+    id: "card", title: "Business card holder", open: true, show: is("card"),
+    help: "A desk holder for business cards: two shaped sides with a front, a floor and a back tabbed through them.",
+    fields: [
+      { kind: "choice", key: "card.profile", label: "Side shape", rail: true, help: "How the sides climb from the low front to the tall back: a straight slant, a soft wave, a full arch, a scoop or a step.", options: (Object.keys(CARD_PROFILES) as (keyof typeof CARD_PROFILES)[]).map((v) => ({ v, text: CARD_PROFILES[v] })) },
+      { kind: "choice", key: "card.lip", label: "Front edge", help: "The top of the front: straight, a thumb notch to pull a card out, a scallop or a wave.", options: (Object.keys(CARD_LIPS) as (keyof typeof CARD_LIPS)[]).map((v) => ({ v, text: CARD_LIPS[v] })) },
+      { kind: "choice", key: "card.crest", label: "Back edge", help: "The top of the back above the sides: flat, an arch, a peak or a wave behind each bay.", options: (Object.keys(CARD_CRESTS) as (keyof typeof CARD_CRESTS)[]).map((v) => ({ v, text: CARD_CRESTS[v] })) },
+      { kind: "number", key: "card.cardW", label: "Card width", unit: "mm", min: 40, max: 160, step: 0.5, help: "Long side of the card: 85 mm (Europe), 88.9 mm (US) or 91 mm (Japan)." },
+      { kind: "number", key: "card.cardH", label: "Card height", unit: "mm", min: 25, max: 120, step: 0.5, help: "Short side of the card: 55 mm (Europe and Japan) or 50.8 mm (US)." },
+      { kind: "toggle", key: "card.portrait", label: "Upright cards", help: "Turn on for cards printed in portrait, which stand on their short side." },
+      { kind: "number", key: "card.bays", label: "Bays", unit: "", min: 1, max: 4, step: 1, int: true, help: "Card stacks side by side, split by dividers: one for each person or each design." },
+      { kind: "toggle", key: "card.tiered", label: "Two rows", help: "Adds a raised second row behind the first, so two stacks show one above the other." },
+      { kind: "number", key: "card.depth", label: "Stack depth", unit: "mm", min: 10, max: 80, step: 1, help: "Room from front to back for the stack; 30 mm holds about 60 cards." },
+      { kind: "number", key: "card.front", label: "Front height", unit: "mm", min: 6, max: 60, step: 0.5, help: "Height of the front above the desk; make it taller for a bigger logo or name." },
+      { kind: "number", key: "card.back", label: "Back height", unit: "mm", min: 15, max: 150, step: 0.5, help: "Height of the back the cards lean on; about three quarters of the card's height." },
+      { kind: "number", key: "card.corner", label: "Corner radius", unit: "mm", min: 0, max: 20, step: 0.5, help: "Rounds the corners of the sides." },
+    ],
+  },
+  {
+    id: "coaster", title: "Coaster holder", open: true, show: is("coaster"),
+    help: "A holder for a stack of round or square coasters, and the coasters themselves if you like.",
+    fields: [
+      { kind: "choice", key: "coaster.style", label: "Holder", rail: true, help: "Caddy: a tabbed tray with tall ends and a carry handle. Posts: a base with upright posts round the stack. Stacked rings: layers glued into a cup with a finger opening.", options: (Object.keys(COASTER_STYLES) as (keyof typeof COASTER_STYLES)[]).map((v) => ({ v, text: COASTER_STYLES[v] })) },
+      { kind: "choice", key: "coaster.shape", label: "Coaster shape", help: "Round or square coasters; the holder follows their shape.", options: [{ v: "round", text: "Round" }, { v: "square", text: "Square" }] },
+      { kind: "number", key: "coaster.size", label: "Coaster size", unit: "mm", min: 40, max: 200, step: 1, help: "Diameter of a round coaster or side of a square one; 90 to 110 mm suits most mugs and glasses." },
+      { kind: "number", key: "coaster.corner", label: "Coaster corners", unit: "mm", min: 0, max: 40, step: 0.5, show: (p) => p.coaster.shape === "square", help: "Rounds the corners of square coasters (and of the holder round them)." },
+      { kind: "number", key: "coaster.count", label: "Coasters", unit: "", min: 1, max: 16, step: 1, int: true, help: "How many coasters the holder takes." },
+      { kind: "toggle", key: "coaster.set", label: "Cut the coasters", help: "Adds the coasters to the cut, from the same material, with the pattern and engraving below." },
+      { kind: "number", key: "coaster.thick", label: "Coaster thickness", unit: "mm", min: 1, max: 15, step: 0.5, show: (p) => !p.coaster.set, help: "Thickness of the coasters you already have (cork, slate or wood)." },
+      { kind: "choice", key: "coaster.deco", label: "Coaster pattern", show: (p) => p.coaster.set, help: "Engraved on every coaster: rings round the edge, a sunburst, or two circles of dots.", options: (Object.keys(COASTER_DECOS) as (keyof typeof COASTER_DECOS)[]).map((v) => ({ v, text: COASTER_DECOS[v] })) },
+      { kind: "number", key: "coaster.posts", label: "Posts", unit: "", min: 2, max: 8, step: 1, int: true, show: (p) => p.coaster.style === "posts", help: "Round holders take three to eight posts; square ones two to four, one on each side (left, right, back, then front)." },
+      { kind: "number", key: "coaster.postWidth", label: "Post width", unit: "mm", min: 10, max: 200, step: 1, show: (p) => p.coaster.style === "posts", help: "Width of each post; on a square holder, widen them into walls." },
+      { kind: "number", key: "coaster.wall", label: "Ring width", unit: "mm", min: 4, max: 30, step: 0.5, show: (p) => p.coaster.style === "layers", help: "Width of the wood round the stack in each ring." },
+      { kind: "toggle", key: "coaster.handle", label: "Carry handle", show: (p) => p.coaster.style === "caddy", help: "Raises the ends with a hand hole to carry the caddy to the table." },
+      { kind: "toggle", key: "coaster.open", label: "Windows", help: "Caddy: a window in each end. Posts: a window in each post. Stacked rings: a gap in the front to slide a coaster out." },
+      { kind: "toggle", key: "coaster.push", label: "Push hole", show: (p) => p.coaster.style !== "caddy", help: "A hole in the base to push the stack up from below." },
+      { kind: "number", key: "coaster.extra", label: "Extra height", unit: "mm", min: 0, max: 60, step: 1, help: "How far the holder reaches above the stack." },
+      { kind: "number", key: "coaster.clearance", label: "Clearance", unit: "mm", min: 0, max: 5, step: 0.1, help: "Room round the coasters, each side, so they drop in easily." },
+    ],
+  },
+  {
     id: "bird", title: "Bird house", open: true, show: is("bird"),
     help: "A finger-jointed nest box with a pitched roof, entrance, vents and drain holes.",
     fields: [
@@ -273,6 +313,23 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
     if (v === "none") return [{ d: fitArt([rect(0, 0, 40, 40)], 38).join(" "), fill: true }];
     return [{ d: fitArt([rect(0, 0, 40, 40), ...fretSample(v as (typeof FRET_KINDS)[number])], 38).join(" "), fill: true }];
   }
+  if (key === "card.profile") {
+    const ease: Record<CardProfile, (t: number) => number> = {
+      slant: (t) => t, wave: (t) => (1 - Math.cos(Math.PI * t)) / 2, arch: (t) => Math.sin((Math.PI * t) / 2),
+      scoop: (t) => 1 - Math.cos((Math.PI * t) / 2), step: (t) => (t < 0.4 ? 0 : t > 0.6 ? 1 : (t - 0.4) / 0.2),
+    };
+    const f = ease[v as CardProfile] ?? ease.slant;
+    const top = Array.from({ length: 25 }, (_, i) => [48 - 2 * i, 40 - (12 + 24 * f(1 - i / 24))] as [number, number]);
+    return [{ d: fitArt([[[0, 40], [48, 40], ...top]], 38).join(" "), fill: true }];
+  }
+  if (key === "coaster.style") {
+    switch (v as CoasterStyle) {
+      case "caddy": return [{ d: fitArt([[[0, 40], [0, 4], [12, 0], [36, 0], [48, 4], [48, 40]], stadium(14, 7, 34, 7, 5), rect(6, 18, 36, 20)], 38).join(" "), fill: true }];
+      case "posts": return [{ d: fitArt([rect(0, 34, 48, 6), rect(4, 8, 7, 26), rect(37, 8, 7, 26), rect(20, 4, 8, 30), rect(12, 22, 24, 3), rect(12, 27, 24, 3)], 38).join(" "), fill: true }];
+      case "layers": return [{ d: fitArt([circle(24, 24, 22), circle(24, 24, 15), rect(18, 30, 12, 20)], 38).join(" "), fill: true }];
+    }
+    return [];
+  }
   if (key !== "design") return [];
   const E = { mate: true, ends: true };
   switch (v as Design) {
@@ -304,6 +361,10 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
       return [{ d: fitArt([[[0, 14], [18, 0], [36, 14], [36, 44], [0, 44]], circle(18, 24, 5)], 38).join(" "), fill: true }];
     case "book":
       return [{ d: fitArt([roundedRect(0, 0, 40, 48, 2), rect(8, 14, 24, 14), rect(0, 0, 5, 48)], 38).join(" "), fill: true }];
+    case "card":
+      return [{ d: fitArt([[[0, 40], [48, 40], [48, 8], [40, 6], [30, 10], [18, 22], [8, 26], [0, 26]], rect(14, 12, 26, 4)], 38).join(" "), fill: true }];
+    case "coaster":
+      return [{ d: fitArt([circle(24, 24, 22), circle(24, 24, 18), circle(24, 24, 12), circle(24, 24, 9)], 38).join(" "), fill: true }];
   }
   return [];
 }
@@ -324,6 +385,8 @@ function size(p: BoxesParams): string {
     case "money": return `${o(p.money.width)} × ${o(p.money.depth)} × ${o(p.money.height)} mm`;
     case "stack": return `${Math.round(p.stack.trays)} trays, ${o(p.stack.width)} × ${o(p.stack.depth)} mm`;
     case "book": return `${p.book.width} × ${p.book.height} × ${p.book.thickness} mm`;
+    case "card": return `${Math.round(p.card.bays)} × ${p.card.cardW} × ${p.card.cardH} mm cards${p.card.tiered ? ", two rows" : ""}`;
+    case "coaster": return `${Math.round(p.coaster.count)} × ${p.coaster.size} mm ${p.coaster.shape} coasters`;
   }
 }
 
@@ -343,6 +406,8 @@ function fileTail(p: BoxesParams): string {
     case "money": return `${o(p.money.width)}x${o(p.money.depth)}x${o(p.money.height)}mm`;
     case "stack": return `${Math.round(p.stack.trays)}-trays`;
     case "book": return `${Math.round(p.book.width)}x${Math.round(p.book.height)}x${Math.round(p.book.thickness)}mm`;
+    case "card": return `${Math.round(p.card.bays)}-bay`;
+    case "coaster": return `${Math.round(p.coaster.count)}x${Math.round(p.coaster.size)}mm-${p.coaster.shape}`;
   }
 }
 
@@ -362,13 +427,15 @@ export const BOXES: GeneratorDef<BoxesParams> = {
   check: (p, out) => checkBoxes(p, out as BoxesOutput),
   fonts: (p) => [...(p.pierce.pattern === "motif" ? motifFonts(p.pierce.motif, p.pierce.art) : []), ...boxFonts(p)],
   art,
+  // A rail picture of a card or coaster option shows that design.
+  railPreview: (key, p) => (key.startsWith("card.") ? { ...p, design: "card" } : key.startsWith("coaster.") ? { ...p, design: "coaster" } : p),
   batch: (p) => (p.design === "sign" ? "sign.text" : p.design === "keys" ? "keys.text" : engraved(p) ? "engrave.text" : null),
   fileName: (p) => namedFile(p.design === "bird" ? "birdhouse" : p.design, p.name, fileTail(p)),
   summary: (p) => `${DESIGN_NAMES[p.design]}, ${size(p)}`,
   help: {
     intro: [
       "One library includes wooden gift and product packaging, sliding sleeves, mailers, jewellery and tea boxes, drawer boxes and inserts. All designs share the same editable dimensions, joints, materials, engraving and 3D preview.",
-      "Boxes & Packaging makes classic laser-cut pieces that slot together: finger-jointed boxes with a closed, open, lift-off, sliding, pin-hinged or inset lid, trays with half-lap dividers (with a lid they make tea and card boxes), drawer boxes with up to four drawers, hexagon boxes, divider inserts for boxes you already have, money boxes, stacking trays, book boxes with a living-hinge spine, desk signs, three-layer photo frames, phone and tablet stands, key holders and bird houses.",
+      "Boxes & Packaging makes classic laser-cut pieces that slot together: finger-jointed boxes with a closed, open, lift-off, sliding, pin-hinged or inset lid, trays with half-lap dividers (with a lid they make tea and card boxes), drawer boxes with up to four drawers, hexagon boxes, divider inserts for boxes you already have, money boxes, stacking trays, book boxes with a living-hinge spine, desk signs, three-layer photo frames, phone and tablet stands, key holders, bird houses, business card holders (slant, wave, arch, scoop or stepped sides, one to four bays, one or two rows) and holders for round or square coasters (a caddy with a handle, a base with posts, or stacked rings), with the coasters themselves.",
       "Boxes can use tab-and-slot joints instead of fingers on the bottom and top, and lids can carry engraved text, a motif and a border.",
       "A cut-out pattern (lattice, floral rosettes, Moroccan quatrefoils, honeycomb, circles, stars or woven leaves) can go through the walls and the lid; the lid's text then sits in a framed label in the middle of it.",
       "Finger joints are worked out per edge: each edge gets an odd number of equal fingers, and every finger belongs to exactly one panel, so the panels always mate. Enter inside sizes for things you have measured, or outside sizes to fit a space.",
@@ -381,7 +448,7 @@ export const BOXES: GeneratorDef<BoxesParams> = {
       "Dry-fit everything before gluing, and glue with a thin bead; squeeze-out is hard to clean between fingers.",
       "Open the 3D view to check how the parts go together before cutting.",
     ],
-    keywords: ["packaging", "gift box", "product box", "branding", "plywood", "box", "finger joint", "tab and slot", "sliding lid", "hinged lid", "drawer", "hexagon box", "insert", "money box", "piggy bank", "pencil box", "tea box", "wine box", "stacking trays", "book box", "pierced", "fretwork", "lattice", "floral", "tray", "organiser", "divider", "sign", "photo frame", "phone stand", "key holder", "bird house", "boxes.py"],
+    keywords: ["packaging", "gift box", "product box", "branding", "plywood", "box", "finger joint", "tab and slot", "sliding lid", "hinged lid", "drawer", "hexagon box", "insert", "money box", "piggy bank", "pencil box", "tea box", "wine box", "stacking trays", "book box", "pierced", "fretwork", "lattice", "floral", "tray", "organiser", "divider", "sign", "photo frame", "phone stand", "key holder", "bird house", "business card holder", "card holder", "coaster", "coaster holder", "boxes.py"],
   },
 };
 

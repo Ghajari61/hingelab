@@ -1803,3 +1803,17 @@ The owner asked for text operations everywhere: Engrave, Score and raised (separ
 - **Tests.** `textOperationsAll.test.ts` covers shared geometry, each integration, SVG/Lay Flat parity of cut regions plus equality of the score layer, 3D lines, one material per sheet, and migration. `textOperationsPresets.test.ts` runs every preset of the eight generators with the operations on.
 - **Not covered.** Boxes (has Engrave/Score, no No Weld), Shadow Box words, Key Rack hook labels, part identifiers, Letters, Hinge Box and Parametric.
 
+## D223. Card and coaster holders on a tabbed frame
+
+- **Construction.** The card holder and the coaster caddy use the phone stand's joint: members run between two side profiles and pass a tab at each end through a slot in each side. The sides can then take any profile (slant, wave, arch, scoop, step), and no finger pattern has to agree along a sloping edge. Card dividers stand on the floor with tabs through it.
+- **Coaster posts** are tabbed into slots turned round the base. They are placed with a matrix whose thickness runs toward the stack, so the placement turns without mirroring. Stacked rings are plain glued layers.
+- **Shared engraving.** Both designs reuse the lid engraving (`lidArt`, `engraveOn`, `markLid`, now exported from `more.ts`): on the card holder's front, and on every coaster. The cut-out pattern reuses the generic panel table: card sides and front; coaster ends and posts, with the coasters standing in for the lid.
+- **Rail pictures.** Only the new pictures (`gen-boxes-card.profile-*`, `gen-boxes-coaster.style-*`, `gen-boxes-design-card`/`-coaster`) were added from `scripts/build-rail-art.mjs`. A full regeneration also rewrites unrelated groups, so it was left for its own change.
+- **Tests.** New tests cover the following, for every option combination exercised and for every preset:
+  - The tabs fill the slots of the sides and floor.
+  - The posts fill the base's turned slots.
+  - No two parts share material, coasters included.
+  - The coasters sit inside the holder.
+  - The options change the cut.
+  - The front and coaster engraving works, and the engraving-too-wide check has a fix.
+

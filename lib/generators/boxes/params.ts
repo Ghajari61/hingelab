@@ -7,7 +7,7 @@ import { mergeInto } from "../util";
 import { FRET_NAMES, type FretKind } from "../fretwork";
 import type { Contour } from "../types";
 
-export type Design = "box" | "tray" | "drawer" | "hex" | "insert" | "money" | "stack" | "book" | "sign" | "frame" | "stand" | "keys" | "bird";
+export type Design = "box" | "tray" | "drawer" | "hex" | "insert" | "money" | "stack" | "book" | "sign" | "frame" | "stand" | "keys" | "bird" | "card" | "coaster";
 export type LidKind = "closed" | "open" | "liftoff" | "sliding" | "pin" | "inset";
 /** Lids a tray can take (a tray with a lid is a tea, card or jewellery box). */
 export type TrayLid = "none" | "liftoff" | "sliding" | "pin" | "inset";
@@ -25,7 +25,22 @@ import { PIERCE_SHAPES, cleanRepeat, type PierceMark, type PierceShape } from ".
 export const DESIGN_NAMES: Record<Design, string> = {
   box: "Box", tray: "Tray", drawer: "Drawer box", hex: "Hexagon box", insert: "Divider insert", money: "Money box", stack: "Stacking trays", book: "Book box",
   sign: "Desk sign", frame: "Photo frame", stand: "Phone stand", keys: "Key holder", bird: "Bird house",
+  card: "Business card holder", coaster: "Coaster holder",
 };
+
+/** The side profile of a card holder, front to back. */
+export type CardProfile = "slant" | "wave" | "arch" | "scoop" | "step";
+export const CARD_PROFILES: Record<CardProfile, string> = { slant: "Slant", wave: "Wave", arch: "Arch", scoop: "Scoop", step: "Step" };
+/** The top edge of the card holder's front. */
+export type CardLip = "straight" | "notch" | "scallop" | "wave";
+export const CARD_LIPS: Record<CardLip, string> = { straight: "Straight", notch: "Thumb notch", scallop: "Scallop", wave: "Wave" };
+/** The top edge of the card holder's back, above the sides. */
+export type CardCrest = "flat" | "arch" | "peak" | "wave";
+export const CARD_CRESTS: Record<CardCrest, string> = { flat: "Flat", arch: "Arch", peak: "Peak", wave: "Wave" };
+export type CoasterStyle = "caddy" | "posts" | "layers";
+export const COASTER_STYLES: Record<CoasterStyle, string> = { caddy: "Caddy", posts: "Posts", layers: "Stacked rings" };
+export type CoasterDeco = "none" | "rings" | "sunburst" | "dots";
+export const COASTER_DECOS: Record<CoasterDeco, string> = { none: "None", rings: "Rings", sunburst: "Sunburst", dots: "Dots" };
 
 export const LID_NAMES: Record<LidKind, string> = {
   closed: "Closed", open: "Open", liftoff: "Lift-off", sliding: "Sliding", pin: "Pin hinge", inset: "Inset with knob",
@@ -57,6 +72,20 @@ export interface BoxesParams extends GenBase {
   stand: { width: number; angle: number; slot: number; lip: number; height: number };
   keys: { width: number; height: number; corner: number; hooks: number; reach: number; text: string; fontId: string; size: number };
   bird: { width: number; depth: number; height: number; pitch: number; hole: number; perch: boolean; overhang: number };
+  /**
+   * A desk holder for business cards: two side profiles with a front, a floor and a back (and a
+   * second, raised row when tiered) tabbed through them. Card sizes are the card's own.
+   */
+  card: {
+    cardW: number; cardH: number; portrait: boolean; bays: number; tiered: boolean;
+    depth: number; front: number; back: number; profile: CardProfile; lip: CardLip; crest: CardCrest; corner: number;
+  };
+  /** A holder for a stack of square or round coasters, optionally with the coasters themselves. */
+  coaster: {
+    shape: "round" | "square"; size: number; corner: number; count: number; style: CoasterStyle;
+    posts: number; postWidth: number; open: boolean; handle: boolean; push: boolean; wall: number;
+    extra: number; clearance: number; set: boolean; thick: number; deco: CoasterDeco;
+  };
   /** A box shaped like a book: one cover piece bends round a living-hinge spine. Sizes are outside. */
   book: { width: number; height: number; thickness: number; over: number };
   /** A decorative pattern cut through the walls and lid (or the book's cover). */
@@ -101,6 +130,8 @@ export const BOXES_DEFAULTS: BoxesParams = {
   keys: { width: 220, height: 90, corner: 10, hooks: 4, reach: 35, text: "KEYS", fontId: "fredoka", size: 18 },
   bird: { width: 120, depth: 120, height: 150, pitch: 40, hole: 32, perch: false, overhang: 20 },
   book: { width: 120, height: 160, thickness: 50, over: 3 },
+  card: { cardW: 85, cardH: 55, portrait: false, bays: 1, tiered: false, depth: 30, front: 18, back: 40, profile: "wave", lip: "notch", crest: "flat", corner: 4 },
+  coaster: { shape: "round", size: 100, corner: 12, count: 6, style: "posts", posts: 4, postWidth: 24, open: true, handle: true, push: true, wall: 8, extra: 8, clearance: 1.5, set: true, thick: 4, deco: "rings" },
   pierce: { pattern: "none", on: "both", cell: 16, bar: 3, shape: "full", size: 70, mark: "cut", motif: "heart", art: { ...MOTIF_ART }, grid: "auto", turn: 0 },
 };
 
@@ -121,6 +152,12 @@ export function mergeBoxes(raw: unknown): BoxesParams {
   Object.assign(p.pierce, cleanRepeat(p.pierce));
   if (p.pierce.mark !== "engrave" && p.pierce.mark !== "score") p.pierce.mark = "cut";
   if (!(p.joint.fit in FIT_MM)) p.joint.fit = "standard";
+  if (!(p.card.profile in CARD_PROFILES)) p.card.profile = "wave";
+  if (!(p.card.lip in CARD_LIPS)) p.card.lip = "notch";
+  if (!(p.card.crest in CARD_CRESTS)) p.card.crest = "flat";
+  if (p.coaster.shape !== "square") p.coaster.shape = "round";
+  if (!(p.coaster.style in COASTER_STYLES)) p.coaster.style = "posts";
+  if (!(p.coaster.deco in COASTER_DECOS)) p.coaster.deco = "none";
   return p;
 }
 

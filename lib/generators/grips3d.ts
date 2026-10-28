@@ -27,6 +27,8 @@ const SPECS: Record<string, (p: GenBase & Record<string, unknown>) => GripSpec[]
       case "frame": return [{ kind: "size", axis: "x", key: "frame.photoW" }, { kind: "size", axis: "y", key: "frame.photoH" }];
       case "stand": return [...dims("stand", false), { kind: "turn", axis: "x", key: "stand.angle" }];
       case "keys": return [...dims("keys", false), { kind: "size", axis: "z", key: "keys.reach" }];
+      case "card": return [{ kind: "size", axis: "z", key: "card.depth" }, { kind: "size", axis: "y", key: "card.back" }];
+      case "coaster": return [{ kind: "size", axis: "x", key: "coaster.size" }, { kind: "size", axis: "z", key: "coaster.size" }, { kind: "size", axis: "y", key: "coaster.extra" }];
       default: return dims(p.design as string);
     }
   },
