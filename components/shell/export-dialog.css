@@ -13,5 +13,5 @@
 .modal.settings .set-h { margin: 6px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-faint); }
 .modal.settings .set-h:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
 .modal.settings .rename-row { justify-content: space-between; }
-.modal.settings .rename-row .btn-ghost-sm { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding-inline: 10px; border-radius: 8px; font-size: 12.5px; background: none; border: 1px solid var(--line); color: var(--fg-dim); cursor: pointer; }
+.modal.settings .rename-row .btn-ghost-sm { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding-inline: 10px; border-radius: 8px; font-size: 13px; background: none; border: 1px solid var(--line); color: var(--fg-dim); cursor: pointer; }
 .modal.settings .rename-row .btn-ghost-sm:hover { color: var(--fg); background: var(--surface-hover); }

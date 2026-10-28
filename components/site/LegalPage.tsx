@@ -6,7 +6,7 @@ import { SiteHeader } from "./SiteHeader";
 export function LegalPage({ title, updated, children }: { title: string; updated: string; children: ReactNode }) {
   return (
     <div className="page landing">
-      <SiteHeader sections={false} />
+      <SiteHeader />
       <main className="legal">
         <h1>{title}</h1>
         <p className="legal-date">Last updated {updated}</p>
