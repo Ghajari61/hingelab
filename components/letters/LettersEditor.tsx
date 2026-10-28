@@ -1,5 +1,7 @@
 "use client";
 
+import { Dices } from "lucide-react";
+
 import { platform } from "@hingelab/platform";
 import { useShortcutKey } from "@/components/shell/useShortcutKey";
 import { keepSetup } from "@/lib/prefs/editor";
@@ -547,6 +549,11 @@ export default function LettersEditor({ onProduct, onHome, start, cloud = null }
           })}
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
           inert={shared.viewing}
+          lead={(
+            <button type="button" className="btn-auto gen-shuffle" onClick={randomStyle} title="A new random letter style. Your text, size and material stay. Ctrl+Z undoes it.">
+              <Dices size={15} aria-hidden /> Randomise style
+            </button>
+          )}
         >
           <PresetLibrary product="letters" presets={LETTER_PRESETS} getCategory={pr => ({ box: "Letter boxes", solid: "Solid lettering", stencil: "Stencils" })[mergeParams(pr.params).mode]} onApply={(pr, keep) => { const next = mergeParams(pr.params); replace(keep ? keepSetup(params, next) : next, true); toastMsg(`Opened “${pr.name}”. Ctrl+Z undoes it.`); }} />
         </GalleryRail>

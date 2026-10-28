@@ -1,3 +1,7 @@
+## Unreleased — Left panel order
+
+- The left panel of every editor (all generators, Hinge Box, Letters and Parametric, on the website and in the Windows app) is now in the same order: Randomise first, then the picture-card settings, then the presets. Before, the presets came first and Randomise sat below them.
+
 ## 1.27.0 — Text operations in more generators
 
 Shared Engrave, Score and raised-letter operations with No Weld (`lib/generators/textOps.ts`, built on the existing weld and score geometry) now cover eight more generators. Sign, Cake Topper, Name Charms and Family Names already had them and are unchanged.

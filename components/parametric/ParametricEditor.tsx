@@ -672,7 +672,6 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
           history={{ canUndo, canRedo, undo: doUndo, redo: doRedo }}
           inert={shared.viewing}
         >
-          <PresetLibrary product="parametric" presets={PARAMETRIC_PRESETS} onApply={(pr, keep) => { const next = mergeParametricParams(pr.params); replace(keep ? keepSetup(params, next) : next, true); setSelected([]); if (pr.finish) setFinish(pr.finish); toastMsg(`Opened “${pr.name}”. Ctrl+Z undoes it.`); }} />
           <section className="gallery-group" aria-label="Designs">
             <h3>Designs</h3>
             <div className="ds-entry">
@@ -680,6 +679,7 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
               <button type="button" data-open="generate" title="Make a new design from a recipe and a seed" onClick={() => setDesigns("generate")}><Sparkles size={20} aria-hidden />Generate<small>New from a recipe</small></button>
             </div>
           </section>
+          <PresetLibrary product="parametric" presets={PARAMETRIC_PRESETS} onApply={(pr, keep) => { const next = mergeParametricParams(pr.params); replace(keep ? keepSetup(params, next) : next, true); setSelected([]); if (pr.finish) setFinish(pr.finish); toastMsg(`Opened “${pr.name}”. Ctrl+Z undoes it.`); }} />
         </GalleryRail>
         <div className={`stage pe-center${tab === "3d" ? " no-rulers" : ""}`}>
           <ViewToggle value={tab} onChange={setTab} sheetsLabel={`Sheets${result ? ` (${result.sheets.length})` : ""}`} tools={(
