@@ -6,6 +6,7 @@ import { checkClock } from "../clock/check";
 import { MOVEMENTS, mergeClock, type ClockParams } from "../clock/params";
 import { bboxOf, pointInContour } from "../geom";
 import { arrangeGenerator, cutPart, genSVG, sheetIssues } from "../output";
+import { itemOf } from "../items";
 import { CTX } from "./ctx";
 
 const build = (p: ClockParams) => CLOCK.build(p, CTX);
@@ -138,11 +139,33 @@ describe("clock checks and fixes", () => {
     expect(res.remaining.map((i) => i.code)).not.toContain("DIAL_TOO_THICK");
   });
 
-  it("markers straddling the ring are fixed by widening the ring", () => {
+  it("markers that would sit under the ring are moved inside its opening; widening the ring puts them on it", () => {
     const p = mergeClock({ markers: { inset: 30 } });
-    expect(codes(p)).toContain("MARKERS_STRADDLE_RING");
-    const res = autoFixAll(p, issues);
-    expect(res.remaining.map((i) => i.code)).not.toContain("MARKERS_STRADDLE_RING");
+    const i = issues(p).find((x) => x.code === "MARKERS_STRADDLE_RING")!;
+    expect(i.level).toBe("info");
+    const wider = i.fixes.find((f) => f.id === "wider-ring")!.apply(p);
+    expect(codes(wider)).not.toContain("MARKERS_STRADDLE_RING");
+    const g = clockGeometry(wider, CTX); if ("error" in g) throw new Error(g.error);
+    expect(g.markersOn).toBe("ring");
+  });
+
+  it("on a layered face nothing on the back plate is hidden under the ring", () => {
+    // the reported case: a cloud face, ring on back, numerals 12/3/6/9 at 30 mm with a 10 mm edge gap
+    for (const raw of [
+      { face: { shape: "cloud", size: 360, layers: "ring", ring: 40 }, markers: { style: "numerals", numerals: "arabic", quarters: true, size: 30, inset: 10, minutes: false } },
+      { face: { shape: "circle", layers: "ring", ring: 40 }, markers: { inset: 30 } },
+      { face: { shape: "sunburst", layers: "stack", ring: 30 }, markers: { style: "mixed", inset: 5 }, inscription: { text: "Since 2026" } },
+      { face: { shape: "square", layers: "ring", ring: 35 }, markers: { style: "dots", inset: 30, cut: true } },
+    ]) {
+      const g = clockGeometry(mergeClock(raw), CTX); if ("error" in g) throw new Error(g.error);
+      expect(g.markersOn, JSON.stringify(raw)).toBe("back");
+      const back = g.parts.find((q) => q.id === "back")!;
+      const marks = [...(back.engrave ?? []), ...(back.score ?? []), ...back.holes.filter((h) => ["Ticks", "Dots"].includes(itemOf(h) ?? ""))];
+      expect(marks.length).toBeGreaterThan(0);
+      for (const c of marks) for (const q of c) {
+        expect(pointInContour(q, g.ringInner!), `${JSON.stringify(raw)}: a mark under the ring at ${q}`).toBe(true);
+      }
+    }
   });
 
   it("a minute hand over the ring, a long hour hand and thin hands are fixed", () => {

@@ -118,7 +118,20 @@ const rot = (c: Contour, a: number) => transform(c, { rot: a });
 
 interface Markers { engrave: Contour[]; score: Contour[]; holes: Contour[]; missing: string[]; loading: boolean }
 
-function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext): Markers {
+/** How far inside the ring's inner edge markers on the back plate stay, mm (so the ring never covers them). */
+export const RING_CLEAR = 3;
+
+/**
+ * Where the outer end of the markers sits along angle `a`: the edge gap in from the face's edge, but
+ * on a layered face with the markers on the back plate never further out than RING_CLEAR inside the
+ * ring's opening, so the ring cannot hide them.
+ */
+function markerAnchor(p: ClockParams, outline: Contour, clear: Contour | null, a: number): number {
+  const r = markerEdge(p, outline, a) - p.markers.inset;
+  return clear ? Math.min(r, edgeDistance(clear, a) - RING_CLEAR) : r;
+}
+
+function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext, clear: Contour | null = null): Markers {
   const m = p.markers, res: Markers = { engrave: [], score: [], holes: [], missing: [], loading: false };
   if (m.style === "none" && !m.minutes) return res;
   let item = "Ticks";
@@ -128,8 +141,22 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext): Mark
     if (scoring) res.score.push(...tagItem(markLetters({ contours: cs, glyphs }, "score", true).score ?? [], what));
     else res.engrave.push(...tagItem(cs, what));
   };
-  const put = (c: Contour) => (m.cut ? res.holes.push(tagItem([c], item)[0]) : mark([c], item));
-  const anchor = (a: number) => markerEdge(p, outline, a) - m.inset;
+  // On the back plate of a layered face every marker stays wholly inside the ring's opening (less
+  // RING_CLEAR): a wide numeral or a tick next to a curve of the opening is drawn in along its angle
+  // until it fits, so the ring never covers any part of it.
+  const opening = clear ? offsetShapes([makeShape(clear, [])], -RING_CLEAR).reduce<Contour | null>((b, s) => (!b || Math.abs(signedArea(s.outer)) > Math.abs(signedArea(b)) ? s.outer : b), null) : null;
+  const inside = (cs: Contour[]) => !opening || cs.every((c) => c.every((q) => pointInContour(q, opening)));
+  const pull = (cs: Contour[], a: number): Contour[] => {
+    if (inside(cs)) return cs;
+    const [dx, dy] = dirOf(a);
+    for (let k = 1; k <= 400; k++) {
+      const moved = cs.map((c) => c.map(([x, y]) => [x - dx * k * 0.5, y - dy * k * 0.5] as Pt));
+      if (inside(moved)) return moved;
+    }
+    return cs;
+  };
+  const put = (c: Contour, a: number) => { const [q] = pull([c], a); if (m.cut) res.holes.push(tagItem([q], item)[0]); else mark([q], item); };
+  const anchor = (a: number) => markerAnchor(p, outline, clear, a);
   const numeralHours = m.style === "numerals" ? (m.quarters ? [0, 3, 6, 9] : [...Array(12).keys()]) : m.style === "mixed" ? [0, 3, 6, 9] : [];
   const tickHours = m.style === "ticks" ? [...Array(12).keys()] : m.style === "mixed" ? [1, 2, 4, 5, 7, 8, 10, 11] : m.style === "numerals" && m.quarters ? [1, 2, 4, 5, 7, 8, 10, 11] : [];
   const dotHours = m.style === "dots" ? [...Array(12).keys()] : [];
@@ -137,12 +164,12 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext): Mark
   for (const h of tickHours) {
     const a = h * 30, r = anchor(a), q = h % 3 === 0 && m.style === "ticks";
     const w = m.tickWidth * (q ? 1.6 : 1), l = m.tickLength * (q ? 1.25 : 1);
-    put(rot(rect(-w / 2, -r, w, l), a));
+    put(rot(rect(-w / 2, -r, w, l), a), a);
   }
   for (const h of dotHours) {
     item = "Dots";
     const a = h * 30, d = m.dot * (h % 3 === 0 ? 1.4 : 1), r = anchor(a) - d / 2, [dx, dy] = dirOf(a);
-    put(circle(dx * r, dy * r, d / 2, 0.02));
+    put(circle(dx * r, dy * r, d / 2, 0.02), a);
   }
   if (m.minutes) {
     item = "Ticks";
@@ -150,7 +177,7 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext): Mark
     for (let i = 0; i < 60; i++) {
       if (i % 5 === 0) continue;
       const a = i * 6;
-      put(rot(rect(-w / 2, -anchor(a), w, l), a));
+      put(rot(rect(-w / 2, -anchor(a), w, l), a), a);
     }
   }
   if (numeralHours.length) {
@@ -164,7 +191,8 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext): Mark
       const r = anchor(a) - extent / 2;
       const at = (c: Contour) => (m.follow ? rot(c, a) : c).map(([x, y]) => [x + dx * r, y + dy * r] as Pt);
       // a numeral is scored as one shape (its glyphs welded), engraved as before
-      mark(shape.contours.map(at), "Numerals", [shape.contours.map(at)]);
+      const placed = pull(shape.contours.map(at), a);
+      mark(placed, "Numerals", [placed]);
     }
   }
   return res;
@@ -174,12 +202,13 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext): Mark
 export interface Inscription { engrave: Contour[]; score: Contour[]; R: number; size: number; span: number; missing: string[]; loading: boolean }
 
 /** The inscription bent along the dial inside the markers (and inside the ring on a layered face, where it shows). */
-export function buildInscription(p: ClockParams, outline: Contour, ringInner: Contour | null, ctx: BuildContext): Inscription | null {
+export function buildInscription(p: ClockParams, outline: Contour, ringInner: Contour | null, ctx: BuildContext, clear: Contour | null = null): Inscription | null {
   const ins = p.inscription;
   if (!ins.text.trim()) return null;
   const a = ins.at === "top" ? 0 : 180;
-  const band = p.markers.style === "none" && !p.markers.minutes ? 0 : p.markers.inset + markerDepth(p);
-  let R = markerEdge(p, outline, a) - band - ins.gap - ins.size * 0.6;
+  const marked = !(p.markers.style === "none" && !p.markers.minutes);
+  // inside the markers (wherever they sit), or inside the face's edge when there are none
+  let R = (marked ? markerAnchor(p, outline, clear, a) - markerDepth(p) : markerEdge(p, outline, a)) - ins.gap - ins.size * 0.6;
   if (ringInner) R = Math.min(R, edgeDistance(ringInner, a) - 2 - ins.size * 0.6);
   if (!ctx.text) return { engrave: [], score: [], R, size: ins.size, span: 0, missing: [], loading: true };
   const shape = ctx.text(ins.text.replace(/\s+/g, " ").trim(), ins.fontId, ins.size);
@@ -278,7 +307,6 @@ export function clockGeometry(p: ClockParams, ctx: BuildContext = {}): (ClockGeo
   const shaft = circle(0, 0, mv.shaft / 2, 0.01);
   const hanger = hangerOf(p, outline);
   const keyholeFits = !hanger || (hanger.every((q) => pointInContour(q, outline)) && Math.min(...hanger.map((q) => distToContour(q, outline))) >= 5);
-  const markers = buildMarkers(p, outline, ctx);
   const depth = markerDepth(p);
   const layered = f.layers !== "single";
 
@@ -289,9 +317,13 @@ export function clockGeometry(p: ClockParams, ctx: BuildContext = {}): (ClockGeo
     ringInner = inner.reduce((a, b) => (b.area > a.area ? b : a)).outer;
   }
   const onRing = layered && p.markers.inset + depth <= f.ring - 1.5;
-  const straddle = layered && !onRing && p.markers.inset < f.ring + 1.5;
   const markersOn: ClockGeometry["markersOn"] = !layered ? "face" : onRing ? "ring" : "back";
-  const inscription = buildInscription(p, outline, ringInner, ctx);
+  // Markers on the back plate are kept inside the ring's opening, where they show: an edge gap that
+  // would put them under the ring moves them in (`straddle` reports that it did).
+  const clear = markersOn === "back" ? ringInner : null;
+  const straddle = layered && !onRing && p.markers.inset < f.ring + RING_CLEAR;
+  const markers = buildMarkers(p, outline, ctx, clear);
+  const inscription = buildInscription(p, outline, ringInner, ctx, clear);
   const insEngrave = inscription?.engrave ?? [];
   const insScore = inscription?.score ?? [];
   const withScore = (cs: Contour[]) => (cs.length ? { score: cs } : {});
