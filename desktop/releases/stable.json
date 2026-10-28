@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.27.2",
-    "pub_date": "2026-10-28T21:34:02.111Z",
-    "notes": "Keeps markers and numerals fully inside the opening on layered clock faces. Also includes the consistent left panel order across all editors.",
+    "version": "1.27.3",
+    "pub_date": "2026-10-28T22:27:06.976Z",
+    "notes": "Adds business card and coaster holders to Boxes & Packaging, with multiple shape, bay, divider and engraving options.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.2_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnFqTDdnM3M2S2tlYUN3YVcyY3hQK3lqcGNtQk1Oa3pQZXRobkJmWGhueUdqSzdDTmJXTHdyck1ldnZqL2p2UEo1d3lBRVNzWk16ZDd2Q2J5Z3lvSFF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjIzMjM1CWZpbGU6SGluZ2VMYWJfMS4yNy4yX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI3LjIKV2UvYTJ0YlppZjZvWDh6Um1yOWJTQ2dQbzY2UGNqckovU0F6RktyQjFiMHlaSGxndFlHZFRIVUZCT0EzS0ZRSWVudGZyak9JU0tYSnI4bUFRMXFZQ2c9PQo=",
-        "size": 11753245,
-        "sha256": "3c023259cbc91ef26ac9e0093ec6ce6e993dbf57290ffac4eb5fcecfa11ce09e"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.3_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm1IQ1FMZGNib2JNdkU5bDJmdVV6TU55NlhpTGhpTlhTSVhLSGYrV2R6WmRKaW1ERFBaOTQ0NFlURElzVG1WeTl4cTQwL3hVK2ZrSVpJM1BTQzZQeWdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjI2NDE5CWZpbGU6SGluZ2VMYWJfMS4yNy4zX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI3LjMKaXdOem41ckdQMVRudEkvVlFseUFPVnFtR29VZ3BiNWwyNXBOR1hIUlY5QjdaQUN5ak9Va1ZTeGs2V3I3OFZHVHlNRnJqWUlJWitMd051TjdCMlhrRFE9PQo=",
+        "size": 11849578,
+        "sha256": "5dcaba322cfe5d2a276c3ff8269daa27b8230b61dbae13f003de195affa624cc"
       }
     }
   }
