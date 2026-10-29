@@ -154,7 +154,7 @@ describe("clock checks and fixes", () => {
     for (const raw of [
       { face: { shape: "cloud", size: 360, layers: "ring", ring: 40 }, markers: { style: "numerals", numerals: "arabic", quarters: true, size: 30, inset: 10, minutes: false } },
       { face: { shape: "circle", layers: "ring", ring: 40 }, markers: { inset: 30 } },
-      { face: { shape: "sunburst", layers: "stack", ring: 30 }, markers: { style: "mixed", inset: 5 }, inscription: { text: "Since 2026" } },
+      { face: { shape: "sunburst", layers: "stack", ring: 30 }, markers: { style: "mixed", inset: 5, size: 20 }, inscription: { text: "Since 2026" } },
       { face: { shape: "square", layers: "ring", ring: 35 }, markers: { style: "dots", inset: 30, cut: true } },
     ]) {
       const g = clockGeometry(mergeClock(raw), CTX); if ("error" in g) throw new Error(g.error);
