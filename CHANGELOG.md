@@ -1,3 +1,7 @@
+## 1.27.10 — iPad Safari touch gestures
+
+- Pinch zoom and pan now work through iPad Safari's native gesture events; touch slider sizing also applies on hover-less screens.
+
 ## 1.27.9 — Puzzle 3D and touch controls
 
 - Puzzle pieces now read clearly in the assembled 3D view, with visible piece seams and cut lines.

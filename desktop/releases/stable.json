@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.27.9",
-    "pub_date": "2026-10-29T04:10:24.544Z",
-    "notes": "Puzzle pieces now show their cut seams in 3D. Touch controls add pinch zoom and pan, larger sliders, and reliable idle turn.",
+    "version": "1.27.10",
+    "pub_date": "2026-10-29T04:29:48.642Z",
+    "notes": "iPad Safari pinch and pan now use native gesture events; touch sliders use a larger, easier target across hover-less displays.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.9_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm5wK0d4elQwSTlwOVlOc2Z1aHc5a1ZXOEZCY1RrL3RJYzd6b2JMNkZUMUd0VTdqK3RuY2JiaHRIUjF3UTBWUEN6RHI2QVJyVFg0MjBzQitXazhJQlFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjQ3MDE4CWZpbGU6SGluZ2VMYWJfMS4yNy45X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI3LjkKNy92MFFUakZlRTJhWWRDMGxVZW4yOGM2R2xyNTgvU3Z3Zk1LYXc4ckJ0NjlFN3gzZGxJendrZ282WmNFaWYzS0ZEeWtWcytFVXpDYzVibmxKMUNzQmc9PQo=",
-        "size": 11886680,
-        "sha256": "764af93a8afca8cf809bcb5eb93d90bcbde6d88a826ca64f37479daf018739a3"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.10_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmk5cDJvSzBoMTl2ay96MEcrZU5UK2Y3cGdnLzhCY0tqdHpjOW9ZM055RmJqejRjaGQ1a1JqaTJxRHJZYjlvOGNHNzNkMmxlZkVMUGVYNno0em96UWdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjQ4MTgzCWZpbGU6SGluZ2VMYWJfMS4yNy4xMF94NjQtc2V0dXAuZXhlCXZlcnNpb246MS4yNy4xMApxR21lUW8xWTZ0blo1alVhVHhLbi9VaVRESDdycmpiVDBuWERJWjlacncyOXo0ckpxMDdJYXZRekNSOGxidCtUbUoreXI0Wk1tQTdSMmRNSzNiYWlCdz09Cg==",
+        "size": 11885869,
+        "sha256": "6862ab9594ba3b5d75a53b8b016b3dadd4ecb1cf7db0520fee374380fe5ea043"
       }
     }
   }
