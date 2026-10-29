@@ -1,8 +1,7 @@
 ## Unreleased — Lines between names
 
 - **Family Names, name tree:** a new **Lines between names** option puts a bar between each row of names, as wide as the shorter row, so the rows sit on shelves instead of touching. The bar thickness can be set (default 1.6 mm); the tree stays one welded piece.
-
-## Unreleased — Leather Studio
+## 1.30.0 — Leather Studio and Assembly Booklet
 
 - **Leather Studio**, a new generator for parametric leather patterns, with 41 products in six constructions:
   - **Bags from faces and a gusset:** structured handbag with a zipped top panel, open tote, executive briefcase with a divider wall, messenger, multi-gusset satchel, camera bag with slotted rails and removable dividers, convertible crossbody backpack, crossbody and phone bags, clutch, saddle bag, doctor bag with frame channels, wood-and-leather bag with plywood ends, roll-top backpack, waist bag and laptop messenger.
@@ -16,8 +15,6 @@
 - 17 decorative styles, all HingeLab's own procedural patterns, perforated, engraved or scored and kept clear of the stitching.
 - **Laser safety:** no laser file until the material is confirmed. PVC, vinyl and unknown leatherette are never laser cut; chrome-tanned, PU and unknown leathers are not approved by default. The hand-cutting template is always available, and no laser settings are given.
 - 42 templates, three of them cut-ready on the xTool P3 bed. The 3D view is a simplified preview, not a simulation.
-
-## Unreleased — Assembly booklet
 
 - A new **Assembly PDF** export format for every generator: a printable step-by-step booklet.
 - The booklet contains:

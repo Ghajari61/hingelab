@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.29.0",
-    "pub_date": "2026-10-29T17:42:54.842Z",
-    "notes": "Miniature Studio adds GLB and parts-list exports, a joint-fit test, xTool P3 profile, AI design support, architecture sources, and a studio guide.",
+    "version": "1.30.0",
+    "pub_date": "2026-10-29T21:05:13.519Z",
+    "notes": "Leather Studio adds 41 parametric leather products with matched seams and material safety gating. Assembly PDF provides illustrated step-by-step instructions for every generator.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.29.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnVvYWV6anJNeldCOVQ1R1pweW5qVm80eHJoeTR4MGxyV3BGU0c5U1F4aHdMMDlobU9nZE45eHd0R0o2UW92aXg4eVVralp2elpZQ3o2V25QclJzQlEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjk1NzY4CWZpbGU6SGluZ2VMYWJfMS4yOS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI5LjAKdHQ1WWM0THMyUHA3b0p4MGJvRGZMZmdyNzRKMnhWMTJ6eFFMR2tJQ1B6d25JbHVxdGFxWm41OFpmaFJXK3JVeDJ1MWs1MGVsZWVibzhwQVBuNUZWRFE9PQo=",
-        "size": 12434873,
-        "sha256": "e708822e42ccc3b2ec494d265c450a80d93d398f96a8cdf710c85921941ec89c"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.30.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmk5QjN3anhabG1jU0tiVFAzR2s5T1NjYmJmNTZmVXVnek9NMHdaQnk1Q05xUkRsUklwcHptVGZJcEZoRVB6cE1kdm1xMWJ3QS9OWmxxWEJ2bVhxOGdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzA3OTA1CWZpbGU6SGluZ2VMYWJfMS4zMC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMwLjAKVWpMWWgzMGxuZm9Mdi9yUUp4UU1DdmhPOUc3M2YxREFwYWFDU2ljRHdQcVBrMXZQNTBJVG9acmVha3pUODlZV0JCYlZ6T1NnWUtQYUgvcU9tamYwQnc9PQo=",
+        "size": 12748230,
+        "sha256": "57edaa22babe9014eaec53d2a6f8da8714d638bd3fa77ed7bdd17c985805fc14"
       }
     }
   }
