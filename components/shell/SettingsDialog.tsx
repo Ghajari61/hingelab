@@ -35,6 +35,9 @@ const Check = ({ checked, onChange, children }: { checked: boolean; onChange: (v
  * Edit › Settings… (Ctrl+,): preferences of this browser for every classic editor. They apply at
  * once and are not part of any design.
  */
+/** The system asks for reduced motion (the idle turn's default follows it). */
+const systemReduced = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 export default function SettingsDialog({ onClose, toast }: { onClose: () => void; toast?: (msg: string) => void }) {
   const p = useEditorPrefs();
   const [units, setUnitsState] = useState<Units>(() => readUnits());
@@ -88,6 +91,7 @@ export default function SettingsDialog({ onClose, toast }: { onClose: () => void
           <Seg label="Shading" value={p.shade} onChange={(shade) => set({ shade })} options={[{ value: "shaded", label: "Shaded" }, { value: "edges", label: "Shaded with edges" }]} />
           <div className="exp-opts">
             <Check checked={p.dims3d} onChange={(dims3d) => set({ dims3d })}>Show overall dimensions</Check>
+            <Check checked={p.idleTurn === "on" || (p.idleTurn === "auto" && !p.reduceMotion && !systemReduced())} onChange={(on) => set({ idleTurn: on ? "on" : "off" })}>Turn the 3D view slowly after 5 seconds untouched</Check>
           </div>
 
           <h3 className="set-h">Editing</h3>

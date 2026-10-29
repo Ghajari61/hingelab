@@ -29,13 +29,18 @@ export interface EditorPrefs {
   dockW: number;
   /** The settings panel is folded to a strip. */
   dockCollapsed: boolean;
+  /**
+   * The 3D view turns slowly round the design after 5 s untouched: always, never, or (auto) unless
+   * reduced motion is asked for here or by the system.
+   */
+  idleTurn: "auto" | "on" | "off";
 }
 
 /** Narrowest and widest settings panel a drag may give, px. */
 export const DOCK_W: [number, number] = [280, 560];
 
 export const DEFAULT_EDITOR_PREFS: EditorPrefs = {
-  decimals: 1, dims3d: true, quad: true, shade: "shaded", autosave: true, confirmReset: true, keepSetup: false, uiSize: "normal", reduceMotion: false, detail: "advanced", dockW: 0, dockCollapsed: false,
+  decimals: 1, dims3d: true, quad: true, shade: "shaded", autosave: true, confirmReset: true, keepSetup: false, uiSize: "normal", reduceMotion: false, detail: "advanced", dockW: 0, dockCollapsed: false, idleTurn: "auto",
 };
 
 /** The 3D toolbar's own keys from before these preferences, read once when there are none yet. */
@@ -68,6 +73,7 @@ export function normalizeEditorPrefs(raw: unknown): EditorPrefs {
     detail: r.detail === "simple" ? "simple" : "advanced",
     dockW: typeof r.dockW === "number" && Number.isFinite(r.dockW) && r.dockW > 0 ? Math.round(Math.min(DOCK_W[1], Math.max(DOCK_W[0], r.dockW))) : 0,
     dockCollapsed: bool("dockCollapsed"),
+    idleTurn: r.idleTurn === "on" || r.idleTurn === "off" ? r.idleTurn : "auto",
   };
 }
 
