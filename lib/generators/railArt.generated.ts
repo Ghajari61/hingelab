@@ -14,7 +14,7 @@ export const GEN_RAIL_GROUPS: Record<string, string> = {
   "gen-keyrack-hooks.profile": "ball round square",
   "gen-keyrack-motif.kind": "anchor balloon balloons bell butterfly cake cap cloud compass crown cup cupcake dreamcatcher feet flame fleur flower gem gift girih heart hearts house infinity key lantern laurel leaf lotus mandala moon moonstar mosque mountains none note olive paisley paw picture rings snowflake sparkle star stars stroller sun text tree treeoflife triquetra",
   "gen-keyrack-pattern.pattern": "circles floral honeycomb lattice leaves motif none quatrefoil stars tile",
-  "gen-miniature-accessory.kind": "bush column fence lamp pine planter tree",
+  "gen-miniature-accessory.kind": "bush column fence fittest lamp pine planter tree",
   "gen-miniature-design": "accessory furniture house nook",
   "gen-miniature-furniture.kind": "armchair bed bench bookshelf cabinet chair counter desk dresser fireplace nightstand sofa table wardrobe",
   "gen-miniature-house.roof": "flat gable gambrel hip mansard shed",

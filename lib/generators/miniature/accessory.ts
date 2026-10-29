@@ -7,9 +7,9 @@
 import { boxPanels } from "../boxes/joints";
 import { circle, rect } from "../geom";
 import type { Contour, GenPart } from "../types";
-import { clamp, clipScore, crossPair, crossProfile, r1, screenPanel, tabSpans, wallFinish, type CrossKind } from "./kit";
+import { clamp, clipScore, crossPair, crossProfile, outerOf, r1, screenPanel, tabSpans, wallFinish, yUp, type CrossKind } from "./kit";
 import { NOT_A_HOUSE, type MiniOutput } from "./house";
-import { ACCESSORY_NAMES, FENCE_STYLES, type MiniatureParams } from "./params";
+import { ACCESSORY_NAMES, FENCE_STYLES, FIT_MM, FIT_NAMES, type JointFit, type MiniatureParams } from "./params";
 
 export function buildAccessory(p: MiniatureParams): MiniOutput {
   const T = p.T, a = p.accessory, name = ACCESSORY_NAMES[a.kind];
@@ -28,6 +28,32 @@ export function buildAccessory(p: MiniatureParams): MiniOutput {
         assembly.push("Push the fence's tabs into the base strip.");
       }
       size = [L + 4, T + 8, z0 + H];
+      break;
+    }
+    case "fittest": {
+      // One slot for every joint fit, each as that fit would cut it (the slot T minus the fit), and a
+      // key cut from the same sheet: the slot that holds the key firmly by hand is the fit to use.
+      // This part is never refitted (build.ts); the export's kerf applies to it as to everything.
+      const fits = Object.keys(FIT_MM) as JointFit[], sl = 10, pitch = 16, W0 = fits.length * pitch + 8, H0 = 34;
+      const holes: Contour[] = [], score: Contour[] = [];
+      fits.forEach((f, i) => {
+        const cx = 4 + pitch * (i + 0.5), w = T - FIT_MM[f];
+        holes.push(rect(cx - sl / 2, 14 - w / 2, sl, w));
+        // dots: 1 for the loosest to 5 for the tightest, above the slot
+        for (let k = 0; k <= i; k++) { const c = circle(cx - (i * 1.6) / 2 + k * 1.6, 5, 0.55, 0.1); score.push([...c, c[0]]); }
+      });
+      score.push([[4, 24], [W0 - 4, 24]]);
+      parts.push({ id: "fittest", name: "Joint fit test", outer: rect(0, 0, W0, H0), holes, score, place: { x: 0, y: 0, z: 0 } });
+      // the key stands in the Standard slot in the 3D view
+      const si = fits.indexOf("standard"), cxs = 4 + pitch * (si + 0.5), kH = 18;
+      const key = outerOf([rect(0, 0, sl + 8, kH), rect(4.5, -T, sl - 1, T + 0.01)]);
+      parts.push({ id: "fittest-key", name: "Fit test key", outer: yUp(key, kH), holes: [], score: [[[2, kH - 9], [sl + 6, kH - 9]]], place: { x: cxs - sl / 2 + 0.5 - 4.5, y: -(T + kH), z: 14 - T / 2, upright: true } });
+      assembly.push(
+        `Push the key into each slot. The slots run, left to right, ${fits.map((f, i) => `${i + 1} ${i ? "dots" : "dot"} ${FIT_NAMES[f]}`).join(", ")}.`,
+        "Choose the fit whose slot holds the key firmly when pressed in by hand, and set it under Joints in every design cut from this sheet.",
+        "Cut it with the same kerf, material and laser settings as the real job.",
+      );
+      size = [W0, H0, kH];
       break;
     }
     case "planter": {

@@ -25,6 +25,7 @@ export function buildMiniature(p: MiniatureParams, _ctx: BuildContext): MiniOutp
   if (!(p.T > 0)) return { parts: [], stats: [], error: "Set the material thickness." };
   const out = p.design === "nook" ? buildNook(p) : p.design === "furniture" ? buildFurniture(p) : p.design === "accessory" ? buildAccessory(p) : buildHouse(p);
   const d = FIT_MM[p.joint.fit] ?? 0;
-  if (!d || out.error) return out;
+  // the fit test carries every fit in its own slots, so it is never refitted
+  if (!d || out.error || (p.design === "accessory" && p.accessory.kind === "fittest")) return out;
   return { ...out, parts: out.parts.map((pt) => fitPart(pt, d / 2)), stats: [...out.stats, { label: "Fit", value: `${FIT_NAMES[p.joint.fit]} (${d > 0 ? "+" : ""}${d} mm on every joint)` }] };
 }

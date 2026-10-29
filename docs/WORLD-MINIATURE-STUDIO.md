@@ -20,14 +20,20 @@ Milestone 1 of the "World Miniature & Architecture Studio Pro" master prompt. Th
 | 14. Templates | 56 original templates: 28 buildings, 6 nooks, 15 furniture pieces and 7 garden and street pieces. |
 | 18. Quality | Contract tests, plus preset and geometry tests (no warnings, no shared material, slots filled). |
 
+## Milestone 4
+
+- Section 3, library: every real tradition lists fetched sources and is `sourced`, with four corrections. Specialist review is still to do.
+- Section 11, manufacturing: the joint fit test coupon.
+- Section 12, machines: the xTool P3 profile, from xTool's published figures.
+- Section 13, exports:
+  - GLB (validated by reading each file back with three's glTF loader) and a parts list as CSV.
+  - The existing SVG, DXF, PDF, LightBurn and STL.
+- Section 15, UX: the `/miniature-studio` guide with twelve sections. The section's original text was not available, so the layout is an interpretation of its outline.
+- Section 16, AI: the AI designer offers the Miniature Studio. It runs server-side, with no keys in the browser.
+- Section 17, cost: the export dialog's job summary, labelled as estimates.
+
 ## Not yet done
 
-- Sources for each tradition, then a review before any tradition is marked verified.
-- Manufacturing (section 11): calibration coupons, part labels, sheet-by-thickness grouping beyond what the shell does, and an assembly-order diagram.
-- Machine profiles (section 12): an xTool P3 profile waits on verified manufacturer specifications.
-- Exports (section 13): GLB, BOM (CSV) and an assembly PDF, each to be validated with a real generated file before it is listed.
-- Cost estimate (section 17).
-- AI (section 16), to run server-side only.
-- The separate studio UX with twelve sections (section 15). For now the generator's sections are Design, Building, Roof, Windows and doors, Front, porch and balconies, Garden and street, Garden and street piece, Book nook, Furniture and Joints.
-- More nook scenes and building types: towers and temples.
-- Section 19 onward of the prompt, which was not received.
+- A specialist review of the library, before any tradition is marked `reviewed`.
+- An assembly-instructions PDF with step drawings.
+- Section 19 onward of the prompt, which was never received.

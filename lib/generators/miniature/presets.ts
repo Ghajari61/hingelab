@@ -73,6 +73,7 @@ const RAW: { id: string; name: string; note: string; tradition: string; params: 
   { id: "picket-fence-run", name: "Picket fence", note: "A run of picket fence on a base strip", tradition: "victorian", params: acc({ kind: "fence", height: 30, length: 150, fence: "picket", base: true }) },
   { id: "stone-garden-wall", name: "Stone garden wall", note: "A low scored stone wall on a base strip", tradition: "british-tudor", params: acc({ kind: "fence", height: 22, length: 150, fence: "wall", base: true }) },
   { id: "garden-column", name: "Garden column", note: "A classical column of two slotted halves on a square base", tradition: "greek-cycladic", params: acc({ kind: "column", height: 90, width: 20, base: true }) },
+  { id: "fit-test", name: "Joint fit test", note: "Five slots from Looser to Tighter and a key: cut it first and pick the fit that holds", tradition: "modern", params: acc({ kind: "fittest" }) },
   { id: "planter-box", name: "Planter box", note: "An open finger-jointed planter with board lines", tradition: "modern", params: acc({ kind: "planter", height: 25, width: 30, length: 80 }) },
   // ---- studio collection
   { id: "studio-tea-house", name: "Tea house", note: "One shoji-screened room under a low tiled gable", tradition: "japanese-machiya", params: house({ width: 200, depth: 150, floors: 1, floorH: 110, rooms: 1, roof: "gable", pitch: 26, overhang: 16, plinth: 12, opening: "rect", panes: "shoji", wall: "boards", roofFinish: "tiles", sideWindows: 1, backWindows: 2, winW: 36, winH: 48, stairs: false }) },

@@ -74,6 +74,7 @@ describe("miniature geometry", () => {
     ...["gable", "shed", "gambrel", "hip", "mansard"].map((roof) => ({ house: { roof, dormers: 2, chimney: true, stairRail: true } })),
     { design: "accessory", accessory: { kind: "column", height: 80, width: 18, base: true } },
     { design: "accessory", accessory: { kind: "column", height: 80, width: 18, base: false } },
+    { design: "accessory", accessory: { kind: "fittest" } },
   ];
   it.each(CASES.map((c) => [JSON.stringify(c), c]))("%s: builds, no shared material, slots filled", (_l, raw) => {
     const out = build(raw);
@@ -92,12 +93,26 @@ describe("miniature presets", () => {
     expect(warns.map((w) => w.code), id).toEqual([]);
     expect(overlaps(out as MiniOutput, 4, 4), id).toEqual([]);
   }, 60000);
-  it("traditions are marked unverified and carry a kit", () => {
-    for (const t of TRADITIONS) { expect(t.verification).toBe("unverified"); expect(t.kit.roof).toBeTruthy(); }
+  it("every real tradition carries sources and is marked sourced, not reviewed; the fictional one stays unverified", () => {
+    for (const t of TRADITIONS) {
+      expect(t.kit.roof).toBeTruthy();
+      if (t.fictional) { expect(t.verification).toBe("unverified"); expect(t.sources).toEqual([]); continue; }
+      expect(t.verification, t.id).toBe("sourced");
+      expect(t.sources.length, t.id).toBeGreaterThan(0);
+      for (const s of t.sources) expect(s.url, t.id).toMatch(/^https:\/\//);
+    }
   });
 });
 
 describe("miniature details", () => {
+  it("the fit test has a slot for every fit, from looser to tighter, unchanged by the design's fit", () => {
+    for (const fit of ["standard", "tight", "looser"]) {
+      const out = build({ design: "accessory", accessory: { kind: "fittest" }, joint: { fit } });
+      const plate = out.parts.find((p) => p.id === "fittest")!;
+      const widths = plate.holes.map((h) => { const b = bboxOf([h]); return Math.round((b.y1 - b.y0) * 100) / 100; });
+      expect(widths).toEqual([3.1, 3.05, 3, 2.95, 2.9]);
+    }
+  });
   it.each(["gable", "shed", "gambrel", "hip", "mansard"])("%s roof: two dormers, a chimney and a stair railing are built", (roof) => {
     const out = build({ house: { roof, dormers: 2, chimney: true, stairRail: true } });
     expect(out.info!.dormers, roof).toBe(2);

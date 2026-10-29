@@ -1,3 +1,17 @@
+## Unreleased — World Miniature Studio: exports, fit test, xTool P3, AI, library sources, studio guide
+
+- New export formats in the export dialog of every generator:
+  - **3D model (GLB):** the assembled 3D preview as a binary glTF 2.0 file in metres, with part names and colours. Each test file is read back by three.js's glTF loader.
+  - **Parts list (CSV):** each kind of part with its quantity, size, thickness, area, cut length and score length, plus totals.
+- The job summary in the export dialog still gives the cut length, time and material cost, labelled as estimates.
+- **Joint fit test:** a coupon with five slots, one cut as each fit setting would cut it (Looser to Tighter), marked with 1 to 5 dots, and a key. The design's own fit never changes it.
+- **xTool P3 machine profile:** 80 W CO₂, 915 × 458 mm bed, 1200 mm/s, as published by xTool.
+- **AI designer:** can now pick the World Miniature Studio and set its options from a description.
+- **Architecture library:**
+  - Every real tradition now lists sources (Britannica, UNESCO, heritage bodies, museums, universities, Wikipedia), and its description was compared with them. Each is marked "sourced"; none is "reviewed" yet.
+  - Four descriptions were corrected where a source disagreed: Scandinavian roofs, Maya doorways, Pacific doors and the barn period.
+- **World Miniature Studio guide** (`/miniature-studio`): twelve sections covering every template, the library with its sources, joints and the fit test, machines, exports and the AI designer.
+
 ## 1.28.2 — Miniature architectural details
 
 - Dormers: up to four shed dormers standing on the front roof panel of gable, shed, gambrel, hip and mansard roofs. Each has a window in its face, two cheeks, its own roof and a hole into the attic. Each dormer is placed where it fits, and the check says when fewer fit.

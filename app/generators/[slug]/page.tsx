@@ -37,6 +37,7 @@ export default async function GeneratorLanding({ params }: { params: Promise<{ s
           </div>
           <p>{item.plan === "pro" ? "Pro is required to save and export this generator. Free can preview it." : "Free can preview this generator. Saving and exporting still need Pro."}</p>
           {item.presetCount != null && <p>{item.presetCount} built-in presets.</p>}
+          {item.slug === "miniature" && <p><Link href="/miniature-studio">The World Miniature Studio guide</Link>: every template, the architecture library with its sources, the fit test, machines and exports.</p>}
         </div>
         {item.picture && (
           <p className="gen-hero">
