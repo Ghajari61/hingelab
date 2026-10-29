@@ -118,7 +118,7 @@ const sections: SectionSpec<MiniatureParams>[] = [
     id: "front", title: "Front, porch and balconies", open: false, show: is("house"),
     help: "A door leaf in the front door, a step, a shopfront, a porch and balconies; they need the closed facade.",
     fields: [
-      { kind: "choice", key: "house.door", shuffle: true, label: "Front door", show: front, help: "Leave the doorway open, or cut a door leaf to glue or pin in it: plain, panelled, planked or glazed.", options: opts(DOOR_NAMES) },
+      { kind: "choice", key: "house.door", shuffle: true, label: "Front door", help: "Leave the doorway open, or cut a door leaf to glue or pin in it: plain, panelled, planked or glazed. The door and the rest of this section need the closed facade (Front, under Building).", options: opts(DOOR_NAMES) },
       { kind: "toggle", key: "house.step", label: "Front step", show: front, help: "A step in front of the door, glued on the base." },
       { kind: "toggle", key: "house.shopfront", label: "Shopfront", show: front, help: "Two wide display windows either side of the door on the ground floor, with a scored sign band above them." },
       { kind: "choice", key: "house.porch", shuffle: true, label: "Porch", show: front, help: "A canopy over the door on two posts, or a veranda along the whole front with railings between its posts.", options: opts(PORCH_NAMES) },
