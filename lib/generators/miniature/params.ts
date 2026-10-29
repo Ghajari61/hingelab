@@ -24,8 +24,8 @@ export type Grounds = "none" | "garden" | "street";
 export const GROUNDS_NAMES: Record<Grounds, string> = { none: "Just the base", garden: "Garden yard", street: "Street pavement" };
 export type TreeKind = "tree" | "pine" | "bush";
 export const TREE_NAMES: Record<TreeKind, string> = { tree: "Leafy tree", pine: "Pine tree", bush: "Bush" };
-export type AccessoryKind = "tree" | "pine" | "bush" | "lamp" | "column" | "fence" | "planter";
-export const ACCESSORY_NAMES: Record<AccessoryKind, string> = { tree: "Leafy tree", pine: "Pine tree", bush: "Bush", lamp: "Street lamp", column: "Column", fence: "Fence run", planter: "Planter box" };
+export type AccessoryKind = "tree" | "pine" | "bush" | "lamp" | "column" | "fence" | "planter" | "fittest";
+export const ACCESSORY_NAMES: Record<AccessoryKind, string> = { tree: "Leafy tree", pine: "Pine tree", bush: "Bush", lamp: "Street lamp", column: "Column", fence: "Fence run", planter: "Planter box", fittest: "Joint fit test" };
 export { COLUMN_STYLES, FENCE_STYLES, RAIL_STYLES, type ColumnStyle, type FenceStyle, type RailStyle };
 
 export const ROOF_NAMES: Record<RoofKind, string> = { flat: "Flat", gable: "Gable", shed: "Shed", hip: "Hip", mansard: "Mansard", gambrel: "Gambrel" };

@@ -1,0 +1,11 @@
+/* World Miniature Studio hub */
+.mstudio-toc ol { columns: 2; column-gap: 32px; padding-inline-start: 20px; margin: 18px 0 8px; }
+.mstudio-toc li { margin: 4px 0; break-inside: avoid; }
+.mstudio-sec { scroll-margin-top: 80px; margin-top: 36px; }
+.mstudio-scroll { overflow-x: auto; max-width: 100%; }
+.legal .mstudio-table td, .legal .mstudio-table th { text-align: start; white-space: normal; vertical-align: top; font-variant-numeric: normal; }
+.mstudio-table details { margin-top: 4px; font-size: 13px; color: var(--fg-dim); }
+.mstudio-note { font-size: 13px; color: var(--fg-dim); }
+.mstudio-list li { margin: 6px 0; }
+.mstudio-templates { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+@media (max-width: 640px) { .mstudio-toc ol { columns: 1; } }

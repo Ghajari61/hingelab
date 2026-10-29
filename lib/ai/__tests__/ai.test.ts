@@ -56,7 +56,8 @@ describe("AI designer menu", () => {
     for (const p of menu) {
       if (p.id === "art") expect(p.presets).toEqual([]);
       else expect(p.presets.length).toBeGreaterThan(0);
-      for (const f of p.fields) expect(f.key).not.toMatch(/path$/i);
+      // drawn outlines are text fields holding path data (a toggle such as a garden path is fine)
+      for (const f of p.fields) if (f.kind === "text") expect(f.key).not.toMatch(/path$/i);
     }
     const text = productsText(menu);
     expect(text).toContain("## hinge: Hinge Box");
@@ -112,6 +113,20 @@ describe("AI designer", () => {
     expect(d.svg).toMatch(/^<\?xml|^<svg/);
     expect(d.width).toBeGreaterThan(0);
     expect(d.notes.join(" ")).toContain("nope.key");
+  });
+
+  it("builds a miniature house from a description, with the cut file", async () => {
+    const { model } = mock(
+      { product: "miniature", preset: "country-farmhouse", name: "Grandma's farmhouse", match: "close", flat: false, brief: "Two-storey country house with a veranda and a picket fence" },
+      { settings: [{ key: "house.floors", value: "2" }, { key: "house.porch", value: "veranda" }, { key: "house.fence", value: "picket" }, { key: "house.dormers", value: "9" }], notes: [] },
+    );
+    const d = await designWithAI({ prompt: "a country farmhouse dollhouse with a veranda and a picket fence" }, "pro", "user-1", model);
+    expect(d.product).toBe("miniature");
+    const h = d.params.house as Record<string, unknown>;
+    expect(h.porch).toBe("veranda");
+    expect(h.fence).toBe("picket");
+    expect(h.dormers).toBe(4);
+    expect(d.svg).toMatch(/^<\?xml|^<svg/);
   });
 
   it("never picks a Custom shape, whose outline the model cannot draw", async () => {

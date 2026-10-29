@@ -14,6 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     page("/app/editor/local", 0.8),
     page("/generators", 0.9, "weekly"),
     ...CATALOGUE.map((c) => page(`/generators/${c.slug}`, 0.8)),
+    page("/miniature-studio", 0.8, "weekly"),
     page("/tools", 0.8),
     ...TOOLS.map((t) => page(`/tools/${t.id}`, 0.8)),
     page("/collections", 0.7, "weekly"),

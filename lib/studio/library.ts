@@ -100,6 +100,9 @@ export const MACHINE_PROFILES: MachineProfile[] = [
   { id: "co2-100", name: "Generic CO₂ 100 W", laser: "co2", watts: 100, bedW: 900, bedH: 600, maxSpeed: 600, origin: "top-left", exportFormat: "dxf", builtIn: true },
   { id: "k40", name: "K40 (40 W CO₂)", laser: "co2", watts: 40, bedW: 300, bedH: 200, maxSpeed: 300, origin: "top-left", exportFormat: "svg", builtIn: true },
   { id: "glowforge", name: "Glowforge Basic / Plus", laser: "co2", watts: 40, bedW: 495, bedH: 279, maxSpeed: 400, origin: "top-left", exportFormat: "svg", builtIn: true },
+  // xTool P3: 80 W CO₂, 915 × 458 mm working area, 1200 mm/s, as published by xTool
+  // (au.xtool.com/pages/xtool-p3-presale and the xTool P3 spec sheet, checked October 2026).
+  { id: "xtool-p3", name: "xTool P3 (80 W CO₂)", laser: "co2", watts: 80, bedW: 915, bedH: 458, maxSpeed: 1200, origin: "top-left", exportFormat: "svg", builtIn: true },
   { id: "xtool-p2", name: "xTool P2 (55 W CO₂)", laser: "co2", watts: 55, bedW: 600, bedH: 308, maxSpeed: 600, origin: "top-left", exportFormat: "svg", builtIn: true },
   { id: "diode-10", name: "Diode 10 W (xTool D1, Ortur, Sculpfun)", laser: "diode", watts: 10, bedW: 430, bedH: 390, maxSpeed: 400, origin: "top-left", exportFormat: "svg", builtIn: true },
   { id: "diode-20", name: "Diode 20 W", laser: "diode", watts: 20, bedW: 430, bedH: 400, maxSpeed: 400, origin: "top-left", exportFormat: "svg", builtIn: true },

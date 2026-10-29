@@ -50,6 +50,7 @@ import { useArranged } from "./useArranged";
 import { partFrames } from "./highlight";
 import { NestChip, useNestWorker } from "./useNestWorker";
 import { getPath, setPath } from "@/lib/generators/path";
+import { bomCSV, bomRows } from "@/lib/export/bom";
 import { loadGenerator } from "@/lib/generators/registry";
 import { makeTextFn } from "@/lib/generators/text";
 import type { AnyGenerator, BuildContext, ChoiceSpec, FieldSpec, GenBase, GenPreset, ImageSpec } from "@/lib/generators/types";
@@ -222,6 +223,17 @@ function GenEditor({ def, onProduct, onHome, start }: {
   const model = "error" in arranged.result ? null : arranged.result;
   const out = model?.out ?? null;
   const built = arranged.params as P;
+  // The assembled 3D model and the parts list, made only when exported (three.js loads then).
+  const glbFile = useCallback(async () => {
+    if (!out) return null;
+    const [{ generatorScene }, { sceneToGLB }] = await Promise.all([import("@/lib/generators/scene3d"), import("@/lib/export/glb")]);
+    const scene = generatorScene(out, built.T, 0);
+    try {
+      scene.group.name = def.summary(built);
+      return sceneToGLB(scene.group).data;
+    } finally { scene.dispose(); }
+  }, [out, built, def]);
+  const bomFile = useCallback(() => (out ? bomCSV(bomRows(out.parts, built.T), { title: `${built.name} (${def.summary(built)})`, material: built.material, T: built.T }) : null), [out, built, def]);
   const error = fontError ?? ("error" in arranged.result ? arranged.result.error : null);
   const lay = model ? arranged.lay : null;
   const [nominal, setNominal] = useState(false);
@@ -702,7 +714,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       />
       {exporting && (
         <ExportDialog
-          getSVG={exportedSVG} localSVG={localSVG} sheets={arranged.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
+          getSVG={exportedSVG} localSVG={localSVG} getGLB={glbFile} getBOM={bomFile} sheets={arranged.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
           base={def.fileName(built)} units={units} material={params.material} thickness={params.T} onClose={() => setExporting(false)} toast={toastMsg}
         />
       )}
