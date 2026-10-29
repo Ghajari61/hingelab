@@ -6,7 +6,7 @@
   - Dollhouse furniture from 1:6 to 1:48 or a custom scale: chair, table, bed, bookshelf, cabinet, desk, dresser and bench.
 - Openings come in five shapes (square, round arch, pointed arch, horseshoe, round), filled with bars, grids, shoji grids or cut lattice screens. Walls and roofs can carry scored brick, stone, half-timbering, boards, shingles, tiles or seams.
 - 29 architectural traditions from 16 regions set each design's starting roof, openings and finishes. The tradition notes are marked unverified until checked against sources.
-- 32 original templates: 19 buildings, 5 book nooks and 8 furniture pieces.
+- 35 original templates: 20 buildings, 6 book nooks and 9 furniture pieces.
 - Every part slots together with tabs sized from the material, and the joint fit applies to them. Furniture scales the piece but never the sheet, tabs, fit or kerf.
 
 ## 1.27.12 — Family Names score overlaps

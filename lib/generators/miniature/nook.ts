@@ -18,9 +18,8 @@
  * electrical parts are the builder's (see the assembly notes).
  */
 import { rect, circle } from "../geom";
-import { clipLines } from "../textOps";
 import type { Contour, GenPart, Pt } from "../types";
-import { clamp, openingHoles, openingShape, r1, tabbedFrame, wallFinish, type Divider, type FlatMember, type UprightMember } from "./kit";
+import { clamp, clipScore, openingHoles, openingShape, r1, tabbedFrame, wallFinish, type Divider, type FlatMember, type UprightMember } from "./kit";
 import type { MiniOutput } from "./house";
 import { NOOK_SCENES, type MiniatureParams } from "./params";
 import { traditionOf } from "./traditions";
@@ -79,7 +78,7 @@ export function buildNook(p: MiniatureParams): MiniOutput {
       holes.push([[x0 + T + 2, roof], [x0 + T + farW / 2, roof + sceneH * 0.08], [x0 + farW - 2 + T, roof], [x0 + farW - 2 + T, zc - rail], [x0 + T + 2, zc - rail]]);
       for (let r = 0; r < st; r++) for (const t of [0.3, 0.7]) holes.push(...cut(openingShape(n.opening, x0 + T + farW * t, zs + 8 + ((roof - zs - 12) * r) / st, Math.min(12, farW * 0.22), Math.min(14, (roof - zs - 12) / st - 6))));
       const outer = rect(T, zs, Wc, sceneH);
-      const lines = clipLines(wallFinish(n.wall, T, T + Wc, zs, zc), outer, holes);
+      const lines = clipScore(wallFinish(n.wall, T, T + Wc, zs, zc), outer, holes);
       ups.push({ id: "far", name: "Far facade", y: farY, z0: zs, z1: zc, holes: holes.map((c) => frontOf(c, zc)), score: lines.map((c) => frontOf(c, zc)) });
       backFace = farY + T;
     }
@@ -107,7 +106,7 @@ export function buildNook(p: MiniatureParams): MiniOutput {
       const skyPts = sky.slice(0, 2).concat(sky.slice(2).sort((u, v) => u[0] - v[0]));
       holes.unshift(skyPts);
       const outline = rect(ya, zs, L, sceneH);
-      const lines = clipLines(wallFinish(n.wall, ya, yb, zs, zc), outline, holes);
+      const lines = clipScore(wallFinish(n.wall, ya, yb, zs, zc), outline, holes);
       dividers.push({ id: `facade-${side}`, name: `Facade (${side})`, x, outline, z0: zs, z1: zc, holes, score: lines, face: side === "left" ? "+x" : "-x" });
     }
   } else {

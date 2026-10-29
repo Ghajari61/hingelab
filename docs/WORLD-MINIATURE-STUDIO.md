@@ -16,7 +16,7 @@ Milestone 1 of the "World Miniature & Architecture Studio Pro" master prompt. Th
 | 8. Furniture | Done for 8 kinds, at 1:6 to 1:48 or a custom scale. Joints, fit and kerf are not scaled. |
 | 10. 3D | Done through the shared assembled 3D view and thumbnails. It is not a physical simulation. |
 | 13. Exports | SVG, DXF and PDF through the existing, tested export pipeline. |
-| 14. Templates | 32 original templates: 19 buildings, 5 nooks and 8 furniture pieces. The target was 50. |
+| 14. Templates | 35 original templates: 20 buildings, 6 nooks and 9 furniture pieces. The target was 50. |
 | 18. Quality | Contract tests, plus preset and geometry tests (no warnings, no shared material, slots filled). |
 
 ## Not yet done

@@ -47,6 +47,10 @@ const RAW: { id: string; name: string; note: string; tradition: string; params: 
   { id: "dresser-1-12", name: "Dresser, 1:12", note: "Four drawer fronts with knobs", tradition: "victorian", params: furn("dresser", { scale: "12", drawers: 4 }) },
   { id: "desk-1-6", name: "Desk, 1:6", note: "A desk with a shelf and back panel for 1:6 figures", tradition: "modern", params: furn("desk", { scale: "6" }) },
   { id: "bench-1-12", name: "Garden bench, 1:12", note: "Arched ends and a stretcher shelf", tradition: "storybook", params: furn("bench", { scale: "12" }) },
+  // ---- studio collection
+  { id: "studio-tea-house", name: "Tea house", note: "One shoji-screened room under a low tiled gable", tradition: "japanese-machiya", params: house({ width: 200, depth: 150, floors: 1, floorH: 110, rooms: 1, roof: "gable", pitch: 26, overhang: 16, plinth: 12, opening: "rect", panes: "shoji", wall: "boards", roofFinish: "tiles", sideWindows: 1, backWindows: 2, winW: 36, winH: 48, stairs: false }) },
+  { id: "studio-lantern-nook", name: "Lantern arcade book nook", note: "Five round arches, a light box and a mirror at the back", tradition: "victorian", params: nook({ scene: "arches", buildings: 5, opening: "arch", panes: "none", light: true, battery: true, mirror: true, width: 120, height: 240, depth: 200 }) },
+  { id: "studio-bookcase-1-24", name: "Tall bookcase, 1:24", note: "Five shelves for a 1:24 house, with unscaled joints", tradition: "modern", params: furn("bookshelf", { scale: "24", shelves: 5, width: 900, depth: 320, height: 2000 }) },
 ];
 
 export const MINIATURE_PRESETS: GenPreset<MiniatureParams>[] = RAW.map((r) => ({ id: r.id, name: r.name, note: r.note, params: mergeMiniature({ name: r.name, tradition: r.tradition, ...r.params }) }));

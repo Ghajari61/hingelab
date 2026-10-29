@@ -18,10 +18,9 @@
  */
 import { boxPanels } from "../boxes/joints";
 import { deg, rect, stadium } from "../geom";
-import { clipLines } from "../textOps";
 import type { Contour, GenOutput, GenPart, Pt } from "../types";
 import {
-  clamp, openingHoles, openingShape, outerOf, planar, r1, roofFinish, tabSpans, tabbedFrame, trimLine, wallFinish,
+  clamp, clipScore, openingHoles, openingShape, outerOf, planar, r1, roofFinish, tabSpans, tabbedFrame, trimLine, wallFinish,
   type Divider, type FlatMember, type UprightMember, type V3,
 } from "./kit";
 import type { MiniatureParams } from "./params";
@@ -156,7 +155,7 @@ export function buildHouse(p: MiniatureParams): MiniOutput {
   const uprights: UprightMember[] = [];
   {
     const outer = rect(T, 0, Wc, backTop), holes = backOpen.holes;
-    const lines = clipLines([...finishLines(T, T + Wc, 0, backTop), ...backOpen.marks], outer, holes);
+    const lines = clipScore([...finishLines(T, T + Wc, 0, backTop), ...backOpen.marks], outer, holes);
     uprights.push({ id: "back", name: "Back wall", y: mb, z0: 0, z1: backTop, holes: holes.map((c) => toMember(c, backTop)), score: lines.map((c) => toMember(c, backTop)) });
   }
   if (closed) {
@@ -166,13 +165,13 @@ export function buildHouse(p: MiniatureParams): MiniOutput {
     const win = openings(at, Math.min(ww, Wc / Math.max(1, n) - 8), wh);
     const door = openings([[T + Wc / 2, T]], clamp(h.doorW, 14, Wc * 0.4), clamp(h.doorH, 20, fh - 4), h.opening === "round" ? "arch" : h.opening, false);
     const holes = [...win.holes, ...door.holes], outer = rect(T, 0, Wc, ftop);
-    const lines = clipLines([...finishLines(T, T + Wc, 0, ftop), ...win.marks, ...door.marks], outer, holes);
+    const lines = clipScore([...finishLines(T, T + Wc, 0, ftop), ...win.marks, ...door.marks], outer, holes);
     uprights.push({ id: "facade", name: "Facade", y: D - mf - T, z0: 0, z1: ftop, holes: holes.map((c) => toMember(c, ftop)), score: lines.map((c) => toMember(c, ftop)) });
   }
 
   // ---- the frame
   const P = Math.max(0, h.plinth);
-  const sideLines = clipLines([...finishLines(0, D, 0, Math.max(...top.map((q) => q[1]))), ...sideOpen.marks], profile, sideOpen.holes);
+  const sideLines = clipScore([...finishLines(0, D, 0, Math.max(...top.map((q) => q[1]))), ...sideOpen.marks], profile, sideOpen.holes);
   const parts = tabbedFrame({
     T, W: Wc, profile, endHoles: sideOpen.holes, endScore: sideLines, ends: ["Left wall", "Right wall"],
     flats, uprights, dividers,
@@ -197,7 +196,7 @@ export function buildHouse(p: MiniatureParams): MiniOutput {
     const holes = slots.map((s) => s.map(pl.uv));
     const outer = outerOf([pl.outline]);
     const us = outer.map((q) => q[0]), vs = outer.map((q) => q[1]);
-    const lines = clipLines(roofFinish(h.roofFinish, Math.min(...us), Math.max(...us), Math.min(...vs), Math.max(...vs)), outer, holes);
+    const lines = clipScore(roofFinish(h.roofFinish, Math.min(...us), Math.max(...us), Math.min(...vs), Math.max(...vs)), outer, holes);
     roof.push({ id, name, outer, holes, ...(lines.length ? { score: lines } : {}), place: { x: 0, y: 0, z: 0, m: pl.m } });
   };
   if (segments.length) {

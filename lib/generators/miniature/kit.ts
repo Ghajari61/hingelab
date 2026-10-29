@@ -23,6 +23,7 @@ import { circle, rect, signedArea } from "../geom";
 import { fretHoles } from "../fretwork";
 import type { FretKind } from "../fretKinds";
 import type { Contour, GenPart, Pt } from "../types";
+import { clipLines } from "../textOps";
 
 export type Place = NonNullable<GenPart["place"]>;
 export type V3 = [number, number, number];
@@ -295,3 +296,19 @@ export function roofFinish(kind: RoofFinish, u0: number, u1: number, v0: number,
 
 /** Total length of lines, mm. */
 export const linesLength = (cs: Contour[]) => cs.reduce((n, c) => n + len(c), 0);
+
+/** Points of a polyline that bend it: the clip samples every 0.4 mm, and straight runs need only their ends. */
+export function straighten(c: Contour, tol = 1e-3): Contour {
+  if (c.length < 3) return c;
+  const out: Contour = [c[0]];
+  for (let i = 1; i + 1 < c.length; i++) {
+    const a = out[out.length - 1], b = c[i], d = c[i + 1];
+    const cross = (b[0] - a[0]) * (d[1] - a[1]) - (b[1] - a[1]) * (d[0] - a[0]);
+    if (Math.abs(cross) > tol * Math.hypot(d[0] - a[0], d[1] - a[1])) out.push(b);
+  }
+  out.push(c[c.length - 1]);
+  return out;
+}
+
+/** Score lines kept to the wood (outside the holes), with their straight runs as single segments. */
+export const clipScore = (lines: Contour[], outer: Contour, holes: Contour[]): Contour[] => clipLines(lines, outer, holes).map((c) => straighten(c));
