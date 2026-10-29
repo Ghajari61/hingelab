@@ -4,7 +4,7 @@
  */
 import * as THREE from "three";
 import { applyRadialSurface } from '@/lib/three/radialSurface';
-import { unionShapes } from "@/lib/letters/polygon";
+import { makeShape, offsetShapes, unionShapes } from "@/lib/letters/polygon";
 import { finishScene, slab, slabs, type Scene3D } from "@/lib/three/flat";
 import { ITEM_SEP, itemOf, itemSkinName } from "./items";
 import type { Contour, GenImage, GenOutput, GenPart, Hardware3D } from "./types";
@@ -131,6 +131,18 @@ function creaseLines(cs: { pts: Contour; mountain: boolean }[], t: number, name:
   return g;
 }
 
+/** How much each puzzle piece is drawn smaller than its cell, mm (about a laser's kerf). */
+const PIECE_SEAM = 0.2;
+
+/** Cut lines through a part as dark lines at height z (y-down polylines). */
+function cutLines(cs: Contour[], z: number, name: string): THREE.LineSegments {
+  const l = scoreLines(cs, z, name);
+  (l.material as THREE.Material).dispose();
+  l.material = new THREE.LineBasicMaterial({ color: "#1c140c" });
+  l.userData.noMeasure = true;
+  return l;
+}
+
 /** Scored outlines as lines at height z (y-down contours). */
 function scoreLines(cs: Contour[], z: number, name: string): THREE.LineSegments {
   const pos: number[] = [];
@@ -236,7 +248,9 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
         let px = 0, py = 0;
         for (const [x, y] of c) { px += x; py += y; }
         px /= c.length; py /= c.length;
-        const m = slab(c, [], 0, t, `${p.name} piece ${i + 1}`);
+        // Each piece a hair smaller than its cell, so the cut between neighbours shows as a seam.
+        const own = offsetShapes([makeShape(c, [])], -PIECE_SEAM);
+        const m = slab(own.length ? own.reduce((a, b) => (b.area > a.area ? b : a)).outer : c, [], 0, t, `${p.name} piece ${i + 1}`);
         moving.push(e => { m.position.set((px - cx) * e * 0.12, -(py - cy) * e * 0.12, 0); });
         m.userData.tint = tint * (i % 2 ? 1.03 : 0.97);
         spin.add(m);
@@ -291,6 +305,9 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
       if (m && item) delete m.userData.noPick;
       if (m) surface.add(m);
     }
+    // Cut lines inside the part (a puzzle's piece cuts, hinge slits): dark lines on its top face, as
+    // the laser leaves them. They stay with the whole part, so they fade when pieces separate.
+    if (p.cuts?.length) surface.add(cutLines(p.cuts, t + 0.04, `${p.name} cut lines`));
     if (p.creases?.length) spin.add(creaseLines(p.creases, t, `${p.name} creases`));
     spin.add(surface);
     if(p.radialSurface)applyRadialSurface(spin,p.radialSurface);
