@@ -210,16 +210,32 @@ export function buildFamily(p: FamilyParams, ctx: BuildContext): FamilyOutput {
     for (const n of sorted) { const l = line(ctx, p.names.caps ? n.toLocaleUpperCase() : n, font, t.maxLine, missing); if (!l) return loadingOut(); raw.push(l); }
     // Line i is sized to the triangle: from a third of the width at the top to the full width.
     let y = 0;
-    const all: Contour[] = [], glyphs: Contour[][] = [];
-    raw.forEach((l, i) => {
-      const target = t.width * (0.34 + (0.66 * (i + 1)) / raw.length);
-      const k = Math.min(1, target / l.w);
+    const all: Contour[] = [], glyphs: Contour[][] = [], bars: Contour[] = [];
+    // With lines on, each row sits on a bar the width of the shorter of the two rows it separates;
+    // the bar overlaps the letters by a fraction of a millimetre so the weld fuses them.
+    const rows = raw.map((l, i) => { const k = Math.min(1, (t.width * (0.34 + (0.66 * (i + 1)) / raw.length)) / l.w); return { l, k, b: bboxOf(scale(l.cs, k)) }; });
+    let prevBottom = 0, prevW = 0;
+    rows.forEach(({ l, k, b }, i) => {
       const h = l.h * k;
       info.letter = Math.min(info.letter, t.maxLine * k);
-      all.push(...move(scale(l.cs, k), 0, y + h / 2));
-      glyphs.push(...l.glyphs.map((g) => move(scale(g, k), 0, y + h / 2)));
-      y += h * 0.94;
+      if (!t.lines) {
+        all.push(...move(scale(l.cs, k), 0, y + h / 2));
+        glyphs.push(...l.glyphs.map((g) => move(scale(g, k), 0, y + h / 2)));
+        y += h * 0.94;
+        return;
+      }
+      const ov = Math.min(0.6, t.lineW / 3), w = b.x1 - b.x0;
+      if (i > 0) {
+        const bw = Math.min(prevW, w) + 2;
+        bars.push(orient(rect(-bw / 2, prevBottom - ov, bw, t.lineW + 2 * ov)));
+        y = prevBottom + t.lineW;
+      }
+      const dy = y - b.y0;
+      all.push(...move(scale(l.cs, k), 0, dy));
+      glyphs.push(...l.glyphs.map((g) => move(scale(g, k), 0, dy)));
+      prevBottom = y + (b.y1 - b.y0); prevW = w;
     });
+    all.push(...bars);
     const top = bboxOf(all).y0;
     let star: Contour[] = [];
     if (t.star !== "none") {
@@ -244,8 +260,8 @@ export function buildFamily(p: FamilyParams, ctx: BuildContext): FamilyOutput {
       letterHoles = unionShapes(yr).map(s => orientHole(s.outer));
       piece = makeShape(piece.outer, [...piece.holes, ...letterHoles]);
     }
-    const loose = t.noWeld || t.operation === "score" ? letterShapes([...star, ...all, ...trunk], { noWeld: true, border: 0 }, [...glyphs, star, trunk].filter(g => g.length)).flatMap(s => letterHoles.length ? differenceShapes(shapeContours([s]), letterHoles.map(orient)) : [s]) : undefined;
-    const w = weldedParts(p, piece, scores, "Name tree", true, loose, t.operation === "score", [star, trunk, ...glyphs, letterHoles.map(orient)].filter((g) => g.length));
+    const loose = t.noWeld || t.operation === "score" ? letterShapes([...star, ...all, ...trunk], { noWeld: true, border: 0 }, [...glyphs, bars, star, trunk].filter(g => g.length)).flatMap(s => letterHoles.length ? differenceShapes(shapeContours([s]), letterHoles.map(orient)) : [s]) : undefined;
+    const w = weldedParts(p, piece, scores, "Name tree", true, loose, t.operation === "score", [star, trunk, bars, ...glyphs, letterHoles.map(orient)].filter((g) => g.length));
     info.wall = w.wall;
     parts.push(...w.parts);
   }
