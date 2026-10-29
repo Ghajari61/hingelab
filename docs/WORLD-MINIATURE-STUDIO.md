@@ -1,6 +1,6 @@
 # World Miniature Studio: status
 
-Milestone 1 of the "World Miniature & Architecture Studio Pro" master prompt. The prompt as received was cut off at section 19 ("Testing require…"), so section 19 onward is not covered. Decision records: D224 (milestone 1) and D225 (milestone 2: fronts, grounds, chimneys, more furniture and garden pieces).
+Milestone 1 of the "World Miniature & Architecture Studio Pro" master prompt. The prompt as received was cut off at section 19 ("Testing require…"), so section 19 onward is not covered. Decision records: D224 (milestone 1), D225 (milestone 2: fronts, grounds, chimneys, more furniture and garden pieces) and D226 (milestone 3: dormers, columns, stair railings and window boxes).
 
 ## Delivered (milestone 1)
 
@@ -16,14 +16,13 @@ Milestone 1 of the "World Miniature & Architecture Studio Pro" master prompt. Th
 | 8. Furniture | Done for 14 kinds, at 1:6 to 1:48 or a custom scale. Joints, fit and kerf are not scaled. |
 | 10. 3D | Done through the shared assembled 3D view and thumbnails. It is not a physical simulation. |
 | 13. Exports | SVG, DXF and PDF through the existing, tested export pipeline. |
-| 9. Components | Partial (milestone 2). Door leaves, steps, shopfronts, porches and verandas, balconies with railings and brackets, chimneys, fences and gates, paths, flower beds, trees, bushes, lamps and planters. Columns and stair railings are not done yet. |
-| 14. Templates | 53 original templates: 26 buildings, 6 nooks, 15 furniture pieces and 6 garden and street pieces. |
+| 9. Components | Done for the house (milestones 2 and 3): door leaves, steps, shopfronts, porches and verandas on square, turned or classical posts, balconies with railings and brackets, pilasters, window boxes, dormers, chimneys, stair railings, fences and gates, paths, flower beds, trees, bushes, lamps, columns and planters. |
+| 14. Templates | 56 original templates: 28 buildings, 6 nooks, 15 furniture pieces and 7 garden and street pieces. |
 | 18. Quality | Contract tests, plus preset and geometry tests (no warnings, no shared material, slots filled). |
 
 ## Not yet done
 
 - Sources for each tradition, then a review before any tradition is marked verified.
-- Components (section 9): columns, stair railings, dormers and window boxes.
 - Manufacturing (section 11): calibration coupons, part labels, sheet-by-thickness grouping beyond what the shell does, and an assembly-order diagram.
 - Machine profiles (section 12): an xTool P3 profile waits on verified manufacturer specifications.
 - Exports (section 13): GLB, BOM (CSV) and an assembly PDF, each to be validated with a real generated file before it is listed.

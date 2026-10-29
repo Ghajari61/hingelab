@@ -4,7 +4,7 @@ import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 import { FIT_MM, FIT_NAMES, type JointFit } from "../boxes/params";
 import { FRET_NAMES, type FretKind } from "../fretKinds";
-import { FENCE_STYLES, OPENING_SHAPES, PANES, RAIL_STYLES, ROOF_FINISHES, WALL_FINISHES, type FenceStyle, type OpeningShape, type Panes, type RailStyle, type RoofFinish, type WallFinish } from "./kit";
+import { COLUMN_STYLES, FENCE_STYLES, OPENING_SHAPES, PANES, RAIL_STYLES, ROOF_FINISHES, WALL_FINISHES, type ColumnStyle, type FenceStyle, type OpeningShape, type Panes, type RailStyle, type RoofFinish, type WallFinish } from "./kit";
 import { TRADITION_BY_ID, type RoofKind } from "./traditions";
 
 export { FIT_MM, FIT_NAMES, type JointFit };
@@ -24,9 +24,9 @@ export type Grounds = "none" | "garden" | "street";
 export const GROUNDS_NAMES: Record<Grounds, string> = { none: "Just the base", garden: "Garden yard", street: "Street pavement" };
 export type TreeKind = "tree" | "pine" | "bush";
 export const TREE_NAMES: Record<TreeKind, string> = { tree: "Leafy tree", pine: "Pine tree", bush: "Bush" };
-export type AccessoryKind = "tree" | "pine" | "bush" | "lamp" | "fence" | "planter";
-export const ACCESSORY_NAMES: Record<AccessoryKind, string> = { tree: "Leafy tree", pine: "Pine tree", bush: "Bush", lamp: "Street lamp", fence: "Fence run", planter: "Planter box" };
-export { FENCE_STYLES, RAIL_STYLES, type FenceStyle, type RailStyle };
+export type AccessoryKind = "tree" | "pine" | "bush" | "lamp" | "column" | "fence" | "planter";
+export const ACCESSORY_NAMES: Record<AccessoryKind, string> = { tree: "Leafy tree", pine: "Pine tree", bush: "Bush", lamp: "Street lamp", column: "Column", fence: "Fence run", planter: "Planter box" };
+export { COLUMN_STYLES, FENCE_STYLES, RAIL_STYLES, type ColumnStyle, type FenceStyle, type RailStyle };
 
 export const ROOF_NAMES: Record<RoofKind, string> = { flat: "Flat", gable: "Gable", shed: "Shed", hip: "Hip", mansard: "Mansard", gambrel: "Gambrel" };
 
@@ -67,6 +67,8 @@ export interface MiniatureParams extends GenBase {
     porch: Porch; porchDepth: number; balcony: Balcony; balconyDepth: number; rail: RailStyle;
     grounds: Grounds; yard: number; yardSides: number; fence: FenceStyle | "none"; gate: boolean; path: boolean; beds: boolean;
     trees: number; treeKind: TreeKind; lamps: number;
+    /** Porch posts' shape, pilasters scored on the facade, a stair railing, dormers in the front roof, flower boxes under the facade's windows. */
+    columns: ColumnStyle; pilasters: boolean; stairRail: boolean; dormers: number; windowBoxes: boolean;
   };
   nook: {
     width: number; height: number; depth: number; scene: NookScene; buildings: number; storeys: number;
@@ -103,6 +105,7 @@ export const MINIATURE_DEFAULTS: MiniatureParams = {
     porch: "none", porchDepth: 30, balcony: "none", balconyDepth: 22, rail: "balusters",
     grounds: "none", yard: 70, yardSides: 20, fence: "picket", gate: true, path: true, beds: true,
     trees: 2, treeKind: "tree", lamps: 2,
+    columns: "plain", pilasters: false, stairRail: false, dormers: 0, windowBoxes: false,
   },
   nook: { width: 110, height: 220, depth: 180, scene: "alley", buildings: 3, storeys: 3, opening: "rect", panes: "cross", lattice: "lattice", light: true, battery: true, mirror: false, wall: "brick" },
   furniture: { kind: "chair", scale: "12", custom: 20, ...FURNITURE_REAL.chair, shelves: 3, drawers: 3 },
@@ -135,6 +138,7 @@ export function mergeMiniature(raw: unknown): MiniatureParams {
   if (!(h.grounds in GROUNDS_NAMES)) h.grounds = "none";
   if (h.fence !== "none" && !(h.fence in FENCE_STYLES)) h.fence = "picket";
   if (!(h.treeKind in TREE_NAMES)) h.treeKind = "tree";
+  if (!(h.columns in COLUMN_STYLES)) h.columns = "plain";
   const a = p.accessory;
   if (!(a.kind in ACCESSORY_NAMES)) a.kind = "tree";
   if (!(a.fence in FENCE_STYLES)) a.fence = "picket";

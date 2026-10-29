@@ -68,6 +68,12 @@ describe("miniature geometry", () => {
     { house: { front: "panel", balcony: "centre", floors: 2, porch: "veranda", rail: "solid", door: "panelled", shopfront: true } },
     ...["picket", "rail", "lattice", "wall"].map((fence) => ({ house: { grounds: "garden", fence, yard: 90, yardSides: 30, trees: 4, treeKind: fence === "wall" ? "pine" : "bush", front: "panel", porch: "canopy", door: "planked" } })),
     { house: { grounds: "street", yard: 50, lamps: 4, trees: 2, front: "panel", shopfront: true, door: "glazed" } },
+    { house: { stairRail: true, floors: 3 } },
+    { house: { front: "panel", porch: "veranda", columns: "turned", windowBoxes: true, pilasters: true } },
+    { house: { front: "panel", porch: "canopy", columns: "classical", balcony: "centre", floors: 3, windowBoxes: true, frontWindows: 3 } },
+    ...["gable", "shed", "gambrel", "hip", "mansard"].map((roof) => ({ house: { roof, dormers: 2, chimney: true, stairRail: true } })),
+    { design: "accessory", accessory: { kind: "column", height: 80, width: 18, base: true } },
+    { design: "accessory", accessory: { kind: "column", height: 80, width: 18, base: false } },
   ];
   it.each(CASES.map((c) => [JSON.stringify(c), c]))("%s: builds, no shared material, slots filled", (_l, raw) => {
     const out = build(raw);
@@ -88,5 +94,19 @@ describe("miniature presets", () => {
   }, 60000);
   it("traditions are marked unverified and carry a kit", () => {
     for (const t of TRADITIONS) { expect(t.verification).toBe("unverified"); expect(t.kit.roof).toBeTruthy(); }
+  });
+});
+
+describe("miniature details", () => {
+  it.each(["gable", "shed", "gambrel", "hip", "mansard"])("%s roof: two dormers, a chimney and a stair railing are built", (roof) => {
+    const out = build({ house: { roof, dormers: 2, chimney: true, stairRail: true } });
+    expect(out.info!.dormers, roof).toBe(2);
+    expect(out.info!.chimney, roof).toBe("built");
+    expect(out.parts.find((p) => p.id === "stair1-end-r")!.holes.length).toBeGreaterThan(out.parts.find((p) => p.id === "stair1-end-l")!.holes.length);
+  });
+  it("window boxes, pilasters and classical columns are built on a closed facade", () => {
+    const out = build({ house: { front: "panel", porch: "veranda", columns: "classical", windowBoxes: true, pilasters: true } });
+    expect(out.info!.boxes).toBeGreaterThan(0);
+    expect(out.parts.some((p) => p.name.startsWith("Porch column"))).toBe(true);
   });
 });

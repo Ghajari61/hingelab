@@ -1,3 +1,14 @@
+## Unreleased — World Miniature Studio: dormers, columns, stair railings, window boxes
+
+- Dormers: up to four shed dormers standing on the front roof panel of gable, shed, gambrel, hip and mansard roofs. Each has a window in its face, two cheeks, its own roof and a hole into the attic. Each dormer is placed where it fits, and the check says when fewer fit.
+- Porch posts in three shapes: square, turned, or classical columns with a base and a capital.
+- Pilasters scored up the facade at its corners and between the windows.
+- Window boxes with a row of flowers under the facade's windows, tabbed into the wall and left out wherever a porch, balcony or opening is in the way.
+- A stair railing: the open side's stringer is cut with a sloped balustrade and a newel post, and stops under the floor above.
+- A classical column as a garden piece on its own.
+- The Country house and Town house themes now include these details.
+- 56 templates; new: manor house, attic cottage and garden column.
+
 ## Unreleased — World Miniature Studio: houses, gardens and more furniture
 
 - Country house and Town house themes set a whole look in one step; every setting stays editable.
