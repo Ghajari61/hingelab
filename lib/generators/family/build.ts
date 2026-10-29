@@ -25,7 +25,7 @@ import { orient, orientHole } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { textBlock, weld, letterShapes } from "../weld";
 import { stackedScores } from "../weldScore";
-import { fitContent, hang } from "../charm/build";
+import { fitContent, hang, loopSpot } from "../charm/build";
 import { mergeCharm } from "../charm/params";
 import { crossword, tileWord } from "./crossword";
 import { familyNames, type FamilyParams } from "./params";
@@ -350,18 +350,15 @@ export function buildFamily(p: FamilyParams, ctx: BuildContext): FamilyOutput {
     // The band lies across the initial and holds every stroke it crosses; strokes it misses are bridged on.
     let piece = weld([...big.cs, band], { border: 0, minHole: 2, bridge: Math.max(3, mo.size * 0.04) });
     if (!piece) return { parts: [], stats: [], error: "The initial could not be drawn; try another font." };
-    // Hang it from the highest point of the outline, not the middle of its box (an N or a W is open there).
+    // Hang it above the centre of mass so it hangs straight. An N, M, V or W is open in the middle
+    // and its strokes there can be hairlines, so the loop rises to the top of the piece and a stem as
+    // wide as its neck runs down to the first solid footing (loopSpot) instead of hanging off a hairline.
     const withLoop = (sh: Shape): Shape => {
       if (p.hang.kind === "none") return sh;
-      // Of the points near the top, the one nearest the centre of mass, so it hangs straight.
-      const b = bboxOf([sh.outer]);
-      let A = 0, cx = 0;
-      for (let i = 0, j = sh.outer.length - 1; i < sh.outer.length; j = i++) { const [x0, y0] = sh.outer[j], [x1, y1] = sh.outer[i], k = x0 * y1 - x1 * y0; A += k; cx += (x0 + x1) * k; }
-      cx = A ? cx / (3 * A) : (b.x0 + b.x1) / 2;
-      const near = sh.outer.filter((q) => q[1] <= b.y0 + (b.y1 - b.y0) * 0.12);
-      const top = near.reduce((m, q) => (Math.abs(q[0] - cx) < Math.abs(m[0] - cx) ? q : m), near[0]);
-      const lr = p.hang.hole / 2, LR = lr + p.hang.wall, lc: Pt = [top[0], top[1] - lr - p.hang.wall * 0.35];
-      const body = largest(unionShapes([sh.outer, orient(circle(lc[0], lc[1], LR)), orient(rect(lc[0] - LR * 0.7, lc[1], LR * 1.4, LR + p.hang.wall))]))!;
+      const lr = p.hang.hole / 2, LR = lr + p.hang.wall;
+      const spot = loopSpot(sh.outer, sh.holes, "top", lr, p.hang.wall, "mass");
+      const lc: Pt = [spot.at[0], spot.at[1] - lr - p.hang.wall * 0.35];
+      const body = largest(unionShapes([sh.outer, orient(circle(lc[0], lc[1], LR)), orient(rect(lc[0] - LR * 0.7, lc[1], LR * 1.4, LR + p.hang.wall + spot.reach))]))!;
       info.wall = p.hang.wall;
       return makeShape(body.outer, [...sh.holes, orientHole(circle(lc[0], lc[1], lr))]);
     };

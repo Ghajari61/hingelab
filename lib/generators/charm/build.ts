@@ -167,6 +167,74 @@ function edgeAt(outer: Contour, side: "top" | "left"): Pt {
   return along(b, side, 0);
 }
 
+/**
+ * Where a loop goes, and how far its neck reaches. On the edge at the middle, as always, where the
+ * outline there is solid under the neck and the ring clears the rest; otherwise near the balance
+ * point (the piece's centroid across), so it hangs straight: on the top of the outline within a
+ * little of it, else wherever the centre line first meets solid material. Where it is not (a letter whose middle is a
+ * notch or a hairline, as a monogram's M), the ring rises to the top of the piece and a stem as wide
+ * as the neck runs down to the first solid footing, instead of hanging the piece off a thin stroke.
+ */
+export function loopSpot(outer: Contour, holes: Contour[], side: "top" | "left", r: number, wall: number, over: "box" | "mass" = "box"): { at: Pt; reach: number } {
+  const R = r + wall, b = bboxOf([outer]);
+  const top = side === "top";
+  const inMat = (q: Pt) => pointInContour(q, outer) && !holes.some((h) => pointInContour(q, h));
+  // the balance point across: the area centroid of the outline less its holes
+  let A = 0, M = 0;
+  for (const c of [outer, ...holes]) {
+    const sg = c === outer ? 1 : -1;
+    let a = 0, m = 0;
+    for (let i = 0; i < c.length; i++) {
+      const [x0, y0] = c[i], [x1, y1] = c[(i + 1) % c.length], k = x0 * y1 - x1 * y0;
+      a += k; m += (top ? x0 + x1 : y0 + y1) * k;
+    }
+    // each contour's own area and moment, made positive, added for the outline, taken off for holes
+    const s = Math.sign(a) || 1;
+    A += sg * s * a / 2; M += sg * s * m / 6;
+  }
+  const mid = A > 1e-9 ? Math.min(Math.max(M / A, top ? b.x0 : b.y0), top ? b.x1 : b.y1) : top ? (b.x0 + b.x1) / 2 : (b.y0 + b.y1) / 2;
+  const at = (t: number): Pt => (top ? [mid, b.y0 + t] : [b.x0 + t, mid]);
+  const span = top ? b.y1 - b.y0 : b.x1 - b.x0;
+  // the neck's foot: material across its width, a little below the edge and a ring's width further in
+  const foot = (e: Pt) => [wall * 1.2, wall * 1.2 + R].every((dd) => [-0.7, -0.35, 0, 0.35, 0.7].every((k) => inMat(top ? [e[0] + k * R, e[1] + dd] : [e[0] + dd, e[1] + k * R])));
+  const ringClear = (e: Pt) => {
+    const c: Pt = top ? [e[0], e[1] - r - wall * 0.35] : [e[0] - r - wall * 0.35, e[1]];
+    for (let i = 0; i < 36; i++) {
+      const a = (2 * Math.PI * i) / 36, dx = Math.cos(a), dy = Math.sin(a);
+      if ((top ? dy : dx) > 0.55) continue; // the side facing the piece, where the neck joins
+      if (inMat([c[0] + dx * (R + 0.6), c[1] + dy * (R + 0.6)])) return false;
+    }
+    return true;
+  };
+  // the usual spot first: the edge on the box's centre line, as every loop has always been placed
+  const box = (t: number): Pt => (top ? [(b.x0 + b.x1) / 2, b.y0 + t] : [b.x0 + t, (b.y0 + b.y1) / 2]);
+  let edge: Pt | null = null;
+  if (over === "box") {
+    for (let t = 0; t <= span; t += 0.1) if (pointInContour(box(t), outer)) { edge = box(t); break; }
+    if (edge && foot(edge) && ringClear(edge)) return { at: edge, reach: 0 };
+    edge = null;
+  } else {
+    // on the top of the outline near the balance point: the nearest sound spot in the top sixth
+    const across = top ? b.x1 - b.x0 : b.y1 - b.y0, depth = span / 6;
+    for (let d = 0; d <= across * 0.12; d += 0.5) for (const q of d ? [mid - d, mid + d] : [mid]) {
+      for (let t = 0; t <= depth; t += 0.1) {
+        const pt: Pt = top ? [q, b.y0 + t] : [b.x0 + t, q];
+        if (!inMat(pt)) continue;
+        if (foot(pt) && ringClear(pt)) return { at: pt, reach: 0 };
+        break;
+      }
+    }
+  }
+  for (let t = 0; t <= span; t += 0.1) if (inMat(at(t))) { edge = at(t); break; }
+  if (edge && foot(edge) && ringClear(edge)) return { at: edge, reach: 0 };
+  // a stem from the top of the piece down to the first point with a solid footing
+  for (let t = 0; t <= span; t += 0.2) {
+    const q = at(t);
+    if (inMat(q) && foot(q)) return { at: at(0), reach: t };
+  }
+  return { at: edge ?? at(0), reach: 0 };
+}
+
 /** Kinds that hang from a hole or loop (bag tags use their strap slot, markers their clip, cards stand). */
 export const hangs = (p: CharmParams) => p.kind.kind !== "drink" && p.kind.kind !== "placecard" && p.kind.kind !== "bagtag";
 
@@ -182,10 +250,11 @@ export function hang(p: CharmParams, blank: Shape): Hung {
     return { shape: makeShape(blank.outer, [...blank.holes, hole]), hole, keep: orient(circle(spot.at[0], spot.at[1], r + Math.max(h.wall, 1.5) + 0.5)), wall: spot.wall };
   }
   // A loop: a ring of `wall` round the hole, its inner edge just clear of the outline, joined by a neck.
-  const R = r + h.wall, e = edgeAt(blank.outer, h.side);
+  const R = r + h.wall, spot = loopSpot(blank.outer, blank.holes, h.side === "top" ? "top" : "left", r, h.wall), e = spot.at;
   const c: Pt = h.side === "top" ? [e[0], e[1] - r - h.wall * 0.35] : [e[0] - r - h.wall * 0.35, e[1]];
   const ring = orient(circle(c[0], c[1], R));
-  const neck = orient(h.side === "top" ? rect(c[0] - R * 0.7, c[1], R * 1.4, R + h.wall) : rect(c[0], c[1] - R * 0.7, R + h.wall, R * 1.4));
+  const reach = R + h.wall + spot.reach;
+  const neck = orient(h.side === "top" ? rect(c[0] - R * 0.7, c[1], R * 1.4, reach) : rect(c[0], c[1] - R * 0.7, reach, R * 1.4));
   const body = largest(unionShapes([blank.outer, ring, neck]))!;
   const hole = orientHole(circle(c[0], c[1], r));
   return { shape: makeShape(body.outer, [...blank.holes, hole]), hole, keep: orient(circle(c[0], c[1], R + 0.5)), wall: h.wall };
