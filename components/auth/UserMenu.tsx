@@ -32,7 +32,9 @@ export function UserMenu() {
 
   useEffect(() => {
     if (!open) return;
-    const close = () => setOpen(false);
+    // A click anywhere closes the menu, except on Sign out: closing removes its form from the page
+    // before the click submits it, and the browser then drops the submission (nothing happened).
+    const close = (e: MouseEvent) => { if (!(e.target instanceof Element && e.target.closest(".user-signout"))) setOpen(false); };
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("click", close);
     document.addEventListener("keydown", onKey);
@@ -83,7 +85,7 @@ export function UserMenu() {
           <Link role="menuitem" href="/invite"><Mail size={15} aria-hidden="true" />Invite friends</Link>
           <Link role="menuitem" href="/preferences"><Settings size={15} aria-hidden="true" />Preferences</Link>
           <hr />
-          <form action="/auth/signout" method="post">
+          <form className="user-signout" action="/auth/signout" method="post">
             <button type="submit" role="menuitem"><LogOut size={15} aria-hidden="true" />Sign out</button>
           </form>
         </div>

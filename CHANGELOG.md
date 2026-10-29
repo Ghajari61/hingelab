@@ -39,6 +39,7 @@
   - The coasters can be cut too, engraved with rings, a sunburst or dots, plus the lid engraving or a cut-out pattern engraved on every coaster. Or the holder can be sized for coasters you already have.
 - Existing designs, presets and saved files are unchanged.
 - The left panel of every editor no longer scrolls sideways: the cards always fit its full width (picture cards with fixed-size images could push it wider than the panel).
+- Account menu: Sign out works again. The menu closed on the click and took the sign-out form off the page before the click could submit it, so nothing happened.
 - Puzzle 3D: the pieces now show. Each piece is drawn a hair smaller than its cell, so the seams read, and the piece cuts are drawn on the face. Before, the assembled puzzle looked like one plain board.
 - Tablets and touch screens:
   - Two fingers pinch to zoom and pan on the Sheets view of every editor (generators, Hinge Box, Letters, Parametric) and in Studio. On iPad Safari (and a Mac trackpad in Safari) the pinch also works through Safari's own gesture events, and it never zooms the page instead.
