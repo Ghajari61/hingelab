@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.30.1",
-    "pub_date": "2026-10-29T21:28:38.294Z",
-    "notes": "Family Names adds optional connecting bars between tree rows, with adjustable thickness.",
+    "version": "1.30.2",
+    "pub_date": "2026-10-29T21:47:31.404Z",
+    "notes": "Redesigned the Pro upgrade dialog with a clearer plan comparison and cut-file preview.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.30.1_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnBhNTNOVUd5VGxhbzJ2NG5zWEJaT3YxSmdLcUdpbEJteFc3QzdHNEdoQlhOWHoxdjNLZzkxak5ucVRSTTE4bzdvSjJWajhGSlhuT011cjdrazg1T2dFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzA5MzExCWZpbGU6SGluZ2VMYWJfMS4zMC4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMwLjEKZUk0cDVSczFMUW43Zm9UL1pxYlFHS0Q0VHpSYzJyY0RrOEhVeE9CNVhvNUJjbXdzY0JGU3RYVGQySTdlb0FPUVNpMFVMQmZ5WU1MUGZBb0F3QVQzQ1E9PQo=",
-        "size": 12747267,
-        "sha256": "4bdfc27051e7c1bc7d29fc5c4588f3c2d980a0504cc63b3a0ce75103b7eaf4b7"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.30.2_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmtxNGphUHRxb1lpUk5ib1QxeTFwdVRlckhwZDk0L0c2RXJ1d2xuZEZIYjY4b2FMcU4zQVEwczlmdDcyNGxoRTRPM1pmOEhuaWJTZ0tyOE5CTm51c2dBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzEwNDQ1CWZpbGU6SGluZ2VMYWJfMS4zMC4yX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMwLjIKb0kwU1Z4ZjZ1VVAyd2JBazdJYzJxNDRPK2pXRDB6cEdKY05CWkVMUTQyYS9QeXE5SXA3TWRFUU84Yzk4bTM3UG1ZTFFDYkl5OGFzaFZFQzZpR0NJQVE9PQo=",
+        "size": 12749499,
+        "sha256": "71d3ec4abfc51fe9bd7010d38cf35d23f8b4acd5344001a2dc434f48b2e27c3b"
       }
     }
   }

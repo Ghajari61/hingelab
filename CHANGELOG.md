@@ -1,4 +1,4 @@
-## Unreleased
+## 1.30.2 — Pro upgrade dialog
 
 - **Upgrade dialog redesign:** a gradient header with a Pro badge, the cut-file preview as a raised card marked "Ready to cut", the benefits in two columns with round ticks, monthly and yearly plans as cards (yearly highlighted with its saving), and a full-width sign-up button. Prices, plans and links are unchanged.
 
