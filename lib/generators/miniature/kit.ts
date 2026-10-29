@@ -198,21 +198,27 @@ export function openingShape(shape: OpeningShape, cx: number, z0: number, w: num
     case "rect": return rect(x0, z0, w, h);
     case "round": { const r = Math.min(w, h) / 2; return circle(cx, z0 + h / 2, r, 0.05); }
     case "arch": {
-      const r = w / 2, spring = z0 + Math.max(0, h - r);
-      return outerOf([rect(x0, z0, w, spring - z0 + 0.01), circle(cx, spring, r, 0.05)]);
+      const r = w / 2;
+      if (h >= r) { const spring = z0 + h - r; return outerOf([rect(x0, z0, w, spring - z0 + 0.01), circle(cx, spring, r, 0.05)]); }
+      // lower than a half circle: a segmental arch through both bottom corners and the top
+      const R = (r * r + h * h) / (2 * h), zc = z0 + h - R, a0 = Math.asin(Math.min(1, r / R)), n = 24;
+      const pts: Pt[] = [[x0, z0], [x0 + w, z0]];
+      for (let i = 0; i <= n; i++) { const a = -a0 + (2 * a0 * i) / n; pts.push([cx + R * Math.sin(-a), zc + R * Math.cos(a)]); }
+      return outerOf([pts]);
     }
     case "pointed": {
       // two arcs of radius w struck from the far springing points: an equilateral pointed arch
-      const r = w, rise = w * Math.sqrt(3) / 2, spring = z0 + Math.max(0, h - rise);
+      // squashed to the height when that is less than the arch's own rise
+      const r = w, rise = w * Math.sqrt(3) / 2, spring = z0 + Math.max(0, h - rise), k = Math.min(1, h / rise);
       const pts: Pt[] = [[x0, z0], [x0 + w, z0], [x0 + w, spring]];
       const n = 14;
-      for (let i = 1; i <= n; i++) { const a = (Math.PI / 3) * (i / n); pts.push([x0 + r * Math.cos(a), spring + r * Math.sin(a)]); }
-      for (let i = n - 1; i >= 0; i--) { const a = (Math.PI / 3) * (i / n); pts.push([x0 + w - r * Math.cos(a), spring + r * Math.sin(a)]); }
+      for (let i = 1; i <= n; i++) { const a = (Math.PI / 3) * (i / n); pts.push([x0 + r * Math.cos(a), spring + r * Math.sin(a) * k]); }
+      for (let i = n - 1; i >= 0; i--) { const a = (Math.PI / 3) * (i / n); pts.push([x0 + w - r * Math.cos(a), spring + r * Math.sin(a) * k]); }
       return outerOf([pts]);
     }
     case "horseshoe": {
       // a circle wider than its opening, cut by the jambs below its centre
-      const r = w * 0.56, c = z0 + Math.max(r * 0.7, h - r);
+      const r = Math.min(w * 0.56, h / 1.7), c = z0 + Math.max(r * 0.7, h - r);
       return outerOf([rect(x0 + w * 0.06, z0, w * 0.88, c - z0 + 0.01), circle(cx, c, r, 0.05)]);
     }
   }
@@ -312,3 +318,136 @@ export function straighten(c: Contour, tol = 1e-3): Contour {
 
 /** Score lines kept to the wood (outside the holes), with their straight runs as single segments. */
 export const clipScore = (lines: Contour[], outer: Contour, holes: Contour[]): Contour[] => clipLines(lines, outer, holes).map((c) => straighten(c));
+
+// ------------------------------------------------------------------ railings, fences and crossed pairs
+
+export type RailStyle = "balusters" | "bars" | "lattice" | "solid";
+export const RAIL_STYLES: Record<RailStyle, string> = { balusters: "Balusters", bars: "Horizontal bars", lattice: "Lattice", solid: "Solid panel" };
+export type FenceStyle = "picket" | "rail" | "lattice" | "wall";
+export const FENCE_STYLES: Record<FenceStyle, string> = { picket: "Picket fence", rail: "Post and rail", lattice: "Lattice fence", wall: "Low stone wall" };
+
+/** A shape with its holes, from the union of contours (gaps a union closes in become holes). */
+function solidOf(cs: Contour[]): { outer: Contour; holes: Contour[] } {
+  const s = biggest(unionShapes(cs.map(wound), [], false, true));
+  return { outer: s.outer, holes: s.holes };
+}
+
+/**
+ * A railing or fence panel L long and H tall, standing on its bottom edge with tabs T deep below it
+ * (`tabs`), as a y-down outline (v = 0 at the top, the bottom edge at v = H). Every style keeps a
+ * solid strip along the bottom, so the tabs always have wood above them.
+ */
+export function screenPanel(L: number, H: number, style: RailStyle | FenceStyle, T: number, tabs = true): { outer: Contour; holes: Contour[]; score: Contour[] } {
+  const br = 2.6, tr = 2.2, post = 2.4;
+  const tabRects = tabs ? tabSpans(0, L, T).map(([s, e]) => rect(s, -T, e - s, T + 0.01)) : [];
+  let outer: Contour, holes: Contour[] = [], score: Contour[] = [];
+  const inner = H - br - tr;
+  switch (style) {
+    case "picket": {
+      const pw = 3.2, g = 2.4, n = Math.max(2, Math.round((L + g) / (pw + g))), step = (L - pw) / (n - 1);
+      const pick = Array.from({ length: n }, (_, i): Contour => { const x = i * step; return [[x, 0], [x + pw, 0], [x + pw, H - 1.8], [x + pw / 2, H], [x, H - 1.8]]; });
+      ({ outer, holes } = solidOf([rect(0, 0, L, br), rect(0, H * 0.62, L, 2.2), ...pick, ...tabRects]));
+      break;
+    }
+    case "rail": {
+      const n = Math.max(2, Math.round(L / 28) + 1), step = (L - 3.5) / (n - 1);
+      const posts = Array.from({ length: n }, (_, i) => rect(i * step, 0, 3.5, H));
+      ({ outer, holes } = solidOf([rect(0, 0, L, br), rect(0, H * 0.48, L, 2.4), rect(0, H - 2.6, L, 2.6), ...posts, ...tabRects]));
+      break;
+    }
+    case "wall": {
+      ({ outer } = solidOf([rect(0, 0, L, H), ...tabRects]));
+      const lines = wallFinish("stone", 0, L, 0, H - 2.4);
+      score = clipScore([...lines, [[0, H - 2.4], [L, H - 2.4]]], outer, []);
+      break;
+    }
+    default: {
+      ({ outer } = solidOf([rect(0, 0, L, H), ...tabRects]));
+      if (inner < 3 || L < 3 * post) { if (style !== "solid") break; }
+      if (style === "balusters" && inner >= 3) {
+        const b = 1.4, g = 2.2, k = Math.max(1, Math.floor((L - 2 * post + b) / (g + b))), gw = (L - 2 * post - (k - 1) * b) / k;
+        holes = Array.from({ length: k }, (_, i) => rect(post + i * (gw + b), br, gw, inner));
+      } else if (style === "bars" && inner >= 3) {
+        const b = 1.3, rows = Math.max(1, Math.floor((inner + b) / 4.2)), gh = (inner - (rows - 1) * b) / rows;
+        holes = Array.from({ length: rows }, (_, i) => rect(post, br + i * (gh + b), L - 2 * post, gh));
+      } else if (style === "lattice" && inner >= 4) {
+        const clip = rect(post, br, L - 2 * post, inner);
+        holes = fretHoles({ kind: "lattice", cell: clamp(inner / 2.2, 3.5, 9), bar: 1.2 }, post - 1, br - 1, L - post + 1, H - tr + 1, [], undefined, clip);
+        if (!holes.length) holes = [clip];
+      } else if (style === "solid") {
+        const panes = Math.max(1, Math.round(L / 30)), pw = (L - 2 * post) / panes;
+        for (let i = 0; i < panes; i++) { const r = rect(post + i * pw + 0.8, br, pw - 1.6, Math.max(1, inner)); score.push([...r, r[0]]); }
+      }
+    }
+  }
+  return { outer: yUp(outer, H), holes: holes.map((c) => yUp(c, H)), score: score.map((c) => yUp(c, H)) };
+}
+
+/**
+ * Two identical profiles slotted halfway into each other at right angles (a half-lap cross): a tree,
+ * a lamp post, a bush. `profile` is y up, centred on u = 0, standing on z = 0; `foot` is the half-width
+ * of its foot. With `tabs`, the foot passes tabs T deep below z = 0 and `hole` is the plus-shaped
+ * slot they need in whatever it stands on (plan coordinates). The first part runs along x, the
+ * second along y; the first is slotted from the top, the second from the bottom.
+ */
+export function crossPair(profile: Contour, T: number, at: V3, id: string, name: string, foot: number, tabs: boolean): { parts: GenPart[]; hole: Contour[] } {
+  const [cx, cy, z0] = at;
+  const xs = profile.map((q) => q[0]), zs = profile.map((q) => q[1]);
+  const w = 2 * Math.max(Math.abs(Math.min(...xs)), Math.max(...xs)), H = Math.max(...zs), Hm = H / 2;
+  const f = Math.max(foot, T / 2 + 1.5);
+  const tabA = tabs ? [rect(-f, -T, 2 * f, T + 0.01)] : [];
+  const legsB = tabs ? [rect(-f, -T, f - T / 2 + 0.01, T + 0.01), rect(T / 2 - 0.01, -T, f - T / 2 + 0.01, T + 0.01)] : [];
+  const a = biggest(differenceShapes([outerOf([profile, ...tabA])], [rect(-T / 2, Hm, T, H + 1)]));
+  const b = biggest(differenceShapes([outerOf([profile, ...legsB])], [rect(-T / 2, -T - 1, T, Hm + T + 1)]));
+  const shift = (c: Contour) => yUp(move(c, w / 2, 0), H);
+  const parts: GenPart[] = [
+    { id: `${id}-a`, name: `${name} (slotted from the top)`, outer: shift(a.outer), holes: a.holes.map(shift), place: { x: cx - w / 2, y: -(z0 + H), z: cy - T / 2, upright: true } },
+    { id: `${id}-b`, name: `${name} (slotted from the bottom)`, outer: shift(b.outer), holes: b.holes.map(shift), place: { x: cx + T / 2, y: -(z0 + H), z: cy - w / 2, upright: true, yaw: 90 } },
+  ];
+  const hole = tabs ? [outerOf([rect(cx - f, cy - T / 2, 2 * f, T), rect(cx - T / 2, cy - f, T, 2 * f)])] : [];
+  return { parts, hole };
+}
+
+export type CrossKind = "tree" | "pine" | "bush" | "lamp";
+/** Profiles for crossed pairs, y up, centred on u = 0, H tall and about w wide; and the foot half-width. */
+export function crossProfile(kind: CrossKind, H: number, w: number, T: number): { profile: Contour; foot: number } {
+  const tw = Math.max(T + 5, w * 0.16);
+  switch (kind) {
+    case "pine": {
+      const trunk = rect(-tw / 2, 0, tw, H * 0.2);
+      const tiers = [0, 1, 2].map((i): Contour => { const z = H * (0.14 + i * 0.25), hw = (w / 2) * (1 - i * 0.22); return [[-hw, z], [hw, z], [0, Math.min(H, z + H * 0.42)]]; });
+      return { profile: outerOf([trunk, ...tiers, [[-tw / 2, H * 0.1], [tw / 2, H * 0.1], [0, H]]]), foot: tw / 2 };
+    }
+    case "bush": {
+      const r = w * 0.3;
+      return { profile: outerOf([rect(-tw / 2, 0, tw, H * 0.3), circle(0, H - r, r, 0.05), circle(-w * 0.22, H * 0.48, r * 0.85, 0.05), circle(w * 0.22, H * 0.48, r * 0.85, 0.05), rect(-w * 0.3, H * 0.25, w * 0.6, H * 0.25)]), foot: tw / 2 };
+    }
+    case "lamp": {
+      const pw = Math.max(T + 5, 6), lw = Math.max(pw + 6, w * 0.55), lh = Math.max(9, H * 0.16);
+      const base = rect(-pw * 0.9, 0, pw * 1.8, Math.max(4, H * 0.06));
+      const pole = rect(-pw / 2, 0, pw, H - lh - 2);
+      const lantern: Contour = [[-lw * 0.32, H - lh - 2], [lw * 0.32, H - lh - 2], [lw / 2, H - 3], [-lw / 2, H - 3]];
+      const cap: Contour = [[-lw / 2 - 1, H - 3.2], [lw / 2 + 1, H - 3.2], [0, H]];
+      return { profile: outerOf([base, pole, lantern, cap]), foot: pw * 0.9 };
+    }
+    default: {
+      const r = w / 2;
+      const crown = [circle(0, H - r * 0.9, r * 0.72, 0.05), circle(-r * 0.42, H - r * 1.2, r * 0.6, 0.05), circle(r * 0.42, H - r * 1.2, r * 0.6, 0.05), circle(-r * 0.2, H - r * 0.55, r * 0.5, 0.05), circle(r * 0.25, H - r * 0.6, r * 0.5, 0.05)];
+      return { profile: outerOf([rect(-tw / 2, 0, tw, H - r * 1.1), [[-tw / 2, H * 0.12], [tw / 2, H * 0.12], [tw * 1.2, H * 0.02], [-tw * 1.2, H * 0.02]], ...crown]), foot: tw / 2 };
+    }
+  }
+}
+
+/** The convex hull of points (monotone chain), counter-clockwise. */
+export function hull(pts: Pt[]): Contour {
+  const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  if (p.length < 3) return p;
+  const cr = (o: Pt, a: Pt, b: Pt) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo: Pt[] = [], up: Pt[] = [];
+  for (const q of p) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (const q of p.slice().reverse()) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+  return [...lo.slice(0, -1), ...up.slice(0, -1)];
+}
+
+/** A contour grown by d (mitred), for clearance round a hole. */
+export const grow = (c: Contour, d: number): Contour => { const g = offsetShapes([makeShape(wound(c), [])], d, "miter"); return g.length ? biggest(g).outer : c; };

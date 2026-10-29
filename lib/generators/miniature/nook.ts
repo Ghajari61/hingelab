@@ -20,7 +20,7 @@
 import { rect, circle } from "../geom";
 import type { Contour, GenPart, Pt } from "../types";
 import { clamp, clipScore, openingHoles, openingShape, r1, tabbedFrame, wallFinish, type Divider, type FlatMember, type UprightMember } from "./kit";
-import type { MiniOutput } from "./house";
+import { NOT_A_HOUSE, type MiniOutput } from "./house";
 import { NOOK_SCENES, type MiniatureParams } from "./params";
 import { traditionOf } from "./traditions";
 
@@ -155,6 +155,6 @@ export function buildNook(p: MiniatureParams): MiniOutput {
       ...(n.battery ? ["The battery holder goes in the bay; close the hatch with two small magnets or a strip of tape."] : []),
       ...(n.light || n.battery ? ["Use only low-voltage LED kits sold for book nooks or dollhouses, keep wiring away from hot parts and never leave lights on unattended."] : []),
     ],
-    info: { size: [W, D, H], parts: parts.length, roomW: Wc, stairs: "none", windowFit: true, tower: "none", sceneH },
+    info: { size: [W, D, H], parts: parts.length, ...NOT_A_HOUSE, roomW: Wc, sceneH },
   };
 }

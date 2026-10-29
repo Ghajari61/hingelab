@@ -29,6 +29,31 @@ export function checkMiniature(p: MiniatureParams, out: MiniOutput): I[] {
       const winH = Math.max(8, Math.floor(h.floorH - 12));
       issues.push({ code: "WINDOW_TALL", level: "warn", message: `Windows ${h.winH} mm tall do not fit a ${h.floorH} mm floor; they are drawn ${winH} mm tall.`, fixes: [{ id: "winH", label: `Windows ${winH} mm tall`, safe: true, apply: (q) => ({ ...q, house: { ...q.house, winH } }) }] });
     }
+    if (info.front === "needs-facade") {
+      issues.push({
+        code: "FRONT_NEEDS_FACADE", level: "warn", message: "A door leaf, shopfront, porch and balconies need the closed facade; with an open front they are left out.",
+        fixes: [
+          { id: "facade", label: "Closed facade", safe: false, apply: (q) => ({ ...q, house: { ...q.house, front: "panel" } }) },
+          { id: "off", label: "Leave them off", safe: true, apply: (q) => ({ ...q, house: { ...q.house, door: "open", shopfront: false, porch: "none", balcony: "none" } }) },
+        ],
+      });
+    }
+    if (h.front === "panel" && h.balcony !== "none" && Math.round(h.floors) < 2) {
+      issues.push({ code: "BALCONY_ONE_FLOOR", level: "warn", message: "Balconies go on the floors above the ground floor, and this house has one floor.", fixes: [{ id: "floors", label: "Two floors", safe: false, apply: (q) => ({ ...q, house: { ...q.house, floors: 2 } }) }, { id: "none", label: "No balconies", safe: true, apply: (q) => ({ ...q, house: { ...q.house, balcony: "none" } }) }] });
+    }
+    if (info.front === "built" && h.porch !== "none" && info.porch === "none") {
+      issues.push({ code: "PORCH_NO_ROOM", level: "warn", message: "There is no room for the porch: the windows beside the door, the floor above or the yard leave too little space.", fixes: [{ id: "none", label: "No porch", safe: true, apply: (q) => ({ ...q, house: { ...q.house, porch: "none" } }) }] });
+    }
+    if (info.front === "built" && h.porch === "veranda" && info.porch === "canopy") {
+      issues.push({ code: "VERANDA_LOW", level: "info", message: "A veranda's roof has to clear the ground floor's windows under the floor above; a canopy over the door is made instead.", fixes: [] });
+    }
+    if (info.doorCut) issues.push({ code: "DOOR_UNDER_PORCH", level: "info", message: "The front door is made shorter to fit under the porch canopy.", fixes: [] });
+    if (info.chimney === "no-room") {
+      issues.push({ code: "CHIMNEY_NO_ROOM", level: "warn", message: "No roof panel has room for the chimney clear of its edges; a wider or deeper house makes room.", fixes: [{ id: "none", label: "No chimney", safe: true, apply: (q) => ({ ...q, house: { ...q.house, chimney: false } }) }] });
+    }
+    const want = (info as { treesWanted?: number }).treesWanted ?? 0, lampWant = (info as { lampsWanted?: number }).lampsWanted ?? 0;
+    if (info.trees < want) issues.push({ code: "TREES_FEWER", level: "info", message: `${info.trees} of ${want} ${want === 1 ? "tree fits" : "trees fit"} in the yard; a deeper front yard or wider side yards make room.`, fixes: [{ id: "yard", label: "Deeper front yard", safe: true, apply: (q) => ({ ...q, house: { ...q.house, yard: Math.min(250, q.house.yard + 40) } }) }] });
+    if (info.lamps < lampWant) issues.push({ code: "LAMPS_FEWER", level: "info", message: `${info.lamps} of ${lampWant} street lamps fit along the kerb.`, fixes: [] });
     if (info.tower === "needs-flat") {
       issues.push({ code: "TOWER_FLAT", level: "warn", message: "The windcatcher stands on a flat roof; it is left out of this roof.", fixes: [{ id: "flat", label: "Flat roof", safe: false, apply: (q) => ({ ...q, house: { ...q.house, roof: "flat" } }) }, { id: "no-tower", label: "No windcatcher", safe: true, apply: (q) => ({ ...q, house: { ...q.house, tower: false } }) }] });
     }
