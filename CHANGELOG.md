@@ -1,4 +1,4 @@
-## Unreleased — World Miniature Studio (milestone 1)
+## 1.28.0 — World Miniature Studio
 
 - New generator, World Miniature Studio, with three products:
   - Dollhouses and buildings: one to six floors, rooms with doorways, stairs, an open front or a facade, and six roof shapes (flat with an optional windcatcher, gable, shed, hip, mansard, gambrel).

@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.27.12",
-    "pub_date": "2026-10-29T05:19:15.662Z",
-    "notes": "Family Names overlapping letters now use stacked score shapes so score paths do not cross through letter interiors.",
+    "version": "1.28.0",
+    "pub_date": "2026-10-29T13:13:58.859Z",
+    "notes": "World Miniature Studio adds dollhouses, buildings, book nooks, and scaled dollhouse furniture with editable, tabbed parts and 35 templates.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.12_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmlsWjFYVzlFNVRoaU1yQ09EbW1HSnVtdU0xV2hCc0x6SE8vb1dTTm1QTHhyUWdaamN6ZENQMFYwc1dSZXhuYmpjWTFHNkRZL0syVkE2Y1ZXcTVscEFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjUxMTUwCWZpbGU6SGluZ2VMYWJfMS4yNy4xMl94NjQtc2V0dXAuZXhlCXZlcnNpb246MS4yNy4xMgp5aTg4SmpidGlROTdzN1NhdlFVV1c4RmNmVmRnRkRFU0dqNUNTb0hDTS9pcXd1Vmh3anQ2SUZBdHN5ZThZUHRDSlVsNGdrMVRvVnAwOTFoOUI2NXREQT09Cg==",
-        "size": 11890410,
-        "sha256": "1496e3a5c66419fb4dd4dc3a1c2bcba761ab05f51b4703547da4d52fbe868d7a"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.28.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm4wYmw3VXBBVndWWk1mcGp6azJyUzZrWk9xRjV5V3p2QVFzbXZxYVEvSlp4ak1TU3I5a3VzendTK3RhU1dzb25rSyt6bnhGWXBhNm1ocngyV0xMRHdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjc5NjMwCWZpbGU6SGluZ2VMYWJfMS4yOC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI4LjAKTk1MRDN1ZjFkTHhGVnphbDZtZ2ZQN3k1TFVteWw4TlNrSDZZcExQenhETnVWekg0S2NSR2JNSVZmMisreFc5R2N2alYxWkhDazc3SWRIR0FuSXhhQ2c9PQo=",
+        "size": 12312687,
+        "sha256": "48be155f885ed0c4b78c2a0e121f21e3e83b1c230c4003521d919c5df045c893"
       }
     }
   }
