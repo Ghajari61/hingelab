@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.27.8",
-    "pub_date": "2026-10-29T03:04:04.951Z",
-    "notes": "Score and engraved geometry now appears in 3D previews and thumbnails, including Hinge Box lid marks.",
+    "version": "1.27.9",
+    "pub_date": "2026-10-29T04:10:24.544Z",
+    "notes": "Puzzle pieces now show their cut seams in 3D. Touch controls add pinch zoom and pan, larger sliders, and reliable idle turn.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.8_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm1tcnlDbEN4ZWlBM28xc2FvTkxlNHJvbWliNjd0MllwNnZ5dFBQNHZRa0RUc0JNNHVFRkJiY0R1OGlXeXNvc2dvR1hQNWNIVlMyVWU3YW5Ma3dwd2dzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjQzMDM4CWZpbGU6SGluZ2VMYWJfMS4yNy44X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI3LjgKRGk3eGhjb01OVGdvN1loWnZKYnFPZ2tTZldoNXhqb0EyaGcvRE0xT0s2bldzZUFibmNTMVRZcks2WWhkYmhzRXk0WjIrZVE2Y2hXeEJUMWFkT2dnQ3c9PQo=",
-        "size": 11886268,
-        "sha256": "3e686d29cb7f06671354f8c351cb9740222fe14216ccded30859e0da66eea268"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.9_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm5wK0d4elQwSTlwOVlOc2Z1aHc5a1ZXOEZCY1RrL3RJYzd6b2JMNkZUMUd0VTdqK3RuY2JiaHRIUjF3UTBWUEN6RHI2QVJyVFg0MjBzQitXazhJQlFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjQ3MDE4CWZpbGU6SGluZ2VMYWJfMS4yNy45X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI3LjkKNy92MFFUakZlRTJhWWRDMGxVZW4yOGM2R2xyNTgvU3Z3Zk1LYXc4ckJ0NjlFN3gzZGxJendrZ282WmNFaWYzS0ZEeWtWcytFVXpDYzVibmxKMUNzQmc9PQo=",
+        "size": 11886680,
+        "sha256": "764af93a8afca8cf809bcb5eb93d90bcbde6d88a826ca64f37479daf018739a3"
       }
     }
   }

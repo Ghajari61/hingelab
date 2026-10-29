@@ -1,3 +1,8 @@
+## 1.27.9 — Puzzle 3D and touch controls
+
+- Puzzle pieces now read clearly in the assembled 3D view, with visible piece seams and cut lines.
+- Touch users can pinch to zoom and pan on Sheets canvases, use wider sliders, and keep the idle 3D turn from being blocked by a hovering pen.
+
 ## 1.27.8 — Score and engraved lines in 3D
 
 - Score and engraved geometry is now visible in 3D previews and thumbnails, including Hinge Box lid marks.
