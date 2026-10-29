@@ -9,3 +9,4 @@
 .mstudio-list li { margin: 6px 0; }
 .mstudio-templates { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
 @media (max-width: 640px) { .mstudio-toc ol { columns: 1; } }
+.mstudio-start, .mstudio-templates { list-style: none; padding-inline-start: 0; }
