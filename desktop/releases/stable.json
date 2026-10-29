@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.28.2",
-    "pub_date": "2026-10-29T16:23:58.909Z",
-    "notes": "World Miniature Studio adds dormers, turned and classical columns, pilasters, window boxes, stair railings, and 56 templates.",
+    "version": "1.29.0",
+    "pub_date": "2026-10-29T17:42:54.842Z",
+    "notes": "Miniature Studio adds GLB and parts-list exports, a joint-fit test, xTool P3 profile, AI design support, architecture sources, and a studio guide.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.28.2_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm5KTWQ0ZUtydWpiVCtvZWtYNWtwdDhFdVhCZnh4OHlaK3h4ajd4cFNNSCtBSVluZmR6UGpJTjhCR1FnaXNWTys0bno5Z2ZVRFZFWHpEOWtuTkx0ZHdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjkxMDI3CWZpbGU6SGluZ2VMYWJfMS4yOC4yX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI4LjIKN1d5WThVeFR2cnQ1QmJUK1lOSFRvMFRjeUxsbnB2NDM3WkJLVGI1RzE5emdOdHpGVkFkckg2TUJsVWszMTdHZm83dmN2ODROUSs1aVNDdCtJcFBPQkE9PQo=",
-        "size": 12411831,
-        "sha256": "180573837c6899b4b64b6d205de4cacb59edfca2e5928ac1aeaacf5390839e03"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.29.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnVvYWV6anJNeldCOVQ1R1pweW5qVm80eHJoeTR4MGxyV3BGU0c5U1F4aHdMMDlobU9nZE45eHd0R0o2UW92aXg4eVVralp2elpZQ3o2V25QclJzQlEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjk1NzY4CWZpbGU6SGluZ2VMYWJfMS4yOS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI5LjAKdHQ1WWM0THMyUHA3b0p4MGJvRGZMZmdyNzRKMnhWMTJ6eFFMR2tJQ1B6d25JbHVxdGFxWm41OFpmaFJXK3JVeDJ1MWs1MGVsZWVibzhwQVBuNUZWRFE9PQo=",
+        "size": 12434873,
+        "sha256": "e708822e42ccc3b2ec494d265c450a80d93d398f96a8cdf710c85921941ec89c"
       }
     }
   }

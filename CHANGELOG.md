@@ -8,7 +8,7 @@
 - Miniature houses go together in their real order: base, left wall, back wall and facade, then floor by floor with partitions and stairs. After those come the top plate and the right wall, then the chimney, roof and dormers, the door, porch, balconies and window boxes, and finally the fence, trees and lamps.
 - Other designs follow a general plan: the bottom part, one end, the parts between the ends, the other end, then the rest from the bottom up.
 
-## Unreleased — World Miniature Studio: exports, fit test, xTool P3, AI, library sources, studio guide
+## 1.29.0 — Miniature Studio exports and fit tools
 
 - New export formats in the export dialog of every generator:
   - **3D model (GLB):** the assembled 3D preview as a binary glTF 2.0 file in metres, with part names and colours. Each test file is read back by three.js's glTF loader.
