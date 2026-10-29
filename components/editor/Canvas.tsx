@@ -74,7 +74,34 @@ export function Canvas({
       }
     };
     canvas.addEventListener("wheel", onWheel, { passive: false });
-    return () => canvas.removeEventListener("wheel", onWheel);
+    // Safari (iPad, and the Mac's trackpad) pinches with its own gesture events, and may zoom the
+    // page instead: these zoom the canvas about the gesture's centre, unless the two-pointer pinch
+    // above is already doing it.
+    type Gesture = Event & { scale: number; clientX: number; clientY: number };
+    let last = 1;
+    const onGestureStart = (e: Event) => { e.preventDefault(); last = 1; };
+    const onGestureChange = (e: Event) => {
+      e.preventDefault();
+      const g = e as Gesture;
+      if (pinch.current || !(g.scale > 0)) { last = g.scale || 1; return; }
+      const r = canvas.getBoundingClientRect();
+      zoomAt(g.scale / last, g.clientX - r.left, g.clientY - r.top);
+      last = g.scale;
+    };
+    const onGestureEnd = (e: Event) => { e.preventDefault(); last = 1; };
+    // Two fingers on the canvas never scroll or zoom the page.
+    const onTouchMove = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
+    canvas.addEventListener("gesturestart", onGestureStart, { passive: false });
+    canvas.addEventListener("gesturechange", onGestureChange, { passive: false });
+    canvas.addEventListener("gestureend", onGestureEnd, { passive: false });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      canvas.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("gesturestart", onGestureStart);
+      canvas.removeEventListener("gesturechange", onGestureChange);
+      canvas.removeEventListener("gestureend", onGestureEnd);
+      canvas.removeEventListener("touchmove", onTouchMove);
+    };
   }, [canvasRef, viewRef, zoomAt, panBy]);
 
   const [aspect, setAspect] = useState(1.6);

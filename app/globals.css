@@ -96,7 +96,7 @@ details.sec > summary .sec-rst { margin-inline-start: 0; }
 .slider:hover .knob, .slider:focus-visible .knob { transform: scale(1.15); }
 .slider:focus-visible .knob { box-shadow: 0 0 0 3px var(--accent-soft); }
 /* Touch screens: the slider gets a row of its own across the panel and a bigger knob, so a finger can set a value. */
-@media (pointer: coarse) {
+@media (pointer: coarse), (hover: none) {
   .fld:not(.no-slider) { grid-template-columns: minmax(0,1fr) 112px; row-gap: 2px; }
   .fld:not(.no-slider) > label { grid-row: 1; grid-column: 1; }
   .fld:not(.no-slider) > .in { grid-row: 1; grid-column: 2; }
