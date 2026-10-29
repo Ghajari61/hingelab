@@ -1,3 +1,7 @@
+## 1.27.11 — Account menu sign out
+
+- Fixed the account menu's sign-out action so it submits reliably.
+
 ## 1.27.10 — iPad Safari touch gestures
 
 - Pinch zoom and pan now work through iPad Safari's native gesture events; touch slider sizing also applies on hover-less screens.

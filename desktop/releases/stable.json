@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.27.10",
-    "pub_date": "2026-10-29T04:29:48.642Z",
-    "notes": "iPad Safari pinch and pan now use native gesture events; touch sliders use a larger, easier target across hover-less displays.",
+    "version": "1.27.11",
+    "pub_date": "2026-10-29T05:01:58.564Z",
+    "notes": "Fixed the account menu sign-out action so it submits reliably.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.10_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmk5cDJvSzBoMTl2ay96MEcrZU5UK2Y3cGdnLzhCY0tqdHpjOW9ZM055RmJqejRjaGQ1a1JqaTJxRHJZYjlvOGNHNzNkMmxlZkVMUGVYNno0em96UWdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjQ4MTgzCWZpbGU6SGluZ2VMYWJfMS4yNy4xMF94NjQtc2V0dXAuZXhlCXZlcnNpb246MS4yNy4xMApxR21lUW8xWTZ0blo1alVhVHhLbi9VaVRESDdycmpiVDBuWERJWjlacncyOXo0ckpxMDdJYXZRekNSOGxidCtUbUoreXI0Wk1tQTdSMmRNSzNiYWlCdz09Cg==",
-        "size": 11885869,
-        "sha256": "6862ab9594ba3b5d75a53b8b016b3dadd4ecb1cf7db0520fee374380fe5ea043"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.11_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnRZYXhla1FpUTRncGdIMEpGLzZtRFk3cUpMTWhvUjdPbXpUVGlFSmtOVmdxaUxxalFXZ1JFUEJyeVFmc3dBTDJ6d3ZscFhsd1JaWmNiaC9KbzdlU0FNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjUwMTEzCWZpbGU6SGluZ2VMYWJfMS4yNy4xMV94NjQtc2V0dXAuZXhlCXZlcnNpb246MS4yNy4xMQplQ1gycFA0N0thbTI1dk1KaVJhOSt3Q3M5ZzJUSDhyY1Q3emFrUkt0M2c0ajI2RnJvekNFVHNvMjYrSnZibVFTZytwMHZNRjJ2RUY1TmdMMmwvV2dDZz09Cg==",
+        "size": 11885435,
+        "sha256": "7baca4e8e629e5c77677e9026d8f1cb1fc61260a8079738b62c22c54b80ef737"
       }
     }
   }
