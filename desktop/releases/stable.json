@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.28.1",
-    "pub_date": "2026-10-29T15:03:56.604Z",
-    "notes": "World Miniature Studio adds house fronts, porches, balconies, chimneys, gardens, streets, more furniture, and garden pieces. City apartments fit the sheet.",
+    "version": "1.28.2",
+    "pub_date": "2026-10-29T16:23:58.909Z",
+    "notes": "World Miniature Studio adds dormers, turned and classical columns, pilasters, window boxes, stair railings, and 56 templates.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.28.1_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm1pODl0Y3JRaWovR2IyMmhqbkZBUVhVU0RWc2Y4andzZjNKVVFwWHZhcUdBNklsWjVqWUlFSVBjOTNlTU5FZlhFMjQrcm9zUDY3WG5RQUlYOHF0cHdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjg2MjMwCWZpbGU6SGluZ2VMYWJfMS4yOC4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI4LjEKdGNjbVRYTkVLMndQQzY1bUo3TUt3cW5MZU01TzhOVVFTY0lCVC95cXZvby9mYnlLTnBkNGhrd0I1L0FDNnJFaG1uNGkzd2h2MFJSNEpxWG95NDNUQ3c9PQo=",
-        "size": 12357375,
-        "sha256": "c22b65f177a3de508f3bd18c6efd808b23d892e26dbd1a24c0698c551622c7b6"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.28.2_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm5KTWQ0ZUtydWpiVCtvZWtYNWtwdDhFdVhCZnh4OHlaK3h4ajd4cFNNSCtBSVluZmR6UGpJTjhCR1FnaXNWTys0bno5Z2ZVRFZFWHpEOWtuTkx0ZHdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjkxMDI3CWZpbGU6SGluZ2VMYWJfMS4yOC4yX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI4LjIKN1d5WThVeFR2cnQ1QmJUK1lOSFRvMFRjeUxsbnB2NDM3WkJLVGI1RzE5emdOdHpGVkFkckg2TUJsVWszMTdHZm83dmN2ODROUSs1aVNDdCtJcFBPQkE9PQo=",
+        "size": 12411831,
+        "sha256": "180573837c6899b4b64b6d205de4cacb59edfca2e5928ac1aeaacf5390839e03"
       }
     }
   }

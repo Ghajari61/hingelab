@@ -1,4 +1,4 @@
-## Unreleased — World Miniature Studio: dormers, columns, stair railings, window boxes
+## 1.28.2 — Miniature architectural details
 
 - Dormers: up to four shed dormers standing on the front roof panel of gable, shed, gambrel, hip and mansard roofs. Each has a window in its face, two cheeks, its own roof and a hole into the attic. Each dormer is placed where it fits, and the check says when fewer fit.
 - Porch posts in three shapes: square, turned, or classical columns with a base and a capital.
