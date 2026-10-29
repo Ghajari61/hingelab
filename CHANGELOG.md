@@ -1,3 +1,13 @@
+## Unreleased — Assembly booklet
+
+- A new **Assembly PDF** export format for every generator: a printable step-by-step booklet.
+- The booklet contains:
+  - A cover with the finished model and the general notes.
+  - The parts list.
+  - Every step, two to a page, with a vector drawing of the model so far, the new parts in orange, what to do and which parts it adds.
+- Miniature houses go together in their real order: base, left wall, back wall and facade, then floor by floor with partitions and stairs. After those come the top plate and the right wall, then the chimney, roof and dormers, the door, porch, balconies and window boxes, and finally the fence, trees and lamps.
+- Other designs follow a general plan: the bottom part, one end, the parts between the ends, the other end, then the rest from the bottom up.
+
 ## 1.29.0 — Miniature Studio exports and fit tools
 
 - New export formats in the export dialog of every generator:

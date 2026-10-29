@@ -5,9 +5,9 @@
  */
 import { MACHINE_PROFILES, machineById } from "@/lib/studio/library";
 
-export const EXPORT_FORMATS = ["svg", "dxf", "pdf", "lbrn2", "stl", "glb", "csv"] as const;
+export const EXPORT_FORMATS = ["svg", "dxf", "pdf", "lbrn2", "stl", "glb", "csv", "guide"] as const;
 /** Formats made from the 3D model or the parts list rather than the cut file: offered only where the editor supplies them. */
-export const MODEL_FORMATS: readonly ExportFormat[] = ["glb", "csv"];
+export const MODEL_FORMATS: readonly ExportFormat[] = ["glb", "csv", "guide"];
 export type ExportFormat = (typeof EXPORT_FORMATS)[number];
 
 /** `order`: what the format can make the laser software do about the cut order. */
@@ -18,6 +18,7 @@ export const FORMAT_INFO: Record<ExportFormat, { name: string; ext: string; mime
   stl: { name: "STL (3D print)", ext: "stl", mime: "model/stl", about: "The cut-out parts as solid pieces at the material thickness, laid out as on the sheet, for a 3D printer. Score lines, hinge slits and engraving are left out.", order: "A 3D print has no cut order." },
   glb: { name: "GLB 3D", ext: "glb", mime: "model/gltf-binary", about: "The assembled 3D preview as a binary glTF 2.0 file in metres, for Blender, online viewers, AR and slide decks. Every part keeps its name and colour; score lines are kept as lines; pictures are left out.", order: "A 3D model has no cut order: it is for looking at, not for the laser." },
   csv: { name: "Parts CSV", ext: "csv", mime: "text/csv", about: "Every part with its size, thickness, area, cut length and score length, identical parts counted together, and totals, for a spreadsheet or a kit list.", order: "A parts list has no cut order." },
+  guide: { name: "Assembly PDF", ext: "pdf", mime: "application/pdf", about: "A step-by-step assembly booklet: the finished model and notes, the parts list, then every step with a drawing of the model so far, the new parts in orange, what to do and which parts it adds.", order: "A booklet is for the bench, not the laser: cut from the SVG, DXF, PDF or LightBurn file." },
   lbrn2: { name: "LightBurn", ext: "lbrn2", mime: "application/xml", about: "A LightBurn project with one layer per cut type. Text and pictures are left out: import the SVG for those.", order: "LightBurn follows the order in the file: engrave, score, inner cuts, then outlines (layer priority)." },
 };
 

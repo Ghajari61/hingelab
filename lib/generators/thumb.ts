@@ -64,7 +64,7 @@ const pieces3d = (out: GenOutput): (GenPart & { soft?: boolean })[] => out.parts
   ? p.views3d.map((v, i) => ({ ...p, id: `${p.id}-${i}`, outer: v.outer, holes: v.holes, cuts: undefined, score: v.score, engrave: v.engrave, place: v.place, views3d: undefined, soft: v.soft }))
   : [p]);
 
-function projectedSVG(out: GenOutput, T: number, w: number, h: number): string {
+export function projectedSVG(out: GenOutput, T: number, w: number, h: number): string {
   const items = pieces3d(out).map((p, i) => {
     const pl = p.place ?? { x: 0, y: 0, z: 0 };
     const t = p.t ?? T;

@@ -371,6 +371,8 @@ export interface GeneratorDef<P extends GenBase> {
   art?(key: string, value: string): { d: string; fill?: boolean }[];
   /** The params a rail card renders for a choice key (simpler than the defaults, so the cards differ clearly). */
   railPreview?(key: string, p: P, value: string): P;
+  /** The order to put the parts together in, for the assembly booklet (default: by height, ends first). */
+  assemblyPlan?(p: P, out: GenOutput): AssemblyGroup[];
   /** File name without extension. */
   fileName(p: P): string;
   /** One line under the title, e.g. "Clock · 300 mm · Roman". */
@@ -381,3 +383,6 @@ export interface GeneratorDef<P extends GenBase> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyGenerator = GeneratorDef<any>;
 export type GenIssue<P> = Issue<P>;
+
+/** One step of an assembly booklet: the parts it adds (by id) and what to do with them. */
+export interface AssemblyGroup { title: string; text: string; ids: string[] }

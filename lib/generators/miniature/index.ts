@@ -11,6 +11,7 @@ import {
   mergeMiniature, scaleOf, type AccessoryKind, type FurnitureKind, type HouseTheme, type JointFit, type MiniDesign, type MiniatureParams, type NookScene,
 } from "./params";
 import { MINIATURE_PRESETS } from "./presets";
+import { miniaturePlan } from "./steps";
 import { REGIONS, TRADITIONS, traditionOf, type RoofKind } from "./traditions";
 
 const is = (...d: MiniDesign[]) => (p: MiniatureParams) => d.includes(p.design);
@@ -298,6 +299,7 @@ export const MINIATURE: GeneratorDef<MiniatureParams> = {
   build: buildMiniature,
   check: (p, out) => checkMiniature(p, out as MiniOutput),
   art,
+  assemblyPlan: miniaturePlan,
   railPreview: (key, p) => (key.startsWith("house.") ? { ...p, design: "house" } : key.startsWith("nook.") ? { ...p, design: "nook" } : key.startsWith("furniture.") ? { ...p, design: "furniture" } : key.startsWith("accessory.") ? { ...p, design: "accessory" } : p),
   fileName: (p) => namedFile(p.design === "house" ? "miniature-house" : p.design === "nook" ? "book-nook" : p.design === "accessory" ? "miniature-garden" : "miniature", p.name, fileTail(p)),
   summary: (p) => `${DESIGN_NAMES[p.design]}, ${size(p)}`,
