@@ -49,6 +49,9 @@ export interface FamilyParams extends GenBase {
     trunk: boolean;
     /** Words on the trunk (a year). */
     year: string;
+    /** A bar between each line of names, and its thickness, mm. */
+    lines: boolean;
+    lineW: number;
   };
   snowflake: {
     diameter: number;
@@ -109,7 +112,7 @@ export const FAMILY_DEFAULTS: FamilyParams = {
   names: { list: "Olivia\nNoah\nAva\nLiam\nMum\nDad", fontId: "archivo-black", caps: true },
   mark: { kind: "engrave" },
   crossword: { tile: 14, letter: 62, round: 1.5, back: "outline", pad: 3, grid: true },
-  tree: { width: 100, maxLine: 16, weld: 0.7, noWeld: false, operation: "cut", star: "star", trunk: true, year: "2026" },
+  tree: { width: 100, maxLine: 16, weld: 0.7, noWeld: false, operation: "cut", star: "star", trunk: true, year: "2026", lines: false, lineW: 1.6 },
   snowflake: { diameter: 110, centre: "2026", weld: 1.2, noWeld: false, operation: "cut" },
   monogram: { size: 90, letter: "", letterFont: "playfair-display", band: 26 },
   backer: { on: false, offset: 3 },
@@ -140,7 +143,7 @@ export function mergeFamily(raw: unknown): FamilyParams {
   const c = p.crossword;
   c.tile = clamp(c.tile, 6, 60); c.letter = clamp(c.letter, 30, 90); c.round = clamp(c.round, 0, c.tile / 3); c.pad = clamp(c.pad, 1, 30);
   const t = p.tree;
-  t.width = clamp(t.width, 40, 400); t.maxLine = clamp(t.maxLine, 5, 80); t.weld = clamp(t.weld, 0.2, 4);
+  t.width = clamp(t.width, 40, 400); t.maxLine = clamp(t.maxLine, 5, 80); t.weld = clamp(t.weld, 0.2, 4); t.lineW = clamp(t.lineW, 0.6, 8); t.lines = t.lines === true;
   const sf = p.snowflake;
   sf.diameter = clamp(sf.diameter, 50, 400); sf.weld = clamp(sf.weld, 0.2, 4); sf.centre = sf.centre.slice(0, 8);
   const mo = p.monogram;

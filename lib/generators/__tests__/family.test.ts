@@ -142,6 +142,17 @@ describe("stacked letter scores", () => {
     expect(pointInContour([5, 5], back)).toBe(true);
   });
 
+  it("lines between the names make the tree taller by a bar per gap and keep it one piece", () => {
+    const names = { list: "Ava\nAnna\nSimone\nGabriela\nBenjamin", fontId: "archivo-black", caps: true };
+    const plain = build({ layout: { kind: "tree" }, names, tree: { trunk: false, star: "none" } });
+    const lined = build({ layout: { kind: "tree" }, names, tree: { trunk: false, star: "none", lines: true, lineW: 2 } });
+    const h = (o: FamilyOutput) => { const b = bboxOf([o.parts[0].outer]); return b.y1 - b.y0; };
+    expect(lined.parts.length).toBe(1);
+    expect(h(lined)).toBeGreaterThan(h(plain) + 4 * 2 - 1);
+    const p = mergeFamily({ layout: { kind: "tree" }, names, tree: { lines: true } });
+    expect(FAMILY.check(p, FAMILY.build(p, CTX) as never).filter((i) => i.level !== "info")).toEqual([]);
+  });
+
   it("the name tree's score lines never cross inside a letter, welded or score-only", () => {
     for (const operation of ["cut", "score"]) {
       const p = FAMILY.merge({ layout: { kind: "tree" }, names: { list: "Nahid\nSarah\nEisam\nKzaat", fontId: "archivo-black", caps: true }, tree: { operation } });

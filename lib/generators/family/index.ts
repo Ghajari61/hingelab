@@ -73,6 +73,8 @@ const sections: SectionSpec<FamilyParams>[] = [
       { kind: "choice", key: "tree.operation", label: "Letters", options: [{ v: "cut", text: "Cut" }, { v: "score", text: "Score" }], help: "Cut makes letter pieces. Score traces the original letters on a backing without cutting them out; a backing is added where needed." },
       { kind: "number", key: "tree.weld", label: "Weld", unit: "mm", min: 0.2, max: 4, step: 0.1, show: (p) => !p.tree.noWeld && p.tree.operation !== "score", help: "How much the letters grow so the lines fuse into one piece." },
       { kind: "choice", key: "tree.star", shuffle: true, label: "Topper", rail: true, options: MOTIF_OPTIONS.filter((o) => !o.input), help: "The motif on top of the tree: a star, a snowflake, an angel's crown or none." },
+      { kind: "toggle", key: "tree.lines", label: "Lines between names", help: "A bar between each line of names, as wide as the shorter line, so the rows sit on shelves instead of touching." },
+      { kind: "number", key: "tree.lineW", label: "Line thickness", unit: "mm", min: 0.6, max: 8, step: 0.1, show: (p) => p.tree.lines, help: "Thickness of each bar between the lines; 1.5 mm or more holds in 3 mm wood." },
       { kind: "toggle", key: "tree.trunk", label: "Trunk", help: "A trunk under the tree." },
       { kind: "text", key: "tree.year", label: "Trunk words", maxLength: 12, show: (p) => p.tree.trunk, placeholder: "A year", help: "Words cut through the trunk, such as the year." },
     ],
