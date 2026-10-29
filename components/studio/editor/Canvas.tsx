@@ -355,7 +355,31 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
       } else api.getState().setView((v) => ({ ...v, x: v.x - (e.shiftKey ? e.deltaY : e.deltaX), y: v.y - (e.shiftKey ? 0 : e.deltaY) }));
     };
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
+    // Safari's own pinch (iPad, and the Mac's trackpad): zoom about the gesture's centre, unless
+    // the two-pointer pinch is already doing it; two fingers never zoom or scroll the page.
+    type Gesture = Event & { scale: number; clientX: number; clientY: number };
+    let last = 1;
+    const onGestureStart = (e: Event) => { e.preventDefault(); last = 1; };
+    const onGestureChange = (e: Event) => {
+      e.preventDefault();
+      const g = e as Gesture;
+      if (pinch.current || !(g.scale > 0)) { last = g.scale || 1; return; }
+      const r = el.getBoundingClientRect();
+      zoomAt(g.scale / last, g.clientX - r.left, g.clientY - r.top, false);
+      last = g.scale;
+    };
+    const onTouchMove = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
+    el.addEventListener("gesturestart", onGestureStart, { passive: false });
+    el.addEventListener("gesturechange", onGestureChange, { passive: false });
+    el.addEventListener("gestureend", onGestureStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("gesturestart", onGestureStart);
+      el.removeEventListener("gesturechange", onGestureChange);
+      el.removeEventListener("gestureend", onGestureStart);
+      el.removeEventListener("touchmove", onTouchMove);
+    };
   }, [api, zoomAt]);
 
   // Keys the canvas owns: Space (pan), Escape/Enter (pen, drags), Backspace in the pen, arrows (nudge), Delete on anchors.
