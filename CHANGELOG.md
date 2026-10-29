@@ -1,4 +1,4 @@
-## Unreleased — World Miniature Studio: houses, gardens and more furniture
+## 1.28.1 — Miniature houses, gardens and furniture
 
 - Country house and Town house themes set a whole look in one step; every setting stays editable.
 - New front features (with a closed facade):
