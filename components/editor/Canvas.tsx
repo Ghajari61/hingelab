@@ -50,6 +50,13 @@ export function Canvas({
 }) {
   const [dragging, setDragging] = useState(false);
   const drag = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
+  /** Touches on the canvas: two fingers pinch to zoom about their midpoint and drag to pan. */
+  const touches = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ d: number; mx: number; my: number } | null>(null);
+  const pinchOf = () => {
+    const [a, b] = [...touches.current.values()];
+    return { d: Math.hypot(b.x - a.x, b.y - a.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+  };
   const zoomPct = Math.round(view.z / (96 / 25.4) * 100) + "%";
 
   useEffect(() => {
@@ -136,6 +143,16 @@ export function Canvas({
     </>
   );
 
+  /** A finger or the mouse lifts: a pinch that loses a finger carries on as a one-finger pan. */
+  const endPointer = (id: number) => {
+    touches.current.delete(id);
+    pinch.current = null;
+    const v = viewRef.current, rest = [...touches.current.values()][0];
+    if (rest && v) { drag.current = { x: rest.x, y: rest.y, tx: v.tx, ty: v.ty }; return; }
+    drag.current = null;
+    setDragging(false);
+  };
+
   return (
     <div
       className={`canvas${dragging ? " dragging" : ""}${tool === "zoom" && !spaceDown ? " zoom-in" : ""}${stale ? " stale" : ""}`}
@@ -152,6 +169,11 @@ export function Canvas({
         }
         const v = viewRef.current;
         if (!v) return;
+        if (e.pointerType === "touch") {
+          touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (touches.current.size === 2) { drag.current = null; pinch.current = pinchOf(); }
+          if (touches.current.size > 1) { e.currentTarget.setPointerCapture(e.pointerId); setDragging(true); return; }
+        }
         drag.current = { x: e.clientX, y: e.clientY, tx: v.tx, ty: v.ty };
         e.currentTarget.setPointerCapture(e.pointerId);
         setDragging(true);
@@ -166,11 +188,21 @@ export function Canvas({
         const on = at && shown?.find((s) => mx >= s.x && mx <= s.x + s.w && my >= s.y && my <= s.y + s.h);
         if (on) { mx -= on.x; my -= on.y; }
         onCursor(fmtLen(mx, units, true), fmtLen(my, units, true));
+        if (e.pointerType === "touch" && touches.current.has(e.pointerId)) {
+          touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (touches.current.size === 2 && pinch.current) {
+            const now = pinchOf(), was = pinch.current;
+            panBy(v.tx + now.mx - was.mx, v.ty + now.my - was.my);
+            if (was.d > 1 && now.d > 1) zoomAt(now.d / was.d, now.mx - r.left, now.my - r.top);
+            pinch.current = now;
+            return;
+          }
+        }
         if (!drag.current) return;
         panBy(drag.current.tx + e.clientX - drag.current.x, drag.current.ty + e.clientY - drag.current.y);
       }}
-      onPointerUp={() => { drag.current = null; setDragging(false); }}
-      onPointerCancel={() => { drag.current = null; setDragging(false); }}
+      onPointerUp={(e) => endPointer(e.pointerId)}
+      onPointerCancel={(e) => endPointer(e.pointerId)}
     >
       <svg id="stage" xmlns="http://www.w3.org/2000/svg">
         <g id="world" transform={`translate(${view.tx},${view.ty}) scale(${view.z})`}>

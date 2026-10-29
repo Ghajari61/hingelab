@@ -7,6 +7,7 @@
  */
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import * as THREE from "three";
+import { editorPrefs } from "@/lib/prefs/editorStore";
 import { meshEdges } from './edges';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
@@ -248,6 +249,12 @@ function glow(mesh: THREE.Mesh, on: boolean) {
 /** How long the mouse and keys rest before the perspective view starts turning, ms. */
 const IDLE_MS = 5000;
 
+/** Whether the idle turn may run: the preference, or by default unless reduced motion is asked for. */
+function idleTurnAllowed(systemReduced: boolean): boolean {
+  const p = editorPrefs();
+  return p.idleTurn === "on" || (p.idleTurn === "auto" && !systemReduced && !p.reduceMotion);
+}
+
 const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref) {
   const { model, look, frameKey, explode = 0, measure, shade, quad, active, onActive, onQuad, onShade, dims, units, dim, onPick, pickable, onSelect, selectName, grips, id, testId, className = "", label = "3D views of the design", photoName, children } = props;
   const [gripKind, setGripKind] = useState<GripKind>("size");
@@ -438,11 +445,15 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
       if (p?.controls.autoRotate) { p.controls.autoRotate = false; request(); }
     };
     pokeRef.current = poke;
-    const wake = ["pointerdown", "pointermove", "wheel", "keydown", "touchstart"] as const;
+    const wake = ["pointerdown", "wheel", "keydown", "touchstart"] as const;
     for (const t of wake) el.addEventListener(t, poke, { passive: true });
+    // A moving mouse wakes the view; a pen or finger only while it presses (a pen hovering over a
+    // tablet sends moves all the time and would keep the turn from ever starting).
+    const moved = (e: PointerEvent) => { if (e.pointerType === "mouse" || e.buttons) poke(); };
+    el.addEventListener("pointermove", moved, { passive: true });
     const timer = window.setInterval(() => {
       const p = panes.find((x) => x.def.id === "persp"), l = live.current;
-      if (!p || p.controls.autoRotate || l.autoOrbit===false || still?.matches || document.visibilityState !== "visible") return;
+      if (!p || p.controls.autoRotate || l.autoOrbit===false || !idleTurnAllowed(still?.matches ?? false) || document.visibilityState !== "visible") return;
       if (!shown.current || drag.current || l.photo || !(l.quad || l.active === "persp")) return;
       if (performance.now() - idle.current < IDLE_MS) return;
       p.controls.autoRotate = true;
@@ -451,6 +462,7 @@ const QuadView = forwardRef<QuadViewHandle, Props>(function QuadView(props, ref)
     return () => {
       window.clearInterval(timer);
       for (const t of wake) el.removeEventListener(t, poke);
+      el.removeEventListener("pointermove", moved);
       ro.disconnect();
       for (const off of offs) off();
       for (const k of handles.current) k.dispose();

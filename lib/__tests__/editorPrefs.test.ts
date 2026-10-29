@@ -70,4 +70,11 @@ describe("editor preferences", () => {
     expect(d2.uiSize).toBeUndefined();
     expect(d2.reduceMotion).toBeUndefined();
   });
+
+  it("keeps the idle 3D turn preference: auto by default, on or off when set", () => {
+    expect(normalizeEditorPrefs({}).idleTurn).toBe("auto");
+    expect(normalizeEditorPrefs({ idleTurn: "on" }).idleTurn).toBe("on");
+    expect(normalizeEditorPrefs({ idleTurn: "off" }).idleTurn).toBe("off");
+    expect(normalizeEditorPrefs({ idleTurn: "sometimes" }).idleTurn).toBe("auto");
+  });
 });

@@ -629,6 +629,50 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   }
 
+  // ---------- two-finger pinch and pan (tablets) ----------
+  // A second finger cancels what the first one started (as Escape does) and turns the gesture into a
+  // pinch: the view zooms about the fingers' midpoint and follows it; lifting a finger ends it.
+  const touches = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ d: number; mx: number; my: number } | null>(null);
+  const pinchOf = () => {
+    const [a, b] = [...touches.current.values()];
+    return { d: Math.hypot(b.x - a.x, b.y - a.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+  };
+  function touchDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType === "touch") {
+      touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (touches.current.size >= 2) {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        if (touches.current.size === 2) {
+          if (drag.current) { api.getState().end("", null); drag.current = null; pending.current = null; setLines([]); setHud(null); rerender(); }
+          pinch.current = pinchOf();
+        }
+        return;
+      }
+    }
+    onPointerDown(e);
+  }
+  function touchMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType === "touch" && touches.current.has(e.pointerId)) {
+      touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch.current && touches.current.size >= 2) {
+        const now = pinchOf(), was = pinch.current, r = stageRef.current!.getBoundingClientRect();
+        const s = api.getState();
+        s.setView({ x: s.view.x + now.mx - was.mx, y: s.view.y + now.my - was.my });
+        if (was.d > 1 && now.d > 1) zoomAt(now.d / was.d, now.mx - r.left, now.my - r.top, false);
+        pinch.current = now;
+        return;
+      }
+    }
+    onPointerMove(e);
+  }
+  function touchUp(e: React.PointerEvent<HTMLDivElement>) {
+    const wasPinch = !!pinch.current;
+    touches.current.delete(e.pointerId);
+    if (wasPinch) { if (touches.current.size < 2) pinch.current = null; return; }
+    onPointerUp(e);
+  }
+
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     const s = api.getState();
     if (s.textEditing) return;
@@ -1570,7 +1614,7 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
       className={`st-stage${ui.rulers && !turned ? " with-rulers" : ""}`} ref={stageRef} data-testid="stage" tabIndex={-1}
       data-rotation={turned ? Math.round(normDeg(view.rotation ?? 0) * 100) / 100 : undefined}
       style={{ cursor: toolCursor }}
-      onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
+      onPointerDown={touchDown} onPointerMove={touchMove} onPointerUp={touchUp} onPointerCancel={touchUp}
       onPointerLeave={() => { setPointer(null); pointerStore.setState({ p: null }); }} onDoubleClick={onDoubleClick} onContextMenu={onContextMenuEvent}
     >
       <svg className="st-canvas" width={size.w} height={size.h} aria-label="Canvas" role="img">

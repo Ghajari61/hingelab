@@ -30,6 +30,12 @@
   - The coasters can be cut too, engraved with rings, a sunburst or dots, plus the lid engraving or a cut-out pattern engraved on every coaster. Or the holder can be sized for coasters you already have.
 - Existing designs, presets and saved files are unchanged.
 - The left panel of every editor no longer scrolls sideways: the cards always fit its full width (picture cards with fixed-size images could push it wider than the panel).
+- Puzzle 3D: the pieces now show. Each piece is drawn a hair smaller than its cell, so the seams read, and the piece cuts are drawn on the face. Before, the assembled puzzle looked like one plain board.
+- Tablets and touch screens:
+  - Two fingers pinch to zoom and pan on the Sheets view of every editor (generators, Hinge Box, Letters, Parametric) and in Studio.
+  - Sliders get a full-width row and a bigger knob, so a finger can set a value.
+  - The idle 3D turn is no longer held off by a pen hovering over the screen.
+- Settings › 3D view: a new option, "Turn the 3D view slowly after 5 seconds untouched". By default the view turns unless reduced motion is asked for, in HingeLab or by the system (for example a tablet's Remove animations or battery saver). Ticking the option turns it on even then.
 - 3D view: every scored line in the cut file now shows in 3D. Before, only scored text showed. A scored frame or border (Name Charms, Cake Topper, Key Rack), scored rings (Family Names), a score-only backer, a scored pattern and other untagged score lines were missing. Preset thumbnails show scored lines too.
 - Hinge Box 3D: the lid now shows its engraved or scored pattern and the scored lid-lip outline, as in the cut file. This applies to a fixed lid, a removable lid and a cap lid.
 - Clock: numerals now always stay wholly on their band, so none run past the face's edge or onto the ring's opening.
