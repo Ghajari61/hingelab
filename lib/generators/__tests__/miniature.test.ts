@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildMiniature, type MiniOutput } from "../miniature/build";
-import { mergeMiniature } from "../miniature/params";
+import { FURNITURE_REAL, mergeMiniature, type FurnitureKind } from "../miniature/params";
+import { MINIATURE } from "../miniature";
 import { checkMiniature } from "../miniature/check";
 import { MINIATURE_PRESETS } from "../miniature/presets";
 import { TRADITIONS } from "../miniature/traditions";
@@ -30,7 +31,9 @@ export function overlaps(out: MiniOutput, step = 2.3, max = 20) {
 /** Each rectangular slot is filled by exactly one other part. */
 export function slotsFilled(out: MiniOutput) {
   const bad: string[] = [];
-  for (const p of out.parts) for (const hole of p.holes.filter((h) => h.length === 4)) {
+  // a slot is a rectangle one material thickness across (a clearance hole round a chimney is not)
+  const slot = (h: Contour) => { const b = bboxOf([h]); return h.length === 4 && Math.min(b.x1 - b.x0, b.y1 - b.y0) < 1.6 * T0; };
+  for (const p of out.parts) for (const hole of p.holes.filter(slot)) {
     const pts = grid(hole, 0.7, (u, v) => pointInContour([u, v], hole) && distToContour([u, v], hole) > 0.4);
     if (!pts.length) continue;
     let filled = 0;
@@ -39,6 +42,12 @@ export function slotsFilled(out: MiniOutput) {
   }
   return bad;
 }
+
+/** Params with a house theme applied, as the Theme field does. */
+const theme = (v: string, raw: unknown = {}) => {
+  const f = MINIATURE.sections.flatMap((x) => x.fields).find((x) => x.key === "house.theme") as unknown as { apply: (p: unknown, v: string) => unknown };
+  return f.apply(mergeMiniature(raw), v);
+};
 
 describe("miniature geometry", () => {
   const CASES: unknown[] = [
@@ -51,6 +60,14 @@ describe("miniature geometry", () => {
     { design: "nook" },
     { design: "nook", nook: { scene: "arches", mirror: true } },
     ...["chair", "table", "bed", "bookshelf", "cabinet", "desk", "dresser", "bench"].map((kind) => ({ design: "furniture", furniture: { kind } })),
+    ...["sofa", "armchair", "wardrobe", "nightstand", "fireplace", "counter"].map((kind) => ({ design: "furniture", furniture: { kind, ...FURNITURE_REAL[kind as FurnitureKind] } })),
+    ...["tree", "pine", "bush", "lamp", "fence", "planter"].flatMap((kind) => [true, false].map((base) => ({ design: "accessory", accessory: { kind, base, height: kind === "fence" ? 30 : kind === "planter" ? 25 : 90, width: kind === "lamp" ? 14 : kind === "planter" ? 30 : 50, length: 90 } }))),
+    theme("rural"), theme("urban"), theme("rural", { house: { floors: 1, roof: "hip" } }), theme("urban", { house: { roof: "flat", parapet: 12 } }),
+    ...["gable", "shed", "gambrel", "hip", "mansard", "flat"].map((roof) => ({ house: { roof, chimney: true } })),
+    { house: { front: "panel", balcony: "full", floors: 3, porch: "canopy", rail: "lattice", door: "glazed", step: true } },
+    { house: { front: "panel", balcony: "centre", floors: 2, porch: "veranda", rail: "solid", door: "panelled", shopfront: true } },
+    ...["picket", "rail", "lattice", "wall"].map((fence) => ({ house: { grounds: "garden", fence, yard: 90, yardSides: 30, trees: 4, treeKind: fence === "wall" ? "pine" : "bush", front: "panel", porch: "canopy", door: "planked" } })),
+    { house: { grounds: "street", yard: 50, lamps: 4, trees: 2, front: "panel", shopfront: true, door: "glazed" } },
   ];
   it.each(CASES.map((c) => [JSON.stringify(c), c]))("%s: builds, no shared material, slots filled", (_l, raw) => {
     const out = build(raw);

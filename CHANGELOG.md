@@ -1,3 +1,20 @@
+## Unreleased — World Miniature Studio: houses, gardens and more furniture
+
+- Country house and Town house themes set a whole look in one step; every setting stays editable.
+- New front features (with a closed facade):
+  - Door leaves: plain, panelled, planked or glazed.
+  - A front step and a shopfront with display windows and a sign band.
+  - A canopy porch on posts, or a veranda with railings between its posts.
+  - Centre or full-width balconies on every upper floor, each with a door, railings (balusters, bars, lattice or solid) and brackets.
+- A brick chimney that stands on the top plate and passes up through a hole cut in the right roof panel, on every roof shape.
+- Grounds: the base can grow into a garden or a street.
+  - Garden: a picket, post-and-rail, lattice or stone fence with a gate, a stepping-stone path, flower beds and trees.
+  - Street: paving, a kerb and street lamps.
+- Six more furniture pieces: sofa, armchair, wardrobe, nightstand, fireplace and kitchen counter.
+- Garden and street pieces on their own: leafy tree, pine, bush, street lamp, fence run and planter box. Trees and lamps are two slotted halves standing in a plus-shaped slot.
+- Wide, low arched windows are now segmental arches instead of spilling below their sill. Doors no longer get scored shutters.
+- 53 templates in all, with 18 new ones: 6 houses, 6 furniture pieces and 6 garden and street pieces.
+
 ## 1.28.0 — World Miniature Studio
 
 - New generator, World Miniature Studio, with three products:

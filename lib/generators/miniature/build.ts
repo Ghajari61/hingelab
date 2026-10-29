@@ -5,6 +5,7 @@
  */
 import { makeShape, offsetShapes } from "@/lib/letters/polygon";
 import type { BuildContext, GenPart } from "../types";
+import { buildAccessory } from "./accessory";
 import { buildFurniture } from "./furniture";
 import { buildHouse, type MiniOutput } from "./house";
 import { buildNook } from "./nook";
@@ -22,7 +23,7 @@ function fitPart(pt: GenPart, e: number): GenPart {
 
 export function buildMiniature(p: MiniatureParams, _ctx: BuildContext): MiniOutput {
   if (!(p.T > 0)) return { parts: [], stats: [], error: "Set the material thickness." };
-  const out = p.design === "nook" ? buildNook(p) : p.design === "furniture" ? buildFurniture(p) : buildHouse(p);
+  const out = p.design === "nook" ? buildNook(p) : p.design === "furniture" ? buildFurniture(p) : p.design === "accessory" ? buildAccessory(p) : buildHouse(p);
   const d = FIT_MM[p.joint.fit] ?? 0;
   if (!d || out.error) return out;
   return { ...out, parts: out.parts.map((pt) => fitPart(pt, d / 2)), stats: [...out.stats, { label: "Fit", value: `${FIT_NAMES[p.joint.fit]} (${d > 0 ? "+" : ""}${d} mm on every joint)` }] };

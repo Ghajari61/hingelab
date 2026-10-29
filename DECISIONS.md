@@ -1828,3 +1828,22 @@ The owner asked for text operations everywhere: Engrave, Score and raised (separ
 - **Not claimed.** The mirror frame is not described as producing an infinity effect, since optics are not simulated. The 3D view is a preview, not a physical simulation. No xTool P3 profile was added, because no verified specification was at hand.
 - **Score lines.** The shared clip samples a line every 0.4 mm; `clipScore` keeps only the points where a line bends. Brick and shingle walls stay at a few thousand segments, and the desktop 3D model stays under its size budget.
 - **Tests.** Every preset builds with no warning, and no two parts share material (sampled through each part's thickness). The tabs fill their slots for every roof, the tower, both nook scenes and all furniture kinds. Every tradition is marked unverified.
+
+## D225. Houses with fronts, grounds and chimneys
+
+- **Everything tabs into something that already exists.** No new joint was added:
+  - Porch roofs and balconies pass tabs back into slots in the facade.
+  - Posts tab into the base and the porch roof.
+  - Railings tab down into the balcony or the base, and brackets tab both up and back.
+  - Fence panels tab into the base, which grows into the garden.
+  - Trees and lamps are half-lap pairs. One half is slotted from the top and the other from the bottom, with a plus-shaped slot in the base.
+  - The chimney is the windcatcher's finger-jointed box standing on the top plate.
+- **The facade is checked before anything is tabbed into it.** Every opening is listed first. A porch canopy is narrowed to clear the windows beside the door. A veranda falls back to a canopy when its roof cannot clear the ground-floor windows under the floor above. The door is made shorter under a low canopy. Brackets are left out where they would cross an opening.
+- **The chimney hole is found, not assumed.** Positions are tried in turn. A position is taken only when every sample of its footprint falls inside exactly one roof panel and none falls inside another. The hole is the hull of the footprint's corners on both faces of the panel, plus 0.4 mm. The chimney reaches above the panel's top face at its highest corner.
+- **Trees and lamps take the room there is.** Each spot (yard corners, side yards, along the kerb) takes the largest size that fits, down to 0.45 of the full size. Spots are checked against everything already standing on the base. The check reports when fewer fit than asked for.
+- **Themes are one-shot.** A theme writes a set of fields and stays as a label. Changing a field afterwards does not reset it, and the help says "every setting can be changed after".
+- **Tests:** No shared material, every slot filled, for:
+  - Both themes on four house shapes and the chimney on all six roofs.
+  - Balcony, porch and railing combinations, and all four fences.
+  - The street, the six new furniture kinds, and the accessories with and without a base.
+  - All 53 templates, which build without warnings.
