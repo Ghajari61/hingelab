@@ -1,4 +1,4 @@
-## Unreleased
+## 1.30.4 — Balanced hanging loops
 
 - **Hanging loops stand on solid material.** A monogram's loop no longer hangs off a hairline stroke (the thin diagonal of an M or N). The loop goes near the piece's balance point, so it hangs straight: on the top of the outline where the neck has solid material under it, otherwise where the centre line first meets solid material, or on a short stem down to it. Charms and other layouts use the same check, so a loop never lands on a spike or a thin serif end.
 

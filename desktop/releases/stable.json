@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.30.3",
-    "pub_date": "2026-10-29T22:41:36.201Z",
-    "notes": "Cleaned 3D outlines and edge overlays to remove stray lines over flat faces; STL caps now face outward.",
+    "version": "1.30.4",
+    "pub_date": "2026-10-29T23:01:27.617Z",
+    "notes": "Hanging loops now avoid hairline strokes and sit near the balance point for straighter hanging.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.30.3_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnRReXduKzF3R1BTN0JrNUF6YXV3dDJYZnVnMUdQS2VsMEhrNUd0UDFVRDlyLzF1ajdEN0tqNHFJbm04OUhYMUREWW9yUkdLZWlIM1NXcDl4NFF2WlFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzEzNjkwCWZpbGU6SGluZ2VMYWJfMS4zMC4zX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMwLjMKM3VSdzBVUnRTS090emgrSDFqTEk4c0pncEhmMWZLK25BWWdJa0dUMWpvTnQ3cHpmeFR3UGMxbFMybjZpY29tMU4wRDZnVitMMEhqcUFZU24vdGhaQWc9PQo=",
-        "size": 12749236,
-        "sha256": "3cee469ccc85b5988ab038e0e28d836ddf113cd9229cdd12dcbe55f493d4543e"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.30.4_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmxBcUZ1V3V6Rk1VSm1QaVZ3ZkpvUjJxRFZrY2pWaHBNZnNuUmtWUHRCTmRLY2Q0ZUMzMWpFUkV2NTd5UWRJY245Q1cyZFRrdlhyS3luelhYdDJVYXdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzE0ODgxCWZpbGU6SGluZ2VMYWJfMS4zMC40X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMwLjQKaFhsaVNPbGd1Ym0rZkszakFDSEh2czNzSnUrTzVLUTZGK2VrSTl3T2NucHNDeE05WXN3MEtSSVhLSFZtd3dlSEhyWVJNNmtURzJycDV1cXZiaXJQRHc9PQo=",
+        "size": 12750858,
+        "sha256": "1782c522c3c9160cd11f800d52446e36481c3c37d9b008e183debc8f675dbf08"
       }
     }
   }
