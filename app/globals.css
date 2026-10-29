@@ -95,6 +95,14 @@ details.sec > summary .sec-rst { margin-inline-start: 0; }
 .slider .knob { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--panel); border: 2px solid var(--select); box-shadow: var(--shadow-1); transition: transform var(--dur-fast); }
 .slider:hover .knob, .slider:focus-visible .knob { transform: scale(1.15); }
 .slider:focus-visible .knob { box-shadow: 0 0 0 3px var(--accent-soft); }
+/* Touch screens: the slider gets a row of its own across the panel and a bigger knob, so a finger can set a value. */
+@media (pointer: coarse) {
+  .fld:not(.no-slider) { grid-template-columns: minmax(0,1fr) 112px; row-gap: 2px; }
+  .fld:not(.no-slider) > label { grid-row: 1; grid-column: 1; }
+  .fld:not(.no-slider) > .in { grid-row: 1; grid-column: 2; }
+  .fld:not(.no-slider) > .slider { grid-row: 2; grid-column: 1 / -1; height: 30px; }
+  .slider .knob { width: 22px; height: 22px; margin: -11px 0 0 -11px; }
+}
 select.sel { width: 100%; background: var(--field); border: 1px solid transparent; border-radius: 8px; color: var(--fg); padding: 0 10px; height: 34px; font: inherit; font-size: 13px; }
 select.sel:focus { border-color: var(--accent); outline: none; }
 .rowlabel { color: var(--fg-dim); font-size: 12px; font-weight: 500; }
