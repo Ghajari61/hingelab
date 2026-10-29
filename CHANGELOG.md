@@ -1,6 +1,7 @@
 ## Unreleased
 
 - **Upgrade dialog redesign:** a gradient header with a Pro badge, the cut-file preview as a raised card marked "Ready to cut", the benefits in two columns with round ticks, monthly and yearly plans as cards (yearly highlighted with its saving), and a full-width sign-up button. Prices, plans and links are unchanged.
+- **3D view: no more stray lines across parts.** The triangulator folded thin slivers over where an outline nearly touches itself (puzzle knobs, QR plates, shadow-box layers, pop-up rings, box lattices), and the edge overlay drew lines from their wobbly corners. Outlines are cleaned of repeated points and spikes, every part's top and bottom now face out, and edge lines come from the faces' true directions. The same fix keeps STL exports' caps facing out.
 
 ## 1.30.1 — Family Names tree connectors
 

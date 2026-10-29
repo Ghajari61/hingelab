@@ -28,11 +28,69 @@ export interface FlatPart {
   t?: number;
 }
 
-const toPath = (c: Point[], path: THREE.Path) => {
+/**
+ * A ring without the points that make the triangulator fold a triangle over (drawn as a dark sliver
+ * or a stray line across the face): repeated points, the closing copy of the first point, and
+ * spikes where the outline doubles back on itself.
+ */
+export function cleanRing(c: Point[], eps = 1e-4): Point[] {
+  let r = c.slice();
+  for (let pass = 0; pass < 8; pass++) {
+    const out: Point[] = [];
+    for (const q of r) { const l = out[out.length - 1]; if (!l || Math.hypot(q[0] - l[0], q[1] - l[1]) > eps) out.push(q); }
+    while (out.length > 1 && Math.hypot(out[0][0] - out[out.length - 1][0], out[0][1] - out[out.length - 1][1]) <= eps) out.pop();
+    const n = out.length, keep: Point[] = [];
+    let changed = n !== r.length;
+    for (let i = 0; i < n; i++) {
+      const a = out[(i + n - 1) % n], q = out[i], b = out[(i + 1) % n];
+      const ux = q[0] - a[0], uy = q[1] - a[1], vx = b[0] - q[0], vy = b[1] - q[1];
+      const lu = Math.hypot(ux, uy), lv = Math.hypot(vx, vy);
+      // collinear with its neighbours: a spike (it goes back) or a point on a straight run
+      if (n > 3 && Math.abs(ux * vy - uy * vx) <= 1e-9 * Math.max(1, lu * lv)) { changed = true; continue; }
+      keep.push(q);
+    }
+    r = keep;
+    if (!changed || r.length <= 3) break;
+  }
+  return r;
+}
+
+const toPath = (raw: Point[], path: THREE.Path) => {
+  const c = cleanRing(raw);
   c.forEach((q, i) => (i ? path.lineTo(q[0], -q[1]) : path.moveTo(q[0], -q[1])));
   path.closePath();
   return path;
 };
+
+/**
+ * The flat caps of an extrusion face up (top) and down (bottom). The triangulator can still fold a
+ * triangle over where an outline nearly touches itself; turned the right way round it lies flat with
+ * its neighbours instead of showing as a dark line.
+ */
+export function faceCapsOut(geo: THREE.BufferGeometry, z0: number, z1: number) {
+  const pos = geo.getAttribute("position") as THREE.BufferAttribute, nor = geo.getAttribute("normal") as THREE.BufferAttribute | undefined;
+  const idx = geo.getIndex();
+  const tri = (k: number) => (idx ? idx.getX(k) : k);
+  const count = idx ? idx.count : pos.count;
+  const e = 1e-5 * Math.max(1, Math.abs(z1 - z0));
+  let fixed = 0;
+  for (let k = 0; k + 2 < count; k += 3) {
+    const i = tri(k), j = tri(k + 1), l = tri(k + 2);
+    const za = pos.getZ(i), zb = pos.getZ(j), zc = pos.getZ(l);
+    const top = Math.abs(za - z1) < e && Math.abs(zb - z1) < e && Math.abs(zc - z1) < e;
+    const bottom = Math.abs(za - z0) < e && Math.abs(zb - z0) < e && Math.abs(zc - z0) < e;
+    if (!top && !bottom) continue;
+    const nz = (pos.getX(j) - pos.getX(i)) * (pos.getY(l) - pos.getY(i)) - (pos.getY(j) - pos.getY(i)) * (pos.getX(l) - pos.getX(i));
+    if ((top && nz < 0) || (bottom && nz > 0)) {
+      if (idx) { idx.setX(k + 1, l); idx.setX(k + 2, j); }
+      else for (const a of [pos, nor]) if (a) { for (let c = 0; c < a.itemSize; c++) { const t = a.getComponent(j, c); a.setComponent(j, c, a.getComponent(l, c)); a.setComponent(l, c, t); } }
+      fixed++;
+    }
+    if (nor) for (const v of [i, j, l]) nor.setXYZ(v, 0, 0, top ? 1 : -1);
+  }
+  if (fixed) { pos.needsUpdate = true; if (nor) nor.needsUpdate = true; if (idx) idx.needsUpdate = true; }
+  return fixed;
+}
 
 /** An extruded slab from a y-down outline, z from z0 up t. */
 export function slab(outer: Point[], holes: Point[][], z0: number, t: number, name: string) {
@@ -47,6 +105,7 @@ export function slabs(regions: { outer: Point[]; holes: Point[][] }[], z0: numbe
     return shape;
   });
   const geo = new THREE.ExtrudeGeometry(shapes.length === 1 ? shapes[0] : shapes, { depth: t, bevelEnabled: false, curveSegments: 1 });
+  faceCapsOut(geo, 0, t);
   geo.translate(0, 0, z0);
   const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: "#d9b07a", roughness: 0.8 }));
   mesh.name = name;

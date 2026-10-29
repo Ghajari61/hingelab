@@ -2,6 +2,8 @@
  * three.js objects for the Parametric views: the source model, the slicing planes, and the parts
  * extruded to the sheet thickness at their assembly placement.
  */
+import { cleanRing, faceCapsOut } from "@/lib/three/flat";
+import { featureEdges } from "@/lib/three/edges";
 import * as THREE from "three";
 import type { MeshData, Part, Plane, SliceResult, ParametricParams } from "@/lib/parametric";
 import { calibrationBar } from '@/lib/fit/calibration';
@@ -67,9 +69,10 @@ function range(axis: Plane["u"], min: number[], max: number[]) {
 }
 
 export function partGeometry(part: Part, T: number): THREE.BufferGeometry {
-  const s = new THREE.Shape(part.shape.outer.map(([x, y]) => new THREE.Vector2(x, y)));
-  s.holes = part.shape.holes.map(h => new THREE.Path(h.map(([x, y]) => new THREE.Vector2(x, y))));
+  const s = new THREE.Shape(cleanRing(part.shape.outer).map(([x, y]) => new THREE.Vector2(x, y)));
+  s.holes = part.shape.holes.map(h => new THREE.Path(cleanRing(h).map(([x, y]) => new THREE.Vector2(x, y))));
   const g = new THREE.ExtrudeGeometry(s, { depth: T, bevelEnabled: false, curveSegments: 1 });
+  faceCapsOut(g, 0, T);
   g.translate(0, 0, -T / 2);
   return g;
 }
@@ -141,7 +144,7 @@ export function partsObject(r: SliceResult, T: number, explode = 0, finish: keyo
         if (n.lengthSq() > 0) delta.copy(n.normalize());
       }
       mesh.userData.partId = part.id;
-      const line = edge ? new THREE.LineSegments(new THREE.EdgesGeometry(g, 1), edge) : undefined;
+      const line = edge ? new THREE.LineSegments(featureEdges(g, 1), edge) : undefined;
       line?.position.copy(mesh.position);
       moves.push({ mesh, line, base: mesh.position.clone(), delta });
       grp.add(mesh);
@@ -166,7 +169,7 @@ export function partsObject(r: SliceResult, T: number, explode = 0, finish: keyo
     const mesh = new THREE.Mesh(g, mat);
     mesh.applyMatrix4(mx);
     mesh.userData.partId = part.id;
-    const line = edge ? new THREE.LineSegments(new THREE.EdgesGeometry(g, 30), edge) : undefined;
+    const line = edge ? new THREE.LineSegments(featureEdges(g, 30), edge) : undefined;
     line?.applyMatrix4(mx);
     moves.push({ mesh, line, base: mesh.position.clone(), delta });
     grp.add(mesh);

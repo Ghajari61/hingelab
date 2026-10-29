@@ -5,6 +5,7 @@
  * a print has no use for them. Everything runs on the device.
  */
 import { ShapeUtils, Vector2 } from "three";
+import { cleanRing } from "@/lib/three/flat";
 import { unionShapes } from "@/lib/letters/polygon";
 import type { Contour } from "@/lib/letters/types";
 import { readScene, type Scene } from "./scene";
@@ -66,7 +67,7 @@ export function loopsToSTL(loops: Contour[], thickness: number): StlResult {
   const T = Math.max(0.2, Math.min(100, thickness));
   const shapes = unionShapes(loops, [], true);
   const tris: number[] = [];
-  const v = (c: Contour) => c.map(([x, y]) => new Vector2(x, -y));
+  const v = (c: Contour) => cleanRing(c).map(([x, y]) => new Vector2(x, -y));
   for (const s of shapes) {
     // y flips, so a contour's winding flips too: three wants the outer counter-clockwise, holes clockwise
     let outer = v(s.outer);
@@ -76,6 +77,9 @@ export function loopsToSTL(loops: Contour[], thickness: number): StlResult {
     const all = [...outer, ...holes.flat()];
     for (const [a, b, c] of faces) {
       const A = all[a], B = all[b], C = all[c];
+      // the triangulator can fold a sliver over where an outline nearly touches itself: keep every cap facing out
+      const turn = (B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x);
+      if (turn < 0) { tris.push(A.x, A.y, T, C.x, C.y, T, B.x, B.y, T, A.x, A.y, 0, B.x, B.y, 0, C.x, C.y, 0); continue; }
       tris.push(A.x, A.y, T, B.x, B.y, T, C.x, C.y, T); // top, facing up
       tris.push(A.x, A.y, 0, C.x, C.y, 0, B.x, B.y, 0); // bottom, facing down
     }
