@@ -4,6 +4,7 @@ import { BOXES } from "./boxes";
 import { CHARM } from "./charm";
 import { FAMILY } from "./family";
 import { MINIATURE } from "./miniature";
+import { LEATHER } from "./leather";
 import { POPUP } from "./popup";
 import { CLOCK } from "./clock";
 import { KEYRACK } from "./keyrack";
@@ -16,4 +17,4 @@ import { TOPPER } from "./topper";
 import { TROPHY } from "./trophy";
 import type { AnyGenerator } from "./types";
 
-export const ALL_GENERATORS: AnyGenerator[] = [KEYCHAIN, POPUP, CLOCK, PUZZLE, QR, BOXES, TOPPER, KEYRACK, SIGN, TABLENUM, TROPHY, SHADOWBOX, CHARM, FAMILY, MINIATURE];
+export const ALL_GENERATORS: AnyGenerator[] = [KEYCHAIN, POPUP, CLOCK, PUZZLE, QR, BOXES, TOPPER, KEYRACK, SIGN, TABLENUM, TROPHY, SHADOWBOX, CHARM, FAMILY, MINIATURE, LEATHER];

@@ -322,6 +322,8 @@ function GenEditor({ def, onProduct, onHome, start }: {
     if (out.notice) { toastMsg(out.notice); return null; }
     if (nesting) { toastMsg("Still nesting the parts by shape. Wait a moment, or press Cancel to keep the box layout."); return null; }
     if (issues.some((i) => i.code === "MISSING_GLYPHS")) { toastMsg("Pick a font that has every character first"); return null; }
+    // Leather: no laser file until the material is confirmed safe for the laser (the hand template is always allowed)
+    if (issues.some((i) => i.code === "LASER_BLOCKED")) { toastMsg("No laser file for this material yet: confirm it under Material and safety, or make the hand-cutting template"); return null; }
     const over = batchLimitMessage(account.plan, designBatchCount(params), !account.configured);
     if (over) { setUpgrade(over); return null; }
     if (account.configured && !hasPro(account.plan)) { setUpgrade("Saving and exporting need Pro. Upgrade to download cut files and keep cloud projects."); return null; }
