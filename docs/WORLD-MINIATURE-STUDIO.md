@@ -32,8 +32,11 @@ Milestone 1 of the "World Miniature & Architecture Studio Pro" master prompt. Th
 - Section 16, AI: the AI designer offers the Miniature Studio. It runs server-side, with no keys in the browser.
 - Section 17, cost: the export dialog's job summary, labelled as estimates.
 
+## Milestone 5
+
+- Section 13, exports: the Assembly PDF booklet, with step drawings, the parts list and the notes (D228).
+
 ## Not yet done
 
 - A specialist review of the library, before any tradition is marked `reviewed`.
-- An assembly-instructions PDF with step drawings.
 - Section 19 onward of the prompt, which was never received.

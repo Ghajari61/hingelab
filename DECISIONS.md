@@ -1873,3 +1873,20 @@ The owner asked for text operations everywhere: Engrave, Score and raised (separ
 - **xTool P3:** the profile uses only figures from xTool's own pages: 80 W CO₂, 915 × 458 mm and 1200 mm/s. A comment in `lib/studio/library.ts` names the sources and the date checked.
 - **Sources do not make an entry reviewed.** A research pass fetched every source URL listed in `traditionSources.ts` and compared the short claims with it. It corrected four claims that a source contradicted and kept softer disagreements as notes. That makes an entry `sourced`. `reviewed` stays for a specialist.
 - **The studio guide is a page, not a second editor.** The twelve sections link into the one generator editor and its templates, so nothing is built twice. The original prompt's section 15 text was not available in full, so this layout is an interpretation of its outline.
+
+## D228. The assembly booklet
+
+- **Drawn from the thumbnails' projection.** Each step's drawing is `projectedSVG` (thumb.ts, now exported). It shows the parts placed so far in a pale grey and the step's new parts in orange.
+- **One frame for every drawing.** All drawings use the finished model's viewBox, so the model stays in place from step to step.
+- **Paths go straight into the PDF.** The drawings use only M, L and Z paths, so `lib/export/assemblyPdf.ts` writes them as PDF path operators in A4 pages, without a rasteriser or a PDF library. The text is Helvetica (WinAnsi). The page streams are compressed with the fflate already in the app.
+- **Plans are per generator.** `GeneratorDef.assemblyPlan` is new and optional. The miniature house plan follows the real build order. Other designs use `genericPlan`:
+  - the bottom part, then one end panel;
+  - the parts inside the frame, parts of one kind together, at most six to a step;
+  - the second end, then the caps on top.
+- **Every part is in one step.** `bookSteps` drops ids already used and adds a "Remaining parts" step for anything a plan missed, so every part appears exactly once. The tests check this.
+- **Validation:** the tests check the PDF structure:
+  - The header and trailer.
+  - Every xref offset lands on its object.
+  - The page count matches the page streams.
+  - Every stream inflates to drawing operators with no NaN in them.
+- **Also checked outside the tests:** a sample file passes `qpdf --check`, and its pages, rendered with `pdftoppm`, were checked by eye.

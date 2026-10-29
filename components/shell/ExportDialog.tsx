@@ -26,11 +26,13 @@ function download(f: ExportFile) {
  * sheets), SVG, DXF, PDF or a LightBurn project, every sheet in one file or one file per sheet, a
  * mirrored copy and hairline strokes. The files are made from the same SVG the editor exports.
  */
-export default function ExportDialog({ getSVG, localSVG, getGLB, getBOM, sheets, size, base, units, material, thickness, onClose, toast }: {
+export default function ExportDialog({ getSVG, localSVG, getGLB, getBOM, getGuide, sheets, size, base, units, material, thickness, onClose, toast }: {
   /** The assembled 3D model as a .glb file (none: the editor has no 3D model to offer). */
   getGLB?: () => Promise<Uint8Array | null>;
   /** The parts list as CSV (none: not offered). */
   getBOM?: () => string | null;
+  /** The assembly booklet as a PDF (none: not offered). */
+  getGuide?: () => Promise<Uint8Array | null>;
   /** The design's material id: the user's own laser settings for it go into a LightBurn file. */
   material?: string;
   /** The design's material thickness, mm: how thick an STL's parts are unless the user changes it. */
@@ -47,7 +49,7 @@ export default function ExportDialog({ getSVG, localSVG, getGLB, getBOM, sheets,
   onClose: () => void;
   toast: (msg: string) => void;
 }) {
-  const offered = (f: ExportFormat) => (f === "glb" ? !!getGLB : f === "csv" ? !!getBOM : true);
+  const offered = (f: ExportFormat) => (f === "glb" ? !!getGLB : f === "csv" ? !!getBOM : f === "guide" ? !!getGuide : true);
   const [s, setS] = useState<ExportSettings>(() => { const x = loadExport(loadPrefs().machineId); return offered(x.format) ? x : { ...x, format: "svg" }; });
   const [busy, setBusy] = useState(false);
   const [mat] = useState<LaserFromMaterial | undefined>(() => {
@@ -84,10 +86,10 @@ export default function ExportDialog({ getSVG, localSVG, getGLB, getBOM, sheets,
     if (busy || locked) return;
     setBusy(true);
     try {
-      if (s.format === "glb" || s.format === "csv") {
-        const data = s.format === "glb" ? await getGLB?.() : getBOM?.();
+      if (s.format === "glb" || s.format === "csv" || s.format === "guide") {
+        const data = s.format === "glb" ? await getGLB?.() : s.format === "guide" ? await getGuide?.() : getBOM?.();
         if (!data) { toast("There is nothing to export yet."); return; }
-        const name = `${base}${s.format === "csv" ? "-parts" : ""}.${FORMAT_INFO[s.format].ext}`;
+        const name = `${base}${s.format === "csv" ? "-parts" : s.format === "guide" ? "-assembly" : ""}.${FORMAT_INFO[s.format].ext}`;
         download({ name, data, mime: FORMAT_INFO[s.format].mime });
         saveExport(s);
         toast(`Downloading ${name}`);
@@ -177,6 +179,7 @@ export default function ExportDialog({ getSVG, localSVG, getGLB, getBOM, sheets,
               ? `Files are made on your device. The LightBurn file carries the speed, power and passes you saved for “${mat.name}”; layers without your settings keep LightBurn's own.`
               : s.format === "glb" ? "The model is made on your device from the 3D preview, assembled. It shows the design; cut from the SVG, DXF, PDF or LightBurn file."
               : s.format === "csv" ? "The list is made on your device from the design's parts, before kerf."
+              : s.format === "guide" ? "The booklet is made on your device from the design's parts and 3D placement. Dry-fit each step before gluing."
               : s.format === "stl" ? "The file is made on your device. Check the part thickness, and print a small part first to check the fit of slots and tabs."
               : "Files are made on your device. Laser power and speed are not set: use your own tested settings for each layer. Measure your real material thickness and cut a small test before the whole job."}
           </p>

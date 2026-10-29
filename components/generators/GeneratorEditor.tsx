@@ -233,6 +233,13 @@ function GenEditor({ def, onProduct, onHome, start }: {
       return sceneToGLB(scene.group).data;
     } finally { scene.dispose(); }
   }, [out, built, def]);
+  const guideFile = useCallback(async () => {
+    if (!out) return null;
+    const [{ bookSteps, genericPlan }, { assemblyPDF }] = await Promise.all([import("@/lib/generators/assemblyBook"), import("@/lib/export/assemblyPdf")]);
+    const plan = def.assemblyPlan?.(built, out) ?? genericPlan(out);
+    const { cover, steps } = bookSteps(out, built.T, plan);
+    return assemblyPDF({ title: built.name, subtitle: def.summary(built), cover, notes: assemblySteps(out.assembly, built.gap), bom: bomRows(out.parts, built.T), steps }).pdf;
+  }, [out, built, def]);
   const bomFile = useCallback(() => (out ? bomCSV(bomRows(out.parts, built.T), { title: `${built.name} (${def.summary(built)})`, material: built.material, T: built.T }) : null), [out, built, def]);
   const error = fontError ?? ("error" in arranged.result ? arranged.result.error : null);
   const lay = model ? arranged.lay : null;
@@ -714,7 +721,7 @@ function GenEditor({ def, onProduct, onHome, start }: {
       />
       {exporting && (
         <ExportDialog
-          getSVG={exportedSVG} localSVG={localSVG} getGLB={glbFile} getBOM={bomFile} sheets={arranged.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
+          getSVG={exportedSVG} localSVG={localSVG} getGLB={glbFile} getBOM={bomFile} getGuide={guideFile} sheets={arranged.sheets} size={{ w: lay?.width ?? 0, h: lay?.height ?? 0 }}
           base={def.fileName(built)} units={units} material={params.material} thickness={params.T} onClose={() => setExporting(false)} toast={toastMsg}
         />
       )}
