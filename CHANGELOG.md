@@ -22,6 +22,8 @@
   - The coasters can be cut too, engraved with rings, a sunburst or dots, plus the lid engraving or a cut-out pattern engraved on every coaster. Or the holder can be sized for coasters you already have.
 - Existing designs, presets and saved files are unchanged.
 - The left panel of every editor no longer scrolls sideways: the cards always fit its full width (picture cards with fixed-size images could push it wider than the panel).
+- 3D view: every scored line in the cut file now shows in 3D. Before, only scored text showed. A scored frame or border (Name Charms, Cake Topper, Key Rack), scored rings (Family Names), a score-only backer, a scored pattern and other untagged score lines were missing. Preset thumbnails show scored lines too.
+- Hinge Box 3D: the lid now shows its engraved or scored pattern and the scored lid-lip outline, as in the cut file. This applies to a fixed lid, a removable lid and a cap lid.
 - Clock: numerals now always stay wholly on their band, so none run past the face's edge or onto the ring's opening.
   - On a cloud or heart face, or on a ring too narrow for a wide numeral such as VIII, a numeral that does not fit where its edge gap puts it moves along its angle to the nearest place it fits, clear of the hands' hub and of the other numerals.
   - If one fits nowhere, all the numerals are drawn smaller together, and the check says so and offers to widen the ring.
