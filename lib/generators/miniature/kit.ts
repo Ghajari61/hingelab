@@ -408,7 +408,7 @@ export function crossPair(profile: Contour, T: number, at: V3, id: string, name:
   return { parts, hole };
 }
 
-export type CrossKind = "tree" | "pine" | "bush" | "lamp";
+export type CrossKind = "tree" | "pine" | "bush" | "lamp" | "column";
 /** Profiles for crossed pairs, y up, centred on u = 0, H tall and about w wide; and the foot half-width. */
 export function crossProfile(kind: CrossKind, H: number, w: number, T: number): { profile: Contour; foot: number } {
   const tw = Math.max(T + 5, w * 0.16);
@@ -429,6 +429,10 @@ export function crossProfile(kind: CrossKind, H: number, w: number, T: number): 
       const lantern: Contour = [[-lw * 0.32, H - lh - 2], [lw * 0.32, H - lh - 2], [lw / 2, H - 3], [-lw / 2, H - 3]];
       const cap: Contour = [[-lw / 2 - 1, H - 3.2], [lw / 2 + 1, H - 3.2], [0, H]];
       return { profile: outerOf([base, pole, lantern, cap]), foot: pw * 0.9 };
+    }
+    case "column": {
+      const { outline } = columnProfile("classical", w, H);
+      return { profile: move(outline, -w / 2, 0), foot: w / 2 };
     }
     default: {
       const r = w / 2;
@@ -451,3 +455,43 @@ export function hull(pts: Pt[]): Contour {
 
 /** A contour grown by d (mitred), for clearance round a hole. */
 export const grow = (c: Contour, d: number): Contour => { const g = offsetShapes([makeShape(wound(c), [])], d, "miter"); return g.length ? biggest(g).outer : c; };
+
+// ------------------------------------------------------------------ columns
+
+export type ColumnStyle = "plain" | "turned" | "classical";
+export const COLUMN_STYLES: Record<ColumnStyle, string> = { plain: "Square posts", turned: "Turned posts", classical: "Classical columns" };
+
+/**
+ * A post or column's silhouette pw wide and H tall, y up (x from 0 to pw, z from 0 to H), with its
+ * scored details. Every style is full width for the last few millimetres at the foot and the head,
+ * so tabs there have wood beside them.
+ */
+export function columnProfile(style: ColumnStyle, pw: number, H: number): { outline: Contour; score: Contour[] } {
+  const c = pw / 2;
+  if (style === "plain" || H < 16) return { outline: rect(0, 0, pw, H), score: [[[0, 3], [pw, 3]], [[0, H - 4], [pw, H - 4]]] };
+  const side: Pt[] = []; // the right-hand edge, bottom to top
+  const score: Contour[] = [];
+  if (style === "turned") {
+    const z0 = 4, z1 = H - 4, n = 48;
+    side.push([pw, 0], [pw, z0]);
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, z = z0 + (z1 - z0) * t;
+      // a vase low down, a run of beads above it, and a neck under the head
+      const vase = t < 0.45 ? 0.3 * Math.sin((Math.PI * t) / 0.45) ** 2 : 0;
+      const beads = t >= 0.5 && t < 0.9 ? 0.12 * Math.max(0, Math.cos(2 * Math.PI * ((t - 0.5) / 0.4) * 4)) : 0;
+      side.push([c + c * (0.52 + vase + beads), z]);
+    }
+    side.push([pw, z1], [pw, H]);
+    score.push([[0, z0], [pw, z0]], [[0, z1], [pw, z1]]);
+  } else {
+    const b = 2.5, tor = 4.5, ech = H - 6, ab = H - 2.5, n = 24;
+    side.push([pw, 0], [pw, b], [c + c * 0.92, b], [c + c * 0.92, tor]);
+    for (let i = 0; i <= n; i++) { const t = i / n, z = tor + (ech - tor) * t; side.push([c + c * (0.72 - 0.1 * t ** 1.5), z]); }
+    for (let i = 1; i <= 6; i++) { const t = i / 6; side.push([c + c * (0.62 + 0.32 * Math.sin((Math.PI / 2) * t)), ech + (ab - ech) * t]); }
+    side.push([pw, ab], [pw, H]);
+    for (const f of [-0.35, 0, 0.35]) score.push([[c + c * f, tor + 1], [c + c * f * 0.88, ech - 1]]);
+    score.push([[0, ab], [pw, ab]]);
+  }
+  const left = side.map(([x, z]) => [pw - x, z] as Pt).reverse();
+  return { outline: outerOf([[...side, ...left]]), score };
+}

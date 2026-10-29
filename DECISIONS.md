@@ -1847,3 +1847,19 @@ The owner asked for text operations everywhere: Engrave, Score and raised (separ
   - Balcony, porch and railing combinations, and all four fences.
   - The street, the six new furniture kinds, and the accessories with and without a base.
   - All 53 templates, which build without warnings.
+
+## D226. Dormers, columns, stair railings and window boxes
+
+- **Dormers sit on the roof, not in it.**
+  - The face stands on the panel's top face a little above the eaves, and the triangular cheeks stand on the same top face behind it.
+  - The dormer's flat roof starts where the main roof's top face reaches the face's height, so nothing passes through the main panel.
+  - The hole into the attic is cut between the cheeks only, on both faces of the panel.
+  - The face is moved up the slope, and then made lower, until the whole dormer is clear of the panel's edges and of every other panel.
+  - The chimney search then avoids the dormers.
+- **The stair railing is part of the stringer.**
+  - The open side's stringer is given a `rightProfile` with a band along the line through the nosings, baluster holes and a newel post.
+  - The railing is clipped to stay 1 mm under the floor above, so it never meets the next stair or the floor plate.
+- **Columns keep their tabs.**
+  - Turned and classical profiles are full width for the last few millimetres at the foot and the head, where the tabs into the base and the porch roof are.
+  - Those posts are made wider (at least T + 6) so their shafts stay solid.
+- **Window boxes test only their slot against the wall.** The flowers rise in front of the window, so only the floor's slot has to be in solid wall. The box itself must clear the porch roof and the balconies.

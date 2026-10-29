@@ -17,10 +17,11 @@
  * Every size is the finished part's size; kerf is the export's business, joint fit is build.ts's.
  */
 import { boxPanels } from "../boxes/joints";
-import { circle, deg, pointInContour, rect, stadium } from "../geom";
+import { bboxOf, circle, deg, pointInContour, rect, stadium } from "../geom";
+import { intersectShapes } from "@/lib/letters/polygon";
 import type { Contour, GenOutput, GenPart, Pt } from "../types";
 import {
-  clamp, clipScore, crossPair, crossProfile, grow, hull, move, openingHoles, openingShape, outerOf, planar, r1, roofFinish, screenPanel, tabSpans, tabbedFrame, trimLine, wallFinish, yUp,
+  biggest, clamp, clipScore, columnProfile, crossPair, crossProfile, grow, hull, move, openingHoles, openingShape, outerOf, planar, r1, roofFinish, screenPanel, tabSpans, tabbedFrame, trimLine, wallFinish, wound, yUp,
   type CrossKind, type Divider, type FenceStyle, type FlatMember, type OpeningShape, type UprightMember, type V3,
 } from "./kit";
 import type { MiniatureParams } from "./params";
@@ -133,9 +134,25 @@ export function buildHouse(p: MiniatureParams): MiniOutput {
       // sawtooth stringer: rises from the front (y = L) to the back wall (y = 0)
       const saw: Pt[] = [[0, 0], [L, 0]];
       for (let i = 1; i <= steps; i++) saw.push([L - (i - 1) * g, i * sh], [L - i * g, i * sh]);
+      // the railing on the stair's open (right) side: the right stringer grows a sloped balustrade
+      // above the line through the nosings, from the newel at the foot to the stairwell at the head
+      let rail: { rightProfile?: Contour; rightHoles?: Contour[]; endHoles?: Contour[] } = {};
+      if (h.stairRail) {
+        const rh = clamp(fh * 0.28, 12, 36), zl = (y: number) => sh + (rise * (L - y)) / L, ya = 3.5;
+        const band: Contour = [[ya, zl(ya) - sh - 1], [L, zl(L) - sh - 1], [L, zl(L) + rh + 4], [L - 4, zl(L) + rh + 4], [L - 4, zl(L - 4) + rh], [ya, zl(ya) + rh]];
+        // kept under the floor above, where the next stair (and the floor's own edge) takes over
+        const clipped = biggest(intersectShapes([wound(band)], [rect(-1, 0, L + 2, rise - 1)])).outer;
+        const holes: Contour[] = [];
+        if (rh >= 9) for (let a = ya + 2.4; a + 2.6 < L - 5; a += 4) {
+          const b = a + 2.6, lo = 1.8, hi = rh - 2.4;
+          if (zl(a) + hi > rise - 3.5) continue;
+          holes.push([[a, zl(a) + lo], [b, zl(b) + lo], [b, zl(b) + hi], [a, zl(a) + hi]]);
+        }
+        rail = { rightProfile: outerOf([saw, clipped]), rightHoles: holes, endHoles: [] };
+      }
       for (let k = 0; k + 1 < N; k++) {
         const treads: FlatMember[] = Array.from({ length: steps - 1 }, (_, j) => ({ id: `t${j + 1}`, name: `Tread ${j + 1} (floor ${k + 1})`, y0: L - (j + 1) * g + 0.5, y1: L - j * g - 0.5, z: (j + 1) * sh - T - c }));
-        stairParts.push(...tabbedFrame({ T, W: sw, at: [xs, yi0, zFloor(k) + T], profile: saw, ends: [`Stringer (floor ${k + 1}, left)`, `Stringer (floor ${k + 1}, right)`], idPrefix: `stair${k + 1}-`, flats: treads }));
+        stairParts.push(...tabbedFrame({ T, W: sw, at: [xs, yi0, zFloor(k) + T], profile: saw, ...rail, ends: [`Stringer (floor ${k + 1}, left)`, `Stringer (floor ${k + 1}, right${h.stairRail ? ", with its railing" : ""})`], idPrefix: `stair${k + 1}-`, flats: treads }));
         // the stairwell over the stair's upper half
         flats[k + 1].holes!.push(rect(xs, yi0 + 3, sw + 2 * T, L * 0.7));
       }
@@ -167,7 +184,7 @@ export function buildHouse(p: MiniatureParams): MiniOutput {
   const dShape: OpeningShape = h.opening === "round" ? "arch" : h.opening;
   const dW = clamp(h.doorW, 14, Wc * 0.4);
   let dH = clamp(h.doorH, 20, fh - 4);
-  const frontWanted = h.door !== "open" || h.shopfront || h.balcony !== "none" || h.porch !== "none";
+  const frontWanted = h.door !== "open" || h.shopfront || h.balcony !== "none" || h.porch !== "none" || h.pilasters || h.windowBoxes;
   const front: HouseInfo["front"] = !frontWanted ? "none" : closed ? "built" : "needs-facade";
   const ftop = h.roof === "flat" ? He + par : He;
 
@@ -219,7 +236,7 @@ export function buildHouse(p: MiniatureParams): MiniOutput {
   }
   if (porch !== "none") {
     if (grounds === "none") gy1 = Math.max(gy1, yF + pd + 4);
-    const pw = Math.max(T + 4, 6), yp = yF + pd - 2 - T, tw = pw - 2;
+    const pw = h.columns === "plain" ? Math.max(T + 4, 6) : Math.max(T + 6, 9), yp = yF + pd - 2 - T, tw = pw - 2;
     // posts: at both ends, and for a veranda beside the door and between, no more than 60 mm apart
     let xs = [cx0 + 2, cx1 - 2 - pw];
     if (porch === "veranda") {
@@ -235,9 +252,10 @@ export function buildHouse(p: MiniatureParams): MiniOutput {
     extra.push({ id: "porch-roof", name: porch === "veranda" ? "Veranda roof" : "Porch canopy", outer: canopyOuter, holes: canopyHoles, ...(finish.length ? { score: finish } : {}), place: { x: 0, y: 0, z: zc } });
     xs.forEach((x, i) => {
       const H = zc + T;
-      const out = yUp(outerOf([rect(0, 0, pw, zc), rect(1, zc - 0.01, tw, T + 0.01), rect(1, -T, tw, T + 0.01)]), H);
-      const rings: Contour[] = [[[0, H - zc + 3], [pw, H - zc + 3]], [[0, H - 4], [pw, H - 4]]];
-      extra.push({ id: `porch-post${i + 1}`, name: `Porch post ${i + 1}`, outer: out, holes: [], score: rings, place: { x, y: -H, z: yp, upright: true } });
+      const col = columnProfile(h.columns, pw, zc);
+      const out = yUp(outerOf([col.outline, rect(1, zc - 0.01, tw, T + 0.01), rect(1, -T, tw, T + 0.01)]), H);
+      const marks = clipScore(col.score, col.outline, []).map((c) => yUp(c, H));
+      extra.push({ id: `porch-post${i + 1}`, name: `${h.columns === "classical" ? "Porch column" : "Porch post"} ${i + 1}`, outer: out, holes: [], ...(marks.length ? { score: marks } : {}), place: { x, y: -H, z: yp, upright: true } });
       baseHoles.push(rect(x + 1, yp, tw, T));
     });
     // railings between the veranda's posts, leaving the door's bay open
@@ -296,6 +314,37 @@ export function buildHouse(p: MiniatureParams): MiniOutput {
     extra.push({ id: `${pre}-floor`, name: `Balcony (floor ${k + 1})`, outer: slab, holes: slabHoles, score: clipScore(wallFinish("boards", bx0, bx0 + bw, yF, yF + bd), slab, slabHoles), place: { x: 0, y: 0, z } });
   }
 
+  // flower boxes under the facade's windows: a floor tabbed into the facade, a front with a row of
+  // flowers along its top and two ends, glued on the floor; left out wherever something else is
+  let boxes = 0;
+  if (closed && h.windowBoxes) {
+    const bw2 = fw + 4, bdp = Math.min(clamp(fw * 0.22, 5, 9), porch !== "none" ? pd - T - 4 : 9), bh = clamp(wh * 0.16, 5, 9);
+    // the slot (z0 to z0 + T) must be in solid wall; the box in front must miss the porch and balconies
+    const clash = (x0: number, x1: number, z0: number, z1: number) =>
+      openBoxes.some(([a, b, c, d]) => x0 < b + 1 && x1 > a - 1 && z0 < d + 1 && z0 + T > c - 1) ||
+      facadeSlots.some((q) => { const bb = bboxOf([q]); return x0 < bb.x1 + 1 && x1 > bb.x0 - 1 && z0 < bb.y1 + 1 && z0 + T > bb.y0 - 1; }) ||
+      (porch !== "none" && x0 < cx1 + 1 && x1 > cx0 - 1 && z1 > zc - 1 && z0 < zc + T + 1) ||
+      balconyFloors.some((k) => x0 < bx0 + bw + 1 && x1 > bx0 - 1 && z1 > zFloor(k) - bd && z0 < zFloor(k) + T + clamp(fh * 0.32, 12, 40) + 1);
+    if (bdp >= 4) frontAt.forEach(([x, z], i) => {
+      const x0 = x - bw2 / 2, x1 = x + bw2 / 2, zb = z - 1.5 - bh, top = z - 1.5;
+      if (zb < T + 2 || x0 < T + 1 || x1 > T + Wc - 1 || clash(x0, x1, zb, top + 4)) return;
+      const spans = tabSpans(x0, x1, T);
+      for (const [s, e] of spans) facadeSlots.push(rect(s, zb, e - s, T));
+      const id = `box${i + 1}`;
+      extra.push({ id: `${id}-floor`, name: `Window box ${i + 1} (floor)`, outer: outerOf([rect(x0, yF, bw2, bdp - T), ...spans.map(([s, e]) => rect(s, yF - T, e - s, T + 0.01))]), holes: [], place: { x: 0, y: 0, z: zb } });
+      const flowers: Contour[] = [];
+      for (let fx = 2.2; fx < bw2 - 1.5; fx += 3.4) flowers.push(circle(fx, bh + 0.6, 1.7, 0.1));
+      const fr = outerOf([rect(0, 0, bw2, bh + 0.6), ...flowers]), Hf = Math.max(...fr.map((q) => q[1]));
+      extra.push({ id: `${id}-front`, name: `Window box ${i + 1} (front, with flowers)`, outer: yUp(fr, Hf), holes: [], score: [[[0, Hf - bh * 0.5], [bw2, Hf - bh * 0.5]]], place: { x: x0, y: -(zb + Hf), z: yF + bdp - T, upright: true } });
+      for (const [side, xe] of [["left", x0], ["right", x1 - T]] as const) {
+        const L = bdp - T, Hh = bh - T;
+        if (L > 1 && Hh > 1) extra.push({ id: `${id}-${side}`, name: `Window box ${i + 1} (${side} end)`, outer: rect(0, 0, L, Hh), holes: [], place: { x: xe + T, y: -(zb + T + Hh), z: yF, upright: true, yaw: 90 } });
+      }
+      occupied.push([x0, yF, x1, yF + bdp]);
+      boxes++;
+    });
+  }
+
   // a door leaf in an opening: inset 0.5 mm all round, panels scored or glass cut out, and a knob
   function doorLeaf(id: string, name: string, cx: number, z0: number, w: number, hh: number): GenPart {
     const shape = openingShape(dShape, cx, z0, w, hh), leaf = grow(shape, -0.5);
@@ -340,8 +389,14 @@ export function buildHouse(p: MiniatureParams): MiniOutput {
       const z0 = T + 6 + shopH + 4, z1 = Math.min(z0 + 10, (N > 1 ? zFloor(1) : ftop) - 3);
       if (z1 - z0 >= 4) { const r = rect(T + 4, z0, Wc - 8, z1 - z0); sign.push([...r, r[0]]); }
     }
+    const pil: Contour[] = [];
+    if (h.pilasters) {
+      const pwp = clamp(Wc * 0.025, 4, 8), at = evenly(T + 6, T + Wc - 6, nf);
+      const xsP = [T + 1.5, T + Wc - 1.5 - pwp, ...at.slice(1).map((x, i) => (x + at[i]) / 2 - pwp / 2)];
+      for (const x of xsP) pil.push([[x, 2], [x, ftop - 2]], [[x + pwp, 2], [x + pwp, ftop - 2]], [[x - 1, ftop - 6], [x + pwp + 1, ftop - 6]], [[x - 1, 6], [x + pwp + 1, 6]]);
+    }
     const holes = [...win.holes, ...shopO.holes, ...door.holes, ...bdoors.holes], outer = rect(T, 0, Wc, ftop);
-    const lines = clipScore([...finishLines(T, T + Wc, 0, ftop), ...win.marks, ...shopO.marks, ...door.marks, ...bdoors.marks, ...sign], outer, [...holes, ...facadeSlots]);
+    const lines = clipScore([...finishLines(T, T + Wc, 0, ftop), ...win.marks, ...shopO.marks, ...door.marks, ...bdoors.marks, ...sign, ...pil], outer, [...holes, ...facadeSlots]);
     uprights.push({ id: "facade", name: "Facade", y: D - mf - T, z0: 0, z1: ftop, holes: [...holes, ...facadeSlots].map((c) => toMember(c, ftop)), score: lines.map((c) => toMember(c, ftop)) });
     if (h.door !== "open") {
       extra.push(doorLeaf("door", "Front door", cxD, T, dW, dH));
@@ -568,19 +623,80 @@ export function buildHouse(p: MiniatureParams): MiniOutput {
       );
     }
   }
+  // The plane of a roof panel: the z of its underside (or top face) over a plan point, and that
+  // point's (u, v) in the panel's outline.
+  type Plane = { q: GenPart; z: (x: number, y: number, top: boolean) => number; uv: (x: number, y: number, top: boolean) => Pt };
+  function planeOf(q: GenPart): Plane {
+    const m = q.place!.m;
+    if (!m) { const z0 = q.place!.z; return { q, z: (_x, _y, top) => z0 + (top ? T : 0), uv: (x, y) => [x, y] }; }
+    const U = [m[0], m[4], m[8]], V = [m[1], m[5], m[9]], Nn = [m[2], m[6], m[10]], O = [m[3], m[7], m[11]];
+    const z = (x: number, y: number, top: boolean) => O[2] + ((top ? T : 0) - Nn[0] * (x - O[0]) - Nn[1] * (y - O[1])) / Nn[2];
+    return { q, z, uv: (x, y, top) => { const d = [x - O[0], y - O[1], z(x, y, top) - O[2]]; return [d[0] * U[0] + d[1] * U[1] + d[2] * U[2], d[0] * V[0] + d[1] * V[1] + d[2] * V[2]]; } };
+  }
+  const inPanel = (pl: Plane, pts: Pt[], top = false) => pts.every(([x, y]) => pointInContour(pl.uv(x, y, top), pl.q.outer) && !pl.q.holes.some((hh) => pointInContour(pl.uv(x, y, top), hh)));
+  const gridOf = (x0: number, y0: number, x1: number, y1: number, n = 6): Pt[] => { const o: Pt[] = []; for (let i = 0; i <= n; i++) for (let j = 0; j <= n; j++) o.push([x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * j) / n]); return o; };
+
+  // ---- dormers: shed dormers standing on the front roof panel over a hole, a window in each face
+  const dormerBoxes: [number, number, number, number][] = [];
+  let dormers = 0;
+  const nd = h.roof === "flat" ? 0 : clamp(Math.round(h.dormers), 0, 4);
+  const frontPanel = roof.find((q) => q.id === "roof-front" || q.id === "roof-front-lower");
+  if (nd && frontPanel) {
+    const pl = planeOf(frontPanel);
+    const dwid = clamp(ww + 12, 22, ((h.roof === "hip" || h.roof === "mansard" ? 0.56 : 1) * Wc) / nd - 10);
+    // a hipped front narrows toward the top, so its dormers keep to the middle
+    const span = h.roof === "hip" || h.roof === "mansard" ? [T + Wc * 0.22, T + Wc * 0.78] : [T + 4, T + Wc - 4];
+    for (const xc of evenly(span[0], span[1], nd)) {
+      const x0 = xc - dwid / 2, x1 = xc + dwid / 2;
+      const ztop = (y: number) => pl.z(xc, y, true), zA = ztop(0), slope = (ztop(D) - zA) / D;
+      if (!(slope < -0.1) || x0 < T + 4 || x1 > T + Wc - 4) continue;
+      // the face's back: where the roof's top is a little over the eaves, moved up the slope until the
+      // dormer is clear of the panel's edges; and the tallest face that fits, from the window's down
+      const y00 = (He + Math.max(4, fh * 0.12) - zA) / slope;
+      const others = roof.filter((q) => q.id.startsWith("roof-") && q !== frontPanel).map(planeOf);
+      let fit: { hd: number; zt: number; yEnd: number; yf0: number; foot: number } | null = null;
+      search: for (const back of [0, 4, 8, 12, 18, 26]) for (const k of [1, 0.85, 0.7, 0.55, 0.45]) {
+        const yf0 = y00 - back, foot = ztop(yf0);
+        const hd = Math.max(22, clamp(wh * 0.8 + 10, 22, fh * 0.9) * k), zt = foot + hd, yEnd = (zt - zA) / slope;
+        if (yf0 - yEnd < 8) continue;
+        const near = gridOf(x0 - 2.5, yEnd - 1, x1 + 2.5, yf0 + T + 2.5);
+        if (!inPanel(pl, near) || !inPanel(pl, gridOf(x0, yEnd, x1, yf0 + T), true)) continue;
+        if (others.some((o) => near.some(([x, y]) => pointInContour(o.uv(x, y, false), o.q.outer)))) continue;
+        fit = { hd, zt, yEnd, yf0, foot };
+        break search;
+      }
+      if (!fit) continue;
+      const { hd, zt, yEnd, yf0, foot } = fit;
+      const holePlan: Pt[] = [[x0 + T + 0.3, yEnd + 0.3], [x1 - T - 0.3, yEnd + 0.3], [x1 - T - 0.3, yf0 - 0.3], [x0 + T + 0.3, yf0 - 0.3]];
+      const hole = grow(hull(holePlan.flatMap(([x, y]) => [pl.uv(x, y, false), pl.uv(x, y, true)])), 0.2);
+      frontPanel.holes.push(hole);
+      if (frontPanel.score) frontPanel.score = clipScore(frontPanel.score, frontPanel.outer, [hole]);
+      const id = `dormer${dormers + 1}`, name = `Dormer ${dormers + 1}`;
+      // the face: x0 to x1 at y = yf0 (its back) to yf0 + T, from the foot up to the dormer roof
+      const fwin = openingShape(h.opening, xc, foot + 3, Math.min(ww, dwid - 8), Math.min(wh, hd - 7));
+      const faceHoles = openingHoles(fwin, h.panes, BAR, h.lattice);
+      const faceOuter = rect(x0, foot, dwid, hd);
+      const faceLines = clipScore([...wallFinish(h.wall, x0, x1, foot, zt), ...(h.trim ? [trimLine(fwin, 1.2)] : [])], faceOuter, faceHoles);
+      roof.push({ id: `${id}-face`, name: `${name} (face)`, outer: toMember(faceOuter, zt), holes: faceHoles.map((c) => toMember(c, zt)), ...(faceLines.length ? { score: faceLines.map((c) => toMember(c, zt)) } : {}), place: { x: 0, y: -zt, z: yf0, upright: true } });
+      // the cheeks: triangles standing on the roof's top face behind the face
+      for (const [side, xa] of [["left", x0], ["right", x1 - T]] as const) {
+        const tri: Contour = [[yEnd, zt], [yf0, zt], [yf0, foot]].map(([y, z]) => [y - yEnd, z] as Pt);
+        roof.push({ id: `${id}-${side}`, name: `${name} (${side} cheek)`, outer: yUp(tri, zt), holes: [], place: { x: xa + T, y: -zt, z: yEnd, upright: true, yaw: 90 } });
+      }
+      const dr = rect(x0 - 2, yEnd, dwid + 4, yf0 + T + 2 - yEnd);
+      const drLines = clipScore(roofFinish(h.roofFinish, x0 - 2, x1 + 2, yEnd, yf0 + T + 2), dr, []);
+      roof.push({ id: `${id}-roof`, name: `${name} (roof)`, outer: dr, holes: [], ...(drLines.length ? { score: drLines } : {}), place: { x: 0, y: 0, z: zt } });
+      dormerBoxes.push([x0 - 2, yEnd - 2, x1 + 2, yf0 + T + 4]);
+      dormers++;
+    }
+  }
+
   // ---- chimney: a finger-jointed stack standing on the top plate, up through a hole in one roof panel
   let chimney: HouseInfo["chimney"] = "none";
   if (h.chimney) {
     chimney = "no-room";
     const cw = clamp(W * 0.09, 16, 30), cd = clamp(cw * 0.8, 14, 26);
-    type Plane = { q: GenPart; z: (x: number, y: number, top: boolean) => number; uv: (x: number, y: number, top: boolean) => Pt };
-    const planes: Plane[] = roof.filter((q) => q.id.startsWith("roof-")).map((q): Plane => {
-      const m = q.place!.m;
-      if (!m) { const z0 = q.place!.z; return { q, z: (_x, _y, top) => z0 + (top ? T : 0), uv: (x, y) => [x, y] }; }
-      const U = [m[0], m[4], m[8]], V = [m[1], m[5], m[9]], Nn = [m[2], m[6], m[10]], O = [m[3], m[7], m[11]];
-      const z = (x: number, y: number, top: boolean) => O[2] + ((top ? T : 0) - Nn[0] * (x - O[0]) - Nn[1] * (y - O[1])) / Nn[2];
-      return { q, z, uv: (x, y, top) => { const d = [x - O[0], y - O[1], z(x, y, top) - O[2]]; return [d[0] * U[0] + d[1] * U[1] + d[2] * U[2], d[0] * V[0] + d[1] * V[1] + d[2] * V[2]]; } };
-    });
+    const planes: Plane[] = roof.filter((q) => q.id.startsWith("roof-")).map(planeOf);
     const tw = clamp(Wc * 0.22, 30, 60), towerBox = tower === "built" ? [T + 6, yi0 + 6, T + 6 + tw, yi0 + 6 + tw] : null;
     const xs = [T + Wc - cw - 12, T + (Wc - cw) / 2, T + 12];
     const ys = h.roof === "flat" ? [yi0 + 8, (yi0 + yi1 - cd) / 2] : [D / 2 - cd - 8, yi0 + 10, D / 2 + 8, yi1 - cd - 10];
@@ -589,6 +705,7 @@ export function buildHouse(p: MiniatureParams): MiniOutput {
       for (const ox of xs) {
         if (ox < T + 2 || ox + cw > T + Wc - 2 || oy < yi0 + 1 || oy + cd > yi1 - 1) continue;
         if (towerBox && ox < towerBox[2] + 2 && ox + cw > towerBox[0] - 2 && oy < towerBox[3] + 2 && oy + cd > towerBox[1] - 2) continue;
+        if (dormerBoxes.some((b) => ox < b[2] + 2 && ox + cw > b[0] - 2 && oy < b[3] + 2 && oy + cd > b[1] - 2)) continue;
         if (h.roof === "flat") { found = { ox, oy, plane: null }; break; }
         const pts: Pt[] = [];
         for (let y = oy - 1; y <= oy + cd + 1.001; y += (cd + 2) / 6) for (let x = ox - 1; x <= ox + cw + 1.001; x += (cw + 2) / 6) pts.push([x, y]);
@@ -643,6 +760,9 @@ export function buildHouse(p: MiniatureParams): MiniOutput {
       ...(closed ? ["The facade goes in with the back wall, before the top plate."] : ["The front stays open for play; dry-fit before gluing."]),
       ...(segments.length ? ["Lay the roof panels on the side walls' tabs; the panel over the ridge covers the other's edge. Glue along the tabs."] : h.roof === "hip" || h.roof === "mansard" ? ["Glue the roof panels on the top plate, edge to edge; sand the hips flush."] : []),
       ...(tower === "built" ? ["Glue the windcatcher's finger joints and stand it on the roof at the back."] : []),
+      ...(dormers ? ["Glue each dormer's cheeks to its face, stand it over its hole in the front roof panel and glue its roof on top."] : []),
+      ...(boxes ? ["Push each window box's floor into its slots under the window and glue the front and ends on it."] : []),
+      ...(h.stairRail && stairs === "built" ? ["The stair's right stringer carries its railing; it rises through the stairwell."] : []),
       ...(chimney === "built" ? ["Glue the chimney's finger joints, stand it on the top plate before the roof goes on, and lower the roof panel over it."] : []),
       ...(balc ? ["Push each balcony into its slots in the facade, stand the railings in the balcony's slots and press the brackets in under it."] : []),
       ...(porch !== "none" ? ["Tab the porch roof into the facade, then stand the posts between the base and the porch roof."] : []),
@@ -651,6 +771,6 @@ export function buildHouse(p: MiniatureParams): MiniOutput {
       ...(trees || lamps ? ["Slide each tree or lamp's two halves together at their slots and push the cross into its slot in the base."] : []),
       "Wood glue in every slot makes it permanent; engrave and score before cutting so nothing moves between jobs.",
     ],
-    info: { size: [gx1 - gx0, gy1 - gy0, Htot], roomW, stairs, windowFit, tower, parts: parts.length, front, porch, doorCut, chimney, trees, lamps, treesWanted: grounds !== "none" ? clamp(Math.round(h.trees), 0, 6) : 0, lampsWanted: grounds === "street" ? clamp(Math.round(h.lamps), 0, 6) : 0 },
+    info: { size: [gx1 - gx0, gy1 - gy0, Htot], roomW, stairs, windowFit, tower, parts: parts.length, front, porch, doorCut, chimney, trees, lamps, dormers, dormersWanted: nd, boxes, treesWanted: grounds !== "none" ? clamp(Math.round(h.trees), 0, 6) : 0, lampsWanted: grounds === "street" ? clamp(Math.round(h.lamps), 0, 6) : 0 },
   };
 }
