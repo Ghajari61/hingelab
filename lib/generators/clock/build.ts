@@ -293,8 +293,11 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext, clear
       if (best || first) break;
     }
     const pick = best ?? first;
-    numerals = pick ? pick.cs : glyphs.map((g) => pull(move(g.base, 1, anchor(g.a) - g.extent / 2, g.dir), g.a));
-    if (pick && pick.k < 1 - 1e-9) res.numeralSize = Math.floor(m.size * pick.k * 2) / 2;
+    // Nowhere on the band at any size: the smallest size, drawn in along its angle until it is clear of the ring.
+    const K = 0.3;
+    numerals = pick ? pick.cs : glyphs.map((g) => pull(move(g.base, K, anchor(g.a) - (g.extent * K) / 2, g.dir), g.a));
+    const k = pick ? pick.k : K;
+    if (k < 1 - 1e-9) res.numeralSize = Math.floor(m.size * k * 2) / 2;
   }
   const gap = Math.max(1, m.tickWidth * 0.6);
   const boxes = numerals.map((cs) => { const b = bboxOf(cs); return { cs, x0: b.x0 - gap, y0: b.y0 - gap, x1: b.x1 + gap, y1: b.y1 + gap }; });
