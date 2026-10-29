@@ -39,6 +39,7 @@
   - The coasters can be cut too, engraved with rings, a sunburst or dots, plus the lid engraving or a cut-out pattern engraved on every coaster. Or the holder can be sized for coasters you already have.
 - Existing designs, presets and saved files are unchanged.
 - The left panel of every editor no longer scrolls sideways: the cards always fit its full width (picture cards with fixed-size images could push it wider than the panel).
+- Family Names (name tree and snowflake): where letters overlap, the score lines no longer cross inside them. Each row lies over the one above and each letter over the one before. Only the front letter's edge is scored where they overlap, as on a stacked sign. The star, trunk, hub and tips sit behind the names. This applies to the welded piece and to Score-only.
 - Account menu: Sign out works again. The menu closed on the click and took the sign-out form off the page before the click could submit it, so nothing happened.
 - Puzzle 3D: the pieces now show. Each piece is drawn a hair smaller than its cell, so the seams read, and the piece cuts are drawn on the face. Before, the assembled puzzle looked like one plain board.
 - Tablets and touch screens:

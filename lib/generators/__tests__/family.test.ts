@@ -124,3 +124,39 @@ describe("Family Names: plates and flags", () => {
     }
   }, 120000);
 });
+
+describe("stacked letter scores", () => {
+  it("scores only the front shape's edge where shapes overlap", async () => {
+    const { stackedScores } = await import("../weldScore");
+    const { pointInContour, rect } = await import("../geom");
+    const back = rect(0, 0, 20, 20), front = rect(10, 10, 20, 20);
+    const lines = stackedScores([[back], [front]]);
+    for (const c of lines) for (const q of c) {
+      // no line runs through the inside of the front square
+      const deep = q[0] > 10.5 && q[0] < 29.5 && q[1] > 10.5 && q[1] < 29.5;
+      expect(deep, String(q)).toBe(false);
+    }
+    // the back square's hidden corner is gone; its visible edges and the whole front remain
+    const len = lines.reduce((n, c) => n + c.slice(1).reduce((m, q, i) => m + Math.hypot(q[0] - c[i][0], q[1] - c[i][1]), 0), 0);
+    expect(len).toBeCloseTo(80 + 60, 0);
+    expect(pointInContour([5, 5], back)).toBe(true);
+  });
+
+  it("the name tree's score lines never cross inside a letter, welded or score-only", () => {
+    for (const operation of ["cut", "score"]) {
+      const p = FAMILY.merge({ layout: { kind: "tree" }, names: { list: "Nahid\nSarah\nEisam\nKzaat", fontId: "archivo-black", caps: true }, tree: { operation } });
+      const out = FAMILY.build(p, CTX);
+      const lines = out.parts.flatMap((q) => q.score ?? []);
+      expect(lines.length, operation).toBeGreaterThan(20);
+      // a crossing: two lines meeting at an interior point (not end to end)
+      const seg = lines.flatMap((c) => c.slice(1).map((q, i) => [c[i], q] as const));
+      let crossings = 0;
+      const cross = (a: readonly number[], b: readonly number[], c: readonly number[], d: readonly number[]) => {
+        const o = (p: readonly number[], q: readonly number[], r: readonly number[]) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
+        return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0;
+      };
+      for (let i = 0; i < seg.length; i += 3) for (let j = i + 1; j < seg.length; j += 1) if (cross(seg[i][0], seg[i][1], seg[j][0], seg[j][1])) crossings++;
+      expect(crossings, operation).toBe(0);
+    }
+  }, 120_000);
+});

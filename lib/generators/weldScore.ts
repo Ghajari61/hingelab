@@ -62,3 +62,52 @@ export function overlapScores(shapes: Contour[][], o: { inset?: number; minRun?:
   }
   return out;
 }
+
+/**
+ * Score lines for shapes stacked in order, each over the ones before it (later rows and letters in
+ * front): every shape's outline (counters included), less the parts hidden under the shapes drawn
+ * after it. Where letters overlap only the front letter's edge is scored, so the lines never cross
+ * inside a letter. Runs shorter than `minRun` mm are dropped.
+ */
+export function stackedScores(shapes: Contour[][], o: { minRun?: number; step?: number } = {}): Contour[] {
+  const minRun = o.minRun ?? 0.6, step = o.step ?? 0.4;
+  const groups = shapes.map((g) => unionShapes(g)).filter((g) => g.length);
+  const out: Contour[] = [];
+  for (let i = 0; i < groups.length; i++) {
+    const above = i + 1 < groups.length ? unionShapes(groups.slice(i + 1).flatMap((g) => shapeContours(g))) : [];
+    for (const c of shapeContours(groups[i])) {
+      if (c.length < 3) continue;
+      if (!above.length) { out.push([...c, c[0]]); continue; }
+      const pts = dense(c, step), hidden = pts.map((q) => inside(q, above));
+      if (!hidden.some(Boolean)) { out.push([...c, c[0]]); continue; }
+      const start = hidden.indexOf(true);
+      if (hidden.every(Boolean)) continue;
+      let run: Contour = [];
+      const flush = () => {
+        let len = 0;
+        for (let k = 1; k < run.length; k++) len += Math.hypot(run[k][0] - run[k - 1][0], run[k][1] - run[k - 1][1]);
+        if (run.length > 1 && len >= minRun) out.push(run);
+        run = [];
+      };
+      // The point where an edge passes under the front shape, found by halving the step, so the
+      // line meets the front letter's edge exactly.
+      const edge = (a: Pt, b: Pt): Pt => {
+        let lo = a, hi = b;
+        for (let n = 0; n < 12; n++) { const m: Pt = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2]; if (inside(m, above)) hi = m; else lo = m; }
+        return lo;
+      };
+      // walk from a hidden point, so every visible run is whole
+      for (let k = 0; k <= pts.length; k++) {
+        const j = (start + k) % pts.length, prev = pts[(j - 1 + pts.length) % pts.length];
+        if (!hidden[j] && k < pts.length) {
+          if (!run.length) run.push(edge(pts[j], prev));
+          run.push(pts[j]);
+        } else {
+          if (run.length) run.push(edge(run[run.length - 1], pts[j]));
+          flush();
+        }
+      }
+    }
+  }
+  return out;
+}

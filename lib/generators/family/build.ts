@@ -17,14 +17,14 @@ import { MATERIALS } from "@/lib/hinge/defaults";
 import { differenceShapes, makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import type { Shape } from "@/lib/letters/types";
 import { bboxOf, circle, rect, roundedRect, transform } from "../geom";
-import { tagMarks } from "../items";
+import { tagItem, tagMarks } from "../items";
 import { material2 } from "../material2";
 import { motif, type MotifRef } from "../motifs";
 import { motifRef } from "../motifRef";
 import { orient, orientHole } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
-import { textBlock, weld, letterShapes, letterTraces } from "../weld";
-import { letterScores } from "../weldScore";
+import { textBlock, weld, letterShapes } from "../weld";
+import { stackedScores } from "../weldScore";
 import { fitContent, hang } from "../charm/build";
 import { mergeCharm } from "../charm/params";
 import { crossword, tileWord } from "./crossword";
@@ -81,7 +81,12 @@ function onCircle(cs: Contour[], R: number): Contour[] {
 }
 
 /** The parts for a welded piece: one cut piece, or a backer with the names in the second material on top. */
-function weldedParts(p: FamilyParams, piece: Shape, scores: Contour[], label: string, hangIt: boolean, loose?: Shape[], scoreOnly = false): { parts: GenPart[]; wall: number } {
+/**
+ * The welded piece (or loose letters) with its backer. `scores` are the letter lines on a welded
+ * piece; with `scoreOnly` the backer carries `stacked`'s lines instead: every shape's outline less
+ * what the shapes in front of it hide, so overlapping letters never draw lines across each other.
+ */
+function weldedParts(p: FamilyParams, piece: Shape, scores: Contour[], label: string, hangIt: boolean, loose?: Shape[], scoreOnly = false, stacked: Contour[][] = []): { parts: GenPart[]; wall: number } {
   const m2 = material2(p.mat.mat2);
   if (loose || scoreOnly) {
     const pieces = loose ?? [piece];
@@ -92,7 +97,7 @@ function weldedParts(p: FamilyParams, piece: Shape, scores: Contour[], label: st
       const back = largest(offsetShapes([makeShape(piece.outer, [])], Math.max(2, p.backer.offset), "round"))!;
       const h = hangIt ? hangTop(p, back) : { shape: back, wall: Infinity };
       wall = h.wall;
-      parts.push({ id: "backer", name: `${label} backer`, outer: h.shape.outer, holes: h.shape.holes, ...(scoreOnly ? { score: pieces.flatMap(s => letterTraces(shapeContours([s]))) } : {}), place: { x: 0, y: 0, z: 0 } });
+      parts.push({ id: "backer", name: `${label} backer`, outer: h.shape.outer, holes: h.shape.holes, ...(scoreOnly ? { score: tagItem(stackedScores(stacked.length ? stacked : pieces.map((q) => shapeContours([q]))), "Letters") } : {}), place: { x: 0, y: 0, z: 0 } });
     }
     if (!scoreOnly) pieces.forEach((s, i) => parts.push({ id: `piece-${i + 1}`, name: `${label} piece ${i + 1}`, outer: s.outer, holes: s.holes, ...(hasBack ? { material: "second", color: m2.color, t: p.mat.T2 } : {}), place: { x: 0, y: 0, z: hasBack ? p.T : 0 } }));
     return { parts, wall };
@@ -227,7 +232,8 @@ export function buildFamily(p: FamilyParams, ctx: BuildContext): FamilyOutput {
     if (!welded) return { parts: [], stats: [], error: "Type some names." };
     let piece = welded;
     let letterHoles: Contour[] = [];
-    const scores = letterScores(glyphs);
+    // letters stacked in reading order: each row over the one above, each letter over the one before
+    const scores = stackedScores(glyphs);
     if (t.trunk && t.year.trim()) {
       const yl = line(ctx, t.year, "archivo-black", t.width * 0.07, missing);
       if (!yl) return loadingOut();
@@ -239,7 +245,7 @@ export function buildFamily(p: FamilyParams, ctx: BuildContext): FamilyOutput {
       piece = makeShape(piece.outer, [...piece.holes, ...letterHoles]);
     }
     const loose = t.noWeld || t.operation === "score" ? letterShapes([...star, ...all, ...trunk], { noWeld: true, border: 0 }, [...glyphs, star, trunk].filter(g => g.length)).flatMap(s => letterHoles.length ? differenceShapes(shapeContours([s]), letterHoles.map(orient)) : [s]) : undefined;
-    const w = weldedParts(p, piece, scores, "Name tree", true, loose, t.operation === "score");
+    const w = weldedParts(p, piece, scores, "Name tree", true, loose, t.operation === "score", [star, trunk, ...glyphs, letterHoles.map(orient)].filter((g) => g.length));
     info.wall = w.wall;
     parts.push(...w.parts);
   }
@@ -280,7 +286,7 @@ export function buildFamily(p: FamilyParams, ctx: BuildContext): FamilyOutput {
       piece = makeShape(piece.outer, [...piece.holes, ...letterHoles]);
     }
     const raw = sf.noWeld || sf.operation === "score" ? letterShapes([...hub, ...all, ...tips], { noWeld: true, border: 0 }, [...glyphs, hub, tips]).flatMap(s => letterHoles.length ? differenceShapes(shapeContours([s]), letterHoles.map(orient)) : [s]) : undefined;
-    const w = weldedParts(p, piece, letterScores(glyphs), "Name snowflake", true, raw, sf.operation === "score");
+    const w = weldedParts(p, piece, stackedScores(glyphs), "Name snowflake", true, raw, sf.operation === "score", [hub, tips, ...glyphs, letterHoles.map(orient)].filter((g) => g.length));
     info.wall = w.wall;
     parts.push(...w.parts);
   }
