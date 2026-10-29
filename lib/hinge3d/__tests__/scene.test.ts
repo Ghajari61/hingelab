@@ -108,4 +108,25 @@ describe("material looks", () => {
     expect((wall.material as THREE.MeshStandardMaterial).vertexColors).toBe(true);
     expect((wall.material as THREE.MeshStandardMaterial).transparent).toBe(false);
   });
+
+  it("shows the lid's scored and engraved marks in 3D: a scored pattern, an engraved one, the scored lip outline", () => {
+    const lineLen = (g: THREE.Object3D) => {
+      let n = 0;
+      g.traverse((o) => {
+        const l = o as THREE.LineSegments;
+        if (!l.isLineSegments || !/score lines$/.test(o.name)) return;
+        const a = l.geometry.getAttribute("position");
+        for (let i = 0; i + 1 < a.count; i += 2) n += Math.hypot(a.getX(i + 1) - a.getX(i), a.getY(i + 1) - a.getY(i));
+      });
+      return n;
+    };
+    const scored = build({ lid: "fixed", fret: "circles", fretOn: "lid", fretMark: "score" });
+    expect(lineLen(buildHingeScene(scored.m, scored.p).group)).toBeGreaterThan(100);
+    const lip = build({ lid: "removable", lidLipScore: true });
+    expect(lineLen(buildHingeScene(lip.m, lip.p).group)).toBeGreaterThan(100);
+    const engraved = build({ lid: "fixed", fret: "circles", fretOn: "lid", fretMark: "engrave" });
+    expect(meshes(buildHingeScene(engraved.m, engraved.p).group).some((m) => m.name === "lid engraving")).toBe(true);
+    const plain = build({ lid: "fixed" });
+    expect(lineLen(buildHingeScene(plain.m, plain.p).group)).toBe(0);
+  });
 });

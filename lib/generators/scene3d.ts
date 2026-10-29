@@ -275,11 +275,13 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
       const shapes = unionShapes(cs, [], true);
       if (shapes.length) surface.add(itemMesh(slabs(shapes, t, 0.2, itemSkinName(p.name, item)), ENGRAVE));
     }
-    // Scored items: their outlines, over a faint fill that picks them.
-    for (const [item, cs] of byItem(p.score ?? [])) if (item) {
-      const shapes = unionShapes(cs, [], true);
-      if (!shapes.length) continue;
-      const fill = itemMesh(slabs(shapes, t, 0.05, itemSkinName(p.name, item)), SCORE_FILL);
+    // Scored items: their outlines, over a faint fill that picks them. Score lines that belong to
+    // no item (a scored frame, a scored pattern, fold or assembly marks) and open lines are drawn
+    // as lines alone, so every scored line in the cut file shows in 3D.
+    for (const [item, cs] of byItem(p.score ?? [])) {
+      const shapes = item ? unionShapes(cs.filter((c) => c.length > 2), [], true) : [];
+      if (!shapes.length) { if (cs.length) surface.add(scoreLines(cs, t + 0.06, item ? itemSkinName(p.name, item) + " lines" : `${p.name} score lines`)); continue; }
+      const fill = itemMesh(slabs(shapes, t, 0.05, itemSkinName(p.name, item!)), SCORE_FILL);
       fill.add(scoreLines(cs, t + 0.06, `${fill.name} lines`));
       surface.add(fill);
     }
