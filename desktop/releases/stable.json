@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.30.2",
-    "pub_date": "2026-10-29T21:47:31.404Z",
-    "notes": "Redesigned the Pro upgrade dialog with a clearer plan comparison and cut-file preview.",
+    "version": "1.30.3",
+    "pub_date": "2026-10-29T22:41:36.201Z",
+    "notes": "Cleaned 3D outlines and edge overlays to remove stray lines over flat faces; STL caps now face outward.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.30.2_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmtxNGphUHRxb1lpUk5ib1QxeTFwdVRlckhwZDk0L0c2RXJ1d2xuZEZIYjY4b2FMcU4zQVEwczlmdDcyNGxoRTRPM1pmOEhuaWJTZ0tyOE5CTm51c2dBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzEwNDQ1CWZpbGU6SGluZ2VMYWJfMS4zMC4yX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMwLjIKb0kwU1Z4ZjZ1VVAyd2JBazdJYzJxNDRPK2pXRDB6cEdKY05CWkVMUTQyYS9QeXE5SXA3TWRFUU84Yzk4bTM3UG1ZTFFDYkl5OGFzaFZFQzZpR0NJQVE9PQo=",
-        "size": 12749499,
-        "sha256": "71d3ec4abfc51fe9bd7010d38cf35d23f8b4acd5344001a2dc434f48b2e27c3b"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.30.3_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnRReXduKzF3R1BTN0JrNUF6YXV3dDJYZnVnMUdQS2VsMEhrNUd0UDFVRDlyLzF1ajdEN0tqNHFJbm04OUhYMUREWW9yUkdLZWlIM1NXcDl4NFF2WlFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzEzNjkwCWZpbGU6SGluZ2VMYWJfMS4zMC4zX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMwLjMKM3VSdzBVUnRTS090emgrSDFqTEk4c0pncEhmMWZLK25BWWdJa0dUMWpvTnQ3cHpmeFR3UGMxbFMybjZpY29tMU4wRDZnVitMMEhqcUFZU24vdGhaQWc9PQo=",
+        "size": 12749236,
+        "sha256": "3cee469ccc85b5988ab038e0e28d836ddf113cd9229cdd12dcbe55f493d4543e"
       }
     }
   }
