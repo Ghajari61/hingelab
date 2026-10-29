@@ -2,10 +2,13 @@
 
 - **Hanging loops stand on solid material.** A monogram's loop no longer hangs off a hairline stroke (the thin diagonal of an M or N). The loop goes near the piece's balance point, so it hangs straight: on the top of the outline where the neck has solid material under it, otherwise where the centre line first meets solid material, or on a short stem down to it. Charms and other layouts use the same check, so a loop never lands on a spike or a thin serif end.
 
+## 1.30.3 — Clean 3D edges
+
+- Removed stray edge lines across flat faces in 3D previews and STL exports across generators.
+
 ## 1.30.2 — Pro upgrade dialog
 
 - **Upgrade dialog redesign:** a gradient header with a Pro badge, the cut-file preview as a raised card marked "Ready to cut", the benefits in two columns with round ticks, monthly and yearly plans as cards (yearly highlighted with its saving), and a full-width sign-up button. Prices, plans and links are unchanged.
-- **3D view: no more stray lines across parts.** The triangulator folded thin slivers over where an outline nearly touches itself (puzzle knobs, QR plates, shadow-box layers, pop-up rings, box lattices), and the edge overlay drew lines from their wobbly corners. Outlines are cleaned of repeated points and spikes, every part's top and bottom now face out, and edge lines come from the faces' true directions. The same fix keeps STL exports' caps facing out.
 
 ## 1.30.1 — Family Names tree connectors
 
