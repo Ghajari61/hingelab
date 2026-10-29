@@ -4,7 +4,7 @@ import { chromium } from "playwright";
 
 const base = process.argv[2] || "http://127.0.0.1:3200";
 // Kept in step with GENERATOR_IDS (lib/generators/ids.ts) plus the three hand-built editors.
-const PRODUCTS = ["hinge", "letters", "parametric", "clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "keychain", "popup", "charm", "family", "miniature"];
+const PRODUCTS = ["hinge", "letters", "parametric", "clock", "puzzle", "qr", "boxes", "topper", "keyrack", "sign", "tablenum", "trophy", "shadowbox", "paperbox", "keychain", "popup", "charm", "family", "miniature", "leather"];
 
 const browser = await chromium.launch();
 const failed = [];

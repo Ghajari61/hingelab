@@ -1,6 +1,6 @@
 /**
  * Every ready-made design opens the way a user expects: it builds, exports and shows no warning
- * about itself. (The pop-up LED reminder is a deliberate safety note on lamp designs.)
+ * about itself. (The pop-up LED reminder and the leather laser-safety gate are deliberate.)
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -14,7 +14,9 @@ import { lettersIssues } from "@/lib/issues/letters";
 import { BUNDLED_FONTS, loadFont, mergeLetterParams, type LoadedFont } from "@/lib/letters";
 import { LETTER_PRESETS } from "@/lib/letters/presets";
 
-const DELIBERATE = new Set(["popup-led"]);
+// Leather Studio's LASER_BLOCKED is a deliberate safety gate: no template may claim its leather is
+// laser-safe, so every template opens with it until the user confirms the material.
+const DELIBERATE = new Set(["popup-led", "LASER_BLOCKED"]);
 const fontCache = new Map<string, LoadedFont | null>();
 const font = (id: string): LoadedFont | null => {
   if (!fontCache.has(id)) {

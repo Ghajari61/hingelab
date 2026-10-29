@@ -257,7 +257,12 @@ export function validateFab(m: FabModel, o: ValidateOptions = {}): FabIssue[] {
     for (const c of ops.cuts) { vertices += c.length; const sp = specks(c, false); if (sp) note("SHORT_SEGMENTS", pt, around(abs(c[0])), sp); }
     if (vertices > maxV) note("TOO_MANY_VERTICES", pt, move(pt.box, pt.ox, pt.oy));
     // A hole's edge lies in material: inside an odd number of the part's other closed contours.
-    for (const h of ops.inner) if (h.length >= 3 && !insideRegion(h[0], closed.filter((c) => c !== h))) note("HOLE_OUTSIDE", pt, around(abs(h[0])));
+    // A closed contour whose box does not hold the point crosses a ray from it an even number of
+    // times, so only the contours whose boxes hold it decide (this keeps parts with thousands of
+    // holes, such as stitched leather, quick to check).
+    const boxes = closed.map((c) => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of c) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } return { x0, y0, x1, y1 }; });
+    const holding = (q: Pt, skip: Contour) => closed.filter((c, i) => c !== skip && q[0] >= boxes[i].x0 && q[0] <= boxes[i].x1 && q[1] >= boxes[i].y0 && q[1] <= boxes[i].y1);
+    for (const h of ops.inner) if (h.length >= 3 && !insideRegion(h[0], holding(h[0], h))) note("HOLE_OUTSIDE", pt, around(abs(h[0])));
     for (const c of ops.outline.slice(1)) if (c.length >= 3 && ops.inner.some((h) => h.length >= 3 && insideRegion(c[0], [h]))) note("LOOSE_ISLAND", pt, around(abs(c[0])));
     if (o.minFeature && o.minFeature > 0 && narrowChecked++ < MAX_NARROW_PARTS) {
       const at = narrowAt(ops.outline, ops.inner, o.minFeature);

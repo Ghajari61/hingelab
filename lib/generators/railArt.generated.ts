@@ -20,6 +20,7 @@ export const GEN_RAIL_GROUPS: Record<string, string> = {
   "gen-miniature-house.roof": "flat gable gambrel hip mansard shed",
   "gen-miniature-house.theme": "custom rural urban",
   "gen-miniature-nook.scene": "alley arches",
+  "gen-leather-product": "bagcharm belt bifold bracelet briefcase bucket camera cardholder clutch coaster coinpurse collar convertible crossbody doctor duffel glasses handbag hybrid keyfob laptop leash longwallet luggagetag messenger notebook passport penroll phonebag rolltop saddle satchel sculpt shoulderstrap sleeve toiletry toolroll tote tray waistbag watchstrap",
   "gen-popup-mode": "bowl hanging sleeve tiered tower",
   "gen-puzzle-engrave.kind": "image none numbers text",
   "gen-puzzle-frame.kind": "frame none tray",
