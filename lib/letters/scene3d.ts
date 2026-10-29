@@ -4,6 +4,7 @@
  * builds in Node for tests. Letter coordinates are y-down; the scene is y-up with the text
  * lying on the floor, read from the front.
  */
+import { cleanRing, faceCapsOut } from "@/lib/three/flat";
 import * as THREE from "three";
 import { stackLayersOf, wallHeightOf } from "./defaults";
 import { ZONE_COLORS } from "./export";
@@ -35,7 +36,8 @@ export function letterFlatParts(lay: Layout<LetterPart>): FlatPart[] {
   });
 }
 
-const toPath = (c: Contour, path: THREE.Path) => {
+const toPath = (raw: Contour, path: THREE.Path) => {
+  const c = cleanRing(raw);
   c.forEach((q, i) => (i ? path.lineTo(q[0], -q[1]) : path.moveTo(q[0], -q[1])));
   path.closePath();
   return path;
@@ -45,6 +47,7 @@ function slab(outer: Contour, holes: Contour[], z0: number, t: number, color: st
   const shape = toPath(outer, new THREE.Shape()) as THREE.Shape;
   for (const h of holes) shape.holes.push(toPath(h, new THREE.Path()));
   const geo = new THREE.ExtrudeGeometry(shape, { depth: t, bevelEnabled: false, curveSegments: 1 });
+  faceCapsOut(geo, 0, t);
   geo.translate(0, 0, z0);
   const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0 }));
   mesh.name = name;

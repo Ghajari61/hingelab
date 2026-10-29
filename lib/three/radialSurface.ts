@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import {meshEdges} from './edges';
+import {featureEdges,meshEdges} from './edges';
 import {formHeight,type FormedSurface as RadialSurface} from '@/lib/radialProfile';
 export {radialHeight,type RadialSurface} from '@/lib/radialProfile';
 // Meshes are built with y flipped (y up); the form is defined as drawn (y down).
@@ -100,7 +100,7 @@ export function applyRadialSurface(group:THREE.Object3D,surface:RadialSurface):v
  for(const l of lines){const g=splitSegments(l.geometry,surface);deform(g);l.geometry=g;}
  for(const mesh of meshes){
   // Extract physical edges before warping: the curved caps' triangulation is not a cut line.
-  if(!mesh.userData.noMeasure){const edges=splitSegments(new THREE.EdgesGeometry(mesh.geometry,28),surface);deform(edges);meshEdges(mesh,edges);}
+  if(!mesh.userData.noMeasure){const edges=splitSegments(featureEdges(mesh.geometry,28),surface);deform(edges);meshEdges(mesh,edges);}
   const old=mesh.geometry;
   // the flat outlines it was made from, for anything that needs the cut shapes rather than the mesh
   mesh.userData.flatShapes=(old as THREE.ExtrudeGeometry).parameters?.shapes;
