@@ -148,8 +148,8 @@ export function assemblyPDF(b: BookletInput): { pdf: Uint8Array; pages: number }
     const imgH = half - 120;
     p.box(M, top - 40 - imgH, CW, imgH);
     p.ops.push(svgOps(s.svg, M + 8, top - 34 - imgH, CW - 16, imgH - 12));
-    let ty = p.para(s.text, M, top - 56 - imgH, 10, CW);
-    ty = p.para(`New parts (orange): ${s.parts.join(", ")}`, M, ty - 2, 9, CW, false, true);
+    const ty = p.para(s.text, M, top - 56 - imgH, 10, CW);
+    p.para(`New parts (orange): ${s.parts.join(", ")}`, M, ty - 2, 9, CW, false, true);
     if (i % 2 === 0 && i + 1 < b.steps.length) p.rule(M, H - M - half + 4, W - M);
   });
   pages.forEach((pg, i) => pg.text(`${b.title} - page ${i + 1} of ${pages.length}`, M, M - 22, 8, false, true));
