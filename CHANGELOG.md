@@ -1,3 +1,7 @@
+## 1.27.7 — Clock numerals fit the face
+
+- Clock numerals now stay within the dial or ring across face shapes, with consistent sizing and spacing.
+
 ## 1.27.6 — Left panel fits its width
 
 - Left-panel cards now fit the available width without horizontal scrolling.

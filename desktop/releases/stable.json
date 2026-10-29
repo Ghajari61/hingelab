@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.27.6",
-    "pub_date": "2026-10-28T23:24:30.654Z",
-    "notes": "Left-panel cards now fit the available width without horizontal scrolling.",
+    "version": "1.27.7",
+    "pub_date": "2026-10-29T02:08:14.392Z",
+    "notes": "Clock numerals now fit inside the dial or ring on every face shape, with consistent sizing and spacing.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.6_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnNJNGprMFExM2lPS1F3U2luS2VlSXRwcU9QTktzcHoxbTdYVWljSUlvNGh6QlFadnd1YzFBTFoyMFNiOGgwVkpWdTEyaDhpbWw0NUtGRk9QMzhBdFE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjI5ODY1CWZpbGU6SGluZ2VMYWJfMS4yNy42X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI3LjYKTjZUU0tLSXZPdVNHZ3ZiblJiQ0pNL21BV3dyUjl5dUJZcS9KWmpNZENaKzJramRVQmFCQk9CSGxIVE40a1pVbGpZUmlJNVp5bmRodGtUd05weUV4QlE9PQo=",
-        "size": 11854627,
-        "sha256": "923a6d794287aff9625c40adf840c72da4bad1a6a34406531cc38a060591ebaf"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.7_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnNuQlJNN1pjMzdvcGFCeGZEdnhKRFowY0wrSnd6VzlWWmJmZ1YwNjVtNENCdGswOTlVcW9HQzBaYm9iU2NGMjB3Q241YUwySTY2WGVrc1JYTXJKb3c0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjM5Njg2CWZpbGU6SGluZ2VMYWJfMS4yNy43X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI3LjcKcVY3VHRneGM2enB4dVpsdjlDdXF5Q1FwMFN3YkdKNllNSGhBVnQ2dWVoMVlMVE9DRkYyS2tKcjFrS1hSOVMrc1dWTTRGVmNrRGhrSmVsSjgzdVArQmc9PQo=",
+        "size": 11858518,
+        "sha256": "b339aa8abc6fb5052cc237cf7ac57e2b1d7ae653fa8d924d99dcd7e7bd280409"
       }
     }
   }
