@@ -1,3 +1,7 @@
+## 1.27.8 — Score and engraved lines in 3D
+
+- Score and engraved geometry is now visible in 3D previews and thumbnails, including Hinge Box lid marks.
+
 ## 1.27.7 — Clock numerals fit the face
 
 - Clock numerals now stay within the dial or ring across face shapes, with consistent sizing and spacing.

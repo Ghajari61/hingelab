@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.27.7",
-    "pub_date": "2026-10-29T02:08:14.392Z",
-    "notes": "Clock numerals now fit inside the dial or ring on every face shape, with consistent sizing and spacing.",
+    "version": "1.27.8",
+    "pub_date": "2026-10-29T03:04:04.951Z",
+    "notes": "Score and engraved geometry now appears in 3D previews and thumbnails, including Hinge Box lid marks.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.7_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnNuQlJNN1pjMzdvcGFCeGZEdnhKRFowY0wrSnd6VzlWWmJmZ1YwNjVtNENCdGswOTlVcW9HQzBaYm9iU2NGMjB3Q241YUwySTY2WGVrc1JYTXJKb3c0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjM5Njg2CWZpbGU6SGluZ2VMYWJfMS4yNy43X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI3LjcKcVY3VHRneGM2enB4dVpsdjlDdXF5Q1FwMFN3YkdKNllNSGhBVnQ2dWVoMVlMVE9DRkYyS2tKcjFrS1hSOVMrc1dWTTRGVmNrRGhrSmVsSjgzdVArQmc9PQo=",
-        "size": 11858518,
-        "sha256": "b339aa8abc6fb5052cc237cf7ac57e2b1d7ae653fa8d924d99dcd7e7bd280409"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.8_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm1tcnlDbEN4ZWlBM28xc2FvTkxlNHJvbWliNjd0MllwNnZ5dFBQNHZRa0RUc0JNNHVFRkJiY0R1OGlXeXNvc2dvR1hQNWNIVlMyVWU3YW5Ma3dwd2dzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjQzMDM4CWZpbGU6SGluZ2VMYWJfMS4yNy44X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI3LjgKRGk3eGhjb01OVGdvN1loWnZKYnFPZ2tTZldoNXhqb0EyaGcvRE0xT0s2bldzZUFibmNTMVRZcks2WWhkYmhzRXk0WjIrZVE2Y2hXeEJUMWFkT2dnQ3c9PQo=",
+        "size": 11886268,
+        "sha256": "3e686d29cb7f06671354f8c351cb9740222fe14216ccded30859e0da66eea268"
       }
     }
   }
