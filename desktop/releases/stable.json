@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.27.11",
-    "pub_date": "2026-10-29T05:01:58.564Z",
-    "notes": "Fixed the account menu sign-out action so it submits reliably.",
+    "version": "1.27.12",
+    "pub_date": "2026-10-29T05:19:15.662Z",
+    "notes": "Family Names overlapping letters now use stacked score shapes so score paths do not cross through letter interiors.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.11_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnRZYXhla1FpUTRncGdIMEpGLzZtRFk3cUpMTWhvUjdPbXpUVGlFSmtOVmdxaUxxalFXZ1JFUEJyeVFmc3dBTDJ6d3ZscFhsd1JaWmNiaC9KbzdlU0FNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjUwMTEzCWZpbGU6SGluZ2VMYWJfMS4yNy4xMV94NjQtc2V0dXAuZXhlCXZlcnNpb246MS4yNy4xMQplQ1gycFA0N0thbTI1dk1KaVJhOSt3Q3M5ZzJUSDhyY1Q3emFrUkt0M2c0ajI2RnJvekNFVHNvMjYrSnZibVFTZytwMHZNRjJ2RUY1TmdMMmwvV2dDZz09Cg==",
-        "size": 11885435,
-        "sha256": "7baca4e8e629e5c77677e9026d8f1cb1fc61260a8079738b62c22c54b80ef737"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.27.12_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmlsWjFYVzlFNVRoaU1yQ09EbW1HSnVtdU0xV2hCc0x6SE8vb1dTTm1QTHhyUWdaamN6ZENQMFYwc1dSZXhuYmpjWTFHNkRZL0syVkE2Y1ZXcTVscEFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjUxMTUwCWZpbGU6SGluZ2VMYWJfMS4yNy4xMl94NjQtc2V0dXAuZXhlCXZlcnNpb246MS4yNy4xMgp5aTg4SmpidGlROTdzN1NhdlFVV1c4RmNmVmRnRkRFU0dqNUNTb0hDTS9pcXd1Vmh3anQ2SUZBdHN5ZThZUHRDSlVsNGdrMVRvVnAwOTFoOUI2NXREQT09Cg==",
+        "size": 11890410,
+        "sha256": "1496e3a5c66419fb4dd4dc3a1c2bcba761ab05f51b4703547da4d52fbe868d7a"
       }
     }
   }

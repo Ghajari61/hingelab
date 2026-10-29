@@ -1,3 +1,7 @@
+## 1.27.12 — Family Names score overlaps
+
+- Overlapping letters in Family Names are now scored as stacked shapes, keeping score lines from crossing through letter interiors.
+
 ## 1.27.11 — Account menu sign out
 
 - Fixed the account menu's sign-out action so it submits reliably.
