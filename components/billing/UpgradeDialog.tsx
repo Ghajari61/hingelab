@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, Check, Scissors, ShieldCheck, Sparkles, X } from "lucide-react";
 import { PRICES, PRO_BENEFITS } from "@/lib/plans";
 
 const BUSINESS_BENEFITS = [
@@ -57,37 +58,44 @@ export function UpgradeDialog({ reason, signedIn, onClose, preview }: {
 
   return (
     <div className="modal-back" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal upgrade" role="dialog" aria-modal="true" aria-label={business ? "Upgrade to Business" : "Upgrade to Pro"} ref={ref}>
-        <header>{business ? "Upgrade to Business" : "Upgrade to Pro"}<button type="button" aria-label="Close" onClick={onClose}>×</button></header>
-        <div className="mb">
+      <div className="modal upgrade" role="dialog" aria-modal="true" aria-labelledby="upgrade-title" ref={ref}>
+        <div className="upgrade-hero">
+          <button type="button" className="upgrade-close" aria-label="Close" onClick={onClose}><X size={18} aria-hidden /></button>
+          <span className="upgrade-badge"><Sparkles size={13} aria-hidden />{business ? "Business" : "Pro"}</span>
+          <h2 id="upgrade-title">{business ? "Upgrade to Business" : "Upgrade to Pro"}</h2>
           <p className="upgrade-reason">{reason}</p>
+        </div>
+        <div className="mb upgrade-body">
           {previewSrc && (
             <figure className="upgrade-preview">
+              <span className="upgrade-ready"><Scissors size={12} aria-hidden />Ready to cut</span>
               <img src={previewSrc} alt="The cut file of this design" />
-              <figcaption>Your design, ready to cut: this is the file Pro downloads.</figcaption>
+              <figcaption>Your design, ready to cut: this is the file {business ? "Business" : "Pro"} downloads.</figcaption>
             </figure>
           )}
           <ul className="upgrade-list">
-            {benefits.map((b) => <li key={b}>{b}</li>)}
+            {benefits.map((b) => <li key={b}><span className="upgrade-tick" aria-hidden><Check size={12} strokeWidth={3} /></span>{b}</li>)}
           </ul>
           {signedIn ? (
-            <div className="upgrade-buy">
-              <button type="button" className="btn-export" disabled={!!busy} onClick={() => buy("month")}>
-                {busy === "month" ? "Opening checkout…" : `$${monthly} / month`}
+            <div className="upgrade-buy upgrade-plans">
+              <button type="button" className="btn-export upgrade-plan" disabled={!!busy} onClick={() => buy("month")}>
+                <span className="upgrade-plan-name">Monthly</span>
+                <span className="upgrade-plan-price">{busy === "month" ? "Opening checkout…" : <><b>${monthly}</b> / month</>}</span>
               </button>
-              <button type="button" className="btn-export" disabled={!!busy} onClick={() => buy("year")}>
-                {busy === "year" ? "Opening checkout…" : `$${yearly} / year`}
+              <button type="button" className="btn-export upgrade-plan best" disabled={!!busy} onClick={() => buy("year")}>
+                {yearlySaving > 0 && <span className="upgrade-save">Save {yearlySaving}%</span>}
+                <span className="upgrade-plan-name">Yearly</span>
+                <span className="upgrade-plan-price">{busy === "year" ? "Opening checkout…" : <><b>${yearly}</b> / year</>}</span>
               </button>
-              <span className="upgrade-save">Yearly saves {yearlySaving}%</span>
             </div>
           ) : (
-            <div className="upgrade-buy">
-              <a className="btn-export" href="/signup?next=%2Fapp%2Fbilling">Create a free account</a>
+            <div className="upgrade-buy upgrade-cta">
+              <a className="btn-export" href="/signup?next=%2Fapp%2Fbilling">Create a free account<ArrowRight size={16} aria-hidden /></a>
               <a className="upgrade-link" href="/login?next=%2Fapp%2Fbilling">I already have one</a>
             </div>
           )}
           {error && <p className="upgrade-error" role="alert">{error}</p>}
-          <p className="upgrade-fine">Cancel any time from Billing. Prices in {PRICES.currency}.</p>
+          <p className="upgrade-fine"><ShieldCheck size={13} aria-hidden />Cancel any time from Billing. Prices in {PRICES.currency}.</p>
         </div>
       </div>
     </div>
