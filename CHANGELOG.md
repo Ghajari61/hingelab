@@ -1,4 +1,4 @@
-## Unreleased — Lines between names
+## 1.30.1 — Family Names tree connectors
 
 - **Family Names, name tree:** a new **Lines between names** option puts a bar between each row of names, as wide as the shorter row, so the rows sit on shelves instead of touching. The bar thickness can be set (default 1.6 mm); the tree stays one welded piece.
 

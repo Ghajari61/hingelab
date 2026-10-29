@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.30.0",
-    "pub_date": "2026-10-29T21:05:13.519Z",
-    "notes": "Leather Studio adds 41 parametric leather products with matched seams and material safety gating. Assembly PDF provides illustrated step-by-step instructions for every generator.",
+    "version": "1.30.1",
+    "pub_date": "2026-10-29T21:28:38.294Z",
+    "notes": "Family Names adds optional connecting bars between tree rows, with adjustable thickness.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.30.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmk5QjN3anhabG1jU0tiVFAzR2s5T1NjYmJmNTZmVXVnek9NMHdaQnk1Q05xUkRsUklwcHptVGZJcEZoRVB6cE1kdm1xMWJ3QS9OWmxxWEJ2bVhxOGdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzA3OTA1CWZpbGU6SGluZ2VMYWJfMS4zMC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMwLjAKVWpMWWgzMGxuZm9Mdi9yUUp4UU1DdmhPOUc3M2YxREFwYWFDU2ljRHdQcVBrMXZQNTBJVG9acmVha3pUODlZV0JCYlZ6T1NnWUtQYUgvcU9tamYwQnc9PQo=",
-        "size": 12748230,
-        "sha256": "57edaa22babe9014eaec53d2a6f8da8714d638bd3fa77ed7bdd17c985805fc14"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.30.1_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnBhNTNOVUd5VGxhbzJ2NG5zWEJaT3YxSmdLcUdpbEJteFc3QzdHNEdoQlhOWHoxdjNLZzkxak5ucVRSTTE4bzdvSjJWajhGSlhuT011cjdrazg1T2dFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzA5MzExCWZpbGU6SGluZ2VMYWJfMS4zMC4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMwLjEKZUk0cDVSczFMUW43Zm9UL1pxYlFHS0Q0VHpSYzJyY0RrOEhVeE9CNVhvNUJjbXdzY0JGU3RYVGQySTdlb0FPUVNpMFVMQmZ5WU1MUGZBb0F3QVQzQ1E9PQo=",
+        "size": 12747267,
+        "sha256": "4bdfc27051e7c1bc7d29fc5c4588f3c2d980a0504cc63b3a0ce75103b7eaf4b7"
       }
     }
   }
