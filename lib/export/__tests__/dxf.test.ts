@@ -19,11 +19,13 @@ function readDXF(dxf: string) {
   if (lines[lines.length - 1] === "") lines.pop();
   expect(lines.length % 2).toBe(0);
   const pairs: [number, string][] = [];
+  let badCode = -1;
   for (let i = 0; i < lines.length; i += 2) {
     const code = Number(lines[i]);
-    expect(Number.isInteger(code), `group code at line ${i}`).toBe(true);
+    if (!Number.isInteger(code) && badCode < 0) badCode = i;
     pairs.push([code, lines[i + 1]]);
   }
+  expect(badCode, "first line with a bad group code").toBe(-1);
   expect(pairs[pairs.length - 1]).toEqual([0, "EOF"]);
   const layers = new Map<string, number>();
   const ents: Ent[] = [];
@@ -84,13 +86,16 @@ function checkAgainst(svg: string, tag: string) {
   expect(polys.length, tag).toBe(subpaths(svg));
   expect(out.polylines, tag).toBe(polys.length);
   const { W, H } = dims(svg);
+  // one assertion per check, not per point: a sheet with scored brick has tens of thousands
+  const badLayer = polys.find((e) => !layers.has(e.layer));
+  expect(badLayer?.layer, `${tag}: layer`).toBeUndefined();
+  const outside: string[] = [];
   for (const e of polys) {
-    expect(layers.has(e.layer), `${tag}: layer ${e.layer}`).toBe(true);
     for (const [x, y] of e.pts) {
-      expect(Number.isFinite(x) && Number.isFinite(y), tag).toBe(true);
-      expect(x >= -1e-3 && x <= W + 1e-3 && y >= -1e-3 && y <= H + 1e-3, `${tag}: ${x}, ${y} in ${W} × ${H}`).toBe(true);
+      if (!(Number.isFinite(x) && Number.isFinite(y) && x >= -1e-3 && x <= W + 1e-3 && y >= -1e-3 && y <= H + 1e-3) && outside.length < 3) outside.push(`${x}, ${y}`);
     }
   }
+  expect(outside, `${tag}: points in ${W} × ${H}`).toEqual([]);
   const texts = ents.filter((e) => e.type === "TEXT");
   expect(texts.length, tag).toBe((svg.replace(/<defs>[\s\S]*?<\/defs>/g, "").match(/<text /g) ?? []).length);
   return { out, layers, ents };
