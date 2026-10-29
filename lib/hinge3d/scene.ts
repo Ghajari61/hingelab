@@ -12,7 +12,7 @@ import { honeyLattice } from "@/lib/hinge/hinge";
 import { clipHalf } from "@/lib/hinge/flip";
 import { builtParams } from "@/lib/hinge/model";
 import { unionShapes } from "@/lib/letters/polygon";
-import { finishScene, flatScene, slab, type FlatPart, type Scene3D } from "@/lib/three/flat";
+import { finishScene, flatScene, slab, slabs, type FlatPart, type Scene3D } from "@/lib/three/flat";
 
 /** Points around the core at offset r: flat sides plus `perArc` points per quarter turn of corner. */
 export function ringPoints(edges: Edge[], r: number, perArc = 10): { p: Point; arc: boolean }[] {
@@ -101,6 +101,42 @@ function plate(edges: Edge[], r: number, z0: number, t: number, name: string, ti
   return m;
 }
 
+const MARK = new THREE.MeshStandardMaterial({ color: "#3b2a1c", roughness: 0.9 });
+const SCORE = new THREE.LineBasicMaterial({ color: "#2a1d12", transparent: true, opacity: 0.9 });
+
+/**
+ * A plate's engraved and scored marks on its top face at z: the engraved pattern as a thin dark
+ * skin, and the scored pattern and the scored lid-lip outline as lines, as in the cut file.
+ */
+function plateMarks(pt: PlatePart | undefined, z: number, name: string): THREE.Group | null {
+  if (!pt) return null;
+  const g = new THREE.Group();
+  g.name = `${name} marks`;
+  const eng = unionShapes(pt.engrave ?? [], [], true);
+  if (eng.length) {
+    const skin = slabs(eng.map((x) => ({ outer: x.outer, holes: x.holes })), z, 0.2, `${name} engraving`);
+    (skin.material as THREE.Material).dispose();
+    skin.material = MARK;
+    skin.userData.keepMaterial = true;
+    skin.userData.noMeasure = true;
+    g.add(skin);
+  }
+  const lines: Point[][] = [...(pt.score ?? []).map((c) => [...c, c[0]]), ...(pt.scoreR ? [((o) => [...o, o[0]])(outline(pt.edges, pt.scoreR))] : [])];
+  if (lines.length) {
+    const pos: number[] = [];
+    for (const c of lines) for (let i = 0; i + 1 < c.length; i++) pos.push(c[i][0], -c[i][1], z + 0.06, c[i + 1][0], -c[i + 1][1], z + 0.06);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    const ls = new THREE.LineSegments(geo, SCORE);
+    ls.name = `${name} score lines`;
+    ls.userData.keepMaterial = true;
+    ls.userData.noMeasure = true;
+    ls.raycast = () => {};
+    g.add(ls);
+  }
+  return g.children.length ? g : null;
+}
+
 const named = (m: Model, name: string) => m.parts.find((pt): pt is PlatePart => pt.kind === "plate" && pt.name === name);
 const dotA = (q: Point, a: Point) => q[0] * a[0] + q[1] * a[1];
 
@@ -183,6 +219,7 @@ export function buildHingeScene(model: Model, user: Params, explode = 0): Scene3
     if (lipR > 0.5 && p.lidLip !== false) inner.add(plate(edges, lipR, top - t + lidLift, t, "lid lip", 0.86, holes));
     inner.add(plate(edges, lidR, top + lidLift, t, "lid", 1.04, holes));
   }
+  if (p.lid === "fixed" || p.lid === "removable") { const mk = plateMarks(lid, top + lidLift + t, "lid"); if (mk) inner.add(mk); }
   // A flip lid stays on its walls (they lift as the view explodes) and swings open instead.
   if (p.lid === "flip" && lid && model.flip) inner.add(flipLid(model, p, lid, top + wallLift, explode, named(model, "WINDOW")));
   if (p.lid === "fixed" || p.lid === "removable") lidTop = top + t + lidLift;
@@ -195,6 +232,8 @@ export function buildHingeScene(model: Model, user: Params, explode = 0): Scene3
     const lat = model.parts.find((pt): pt is WallPart => pt.kind === "wall" && pt.name.startsWith("CAP WALL"))?.lattice;
     inner.add(slitLines(c.edges, c.R + 0.15, cz - c.hBody, c.hBody, lat?.pitch ?? p.pitch, lat?.bridge ?? honeyLattice(p).bridge));
     inner.add(plate(c.edges, c.R + p.K / 2, cz, t, "cap top", 1.04, capTop ? capTop.slots.slice(capTabs) : []));
+    const mk = plateMarks(capTop, cz + t, "cap top");
+    if (mk) inner.add(mk);
     lidTop = cz + t;
   }
   // ---- steps on the lid, and a window under an open top

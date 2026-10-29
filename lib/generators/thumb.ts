@@ -26,18 +26,21 @@ function thumbD(c: Contour, closed: boolean, tol: number): string {
   return "M" + kept.map(([x, y]) => `${f(x)},${f(y)}`).join(" L") + (closed ? " Z" : "");
 }
 
-function frontOf(p: GenPart, uprightBottom: number | null, T: number): { cs: Contour[]; engrave: Contour[]; cuts: Contour[] } | null {
+/** Score lines as thin dark strokes, open as in the cut file. */
+const scorePath = (cs: Contour[], tol: number, sw: number) => `<path d="${cs.filter((c) => c.length > 1).map((c) => thumbD(c, false, tol)).join(" ")}" fill="none" stroke="${INK}" stroke-width="${Math.round(sw * 0.9 * 100) / 100}" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+function frontOf(p: GenPart, uprightBottom: number | null, T: number): { cs: Contour[]; engrave: Contour[]; cuts: Contour[]; score: Contour[] } | null {
   const pl = p.place ?? { x: 0, y: 0, z: 0 };
   if (uprightBottom !== null && !pl.upright) {
     const b = bboxOf([p.outer]);
     const t = p.t ?? T, y0 = uprightBottom - t;
-    return { cs: [[[b.x0 + pl.x, y0], [b.x1 + pl.x, y0], [b.x1 + pl.x, y0 + t], [b.x0 + pl.x, y0 + t]]], engrave: [], cuts: [] };
+    return { cs: [[[b.x0 + pl.x, y0], [b.x1 + pl.x, y0], [b.x1 + pl.x, y0 + t], [b.x0 + pl.x, y0 + t]]], engrave: [], cuts: [], score: [] };
   }
   const tr = (c: Contour) => {
     const a = ((pl.rot ?? 0) * Math.PI) / 180, cos = Math.cos(a), sin = Math.sin(a);
     return shift(c.map(([x, y]) => [x * cos - y * sin, x * sin + y * cos] as [number, number]), pl.x, pl.upright ? 0 : pl.y);
   };
-  return { cs: [p.outer, ...p.holes].map(tr), engrave: (p.engrave ?? []).map(tr), cuts: (p.cuts ?? []).map(tr) };
+  return { cs: [p.outer, ...p.holes].map(tr), engrave: (p.engrave ?? []).map(tr), cuts: (p.cuts ?? []).map(tr), score: (p.score ?? []).map(tr) };
 }
 
 const VIEW_AZ = (32 * Math.PI) / 180, VIEW_EL = (24 * Math.PI) / 180;
@@ -58,7 +61,7 @@ function shade(hex: string, k: number) {
 
 /** Parts as drawn in 3D: a part that bends (or folds) as its pieces. */
 const pieces3d = (out: GenOutput): (GenPart & { soft?: boolean })[] => out.parts.flatMap((p) => p.views3d?.length
-  ? p.views3d.map((v, i) => ({ ...p, id: `${p.id}-${i}`, outer: v.outer, holes: v.holes, cuts: undefined, score: undefined, engrave: v.engrave, place: v.place, views3d: undefined, soft: v.soft }))
+  ? p.views3d.map((v, i) => ({ ...p, id: `${p.id}-${i}`, outer: v.outer, holes: v.holes, cuts: undefined, score: v.score, engrave: v.engrave, place: v.place, views3d: undefined, soft: v.soft }))
   : [p]);
 
 function projectedSVG(out: GenOutput, T: number, w: number, h: number): string {
@@ -85,6 +88,7 @@ function projectedSVG(out: GenOutput, T: number, w: number, h: number): string {
     return {
       p, i, depth: dot(mid, toward), face, band, light, a, normal, t, pts: o0.concat(o1), near: topNear,
       engrave: topNear ? (p.engrave ?? []).map((c) => at(c, t).map(screen)) : [],
+      score: topNear ? (p.score ?? []).map((c) => at(c, t).map(screen)) : [],
       cuts: (p.cuts ?? []).map((c) => at(c, hh).map(screen)),
     };
   });
@@ -132,6 +136,7 @@ function projectedSVG(out: GenOutput, T: number, w: number, h: number): string {
     s += `<path d="${d.face.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${fill}" fill-rule="evenodd" stroke="${EDGE}" stroke-width="${sw}" stroke-linejoin="round"/>`;
     if (d.cuts.length) s += `<path d="${d.cuts.map((c) => thumbD(c, false, tol)).join(" ")}" fill="none" stroke="${EDGE}" stroke-width="${sw}"/>`;
     if (d.engrave.length) s += `<path d="${d.engrave.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${INK}" fill-rule="evenodd"/>`;
+    if (d.score.length) s += scorePath(d.score, tol, sw);
   }
   return s + `</svg>`;
 }
@@ -166,6 +171,7 @@ export function assembledSVG(out: GenOutput, T: number, w = 300, h = 200): strin
     if (shown[i].length) s += `<path d="${shown[i].map((c) => thumbD(c, true, tol)).join(" ")}" fill="${fill}" fill-rule="evenodd" stroke="${EDGE}" stroke-width="${sw}"/>`;
     if (f.cuts.length) s += `<path d="${f.cuts.map((c) => thumbD(c, false, tol)).join(" ")}" fill="none" stroke="${EDGE}" stroke-width="${sw}" stroke-linejoin="round"/>`;
     if (f.engrave.length) s += `<path d="${f.engrave.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${INK}" fill-rule="evenodd"/>`;
+    if (f.score.length) s += scorePath(f.score, tol, sw);
   });
   return s + `</svg>`;
 }
