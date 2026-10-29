@@ -142,6 +142,23 @@ describe("stacked letter scores", () => {
     expect(pointInContour([5, 5], back)).toBe(true);
   });
 
+  it("a monogram's loop stands on solid material, never on a hairline, for open letters too", () => {
+    for (const name of ["Meisam", "Nora", "Wilson", "Victor", "Hana", "Kate", "Anna"]) {
+      const p = mergeFamily({ layout: { kind: "monogram" }, names: { list: name, fontId: "archivo-black", caps: true }, monogram: { size: 90, band: 26 }, hang: { kind: "loop", hole: 4, wall: 2.5 } });
+      const out = FAMILY.build(p, CTX) as FamilyOutput;
+      const pt = out.parts[0];
+      // the hanging hole: the hole whose box is about the hole's size
+      const hole = pt.holes.map((h) => bboxOf([h])).find((q) => Math.abs(q.x1 - q.x0 - 4) < 0.3 && Math.abs(q.y1 - q.y0 - 4) < 0.3)!;
+      expect(hole, name).toBeTruthy();
+      const cx = (hole.x0 + hole.x1) / 2, cy = (hole.y0 + hole.y1) / 2, R = 2 + 2.5;
+      // material all across the neck, from the ring down into the piece
+      for (let y = cy + R; y < cy + R + 3; y += 0.5) for (const k of [-0.6, 0, 0.6]) {
+        const q: [number, number] = [cx + k * R, y];
+        expect(pointInContour(q, pt.outer) && !pt.holes.some((h) => pointInContour(q, h)), `${name} at ${q.map((v) => v.toFixed(1))}`).toBe(true);
+      }
+    }
+  });
+
   it("lines between the names make the tree taller by a bar per gap and keep it one piece", () => {
     const names = { list: "Ava\nAnna\nSimone\nGabriela\nBenjamin", fontId: "archivo-black", caps: true };
     const plain = build({ layout: { kind: "tree" }, names, tree: { trunk: false, star: "none" } });
