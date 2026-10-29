@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.28.0",
-    "pub_date": "2026-10-29T13:13:58.859Z",
-    "notes": "World Miniature Studio adds dollhouses, buildings, book nooks, and scaled dollhouse furniture with editable, tabbed parts and 35 templates.",
+    "version": "1.28.1",
+    "pub_date": "2026-10-29T15:03:56.604Z",
+    "notes": "World Miniature Studio adds house fronts, porches, balconies, chimneys, gardens, streets, more furniture, and garden pieces. City apartments fit the sheet.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.28.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm4wYmw3VXBBVndWWk1mcGp6azJyUzZrWk9xRjV5V3p2QVFzbXZxYVEvSlp4ak1TU3I5a3VzendTK3RhU1dzb25rSyt6bnhGWXBhNm1ocngyV0xMRHdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjc5NjMwCWZpbGU6SGluZ2VMYWJfMS4yOC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI4LjAKTk1MRDN1ZjFkTHhGVnphbDZtZ2ZQN3k1TFVteWw4TlNrSDZZcExQenhETnVWekg0S2NSR2JNSVZmMisreFc5R2N2alYxWkhDazc3SWRIR0FuSXhhQ2c9PQo=",
-        "size": 12312687,
-        "sha256": "48be155f885ed0c4b78c2a0e121f21e3e83b1c230c4003521d919c5df045c893"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.28.1_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm1pODl0Y3JRaWovR2IyMmhqbkZBUVhVU0RWc2Y4andzZjNKVVFwWHZhcUdBNklsWjVqWUlFSVBjOTNlTU5FZlhFMjQrcm9zUDY3WG5RQUlYOHF0cHdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjg2MjMwCWZpbGU6SGluZ2VMYWJfMS4yOC4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjI4LjEKdGNjbVRYTkVLMndQQzY1bUo3TUt3cW5MZU01TzhOVVFTY0lCVC95cXZvby9mYnlLTnBkNGhrd0I1L0FDNnJFaG1uNGkzd2h2MFJSNEpxWG95NDNUQ3c9PQo=",
+        "size": 12357375,
+        "sha256": "c22b65f177a3de508f3bd18c6efd808b23d892e26dbd1a24c0698c551622c7b6"
       }
     }
   }
