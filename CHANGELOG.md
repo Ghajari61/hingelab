@@ -1,3 +1,14 @@
+## Unreleased — World Miniature Studio (milestone 1)
+
+- New generator, World Miniature Studio, with three products:
+  - Dollhouses and buildings: one to six floors, rooms with doorways, stairs, an open front or a facade, and six roof shapes (flat with an optional windcatcher, gable, shed, hip, mansard, gambrel).
+  - Book nooks: an alley or receding arches, a light box with a cable hole, a battery bay with a hatch, and an optional mirror frame. They carry low-voltage safety notes.
+  - Dollhouse furniture from 1:6 to 1:48 or a custom scale: chair, table, bed, bookshelf, cabinet, desk, dresser and bench.
+- Openings come in five shapes (square, round arch, pointed arch, horseshoe, round), filled with bars, grids, shoji grids or cut lattice screens. Walls and roofs can carry scored brick, stone, half-timbering, boards, shingles, tiles or seams.
+- 29 architectural traditions from 16 regions set each design's starting roof, openings and finishes. The tradition notes are marked unverified until checked against sources.
+- 35 original templates: 20 buildings, 6 book nooks and 9 furniture pieces.
+- Every part slots together with tabs sized from the material, and the joint fit applies to them. Furniture scales the piece but never the sheet, tabs, fit or kerf.
+
 ## 1.27.12 — Family Names score overlaps
 
 - Overlapping letters in Family Names are now scored as stacked shapes, keeping score lines from crossing through letter interiors.

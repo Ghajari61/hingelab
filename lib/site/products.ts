@@ -22,7 +22,7 @@ export interface SiteProduct {
 const FEATURED: Record<string, string> = {
   keychain: "name-rounded", hinge: "gift-box", letters: "hello-sign", parametric: "head-stack",
   clock: "wall-roman", puzzle: "kids-12", qr: "keychain", boxes: "organiser",
-  topper: "happy-birthday", keyrack: "home-sweet-home", sign: "welcome-arch", tablenum: "wedding-arch", trophy: "star-award", shadowbox: "star-tunnel", paperbox: "tea-hinged", charm: "family-baubles", family: "family-crossword",
+  topper: "happy-birthday", keyrack: "home-sweet-home", sign: "welcome-arch", tablenum: "wedding-arch", trophy: "star-award", shadowbox: "star-tunnel", paperbox: "tea-hinged", charm: "family-baubles", family: "family-crossword", miniature: "victorian-dollhouse",
 };
 
 const pic = (id: string, ids: string[]) => `/presets/${id}/${ids.includes(FEATURED[id]) ? FEATURED[id] : ids[0]}.svg`;

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Award, Baby, Box, Cake, CheckCircle2, Clock, Download, FileDown, Gift, GraduationCap, Hash, Heart, KeyRound, Layers, LayoutGrid, Moon, Package, Puzzle, QrCode, Ruler, ScanLine, Shapes, ShieldCheck, Signpost, Sparkles, SquareStack, TreePine, Trophy, Type, Wand2, Wrench, type LucideIcon, Tag } from "lucide-react";
+import { ArrowRight, Award, Baby, Box, Cake, CheckCircle2, Clock, Download, FileDown, Gift, GraduationCap, Hash, Heart, KeyRound, Layers, LayoutGrid, Moon, Package, Puzzle, QrCode, Ruler, ScanLine, Shapes, ShieldCheck, Signpost, Sparkles, SquareStack, TreePine, Trophy, Type, Wand2, Wrench, type LucideIcon, Tag, House } from "lucide-react";
 import { sceneSVG } from "@/components/editor/scene3d";
 import { CutSheet } from "@/components/site/CutSheet";
 import { DownloadNote } from "@/components/site/DownloadNote";
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
 
 const ICON: Record<SiteIcon, LucideIcon> = {
   hinge: Package, letters: Type, parametric: Layers, clock: Clock, puzzle: Puzzle, qr: QrCode, box: Box,
-  cake: Cake, key: KeyRound, sign: Signpost, hash: Hash, trophy: Trophy, layers: SquareStack, ruler: Ruler, tag: Tag,
+  cake: Cake, key: KeyRound, sign: Signpost, hash: Hash, trophy: Trophy, layers: SquareStack, ruler: Ruler, tag: Tag, house: House,
 };
 
 const OCCASIONS: { name: string; icon: LucideIcon; preset: string }[] = [
