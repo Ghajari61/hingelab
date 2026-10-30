@@ -8,6 +8,7 @@ import { CALLIGRAPHY_DEFAULTS, type CalligraphyParams } from "@/lib/studio/calli
 import type { ToolId } from "@/lib/studio/commands";
 import { FILL_DEFAULTS, type FillOptions } from "@/lib/studio/fillArea";
 import type { MeasureResult } from "@/lib/studio/measure";
+import "@/lib/studio/dimension";
 import { SPRAY_DEFAULTS, type SprayParams } from "@/lib/studio/spray";
 import { TWEAK_DEFAULTS, type TweakParams } from "@/lib/studio/tweak";
 import { commit, emptyHistory, jumpTo, redo, seal, undo, type History } from "@/lib/studio/history";
@@ -16,7 +17,7 @@ import { boxCenter, isEmptyBox } from "@/lib/studio/geom";
 import { allIds, selectionBox } from "@/lib/studio/scene";
 import { emptyZoomHistory, type View, type ZoomHistory } from "@/lib/studio/viewTransform";
 import type { BrushShape, CurveMode, PenMode } from "@/lib/studio/strokes";
-import type { ConnectorMode, Document, Mat, ShapeKind, ShapeParams, TextNode, Vec } from "@/lib/studio/types";
+import type { ConnectorMode, DimensionKind, Document, Mat, ShapeKind, ShapeParams, TextNode, Vec } from "@/lib/studio/types";
 
 export interface AnchorRef { id: string; sub: number; idx: number }
 
@@ -82,6 +83,8 @@ export interface EditorState {
   spray: SprayParams;
   /** Routing for new connectors. */
   connectorMode: ConnectorMode;
+  /** The Dimension tool's kind. */
+  dimensionMode: DimensionKind;
   /** What Align lines objects up with; the key object is the last one clicked. */
   alignTo: AlignTo;
   /** Distribute Spacing gap in mm, or null for equal gaps between the outer objects. */
@@ -121,7 +124,7 @@ export interface EditorState {
   setView: (v: Partial<ViewState> | ((v: ViewState) => ViewState)) => void;
   setUi: (u: Partial<UiState>) => void;
   set: (p: Partial<Pick<EditorState, "shapeDefaults" | "textDefaults" | "lastTransform" | "textEditing" | "currentLayer" | "refPoint" | "lockRatio" | "eraserSize" | "eraserMode" | "measure" | "alignTo" | "alignGap"
-    | "fill" | "calligraphy" | "tweak" | "spray" | "connectorMode" | "penMode" | "penShape" | "brushWidth" | "pencilSmoothing" | "pencilPressure" | "pencilMode" | "fxHandles"
+    | "fill" | "calligraphy" | "tweak" | "spray" | "connectorMode" | "dimensionMode" | "penMode" | "penShape" | "brushWidth" | "pencilSmoothing" | "pencilPressure" | "pencilMode" | "fxHandles"
     | "zoomHistory" | "rotCenter">>) => void;
 }
 
@@ -162,6 +165,7 @@ export function createEditorStore(doc: Document): StoreApi<EditorState> {
     tweak: { ...TWEAK_DEFAULTS },
     spray: { ...SPRAY_DEFAULTS },
     connectorMode: "straight",
+    dimensionMode: "linear",
     alignTo: "selection",
     alignGap: null,
     penMode: "bezier",

@@ -10,7 +10,7 @@ import { nodeBasePaths, transformSubpaths } from "../geom";
 import type { EffectKind, EffectParamsMap, LiveEffect, Mat, SceneNode, Subpath, Units, Vec } from "../types";
 import { applyCorners } from "./corners";
 import { applyDistort } from "./distort";
-import { applyMirror, applyRotateCopies, boxOf } from "./copies";
+import { applyMirror, applyRotateCopies, applySymmetry, boxOf } from "./copies";
 import { applyHatches } from "./hatches";
 import { applyInterpolate } from "./interpolate";
 import { applyLiveBoolean } from "./liveBoolean";
@@ -86,6 +86,31 @@ export const EFFECTS: { [K in EffectKind]: EffectDef<K> } = {
       return { axis: "vertical", x: b.maxX, y: b.maxY, x1: b.maxX, y1: b.minY, x2: b.maxX, y2: b.maxY, keepOriginal: true, fuse: false };
     },
     apply: (subs, p) => applyMirror(subs, p),
+  },
+  symmetry: {
+    ...EFFECT_META.symmetry,
+    defaults: (input) => {
+      // the centre just past the artwork's right edge, so the copies make a ring round it
+      const b = boxOf(input), w = b.maxX - b.minX;
+      return { lines: 6, angle: 90, cx: b.maxX + Math.max(1, w * 0.15), cy: (b.minY + b.maxY) / 2, fuse: false };
+    },
+    presets: [
+      { name: "Mirror (1 line)", params: { lines: 1 } },
+      { name: "Kaleidoscope 6", params: { lines: 6 } },
+      { name: "Mandala 12", params: { lines: 12 } },
+    ],
+    apply: (subs, p) => applySymmetry(subs, p),
+    handles: (p) => [{ x: p.cx, y: p.cy }],
+    drag: (_p, _i, at) => ({ cx: at.x, cy: at.y }),
+    outline: (p, input) => {
+      // the mirror lines, as long as the artwork is far from the centre
+      const b = boxOf(input), r = Math.max(5, ...[[b.minX, b.minY], [b.maxX, b.minY], [b.minX, b.maxY], [b.maxX, b.maxY]].map(([x, y]) => Math.hypot(x - p.cx, y - p.cy)));
+      const n = Math.max(1, Math.min(36, Math.round(p.lines)));
+      return Array.from({ length: n }, (_, k) => {
+        const a = ((p.angle + (180 * k) / n) * Math.PI) / 180;
+        return { closed: false, nodes: [{ x: p.cx - r * Math.cos(a), y: p.cy - r * Math.sin(a) }, { x: p.cx + r * Math.cos(a), y: p.cy + r * Math.sin(a) }] };
+      });
+    },
   },
   livingHinge: {
     ...EFFECT_META.livingHinge,

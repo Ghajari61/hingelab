@@ -23,6 +23,7 @@ import type { ToolId } from "@/lib/studio/commands";
 import { layerCode } from "@/lib/studio/cutLayers";
 import { builderFaces, buildShapes, curvaturePath, deleteVirtualSegment, eraseAlong, eraseTouching, faceAt, knifeCut, lassoHits, scissorsAt, shearAt, virtualSegmentAt } from "@/lib/studio/toolOps";
 import { measureAcross, measureTargets, type MeasureTarget } from "@/lib/studio/measure";
+import { DIM, dimensionDrawing, dimensionText } from "@/lib/studio/dimension";
 import { connectObjects } from "@/lib/studio/connectors";
 import { isPlainText } from "@/lib/studio/text";
 import { boxTouchesQuad, hitStack, inQuad, selectUnder, touchHits } from "@/lib/studio/selectTools";
@@ -33,7 +34,7 @@ import {
 import { rotationCentre, selectionKey, useEditor, useEditorApi, type AnchorRef, type EraserMode } from "./store";
 import { TextEditor } from "./TextEditor";
 import { fillClick, measureToItem, startCalligraphy, startSpray, startTweak, type ToolPointer, type ToolSession } from "./tools/brushTools";
-import { startCrop, startSmartDraw, startThreePoint, type DrawCtx } from "./tools/drawSessions";
+import { startCrop, startDimension, startSmartDraw, startThreePoint, type DrawCtx } from "./tools/drawSessions";
 import { MeasureOverlay } from "./tools/MeasureOverlay";
 import { useImageUrls } from "./assetUrls";
 
@@ -877,6 +878,7 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
       case "rect3": case "ellipse3": case "curve3": drag.current = { kind: "session", session: startThreePoint(api, toolPointer(e, p), drawCtx(), s.tool) }; rerender(); return;
       case "smartDraw": drag.current = { kind: "session", session: startSmartDraw(api, toolPointer(e, p), drawCtx()) }; return;
       case "crop": drag.current = { kind: "session", session: startCrop(api, toolPointer(e, p), drawCtx()) }; rerender(); return;
+      case "dimension": drag.current = { kind: "session", session: startDimension(api, toolPointer(e, p), drawCtx()) }; rerender(); return;
       case "segmentDelete": {
         let out: string[] | null = null;
         s.edit("Virtual Segment Delete", (d) => { out = deleteVirtualSegment(d, p, 6 / s.view.zoom); });
@@ -1545,12 +1547,16 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
       return <rect key={n.id} x={-n.w / 2} y={-n.h / 2} width={n.w} height={n.h} transform={matStr(n.transform)} fill="url(#hl-hatch)" stroke={outline ? "var(--text-secondary)" : layerColor(n)} vectorEffect="non-scaling-stroke" opacity={dim} />;
     }
     if (n.type === "dimension" && n.points.length >= 2) {
-      const m = n.transform, [a, b] = n.points;
-      const len = Math.hypot(b.x - a.x, b.y - a.y) * Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2]));
+      const g = dimensionDrawing(n), col = outline ? "var(--ink)" : layerColor(n);
+      if (!g) return null;
+      const m = n.transform, k = Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2])) || 1;
+      const shown = { ...g, value: g.unit === "length" ? g.value * k : g.value };
       return (
         <g key={n.id} transform={matStr(n.transform)} data-id={own ? n.id : undefined} opacity={dim}>
-          <path d={localD(n)} fill="none" stroke={outline ? "var(--ink)" : layerColor(n)} strokeWidth={1} vectorEffect="non-scaling-stroke" strokeDasharray="2 2" />
-          <text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 4 / zoom} fontSize={11 / zoom} textAnchor="middle" fill={outline ? "var(--ink)" : layerColor(n)} fontFamily="var(--font-num)" data-testid={own ? "dimension-label" : undefined}>{fmt(len)} {doc.units}</text>
+          <path d={pathD(g.lines)} fill="none" stroke={col} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+          {g.arrows.length > 0 && <path d={pathD(g.arrows)} fill={col} stroke="none" />}
+          <text x={g.label.at.x} y={g.label.at.y} fontSize={DIM.text / k} textAnchor="middle" dominantBaseline="middle" fill={col} fontFamily="var(--font-num)"
+            transform={`rotate(${g.label.angle} ${g.label.at.x} ${g.label.at.y})`} data-testid={own ? "dimension-label" : undefined}>{dimensionText(shown, doc.units, n.text)}</text>
         </g>
       );
     }

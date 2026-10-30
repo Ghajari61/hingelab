@@ -7,6 +7,7 @@ export const EFFECT_META: Record<EffectKind, { label: string; description: strin
   hatches: { label: "Hatches", description: "Fill the area with parallel lines for line engraving or scoring", keywords: "hatch fill lines crosshatch engrave scan" },
   rotateCopies: { label: "Rotate Copies", description: "Copies rotated around a centre, optionally fused into one shape", keywords: "rotate copies radial array kaleidoscope mandala polar" },
   mirror: { label: "Mirror", description: "A mirrored copy across a vertical, horizontal or free axis", keywords: "mirror symmetry reflect flip symmetric" },
+  symmetry: { label: "Symmetry", description: "Mirror lines through a centre: the artwork repeats in every wedge, mirrored in turn, and stays editable (CorelDRAW's Symmetry drawing)", keywords: "symmetry kaleidoscope mandala mirror lines dihedral corel symmetric drawing" },
   livingHinge: { label: "Living Hinge", description: "Fill a closed shape with a flexible hinge cut pattern", keywords: "living hinge kerf bend flex lattice slits cuts" },
   patternAlongPath: { label: "Pattern Along Path", description: "Repeat or stretch another object along this path (borders, frames, chains)", keywords: "pattern along path brush repeat stretch skeleton spine border art brush" },
   bend: { label: "Bend", description: "Bend the artwork along a guide you shape on the canvas", keywords: "bend warp arc curve text along guide flex distort" },
@@ -21,7 +22,7 @@ export const EFFECT_META: Record<EffectKind, { label: string; description: strin
 };
 
 export const EFFECT_ORDER: EffectKind[] = [
-  "corners", "offset", "hatches", "rotateCopies", "mirror", "livingHinge",
+  "corners", "offset", "hatches", "rotateCopies", "mirror", "symmetry", "livingHinge",
   "patternAlongPath", "bend", "envelope", "roughen", "distort", "interpolate", "taperStroke", "powerStroke", "measureSegments", "liveBoolean",
 ];
 
