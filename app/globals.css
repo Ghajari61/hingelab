@@ -6,7 +6,7 @@ body { margin: 0; background: var(--chrome); color: var(--fg); font-family: var(
 button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-.app { height: 100%; display: grid; grid-template-rows: 52px minmax(0,1fr) 28px; background: var(--pasteboard); }
+.app { height: 100%; overflow: clip; display: grid; grid-template-rows: 52px minmax(0,1fr) 28px; background: var(--pasteboard); }
 
 /* ---------- header ---------- */
 .menubar { display: flex; align-items: center; gap: 6px; padding-inline: 12px; background: var(--chrome); border-bottom: 1px solid var(--line); min-width: 0; position: relative; z-index: 20; }
