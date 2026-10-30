@@ -37,7 +37,7 @@ import { textLayoutNow } from "./textRuntime";
 export interface Handler { run: () => void; enabled?: boolean; reason?: string; checked?: boolean }
 
 export type EditorDialog = "documentSetup" | "move" | "shortcuts" | "preferences" | "palette" | "resetPrefs" | "offset" | "contour" | "simplify" | "corners"
-  | "stepRepeat" | "transformEach" | "gridArray" | "circularArray" | "pathArray" | "strokeToPath" | "joinNearby" | "transform" | "arrange" | "tiledClones" | "traceBitmap" | "printMerge";
+  | "stepRepeat" | "transformEach" | "gridArray" | "circularArray" | "pathArray" | "strokeToPath" | "joinNearby" | "transform" | "arrange" | "tiledClones" | "traceBitmap" | "printMerge" | "qrCode";
 
 export interface CommandContext {
   api: StoreApi<EditorState>;
@@ -309,6 +309,7 @@ export function buildHandlers(ctx: CommandContext): Record<string, Handler> {
     ctx.toast(`Removed ${n} clone${n === 1 ? "" : "s"}`, true);
   }, one && clonesOf(s.doc, sel).length > 0, one ? "The selected objects have no clones" : NEED_ONE);
   set("object.stepRepeat", () => ctx.dialog("stepRepeat"), one, NEED_ONE);
+  set("file.qrCode", () => ctx.dialog("qrCode"));
   set("file.printMerge", () => ctx.dialog("printMerge"), one, "Select the artwork to merge (with [Field] names in its text)");
   set("object.transformEach", () => ctx.dialog("transformEach"), one, NEED_ONE);
   set("object.array.grid", () => ctx.dialog("gridArray"), one, NEED_ONE);

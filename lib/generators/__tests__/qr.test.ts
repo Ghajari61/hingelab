@@ -8,6 +8,7 @@ import { buildQr, type QrOutput } from "../qr/build";
 import { checkQr } from "../qr/check";
 import { qrMatrix, qrPayload } from "../qr/encode";
 import { mergeQr, type QrParams } from "../qr/params";
+import { EYE_SAFE } from "../qr/eyes";
 import type { Contour, GenPart } from "../types";
 import { CTX } from "./ctx";
 
@@ -43,7 +44,12 @@ function raster(dark: Contour[], frame: Contour, module: number, px = 6) {
 }
 
 function decode(out: QrOutput): string | null {
-  const part: GenPart = out.parts[0];
+  let part: GenPart = out.parts[0];
+  if (part.cuts?.length) {
+    // a tent card: read the front face (the lower half) on its own
+    const b = bboxOf([part.outer]), y = b.y1 - out.info!.plateH;
+    part = { ...part, outer: [[b.x0, y], [b.x1, y], [b.x1, b.y1], [b.x0, b.y1]], engrave: part.engrave!.filter((c) => bboxOf([c]).y0 > y) };
+  }
   const dark = part.id === "plate" ? part.engrave ?? [] : part.holes;
   const { grey, w, h } = raster(dark, part.outer, out.info!.module);
   const rgba = new Uint8ClampedArray(w * h * 4);
@@ -302,5 +308,159 @@ describe("QR with a cut-out pattern", () => {
       expect(out.pattern?.shapes, output).toBeGreaterThan(10);
       expect(decode(out), output).toBe(out.info!.payload);
     }
+  });
+});
+describe("QR designer styles (module styles and eye shapes)", () => {
+  for (const style of ["diamond", "tiny", "vlines", "hlines"] as const) {
+    for (const output of ["engrave", "cutout", "stencil"] as const) {
+      it(`${style} ${output} decodes`, () => {
+        const out = build({ code: { style, size: 60 }, output: { kind: output } });
+        expect(decode(out)).toBe("https://hingelab.vercel.app");
+      });
+    }
+  }
+
+  it("every safe eye frame and centre pair decodes; the others are flagged with a fix", () => {
+    const bad: string[] = [];
+    for (const [eyeFrame, safe] of Object.entries(EYE_SAFE)) for (const eyeBall of ["square", "rounded", "circle", "leaf", "diamond", "star"] as const) {
+      const p = mergeQr({ code: { style: "dots", size: 60, eyeFrame, eyeBall } });
+      if (!safe.includes(eyeBall)) {
+        expect(codes(p), `${eyeFrame} ${eyeBall}`).toContain("EYE_MISMATCH");
+        const fixed = autoFixAll(p, issuesOf).params;
+        expect(codes(fixed)).not.toContain("EYE_MISMATCH");
+        continue;
+      }
+      expect(codes(p)).not.toContain("EYE_MISMATCH");
+      for (const url of ["https://hingelab.vercel.app", "https://example.com/menu?table=12&lang=en"]) {
+        const out = build({ content: { url }, code: { style: "dots", size: 60, eyeFrame, eyeBall } });
+        if (decode(out) !== out.info!.payload) bad.push(`${eyeFrame} ${eyeBall}`);
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it("custom eyes decode cut out and inverted; Match keeps the old output", () => {
+    expect(decode(build({ code: { eyeFrame: "circle", eyeBall: "circle" }, output: { kind: "cutout" } }))).toBe("https://hingelab.vercel.app");
+    expect(decode(build({ code: { eyeFrame: "leaf", eyeBall: "diamond", invert: true } }))).toBe("https://hingelab.vercel.app");
+    expect(build({ code: { eyeFrame: "auto", eyeBall: "auto" } }).parts[0].engrave).toEqual(build({}).parts[0].engrave);
+  });
+
+  it("no part of a vertical-bar or diamond stencil falls out", () => {
+    for (const style of ["vlines", "diamond", "tiny"] as const) {
+      const out = build({ code: { style, size: 120 }, output: { kind: "stencil", bridge: 20 } });
+      const part = out.parts[0];
+      const { grey, w, h } = raster([part.outer, ...part.holes], part.outer, out.info!.module, 20);
+      let total = 0, seed = -1;
+      for (let i = 0; i < grey.length; i++) if (grey[i] === 0) { total++; if (seed < 0) seed = i; }
+      const seen = new Uint8Array(w * h), stack = [seed];
+      seen[seed] = 1;
+      let k = 0;
+      while (stack.length) {
+        const i = stack.pop()!;
+        k++;
+        const x = i % w, y = (i / w) | 0;
+        for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, y > 0 ? i - w : -1, y < h - 1 ? i + w : -1]) if (j >= 0 && !seen[j] && grey[j] === 0) { seen[j] = 1; stack.push(j); }
+      }
+      expect(k, style).toBe(total);
+    }
+  });
+});
+
+describe("QR new content", () => {
+  const P = (c: Partial<QrParams["content"]>) => qrPayload(mergeQr({ content: c }).content);
+  it("WhatsApp, map and event payloads", () => {
+    expect(P({ kind: "whatsapp", waTo: "+44 (0)7700 900123".replace("(0)", ""), waText: "Table 4" })).toBe("https://wa.me/447700900123?text=Table%204");
+    expect(P({ kind: "whatsapp", waTo: "0044 7700 900123" })).toBe("https://wa.me/447700900123");
+    expect(P({ kind: "map", place: "51.5007, -0.1246" })).toBe("https://www.google.com/maps/search/?api=1&query=51.5007,-0.1246");
+    expect(P({ kind: "map", place: "10 Downing St, London" })).toBe("https://www.google.com/maps/search/?api=1&query=10%20Downing%20St%2C%20London");
+    expect(P({ kind: "event", evTitle: "Open day; tea", evDate: "2026-12-5", evStart: "9:30", evEnd: "17:00", evPlace: "Hall, Main St" })).toBe(
+      ["BEGIN:VEVENT", "SUMMARY:Open day\\; tea", "DTSTART:20261205T093000", "DTEND:20261205T170000", "LOCATION:Hall\\, Main St", "END:VEVENT"].join("\n"));
+    expect(P({ kind: "event", evTitle: "Fair", evDate: "2026-07-01" })).toContain("DTSTART;VALUE=DATE:20260701");
+    expect(P({ kind: "event", evTitle: "Fair", evDate: "next week" })).toBe("");
+    expect(build({ content: { kind: "event", evTitle: "x" } }).error).toMatch(/date/);
+  });
+  for (const c of [{ kind: "whatsapp", waTo: "+1 555 0100", waText: "Hi" }, { kind: "map", place: "48.8584, 2.2945" }, { kind: "event", evTitle: "Party", evDate: "2026-12-31", evStart: "20:00" }] as const) {
+    it(`${c.kind} decodes`, () => {
+      const out = build({ content: c });
+      expect(decode(out)).toBe(out.info!.payload);
+    });
+  }
+});
+
+describe("QR signs: plate shapes, header picture, stands", () => {
+  for (const shape of ["arch", "hexagon", "octagon", "shield", "bubble", "scalloped", "ticket", "bone", "stake"] as const) {
+    it(`a ${shape} plate holds the code, its quiet zone and label, and decodes`, () => {
+      const out = build({ plate: { shape, padding: 5 }, label: { text: "Scan me" }, badge: { kind: "stars", size: 8 } });
+      const part = out.parts[0];
+      const engr = bboxOf(part.engrave!);
+      for (const pt of [[engr.x0, engr.y0], [engr.x1, engr.y0], [engr.x0, engr.y1], [engr.x1, engr.y1]] as [number, number][]) expect(pointInContour(pt, part.outer), shape).toBe(true);
+      expect(decode(out), shape).toBe("https://hingelab.vercel.app");
+      expect(codes(mergeQr({ plate: { shape, padding: 5 } }))).not.toContain("QUIET_ZONE");
+    });
+  }
+
+  it("every header picture sits above the code and keeps it scannable", () => {
+    for (const kind of ["stars", "menu", "coffee", "wifi", "camera", "pin", "pay", "tap", "chat", "phone", "calendar", "heart", "paw", "note", "gift", "house", "leaf"] as const) {
+      const plain = build({});
+      const out = build({ badge: { kind, size: 12 } });
+      expect(out.info!.plateH, kind).toBeGreaterThan(plain.info!.plateH + 12);
+      expect(decode(out), kind).toBe("https://hingelab.vercel.app");
+    }
+  });
+
+  it("a slotted base: tabs below the plate, slots in the upper layers that fit them", () => {
+    const p = mergeQr({ stand: { kind: "base", layers: 2, depth: 60 }, code: { size: 50 } });
+    const out = buildQr(p, CTX) as QrOutput;
+    expect(out.parts.map((x) => x.id)).toEqual(["plate", "base1", "base2"]);
+    const [plate, b1, b2] = out.parts;
+    expect(b1.holes.length).toBe(0);
+    expect(b2.holes.length).toBe(2);
+    expect(bboxOf([plate.outer]).y1 - out.info!.plateH).toBeCloseTo(p.T, 3);
+    const slot = bboxOf([b2.holes[0]]);
+    expect(slot.y1 - slot.y0).toBeCloseTo(p.T + 0.1, 3);
+    expect(plate.place!.upright).toBe(true);
+    expect(decode(out)).toBe("https://hingelab.vercel.app");
+    // a cut-out sign: both plates in a slot twice as wide
+    const two = buildQr(mergeQr({ stand: { kind: "base" }, output: { kind: "cutout" } }), CTX) as QrOutput;
+    const s2 = bboxOf([two.parts.find((x) => x.id === "base2")!.holes[0]]);
+    expect(s2.y1 - s2.y0).toBeCloseTo(2 * p.T + 0.1, 3);
+  });
+
+  it("feet: two slotted feet, the sign leaning back", () => {
+    const out = build({ stand: { kind: "feet", lean: 12 } });
+    expect(out.parts.map((x) => x.id)).toEqual(["plate", "foot1", "foot2"]);
+    expect(out.parts[0].place!.tilt).toBe(78);
+    expect(out.parts[1].place!.yaw).toBe(90);
+    expect(decode(out)).toBe("https://hingelab.vercel.app");
+  });
+
+  it("a tent card is one piece with a living hinge and the code on both faces", () => {
+    const out = build({ stand: { kind: "tent" }, plate: { shape: "circle" }, keyring: { kind: "top" } });
+    expect(out.parts.length).toBe(1);
+    const card = out.parts[0];
+    expect(card.cuts!.length).toBeGreaterThan(10);
+    expect(card.holes.length).toBe(0);
+    const b = bboxOf([card.outer]);
+    expect(b.y1 - b.y0).toBeGreaterThan(2 * out.info!.plateH);
+    // the front face (lower half) decodes on its own
+    const lower: GenPart = { ...card, outer: [[b.x0, b.y1 - out.info!.plateH], [b.x1, b.y1 - out.info!.plateH], [b.x1, b.y1], [b.x0, b.y1]], engrave: card.engrave!.filter((c) => bboxOf([c]).y0 > b.y1 - out.info!.plateH) };
+    expect(decode({ ...out, parts: [lower] })).toBe("https://hingelab.vercel.app");
+  });
+
+  it("wall holes stay out of the quiet zone with a border, and are flagged without one", () => {
+    expect(build({ stand: { kind: "wall", holes: "four" }, plate: { padding: 8 } }).parts[0].holes.length).toBe(4);
+    const tight = mergeQr({ stand: { kind: "wall", holes: "four", holeD: 5 }, plate: { padding: 1 } });
+    expect(codes(tight)).toContain("HOLE_IN_QUIET_ZONE");
+    expect(codes(issuesOf(tight).find((i) => i.code === "HOLE_IN_QUIET_ZONE")!.fixes[0].apply(tight))).not.toContain("HOLE_IN_QUIET_ZONE");
+  });
+
+  it("a tall sign on a shallow base warns and the fix deepens it", () => {
+    const p = mergeQr({ stand: { kind: "base", depth: 25 }, code: { size: 120 } });
+    expect(codes(p)).toContain("STAND_TIPS");
+    expect(codes(autoFixAll(p, issuesOf).params)).not.toContain("STAND_TIPS");
+  });
+
+  it("the stand is ignored for a stencil", () => {
+    expect(build({ stand: { kind: "base" }, output: { kind: "stencil" } }).parts.map((x) => x.id)).toEqual(["stencil"]);
   });
 });

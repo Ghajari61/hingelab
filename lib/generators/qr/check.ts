@@ -1,6 +1,7 @@
 import type { Issue } from "@/lib/issues";
 import { logoCells, type QrOutput } from "./build";
 import { qrMatrix } from "./encode";
+import { EYE_BALL_NAMES, EYE_FRAME_NAMES, EYE_SAFE, resolveEyes } from "./eyes";
 import { LOGO_MAX, type QrParams } from "./params";
 
 /** Smallest module that still scans, mm, for each output. */
@@ -65,10 +66,11 @@ export function checkQr(p: QrParams, out: QrOutput): Issue<QrParams>[] {
   if (kind === "stencil" && info.counters > 0) {
     issues.push({
       code: "STENCIL_COUNTERS", level: "warn",
-      message: `${info.counters} letter centre${info.counters === 1 ? "" : "s"} (as in O or A) will fall out of the stencil.`,
+      message: `${info.counters} letter or picture centre${info.counters === 1 ? "" : "s"} (as in O or A) will fall out of the stencil.`,
       fixes: [
         ...(p.label.text.trim() ? [{ id: "no-label", label: "Remove the label", safe: false, apply: (q: QrParams) => ({ ...q, label: { ...q.label, text: "" } }) }] : []),
         ...(p.logo.kind === "text" ? [{ id: "heart", label: "Heart logo instead", safe: false, apply: (q: QrParams) => ({ ...q, logo: { ...q.logo, kind: "heart" as const } }) }] : []),
+        ...(p.badge.kind !== "none" ? [{ id: "no-badge", label: "Remove the picture", safe: false, apply: (q: QrParams) => ({ ...q, badge: { ...q.badge, kind: "none" as const } }) }] : []),
       ],
     });
   }
@@ -90,15 +92,49 @@ export function checkQr(p: QrParams, out: QrOutput): Issue<QrParams>[] {
     });
   }
 
+  if (p.output.kind !== "stencil" && (p.code.eyeFrame !== "auto" || p.code.eyeBall !== "auto")) {
+    const e = resolveEyes(p.code.style, p.code.eyeFrame, p.code.eyeBall);
+    if (!EYE_SAFE[e.frame].includes(e.ball)) {
+      issues.push({
+        code: "EYE_MISMATCH", level: "warn",
+        message: `A ${EYE_BALL_NAMES[e.ball].toLowerCase()} eye centre in a ${EYE_FRAME_NAMES[e.frame].toLowerCase()} frame does not scan on every phone; scanners measure the eyes corner to corner as well.`,
+        fixes: [
+          { id: "ball", label: "Rounded eye centre", safe: true, apply: (q) => ({ ...q, code: { ...q.code, eyeBall: "rounded" as const } }) },
+          ...(e.ball !== "square" ? [{ id: "frame", label: "Matching eye frame", safe: false, apply: (q: QrParams) => ({ ...q, code: { ...q.code, eyeFrame: (Object.keys(EYE_SAFE) as (keyof typeof EYE_SAFE)[]).find((f) => EYE_SAFE[f].includes(e.ball)) ?? "rounded" } }) }] : []),
+        ],
+      });
+    }
+  }
+
   if (info.holeInQuiet) {
-    const padding = Math.ceil(p.keyring.diameter + 3);
+    const wall = p.stand.kind === "wall";
+    const padding = Math.ceil(Math.max(p.plate.padding + 2, (wall ? p.stand.holeD * 1.6 : p.keyring.diameter) + 4));
     issues.push({
       code: "HOLE_IN_QUIET_ZONE", level: "warn",
-      message: "The keyring hole cuts into the clear space around the code.",
+      message: wall ? "A mounting hole cuts into the clear space around the code." : "The keyring hole cuts into the clear space around the code.",
       fixes: [
         { id: "padding", label: `Border ${padding} mm`, safe: true, apply: (q) => ({ ...q, plate: { ...q.plate, padding } }) },
-        { id: "top", label: "Hole on a tab above", safe: false, apply: (q) => ({ ...q, keyring: { ...q.keyring, kind: "top" as const } }) },
+        ...(p.keyring.kind === "corner" ? [{ id: "top", label: "Hole on a tab above", safe: false, apply: (q: QrParams) => ({ ...q, keyring: { ...q.keyring, kind: "top" as const } }) }] : []),
       ],
+    });
+  }
+
+  // A sign much taller than its base (or feet) is deep tips over at a touch.
+  const MAX_TIP = 3;
+  if ((info.stand === "base" || info.stand === "feet") && info.standTip > MAX_TIP) {
+    const depth = Math.min(200, Math.ceil((info.standTip * Math.max(25, p.stand.depth)) / (MAX_TIP * 0.95)));
+    issues.push({
+      code: "STAND_TIPS", level: "warn",
+      message: `The sign is ${info.standTip.toFixed(1)} times as tall as its ${info.stand === "base" ? "base" : "feet"} are deep and will tip over easily.`,
+      fixes: [{ id: "depth", label: `Depth ${depth} mm`, safe: true, apply: (q) => ({ ...q, stand: { ...q.stand, depth } }) }],
+    });
+  }
+
+  if (p.stand.kind === "tent" && p.output.kind !== "engrave") {
+    issues.push({
+      code: "TENT_ENGRAVE_ONLY", level: "info",
+      message: "A tent card folds on a living hinge, so it is made as an engraved plate; it stands flat for a cut-out or stencil.",
+      fixes: [{ id: "engrave", label: "Engrave", safe: false, apply: (q) => ({ ...q, output: { ...q.output, kind: "engrave" as const } }) }],
     });
   }
 

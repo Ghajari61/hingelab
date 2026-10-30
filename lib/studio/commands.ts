@@ -126,6 +126,7 @@ export const COMMANDS: CommandDef[] = [
   c("file.new", "New…", "File", "Ctrl+Alt+N", undefined, "Open the start screen to create a project. (Ctrl+N belongs to the browser.)"),
   c("file.open", "Open…", "File", "Ctrl+O"),
   c("file.import", "Import…", "File", "Ctrl+I", undefined, "Place an SVG or DXF drawing (its colours go onto cut layers) or a PNG, JPEG or WebP picture to trace.", "svg dxf png jpg jpeg webp image picture import place drawing vector file inkscape illustrator corel autocad"),
+  c("file.qrCode", "Insert QR Code…", "File", undefined, undefined, "Place a scannable QR code (a web address, text, Wi-Fi or contact) on an engrave layer, with designer module and eye styles", "qr code barcode link url wifi vcard scan menu"),
   c("file.printMerge", "Fill from Table…", "File", undefined, undefined, "Fill [Field] names in the selected artwork's text from a table: one copy per record, for name tags, numbered parts and personalised batches", "print merge mail merge csv spreadsheet names batch personalise serial numbers variable data corel"),
   c("file.templates", "New from Template…", "File", undefined, undefined, "Browse ready-made projects and open one as a new project.", "template gallery library example project"),
   c("file.close", "Close", "File", "Ctrl+Alt+W"),
@@ -366,7 +367,7 @@ export type MenuEntry = string | "-" | { label: string; items: MenuEntry[] };
 export interface MenuDef { id: string; label: string; items: MenuEntry[] }
 
 export const MENUS: MenuDef[] = [
-  { id: "file", label: "File", items: ["file.new", "file.templates", "file.open", "file.import", "-", "file.close", "file.save", "file.saveCopy", "file.saveComputer", "file.rename", "file.revert", "-", "file.documentSetup", "file.printMerge", "-", "file.exit"] },
+  { id: "file", label: "File", items: ["file.new", "file.templates", "file.open", "file.import", "file.qrCode", "-", "file.close", "file.save", "file.saveCopy", "file.saveComputer", "file.rename", "file.revert", "-", "file.documentSetup", "file.printMerge", "-", "file.exit"] },
   { id: "edit", label: "Edit", items: [
     "edit.undo", "edit.redo", "-", "edit.cut", "edit.copy", "edit.paste", "edit.pasteFront", "edit.pasteBack", "edit.pasteInPlace", "edit.pasteStyle",
     { label: "Paste Size", items: ["edit.pasteSize.both", "edit.pasteSize.width", "edit.pasteSize.height", "-", "edit.pasteSize.bothSep", "edit.pasteSize.widthSep", "edit.pasteSize.heightSep"] }, "-",

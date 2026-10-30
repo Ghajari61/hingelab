@@ -4,7 +4,20 @@ import type { ContentKind, Ecc, QrParams } from "./params";
 
 export const CONTENT_NAMES: Record<ContentKind, string> = {
   url: "Web address", text: "Text", wifi: "Wi-Fi", vcard: "Contact", email: "Email", sms: "Text message", phone: "Phone call",
+  whatsapp: "WhatsApp", map: "Map location", event: "Event",
 };
+
+/** iCalendar text values escape backslash, comma, semicolon and new lines. */
+const iEsc = (s: string) => s.replace(/([\\,;])/g, "\\$1").replace(/\r?\n/g, "\\n");
+/** "2026-12-31" and "19:30" as an iCalendar local time, or "" when the date is not a date. */
+export function icalTime(date: string, time: string): string {
+  const d = date.trim().match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if (!d) return "";
+  const pad = (v: string | number) => String(v).padStart(2, "0");
+  const day = `${d[1]}${pad(d[2])}${pad(d[3])}`;
+  const t = time.trim().match(/^(\d{1,2})[:.](\d{2})$/);
+  return t ? `${day}T${pad(t[1])}${pad(t[2])}00` : day;
+}
 
 /** Backslash before the characters the Wi-Fi format reserves. */
 const wifiEsc = (s: string) => s.replace(/([\\;,:"])/g, "\\$1");
@@ -51,6 +64,29 @@ export function qrPayload(c: QrParams["content"]): string {
     case "phone": {
       const n = digits(c.tel);
       return n ? `tel:${n}` : "";
+    }
+    case "whatsapp": {
+      // wa.me takes the full international number without + or leading zeros
+      const n = c.waTo.replace(/\D/g, "").replace(/^00/, "");
+      if (!n) return "";
+      return `https://wa.me/${n}${c.waText.trim() ? `?text=${encodeURIComponent(c.waText.trim())}` : ""}`;
+    }
+    case "map": {
+      const q = c.place.trim();
+      if (!q) return "";
+      const ll = q.match(/^\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);
+      return `https://www.google.com/maps/search/?api=1&query=${ll ? `${ll[1]},${ll[2]}` : encodeURIComponent(q)}`;
+    }
+    case "event": {
+      const start = icalTime(c.evDate, c.evStart);
+      if (!c.evTitle.trim() || !start) return "";
+      const end = icalTime(c.evDate, c.evEnd);
+      const allDay = start.length === 8;
+      const lines = ["BEGIN:VEVENT", `SUMMARY:${iEsc(c.evTitle.trim())}`, allDay ? `DTSTART;VALUE=DATE:${start}` : `DTSTART:${start}`];
+      if (!allDay && end > start) lines.push(`DTEND:${end}`);
+      if (c.evPlace.trim()) lines.push(`LOCATION:${iEsc(c.evPlace.trim())}`);
+      lines.push("END:VEVENT");
+      return lines.join("\n");
     }
   }
 }
