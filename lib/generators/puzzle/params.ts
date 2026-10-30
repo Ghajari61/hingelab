@@ -9,7 +9,10 @@ export type PuzzleShape = "rect" | "circle" | "oval" | "heart" | "hexagon" | "cl
 /** Outlines drawn by the shared plate shapes; `corner` rounds the straight-sided ones. */
 export const PLATE_PUZZLES = ["oval", "hexagon", "cloud", "house", "arch", "shield"] as const;
 export const CORNERED_PUZZLES: PuzzleShape[] = ["rect", "hexagon", "house", "arch", "shield"];
-export type TabStyle = "classic" | "kids" | "wavy" | "straight";
+export type TabStyle = "classic" | "kids" | "wavy" | "dovetail" | "straight";
+export const TAB_STYLES: TabStyle[] = ["classic", "kids", "wavy", "dovetail", "straight"];
+export type WhimsyShape = "heart" | "star" | "circle" | "flower" | "house";
+export const WHIMSY_SHAPES: WhimsyShape[] = ["heart", "star", "circle", "flower", "house"];
 export type FrameKind = "none" | "frame" | "tray";
 export type EngraveKind = "none" | "image" | "text" | "numbers";
 
@@ -48,6 +51,23 @@ export interface PuzzleParams extends GenBase {
     /** Gap between the puzzle and the frame, mm. */
     clearance: number;
     corner: number;
+    /** Score the piece outlines on the tray's base, so small children can match each piece to its place. */
+    guide: boolean;
+    /** Two holes through the top of the frame (and base) to hang the finished puzzle on the wall. */
+    hang: boolean;
+  };
+  /** Whimsy pieces: little figures cut inside some of the pieces, each a piece of its own. */
+  whimsy: {
+    count: number;
+    shape: WhimsyShape;
+    /** Size, % of the piece. */
+    size: number;
+  };
+  /** Grip knobs: a disc (or two stacked) glued on every piece, for small hands. */
+  knobs: {
+    on: boolean;
+    diameter: number;
+    stack: number;
   };
   engrave: {
     kind: EngraveKind;
@@ -82,7 +102,9 @@ export const PUZZLE_DEFAULTS: PuzzleParams = {
   shape: { kind: "rect", width: 300, height: 200, corner: 0, path: "" },
   pieces: { auto: true, count: 48, cols: 8, rows: 6 },
   tabs: { style: "classic", size: 20, jitter: 4, seed: 1 },
-  frame: { kind: "none", border: 15, clearance: 0.4, corner: 6 },
+  frame: { kind: "none", border: 15, clearance: 0.4, corner: 6, guide: false, hang: false },
+  whimsy: { count: 0, shape: "heart", size: 50 },
+  knobs: { on: false, diameter: 14, stack: 1 },
   engrave: { kind: "none", image: "", aspect: 1.5, zoom: 100, text: "", fontId: "fredoka", size: 30, numberSize: 5, mark: "engrave", noWeld: false },
 };
 
@@ -91,5 +113,11 @@ export function mergePuzzle(raw: unknown): PuzzleParams {
   if (p.engrave.image && !isImageDataURL(p.engrave.image)) p.engrave = { ...p.engrave, image: "" };
   p.engrave.mark = cleanMark(p.engrave.mark, ["engrave", "score"] as const, "engrave");
   p.engrave.noWeld = cleanNoWeld(p.engrave.noWeld);
+  if (!TAB_STYLES.includes(p.tabs.style)) p.tabs.style = "classic";
+  if (!WHIMSY_SHAPES.includes(p.whimsy.shape)) p.whimsy.shape = "heart";
+  p.whimsy.count = Math.max(0, Math.min(20, Math.round(p.whimsy.count) || 0));
+  p.whimsy.size = Math.max(25, Math.min(70, p.whimsy.size || 50));
+  p.knobs.stack = p.knobs.stack >= 2 ? 2 : 1;
+  p.knobs.diameter = Math.max(6, Math.min(40, p.knobs.diameter || 14));
   return p;
 }

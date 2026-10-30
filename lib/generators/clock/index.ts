@@ -1,4 +1,5 @@
 import { letterMarkField, noWeldField } from "../textOps";
+import { material2Fields } from "../material2";
 import { circle, transform } from "../geom";
 import { HEART_PATH as HEART, fitArt as fit, namedFile } from "../util";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
@@ -11,11 +12,12 @@ import { byId, withPattern } from "../pattern";
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const pointed = (p: ClockParams) => ["sunburst", "gear", "scallop", "flower"].includes(p.face.shape);
 const hasNumerals = (p: ClockParams) => p.markers.style === "numerals" || p.markers.style === "mixed";
+const usesFont = (p: ClockParams) => hasNumerals(p) || p.markers.minuteNumbers;
 const hasInscription = (p: ClockParams) => !!p.inscription.text.trim();
 const hasTicks = (p: ClockParams) => p.markers.style === "ticks" || p.markers.style === "mixed" || p.markers.minutes;
 
 const SHAPE_NAMES: Record<ClockParams["face"]["shape"], string> = {
-  round: "Round", square: "Square", polygon: "Polygon", sunburst: "Sunburst", gear: "Gear", scallop: "Scalloped", flower: "Flower", heart: "Heart", cloud: "Cloud", custom: "Custom",
+  round: "Round", square: "Square", polygon: "Polygon", sunburst: "Sunburst", gear: "Gear", scallop: "Scalloped", flower: "Flower", heart: "Heart", cloud: "Cloud", star: "Star", slice: "Wood slice", custom: "Custom",
 };
 const MARKER_NAMES: Record<ClockParams["markers"]["style"], string> = {
   numerals: "Numerals", mixed: "Numerals and ticks", ticks: "Ticks", dots: "Dots", none: "No markers",
@@ -28,16 +30,20 @@ const sections: SectionSpec<ClockParams>[] = [
     fields: [
       {
         kind: "choice", key: "face.shape", shuffle: true, label: "Face shape", rail: true,
-        help: "The outline of the clock face; Custom takes the path data of any closed outline.",
+        help: "The outline of the clock face; Wood slice gives an irregular, bark-like round edge, and Custom takes the path data of any closed outline.",
         options: [
           { v: "round", text: "Round" }, { v: "square", text: "Square" }, { v: "polygon", text: "Polygon" },
           { v: "sunburst", text: "Sunburst" }, { v: "gear", text: "Gear" }, { v: "scallop", text: "Scalloped" },
-          { v: "flower", text: "Flower" }, { v: "heart", text: "Heart" }, { v: "cloud", text: "Cloud" }, { v: "custom", text: "Custom", input: "text" },
+          { v: "flower", text: "Flower" }, { v: "heart", text: "Heart" }, { v: "cloud", text: "Cloud" }, { v: "star", text: "Star" },
+          { v: "slice", text: "Wood slice" }, { v: "custom", text: "Custom", input: "text" },
         ],
       },
       { kind: "number", key: "face.size", label: "Size", unit: "mm", min: 80, max: 1200, step: 5, help: "Width of the face across its widest point (corners or ray tips)." },
       { kind: "number", key: "face.sides", label: "Sides", unit: "", min: 3, max: 24, step: 1, int: true, show: (p) => p.face.shape === "polygon", help: "Number of sides of the polygon face." },
-      { kind: "number", key: "face.corner", label: "Corner radius", unit: "mm", min: 0, max: 120, step: 1, show: (p) => ["square", "polygon", "sunburst"].includes(p.face.shape), help: "Rounds the corners of the face; 0 keeps them sharp." },
+      { kind: "number", key: "face.corner", label: "Corner radius", unit: "mm", min: 0, max: 120, step: 1, show: (p) => ["square", "polygon", "sunburst", "star"].includes(p.face.shape), help: "Rounds the corners of the face; 0 keeps them sharp." },
+      { kind: "number", key: "face.points", shuffle: true, label: "Points", unit: "", min: 3, max: 16, step: 1, int: true, show: (p) => p.face.shape === "star", help: "Number of points of the star." },
+      { kind: "number", key: "face.inner", label: "Star depth", unit: "%", min: 30, max: 90, step: 1, show: (p) => p.face.shape === "star", help: "The star's inner corners as a share of its outer radius; higher values give a fuller, rounder star with more room for the markers." },
+      { kind: "number", key: "face.seed", shuffle: true, label: "Slice number", unit: "", min: 1, max: 9999, step: 1, int: true, random: true, show: (p) => p.face.shape === "slice", help: "Each number gives a differently shaped wood slice; Randomise picks a new one." },
       { kind: "number", key: "face.rays", shuffle: true, label: "Rays", unit: "", min: 6, max: 72, step: 1, int: true, show: pointed, help: "Number of rays, teeth, scallops or petals around the edge." },
       { kind: "number", key: "face.depth", label: "Ray depth", unit: "mm", min: 2, max: 200, step: 1, show: pointed, help: "How far the rays, teeth or scallops reach in from the outer edge; for a flower, the petal radius." },
       { kind: "text", key: "face.path", label: "Custom outline", multiline: true, placeholder: "M 0 0 C …", show: (p) => p.face.shape === "custom", help: "SVG path data (the d attribute) of a closed outline; it is scaled to the face size." },
@@ -68,7 +74,7 @@ const sections: SectionSpec<ClockParams>[] = [
         options: [{ v: "roman", text: "Roman (IIII)" }, { v: "roman-iv", text: "Roman (IV)" }, { v: "arabic", text: "Arabic" }],
       },
       { kind: "toggle", key: "markers.quarters", shuffle: true, label: "Only 12, 3, 6 and 9", show: (p) => p.markers.style === "numerals", help: "Shows four numerals and ticks for the other hours." },
-      { kind: "font", key: "markers.fontId", shuffle: true, label: "Font", show: hasNumerals, sample: (p) => (p.markers.numerals.startsWith("roman") ? "XIIV" : "123456789"), help: "The typeface of the numerals (the same fonts as Letters)." },
+      { kind: "font", key: "markers.fontId", shuffle: true, label: "Font", show: usesFont, sample: (p) => (p.markers.numerals.startsWith("roman") ? "XIIV" : "123456789"), help: "The typeface of the numerals (the same fonts as Letters)." },
       { kind: "number", key: "markers.size", label: "Numeral height", unit: "mm", min: 4, max: 200, step: 1, show: hasNumerals, help: "Cap height of the numerals." },
       { kind: "number", key: "markers.inset", label: "Edge gap", unit: "mm", min: 0, max: 200, step: 1, show: (p) => p.markers.style !== "none" || p.markers.minutes, help: "Gap between the edge of the face and the outer end of the markers." },
       { kind: "number", key: "markers.tickLength", label: "Tick length", unit: "mm", min: 2, max: 100, step: 1, show: hasTicks, help: "Length of the hour ticks; minute ticks are a little under half as long." },
@@ -77,7 +83,10 @@ const sections: SectionSpec<ClockParams>[] = [
       { kind: "toggle", key: "markers.minutes", shuffle: true, label: "Minute ticks", help: "Adds a short tick for every minute between the hours." },
       { kind: "toggle", key: "markers.cut", label: "Cut through", show: (p) => p.markers.style !== "none" || p.markers.minutes, help: "Cuts the markers out instead of engraving them, so the layer behind shows through." },
       letterMarkField<ClockParams>("markers.mark", "Mark", (p) => (p.markers.style !== "none" || p.markers.minutes) && (p.markers.style === "numerals" || p.markers.style === "mixed" || !p.markers.cut)),
-      { kind: "toggle", key: "markers.follow", shuffle: true, label: "Follow the dial", show: hasNumerals, help: "Turns each numeral so its top points outward, as on classic dials, instead of standing upright." },
+      { kind: "toggle", key: "markers.follow", shuffle: true, label: "Follow the dial", show: usesFont, help: "Turns each numeral so its top points outward, as on classic dials, instead of standing upright." },
+      { kind: "toggle", key: "markers.raised", label: "Raised markers", show: (p) => p.markers.style !== "none", help: "Cuts the numerals, hour ticks or dots from a second material (mirror or coloured acrylic, or a contrasting wood) to glue on, with a scored outline on the face for each; minute ticks stay as they are." },
+      { kind: "toggle", key: "markers.minuteNumbers", label: "Minute numbers", help: "Adds a teaching clock's ring of minute numbers (5, 10 … 60) round the outside; the other markers move in to make room." },
+      { kind: "number", key: "markers.minuteSize", label: "Minute number height", unit: "mm", min: 3, max: 40, step: 0.5, show: (p) => p.markers.minuteNumbers, help: "Height of the minute numbers." },
     ],
   },
   {
@@ -113,6 +122,7 @@ const sections: SectionSpec<ClockParams>[] = [
       { kind: "number", key: "hands.hour", label: "Hour hand", unit: "mm", min: 15, max: 300, step: 1, show: (p) => p.hands.style !== "none", help: "Length from the centre of the shaft to the tip of the hour hand." },
       { kind: "number", key: "hands.width", label: "Width", unit: "mm", min: 2, max: 60, step: 0.5, show: (p) => p.hands.style !== "none", help: "Widest part of the minute hand; the hour hand is a quarter wider." },
       { kind: "number", key: "hands.tail", label: "Tail", unit: "mm", min: 0, max: 120, step: 1, show: (p) => p.hands.style !== "none", help: "Counterweight behind the centre, which helps the movement turn long hands." },
+      { kind: "toggle", key: "hands.second", label: "Second hand", show: (p) => p.hands.style !== "none", help: "Adds a slim second hand as long as the minute hand, with a round counterweight; cut it from thin acrylic or veneer so it stays light." },
     ],
   },
   {
@@ -136,6 +146,7 @@ const sections: SectionSpec<ClockParams>[] = [
       { kind: "number", key: "movement.minuteW", label: "Minute hole width", unit: "mm", min: 1, max: 10, step: 0.1, show: (p) => p.movement.id === "custom", help: "Minute hand hole, measured across its round sides." },
       { kind: "number", key: "movement.minuteH", label: "Minute hole flats", unit: "mm", min: 1, max: 10, step: 0.1, show: (p) => p.movement.id === "custom", help: "Minute hand hole, measured across its two flat sides." },
       { kind: "number", key: "movement.maxDial", label: "Thickest face", unit: "mm", min: 1, max: 30, step: 0.5, show: (p) => p.movement.id === "custom", help: "The thickest face the shaft's thread can clamp." },
+      { kind: "number", key: "movement.secondHole", label: "Second hand hole", unit: "mm", min: 0.5, max: 4, step: 0.1, show: (p) => p.movement.id === "custom" && p.hands.second && p.hands.style !== "none", help: "Round hole in the second hand; measure the movement's seconds pin." },
     ],
   },
   {
@@ -150,11 +161,16 @@ const sections: SectionSpec<ClockParams>[] = [
       { kind: "toggle", key: "stand", label: "Desk stand", help: "Adds a base with a slot; a tab under the face pushes into it." },
     ],
   },
+  {
+    id: "mat", title: "Second material", open: false, show: (p) => p.markers.raised && p.markers.style !== "none",
+    help: "The material of raised markers: mirror or coloured acrylic, or a contrasting wood.",
+    fields: material2Fields<ClockParams>("mat"),
+  },
 ];
 
 function art(key: string, v: string): { d: string; fill?: boolean }[] {
   if (key === "face.shape") {
-    const p = mergeClock({ face: { shape: v, size: 100, sides: 6, rays: v === "gear" ? 12 : v === "scallop" ? 10 : v === "flower" ? 8 : 16, depth: v === "sunburst" ? 14 : v === "flower" ? 16 : 8, corner: v === "square" ? 14 : 6, path: v === "custom" ? HEART : "" } });
+    const p = mergeClock({ face: { shape: v, size: 100, sides: 6, rays: v === "gear" ? 12 : v === "scallop" ? 10 : v === "flower" ? 8 : 16, depth: v === "sunburst" ? 14 : v === "flower" ? 16 : 8, corner: v === "square" ? 14 : v === "star" ? 3 : 6, points: 5, inner: 55, seed: 1, path: v === "custom" ? HEART : "" } });
     const o = faceOutline(p);
     return o ? [{ d: fit([o])[0], fill: true }] : [];
   }
@@ -190,7 +206,7 @@ function scaleClock(p: ClockParams, s: number): ClockParams {
   return {
     ...p,
     face: { ...p.face, size: k(p.face.size), corner: k(p.face.corner), depth: k(p.face.depth), ring: k(p.face.ring), centre: k(p.face.centre) },
-    markers: { ...p.markers, size: k(p.markers.size), inset: k(p.markers.inset), tickLength: k(p.markers.tickLength), tickWidth: k(p.markers.tickWidth), dot: k(p.markers.dot) },
+    markers: { ...p.markers, size: k(p.markers.size), inset: k(p.markers.inset), tickLength: k(p.markers.tickLength), tickWidth: k(p.markers.tickWidth), dot: k(p.markers.dot), minuteSize: k(p.markers.minuteSize) },
     hands: { ...p.hands, hour: k(p.hands.hour), minute: k(p.hands.minute), width: k(p.hands.width), tail: k(p.hands.tail) },
     inscription: { ...p.inscription, size: k(p.inscription.size), gap: k(p.inscription.gap) },
   };
@@ -207,7 +223,7 @@ const CLOCK_BASE: GeneratorDef<ClockParams> = {
   presets: CLOCK_PRESETS,
   build: buildClock,
   check: checkClock,
-  fonts: (p) => [...new Set([...(hasNumerals(p) ? [p.markers.fontId] : []), ...(hasInscription(p) ? [p.inscription.fontId] : [])])],
+  fonts: (p) => [...new Set([...(usesFont(p) ? [p.markers.fontId] : []), ...(hasInscription(p) ? [p.inscription.fontId] : [])])],
   scale: scaleClock,
   art,
   batch: () => "inscription.text",
@@ -216,7 +232,8 @@ const CLOCK_BASE: GeneratorDef<ClockParams> = {
   summary: (p) => `${p.face.size} mm ${SHAPE_NAMES[p.face.shape].toLowerCase()} face, ${MARKER_NAMES[p.markers.style].toLowerCase()}`,
   help: {
     intro: [
-      "The Clock generator draws a wall or desk clock to fit a standard quartz movement: the face, hour markers, hands with the right holes, a hanger and an optional stand. Faces come round, square, polygonal, sunburst, gear, scalloped, flower, heart, cloud or any outline you paste.",
+      "The Clock generator draws a wall or desk clock to fit a standard quartz movement: the face, hour markers, hands (and a second hand) with the right holes, a hanger and an optional stand. Faces come round, square, polygonal, sunburst, gear, scalloped, flower, heart, cloud, star, wood slice or any outline you paste.",
+      "Markers are engraved, scored, cut through to show a back plate, or raised: cut from mirror or coloured acrylic and glued onto scored outlines. A teaching clock adds a ring of minute numbers (5, 10 … 60) round the outside.",
       "Buy the movement first and check its shaft length: the face must be no thicker at the centre than the thread can clamp. Measure the hand holes if your movement's hands are not the usual size and enter them under Movement → Custom sizes.",
     ],
     tips: [
@@ -225,8 +242,10 @@ const CLOCK_BASE: GeneratorDef<ClockParams> = {
       "Cut the hands from thin material (1.5–3 mm) and keep them light; long, heavy hands stall a standard movement.",
       "Engrave the markers before cutting the outline, so the part does not move between jobs.",
       "Text on the dial looks best short and in capitals; the generator warns when it would wrap more than half way round.",
+      "Raised markers: peel the acrylic's film, cut them on their own sheet, and glue them with clear glue or thin double-sided tape; keep them out from under the minute hand, which sits only a few millimetres above the face.",
+      "A laser-cut second hand must be light: 1.5 to 2 mm acrylic or veneer, never thick plywood, or the movement will stall.",
     ],
-    keywords: ["clock", "wall clock", "quartz", "movement", "numerals", "hands", "dial"],
+    keywords: ["clock", "wall clock", "quartz", "movement", "numerals", "hands", "dial", "teaching clock", "learning clock", "wood slice", "star clock", "mirror acrylic", "second hand"],
   },
 };
 

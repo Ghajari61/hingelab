@@ -2,9 +2,9 @@ import { letterMarkField, noWeldField } from "../textOps";
 import { circle, rect, roundedRect } from "../geom";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { fitArt, namedFile } from "../util";
-import { buildPuzzle, puzzleOutline, tabEdge, type PuzzleOutput } from "./build";
+import { buildPuzzle, puzzleOutline, tabEdge, whimsyOutline, type PuzzleOutput } from "./build";
 import { checkPuzzle } from "./check";
-import { CORNERED_PUZZLES, FREE_PIECES, PUZZLE_DEFAULTS, mergePuzzle, type PuzzleParams } from "./params";
+import { CORNERED_PUZZLES, FREE_PIECES, PUZZLE_DEFAULTS, WHIMSY_SHAPES, mergePuzzle, type PuzzleParams, type WhimsyShape } from "./params";
 import { PUZZLE_PRESETS } from "./presets";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
@@ -13,7 +13,8 @@ const engraves = (k: PuzzleParams["engrave"]["kind"]) => (p: PuzzleParams) => p.
 const SHAPE_NAMES: Record<PuzzleParams["shape"]["kind"], string> = {
   rect: "Rectangle", circle: "Circle", oval: "Oval", heart: "Heart", hexagon: "Hexagon", cloud: "Cloud", house: "House", arch: "Arch", shield: "Shield", custom: "Custom",
 };
-const STYLE_NAMES: Record<PuzzleParams["tabs"]["style"], string> = { classic: "classic", kids: "kids", wavy: "wavy", straight: "straight-cut" };
+const STYLE_NAMES: Record<PuzzleParams["tabs"]["style"], string> = { classic: "classic", kids: "kids", wavy: "wavy", dovetail: "dovetail", straight: "straight-cut" };
+const WHIMSY_NAMES: Record<WhimsyShape, string> = { heart: "Heart", star: "Star", circle: "Circle", flower: "Flower", house: "House" };
 
 const sections: SectionSpec<PuzzleParams>[] = [
   {
@@ -47,12 +48,34 @@ const sections: SectionSpec<PuzzleParams>[] = [
     fields: [
       {
         kind: "choice", key: "tabs.style", shuffle: true, label: "Edge style", rail: true,
-        help: "Classic knobs, chunky knobs for small hands, wavy cuts without knobs, or straight cuts.",
-        options: [{ v: "classic", text: "Classic" }, { v: "kids", text: "Kids" }, { v: "wavy", text: "Wavy" }, { v: "straight", text: "Straight" }],
+        help: "Classic knobs, chunky knobs for small hands, wavy cuts without knobs, flared dovetail knobs, or straight cuts.",
+        options: [{ v: "classic", text: "Classic" }, { v: "kids", text: "Kids" }, { v: "wavy", text: "Wavy" }, { v: "dovetail", text: "Dovetail" }, { v: "straight", text: "Straight" }],
       },
       { kind: "number", key: "tabs.size", label: "Tab size", unit: "%", min: 10, max: 30, step: 1, show: (p) => p.tabs.style !== "straight", help: "How far the knobs reach into the next piece, as a share of the piece size." },
       { kind: "number", key: "tabs.jitter", shuffle: true, label: "Variation", unit: "%", min: 0, max: 15, step: 1, show: (p) => p.tabs.style !== "kids", help: "Bends the grid and varies each tab so no two pieces are alike; 0 gives a regular grid." },
       { kind: "number", key: "tabs.seed", shuffle: true, label: "Layout number", unit: "", min: 1, max: 9999, step: 1, int: true, random: true, help: "Each number gives a different arrangement of tabs; Randomise picks a new one." },
+    ],
+  },
+  {
+    id: "whimsy", title: "Whimsy pieces", open: false,
+    help: "Little figures cut inside some of the pieces, as in heirloom wooden puzzles; each pops out as a piece of its own.",
+    fields: [
+      { kind: "number", key: "whimsy.count", label: "Whimsy pieces", unit: "", min: 0, max: 20, step: 1, int: true, help: "How many pieces get a figure cut inside them; 0 for none." },
+      {
+        kind: "choice", key: "whimsy.shape", shuffle: true, label: "Figure", rail: true, show: (p) => p.whimsy.count > 0,
+        help: "The figure of the whimsy pieces.",
+        options: WHIMSY_SHAPES.map((v) => ({ v, text: WHIMSY_NAMES[v] })),
+      },
+      { kind: "number", key: "whimsy.size", label: "Figure size", unit: "%", min: 25, max: 70, step: 1, show: (p) => p.whimsy.count > 0, help: "Size of each figure as a share of a piece; larger figures fit only the roomiest pieces." },
+    ],
+  },
+  {
+    id: "knobs", title: "Grip knobs", open: false,
+    help: "Wooden knobs glued on every piece, so toddlers can lift the pieces out of a tray.",
+    fields: [
+      { kind: "toggle", key: "knobs.on", label: "Grip knobs", help: "Cuts a disc for every piece and scores a ring on each piece to glue it to." },
+      { kind: "number", key: "knobs.diameter", label: "Knob diameter", unit: "mm", min: 6, max: 40, step: 1, show: (p) => p.knobs.on, help: "Diameter of each knob; 12 to 16 mm suits small fingers." },
+      { kind: "number", key: "knobs.stack", label: "Discs per knob", unit: "", min: 1, max: 2, step: 1, int: true, show: (p) => p.knobs.on, help: "One disc, or two stacked for a taller knob that is easier to grip." },
     ],
   },
   {
@@ -67,6 +90,8 @@ const sections: SectionSpec<PuzzleParams>[] = [
       { kind: "number", key: "frame.border", label: "Border", unit: "mm", min: 4, max: 100, step: 1, show: (p) => p.frame.kind !== "none", help: "Width of the frame around the puzzle." },
       { kind: "number", key: "frame.clearance", label: "Clearance", unit: "mm", min: 0, max: 3, step: 0.1, show: (p) => p.frame.kind !== "none", help: "Gap between the puzzle and the frame, after the kerf, so the pieces drop in easily." },
       { kind: "number", key: "frame.corner", label: "Frame corners", unit: "mm", min: 0, max: 100, step: 1, show: (p) => p.frame.kind !== "none" && p.shape.kind === "rect", help: "Corner radius of the frame's outside." },
+      { kind: "toggle", key: "frame.guide", label: "Piece guide", show: (p) => p.frame.kind === "tray", help: "Scores every piece's outline on the tray base, so small children can match each piece to its place." },
+      { kind: "toggle", key: "frame.hang", label: "Hanging holes", show: (p) => p.frame.kind !== "none", help: "Two holes through the top of the frame (and the base) to hang the finished puzzle on the wall." },
     ],
   },
   {
@@ -107,6 +132,10 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
     const [f, ...ls] = fitArt([rect(0, 0, 60, 60), ...lines], 38, [false, true, true]);
     return [{ d: f, fill: true }, ...ls.map((d) => ({ d }))];
   }
+  if (key === "whimsy.shape") {
+    const [b, w] = fitArt([rect(0, 0, 50, 50), whimsyOutline(v as WhimsyShape, 30, 25, 25)], 38);
+    return [{ d: b, fill: true }, { d: w }];
+  }
   if (key === "frame.kind") {
     const inner = rect(0, 0, 60, 40);
     if (v === "none") return fitArt([inner, rect(-12, -12, 84, 64)].slice(0, 1), 34).map((d) => ({ d, fill: true }));
@@ -133,6 +162,7 @@ function scalePuzzle(p: PuzzleParams, s: number): PuzzleParams {
     shape: { ...p.shape, width: k(p.shape.width), height: k(p.shape.height), corner: k(p.shape.corner) },
     frame: { ...p.frame, border: k(p.frame.border), corner: k(p.frame.corner) },
     engrave: { ...p.engrave, size: k(p.engrave.size), numberSize: Math.max(2, k(p.engrave.numberSize)) },
+    knobs: { ...p.knobs, diameter: Math.max(6, k(p.knobs.diameter)) },
   };
 }
 
@@ -162,7 +192,8 @@ const PUZZLE_BASE: GeneratorDef<PuzzleParams> = {
   },
   help: {
     intro: [
-      "The Puzzle generator cuts a jigsaw from a rectangle, circle, oval, heart, hexagon, cloud, house, arch, shield or any closed outline, with classic, kids, wavy or straight cuts, an optional frame or tray, and a picture, text or piece numbers engraved on top.",
+      "The Puzzle generator cuts a jigsaw from a rectangle, circle, oval, heart, hexagon, cloud, house, arch, shield or any closed outline, with classic, kids, wavy, dovetail or straight cuts, an optional frame or tray, and a picture, text or piece numbers engraved on top.",
+      "Add whimsy pieces (a heart, star, circle, flower or house cut inside some pieces, as in heirloom wooden puzzles), grip knobs for toddlers, a piece guide scored on the tray base, and hanging holes to show the finished puzzle on the wall.",
       "Every edge between two pieces is drawn once, as a single line joined along each row and column, so the laser never cuts the same line twice. The cuts run half a millimetre past the outline (plus half the kerf), so no piece stays attached.",
       `Free accounts export puzzles of up to ${FREE_PIECES} pieces; larger puzzles need Pro.`,
     ],
@@ -173,8 +204,10 @@ const PUZZLE_BASE: GeneratorDef<PuzzleParams> = {
       "For a photo, raise the contrast before you load it; engraving flattens mid-greys.",
       "Change the layout number until the edge pieces look right, especially on a heart or circle.",
       "Small children need large pieces: use the Kids style with 4 to 12 pieces, and a tray to keep them together.",
+      "For toddlers, add grip knobs and the piece guide: two stacked 14 mm discs are easy to pinch, and the scored outlines on the base show where each piece goes.",
+      "Whimsy pieces need roomy pieces round them; if fewer fit than you asked, make the figures smaller or the pieces fewer.",
     ],
-    keywords: ["puzzle", "jigsaw", "pieces", "tabs", "kids puzzle", "photo puzzle"],
+    keywords: ["puzzle", "jigsaw", "pieces", "tabs", "kids puzzle", "photo puzzle", "whimsy", "knob puzzle", "toddler", "tray puzzle", "dovetail"],
   },
 };
 

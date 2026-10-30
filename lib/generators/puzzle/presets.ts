@@ -84,4 +84,43 @@ export const PUZZLE_PRESETS: GenPreset<PuzzleParams>[] = [
       pieces: { auto: true, count: 7 }, tabs: { style: "classic", size: 22, jitter: 3, seed: 5 },
     },
   },
+  {
+    id: "toddler-knobs", name: "Toddler knob puzzle", note: "6 chunky pieces with grip knobs in a tray, outlines scored on the base",
+    params: {
+      name: "Toddler knob puzzle", shape: { kind: "rect", width: 200, height: 150, corner: 12 },
+      pieces: { auto: false, cols: 3, rows: 2 }, tabs: { style: "kids", size: 24, seed: 3 },
+      frame: { kind: "tray", border: 15, corner: 16, guide: true }, knobs: { on: true, diameter: 14, stack: 2 },
+    },
+  },
+  {
+    id: "whimsy-hearts", name: "Heart whimsy puzzle", note: "48 classic pieces, three of them hiding a heart-shaped piece",
+    params: {
+      name: "Heart whimsy puzzle", shape: { kind: "rect", width: 300, height: 200 },
+      pieces: { auto: true, count: 45 }, tabs: { style: "classic", size: 20, jitter: 5, seed: 13 },
+      whimsy: { count: 3, shape: "heart", size: 50 },
+    },
+  },
+  {
+    id: "dovetail-30", name: "Dovetail 30", note: "30 flared dovetail pieces, 240 × 180 mm",
+    params: {
+      name: "Dovetail puzzle", shape: { kind: "rect", width: 240, height: 180, corner: 6 },
+      pieces: { auto: true, count: 30 }, tabs: { style: "dovetail", size: 22, jitter: 4, seed: 9 },
+    },
+  },
+  {
+    id: "wall-display", name: "Wall display puzzle", note: "A framed photo puzzle with hanging holes, to show once it is done",
+    params: {
+      name: "Wall display puzzle", shape: { kind: "rect", width: 300, height: 200 },
+      pieces: { auto: true, count: 48 }, tabs: { style: "classic", size: 20, jitter: 5, seed: 21 },
+      frame: { kind: "tray", border: 18, corner: 8, hang: true }, engrave: { kind: "image" },
+    },
+  },
+  {
+    id: "star-whimsy-kids", name: "Starry kids puzzle", note: "A 12-piece cloud with two star whimsies, in a tray",
+    params: {
+      name: "Starry cloud puzzle", shape: { kind: "cloud", width: 260, height: 180 },
+      pieces: { auto: true, count: 12 }, tabs: { style: "kids", size: 22, seed: 5 },
+      whimsy: { count: 2, shape: "star", size: 45 }, frame: { kind: "tray", border: 15 },
+    },
+  },
 ];
