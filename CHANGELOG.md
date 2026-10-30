@@ -1,3 +1,7 @@
+## Unreleased
+
+- **Clearer design preview in the Upgrade dialog:** the cut file shown there now has its lines drawn at a readable width and its parts lightly tinted, so the design is easy to see at that size. The downloaded file is unchanged.
+
 ## 1.31.0 — A clearer start and Leather Studio 3D
 
 - **Leather Studio 3D: the product as it will look.**
