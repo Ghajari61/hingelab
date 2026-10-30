@@ -122,6 +122,7 @@ export function buildBox(p: LeatherParams, pat: Pattern) {
     if (c.wood) { fp.t = clamp(p.build.woodT, 2, 12); fp.material = "second"; fp.name = name.replace("End panel", "Wood end panel"); }
     fp.place = { x: 0, y: 0, z: 0, m: facePlace(i * c.wrapW) };
     faces.push(pat.add(fp));
+    if (isBack && flap) pat.rigs.push({ kind: "flap", back: fp, flap, E });
   }
 
   // ---- the gussets: one strip per compartment
@@ -215,6 +216,8 @@ export function buildBox(p: LeatherParams, pat: Pattern) {
       if (c.reinforce) {
         const pr: GenPart = { id: `${hp.id}-patch${ue ? 2 : 1}`, name: "Rivet backing patch", outer: roundRect(0, 0, hw + 8, rivB - rivA + 16, [4, 4, 4, 4]), holes: [], place: { x: 0, y: 0, z: 0 } };
         pat.add(pr);
+        // inside the panel, behind the rivets
+        pat.rigs.push({ kind: "lie", part: pr, on: { host: target, pt: map((rivA + rivB) / 2, hw / 2) }, dir: [-dir[1], dir[0]], anchor: [(hw + 8) / 2, (rivB - rivA + 16) / 2], inside: true });
         for (const a of [rivA, rivB]) pat.mount("rivet", pr, [hw / 2 + 4, a - rivA + 8], 0, "", 20, false);
       }
     }
@@ -225,6 +228,8 @@ export function buildBox(p: LeatherParams, pat: Pattern) {
       const hp = handlePart(`handle${i + 1}`, `Handle ${i + 1}`, hl), target = faces[i === 0 ? 0 : nFaces - 1], top = flapTop(i === 0 ? 0 : nFaces - 1);
       attachEnd(hp, 0, target, [W / 2 - spread / 2, top + e + 6], [0, 1], "Handle to the face");
       attachEnd(hp, hl, target, [W / 2 + spread / 2, top + e + 6], [0, 1], "Handle to the face");
+      const low = top + e + 6 + rivB + 8;
+      pat.rigs.push({ kind: "handle", part: hp, length: hl, width: hw, ends: [{ host: target, anchor: [W / 2 - spread / 2, low], rise: [W / 2 - spread / 2, top] }, { host: target, anchor: [W / 2 + spread / 2, low], rise: [W / 2 + spread / 2, top] }] });
     }
     pat.steps.push(`Fix the handles to the ${n > 1 ? "front and back" : "front"} before stitching the faces to the gusset${p.build.attach === "box" ? " with a box stitch" : ", rivet caps outside"}.`);
   } else if (c.handles === "lid" && flap) {
@@ -232,11 +237,15 @@ export function buildBox(p: LeatherParams, pat: Pattern) {
     const hp = handlePart("handle1", "Top handle", Math.min(hl, W * 0.9)), back = faces[nFaces - 1], len = Math.min(hl, W * 0.9), v = flap + (E - flap) / 2;
     attachEnd(hp, 0, back, [W / 2 - len * 0.32, v - hw / 2 - 2], [1, 0], "Handle to the lid");
     attachEnd(hp, len, back, [W / 2 + len * 0.32, v - hw / 2 - 2], [-1, 0], "Handle to the lid");
+    const y = v - hw / 2 - 2, xa = W / 2 - len * 0.32, xb = W / 2 + len * 0.32;
+    pat.rigs.push({ kind: "handle", part: hp, length: len, width: hw, ends: [{ host: back, anchor: [xa, y], rise: [xa + rivB + 8, y] }, { host: back, anchor: [xb, y], rise: [xb - rivB - 8, y] }] });
   } else if (c.handles === "lip") {
     const hp = handlePart("handle1", "Top handle", Math.min(hl, c.wrapW * 0.8)), g = strips[0], len = Math.min(hl, c.wrapW * 0.8);
     // on the front lip, beyond the frame channel, lying along the bag's length
     attachEnd(hp, 0, g, [2 * ce + 16, c.wrapW / 2 - len * 0.3], [0, 1], "Handle to the body");
     attachEnd(hp, len, g, [2 * ce + 16, c.wrapW / 2 + len * 0.3], [0, -1], "Handle to the body");
+    const x = 2 * ce + 16, ya = c.wrapW / 2 - len * 0.3, yb = c.wrapW / 2 + len * 0.3;
+    pat.rigs.push({ kind: "handle", part: hp, length: len, width: hw, ends: [{ host: g, anchor: [x, ya], rise: [x, ya + rivB + 8] }, { host: g, anchor: [x, yb], rise: [x, yb - rivB - 8] }] });
   }
 
   // ---- strap tabs (D-rings at the gusset ends) and the strap
@@ -249,10 +258,21 @@ export function buildBox(p: LeatherParams, pat: Pattern) {
       pat.fold(tab, [tl, 0], [tl, tw]);
       pat.mount("rivet", tab, [tl - 20, tw / 2], 0, "", 20, false);
       pat.mount("rivet", tab, [tl + 20, tw / 2], 0, "", 20, false);
-      pat.mount("rivet", g, [u, c.dividers ? c.wrapW / (2 * (c.dividers + 1)) : c.wrapW / 2], Math.PI / 2, "strap tabs");
+      const vt = c.dividers ? c.wrapW / (2 * (c.dividers + 1)) : c.wrapW / 2, out = i === 1 ? -1 : 1;
+      pat.mount("rivet", g, [u, vt], Math.PI / 2, "strap tabs");
       pat.count("dring", 1, `${sw} mm inside`);
+      // the tab folded round its ring, reaching past the gusset's end
+      pat.rigs.push({ kind: "lie", part: tab, on: { host: g, pt: [u, vt] }, dir: [out, 0], anchor: [20, tw / 2], outer: roundRect(0, 0, tl + 6, tw, [3, 3, 3, 3]) });
+      pat.rigs.push({ kind: "ring", on: { host: g, pt: [u + out * (tl - 14), vt] }, dir: [1, 0], r: sw / 2 + 1, lift: 2 });
     }
-    strapPart(pat, "strap", c.convertible ? "Crossbody strap" : "Shoulder strap", clamp(p.build.strapLen, 300, 2000), sw);
+    const sLen = clamp(p.build.strapLen, 300, 2000);
+    const sa = strapPart(pat, "strap", c.convertible ? "Crossbody strap" : "Shoulder strap", sLen, sw), sb = pat.splits.get("strap");
+    {
+      const vt = c.dividers ? c.wrapW / (2 * (c.dividers + 1)) : c.wrapW / 2;
+      const la = sa.outer.reduce((m, q) => Math.max(m, q[0]), 0);
+      pat.rigs.push({ kind: "strap", up: "z", length: sLen, width: sw, a: { host: g, pt: [ce + 16 - tl + 14, vt] }, b: { host: g, pt: [Ls - ce - 16 + tl - 14, vt] },
+        parts: sb ? [{ part: sa, from: 0, to: la }, { part: sb.part, from: sb.off, to: sLen }] : [{ part: sa, from: 0, to: sLen }] });
+    }
     pat.count("slider", 1, `${sw} mm`);
     if (c.convertible) {
       for (const [i, x] of [[3, 24], [4, W - 24]] as const) {
@@ -261,8 +281,11 @@ export function buildBox(p: LeatherParams, pat: Pattern) {
         pat.fold(tab, [tl, 0], [tl, tw]);
         pat.mount("rivet", tab, [tl - 20, tw / 2], 0, "", 20, false);
         pat.mount("rivet", tab, [tl + 20, tw / 2], 0, "", 20, false);
-        pat.mount("rivet", faces[nFaces - 1], [x, flapTop(nFaces - 1) + H - Math.max(c.r, 20) - 10], 0, "backpack tabs");
+        const ty = flapTop(nFaces - 1) + H - Math.max(c.r, 20) - 10;
+        pat.mount("rivet", faces[nFaces - 1], [x, ty], 0, "backpack tabs");
         pat.count("dring", 1, `${sw} mm inside`);
+        pat.rigs.push({ kind: "lie", part: tab, on: { host: faces[nFaces - 1], pt: [x, ty] }, dir: [0, 1], anchor: [20, tw / 2], outer: roundRect(0, 0, tl + 6, tw, [3, 3, 3, 3]) });
+        pat.rigs.push({ kind: "ring", on: { host: faces[nFaces - 1], pt: [x, ty + 16] }, dir: [0, 1], r: sw / 2 + 1, lift: 2 });
       }
       pat.mount("rivet", faces[nFaces - 1], [W / 2, flapTop(nFaces - 1) + e + 14], 0, "top loop");
       pat.notes.push("Clip the strap to the gusset rings to wear it across the body, or to the top loop and the two lower rings as a backpack.");
@@ -273,7 +296,9 @@ export function buildBox(p: LeatherParams, pat: Pattern) {
   if (c.backpack) {
     const back = faces[nFaces - 1], sw = clamp(p.build.strapW, 20, 50);
     for (const [i, x] of [[1, W / 2 - 40], [2, W / 2 + 40]] as const) {
-      const st = strapPart(pat, `pack${i}`, `Shoulder strap ${i}`, clamp(p.build.strapLen * 0.6, 400, 900), sw);
+      const pl = clamp(p.build.strapLen * 0.6, 400, 900), st = strapPart(pat, `pack${i}`, `Shoulder strap ${i}`, pl, sw);
+      const ax = i === 1 ? 28 : W - 28, ay = H - Math.max(c.r, 20) - 12;
+      pat.rigs.push({ kind: "strap", up: "out", length: pl, width: sw, a: { host: back, pt: [x, c.roll + 14] }, b: { host: back, pt: [ax, ay - 16] }, parts: [{ part: st, from: 0, to: pl }] });
       pat.mount("rivet", st, [10, sw / 2], 0, "", 20, false);
       pat.mount("rivet", st, [22, sw / 2], 0, "", 20, false);
       pat.mount("rivet", back, [x, c.roll + 18], 0, "shoulder straps");
@@ -284,10 +309,13 @@ export function buildBox(p: LeatherParams, pat: Pattern) {
       pat.mount("buckle", anc, [30, (sw + 2) / 2], 0, "strap buckles", sw);
       for (const u of [12, 48]) pat.mount("rivet", anc, [u, (sw + 2) / 2], 0, "", 20, false);
       pat.mount("rivet", back, [i === 1 ? 28 : W - 28, H - Math.max(c.r, 20) - 12], 0, "strap anchors");
+      pat.rigs.push({ kind: "lie", part: anc, on: { host: back, pt: [i === 1 ? 28 : W - 28, H - Math.max(c.r, 20) - 12] }, dir: [0, -1], anchor: [12, (sw + 2) / 2], outer: roundRect(0, 0, 32, sw + 2, [4, 4, 4, 4]) });
+      pat.rigs.push({ kind: "ring", on: { host: back, pt: [i === 1 ? 28 : W - 28, H - Math.max(c.r, 20) - 30] }, dir: [0, 1], r: sw / 2 + 2, lift: 2 });
     }
     // the roll closure: two straps from the back over the rolled top to buckles on the front
     for (const [i, x] of [[1, W * 0.3], [2, W * 0.7]] as const) {
-      const cl = strapPart(pat, `roll${i}`, `Roll strap ${i}`, c.roll + c.wrapW + 160, 20);
+      const rl = c.roll + c.wrapW + 160, cl = strapPart(pat, `roll${i}`, `Roll strap ${i}`, rl, 20);
+      pat.rigs.push({ kind: "strap", up: "z", length: rl * 0.62, width: 20, a: { host: back, pt: [x, c.roll + 40] }, b: { host: faces[0], pt: [x, c.roll + 56] }, parts: [{ part: cl, from: 0, to: rl * 0.62 }] });
       for (const u of [10, 22]) pat.mount("rivet", cl, [u, 10], 0, "", 20, false);
       pat.mount("rivet", back, [x, c.roll + 46], 0, "roll straps");
       const anc: GenPart = { id: `rollbuckle${i}`, name: `Roll buckle tab ${i}`, outer: roundRect(0, 0, 50, 22, [3, 3, 3, 3]), holes: [], score: [], place: { x: 0, y: 0, z: 0 } };
@@ -296,6 +324,8 @@ export function buildBox(p: LeatherParams, pat: Pattern) {
       pat.mount("buckle", anc, [25, 11], 0, "roll buckles", 20);
       for (const u of [12, 38]) pat.mount("rivet", anc, [u, 11], 0, "", 20, false);
       pat.mount("rivet", faces[0], [x, c.roll + 70], 0, "roll buckle tabs");
+      pat.rigs.push({ kind: "lie", part: anc, on: { host: faces[0], pt: [x, c.roll + 70] }, dir: [0, -1], anchor: [12, 11], outer: roundRect(0, 0, 28, 22, [3, 3, 3, 3]) });
+      pat.rigs.push({ kind: "ring", on: { host: faces[0], pt: [x, c.roll + 56] }, dir: [0, 1], r: 11, lift: 2 });
     }
     pat.mount("rivet", back, [W / 2, c.roll + 8], 0, "grab loop");
     pat.steps.push("Roll the top down three times and buckle the roll straps over it.");
@@ -316,12 +346,15 @@ export function buildBox(p: LeatherParams, pat: Pattern) {
       const ts = strapPart(pat, `flapstrap${i}`, `Flap strap ${i}`, Math.min(flap * 0.9 + 60, 160), 18, 3);
       for (const u of [8, 20]) { pat.mount("rivet", ts, [u, 9], 0, "", 20, false); }
       for (const u of [8, 20]) pat.mount("rivet", back, [x, u], 0, "flap straps");
+      pat.rigs.push({ kind: "drape", part: ts, a: { host: back, pt: [x, 26] }, tip: { host: back, pt: [x, 0.6] }, length: Math.min(flap * 0.9 + 60, 160), width: 18 });
       const bt: GenPart = { id: `bucktab${i}`, name: `Buckle tab ${i}`, outer: roundRect(0, 0, 50, 20, [3, 3, 3, 3]), holes: [], score: [], place: { x: 0, y: 0, z: 0 } };
       pat.add(bt);
       pat.fold(bt, [25, 0], [25, 20]);
       pat.mount("buckle", bt, [25, 10], 0, "flap buckles", 18);
       for (const u of [12, 38]) pat.mount("rivet", bt, [u, 10], 0, "", 20, false);
       pat.mount("rivet", front, [x, flap + 6], 0, "buckle tabs");
+      pat.rigs.push({ kind: "lie", part: bt, on: { host: front, pt: [x, flap + 6] }, dir: [0, -1], anchor: [12, 10], outer: roundRect(0, 0, 28, 20, [3, 3, 3, 3]) });
+      pat.rigs.push({ kind: "ring", on: { host: front, pt: [x, flap - 6] }, dir: [0, 1], r: 10, lift: 2 });
     }
   }
 
@@ -331,6 +364,7 @@ export function buildBox(p: LeatherParams, pat: Pattern) {
     const Lb = Math.max(30, W - 2 * c.r - 6), wb = c.wrapW - 2 * e - 4;
     const st: GenPart = { id: "stiffener", name: "Base stiffener (leatherboard)", outer: rect(0, 0, Lb, wb), holes: [], place: { x: 0, y: 0, z: 0 } };
     pat.add(st);
+    pat.rigs.push({ kind: "lie", part: st, on: { host: g, pt: [uc, c.wrapW / 2] }, dir: [1, 0], anchor: [Lb / 2, wb / 2], inside: true });
     if (c.feet && !c.backpack) for (const du of [-fx, fx]) for (const v of [0.22, 0.78]) pat.mount("foot", st, [Lb / 2 + du, (c.wrapW * v) - e - 2], 0, "", 20, false);
   }
   if (c.feet && !c.backpack) for (const du of [-fx, fx]) for (const v of [0.22, 0.78]) pat.mount("foot", g, [uc + du, c.wrapW * v], 0, "bag feet");
@@ -341,6 +375,7 @@ export function buildBox(p: LeatherParams, pat: Pattern) {
     const run = runBelow(offsetContour(pk.outer, -e)!, tm + 0.05)!;
     const ox = (W - Wp) / 2, oy = flapTop(nFaces - 1) + Math.max(e + 30, H * 0.22);
     pat.seam("Slip pocket to the back", [{ part: pk, rows: [run] }, { part: back, rows: [run.map(([x, y]) => [x + ox, y + oy] as Pt)] }]);
+    pat.rigs.push({ kind: "lie", part: pk, on: { host: back, pt: [ox + Wp / 2, oy + Hp / 2] }, dir: [1, 0], anchor: [Wp / 2, Hp / 2], inside: true });
     pat.line("Pocket top edge", pk, [[[e + s.pitch, e], [Wp - e - s.pitch, e]]]);
   }
   if (c.rails) {
@@ -350,10 +385,17 @@ export function buildBox(p: LeatherParams, pat: Pattern) {
       const rail: GenPart = { id: `rail-${which}`, name: `Divider rail (${which})`, outer: roundRect(0, 0, rl, rh, [3, 3, 3, 3]), holes: [], place: { x: 0, y: 0, z: 0 } };
       for (let x = pitchR; x < rl - pitchR / 2; x += pitchR) rail.holes.push(rect(x - slotW / 2, rh / 2 - 6, slotW, 12));
       pat.add(rail);
+      const host = which === "front" ? faces[0] : back;
+      pat.rigs.push({ kind: "lie", part: rail, on: { host, pt: [W / 2, flapTop(which === "front" ? 0 : nFaces - 1) + H * 0.45] }, dir: [1, 0], anchor: [rl / 2, rh / 2], inside: true });
     }
     for (let j = 1; j <= c.rails; j++) {
       const dv: GenPart = { id: `camdiv${j}`, name: `Removable divider ${j}`, outer: [[0, 0], [dvL, 0], [dvL, dvH * 0.5 - 5], [dvL + 6, dvH * 0.5 - 5], [dvL + 6, dvH * 0.5 + 5], [dvL, dvH * 0.5 + 5], [dvL, dvH], [0, dvH], [0, dvH * 0.5 + 5], [-6, dvH * 0.5 + 5], [-6, dvH * 0.5 - 5], [0, dvH * 0.5 - 5]], holes: [], place: { x: 0, y: 0, z: 0 } };
       pat.add(dv);
+      if (c.orient === "front") {
+        // standing across the bag, front to back, in a pair of rail slots
+        const xs = Math.round((W * j) / (c.rails + 1) / pitchR) * pitchR;
+        pat.rigs.push({ kind: "stand", part: dv, m: frame([0, -1, 0], [0, 0, -1], [Math.min(W - e - 6, Math.max(e + 6, xs)), Dtot - T - 1, H - 10]) });
+      }
     }
     pat.steps.push("Glue the two divider rails inside the front and back, level with each other; slide the dividers' tabs into whichever slots suit the camera.");
   }
@@ -373,6 +415,7 @@ export function buildBox(p: LeatherParams, pat: Pattern) {
         if (s.mode === "laser") lp.holes.push(holeOutline({ pt: h.pt, t: h.t ?? [1, 0] }, s));
       }
       pat.add(lp);
+      pat.rigs.push({ kind: "lining", part: lp, src });
     }
     pat.steps.push("Glue each lining to its panel, flesh sides together, before stitching: the seams go through both.");
   }

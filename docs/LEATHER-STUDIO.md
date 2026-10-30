@@ -27,11 +27,19 @@ The Leather Studio generator (`lib/generators/leather/`; it opens at `/app/edito
 - Chrome-tanned leather, suede, nubuck, PU, synthetics and leathers of unknown tannage are "not approved" by default.
 - Laser files carry a checklist: extraction, filtration, fire watch and operator supervision, and testing on an offcut. No laser settings are given.
 
+## The 3D preview
+
+- Every product is shown put together in a leather colour for the chosen leather (lining and leatherboard in their own colours), matte with a fine grain, and with brass or steel fittings: rivets, snaps, feet, D-rings, buckles and key rings.
+- Bags: handles arch between their rivets, straps run between their rings, D-ring tabs, buckle tabs, patches and pockets sit on their panels, linings and the base stiffener sit inside, and camera dividers stand in their rails.
+- The **Fold** slider opens and closes the product: a flap and lid lift from closed (100 %) to standing open (0 %), with any strap or tab on them moving with them. Wallets, the passport holder and the glasses case close in half with a rounded fold; the sleeve's flap and the tool roll's top fold over; the notebook cover closes round its spine; the tray and coin purse raise their walls with the corners wrapped round. Belts, collars, the watch strap and the bracelet buckle or snap into a loop at 100 % and lie out straight at 0 %; the key fob folds round its ring; the lead coils; the bag strap hangs from its clips.
+- **Explode** moves each part out from the middle as one piece; stacked layers of flat goods part along their faces.
+- Card holders, coasters, the luggage tag and the bag charm are stacked layers and have no fold.
+
 ## Not done yet
 
 - **120 templates.** The brief's target was 120; this release has 42 templates over 41 products.
 - **16 separate navigation sections.** The brief listed separate studios (2D pattern editor, stitching studio, hardware studio, nesting optimiser and so on). Here they are sections of the one generator editor, and nesting, cost and assembly instructions reuse the existing sheet layout, job estimate and assembly booklet.
 - **Free-form pattern editing.** Shapes come from the parameters; there is no node editor for leather parts.
-- **Physical validation.** Nothing has been sewn or tested on leather. The 3D view is a simplified preview: panels are placed by matrices, curved strips are drawn as flat pieces, and drape, stretch and stitching are not simulated. Flat goods and straps are shown laid out flat.
+- **Physical validation.** Nothing has been sewn or tested on leather. The 3D view is a simplified preview: panels are placed by matrices, curved strips and bends are drawn as short flat pieces, and drape, stretch, the leather's stiffness and stitching are not simulated. Long bag straps are drawn shorter than cut so the bag stays in view. Small loose pieces (keepers, a pen loop, a tie, a tag strap, a charm's tab) still lie beside the product.
 - **The cost estimator.** The brief was cut off in its cost-estimator section, so leather pricing, hardware prices and labour were not specified and are not built.
 - **Long straps that are the product.** Adult belts and full-length leads are longer than the P3 bed. They are not split; a note says to cut them from a blank with a strap cutter or use the hand-cutting template.

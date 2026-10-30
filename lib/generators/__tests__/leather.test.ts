@@ -133,4 +133,81 @@ describe("leather studio", () => {
     expect(out.info!.hardware.some((h) => h.kind === "zipper")).toBe(true);
     expect(out.info!.thread).toBeGreaterThan(out.info!.stitchLength);
   });
+
+  describe("the 3D preview", () => {
+    type Pt3 = [number, number, number];
+    const at = (m: number[], u: number, v: number): Pt3 => [m[0] * u + m[1] * v + m[3], m[4] * u + m[5] * v + m[7], m[8] * u + m[9] * v + m[11]];
+    const pieces = (q: LeatherOutput["parts"][number]) => (q.views3d?.length ? q.views3d : q.place?.m ? [{ outer: q.outer, place: q.place, frames: undefined }] : []);
+    const boxOf = (out: LeatherOutput) => {
+      const lo: Pt3 = [Infinity, Infinity, Infinity], hi: Pt3 = [-Infinity, -Infinity, -Infinity];
+      for (const q of out.parts) for (const vw of pieces(q)) if (vw.place.m) for (const [u, v] of vw.outer) { const w = at(vw.place.m, u, v); for (let i = 0; i < 3; i++) { lo[i] = Math.min(lo[i], w[i]); hi[i] = Math.max(hi[i], w[i]); } }
+      return { lo, hi };
+    };
+    const kinds = Object.keys(PRODUCTS) as ProductKind[];
+
+    it("puts every product together in leather colours, not wood, with metal fittings", () => {
+      for (const k of kinds) {
+        const out = build(ofProduct(k));
+        for (const q of out.parts) {
+          if (k === "hybrid" && q.material === "second") continue;
+          expect(q.color, `${k} ${q.id}`).toMatch(/^#[0-9a-f]{6}$/);
+          expect(q.texture, `${k} ${q.id}`).toBe("leather");
+        }
+        // rivets, snaps and feet show as metal
+        for (const h of out.hardware ?? []) if (h.kind === "cylinder") expect(h.metal, k).toBe(true);
+      }
+    }, 120_000);
+
+    it("bags stand assembled: handles, straps, tabs and linings are in place, above the base", () => {
+      for (const k of kinds.filter((x) => !["flat", "strap"].includes(PRODUCTS[x].family))) {
+        const out = build(ofProduct(k));
+        const placed = out.parts.filter((q) => pieces(q).length);
+        for (const q of out.parts) if (/handle|strap|dtab|lining|pocket|patch|stiffener|tab/.test(q.id)) expect(pieces(q).length, `${k} ${q.id}`).toBeGreaterThan(0);
+        expect(placed.length, k).toBeGreaterThan(0);
+        expect(boxOf(out).lo[2], k).toBeGreaterThan(-2);
+      }
+    }, 120_000);
+
+    it("a flap opens and closes on the Fold slider", () => {
+      const out = build(ofProduct("messenger"));
+      const back = out.parts.find((q) => q.id === "back")!;
+      const flap = back.views3d!.find((v) => v.name === "Flap")!;
+      expect(flap.frames!.length).toBeGreaterThan(2);
+      // closed, the flap hangs down the front; open, it stands above the bag
+      const zOf = (m: number[]) => at(m, 0, 0)[2];
+      expect(zOf(flap.frames![0])).toBeGreaterThan(zOf(flap.frames![flap.frames!.length - 1]));
+    });
+
+    it("flat goods fold closed and open flat; straps wrap and lie out straight", () => {
+      for (const k of ["bifold", "longwallet", "passport", "sleeve", "glasses", "notebook", "toolroll", "tray", "coinpurse", "belt", "collar", "watchstrap", "keyfob", "bracelet", "leash", "shoulderstrap"] as ProductKind[]) {
+        const out = build(ofProduct(k));
+        const moving = out.parts.flatMap((q) => q.views3d ?? []).filter((v) => v.frames?.length);
+        expect(moving.length, k).toBeGreaterThan(0);
+        // every frame stays a rigid placement
+        for (const v of moving) for (const m of [v.frames![0], v.frames![v.frames!.length - 1]]) {
+          const U = [m[0], m[4], m[8]], V = [m[1], m[5], m[9]];
+          expect(Math.hypot(...U), k).toBeCloseTo(1, 5);
+          expect(Math.hypot(...V), k).toBeCloseTo(1, 5);
+          expect(U[0] * V[0] + U[1] * V[1] + U[2] * V[2], k).toBeCloseTo(0, 5);
+        }
+      }
+      // a bifold closed is half as wide as open
+      const w = build(ofProduct("bifold"));
+      const outer = w.parts.find((q) => q.id === "outer")!;
+      const xs = (f: number) => outer.views3d!.filter((v) => v.frames).flatMap((v) => v.outer.map(([u, vv]) => at(v.frames![f === 0 ? 0 : v.frames!.length - 1], u, vv)[0]));
+      expect(Math.max(...xs(0))).toBeGreaterThan(Math.max(...xs(1)) * 1.6);
+    });
+
+    it("the 3D pieces keep the cut outline's area (nothing is lost or doubled)", () => {
+      const area = (c: [number, number][]) => Math.abs(c.reduce((a, p, i) => { const q = c[(i + 1) % c.length]; return a + p[0] * q[1] - q[0] * p[1]; }, 0) / 2);
+      for (const k of ["bifold", "glasses", "tray", "belt", "watchstrap"] as ProductKind[]) {
+        const out = build(ofProduct(k));
+        for (const q of out.parts) if (q.views3d?.length && q.views3d.every((v) => v.name === q.name)) {
+          const own = q.views3d.filter((v) => !v.soft || PRODUCTS[k].family === "strap");
+          const sum = own.reduce((a, v) => a + area(v.outer as [number, number][]), 0);
+          expect(sum / area(q.outer as [number, number][]), `${k} ${q.id}`).toBeGreaterThan(0.97);
+        }
+      }
+    });
+  });
 });

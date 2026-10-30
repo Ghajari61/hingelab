@@ -66,7 +66,8 @@ export function splitLong(pat: Pattern, maxLen: number, maxShort: number) {
         const m = v.place.m;
         // moving the outline by -sh in u moves the origin by +sh along the frame's u axis
         const m2 = m ? [m[0], m[1], m[2], m[3] + m[0] * sh, m[4], m[5], m[6], m[7] + m[4] * sh, m[8], m[9], m[10], m[11] + m[8] * sh] : m;
-        return { ...v, outer: shift(v.outer, sh), place: { ...v.place, ...(m2 ? { m: m2 } : {}) } };
+        const mv = (f: number[]) => [f[0], f[1], f[2], f[3] + f[0] * sh, f[4], f[5], f[6], f[7] + f[4] * sh, f[8], f[9], f[10], f[11] + f[8] * sh];
+        return { ...v, outer: shift(v.outer, sh), place: { ...v.place, ...(m2 ? { m: m2 } : {}) }, ...(v.frames ? { frames: v.frames.map(mv) } : {}) };
       });
     }
     if (part.place?.m) { const m = part.place.m; B.place = { ...part.place, m: [m[0], m[1], m[2], m[3] + m[0] * sh, m[4], m[5], m[6], m[7] + m[4] * sh, m[8], m[9], m[10], m[11] + m[8] * sh] }; }
@@ -115,7 +116,7 @@ export function turnTall(pat: Pattern, maxShort: number, maxLen: number) {
     if (part.cuts) part.cuts = part.cuts.map(T);
     if (part.engrave) part.engrave = part.engrave.map(T);
     if (part.place?.m) part.place = { ...part.place, m: turnM(part.place.m, xm) };
-    if (part.views3d) part.views3d = part.views3d.map((v) => ({ ...v, outer: T(v.outer), holes: v.holes.map(T), ...(v.score ? { score: v.score.map(T) } : {}), place: v.place.m ? { ...v.place, m: turnM(v.place.m, xm) } : v.place }));
+    if (part.views3d) part.views3d = part.views3d.map((v) => ({ ...v, outer: T(v.outer), holes: v.holes.map(T), ...(v.score ? { score: v.score.map(T) } : {}), place: v.place.m ? { ...v.place, m: turnM(v.place.m, xm) } : v.place, ...(v.frames ? { frames: v.frames.map((f) => turnM(f, xm)) } : {}) }));
     const recs = pat.holes.get(part.id);
     if (recs) pat.holes.set(part.id, recs.map((r) => ({ ...r, pt: [r.pt[1], xm - r.pt[0]] as Pt, ...(r.t ? { t: [r.t[1], -r.t[0]] as Pt } : {}) })));
     const fits = pat.fittings.get(part.id);

@@ -7,6 +7,7 @@
  * hand-cutting template prints in tiles. The 3D view lays the strap out flat.
  */
 import { rect } from "../geom";
+import { bendAt, bendStrap, curls } from "./pose";
 import type { Contour, GenPart, Pt } from "../types";
 import { Pattern } from "./kit";
 import { motif, type MotifId } from "../motifs";
@@ -74,6 +75,15 @@ function belted(p: LeatherParams, pat: Pattern, collar: boolean): StrapResult {
     `Fold the buckle end through the buckle${collar ? " and the D-ring" : ""}, prong through the slot, keeper in the fold, and ${collar ? "set the rivets" : "do up the Chicago screws"}.`,
   );
   pat.notes.push(`The size is ${Math.round(L)} mm from the buckle's prong to the middle hole.`);
+  // 3D: the buckle end folded round the buckle; Fold 1 buckles it into a loop at the middle hole
+  const rb = T + 1.2, R0 = L / (2 * Math.PI);
+  bendStrap(part, {
+    len, width: w,
+    fixed: bendAt(fb, Math.PI * rb, Math.PI),
+    curl: (u) => (u > fb + (Math.PI * rb) / 2 ? 1 / (R0 + (1.4 * T * (u - fb)) / L) : 0),
+    anchor: { s: fb + L / 2, p: [0, 0, w / 2], U: [1, 0, 0], V: [0, 0, 1] },
+  });
+  pat.rigs.push({ kind: "ring", on: { host: part, pt: [fb, w / 2] }, dir: [1, 0], r: w / 2 + 3, lift: rb + T, color: "#b8963f" });
   return { size: [len, w, 2 * T], fixed: [part.id] };
 }
 
@@ -104,6 +114,22 @@ function watchstrap(p: LeatherParams, pat: Pattern): StrapResult {
   pat.count("buckle", 1, `${wt.toFixed(0)} mm watch buckle`);
   pat.notes.push(`For ${w} mm lugs and a ${Math.round(wrist)} mm wrist; spring bars go through the lug folds. Glue and stitch the keeper's ends (it is too narrow for a hole pair).`);
   pat.steps.push("Fold each lug end over its spring bar and stitch the fold rows; fold the buckle end round the buckle's pin, prong through the slot, keeper inside, and stitch it.");
+  // 3D: round a wrist, the lug ends folded round their spring bars and the buckle end round the buckle
+  // the lugs sit on the wrist's circle either side of the watch, each strap leaving along the circle
+  const R0 = wrist / (2 * Math.PI) + T, gap = Math.min(clamp(2 * w, 34, 50) / 2, R0 * 0.8), rl = 1.6 + T / 2;
+  const phi = Math.asin(gap / R0), lx = R0 * Math.sin(phi), lz = R0 + R0 * Math.cos(phi), cx = Math.cos(phi), sz = Math.sin(phi);
+  bendStrap(bp, {
+    len: Lb, width: w,
+    fixed: curls(bendAt(F, Math.PI * rl, Math.PI), bendAt(fbk, Math.PI * (T + 1), Math.PI)),
+    curl: (u) => (u > F + Math.PI * rl && u < fbk - 3 ? 1 / R0 : 0),
+    anchor: { s: F + Math.PI * rl, p: [-lx, 0, lz], U: [-cx, 0, -sz], V: [0, 1, 0] },
+  });
+  bendStrap(hpPart, {
+    len: Lh, width: w,
+    fixed: bendAt(F, Math.PI * rl, Math.PI),
+    curl: (u) => (u > F + Math.PI * rl ? 1 / (R0 + (2.2 * T * u) / Lh) : 0),
+    anchor: { s: F + Math.PI * rl, p: [lx, 0, lz], U: [cx, 0, -sz], V: [0, -1, 0] },
+  });
   return { size: [Lb + Lh + 20, w, 2 * T], fixed: [bp.id, hpPart.id] };
 }
 
@@ -118,6 +144,9 @@ function keyfob(p: LeatherParams, pat: Pattern): StrapResult {
   if (w >= 16 && u1 - u0 > 12) pat.seam("Fob edges", [{ part, rows: edgeRows(e, w / 2, () => w / 2, u0, u1) }, { part, rows: edgeRows(e, w / 2, () => w / 2, len - u0, len - u1) }], { ticks: false });
   pat.count("keyring", 1, "25 mm or to suit");
   pat.steps.push("Fold the fob round the key ring, stitch the two halves' edges through the matching holes and set the rivet.");
+  // 3D: folded round the key ring (Fold 0 lays it out flat)
+  bendStrap(part, { len, width: w, curl: bendAt(m, Math.PI * 7, Math.PI), anchor: { s: m, p: [0, 0, len / 2 + 14], U: [1, 0, 0], V: [0, -1, 0] } });
+  pat.rigs.push({ kind: "ring", on: { host: part, pt: [m, w / 2] }, dir: [0, 1], r: 12.5, lift: 12.5 - 3, color: "#b8b8b8" });
   return { size: [len, w, T], fixed: [part.id] };
 }
 
@@ -131,6 +160,9 @@ function bracelet(p: LeatherParams, pat: Pattern): StrapResult {
   const u0 = w / 2 + 14, u1 = len - w / 2 - 14 - (n - 1) * 12;
   if (w >= 14 && u1 - u0 > 20) pat.line("Edge stitching", part, edgeRows(e, w / 2, () => w / 2, u0, u1), 1);
   pat.steps.push("Stitch the edges, then set the snap's cap and socket at one end and the stud (or studs) at the other.");
+  // 3D: snapped into a loop, the ends overlapping
+  const R0 = (len - 24) / (2 * Math.PI);
+  bendStrap(part, { len, width: w, curl: (u) => 1 / (R0 + (1.6 * T * u) / len), anchor: { s: len / 2, p: [0, 0, 0], U: [1, 0, 0], V: [0, 1, 0] } });
   return { size: [len, w, T], fixed: [part.id] };
 }
 
@@ -161,6 +193,27 @@ function folded(p: LeatherParams, pat: Pattern, kind: "leash" | "shoulderstrap")
   const u1 = len - 2 * cf - 20;
   if (w >= 18 && u1 - u0 > 40) pat.line("Edge stitching", part, edgeRows(e, w / 2, () => w / 2, u0, u1), 1);
   pat.steps.push(kind === "leash" ? "Loop the handle end back onto the lead and set its rivets; fold the other end through the clip and rivet it." : "Fold each end through its clip (one through the slider first) and set the rivets.");
+  // 3D: the end folds round their clips stay; Fold 1 shows a lead coiled, or a strap hanging from its two clips
+  const rc = T + 2;
+  if (kind === "leash") {
+    const s0 = 2 * ov + loopL + 40;
+    bendStrap(part, {
+      len, width: w,
+      fixed: curls((u) => (u > ov && u < ov + loopL ? (2 * Math.PI) / loopL : 0), bendAt(fu, Math.PI * rc, Math.PI)),
+      curl: (u) => (u > s0 && u < fu - 60 ? 1 / (110 + (40 * (u - s0)) / Math.max(1, fu - s0)) : 0),
+      anchor: { s: ov + loopL + 2, p: [0, 0, w / 2], U: [1, 0, 0], V: [0, 0, 1] },
+    });
+  } else {
+    const run = fu - cf, R = run / Math.PI;
+    bendStrap(part, {
+      len, width: w,
+      fixed: curls(bendAt(cf, Math.PI * rc, Math.PI), bendAt(fu, Math.PI * rc, Math.PI)),
+      curl: (u) => (u > cf + 20 && u < fu - 20 ? 1 / Math.max(R * 0.92, 30) : 0),
+      anchor: { s: len / 2, p: [0, 0, 0], U: [1, 0, 0], V: [0, 1, 0] },
+    });
+    pat.rigs.push({ kind: "ring", on: { host: part, pt: [cf, w / 2] }, dir: [1, 0], r: w / 2 + 2, lift: rc + T, color: "#b8b8b8" });
+  }
+  pat.rigs.push({ kind: "ring", on: { host: part, pt: [fu, w / 2] }, dir: [1, 0], r: w / 2 + 2, lift: rc + T, color: "#b8b8b8" });
   return { size: [len, w, T], fixed: [part.id] };
 }
 

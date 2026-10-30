@@ -177,6 +177,8 @@ export interface GenPart {
   color?: string;
   /** The preview colour is paper or card, without a shine. */
   matte?: boolean;
+  /** The preview's surface: "leather" adds a fine grain to a matte colour. */
+  texture?: "leather";
 }
 
 export interface GenStat {
@@ -192,8 +194,8 @@ export interface GenStat {
 export type Hardware3D =
   | { kind: "cord"; pts: [number, number, number][]; d: number }
   | { kind: "knot"; at: [number, number, number]; d: number }
-  | { kind: "ring"; at: [number, number, number]; r: number; d: number }
-  | { kind: "cylinder"; at: [number, number, number]; r: number; h: number; color: string; metal?: boolean; glass?: boolean }
+  | { kind: "ring"; at: [number, number, number]; r: number; d: number; /** The ring's axis (default: up, lying flat). */ axis?: [number, number, number]; color?: string }
+  | { kind: "cylinder"; at: [number, number, number]; r: number; h: number; color: string; metal?: boolean; glass?: boolean; /** Its axis, from `at` (default: up). */ axis?: [number, number, number] }
   | { kind: "bulb"; at: [number, number, number]; r: number };
 
 export interface GenOutput {
