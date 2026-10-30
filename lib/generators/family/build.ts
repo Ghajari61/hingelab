@@ -430,14 +430,15 @@ export function buildFamily(p: FamilyParams, ctx: BuildContext): FamilyOutput {
     if (!face) return { parts: [], stats: [], error: "The word could not be cut from the face." };
     const counters = letters.flatMap((l) => l.holes).map((h) => makeShape(orient(h), [])).filter((c) => c.area > 1);
     const tone = { back: 0.62, names: 0.5 };
-    parts.push({ id: "back", name: "Back panel", outer: panel, holes: [], place: { x: 0, y: 0, z: 0 }, tone: tone.back });
+    // stained darker in the preview, as the back and frame usually are, so the word reads
+    parts.push({ id: "back", name: "Back panel", outer: panel, holes: [], place: { x: 0, y: 0, z: 0 }, tone: tone.back, color: "#7b5534", matte: true });
     parts.push({ id: "face", name: `Face with ${word} cut out`, outer: face.outer, holes: face.holes, place: { x: 0, y: 0, z: p.T } });
     counters.forEach((c, i) => parts.push({ id: `centre-${i + 1}`, name: `Letter centre ${i + 1}`, outer: c.outer, holes: [], place: { x: 0, y: 0, z: p.T } }));
     if (fr > 0) {
       const hole = orientHole(roundedRect(x0 + fr, y0 + fr, W0 - 2 * fr, H - 2 * fr, Math.max(0, rr - fr * 0.5)));
-      parts.push({ id: "frame", name: "Frame", outer: panel, holes: [hole], place: { x: 0, y: 0, z: 2 * p.T }, tone: tone.names });
+      parts.push({ id: "frame", name: "Frame", outer: panel, holes: [hole], place: { x: 0, y: 0, z: 2 * p.T }, tone: tone.names, color: "#a8643a", matte: true });
     }
-    const np: GenPart = { id: "names", name: "Names", outer: namesPiece.outer, holes: namesPiece.holes, place: { x: 0, y: 0, z: 2 * p.T }, ...(w.names2 ? {} : { tone: tone.names }) };
+    const np: GenPart = { id: "names", name: "Names", outer: namesPiece.outer, holes: namesPiece.holes, place: { x: 0, y: 0, z: 2 * p.T }, ...(w.names2 ? {} : { tone: tone.names, color: "#b8733f", matte: true }) };
     parts.push(w.names2 ? second(np) : np);
     // the names need the face under them to be glued on
     const resting = shapeContours(differenceShapes([namesPiece.outer], letters.map((l) => l.outer))).length;
