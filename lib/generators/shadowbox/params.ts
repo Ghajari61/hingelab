@@ -14,7 +14,7 @@ export const OPENINGS = ["circle", "oval", "squircle", "polygon", "star", "flowe
 export type Opening = (typeof OPENINGS)[number];
 export const PETALS = ["drop", "leaf", "diamond", "circle"] as const;
 export type Petal = (typeof PETALS)[number];
-export const RIDGES = ["hills", "mountains", "waves", "zigzag", "dunes", "skyline", "trees", "clouds", "sine"] as const;
+export const RIDGES = ["hills", "mountains", "waves", "zigzag", "dunes", "skyline", "trees", "clouds", "sine", "village", "castle"] as const;
 export type Ridge = (typeof RIDGES)[number];
 export const FROMS = ["bottom", "top", "both"] as const;
 export type From = (typeof FROMS)[number];
@@ -46,8 +46,11 @@ export const MOUNTS = ["board", "slot"] as const;
 export type Mount = (typeof MOUNTS)[number];
 export const BACKS = ["none", "glued", "screwed"] as const;
 export type Back = (typeof BACKS)[number];
-export const HANGS = ["none", "keyhole", "stand"] as const;
+export const HANGS = ["none", "keyhole", "stand", "ribbon"] as const;
 export type HangKind = (typeof HANGS)[number];
+/** Shapes of the little stars cut in the back board's sky. */
+export const STARS = ["star", "dot", "sparkle", "mixed"] as const;
+export type StarKind = (typeof STARS)[number];
 /** Longest stored photo, characters of its data URL (an engraving at 0.1 mm across a 10 in window fits). */
 export const MAX_PHOTO_CHARS = 1_200_000;
 
@@ -126,6 +129,8 @@ export interface ShadowBoxParams extends GenBase {
     hang: HangKind;
     /** Keyhole head diameter, mm. */
     head: number;
+    /** Diameter of the ribbon hole at the top (hang: ribbon), mm. */
+    ribbon: number;
     walls: boolean;
     /** Walls stand this far in front of the front layer, mm. */
     lip: number;
@@ -185,6 +190,10 @@ export interface ShadowBoxParams extends GenBase {
     hole: Hole;
     /** Light hole size, % of the window's smaller side. */
     holeSize: number;
+    /** Little stars cut in the back board (in a scene, in its sky): how many, their shape and size, mm. */
+    stars: number;
+    star: StarKind;
+    starSize: number;
   };
   /**
    * Words cut into a layer, standing on a paper bar across the window, or engraved on it. `layer` counts
@@ -275,13 +284,14 @@ export const SHADOWBOX_DEFAULTS: ShadowBoxParams = {
   frame: { shape: "rounded", size: "8x8", width: 200, height: 200, border: 12, corner: 8 },
   stack: { count: 10, back: true, spacer: "none", gap: 2, per: 1, spacerW: 0 },
   light: { on: false, depth: 12, cable: 6, diffuser: true, diffT: 3 },
-  box: { back: "none", screw: 3, hang: "none", head: 8, walls: false, lip: 3, finger: 10, pins: false, pin: 3, numbers: false },
+  box: { back: "none", screw: 3, hang: "none", head: 8, ribbon: 5, walls: false, lip: 3, finger: 10, pins: false, pin: 3, numbers: false },
   design: {
     pattern: "tunnel", opening: "star", sides: 6, inner: 55, petal: "drop",
     ridge: "mountains", from: "bottom", amp: 18, seed: 7, count: 12, basins: 3,
     cell: "hex", pitch: 18, fade: 40,
     min: 18, max: 118, twist: 6, rotate: 0, shiftX: 0, shiftY: 0, swirl: 0, waves: 3,
     web: 1.5, loose: "drop", bridge: 2, stretch: false, moon: false, hole: "circle", holeSize: 18,
+    stars: 0, star: "star", starSize: 5,
   },
   text: { text: "", fontId: "lobster", size: 20, place: "bottom", layer: 0, engrave: false },
   photo: {
@@ -326,6 +336,7 @@ export function mergeShadowBox(raw: unknown): ShadowBoxParams {
   bx.hang = oneOf(HANGS, bx.hang, d.box.hang);
   bx.screw = clamp(bx.screw, 1.5, 8);
   bx.head = clamp(bx.head, 4, 16);
+  bx.ribbon = Number.isFinite(bx.ribbon) ? clamp(bx.ribbon, 2, 12) : d.box.ribbon;
   bx.walls = bx.walls === true;
   bx.lip = clamp(bx.lip, 0, 30);
   bx.finger = clamp(bx.finger, 4, 40);
@@ -346,6 +357,9 @@ export function mergeShadowBox(raw: unknown): ShadowBoxParams {
   g.seed = clamp(Math.round(g.seed), 0, 99999);
   g.hole = oneOf(HOLES, g.hole, d.design.hole);
   g.holeSize = clamp(g.holeSize, 5, 45);
+  g.stars = Number.isFinite(g.stars) ? clamp(Math.round(g.stars), 0, 120) : 0;
+  g.star = oneOf(STARS, g.star, d.design.star);
+  g.starSize = Number.isFinite(g.starSize) ? clamp(g.starSize, 1.5, 15) : d.design.starSize;
   p.frame.size = sizeOf(p.frame.width, p.frame.height);
   const t = p.text;
   t.text = String(t.text ?? "").slice(0, 40);

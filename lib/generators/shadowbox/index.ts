@@ -8,8 +8,8 @@ import { PHOTO_DITHERS, PHOTO_LOOKS, type PhotoDither, type PhotoLook } from "@/
 import { buildShadowBox, frameOutline, unitOpening, windowBox, type ShadowBoxOutput } from "./build";
 import { checkShadowBox } from "./check";
 import {
-  BACKS, CELLS, DPIS, FRAMES, HANGS, HOLES, LOOSE, MAT_MM, MOUNTS, OPENINGS, PALETTES, PATTERNS, PETALS, PIC_MODES, RIDGES, SAMPLES, SHADOWBOX_DEFAULTS, SIZES, mergeShadowBox,
-  type Back, type Cell, type Dpi, type HangKind, type FrameShape, type Hole, type Loose, type Mount, type Opening, type Pattern, type PicMode, type Ridge, type Sample, type ShadowBoxParams,
+  BACKS, CELLS, DPIS, FRAMES, HANGS, HOLES, LOOSE, MAT_MM, MOUNTS, OPENINGS, PALETTES, PATTERNS, PETALS, PIC_MODES, RIDGES, SAMPLES, SHADOWBOX_DEFAULTS, SIZES, STARS, mergeShadowBox,
+  type Back, type Cell, type Dpi, type HangKind, type FrameShape, type Hole, type Loose, type Mount, type Opening, type Pattern, type PicMode, type Ridge, type Sample, type ShadowBoxParams, type StarKind,
 } from "./params";
 import { centreOn, photoSpec } from "./photo";
 import { sampleArt } from "./picture";
@@ -53,7 +53,11 @@ const MOUNT_NAMES: Named<Mount> = {
   slot: ["In a slot", "A print slid into a holder behind the layers, so it can be changed"],
 };
 const BACK_NAMES: Named<Back> = { none: "None", glued: ["Glued", "A whole board glued on behind"], screwed: ["Screwed", "Screwed on, so it comes off"] };
-const HANG_NAMES: Named<HangKind> = { none: "None", keyhole: ["Keyholes", "Two keyholes near the top, for screws or nails"], stand: ["Feet", "Two slotted feet to stand it on a shelf"] };
+const HANG_NAMES: Named<HangKind> = {
+  none: "None", keyhole: ["Keyholes", "Two keyholes near the top, for screws or nails"], stand: ["Feet", "Two slotted feet to stand it on a shelf"],
+  ribbon: ["Ribbon hole", "A hole through the top of every part for a ribbon: an ornament for the tree or a window"],
+};
+const STAR_NAMES: Named<StarKind> = { star: "Stars", dot: "Dots", sparkle: ["Sparkles", "Four-point twinkles"], mixed: ["Mixed", "Stars, dots and sparkles together"] };
 /** Settings that change how the photo is made from its original. */
 const PHOTO_LOOK_KEYS = ["photo.look", "photo.bright", "photo.contrast", "photo.tones", "photo.dither", "photo.dpi", "photo.bg", "photo.tol"];
 const LOOSE_NAMES: Named<Loose> = {
@@ -68,7 +72,7 @@ const OPENING_NAMES: Named<Opening> = {
 };
 const RIDGE_NAMES: Named<Ridge> = {
   hills: "Hills", mountains: "Peaks", waves: "Waves", zigzag: "Zigzag", dunes: "Dunes", skyline: "City", trees: "Forest", clouds: "Clouds",
-  sine: ["Sine", "Smooth, even sine waves"],
+  sine: ["Sine", "Smooth, even sine waves"], village: ["Village", "Houses with pitched roofs and chimneys"], castle: ["Castle", "Towers with pointed roofs between battlements"],
 };
 const HOLE_NAMES: Named<Hole> = {
   circle: "Circle", moon: "Crescent", moonstar: ["Moon & star", "A crescent moon and a star"], star: "Star", sparkle: "Sparkle", heart: "Heart",
@@ -145,7 +149,7 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
       { kind: "number", key: "design.swirl", label: "Swirl", unit: "deg", min: -180, max: 180, step: 1, shuffle: [-60, 60], show: (p) => isPat(p, "sunburst"), help: "Curls the rays into a spiral." },
       {
         kind: "choice", key: "design.ridge", label: "Scene", rail: true, shuffle: true, show: (p) => isPat(p, "landscape"),
-        help: "The line along the top of each scene layer: rolling hills, mountain peaks, sea waves, zigzags, sand dunes, a city, a pine forest or puffy clouds.",
+        help: "The line along the top of each scene layer: rolling hills, mountain peaks, sea waves, zigzags, sand dunes, a city, a pine forest, puffy clouds, a village of little houses or a castle.",
         options: opts(RIDGES, RIDGE_NAMES),
         apply: (p, v) => withDesign(p, { ...(isPat(p, "landscape") ? {} : { pattern: "landscape", ...PATTERN_START.landscape }), ridge: v as Ridge }),
       },
@@ -240,11 +244,14 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
   },
   {
     id: "light", title: "Light hole", open: false, show: (p) => !hasPhoto(p),
-    help: "A hole in the back board that glows when a light sits behind the box: a moon, a sun or a little motif.",
+    help: "A hole in the back board that glows when a light sits behind the box (a moon, a sun or a little motif), and little stars scattered over the sky.",
     fields: [
       { kind: "toggle", key: "design.moon", label: "Light hole", help: "Cuts a hole in the back layer: in the sky of a scene, or in the middle of the other patterns." },
       { kind: "choice", key: "design.hole", label: "Light shape", rail: true, show: (p) => p.design.moon, options: opts(HOLES, HOLE_NAMES), apply: (p, v) => withDesign(p, { moon: true, hole: v as Hole }), help: "The shape of the light hole." },
       { kind: "number", key: "design.holeSize", label: "Hole size", unit: "%", min: 5, max: 45, step: 1, show: (p) => p.design.moon, help: "Size of the light hole, as a share of the window's smaller side." },
+      { kind: "number", key: "design.stars", label: "Stars", unit: "", min: 0, max: 120, step: 1, int: true, help: "Little stars cut through the plain back board, in a scene's sky or over the whole window, that twinkle with a light behind; 0 for none." },
+      { kind: "choice", key: "design.star", label: "Star shape", show: (p) => p.design.stars > 0, options: opts(STARS, STAR_NAMES), help: "Five-point stars, round dots, four-point sparkles or a mix of all three." },
+      { kind: "number", key: "design.starSize", label: "Star size", unit: "mm", min: 1.5, max: 15, step: 0.5, show: (p) => p.design.stars > 0, help: "Size of the largest stars; the others are a little smaller. Keep them at 3 mm or more for card on a blade cutter." },
     ],
   },
   {
@@ -319,8 +326,9 @@ const sections: SectionSpec<ShadowBoxParams>[] = [
     fields: [
       { kind: "choice", key: "box.back", label: "Back board", options: opts(BACKS, BACK_NAMES), help: "An extra whole board behind everything: glued on, or screwed on so it comes off (to reach the lights)." },
       { kind: "number", key: "box.screw", label: "Screw size", unit: "mm", min: 1.5, max: 8, step: 0.5, show: (p) => p.box.back === "screwed", help: "Diameter of the screws that hold the back board; the parts it screws into get smaller pilot holes." },
-      { kind: "choice", key: "box.hang", label: "Hang or stand", options: opts(HANGS, HANG_NAMES), help: "Two keyholes near the top to hang it on screws or nails, or two slotted feet to stand it on a shelf." },
+      { kind: "choice", key: "box.hang", label: "Hang or stand", options: opts(HANGS, HANG_NAMES), help: "Two keyholes near the top to hang it on screws or nails, two slotted feet to stand it on a shelf, or a ribbon hole through the top of every part to hang it like an ornament." },
       { kind: "number", key: "box.head", label: "Keyhole size", unit: "mm", min: 4, max: 16, step: 0.5, show: (p) => p.box.hang === "keyhole", help: "Diameter of the keyholes' round ends: a little more than the head of the screw or nail it hangs on." },
+      { kind: "number", key: "box.ribbon", label: "Ribbon hole", unit: "mm", min: 2, max: 12, step: 0.5, show: (p) => p.box.hang === "ribbon", help: "Diameter of the ribbon hole, in the middle of the top border; the border needs about 3 mm of paper or wood round it." },
       { kind: "toggle", key: "box.walls", label: "Finger-jointed box", help: "Four walls with finger joints around the stack, so it becomes a box of its own; for a laser and board at least 2 mm thick." },
       { kind: "number", key: "box.lip", label: "Wall lip", unit: "mm", min: 0, max: 30, step: 0.5, show: (p) => p.box.walls, help: "How far the walls stand in front of the front layer." },
       { kind: "number", key: "box.finger", label: "Finger width", unit: "mm", min: 4, max: 40, step: 0.5, show: (p) => p.box.walls, help: "Width of the fingers at the box's corners; the count is odd so both ends match." },
@@ -376,6 +384,19 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
     const pts: [number, number][] = [[0, 30]];
     for (const [x, h] of [[8, 14], [22, 6], [36, 12], [50, 4]]) pts.push([x - 6, 30], [x - 2, 22], [x - 4, 22], [x, h], [x + 4, 22], [x + 2, 22], [x + 6, 30]);
     return ring([[...pts, [60, 30], [60, 34], [0, 34]]]);
+  }
+  if (key === "design.ridge" && v === "village") {
+    const pts: [number, number][] = [[0, 30]];
+    for (const [x, w, e, r] of [[2, 14, 18, 8], [18, 12, 22, 14], [32, 16, 16, 4], [50, 10, 20, 12]]) pts.push([x, 30], [x, e], [x + w / 2, r], [x + w, e], [x + w, 30]);
+    return ring([[...pts, [60, 30], [60, 34], [0, 34]]]);
+  }
+  if (key === "design.ridge" && v === "castle") {
+    const pts: [number, number][] = [[0, 34], [0, 14], [4, 4], [8, 14], [8, 20]];
+    for (let x = 8; x < 26; x += 4) pts.push([x + 1, 20], [x + 1, 17], [x + 3, 17], [x + 3, 20]);
+    pts.push([26, 20], [26, 10], [30, 0], [34, 10], [34, 20]);
+    for (let x = 34; x < 52; x += 4) pts.push([x + 1, 20], [x + 1, 17], [x + 3, 17], [x + 3, 20]);
+    pts.push([52, 20], [52, 14], [56, 4], [60, 14], [60, 34]);
+    return ring([pts]);
   }
   if (key === "design.ridge") {
     const pts: [number, number][] = [];
@@ -456,7 +477,8 @@ const SHADOWBOX_BASE: GeneratorDef<ShadowBoxParams> = {
       "The Shadow Box generator makes layered 3D paper-cut art: a stack of frames with the same outline whose geometric cut-outs grow from the back layer to the front one, so the finished piece looks deep when the layers are stacked with foam tape or spacer frames between them.",
       `Pick a pattern (a tunnel of nested circles, polygons, stars, flowers, hearts or arches; a mandala of petals and dots; a sunburst of straight or curled rays; a scene of hills, peaks, waves, dunes, a pine forest, clouds or a city; or a lattice of holes; or flowing wavy stripes, ovals, squircles, sine-wave circles and crossed ellipses for softer looks), then set the number of layers, how much the cut-outs grow, a twist for spirals and a vanishing point for tunnels that run off at an angle. It comes with ${SHADOWBOX_PRESETS.length} ready-made designs.`,
       "Or start from your own picture: a photo or drawing is traced on your device (it is never uploaded) into outlines at ten brightness levels, so each layer can cut away the darker parts and the picture reads in depth; a single shape, from an SVG file or one of the sample silhouettes (a cat, a fish, a bird, a pear and more), can be nested as a tunnel or grown into soft contour rings, or kept as paper with halos behind it like a cameo. Loose pieces are left out, held with thin bridges, or cut as parts to glue back on foam.",
-      "Make it personal: put a photo on the back board so the layers frame it, put a name, date or short message on the front layer in any font, cut a light hole shaped like a crescent, a star, a heart or another motif into the back board, and size the layers for a standard 6 × 6, 8 × 8, 10 × 10, 5 × 7 or 8 × 10 in frame.",
+      "Make it personal: put a photo on the back board so the layers frame it, put a name, date or short message on the front layer in any font, cut a light hole shaped like a crescent, a star, a heart or another motif into the back board, scatter little stars over the sky that twinkle with a light behind them, and size the layers for a standard 6 × 6, 8 × 8, 10 × 10, 5 × 7 or 8 × 10 in frame.",
+      "Scenes include a village of little houses and a castle with towers, and small round designs can hang like ornaments from a ribbon hole cut through every layer.",
       "It starts set for a Cricut or similar blade cutter: the layers are drawn on 12 × 12 in mats with no kerf, one SVG for all the layers. Choose Laser to cut card or thin plywood on a laser bed with kerf compensation.",
     ],
     tips: [
@@ -469,7 +491,7 @@ const SHADOWBOX_BASE: GeneratorDef<ShadowBoxParams> = {
       "For a photo, a tunnel or a frame-shaped cut-out with a large back cut-out leaves the face clear; set the zoom and move it so the part you want sits in the middle.",
       "To turn a picture into layers, high-contrast images trace best: a logo, a silhouette, line art or a landscape with a clear sky. Raise Smallest detail if a photo leaves specks, and use Bridges or Cut as parts for pieces that would fall out.",
     ],
-    keywords: ["shadow box", "photo frame", "picture", "3d paper cut", "papercraft", "layered paper art", "cricut", "svg layers", "light box", "mandala", "tunnel", "geometric art", "personalized name", "night light", "image to layers", "svg to layered", "photo to paper cut", "silhouette", "cameo"],
+    keywords: ["shadow box", "photo frame", "picture", "3d paper cut", "papercraft", "layered paper art", "cricut", "svg layers", "light box", "mandala", "tunnel", "geometric art", "personalized name", "night light", "image to layers", "svg to layered", "photo to paper cut", "silhouette", "cameo", "christmas village", "castle", "starry sky", "stars", "ornament", "christmas ornament", "bauble"],
   },
 };
 

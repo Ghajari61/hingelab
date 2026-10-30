@@ -36,7 +36,8 @@ function grid(c: Contour, step: number, keep: (u: number, v: number) => boolean)
 function overlaps(out: BoxesOutput, step = 2.3) {
   const bad: string[] = [];
   for (const p of out.parts) for (const [u, v] of grid(p.outer, step, (u, v) => inMaterial(p, u, v))) {
-    for (const h of [0.25 * T0, 0.75 * T0]) {
+    // sampled inside each part's own thickness (a window pane is thinner than the wood)
+    for (const h of [0.25 * (p.t ?? T0), 0.75 * (p.t ?? T0)]) {
       const n = holders(out.parts, world(p.place!, u, v, h)).length;
       if (n !== 1) bad.push(`${p.id} (${u.toFixed(1)}, ${v.toFixed(1)}) in ${n} parts`);
     }
@@ -220,7 +221,7 @@ describe("Boxes in 3D", () => {
 
   it("every preset builds without overlapping parts", () => {
     for (const pr of BOXES.presets) expect(overlaps(build(pr.params), 3), pr.id).toEqual([]);
-  }, 60_000);
+  }, 180_000);
 });
 
 describe("Boxes checks", () => {

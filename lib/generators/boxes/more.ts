@@ -14,7 +14,8 @@ import { motifRef } from "../motifRef";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { textBlock } from "../weld";
 import { boxPanels, fingerCount, fingerPanel, type EdgeSpec } from "./joints";
-import type { BoxesParams, LidKind } from "./params";
+import { MATERIALS } from "@/lib/hinge/defaults";
+import { CLEAR_LIDS, WINDOW_LIDS, type BoxesParams, type LidKind } from "./params";
 import { FRET_NAMES, type KeepOut } from "../fretwork";
 import { labelBox, labelFrame, pierce, pierceCuts, pierceLid, pierceWallIds, pierceWalls, pierced } from "./pierce";
 
@@ -37,6 +38,16 @@ export interface V2Info {
   /** Room for the pin hinge: depth needed and depth available, mm. */
   pinNeed?: number;
   pinRoom?: number;
+  /** Napkin holder: depth of the base, mm. */
+  napkinBase?: number;
+  /** Tissue box cover: the longest and widest opening the top takes, mm. */
+  openRoomL?: number;
+  openRoomW?: number;
+  /** Hand holes: whether they were cut, their length, and the wall height they need, mm. */
+  handles?: { cut: boolean; length: number; needH: number; wallH: number };
+  /** Lid window: its smaller side (0 when it does not fit), or the glass setting does not suit the lid. */
+  windowMin?: number;
+  glassIgnored?: boolean;
 }
 export type V2Output = GenOutput & { info?: V2Info };
 
@@ -280,7 +291,8 @@ export function lidKit(p: BoxesParams, kind: LidKind, W: number, D: number, H: n
         { id: "ledge-f", name: "Lid ledge (front)", outer: rect(0, 0, W - 2 * T - 2 * LEDGE, LEDGE), holes: [], place: flat(T + LEDGE, D - T - LEDGE, H - 2 * T) },
         { id: "lid", name: "Inset lid", outer: lid, holes: [], place: flat(T + c, T + c, H - T) },
       );
-      const art = hasArt(p), kr = Math.min(11, Lw / 5, Ld / 5);
+      // The knob moves to the front edge when the lid carries art or a window.
+      const art = hasArt(p) || (p.design === "box" && p.box.glass === "window"), kr = Math.min(11, Lw / 5, Ld / 5);
       const ky = art ? Ld - kr - 6 : Ld / 2;
       parts.push(
         { id: "knob-neck", name: "Knob neck", outer: circle(kr * 0.6, kr * 0.6, kr * 0.6), holes: [], place: flat(T + c + Lw / 2 - kr * 0.6, T + c + ky - kr * 0.6, H) },
@@ -313,7 +325,7 @@ export function pierceBox(p: BoxesParams, parts: GenPart[], kit: LidKit, art: Ar
   if (!pierced(p)) return [];
   const T = p.T, edge = T + Math.max(1, p.pierce.bar) + 1;
   let walls = 0, top = 0, on = 0;
-  if (pierceWalls(p)) for (const id of pierceWallIds(p, ["front", "back", "left", "right"])) { const w = parts.find((q) => q.id === id); if (w) { walls += pierce(p, w, edge); on++; } }
+  if (pierceWalls(p)) for (const id of pierceWallIds(p, ["front", "back", "left", "right"])) { const w = parts.find((q) => q.id === id); if (w) { walls += pierce(p, w, edge, engravedBox(w)); on++; } }
   if (pierceLid(p) && kit.face && lid !== "open" && lid !== "none") {
     const part = parts.find((q) => q.id === kit.face!.id);
     if (part) {
@@ -326,7 +338,7 @@ export function pierceBox(p: BoxesParams, parts: GenPart[], kit: LidKit, art: Ar
       top = pierce(p, part, edge, keep);
       on++;
       const lip = parts.find((q) => q.id === "lip");
-      if (lip && top && pierceCuts(p)) {
+      if (lip && top && pierceCuts(p) && !lip.holes.length) {
         const xs = lip.outer.map((q) => q[0]), ys = lip.outer.map((q) => q[1]), w = Math.max(6, 2 * T);
         const x0 = Math.min(...xs), y0 = Math.min(...ys), x1 = Math.max(...xs), y1 = Math.max(...ys);
         if (x1 - x0 > 3 * w && y1 - y0 > 3 * w) { lip.holes.push(rect(x0 + w, y0 + w, x1 - x0 - 2 * w, y1 - y0 - 2 * w)); lip.name = "Lid lip (frame)"; }
@@ -339,6 +351,78 @@ export function pierceBox(p: BoxesParams, parts: GenPart[], kit: LidKit, art: Ar
   return stats;
 }
 
+/** The area a wall's own engraving covers, with room round it, so a pattern stays clear of it. */
+function engravedBox(w: GenPart): KeepOut[] {
+  if (!w.engrave?.length) return [];
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const c of w.engrave) for (const [x, y] of c) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  return [{ x0: x0 - 4, y0: y0 - 4, x1: x1 + 4, y1: y1 + 4 }];
+}
+
+/** Hand hole height and the wood kept above it (under the lid's fittings), mm. */
+export const HANDLE_H = 24;
+const HANDLE_TOP = 6;
+
+/**
+ * Hand holes in the two side walls (each D long, its top at z = H), below the lid's fittings, which
+ * reach down to `ceiling`. They are cut only where they fit: at least 40 mm long, and with wood
+ * left above the bottom's fingers.
+ */
+export function handleHoles(parts: GenPart[], T: number, D: number, H: number, ceiling: number) {
+  const top = H - ceiling + HANDLE_TOP, L = Math.min(90, D - 2 * T - 24);
+  const needH = top + HANDLE_H + T + 6;
+  const cut = L >= 40 && H >= needH;
+  if (cut) for (const id of ["left", "right"]) parts.find((q) => q.id === id)?.holes.push(stadium(D / 2 - (L - HANDLE_H) / 2, top + HANDLE_H / 2, D / 2 + (L - HANDLE_H) / 2, top + HANDLE_H / 2, HANDLE_H));
+  return { cut, length: L, needH, bottom: top + HANDLE_H };
+}
+
+/** Glue overlap of a window pane round its window, mm. */
+const PANE_LAP = 6;
+
+/**
+ * Clear acrylic in the lid. A window is cut in the lid face with a pane (second material) glued
+ * under it; the pane must clear the lid's fittings (the lip, ledges or hinge cheeks), so the window
+ * shrinks to what fits. A clear lid is the lid part itself cut from acrylic of the same thickness.
+ */
+function glazeLid(p: BoxesParams, kit: LidKit, parts: GenPart[], lid: LidKind, W: number, D: number, c: number) {
+  const T = p.T, g = p.box.glass;
+  if (g === "none") return {};
+  if (g === "clear") {
+    const part = parts.find((q) => q.id === "lid");
+    if (!CLEAR_LIDS.includes(lid) || !part) return { glassIgnored: true };
+    part.material = "second";
+    part.t = T;
+    part.color = "#D8ECF4";
+    part.name = `${part.name} (clear acrylic)`;
+    return { second: `Clear acrylic ${T} mm (the lid)`, stat: `Clear acrylic lid, ${T} mm` };
+  }
+  const f = kit.face, part = f ? parts.find((q) => q.id === f.id) : undefined;
+  if (!WINDOW_LIDS.includes(lid) || !f || !part) return { glassIgnored: true };
+  const room: Record<string, [number, number]> = {
+    closed: [W - 2 * T - 1, D - 2 * T - 1],
+    liftoff: [W - 2 * T - 2 * c - 13, D - 2 * T - 2 * c - 13],
+    pin: [f.w + 12 - 2 * (T + 2) - 2, f.h + 8 - 4],
+    inset: [W - 2 * T - 2 * LEDGE - 1, D - 2 * T - 2 * LEDGE - 1],
+  };
+  const [pmW, pmH] = room[lid], k = p.box.window / 100;
+  const ww = Math.min(f.w * k, pmW - 2 * PANE_LAP), wh = Math.min(f.h * k, pmH - 2 * PANE_LAP);
+  if (Math.min(ww, wh) < 15) return { windowMin: Math.max(0, Math.min(ww, wh)) };
+  part.holes.push(roundedRect(f.cx - ww / 2, f.cy - wh / 2, ww, wh, Math.min(5, ww / 4, wh / 4)));
+  const pw = ww + 2 * PANE_LAP, ph = wh + 2 * PANE_LAP, at = part.place!;
+  parts.push({ id: "pane", name: "Window pane", outer: roundedRect(0, 0, pw, ph, 3), holes: [], material: "second", t: p.box.paneT, color: "#D8ECF4", place: flat((at.x ?? 0) + f.cx - pw / 2, (at.y ?? 0) + f.cy - ph / 2, (at.z ?? 0) - p.box.paneT) });
+  const lip = parts.find((q) => q.id === "lip");
+  if (lip) {
+    const lw = W - 2 * T - 2 * c, ld = D - 2 * T - 2 * c;
+    lip.holes.push(rect(lw / 2 - (pw + 1) / 2, ld / 2 - (ph + 1) / 2, pw + 1, ph + 1));
+    lip.name = "Lid lip (frame)";
+  }
+  return {
+    windowMin: Math.min(ww, wh), pane: true,
+    second: `Clear acrylic ${p.box.paneT} mm (the window pane)`,
+    stat: `${r1(ww)} × ${r1(wh)} mm; pane ${r1(pw)} × ${r1(ph)} × ${p.box.paneT} mm`,
+  };
+}
+
 const insideH = (p: BoxesParams, h: number, lid: LidKind | "none") => (p.joint.outside ? h : h + lidWalls(lid) * p.T);
 
 /** A box with any lid, finger or tab-and-slot joints, a finger notch and an engraved lid. */
@@ -349,26 +433,42 @@ export function buildBoxV2(p: BoxesParams, ctx: BuildContext): V2Output {
   const sh = shell(p, W, D, H, b.lid === "closed", b.lid === "pin" ? T : 0);
   const kit = lidKit(p, b.lid, W, D, H, sh, Math.max(0, b.clearance), b.notch);
   const parts = [...sh.parts, ...kit.parts];
+  const hand = b.handles && b.lid !== "pin" ? handleHoles(parts, T, D, H, kit.ceiling) : null;
+  const glass = glazeLid(p, kit, parts, b.lid, W, D, Math.max(0, b.clearance));
   const art = lidArt(p, ctx);
-  const sizes = engraveLid(p, kit, parts, art);
-  const pattern = pierceBox(p, parts, kit, art, b.lid);
+  // With a window in the lid, the engraving moves to the front wall.
+  const toFront = !!glass.pane && art.cs.length > 0;
+  const Hp = H - (b.lid === "pin" ? T : 0);
+  const artKit: LidKit = toFront ? { ...kit, face: { id: "front", outline: parts[0].outer, cx: W / 2, cy: Hp / 2, w: W - 4 * T, h: Hp - 4 * T } } : kit;
+  const sizes = engraveLid(p, artKit, parts, art);
+  const pattern = pierceBox(p, parts, kit, toFront ? { ...art, cs: [] } : art, b.lid);
   return {
     parts,
     ...(pattern.summary ? { pattern: pattern.summary } : {}),
+    ...(glass.second ? { materials: { main: MATERIALS[p.material]?.name ?? `${T} mm sheet`, second: glass.second } } : {}),
     stats: [
       { label: "Outside", value: `${r1(W + 2 * sh.m)} × ${r1(D + 2 * sh.m)} × ${r1(kit.total)} mm` },
       { label: "Inside", value: `${r1(W - 2 * T)} × ${r1(D - 2 * T)} × ${r1(H - lidWalls(b.lid) * T)} mm` },
       ...pattern,
       { label: p.joint.style === "tabs" ? "Joints" : "Fingers", value: p.joint.style === "tabs" ? "Tabs through the bottom, fingers at the corners" : `${fingerCount(W - 2 * T, f)} × ${fingerCount(D - 2 * T, f)} × ${fingerCount(H - 2 * T, f)}` },
+      ...(hand?.cut ? [{ label: "Hand holes", value: `${r1(hand.length)} × ${HANDLE_H} mm, both ends` }] : []),
+      ...(glass.stat ? [{ label: glass.pane ? "Window" : "Lid", value: glass.stat }] : []),
     ],
     assembly: [
       p.joint.style === "tabs" ? "Push the walls' tabs into the bottom's slots and close the corners; every finger has one mate." : "Dry-fit the four walls around the bottom first; every finger has one mate.",
       "Glue the joints with a thin bead of wood glue and clamp with tape or rubber bands until dry.",
       ...kit.assembly,
+      ...(glass.pane ? [`Cut the window pane from ${p.box.paneT} mm clear acrylic (peel the film after cutting) and glue it centred under the lid's window with a thin bead of clear glue or double-sided tape round its edge.`] : []),
+      ...(glass.second && !glass.pane ? [`Cut the lid from clear acrylic ${T} mm thick, the same as the wood, so it ${b.lid === "sliding" ? "runs in the groove" : "sits like the wooden one"}; engrave it on its underside if you want the art to read through it.`] : []),
+      ...(toFront ? ["The engraving is on the front wall, since the window takes the middle of the lid."] : []),
     ],
     notice: art.loading ? "Loading the font." : undefined,
     missing: art.missing,
-    info: { size: [W + 2 * sh.m, D + 2 * sh.m, kit.total], minEdge: sh.minEdge, ...sizes, ...(kit.pinNeed ? { pinNeed: kit.pinNeed, pinRoom: D } : {}) },
+    info: {
+      size: [W + 2 * sh.m, D + 2 * sh.m, kit.total], minEdge: sh.minEdge, ...sizes, ...(kit.pinNeed ? { pinNeed: kit.pinNeed, pinRoom: D } : {}),
+      ...(hand ? { handles: { cut: hand.cut, length: hand.length, needH: hand.needH, wallH: H } } : {}),
+      ...(glass.windowMin !== undefined ? { windowMin: glass.windowMin } : {}), ...(glass.glassIgnored ? { glassIgnored: true } : {}),
+    },
   };
 }
 
@@ -397,7 +497,9 @@ export function buildTrayV2(p: BoxesParams, ctx: BuildContext): V2Output {
   const sh = shell(p, W, D, H, false, lid === "pin" ? T : 0);
   const kit = lidKit(p, lid, W, D, H, sh, 0.3, false);
   const cols = Math.max(1, Math.round(t.cols)), rows = Math.max(1, Math.round(t.rows));
-  const room = kit.ceiling - T - 0.5;
+  // Hand holes in the ends; the dividers stay below them so a hand reaches in.
+  const hand = t.handles && lid !== "pin" ? handleHoles(sh.parts, T, D, H, kit.ceiling) : null;
+  const room = Math.min(kit.ceiling - T - 0.5, hand?.cut ? H - hand.bottom - T - 3 : Infinity);
   const hd = Math.min((H - T) * Math.min(100, Math.max(30, t.dividers)) / 100, room);
   const dv = dividers(T, W - 2 * T, D - 2 * T, hd, cols, rows, T, T, T);
   const parts = [...sh.parts, ...dv.parts, ...kit.parts];
@@ -412,6 +514,7 @@ export function buildTrayV2(p: BoxesParams, ctx: BuildContext): V2Output {
       ...pattern,
       { label: "Compartments", value: `${cols} × ${rows}, each ${r1(dv.cx)} × ${r1(dv.cy)} mm` },
       { label: "Dividers", value: `${cols + rows - 2}, ${r1(hd)} mm tall` },
+      ...(hand?.cut ? [{ label: "Hand holes", value: `${r1(hand.length)} × ${HANDLE_H} mm, both ends` }] : []),
     ],
     assembly: [
       "Glue the walls around the bottom.",
@@ -420,7 +523,7 @@ export function buildTrayV2(p: BoxesParams, ctx: BuildContext): V2Output {
     ],
     notice: art.loading ? "Loading the font." : undefined,
     missing: art.missing,
-    info: { size: [W + 2 * sh.m, D + 2 * sh.m, kit.total], compartment: Math.min(dv.cx, dv.cy), minEdge: sh.minEdge, ...sizes, ...(kit.pinNeed ? { pinNeed: kit.pinNeed, pinRoom: D } : {}) },
+    info: { size: [W + 2 * sh.m, D + 2 * sh.m, kit.total], compartment: Math.min(dv.cx, dv.cy), minEdge: sh.minEdge, ...sizes, ...(kit.pinNeed ? { pinNeed: kit.pinNeed, pinRoom: D } : {}), ...(hand ? { handles: { cut: hand.cut, length: hand.length, needH: hand.needH, wallH: H } } : {}) },
   };
 }
 

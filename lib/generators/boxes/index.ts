@@ -7,7 +7,7 @@ import { buildBoxes, type BoxesOutput } from "./build";
 import { checkBoxes } from "./check";
 import { fingerPanel } from "./joints";
 import { hasArt } from "./more";
-import { BOXES_DEFAULTS, BOXES_VERSION, CARD_CRESTS, CARD_LIPS, CARD_PROFILES, COASTER_DECOS, COASTER_STYLES, DESIGN_NAMES, FIT_NAMES, LID_NAMES, PIERCE_SHAPES, migrateBoxes, mergeBoxes, type BoxesParams, type CardProfile, type CoasterStyle, type Design, type JointFit, type LidKind, type PierceShape } from "./params";
+import { BOXES_DEFAULTS, BOXES_VERSION, CARD_CRESTS, CARD_LIPS, CARD_PROFILES, COASTER_DECOS, COASTER_STYLES, DESIGN_NAMES, FIT_NAMES, GLASS_NAMES, LID_NAMES, NAPKIN_SHAPES, PIERCE_SHAPES, TISSUE_OPENINGS, migrateBoxes, mergeBoxes, type BoxesParams, type CardProfile, type CoasterStyle, type Design, type Glass, type JointFit, type LidKind, type NapkinShape, type PierceShape, type TissueOpening } from "./params";
 import { BOXES_PRESETS } from "./presets";
 import { FRET_KINDS, fretSample } from "../fretwork";
 import { PATTERN_HELP, patternOptions, repeatFields } from "../pattern";
@@ -15,14 +15,14 @@ import { PATTERN_HELP, patternOptions, repeatFields } from "../pattern";
 const is = (...d: Design[]) => (p: BoxesParams) => d.includes(p.design);
 /** Designs with an engraved face: a lid, the cabinet top, or the money box's front. */
 const engraved = (p: BoxesParams) =>
-  (p.design === "box" && p.box.lid !== "open") || (p.design === "tray" && p.tray.lid !== "none") || p.design === "drawer" || (p.design === "hex" && p.hex.lid === "liftoff") || p.design === "money" || (p.design === "stack" && p.stack.lid) || p.design === "book" || p.design === "card" || (p.design === "coaster" && p.coaster.set);
+  (p.design === "box" && p.box.lid !== "open") || (p.design === "tray" && p.tray.lid !== "none") || p.design === "drawer" || (p.design === "hex" && p.hex.lid === "liftoff") || p.design === "money" || (p.design === "stack" && p.stack.lid) || p.design === "book" || p.design === "card" || (p.design === "coaster" && p.coaster.set) || p.design === "napkin" || p.design === "tissue";
 /** Names a design switch may replace: the user has not named the piece yet. */
 const BUILT_IN_NAMES = new Set<string>([BOXES_DEFAULTS.name, ...Object.values(DESIGN_NAMES), ...BOXES_PRESETS.map((p) => p.params.name ?? "")]);
 
 const sections: SectionSpec<BoxesParams>[] = [
   {
     id: "design", title: "Design", open: true,
-    help: "What to make: a finger-jointed box, a tray with dividers, a drawer box, a hexagon box, a divider insert, a money box, stacking trays, a book box, a desk sign, a photo frame, a phone stand, a key holder, a bird house, a business card holder or a coaster holder.",
+    help: "What to make: a finger-jointed box, a tray with dividers, a drawer box, a hexagon box, a divider insert, a money box, stacking trays, a book box, a desk sign, a photo frame, a phone stand, a key holder, a bird house, a business card holder, a coaster holder, a napkin holder or a tissue box cover.",
     fields: [
       {
         kind: "choice", key: "design", label: "Design", rail: true,
@@ -33,7 +33,7 @@ const sections: SectionSpec<BoxesParams>[] = [
     ],
   },
   {
-    id: "joint", title: "Joints", open: true, show: is("box", "tray", "bird", "drawer", "money", "stack"),
+    id: "joint", title: "Joints", open: true, show: is("box", "tray", "bird", "drawer", "money", "stack", "tissue"),
     help: "How the panels lock together at the corners.",
     fields: [
       {
@@ -65,6 +65,14 @@ const sections: SectionSpec<BoxesParams>[] = [
       { kind: "number", key: "box.clearance", label: "Lid clearance", unit: "mm", min: 0, max: 2, step: 0.05, show: (p) => p.box.lid !== "closed" && p.box.lid !== "open", help: "Gap between the lid and the walls, each side, so the lid moves easily." },
       { kind: "number", key: "box.pin", label: "Pin diameter", unit: "mm", min: 1.5, max: 8, step: 0.1, show: (p) => p.box.lid === "pin" || (p.design === "tray" && p.tray.lid === "pin"), help: "Diameter of the hinge pins: a dowel, a nail, or 1.75 mm or 3 mm printer filament." },
       { kind: "toggle", key: "box.notch", label: "Finger notch", show: (p) => p.box.lid === "open" || p.box.lid === "sliding" || p.box.lid === "pin", help: "Cuts a half-round notch for a finger: in the front wall of an open or hinged box, or in the front of a sliding lid." },
+      { kind: "toggle", key: "box.handles", label: "Hand holes", show: (p) => p.box.lid !== "pin", help: "Cuts a hand hole near the top of each end wall to carry the box, as on a crate; the wall needs about 45 mm of height for it." },
+      {
+        kind: "choice", key: "box.glass", label: "Clear lid", show: (p) => p.box.lid !== "open",
+        help: "Window and pane cuts a window in the lid with a clear acrylic pane glued under it (closed, lift-off, hinged and inset lids); Clear lid cuts the whole lid from clear acrylic as thick as the wood (sliding, lift-off and inset lids).",
+        options: (Object.keys(GLASS_NAMES) as Glass[]).map((v) => ({ v, text: GLASS_NAMES[v] })),
+      },
+      { kind: "number", key: "box.window", label: "Window size", unit: "%", min: 20, max: 95, step: 1, show: (p) => p.box.lid !== "open" && p.box.glass === "window", help: "Size of the window as a share of the lid face; it shrinks if the pane would not clear the lid's lip, ledges or hinge." },
+      { kind: "number", key: "box.paneT", label: "Pane thickness", unit: "mm", min: 0.5, max: 6, step: 0.5, show: (p) => p.box.lid !== "open" && p.box.glass === "window", help: "Thickness of the clear acrylic pane under the window; 2 mm is stiff enough for most lids." },
     ],
   },
   {
@@ -82,6 +90,7 @@ const sections: SectionSpec<BoxesParams>[] = [
         help: "A lid turns the tray into a tea, card or jewellery box; the dividers stay below the lid and its fittings.",
         options: [{ v: "none", text: "None" }, { v: "liftoff", text: "Lift-off" }, { v: "sliding", text: "Sliding" }, { v: "pin", text: "Pin hinge" }, { v: "inset", text: "Inset with knob" }],
       },
+      { kind: "toggle", key: "tray.handles", label: "Hand holes", show: (p) => p.tray.lid !== "pin", help: "Cuts a hand hole near the top of each end wall, for a serving or carry tray; the dividers stay below the holes." },
     ],
   },
   {
@@ -278,6 +287,30 @@ const sections: SectionSpec<BoxesParams>[] = [
     ],
   },
   {
+    id: "napkin", title: "Napkin holder", open: true, show: is("napkin"),
+    help: "Two plates standing in a base with tabs through slots, holding folded napkins upright between them.",
+    fields: [
+      { kind: "choice", key: "napkin.shape", label: "Plate shape", help: "The top edge of the plates: rounded corners, an arch, a round dip in the middle to reach the napkins, or two soft waves.", options: (Object.keys(NAPKIN_SHAPES) as NapkinShape[]).map((v) => ({ v, text: NAPKIN_SHAPES[v] })) },
+      { kind: "number", key: "napkin.width", label: "Width", unit: "mm", min: 60, max: 400, step: 1, help: "Width of the plates; folded lunch napkins are about 165 mm square, cocktail napkins about 125 mm." },
+      { kind: "number", key: "napkin.height", label: "Height", unit: "mm", min: 40, max: 300, step: 1, help: "Height of the plates above the base; lower than the napkins so they are easy to take." },
+      { kind: "number", key: "napkin.gap", label: "Napkin room", unit: "mm", min: 5, max: 150, step: 1, help: "Room between the plates for the stack; 40 mm holds about 150 paper napkins." },
+      { kind: "number", key: "napkin.corner", label: "Corner radius", unit: "mm", min: 0, max: 60, step: 0.5, help: "Rounds the plates' top corners." },
+      { kind: "number", key: "napkin.margin", label: "Base margin", unit: "mm", min: 4, max: 80, step: 0.5, help: "How far the base reaches past the plates on every side; a wider base keeps tall plates steady." },
+    ],
+  },
+  {
+    id: "tissue", title: "Tissue box cover", open: true, show: is("tissue"),
+    help: "A finger-jointed cover that drops over a tissue box: four walls and a top with an opening, open underneath.",
+    fields: [
+      { kind: "number", key: "tissue.width", label: "Width", unit: "mm", min: 60, max: 500, step: 1, help: "Size from left to right; measure the tissue box and add 3 to 5 mm so the cover drops on easily." },
+      { kind: "number", key: "tissue.depth", label: "Depth", unit: "mm", min: 60, max: 500, step: 1, help: "Size from front to back, measured the same way." },
+      { kind: "number", key: "tissue.height", label: "Height", unit: "mm", min: 30, max: 400, step: 1, help: "Height of the tissue box; tall cube boxes are about 130 mm, flat ones about 90 mm." },
+      { kind: "choice", key: "tissue.opening", label: "Opening", help: "The hole the tissues come out of: a long slot or an oval for flat boxes, or a round hole for cube boxes.", options: (Object.keys(TISSUE_OPENINGS) as TissueOpening[]).map((v) => ({ v, text: TISSUE_OPENINGS[v] })) },
+      { kind: "number", key: "tissue.openL", label: "Opening length", unit: "mm", min: 15, max: 400, step: 1, help: "Length of the opening from left to right, or its diameter when it is round." },
+      { kind: "number", key: "tissue.openW", label: "Opening width", unit: "mm", min: 10, max: 300, step: 1, show: (p) => p.tissue.opening !== "round", help: "Width of the opening from front to back; 30 to 40 mm lets a tissue through without the stack falling out." },
+    ],
+  },
+  {
     id: "bird", title: "Bird house", open: true, show: is("bird"),
     help: "A finger-jointed nest box with a pitched roof, entrance, vents and drain holes.",
     fields: [
@@ -365,6 +398,14 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
       return [{ d: fitArt([[[0, 40], [48, 40], [48, 8], [40, 6], [30, 10], [18, 22], [8, 26], [0, 26]], rect(14, 12, 26, 4)], 38).join(" "), fill: true }];
     case "coaster":
       return [{ d: fitArt([circle(24, 24, 22), circle(24, 24, 18), circle(24, 24, 12), circle(24, 24, 9)], 38).join(" "), fill: true }];
+    case "napkin": {
+      // Two plates with a grip dip standing in a base, from the front.
+      const dip = Array.from({ length: 13 }, (_, i) => { const x = 14 + (20 * i) / 12; return [x, 6 + 10 * Math.sqrt(Math.max(0, 1 - ((x - 24) / 10) ** 2))] as [number, number]; });
+      return [{ d: fitArt([[[4, 36], [4, 8], [6, 6], ...dip, [42, 6], [44, 8], [44, 36]], rect(0, 36, 48, 6)], 38).join(" "), fill: true }];
+    }
+    case "tissue":
+      // The cover from the front, a tissue standing out of its top.
+      return [{ d: fitArt([[[0, 40], [0, 14], [17, 14], [19, 5], [24, 0], [29, 6], [31, 14], [48, 14], [48, 40]], rect(6, 24, 36, 2)], 38).join(" "), fill: true }];
   }
   return [];
 }
@@ -387,6 +428,8 @@ function size(p: BoxesParams): string {
     case "book": return `${p.book.width} × ${p.book.height} × ${p.book.thickness} mm`;
     case "card": return `${Math.round(p.card.bays)} × ${p.card.cardW} × ${p.card.cardH} mm cards${p.card.tiered ? ", two rows" : ""}`;
     case "coaster": return `${Math.round(p.coaster.count)} × ${p.coaster.size} mm ${p.coaster.shape} coasters`;
+    case "napkin": return `${p.napkin.width} × ${p.napkin.height} mm plates, ${p.napkin.gap} mm apart`;
+    case "tissue": return `${o(p.tissue.width)} × ${o(p.tissue.depth)} × ${p.joint.outside ? p.tissue.height : p.tissue.height + p.T} mm`;
   }
 }
 
@@ -408,6 +451,8 @@ function fileTail(p: BoxesParams): string {
     case "book": return `${Math.round(p.book.width)}x${Math.round(p.book.height)}x${Math.round(p.book.thickness)}mm`;
     case "card": return `${Math.round(p.card.bays)}-bay`;
     case "coaster": return `${Math.round(p.coaster.count)}x${Math.round(p.coaster.size)}mm-${p.coaster.shape}`;
+    case "napkin": return `${Math.round(p.napkin.width)}x${Math.round(p.napkin.height)}mm`;
+    case "tissue": return `${o(p.tissue.width)}x${o(p.tissue.depth)}mm`;
   }
 }
 
@@ -435,7 +480,8 @@ export const BOXES: GeneratorDef<BoxesParams> = {
   help: {
     intro: [
       "One library includes wooden gift and product packaging, sliding sleeves, mailers, jewellery and tea boxes, drawer boxes and inserts. All designs share the same editable dimensions, joints, materials, engraving and 3D preview.",
-      "Boxes & Packaging makes classic laser-cut pieces that slot together: finger-jointed boxes with a closed, open, lift-off, sliding, pin-hinged or inset lid, trays with half-lap dividers (with a lid they make tea and card boxes), drawer boxes with up to four drawers, hexagon boxes, divider inserts for boxes you already have, money boxes, stacking trays, book boxes with a living-hinge spine, desk signs, three-layer photo frames, phone and tablet stands, key holders, bird houses, business card holders (slant, wave, arch, scoop or stepped sides, one to four bays, one or two rows) and holders for round or square coasters (a caddy with a handle, a base with posts, or stacked rings), with the coasters themselves.",
+      "Boxes & Packaging makes classic laser-cut pieces that slot together: finger-jointed boxes with a closed, open, lift-off, sliding, pin-hinged or inset lid, trays with half-lap dividers (with a lid they make tea and card boxes), drawer boxes with up to four drawers, hexagon boxes, divider inserts for boxes you already have, money boxes, stacking trays, book boxes with a living-hinge spine, desk signs, three-layer photo frames, phone and tablet stands, key holders, bird houses, business card holders (slant, wave, arch, scoop or stepped sides, one to four bays, one or two rows), holders for round or square coasters (a caddy with a handle, a base with posts, or stacked rings) with the coasters themselves, napkin holders (rounded, arched, dipped or wavy plates in a slotted base) and tissue box covers with a slot, oval or round opening.",
+      "Boxes and trays can have hand holes in their end walls, like a crate, and a box lid can carry a window with a clear acrylic pane under it, or be cut whole from clear acrylic (a second material).",
       "Boxes can use tab-and-slot joints instead of fingers on the bottom and top, and lids can carry engraved text, a motif and a border.",
       "A cut-out pattern (lattice, floral rosettes, Moroccan quatrefoils, honeycomb, circles, stars or woven leaves) can go through the walls and the lid; the lid's text then sits in a framed label in the middle of it.",
       "Finger joints are worked out per edge: each edge gets an odd number of equal fingers, and every finger belongs to exactly one panel, so the panels always mate. Enter inside sizes for things you have measured, or outside sizes to fit a space.",
@@ -448,7 +494,7 @@ export const BOXES: GeneratorDef<BoxesParams> = {
       "Dry-fit everything before gluing, and glue with a thin bead; squeeze-out is hard to clean between fingers.",
       "Open the 3D view to check how the parts go together before cutting.",
     ],
-    keywords: ["packaging", "gift box", "product box", "branding", "plywood", "box", "finger joint", "tab and slot", "sliding lid", "hinged lid", "drawer", "hexagon box", "insert", "money box", "piggy bank", "pencil box", "tea box", "wine box", "stacking trays", "book box", "pierced", "fretwork", "lattice", "floral", "tray", "organiser", "divider", "sign", "photo frame", "phone stand", "key holder", "bird house", "business card holder", "card holder", "coaster", "coaster holder", "boxes.py"],
+    keywords: ["packaging", "gift box", "product box", "branding", "plywood", "box", "finger joint", "tab and slot", "sliding lid", "hinged lid", "drawer", "hexagon box", "insert", "money box", "piggy bank", "pencil box", "tea box", "wine box", "stacking trays", "book box", "pierced", "fretwork", "lattice", "floral", "tray", "organiser", "divider", "sign", "photo frame", "phone stand", "key holder", "bird house", "business card holder", "card holder", "coaster", "coaster holder", "napkin holder", "tissue box cover", "tissue holder", "crate", "hand holes", "window box", "acrylic lid", "display box", "boxes.py"],
   },
 };
 

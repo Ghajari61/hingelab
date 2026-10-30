@@ -11,7 +11,7 @@ import type { BoxesParams, LidKind, TrayLid } from "../boxes/params";
 import type { GenPreset } from "../types";
 
 type P = GenPreset<BoxesParams>;
-type Extra = Partial<Pick<BoxesParams, "engrave" | "joint">>;
+type Extra = Partial<Pick<BoxesParams, "engrave" | "joint">> & { box?: Partial<BoxesParams["box"]> };
 const finger = (min: number) => (min < 60 ? 6 : min < 120 ? 8 : 12);
 
 /** A box with a lid, inside sizes in millimetres. */
@@ -21,7 +21,7 @@ function box(id: string, name: string, note: string, w: number, d: number, h: nu
     id, name, note,
     params: {
       name, design: "box", joint: { finger: finger(Math.min(W, D, H)), ...(more.joint ?? {}) } as BoxesParams["joint"],
-      box: { width: W, depth: D, height: H, lid, clearance: lid === "sliding" || lid === "pin" ? 0.4 : 0.3, notch: lid === "sliding" || lid === "pin", pin: 3 },
+      box: { width: W, depth: D, height: H, lid, clearance: lid === "sliding" || lid === "pin" ? 0.4 : 0.3, notch: lid === "sliding" || lid === "pin", pin: 3, ...more.box },
       ...(more.engrave ? { engrave: more.engrave } : {}),
     } as Partial<BoxesParams>,
   };
@@ -134,6 +134,12 @@ export const PAPERBOX_PRESETS: P[] = [
   // hexagon boxes
   hex("hex-candle-box", "Hexagon candle box", "Six-sided box with a lift-off lid, 78 mm across and 110 mm deep.", 45, 110),
   hex("hex-favour-box", "Hexagon favour box", "Little hexagon box with a lift-off lid, 52 mm across and 60 mm deep.", 30, 60),
+
+  // display and carry packaging: clear acrylic lids and crates with hand holes
+  box("window-gift-box", "Window gift box", `Lift-off lid with a clear acrylic window, ${s(150, 150, 60)}.`, 150, 150, 60, "liftoff", { box: { glass: "window", window: 75, paneT: 2 } }),
+  box("chocolate-display", "Chocolate display box", `Hinged lid with a window to show the chocolates, ${s(200, 140, 35)}.`, 200, 140, 35, "pin", { box: { glass: "window", window: 80, paneT: 2 } }),
+  box("clear-soap-box", "Clear-lid soap box", `Sliding lid cut from clear acrylic, ${s(90, 60, 30)}.`, 90, 60, 30, "sliding", { box: { glass: "clear" } }),
+  box("gift-crate", "Gift crate with hand holes", `Open crate for a hamper, a hand hole in each end, ${s(300, 200, 120)}.`, 300, 200, 120, "open", { box: { handles: true } }),
 
   // divider inserts
   insert("ornament-insert", "Ornament cell insert", "Six cells for baubles in a 240 × 160 mm box, 70 mm tall.", 240, 160, 70, 3, 2),

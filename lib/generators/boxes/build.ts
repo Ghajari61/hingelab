@@ -14,6 +14,7 @@ import { pierce, pierceLid, pierceWalls, pierced } from "./pierce";
 import { FRET_NAMES, type KeepOut } from "../fretwork";
 import { buildBook } from "./book";
 import { buildCard, buildCoaster } from "./holders";
+import { buildNapkin, buildTissue } from "./home";
 import { DESIGN_NAMES, FIT_MM, FIT_NAMES, type BoxesParams } from "./params";
 import { patternTile, patternUnit } from "../pattern";
 
@@ -40,6 +41,12 @@ export interface BoxesInfo {
   plugRoom?: number;
   pinNeed?: number;
   pinRoom?: number;
+  napkinBase?: number;
+  openRoomL?: number;
+  openRoomW?: number;
+  handles?: { cut: boolean; length: number; needH: number; wallH: number };
+  windowMin?: number;
+  glassIgnored?: boolean;
 }
 export type BoxesOutput = GenOutput & { info?: BoxesInfo };
 
@@ -327,7 +334,7 @@ function buildKeys(p: BoxesParams, ctx: BuildContext): BoxesOutput {
 }
 
 /** Boxes that version 1 could make, built exactly as it did. */
-const isV1Box = (p: BoxesParams) => (p.box.lid === "closed" || p.box.lid === "open" || p.box.lid === "liftoff") && p.joint.style !== "tabs" && !(p.box.notch && p.box.lid === "open") && !(hasArt(p) && p.box.lid !== "open") && !pierced(p);
+const isV1Box = (p: BoxesParams) => (p.box.lid === "closed" || p.box.lid === "open" || p.box.lid === "liftoff") && p.joint.style !== "tabs" && !(p.box.notch && p.box.lid === "open") && !(hasArt(p) && p.box.lid !== "open") && !pierced(p) && !p.box.handles && p.box.glass === "none";
 
 export function buildBoxes(p: BoxesParams, ctx: BuildContext): BoxesOutput {
   if (!(p.T > 0)) return { parts: [], stats: [], error: "Set the material thickness." };
@@ -360,6 +367,8 @@ const PANELS: Partial<Record<BoxesParams["design"], { walls: string[]; lid: stri
   frame: { walls: ["front"], lid: [], front: ["front"] },
   card: { walls: ["side-l", "side-r"], lid: [], front: ["front"] },
   coaster: { walls: ["end-l", "end-r", "post*"], lid: ["coaster*"], front: ["front", "post1"] },
+  napkin: { walls: ["front", "back"], lid: [], front: ["front"] },
+  tissue: { walls: ["front", "back", "left", "right"], lid: ["top"], front: ["front"] },
 };
 const matches = (id: string, pats: string[]) => pats.some((q) => {
   const [a, b = ""] = q.split("*");
@@ -398,7 +407,7 @@ function piercePanels(p: BoxesParams, out: BoxesOutput): BoxesOutput {
 }
 
 /** Designs whose parts lock together with fingers, tabs or slots (the fit setting applies to them). */
-const JOINTED = new Set<BoxesParams["design"]>(["box", "tray", "drawer", "hex", "insert", "money", "stack", "book", "bird", "sign", "stand", "card", "coaster"]);
+const JOINTED = new Set<BoxesParams["design"]>(["box", "tray", "drawer", "hex", "insert", "money", "stack", "book", "bird", "sign", "stand", "card", "coaster", "napkin", "tissue"]);
 
 /** A part grown by `e` mm on every edge (holes shrink by the same), so its joints go tighter. */
 function fitPart(pt: GenPart, e: number): GenPart {
@@ -412,7 +421,7 @@ function fitPart(pt: GenPart, e: number): GenPart {
 function buildDesign(p: BoxesParams, ctx: BuildContext): BoxesOutput {
   switch (p.design) {
     case "box": return isV1Box(p) ? buildBox(p) : buildBoxV2(p, ctx);
-    case "tray": return p.tray.lid === "none" && p.joint.style !== "tabs" && !pierced(p) ? buildTray(p) : buildTrayV2(p, ctx);
+    case "tray": return p.tray.lid === "none" && p.joint.style !== "tabs" && !pierced(p) && !p.tray.handles ? buildTray(p) : buildTrayV2(p, ctx);
     case "book": return buildBook(p, ctx);
     case "drawer": return buildDrawer(p, ctx);
     case "hex": return buildHex(p, ctx);
@@ -426,6 +435,8 @@ function buildDesign(p: BoxesParams, ctx: BuildContext): BoxesOutput {
     case "keys": return buildKeys(p, ctx);
     case "card": return buildCard(p, ctx);
     case "coaster": return buildCoaster(p, ctx);
+    case "napkin": return buildNapkin(p, ctx);
+    case "tissue": return buildTissue(p, ctx);
     default: return { parts: [], stats: [], error: `Unknown design ${DESIGN_NAMES[p.design as keyof typeof DESIGN_NAMES] ?? p.design}.` };
   }
 }
