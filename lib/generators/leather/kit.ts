@@ -6,6 +6,7 @@ import { circle, distToContour, pointInContour } from "../geom";
 import type { Contour, GenPart, Pt } from "../types";
 import { footprint, mountHoles, type HwKind, type HwLine, type HwSizes } from "./hardware";
 import { pathLength } from "./path";
+import type { Rig } from "./rig";
 import { holeMark, holeOutline, intervals, placeHoles, threadFor, type HolePlace, type StitchSpec } from "./stitch";
 
 export interface SeamReport {
@@ -31,6 +32,8 @@ export class Pattern {
   steps: string[] = [];
   /** The longest part the bed takes, mm (longer straps are made in two halves). */
   maxLen = Infinity;
+  /** Where the loose pieces go in the 3D preview (rig.ts). */
+  rigs: Rig[] = [];
   /** Parts already placed in 3D by their builder with a plain (x, y, z) place. */
   keep = new Set<string>();
   /** Straps made in two halves: the second half by the first's id, and where it starts along the strap. */

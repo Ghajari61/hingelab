@@ -84,9 +84,18 @@ export function runBelow(c: Contour, cut: number): Pt[] | null {
 
 /** A closed contour as an open path starting at the point nearest `at`, once round (back to it). */
 export function loopFrom(c: Contour, at: Pt): Pt[] {
-  const pts = ccw(c);
-  let best = 0, bd = Infinity;
-  pts.forEach((q, i) => { const d = Math.hypot(q[0] - at[0], q[1] - at[1]); if (d < bd) { bd = d; best = i; } });
+  const pts = ccw(c).slice();
+  // the nearest point on the outline, not just the nearest corner, so the loop starts where asked
+  let best = 0, bd = Infinity, bq: Pt = pts[0], bt = 0;
+  pts.forEach((a, i) => {
+    const b = pts[(i + 1) % pts.length], dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy;
+    const t = L2 > 0 ? Math.max(0, Math.min(1, ((at[0] - a[0]) * dx + (at[1] - a[1]) * dy) / L2)) : 0;
+    const q: Pt = [a[0] + dx * t, a[1] + dy * t], d = Math.hypot(q[0] - at[0], q[1] - at[1]);
+    if (d < bd - 1e-9) { bd = d; best = i; bq = q; bt = t; }
+  });
+  const L = Math.hypot(pts[(best + 1) % pts.length][0] - pts[best][0], pts[(best + 1) % pts.length][1] - pts[best][1]);
+  if (bt * L > 0.01 && (1 - bt) * L > 0.01) { pts.splice(best + 1, 0, bq); best++; }
+  else if ((1 - bt) * L <= 0.01) best = (best + 1) % pts.length;
   const ring = [...pts.slice(best), ...pts.slice(0, best)];
   return [...ring, ring[0]];
 }

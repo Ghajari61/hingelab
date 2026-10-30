@@ -40,6 +40,47 @@ type Shown = GenPart & { frames?: View["frames"]; apart?: View["apart"]; creases
 
 const CORD = new THREE.MeshStandardMaterial({ color: "#d9cbb4", roughness: 0.95 });
 const METAL = new THREE.MeshStandardMaterial({ color: "#9aa0a6", roughness: 0.35, metalness: 0.8 });
+const METALS = new Map<string, THREE.MeshStandardMaterial>();
+/** A metal of a given colour (brass, nickel), shared between fittings. */
+const metalOf = (c: string) => { let m = METALS.get(c); if (!m) { m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.32, metalness: 0.85 }); m.userData.shared = true; METALS.set(c, m); } return m; };
+/** A fine pebbled grain as a bump map, drawn once (browser only), tiled every 30 mm. */
+let GRAIN: THREE.Texture | null | undefined;
+function grainMap(): THREE.Texture | null {
+  if (GRAIN !== undefined) return GRAIN;
+  GRAIN = null;
+  if (typeof document === "undefined") return GRAIN;
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const g = c.getContext("2d");
+  if (!g) return GRAIN;
+  g.fillStyle = "#808080";
+  g.fillRect(0, 0, 128, 128);
+  let seed = 5;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 900; i++) {
+    const x = rnd() * 128, y = rnd() * 128, r = 0.8 + rnd() * 2.2, v = Math.round(110 + rnd() * 70);
+    for (const [dx, dy] of [[0, 0], [128, 0], [-128, 0], [0, 128], [0, -128]]) {
+      g.fillStyle = `rgb(${v},${v},${v})`;
+      g.beginPath(); g.arc(x + dx, y + dy, r, 0, Math.PI * 2); g.fill();
+    }
+  }
+  GRAIN = new THREE.CanvasTexture(c);
+  GRAIN.wrapS = GRAIN.wrapT = THREE.RepeatWrapping;
+  GRAIN.repeat.set(1 / 30, 1 / 30);
+  return GRAIN;
+}
+const LEATHERS = new Map<string, THREE.MeshStandardMaterial>();
+/** Leather: matte, a soft sheen, the grain; one shared material per colour. */
+const leatherOf = (c: string) => {
+  let m = LEATHERS.get(c);
+  if (!m) {
+    const bump = grainMap();
+    m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.78, metalness: 0, side: THREE.DoubleSide, ...(bump ? { bumpMap: bump, bumpScale: 0.6 } : {}) });
+    m.userData.shared = true;
+    LEATHERS.set(c, m);
+  }
+  return m;
+};
 const BULB = new THREE.MeshStandardMaterial({ color: "#fff6dc", emissive: "#ffe9b0", emissiveIntensity: 0.6, roughness: 0.2, transparent: true, opacity: 0.85 });
 for (const m of [CORD, METAL, BULB]) m.userData.shared = true;
 
@@ -72,17 +113,25 @@ function hardwareGroup(hw: Hardware3D[]): THREE.Group {
       m.position.copy(v3(h.at));
       add(m, "Knot");
     } else if (h.kind === "ring") {
-      const m = new THREE.Mesh(new THREE.TorusGeometry(h.r, h.d / 2, 8, 32), METAL);
+      const m = new THREE.Mesh(new THREE.TorusGeometry(h.r, h.d / 2, 8, 32), h.color ? metalOf(h.color) : METAL);
       m.position.copy(v3(h.at));
-      m.rotation.x = Math.PI / 2;
+      if (h.axis) m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), v3(h.axis).normalize());
+      else m.rotation.x = Math.PI / 2;
       add(m, "Hanging ring");
     } else if (h.kind === "cylinder") {
       const mat = h.metal ? METAL : h.glass
         ? new THREE.MeshStandardMaterial({ color: h.color, roughness: 0.1, transparent: true, opacity: 0.35, depthWrite: false })
         : new THREE.MeshStandardMaterial({ color: h.color, roughness: 0.6 });
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(h.r, h.r, h.h, 40, 1), mat);
-      m.position.copy(v3(h.at)).add(new THREE.Vector3(0, 0, h.h / 2));
-      m.rotation.x = Math.PI / 2;
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(h.r, h.r, h.h, 40, 1), h.metal && h.color && h.axis ? metalOf(h.color) : mat);
+      if (h.axis) {
+        // standing out of a surface along its normal (a rivet cap on a bag's side)
+        const ax = v3(h.axis).normalize();
+        m.position.copy(v3(h.at)).addScaledVector(ax, h.h / 2);
+        m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), ax);
+      } else {
+        m.position.copy(v3(h.at)).add(new THREE.Vector3(0, 0, h.h / 2));
+        m.rotation.x = Math.PI / 2;
+      }
       add(m, "Fitting");
     } else {
       const m = new THREE.Mesh(new THREE.SphereGeometry(h.r, 32, 20), BULB);
@@ -264,7 +313,7 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
         if (p.color) {
           // A contrasting material (gold mirror acrylic and the like) keeps its own colour in every look.
           (mesh.material as THREE.Material).dispose();
-          mesh.material = p.matte
+          mesh.material = p.texture === "leather" ? leatherOf(p.color) : p.matte
             ? new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.92, metalness: 0, side: THREE.DoubleSide })
             : new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.28, metalness: 0.55, side: THREE.DoubleSide });
           mesh.userData.keepMaterial = true;

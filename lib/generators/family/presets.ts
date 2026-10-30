@@ -80,7 +80,7 @@ export const FAMILY_PRESETS: GenPreset<FamilyParams>[] = [
   },
   {
     id: "door-monogram", name: "Front door monogram", note: "A big family initial for the door, family name across it",
-    params: { name: "Door monogram", layout: { kind: "monogram" }, material: "birch6", T: 6, K: 0.2, names: { list: "Johnson", fontId: "archivo-black", caps: true }, monogram: { size: 300, letter: "J", letterFont: "playfair-display", band: 22 }, mark: { kind: "engrave" }, hang: { kind: "loop", hole: 6, wall: 5 } },
+    params: { name: "Door monogram", layout: { kind: "monogram" }, material: "birch6", T: 6, K: 0.2, names: { list: "Johnson", fontId: "archivo-black", caps: true }, monogram: { size: 285, letter: "J", letterFont: "playfair-display", band: 22 }, mark: { kind: "engrave" }, hang: { kind: "loop", hole: 6, wall: 5 } },
   },
   // ---- bunting
   {

@@ -10,6 +10,7 @@
  * The 3D view shows these goods open and flat, the layers stacked.
  */
 import { rect } from "../geom";
+import { foldFlat, hinge, OPEN, type Region } from "./pose";
 import type { Contour, GenPart, Pt } from "../types";
 import { strapPart } from "./boxbag";
 import { decorate } from "./decor";
@@ -67,6 +68,9 @@ function wallet(p: LeatherParams, pat: Pattern, long: boolean): SmallResult {
     "Stitch round the whole wallet through every layer, then bevel, sand and burnish the edges.",
   );
   if (pw < 90 + 2 * e) pat.notes.push(`The pockets are ${Math.round(pw)} mm wide; a bank card (85.6 mm) needs about ${Math.round(90 + 2 * e)} mm with the stitching.`);
+  // 3D: the right half closes over the left at the fold
+  const zt = z0 + n * T;
+  foldFlat(pat.parts, [{ box: [-OPEN, -OPEN, W / 2, OPEN], hinges: [] }, { box: [W / 2, -OPEN, OPEN, OPEN], hinges: [hinge(0, W / 2, zt, Math.PI, [W * 0.75, H / 2])] }]);
   return { size: [W, H, z0 + n * T], fixed: pat.parts.map((q) => q.id) };
 }
 
@@ -112,6 +116,7 @@ function passport(p: LeatherParams, pat: Pattern): SmallResult {
   pat.stack("Perimeter", out, [loopPath(outline, e, [W / 2, H])], [...(lin ? [{ part: lin, ox: 0, oy: 0 }] : []), { part: sl, ox: 0, oy: 0 }, { part: sr, ox: W - sw, oy: 0 }, { part: pk, ox: W - sw, oy: H - ph }], Math.max(1.5, e * 0.6));
   decorate(p, pat, out, rect(W / 2 + e, 0, W / 2 - e, H));
   pat.steps.push("Stitch the card pocket's inner side to the right sleeve.", "Glue the sleeves (and the lining) to the outer at their edges only, with the cover folded, and stitch round everything.");
+  foldFlat(pat.parts, [{ box: [-OPEN, -OPEN, W / 2, OPEN], hinges: [] }, { box: [W / 2, -OPEN, OPEN, OPEN], hinges: [hinge(0, W / 2, z0 + 2 * T, Math.PI, [W * 0.75, H / 2])] }]);
   return { size: [W, H, z0 + 2 * T], fixed: pat.parts.map((q) => q.id) };
 }
 
@@ -133,6 +138,8 @@ function sleeve(p: LeatherParams, pat: Pattern): SmallResult {
   decorate(p, pat, back, rect(e + 4, 4, W - 2 * e - 8, flap - 8));
   pat.steps.push("Set the closure in the flap and the front first.", "Glue the front to the back along the sides and bottom, stitch the U, then fold the flap over.");
   pat.notes.push(`Make the width the device's width plus its thickness plus ${Math.round(2 * e + 4)} mm, so it slides in past the stitching.`);
+  // 3D: the flap closes over the front
+  foldFlat(pat.parts, [{ box: [-OPEN, flap, OPEN, OPEN], hinges: [] }, { box: [-OPEN, -OPEN, OPEN, flap], hinges: [hinge(1, flap, 2 * T, Math.PI, [W / 2, flap / 2])] }]);
   return { size: [W, H + flap, 2 * T], fixed: pat.parts.map((q) => q.id) };
 }
 
@@ -151,6 +158,8 @@ function glasses(p: LeatherParams, pat: Pattern): SmallResult {
   pat.seam("Side and end", [{ part, rows: [left] }, { part, rows: [right] }]);
   decorate(p, pat, part, rect(0, 0, w - e, L));
   pat.steps.push("Fold the case along the scored line, grain out, and saddle stitch the side and the end through the matching holes, from the opening down.");
+  // 3D: folded in half, the two sides stitched together
+  foldFlat([part], [{ box: [-OPEN, -OPEN, w, OPEN], hinges: [] }, { box: [w, -OPEN, OPEN, OPEN], hinges: [hinge(0, w, p.T + 0.3, Math.PI, [1.5 * w, L / 2])] }]);
   return { size: [2 * w, L, p.T], fixed: [part.id] };
 }
 
@@ -174,6 +183,9 @@ function notebook(p: LeatherParams, pat: Pattern): SmallResult {
   decorate(p, pat, cover, rect(Wc - xs + e, 0, xs - e, Hc));
   pat.steps.push("Rivet the pen loop to the right flap.", "Glue the flaps to the cover along their outer three edges and stitch them; slide the book's boards into the flaps.");
   pat.notes.push(`Made for a book ${Math.round(bw)} × ${Math.round(bh)} mm with a ${Math.round(sp)} mm spine.`);
+  // 3D: closed like the book inside, the spine standing and the back cover over the front
+  const h1 = hinge(0, xs, T, Math.PI / 2, [Wc / 2, Hc / 2]), h2 = hinge(0, Wc - xs, T, Math.PI / 2, [Wc - xs / 2, Hc / 2]);
+  foldFlat([cover, fl, fr], [{ box: [-OPEN, -OPEN, xs, OPEN], hinges: [] }, { box: [xs, -OPEN, Wc - xs, OPEN], hinges: [h1] }, { box: [Wc - xs, -OPEN, OPEN, OPEN], hinges: [h2, h1] }]);
   return { size: [Wc, Hc, 2 * T], fixed: [cover.id, fl.id, fr.id] };
 }
 
@@ -194,6 +206,9 @@ function toolroll(p: LeatherParams, pat: Pattern): SmallResult {
   pat.fold(base, [0, H - ph - 30], [W, H - ph - 30]);
   decorate(p, pat, base, rect(0, 0, W, H - ph - 34));
   pat.steps.push("Glue the pocket strip along its bottom and sides, stitch the slot dividers, then round the whole roll.", "Rivet the tie strap at the end the roll finishes on; fold the top down over the tools and roll up.");
+  // 3D: the top folds down over the tools' handles
+  const ft = H - ph - 30;
+  foldFlat([base, strip], [{ box: [-OPEN, ft, OPEN, OPEN], hinges: [] }, { box: [-OPEN, -OPEN, OPEN, ft], hinges: [hinge(1, ft, 2 * T + 6, Math.PI, [W / 2, ft / 2])] }]);
   return { size: [W, H, 2 * T], fixed: [base.id, strip.id] };
 }
 
@@ -229,6 +244,18 @@ function tray(p: LeatherParams, pat: Pattern, purse: boolean): SmallResult {
   decorate(p, pat, part, rect(h + 4, h + 4, Wb - 8, Db - 8));
   pat.steps.push("Set a snap's cap and socket on one side of each corner's diagonal and the stud on the other.", "Fold up the four walls, pinch each corner on its diagonal and close its snap.");
   if (h < 2 * (p.hw.snapCap / 2 + 2)) pat.notes.push("The walls are low for the snaps: their caps come close to the fold and the edge.");
+  // 3D: the walls fold up; each corner goes with the long wall and wraps round onto the end wall
+  const up = Math.PI / 2, wy0 = hinge(1, h, T, up, [Wt / 2, h / 2]), wy1 = hinge(1, Dt - h, T, up, [Wt / 2, Dt - h / 2]);
+  const regions: Region[] = [
+    { box: [h, h, Wt - h, Dt - h], hinges: [] },
+    { box: [h, -OPEN, Wt - h, h], hinges: [wy0] }, { box: [h, Dt - h, Wt - h, OPEN], hinges: [wy1] },
+    { box: [-OPEN, h, h, Dt - h], hinges: [hinge(0, h, T, up, [h / 2, Dt / 2])] }, { box: [Wt - h, h, OPEN, Dt - h], hinges: [hinge(0, Wt - h, T, up, [Wt - h / 2, Dt / 2])] },
+  ];
+  for (const [x0, x1, cx] of [[-OPEN, h, h], [Wt - h, OPEN, Wt - h]] as const) {
+    const px = cx === h ? h / 2 : Wt - h / 2;
+    regions.push({ box: [x0, -OPEN, x1, h], hinges: [hinge(0, cx, -0.3, up, [px, h / 2]), wy0] }, { box: [x0, Dt - h, x1, OPEN], hinges: [hinge(0, cx, -0.3, up, [px, Dt - h / 2]), wy1] });
+  }
+  foldFlat([part], regions);
   return { size: [Wt, Dt, T], fixed: [part.id] };
 }
 

@@ -58,6 +58,8 @@ export function buildWrap(p: LeatherParams, pat: Pattern) {
         pat.mount("rivet", body, [u, vBase + dir * a], 0, "handles");
         pat.mount("rivet", hp, [dir > 0 ? a : hl - a, hw / 2], 0, "", 20, false);
       }
+      const va = Lb / 2 - spread / 2, vb = Lb / 2 + spread / 2;
+      pat.rigs.push({ kind: "handle", part: hp, length: hl, width: hw, ends: [{ host: body, anchor: [u, va], rise: [u, va + 30] }, { host: body, anchor: [u, vb], rise: [u, vb - 30] }] });
     }
   }
   // shoulder strap on D-ring tabs riveted to the end panels
@@ -69,11 +71,20 @@ export function buildWrap(p: LeatherParams, pat: Pattern) {
       for (const u of [10, 50]) pat.mount("rivet", tab, [u, (sw - 4) / 2], 0, "", 20, false);
       pat.mount("rivet", ends[i], [W / 2, e + 18], 0, "strap tabs");
       pat.count("dring", 1, `${sw} mm inside`);
+      pat.rigs.push({ kind: "lie", part: tab, on: { host: ends[i], pt: [W / 2, e + 18] }, dir: [0, -1], anchor: [10, (sw - 4) / 2], outer: roundRect(0, 0, 36, sw - 4, [3, 3, 3, 3]) });
+      pat.rigs.push({ kind: "ring", on: { host: ends[i], pt: [W / 2, e - 6] }, dir: [0, 1], r: sw / 2 + 1, lift: 2 });
     }
-    strapPart(pat, "strap", "Shoulder strap", clamp(p.build.strapLen, 600, 1800), sw);
+    const sLen = clamp(p.build.strapLen, 600, 1800), sa = strapPart(pat, "strap", "Shoulder strap", sLen, sw), sb = pat.splits.get("strap");
+    const la = sa.outer.reduce((m, q) => Math.max(m, q[0]), 0);
+    pat.rigs.push({ kind: "strap", up: "z", length: sLen, width: sw, a: { host: ends[0], pt: [W / 2, e - 6] }, b: { host: ends[1], pt: [W / 2, e - 6] },
+      parts: sb ? [{ part: sa, from: 0, to: la }, { part: sb.part, from: sb.off, to: sLen }] : [{ part: sa, from: 0, to: sLen }] });
     pat.count("slider", 1, `${sw} mm`);
   }
-  if (p.build.reinforce && !round) pat.add({ id: "stiffener", name: "Base stiffener (leatherboard)", outer: rect(0, 0, Math.max(30, W - 2 * r * 0.6 - 6), Lb - 2 * e - 4), holes: [], place: { x: 0, y: 0, z: 0 } });
+  if (p.build.reinforce && !round) {
+    const sw0 = Math.max(30, W - 2 * r * 0.6 - 6), sl0 = Lb - 2 * e - 4;
+    const st = pat.add({ id: "stiffener", name: "Base stiffener (leatherboard)", outer: rect(0, 0, sw0, sl0), holes: [], place: { x: 0, y: 0, z: 0 } });
+    pat.rigs.push({ kind: "lie", part: st, on: { host: body, pt: [u0 + 1, Lb / 2] }, dir: [1, 0], anchor: [sw0 / 2, sl0 / 2], inside: true });
+  }
   if (p.build.feet && !round) {
     const fx = clamp(W / 2 - r * 0.6 - 14, 8, W / 2);
     for (const uu of [u0 + fx, u0 + Ll - fx]) for (const v of [0.14, 0.86]) pat.mount("foot", body, [uu, Lb * v], 0, "bag feet");
@@ -110,8 +121,14 @@ export function buildBucket(p: LeatherParams, pat: Pattern) {
     for (const uu of [u0 + Ll * 0.25, u0 + Ll * 0.75]) for (const v of [36, 50]) pat.mount("rivet", body, [uu, v], 0, "strap");
     const sl = clamp(p.build.strapLen, 400, 1500), st = strapPart(pat, "strap", "Shoulder strap", sl, sw);
     for (const u of [8, 22, sl - 8, sl - 22]) { const at = strapEnd(pat, st, u); pat.mount("rivet", at.part, [at.u, sw / 2], 0, "", 20, false); }
+    const sb = pat.splits.get("strap"), la = st.outer.reduce((m, q) => Math.max(m, q[0]), 0);
+    pat.rigs.push({ kind: "strap", up: "z", length: sl, width: sw, a: { host: body, pt: [u0 + Ll * 0.25, 30] }, b: { host: body, pt: [u0 + Ll * 0.75, 30] },
+      parts: sb ? [{ part: st, from: 0, to: la }, { part: sb.part, from: sb.off, to: sl }] : [{ part: st, from: 0, to: sl }] });
   }
-  if (p.build.reinforce) pat.add({ id: "stiffener", name: "Base stiffener (leatherboard)", outer: offsetContour(base, -(e + 2))!, holes: [], place: { x: 0, y: 0, z: 0 } });
+  if (p.build.reinforce) {
+    const st = pat.add({ id: "stiffener", name: "Base stiffener (leatherboard)", outer: offsetContour(base, -(e + 2))!, holes: [], place: { x: 0, y: 0, z: 0 } });
+    pat.rigs.push({ kind: "stand", part: st, m: frame([1, 0, 0], [0, 1, 0], [0, 0, p.T + 0.05]) });
+  }
   decorate(p, pat, body, rect(Ll * 0.3, 30, Ll * 0.4, H - 60), 0);
   pat.steps.push("Stitch the side seam through the overlap, then the base round its loop to the body, starting at the side seam.", "Set the grommets and thread the drawstring.");
   return { size: [W, D, H] as V3 };
@@ -152,6 +169,8 @@ export function buildSculpt(p: LeatherParams, pat: Pattern) {
         pat.mount("rivet", net, [x, v0 + dir * a], 0, "handles");
         pat.mount("rivet", hp, [end ? hl - a : a, hw / 2], 0, "", 20, false);
       }
+      const low = v0 + dir * 26, top = i === 1 ? 0 : 2 * H + D;
+      pat.rigs.push({ kind: "handle", part: hp, length: hl, width: hw, ends: [{ host: net, anchor: [W / 2 - spread / 2, low], rise: [W / 2 - spread / 2, top] }, { host: net, anchor: [W / 2 + spread / 2, low], rise: [W / 2 + spread / 2, top] }] });
     }
   }
   if (p.build.closure === "magnet" || p.build.closure === "snap") {

@@ -1,5 +1,12 @@
 ## Unreleased
 
+- **Leather Studio 3D: the product as it will look.**
+  - Leather parts show in a leather colour for the chosen leather, matte with a fine grain, instead of the wood look; linings and leatherboard have their own colours, and rivets, snaps, feet, D-rings, buckles and key rings show as metal.
+  - Bags are shown put together: handles arch over the top, straps hang from their rings, tabs, patches and pockets sit on their panels, and linings, stiffeners and camera dividers sit inside. Long straps are drawn shorter than cut so the bag stays in view.
+  - The Fold slider opens and closes the product: flaps and lids lift open, wallets, the passport holder, glasses case, sleeve, tool roll and notebook cover open flat and close, the tray and coin purse raise their walls, and belts, collars, the watch strap and the bracelet buckle into a loop or lie out straight. Explode moves each part out as one piece.
+  - Fixed: a loop that should start at a point now starts exactly there rather than at the nearest corner, which put the duffel's zip and handles off centre along its top.
+  - Still a simplified preview: bends are drawn as short flat pieces, and drape, stretch and stitching are not simulated.
+
 - **A clearer first visit:**
   - A new **Start** page (`/start`) asks "What would you like to make?" and lists every product by goal (gifts, events, home, boxes, leather and sculpture). Each card shows how easy the project is and opens the editor on a ready-made design, so nobody lands in an empty or advanced editor.
   - The home page says plainly what is free (trying every design and the 3D preview, with no account) and what needs Pro (exporting). It offers the two ways in side by side: online in the browser, or the Windows app.
