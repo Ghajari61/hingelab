@@ -1,3 +1,7 @@
+## Unreleased
+
+- **No side scroll bar in the editor:** the settings column's header (the Simple / All, units and Reset buttons) was a few pixels wider than its column. The whole window scrolled sideways and a scroll bar sat under the status bar. The header now wraps instead, and the editor fills the window to the bottom.
+
 ## 1.32.0 — Layered keychains
 
 - **Layered keychains.** The Keychain generator has a new Construction setting with seven builds:
