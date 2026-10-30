@@ -1,6 +1,7 @@
 "use client";
 
 import {PopupTools} from '@/components/popup/PopupTools';
+import { releaseField, undoKey } from "@/lib/ui/undoKeys";
 import { findGeneratorPreset } from "@/lib/generators/presetLookup";
 import type {PopupParams} from '@/lib/generators/popup/params';
 import { platform } from "@hingelab/platform";
@@ -454,8 +455,9 @@ function GenEditor({ def, onProduct, onHome, start }: {
       if (mod) {
         const k = e.key.toLowerCase();
         const va = api.current;
-        if (k === "z" && !inField) { e.preventDefault(); e.shiftKey ? va.doRedo() : va.doUndo(); }
-        else if (k === "y" && !inField) { e.preventDefault(); va.doRedo(); }
+        const u = undoKey(e);
+        if (u) { e.preventDefault(); releaseField(); if (u === "undo") va.doUndo(); else va.doRedo(); }
+        else if (k === "z" || k === "y") { /* the text field undoes its own typing */ }
         else if (k === "s") { e.preventDefault(); if (e.shiftKey) va.saveProjectAs(); else va.saveProject(); }
         else if (k === "o") { e.preventDefault(); va.openProject(); }
         else if (k === "i" && !e.shiftKey) { e.preventDefault(); va.importPick(); }
