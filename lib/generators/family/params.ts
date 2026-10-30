@@ -11,7 +11,7 @@ import { SECOND_MATERIALS } from "../material2";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 
-export type FamilyLayout = "crossword" | "tree" | "snowflake" | "ring" | "monogram" | "bunting";
+export type FamilyLayout = "crossword" | "tree" | "snowflake" | "ring" | "monogram" | "bunting" | "word";
 export type LetterMark = "engrave" | "score" | "cutout" | "layered";
 export type BackKind = "none" | "plate" | "outline";
 export type FlagShape = "pennant" | "swallowtail" | "square" | "scalloped";
@@ -92,6 +92,25 @@ export interface FamilyParams extends GenBase {
     /** Add a plain flag between words. */
     spacer: boolean;
   };
+  /** Names over a word: a framed sign, a big word cut out of the face and the names in script across it. */
+  word: {
+    /** The big word (MOM, LOVE, a family name). */
+    text: string;
+    font: string;
+    /** Width of the whole sign, mm. */
+    width: number;
+    /** The frame on top round the edge, mm (0 = none). */
+    frame: number;
+    /** Space between the frame and the word, mm. */
+    pad: number;
+    /** Height of the names, % of the word's. */
+    nameSize: number;
+    /** A heart between the names (else they just touch). */
+    heart: boolean;
+    /** The names cut from the second material. */
+    names2: boolean;
+    round: number;
+  };
   hang: { kind: "hole" | "loop" | "none"; hole: number; wall: number };
   mat: { mat2: string; T2: number };
 }
@@ -118,11 +137,12 @@ export const FAMILY_DEFAULTS: FamilyParams = {
   backer: { on: false, offset: 3 },
   ring: { diameter: 90, centre: "S", centreFont: "playfair-display", motif: "heart", art: { ...MOTIF_ART }, nameSize: 7, separator: "•", frame: true },
   bunting: { shape: "pennant", width: 70, height: 90, hole: 4, letter: 62, spacer: true },
+  word: { text: "MOM", font: "abril-fatface", width: 300, frame: 8, pad: 6, nameSize: 40, heart: true, names2: false, round: 2 },
   hang: { kind: "hole", hole: 4, wall: 3 },
   mat: { mat2: "acrylic-gold", T2: 3 },
 };
 
-const LAYOUTS: FamilyLayout[] = ["crossword", "tree", "snowflake", "ring", "monogram", "bunting"];
+const LAYOUTS: FamilyLayout[] = ["crossword", "tree", "snowflake", "ring", "monogram", "bunting", "word"];
 const MARKS: LetterMark[] = ["engrave", "score", "cutout", "layered"];
 const BACKS: BackKind[] = ["none", "plate", "outline"];
 const FLAGS: FlagShape[] = ["pennant", "swallowtail", "square", "scalloped"];
@@ -154,6 +174,9 @@ export function mergeFamily(raw: unknown): FamilyParams {
   r.diameter = clamp(r.diameter, 40, 400); r.nameSize = clamp(r.nameSize, 3, 40); r.centre = r.centre.slice(0, 6); r.separator = r.separator.slice(0, 3);
   const b = p.bunting;
   b.width = clamp(b.width, 30, 300); b.height = clamp(b.height, 30, 400); b.hole = clamp(b.hole, 2, 10); b.letter = clamp(b.letter, 30, 90);
+  const w = p.word;
+  w.text = String(w.text ?? "").slice(0, 16); w.width = clamp(w.width, 120, 900); w.frame = Number.isFinite(w.frame) ? clamp(w.frame, 0, 40) : 8;
+  w.pad = clamp(w.pad, 2, 40); w.nameSize = clamp(w.nameSize, 15, 80); w.heart = w.heart !== false; w.names2 = w.names2 === true; w.round = Number.isFinite(w.round) ? clamp(w.round, 0, 30) : 2;
   p.hang.hole = clamp(p.hang.hole, 1, 12); p.hang.wall = clamp(p.hang.wall, 1, 10);
   p.tree.noWeld = p.tree.noWeld === true;
   p.tree.operation = p.tree.operation === "score" ? "score" : "cut";
@@ -162,4 +185,4 @@ export function mergeFamily(raw: unknown): FamilyParams {
   return p;
 }
 
-export const familyNames = (p: FamilyParams) => p.names.list.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+export const familyNames = (p: FamilyParams) => p.names.list.split(p.layout.kind === "word" ? /\s+/ : /\r?\n/).map((s) => s.trim()).filter(Boolean);

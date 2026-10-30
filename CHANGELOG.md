@@ -1,5 +1,6 @@
 ## 1.32.1 — Desktop sign-out and editor fit
 
+- **Names over a word (Family Names).** A new layout makes a framed layered sign. A big word (MOM, LOVE, DOG MOM, a family name) is cut out of the face so the back panel shows through, and the middles of letters such as O are kept as pieces. A frame lies round the edge, and the names in script, joined by hearts, are glued across the word. Type the names on one line, separated by spaces. You can set the word, its font, the sign width, the names size, the frame, the margin and the corner radius. The names can be cut from a second material (mirror, glitter or coloured acrylic). Four presets: MOM with the kids' names, LOVE, DOG MOM and Mr & Mrs.
 - **Desktop app: Sign out works from the account menu.** In the Windows app, Sign out in the avatar menu signed the website view out, but the app's own session signed it straight back in, so nothing seemed to happen. It now signs the whole app out, the same as the app's own Sign out. This reaches the app with the next desktop release.
 - **No side scroll bar in the editor:** the settings column's header (the Simple / All, units and Reset buttons) was a few pixels wider than its column. The whole window scrolled sideways and a scroll bar sat under the status bar. The header now wraps instead, and the editor fills the window to the bottom.
 

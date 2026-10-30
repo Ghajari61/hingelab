@@ -10,6 +10,8 @@
  * - Ring: names round a circular plate, a word or an initial in the middle.
  * - Monogram: a big initial split by a band that carries the name.
  * - Bunting: one flag per letter, with two string holes that keep their wall.
+ * - Names over a word: a framed sign, a big word cut out of the face over a back panel, the names
+ *   in script joined by hearts glued across it.
  * A silhouette backer (tree, snowflake, monogram) is the welded piece grown by an offset, cut from
  * the main sheet, with the names on top in the second material.
  */
@@ -379,6 +381,68 @@ export function buildFamily(p: FamilyParams, ctx: BuildContext): FamilyOutput {
       parts.push({ id: "piece", name: "Split monogram", outer: m.plate.outer, holes: m.plate.holes, ...m.marks, score: [...(m.marks.score ?? []), closed(band)], place: { x: 0, y: 0, z: 0 } });
       if (m.front) parts.push(second({ id: "letters", name: "Name", outer: m.front.outer, holes: m.front.holes, place: { x: 0, y: 0, z: p.T } }));
     }
+  }
+
+  if (kind === "word") {
+    // A framed sign: the back shows through the big word cut out of the face, a frame lies round the
+    // edge, and the names in script, joined by hearts, are glued across the word.
+    const w = p.word, word = (w.text.trim() || "LOVE").toLocaleUpperCase();
+    const W0 = w.width, fr = w.frame, pad = w.pad;
+    const big0 = line(ctx, word, w.font, 100, missing);
+    const parts0 = names.map((n) => line(ctx, n, font, 100, missing));
+    if (!big0 || parts0.some((q) => !q)) return loadingOut();
+    if (missing.length) return { parts: [], stats: [], error: `These fonts cannot draw: ${missing.join(" ")}. Choose a font that supports your text.` };
+    const inner = W0 - 2 * fr - 2 * pad;
+    if (inner < 40) return { parts: [], stats: [], error: "The sign is too narrow for its frame and spacing. Make it wider or the frame narrower." };
+    const b0 = centre(big0.cs), k = inner / b0.w;
+    const big = scale(b0.cs, k), bh = b0.h * k;
+    const H = bh + 2 * pad + 2 * fr, x0 = -W0 / 2, y0 = -H / 2;
+    // the names in a row, a heart between each pair, overlapping a little so they weld into one piece
+    const nh = (bh * w.nameSize) / 100;
+    const row: Contour[] = [];
+    let x = 0;
+    parts0.forEach((q, i) => {
+      const c = centre(q!.cs), s = nh / Math.max(1, c.h);
+      const cs = scale(c.cs, s), wide = c.w * s;
+      if (i > 0) {
+        if (w.heart) {
+          const hs = nh * 0.62, ov = hs * 0.14;
+          row.push(...motif("heart", hs, x - ov + hs / 2, nh * 0.06));
+          x += hs - 2 * ov;
+        } else x -= nh * 0.06;
+      }
+      row.push(...move(cs, x + wide / 2, 0));
+      x += wide;
+    });
+    let nameCs = move(row, -x / 2, 0);
+    // across most of the word, no taller than the names size
+    const nb = bboxOf(nameCs), fitW = Math.min((inner * 0.9) / Math.max(1, nb.x1 - nb.x0), (bh * Math.min(0.95, (w.nameSize / 100) * 1.6)) / Math.max(1, nb.y1 - nb.y0));
+    nameCs = move(scale(move(nameCs, -(nb.x0 + nb.x1) / 2, -(nb.y0 + nb.y1) / 2), fitW), 0, bh * 0.08);
+    info.letter = Math.min(info.letter, nh * fitW);
+    const namesPiece = weld(nameCs, { border: Math.max(0.5, nh * 0.025), minHole: 2, bridge: Math.max(2, nh * 0.08) });
+    if (!namesPiece) return { parts: [], stats: [], error: "The names could not be joined into one piece; try a bolder script font." };
+    const rr = Math.min(w.round, H / 4);
+    const panel = orient(roundedRect(x0, y0, W0, H, rr));
+    const letters = unionShapes(big);
+    // the face: the panel less the letters; their counters (the middle of an O) are pieces of their own
+    const cut = differenceShapes([panel], letters.map((l) => l.outer));
+    const face = largest(cut);
+    if (!face) return { parts: [], stats: [], error: "The word could not be cut from the face." };
+    const counters = letters.flatMap((l) => l.holes).map((h) => makeShape(orient(h), [])).filter((c) => c.area > 1);
+    const tone = { back: 0.62, names: 0.5 };
+    // stained darker in the preview, as the back and frame usually are, so the word reads
+    parts.push({ id: "back", name: "Back panel", outer: panel, holes: [], place: { x: 0, y: 0, z: 0 }, tone: tone.back, color: "#7b5534", matte: true });
+    parts.push({ id: "face", name: `Face with ${word} cut out`, outer: face.outer, holes: face.holes, place: { x: 0, y: 0, z: p.T } });
+    counters.forEach((c, i) => parts.push({ id: `centre-${i + 1}`, name: `Letter centre ${i + 1}`, outer: c.outer, holes: [], place: { x: 0, y: 0, z: p.T } }));
+    if (fr > 0) {
+      const hole = orientHole(roundedRect(x0 + fr, y0 + fr, W0 - 2 * fr, H - 2 * fr, Math.max(0, rr - fr * 0.5)));
+      parts.push({ id: "frame", name: "Frame", outer: panel, holes: [hole], place: { x: 0, y: 0, z: 2 * p.T }, tone: tone.names, color: "#a8643a", matte: true });
+    }
+    const np: GenPart = { id: "names", name: "Names", outer: namesPiece.outer, holes: namesPiece.holes, place: { x: 0, y: 0, z: 2 * p.T }, ...(w.names2 ? {} : { tone: tone.names, color: "#b8733f", matte: true }) };
+    parts.push(w.names2 ? second(np) : np);
+    // the names need the face under them to be glued on
+    const resting = shapeContours(differenceShapes([namesPiece.outer], letters.map((l) => l.outer))).length;
+    if (!resting) return { parts: [], stats: [], error: "The names do not rest on the face anywhere, so they cannot be glued. Make them bigger." };
   }
 
   if (kind === "bunting") {
