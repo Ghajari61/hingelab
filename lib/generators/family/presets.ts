@@ -100,4 +100,21 @@ export const FAMILY_PRESETS: GenPreset<FamilyParams>[] = [
     id: "eid-bunting", name: "Eid Mubarak bunting", note: "Square flags for the Eid table",
     params: { name: "Eid bunting", layout: { kind: "bunting" }, names: { list: "Eid\nMubarak", fontId: "archivo-black", caps: true }, bunting: { shape: "square", width: 60, height: 70, hole: 4, letter: 60, spacer: true }, mark: { kind: "engrave" } },
   },
+  // ---- names over a word
+  {
+    id: "mom-word-sign", name: "MOM sign with the kids' names", note: "A framed sign: MOM cut out of the face, the children's names in script across it, hearts between them",
+    params: { name: "MOM sign", layout: { kind: "word" }, names: { list: "jaxi eleanor", fontId: "dancing-script", caps: false }, word: { text: "MOM", font: "abril-fatface", width: 380, frame: 8, pad: 6, nameSize: 40, heart: true, names2: false, round: 2 } },
+  },
+  {
+    id: "love-word-sign", name: "LOVE couple sign", note: "LOVE with two names across it; paint the back in a rainbow",
+    params: { name: "LOVE sign", layout: { kind: "word" }, names: { list: "tyler kenzie", fontId: "dancing-script", caps: false }, word: { text: "LOVE", font: "playfair-display", width: 380, frame: 9, pad: 6, nameSize: 42, heart: true, names2: false, round: 1 } },
+  },
+  {
+    id: "dog-mom-sign", name: "DOG MOM sign", note: "DOG MOM with the dogs' names; the names in coloured acrylic",
+    params: { name: "Dog mom sign", layout: { kind: "word" }, names: { list: "kobe prince kash", fontId: "pacifico", caps: false }, word: { text: "DOG MOM", font: "alfa-slab-one", width: 420, frame: 8, pad: 6, nameSize: 38, heart: true, names2: true, round: 2 }, mat: { mat2: "acrylic-green", T2: 3 } },
+  },
+  {
+    id: "mr-mrs-sign", name: "Mr & Mrs family name sign", note: "The family name in tall capitals, mr and mrs across it",
+    params: { name: "Mr & Mrs sign", layout: { kind: "word" }, names: { list: "mr mrs", fontId: "dancing-script", caps: false }, word: { text: "FLETCHER", font: "playfair-display", width: 420, frame: 7, pad: 6, nameSize: 46, heart: true, names2: true, round: 0 }, mat: { mat2: "acrylic-silver", T2: 3 } },
+  },
 ];

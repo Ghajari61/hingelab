@@ -4,7 +4,7 @@ import { bboxOf, distToContour, pointInContour } from "../geom";
 import { arrangeGenerator, genSVG } from "../output";
 import { FAMILY } from "../family";
 import { crossword, tileWord } from "../family/crossword";
-import { mergeFamily } from "../family/params";
+import { familyNames, mergeFamily } from "../family/params";
 import type { FamilyOutput } from "../family/build";
 import { letterScores, overlapScores } from "../weldScore";
 import type { GenPart } from "../types";
@@ -187,4 +187,40 @@ describe("stacked letter scores", () => {
       expect(crossings, operation).toBe(0);
     }
   }, 120_000);
+
+  describe("names over a word", () => {
+    const sign = (over: object = {}) => FAMILY.build(FAMILY.merge({ layout: { kind: "word" }, names: { list: "jaxi eleanor", fontId: "dancing-script", caps: false }, word: { text: "MOM" }, ...over }), CTX);
+    it("stacks a back, a face with the word cut out (its counters kept), a frame and one piece of names", () => {
+      const out = sign();
+      expect(out.error).toBeUndefined();
+      const ids = out.parts.map((q) => q.id);
+      expect(ids[0]).toBe("back"); expect(ids).toContain("face"); expect(ids).toContain("frame"); expect(ids.at(-1)).toBe("names");
+      // the O of MOM keeps its middle as a piece
+      expect(ids.filter((i) => i.startsWith("centre"))).toHaveLength(1);
+      const face = out.parts.find((q) => q.id === "face")!;
+      expect(face.holes.length).toBe(3);
+      const back = bboxOf([out.parts[0].outer]);
+      expect(back.x1 - back.x0).toBeCloseTo(300, 0);
+      // the names are one piece across most of the word, on top
+      const names = out.parts.at(-1)!, nb = bboxOf([names.outer]);
+      expect(nb.x1 - nb.x0).toBeGreaterThan(200);
+      expect(names.place!.z).toBe(2 * FAMILY.merge({}).T);
+    });
+    it("names split on spaces, a heart between each, and can be cut from the second material", () => {
+      const p = FAMILY.merge({ layout: { kind: "word" }, names: { list: "kobe prince kash" } });
+      expect(familyNames(p)).toEqual(["kobe", "prince", "kash"]);
+      const out = sign({ names: { list: "kobe prince kash", fontId: "pacifico", caps: false }, word: { text: "DOG MOM", names2: true } });
+      expect(out.error).toBeUndefined();
+      expect(out.parts.at(-1)!.material).toBe("second");
+      expect(out.materials?.second).toBeTruthy();
+    });
+    it("no frame when it is 0, and every preset lays out on the sheet", () => {
+      expect(sign({ word: { text: "LOVE", frame: 0 } }).parts.some((q) => q.id === "frame")).toBe(false);
+      for (const pr of FAMILY.presets.filter((q) => (q.params as { layout?: { kind: string } }).layout?.kind === "word")) {
+        const p = FAMILY.merge(pr.params);
+        expect(FAMILY.build(p, CTX).error, pr.id).toBeUndefined();
+        expect(arrangeGenerator(FAMILY, p, CTX).result, pr.id).not.toHaveProperty("error");
+      }
+    });
+  });
 });

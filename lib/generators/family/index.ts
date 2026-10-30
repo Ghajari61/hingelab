@@ -14,7 +14,7 @@ import { FAMILY_DEFAULTS, familyNames, mergeFamily, type FamilyLayout, type Fami
 import { FAMILY_PRESETS } from "./presets";
 
 export const LAYOUT_NAMES: Record<FamilyLayout, string> = {
-  crossword: "Crossword", tree: "Name tree", snowflake: "Snowflake", ring: "Ring", monogram: "Split monogram", bunting: "Bunting",
+  crossword: "Crossword", tree: "Name tree", snowflake: "Snowflake", ring: "Ring", monogram: "Split monogram", bunting: "Bunting", word: "Names over a word",
 };
 const is = (...k: FamilyLayout[]) => (p: FamilyParams) => k.includes(p.layout.kind);
 const marked = is("crossword", "ring", "monogram", "bunting");
@@ -115,6 +115,21 @@ const sections: SectionSpec<FamilyParams>[] = [
     ],
   },
   {
+    id: "word", title: "Word sign", open: true, show: is("word"),
+    help: "A framed sign: a big word cut out of the face so the back shows through, and the names in script across it, joined by hearts. Type the names on one line, separated by spaces.",
+    fields: [
+      { kind: "text", key: "word.text", label: "Word", maxLength: 16, placeholder: "MOM", help: "The big word behind the names: MOM, LOVE, DOG MOM, a family name." },
+      { kind: "font", key: "word.font", label: "Word font", sample: (p) => p.word.text || "MOM", help: "The typeface of the big word; a bold serif or slab reads best." },
+      { kind: "number", key: "word.width", label: "Sign width", unit: "mm", min: 120, max: 900, step: 5, help: "Width of the whole sign; the height follows the word." },
+      { kind: "number", key: "word.nameSize", label: "Names size", unit: "%", min: 15, max: 80, step: 1, help: "How big the names are, as a share of the big word's height. They spread across most of the word, and a long list of names shrinks to fit." },
+      { kind: "toggle", key: "word.heart", label: "Hearts between names", help: "A heart joins each pair of names; off, the names just touch." },
+      { kind: "number", key: "word.frame", label: "Frame", unit: "mm", min: 0, max: 40, step: 0.5, help: "Width of the frame laid round the edge (0 for none)." },
+      { kind: "number", key: "word.pad", label: "Margin", unit: "mm", min: 2, max: 40, step: 0.5, help: "Space between the frame and the word." },
+      { kind: "number", key: "word.round", label: "Round corners", unit: "mm", min: 0, max: 30, step: 0.5, help: "Corner radius of the sign." },
+      { kind: "toggle", key: "word.names2", label: "Names in second material", help: "Cuts the names from the second material (mirror, glitter or coloured acrylic)." },
+    ],
+  },
+  {
     id: "bunting", title: "Flags", open: true, show: is("bunting"),
     help: "One flag per letter, with two holes for the cord.",
     fields: [
@@ -144,7 +159,7 @@ const sections: SectionSpec<FamilyParams>[] = [
     ],
   },
   {
-    id: "mat", title: "Second material", open: false, show: (p) => (marked(p) && p.mark.kind === "layered") || (is("tree", "snowflake", "monogram")(p) && p.backer.on),
+    id: "mat", title: "Second material", open: false, show: (p) => (marked(p) && p.mark.kind === "layered") || (is("tree", "snowflake", "monogram")(p) && p.backer.on) || (is("word")(p) && p.word.names2),
     help: "The material of the glued-on names: mirror, glitter or coloured acrylic, or wood.",
     fields: material2Fields<FamilyParams>("mat"),
   },
@@ -163,6 +178,7 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
       snowflake: [circle(20, 20, 5, 0.2), ...[0, 60, 120, 180, 240, 300].map((a) => { const r = (a * Math.PI) / 180; const c: Contour = [[20 + 4 * Math.cos(r + 1.4), 20 + 4 * Math.sin(r + 1.4)], [20 + 19 * Math.cos(r + 0.12), 20 + 19 * Math.sin(r + 0.12)], [20 + 19 * Math.cos(r - 0.12), 20 + 19 * Math.sin(r - 0.12)], [20 + 4 * Math.cos(r - 1.4), 20 + 4 * Math.sin(r - 1.4)]]; return c; })],
       ring: [circle(20, 20, 18, 0.2), holeAt(20, 20, 12), circle(20, 20, 7, 0.2)],
       monogram: [rect(10, 0, 8, 14), rect(10, 26, 8, 14), roundedRect(0, 15, 40, 10, 2)],
+      word: [roundedRect(0, 4, 40, 22, 2), ...mv([rect(5, 9, 6, 12), rect(17, 9, 6, 12), rect(29, 9, 6, 12)], 0, 0)],
       bunting: [...mv([[[0, 0], [12, 0], [6, 16]]], 0, 4), ...mv([[[0, 0], [12, 0], [6, 16]]], 14, 4), ...mv([[[0, 0], [12, 0], [6, 16]]], 28, 4)],
     };
     return [{ d: fitArt(pics[v] ?? [], 38).join(" "), fill: true }];
@@ -197,16 +213,16 @@ export const FAMILY: GeneratorDef<FamilyParams> = {
   presets: FAMILY_PRESETS,
   build: buildFamily,
   check: (p, out) => checkFamily(p, out as FamilyOutput),
-  pro: (p) => ((is("tree", "snowflake", "monogram")(p) && p.backer.on) || (marked(p) && p.mark.kind === "layered") ? "Two-layer designs need Pro." : null),
-  fonts: (p) => [p.names.fontId, ...(p.layout.kind === "ring" && p.ring.centre.trim() ? [p.ring.centreFont] : []), ...(p.layout.kind === "monogram" ? [p.monogram.letterFont] : []), ...(p.layout.kind === "tree" && p.tree.year.trim() || p.layout.kind === "snowflake" ? ["archivo-black"] : [])],
+  pro: (p) => ((is("tree", "snowflake", "monogram")(p) && p.backer.on) || (marked(p) && p.mark.kind === "layered") || is("word")(p) ? "Two-layer designs need Pro." : null),
+  fonts: (p) => [p.names.fontId, ...(p.layout.kind === "ring" && p.ring.centre.trim() ? [p.ring.centreFont] : []), ...(p.layout.kind === "monogram" ? [p.monogram.letterFont] : []), ...(p.layout.kind === "word" ? [p.word.font] : []), ...(p.layout.kind === "tree" && p.tree.year.trim() || p.layout.kind === "snowflake" ? ["archivo-black"] : [])],
   scale: (p, s) => growFamily(p, s),
   art,
   batch: (p) => (p.layout.kind === "monogram" ? "names.list" : null),
   fileName: (p) => namedFile("family", p.name, p.layout.kind),
-  summary: (p) => `${LAYOUT_NAMES[p.layout.kind]} · ${familyNames(p).length} ${p.layout.kind === "bunting" ? "words" : "names"}`,
+  summary: (p) => `${LAYOUT_NAMES[p.layout.kind]}${p.layout.kind === "word" ? ` ${p.word.text}` : ""} · ${familyNames(p).length} ${p.layout.kind === "bunting" ? "words" : "names"}`,
   help: {
     intro: [
-      "Family Names turns a list of names into one piece to cut: a crossword where the names cross on shared letters, a Christmas tree of names stacked shortest to longest, a snowflake with a name along every arm, a ring of names round a word or initial, a big split monogram with the name across it, or bunting with one letter per flag.",
+      "Family Names turns a list of names into one piece to cut: a crossword where the names cross on shared letters, a Christmas tree of names stacked shortest to longest, a snowflake with a name along every arm, a ring of names round a word or initial, a big split monogram with the name across it, a framed word sign with the names in script across a big word, or bunting with one letter per flag.",
       "Welded layouts (the tree and the snowflake) fuse the letters into one piece and score where letters overlap, so each still reads. Add a silhouette backer to make two layers: the backer from the main sheet, the names in mirror or coloured acrylic.",
       "Crosswords check that every name crosses another; any that cannot are listed. Holes and loops keep enough material round them not to tear.",
     ],
@@ -216,7 +232,7 @@ export const FAMILY: GeneratorDef<FamilyParams> = {
       "Paint the backer before gluing the names on, and glue with a thin bead so none squeezes out.",
       "Cut bunting flags from 3 mm wood and thread them on a cord through both holes so they hang straight.",
     ],
-    keywords: ["family names", "name crossword", "crossword ornament", "name tree", "christmas tree ornament", "name snowflake", "monogram", "split monogram", "bunting", "banner", "circle ornament"],
+    keywords: ["family names", "name crossword", "crossword ornament", "name tree", "christmas tree ornament", "name snowflake", "monogram", "split monogram", "word sign", "mom sign", "name over word", "layered sign", "bunting", "banner", "circle ornament"],
   },
 };
 
