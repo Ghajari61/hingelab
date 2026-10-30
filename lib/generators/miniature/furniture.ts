@@ -8,8 +8,8 @@
  */
 import { circle, rect } from "../geom";
 import type { Contour, GenPart, Pt } from "../types";
-import { differenceShapes } from "@/lib/letters/polygon";
-import { biggest, clamp, clipScore, openingShape, outerOf, r1, tabbedFrame, wallFinish, type FlatMember, type UprightMember, type Cap } from "./kit";
+import { differenceShapes, unionShapes } from "@/lib/letters/polygon";
+import { biggest, clamp, clipScore, openingShape, outerOf, r1, tabbedFrame, wallFinish, wound, type FlatMember, type UprightMember, type Cap } from "./kit";
 import { NOT_A_HOUSE, type MiniOutput } from "./house";
 import { FURNITURE_NAMES, SCALES, scaleOf, type MiniatureParams } from "./params";
 
@@ -23,7 +23,7 @@ export function buildFurniture(p: MiniatureParams): MiniOutput {
   /** A size of the piece that also has to hold a slot: at least `min`, counted when it had to grow. */
   const atLeast = (v: number, min: number) => { if (v < min) thin++; return Math.max(v, min); };
   const m = Math.max(2, T * 0.7); // wood kept round a slot near an edge
-  let profile: Contour = rect(0, 0, Dm, Hm), rightProfile: Contour | undefined;
+  let profile: Contour = rect(0, 0, Dm, Hm), rightProfile: Contour | undefined, endHoles: Contour[] | undefined;
   const flats: FlatMember[] = [], ups: UprightMember[] = [], caps: Cap[] = [];
   const extra: GenPart[] = [];
   const shelves = clamp(Math.round(f.shelves), 0, 10);
@@ -115,12 +115,32 @@ export function buildFurniture(p: MiniatureParams): MiniOutput {
       extra.push({ id: "hearth", name: "Hearth", outer: rect(-2, Dm + T, Wm + 4, Math.max(6, Dm * 0.35)), holes: [], place: { x: 0, y: 0, z: 0 } });
       break;
     }
-    case "chair": {
-      const seat = clamp(450 / s, 2 * T + 6, Hm - 3 * T), lw = atLeast(Dm * 0.1, T + 2 * m), ah = atLeast(seat * 0.18, T + 2 * m + 1);
-      profile = outerOf([[[0, 0], [lw, 0], [lw, seat - ah], [Dm - lw, seat - ah], [Dm - lw, 0], [Dm, 0], [Dm, seat], [lw, seat], [lw, Hm], [0, Hm]]]);
-      flats.push({ id: "seat", name: "Seat", y0: lw, y1: Dm - lw * 0.2, z: seat - T - m });
-      ups.push({ id: "back", name: "Back rest", y: (lw - T) / 2, z0: seat + Math.max(3, (Hm - seat) * 0.35), z1: Hm - m });
-      ups.push({ id: "stretcher", name: "Front stretcher", y: Dm - lw + (lw - T) / 2, z0: seat * 0.2, z1: seat * 0.2 + atLeast(seat * 0.2, 3 * T) });
+    case "chair": case "rocker": {
+      // A rocking chair is the chair standing on a pair of curved rockers cut in one with each side:
+      // the rockers reach well behind the back legs so it cannot tip over backwards, and less in front.
+      const rocker = kind === "rocker";
+      const band = rocker ? atLeast(Hm * 0.045, 2.5 * m) : 0, eb = Dm * 0.45, ef = Dm * 0.25, low = Dm * 0.45;
+      const reach = Math.max(eb + low, Dm + ef - low), rise = rocker ? Math.max(Hm * 0.06, band * 0.8) : 0;
+      const zb = (y: number) => (rise * (y - low) ** 2) / (reach * reach);
+      const lw0 = atLeast(Dm * 0.1, T + 2 * m);
+      // the chair sits on the rockers with its legs' feet half way into them
+      const lift = rocker ? Math.max(zb(0), zb(lw0), zb(Dm - lw0), zb(Dm)) + band * 0.5 : 0;
+      const H2 = Hm - lift, seat = clamp(450 / s - lift, 2 * T + 6, H2 - 3 * T), lw = lw0, ah = atLeast(seat * 0.18, T + 2 * m + 1);
+      const up = (c: Contour): Contour => c.map(([y, z]) => [y, z + lift] as Pt);
+      const chair = up([[0, 0], [lw, 0], [lw, seat - ah], [Dm - lw, seat - ah], [Dm - lw, 0], [Dm, 0], [Dm, seat], [lw, seat], [lw, H2], [0, H2]]);
+      if (rocker) {
+        // the rocker: a band following the curve, and each leg carried down into it
+        const n = 40, y0 = -eb, y1 = Dm + ef, ys = Array.from({ length: n + 1 }, (_, i) => y0 + ((y1 - y0) * i) / n);
+        const rock: Contour = [...ys.map((y): Pt => [y, zb(y)]), ...ys.slice().reverse().map((y): Pt => [y, zb(y) + band])];
+        const leg = (a: number, b: number): Contour => { const k = Array.from({ length: 9 }, (_, i) => a + ((b - a) * i) / 8); return [...k.map((y): Pt => [y, zb(y) + band * 0.5]), [b, lift + 1], [a, lift + 1]]; };
+        // the legs, apron and rocker close round the space under the seat: it stays a hole
+        const side = biggest(unionShapes([chair, rock, leg(0, lw), leg(Dm - lw, Dm)].map(wound), [], false, true));
+        profile = side.outer;
+        endHoles = side.holes;
+      } else profile = outerOf([chair]);
+      flats.push({ id: "seat", name: "Seat", y0: lw, y1: Dm - lw * 0.2, z: lift + seat - T - m });
+      ups.push({ id: "back", name: "Back rest", y: (lw - T) / 2, z0: lift + seat + Math.max(3, (H2 - seat) * 0.35), z1: Hm - m });
+      ups.push({ id: "stretcher", name: "Front stretcher", y: Dm - lw + (lw - T) / 2, z0: lift + seat * 0.2, z1: lift + seat * 0.2 + atLeast(seat * 0.2, 3 * T) });
       break;
     }
     case "bench": {
@@ -147,13 +167,13 @@ export function buildFurniture(p: MiniatureParams): MiniOutput {
       break;
     }
   }
-  return finish(p, { profile, rightProfile, flats, ups, caps, extra, Wm, Dm, Hm, thin, s });
+  return finish(p, { profile, rightProfile, endHoles, flats, ups, caps, extra, Wm, Dm, Hm, thin, s });
 }
 
-function finish(p: MiniatureParams, o: { profile: Contour; rightProfile?: Contour; flats: FlatMember[]; ups: UprightMember[]; caps: Cap[]; extra: GenPart[]; Wm: number; Dm: number; Hm: number; thin: number; s: number }): MiniOutput {
+function finish(p: MiniatureParams, o: { profile: Contour; rightProfile?: Contour; endHoles?: Contour[]; flats: FlatMember[]; ups: UprightMember[]; caps: Cap[]; extra: GenPart[]; Wm: number; Dm: number; Hm: number; thin: number; s: number }): MiniOutput {
   const T = p.T, f = p.furniture;
   const parts = [
-    ...tabbedFrame({ T, W: o.Wm - 2 * T, profile: o.profile, rightProfile: o.rightProfile, ends: f.kind === "bed" ? ["Head board", "Foot board"] : f.kind === "sofa" || f.kind === "armchair" ? ["Left arm", "Right arm"] : f.kind === "fireplace" ? ["Left jamb", "Right jamb"] : ["Left side", "Right side"], flats: o.flats, uprights: o.ups, caps: o.caps }),
+    ...tabbedFrame({ T, W: o.Wm - 2 * T, profile: o.profile, rightProfile: o.rightProfile, ...(o.endHoles?.length ? { endHoles: o.endHoles } : {}), ends: f.kind === "bed" ? ["Head board", "Foot board"] : f.kind === "sofa" || f.kind === "armchair" ? ["Left arm", "Right arm"] : f.kind === "fireplace" ? ["Left jamb", "Right jamb"] : ["Left side", "Right side"], flats: o.flats, uprights: o.ups, caps: o.caps }),
     ...o.extra,
   ];
   const name = FURNITURE_NAMES[f.kind];
