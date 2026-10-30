@@ -14,7 +14,8 @@ import { byId, withPattern } from "../pattern";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const boarded = (p: SignParams) => p.style.kind !== "word" && p.style.kind !== "neon";
-const twoMaterials = (p: SignParams) => ((p.style.kind === "layered" || (p.style.kind === "word" && p.style.noWeld && p.mount.kind === "stand")) && p.style.operation !== "score") || p.style.kind === "inlay" || (boarded(p) && p.border.kind === "raised");
+const standing = (p: SignParams) => p.mount.kind === "stand" || p.mount.kind === "feet" || p.mount.kind === "led";
+const twoMaterials = (p: SignParams) => ((p.style.kind === "layered" || (p.style.kind === "word" && p.style.noWeld && standing(p))) && p.style.operation !== "score") || p.style.kind === "inlay" || (boarded(p) && p.border.kind === "raised") || p.mount.kind === "led";
 
 const sections: SectionSpec<SignParams>[] = [
   {
@@ -99,16 +100,29 @@ const sections: SectionSpec<SignParams>[] = [
     fields: [
       {
         kind: "choice", key: "mount.kind", label: "Mounting",
-        help: "Keyhole slots hide two screws; screw holes go straight through; hanging holes take a cord or chain; standoff holes suit acrylic office signs; a stand makes a desk or shelf sign.",
-        options: [{ v: "none", text: "None" }, { v: "keyhole", text: "Keyhole slots" }, { v: "holes", text: "Screw holes" }, { v: "hanging", text: "Hanging cord" }, { v: "standoff", text: "Standoffs" }, { v: "stand", text: "Desk stand" }],
+        help: "Keyhole slots hide two screws; screw holes go straight through; hanging holes take a cord or chain; standoff holes suit acrylic office signs; a desk stand holds the sign upright in a slotted base; leaning feet tilt it back for a desk or counter; an LED base lights the edge of an acrylic sign from below.",
+        options: [{ v: "none", text: "None" }, { v: "keyhole", text: "Keyhole slots" }, { v: "holes", text: "Screw holes" }, { v: "hanging", text: "Hanging cord" }, { v: "standoff", text: "Standoffs" }, { v: "stand", text: "Desk stand" }, { v: "feet", text: "Leaning feet" }, { v: "led", text: "LED base", title: "Edge-lit acrylic on a layered base" }],
       },
       { kind: "number", key: "mount.hole", label: "Hole diameter", unit: "mm", min: 2, max: 20, step: 0.5, show: (p) => ["holes", "hanging", "standoff"].includes(p.mount.kind), help: "Diameter of the screw, cord or standoff holes." },
-      { kind: "number", key: "mount.depth", label: "Base depth", unit: "mm", min: 30, max: 200, step: 1, show: (p) => p.mount.kind === "stand", help: "Front-to-back depth of the stand's base." },
+      { kind: "number", key: "mount.depth", label: "Base depth", unit: "mm", min: 30, max: 200, step: 1, show: standing, help: "Front-to-back depth of the stand's base, the feet or the LED base." },
+      { kind: "number", key: "mount.lean", label: "Lean back", unit: "deg", min: 0, max: 25, step: 1, show: (p) => p.mount.kind === "feet", help: "How far the feet tilt the sign back; 10 to 15 degrees reads well from a desk." },
+    ],
+  },
+  {
+    id: "back", title: "Back face", open: false, show: (p) => p.style.kind === "engraved" && p.mount.kind !== "led",
+    help: "A second board glued to the back, so a hanging or standing sign reads from both sides.",
+    fields: [
+      {
+        kind: "choice", key: "back.kind", label: "Back face",
+        help: "None leaves the back plain; Same engraves the front's words and motif on the back too; Other words makes a flip sign, such as OPEN on one side and CLOSED on the other.",
+        options: [{ v: "none", text: "None" }, { v: "same", text: "Same as the front" }, { v: "other", text: "Other words", title: "A flip sign" }],
+      },
+      { kind: "text", key: "back.text", label: "Back text", multiline: true, maxLength: 160, placeholder: "e.g. Closed", show: (p) => p.back.kind === "other", help: "The words on the back, in the front's font and size; the board grows to fit the longer side." },
     ],
   },
   {
     id: "mat", title: "Second material", open: false, show: twoMaterials,
-    help: "The material of layered letters, inlays or a raised frame: mirror or coloured acrylic, or a contrasting wood.",
+    help: "The material of layered letters, inlays, a raised frame or an LED base: mirror or coloured acrylic, or a contrasting wood.",
     fields: material2Fields<SignParams>("mat"),
   },
 ];
@@ -173,7 +187,8 @@ const SIGN_BASE: GeneratorDef<SignParams> = {
   help: {
     intro: [
       "The Sign generator makes wall, door, shop and desk signs in wood, acrylic or both: text and a motif engraved or scored on a shaped board, letters from a second material layered on top, the word cut out on its own, letters inlaid flush in a contrasting material, a neon-look acrylic piece with glowing engraved outlines, or a paint stencil whose bridges hold the middles of the letters.",
-      "Pick any of 18 board shapes or let the board size itself around the text; add a scored, engraved or raised frame; and hang it on keyhole slots, screws, a cord or standoffs, or stand it on a slotted base.",
+      "Pick any of 18 board shapes or let the board size itself around the text; add a scored, engraved or raised frame; and hang it on keyhole slots, screws, a cord or standoffs, stand it on a slotted base or two leaning feet, or light it from below on a layered LED base.",
+      "An engraved sign can have a back face glued on: the same words for a hanging or window sign that reads from both sides, or other words for a flip sign such as OPEN and CLOSED.",
       "Clear acrylic can be engraved from the back: mirror the engraving and the sign reads correctly from the front with a smooth, glossy face.",
     ],
     tips: [
@@ -182,10 +197,12 @@ const SIGN_BASE: GeneratorDef<SignParams> = {
       "Engrave with masking tape on the wood to stop smoke stains, then peel it after.",
       "Outdoor signs need exterior plywood or acrylic and a coat of clear varnish.",
       "Neon-look signs glow best in 5 mm cast acrylic on an LED base; engrave from the back with Mirror on.",
+      "The LED base is cut from the second material: walnut or MDF hides the strip. Use a 10 mm wide LED strip or a USB LED board; the pocket and the cable notch are cut for it.",
+      "For a two-sided hanging sign, 3 mm boards glued back to back make a stiff 6 mm sign that does not warp.",
       "For a stencil, card or thin acrylic works; a bold font keeps the bridges short.",
       "Pick Your picture as the motif to add your own logo or drawing (a bold black-and-white one traces best), or Your text for initials or a date in another font.",
     ],
-    keywords: ["sign", "wall sign", "door sign", "name sign", "shop sign", "welcome", "acrylic", "wood", "layered", "inlay", "desk sign", "neon", "stencil", "logo"],
+    keywords: ["sign", "wall sign", "door sign", "name sign", "shop sign", "welcome", "acrylic", "wood", "layered", "inlay", "desk sign", "neon", "stencil", "logo", "led", "night light", "edge lit", "open closed", "two sided", "flip sign"],
   },
 };
 

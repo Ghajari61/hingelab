@@ -9,7 +9,7 @@ import { TEXT_FORM, TEXT_STYLE, cleanTextForm, cleanTextStyle, type TextForm, ty
 import { mergeInto } from "../util";
 
 export type KitKind = "topper" | "cupcake" | "set";
-export type TopperStyle = "letters" | "outline" | "layered" | "plate";
+export type TopperStyle = "letters" | "outline" | "layered" | "plate" | "hoop" | "shaker";
 export type MotifPlace = "above" | "below" | "left" | "right" | "both" | "behind";
 export type TextMark = "engrave" | "score" | "none";
 export type CupShape = ShapeKind | "motif";
@@ -40,6 +40,8 @@ export interface TopperParams extends GenBase {
   motif: { kind: string; place: MotifPlace; size: number; gap: number; art: MotifArt };
   plate: { shape: ShapeKind; auto: boolean; pad: number; width: number; height: number; corner: number; frame: boolean };
   sticks: { count: number; length: number; width: number; tip: number; spread: number };
+  /** Hoop: width of the ring the letters cross; shaker: width of the spacer walls and how many spacer layers hold the sprinkles. */
+  frame: { band: number; spacers: number };
   cupcake: {
     count: number;
     shape: CupShape;
@@ -79,12 +81,13 @@ export const TOPPER_DEFAULTS: TopperParams = {
   motif: { kind: "none", place: "above", size: 40, gap: 0, art: { ...MOTIF_ART } },
   plate: { shape: "arch", auto: true, pad: 10, width: 180, height: 120, corner: 4, frame: true },
   sticks: { count: 2, length: 90, width: 7, tip: 14, spread: 45 },
+  frame: { band: 5, spacers: 2 },
   cupcake: { count: 12, shape: "circle", size: 55, motif: "heart", art: { ...MOTIF_ART }, text: "", fontId: "pacifico", textSize: 9, stick: 70, layered: false },
   mat: { mat2: "acrylic-gold", T2: 3 },
 };
 
 const KITS: KitKind[] = ["topper", "cupcake", "set"];
-const STYLES: TopperStyle[] = ["letters", "outline", "layered", "plate"];
+const STYLES: TopperStyle[] = ["letters", "outline", "layered", "plate", "hoop", "shaker"];
 const PLACES: MotifPlace[] = ["above", "below", "left", "right", "both", "behind"];
 const MARKS: TextMark[] = ["engrave", "score", "none"];
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -106,6 +109,7 @@ export function mergeTopper(raw: unknown): TopperParams {
   if (p.cupcake.motif !== "none" && !isMotifKind(p.cupcake.motif)) p.cupcake.motif = "none";
   if (!(p.mat.mat2 in SECOND_MATERIALS)) p.mat.mat2 = d.mat.mat2;
   p.sticks.count = clamp(Math.round(p.sticks.count), 0, 3);
+  p.frame.spacers = clamp(Math.round(p.frame.spacers), 1, 4);
   p.cupcake.count = clamp(Math.round(p.cupcake.count), 1, 60);
   p.style.noWeld = p.style.noWeld === true;
   p.style.operation = p.style.operation === "score" ? "score" : "cut";

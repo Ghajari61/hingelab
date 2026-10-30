@@ -7,6 +7,8 @@ import type { TopperParams } from "./params";
 export const MIN_STICK = 5;
 /** Wider than this overhangs most cakes, mm. */
 export const CAKE_WIDTH = 260;
+/** Narrowest hoop ring or shaker wall that does not snap, mm. */
+export const MIN_BAND = { hoop: 3, shaker: 4 } as const;
 
 export function checkTopper(p: TopperParams, out: TopperOutput): Issue<TopperParams>[] {
   const issues: Issue<TopperParams>[] = [];
@@ -47,11 +49,26 @@ export function checkTopper(p: TopperParams, out: TopperOutput): Issue<TopperPar
       fixes: [{ id: "smaller", label: `Name height ${size} mm`, safe: true, apply: (q) => ({ ...q, cupcake: { ...q.cupcake, textSize: size } }) }],
     });
   }
-  if (p.style.kind === "plate" && !p.plate.auto && (info.contentW > p.plate.width - 8 || info.contentH > p.plate.height - 8)) {
+  if ((p.style.kind === "plate" || p.style.kind === "shaker") && p.kit.kind !== "cupcake" && !p.plate.auto && (info.contentW > p.plate.width - 8 || info.contentH > p.plate.height - 8)) {
     issues.push({
       code: "PLATE_SMALL", level: "warn",
       message: "The text and motif run past the plate.",
       fixes: [{ id: "auto", label: "Size the plate to the text", safe: true, apply: (q) => ({ ...q, plate: { ...q.plate, auto: true } }) }],
+    });
+  }
+  if (p.kit.kind !== "cupcake" && (p.style.kind === "hoop" || p.style.kind === "shaker") && info.band > 0 && info.band < MIN_BAND[p.style.kind]) {
+    const band = MIN_BAND[p.style.kind] + 1;
+    issues.push({
+      code: "FRAME_THIN", level: "warn",
+      message: `A ${info.band} mm ${p.style.kind === "hoop" ? "ring" : "spacer wall"} snaps easily; ${band} mm or more holds.`,
+      fixes: [{ id: "band", label: `Frame ${band} mm`, safe: true, apply: (q) => ({ ...q, frame: { ...q.frame, band } }) }],
+    });
+  }
+  if (p.kit.kind !== "cupcake" && p.style.kind === "shaker" && p.mat.mat2 !== "acrylic-clear") {
+    issues.push({
+      code: "SHAKER_WINDOW", level: "info",
+      message: "The shaker's window is cut from the second material; clear acrylic shows the sprinkles behind the words.",
+      fixes: [{ id: "clear", label: "Clear acrylic window", safe: true, apply: (q) => ({ ...q, mat: { ...q.mat, mat2: "acrylic-clear", T2: 3 } }) }],
     });
   }
   if (p.material === "acr3" && p.style.mark === "score" && p.style.kind !== "letters") {

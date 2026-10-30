@@ -113,4 +113,37 @@ export const TOPPER_PRESETS: GenPreset<TopperParams>[] = [
     id: "lotus-namaste", name: "Lotus", note: "Lotus over a flowing script word",
     params: { name: "Lotus topper", text: { text: "Namaste", fontId: "great-vibes", size: 32 }, motif: { kind: "lotus", place: "above", size: 38, gap: -4 }, style: { kind: "letters" } },
   },
+  {
+    id: "hoop-mr-mrs", name: "Mr & Mrs hoop", note: "Script letters welded across a round hoop",
+    params: { name: "Mr and Mrs hoop", text: { text: "Mr & Mrs", fontId: "pacifico", size: 30, spacing: -0.5 }, style: { kind: "hoop", weld: 1 }, plate: { shape: "circle", auto: true, pad: 12 }, frame: { band: 5 }, motif: { kind: "none" } },
+  },
+  {
+    id: "hoop-heart-forever", name: "Heart hoop", note: "Forever across an open heart, in gold mirror acrylic",
+    params: { name: "Forever heart hoop", material: "mirror3", T: 3, K: 0.1, text: { text: "Forever", fontId: "pacifico", size: 30, spacing: -0.5 }, style: { kind: "hoop", weld: 1.1 }, plate: { shape: "heart", auto: true, pad: 14 }, frame: { band: 5 }, motif: { kind: "none" } },
+  },
+  {
+    id: "hoop-oh-baby", name: "Oh baby hoop", note: "Baby shower hoop with little feet above the words",
+    params: { name: "Oh baby hoop", text: { text: "Oh Baby", fontId: "pacifico", size: 28, spacing: -0.5 }, style: { kind: "hoop", weld: 1 }, plate: { shape: "scalloped", auto: true, pad: 14 }, frame: { band: 5 }, motif: { kind: "feet", place: "above", size: 28, gap: 2 } },
+  },
+  {
+    id: "shaker-birthday", name: "Sprinkle shaker", note: "Happy Birthday on a clear window with sprinkles behind it",
+    params: {
+      name: "Birthday shaker topper", text: { text: "Happy\nBirthday", fontId: "pacifico", size: 24, spacing: -0.5 }, style: { kind: "shaker", mark: "engrave" },
+      plate: { shape: "rounded", auto: true, pad: 12, corner: 14 }, frame: { band: 5, spacers: 2 }, motif: { kind: "none" }, mat: { mat2: "acrylic-clear", T2: 3 },
+    },
+  },
+  {
+    id: "shaker-heart-sweet16", name: "Heart shaker", note: "Sweet 16 in a heart-shaped shaker window",
+    params: {
+      name: "Sweet sixteen shaker", text: { text: "Sweet\n16", fontId: "fredoka", size: 22 }, style: { kind: "shaker", mark: "engrave" },
+      plate: { shape: "heart", auto: true, pad: 22 }, frame: { band: 5, spacers: 2 }, motif: { kind: "none" }, mat: { mat2: "acrylic-clear", T2: 3 },
+    },
+  },
+  {
+    id: "name-and-age", name: "Name and age", note: "A big age number with the name in script across its foot",
+    params: {
+      name: "Name and age topper", text: { text: "Ava", fontId: "pacifico", size: 30, spacing: -0.5 }, style: { kind: "letters", weld: 1.2 },
+      motif: { kind: "text", place: "above", size: 70, gap: -4, art: { text: "5", fontId: "archivo-black" } },
+    },
+  },
 ];

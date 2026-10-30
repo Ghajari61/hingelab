@@ -12,7 +12,8 @@ import { TROPHY_PRESETS } from "./presets";
 import { byId, withPattern } from "../pattern";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
-const EMBLEM_NAMES: Record<Emblem, string> = { star: "Star", cup: "Cup", shield: "Shield", medal: "Medal", flame: "Flame", laurel: "Laurel", motif: "Motif", custom: "Custom" };
+const EMBLEM_NAMES: Record<Emblem, string> = { star: "Star", cup: "Cup", shield: "Shield", medal: "Medal", flame: "Flame", laurel: "Laurel", rosette: "Rosette", motif: "Motif", custom: "Custom" };
+const onBase = (p: TrophyParams) => p.display.kind === "base";
 
 const sections: SectionSpec<TrophyParams>[] = [
   {
@@ -24,6 +25,18 @@ const sections: SectionSpec<TrophyParams>[] = [
         help: "Single cuts everything from one sheet; Mixed cuts the figure from the second material; Layered glues a mirror emblem and name plate onto the figure.",
         options: [{ v: "single", text: "Single" }, { v: "mixed", text: "Mixed", title: "Two materials" }, { v: "layered", text: "Layered", title: "Two materials" }],
       },
+      {
+        kind: "choice", key: "display.kind", label: "Display",
+        help: "Base stands the award in a slotted, stepped base; Plaque glues it onto a backing board that hangs on the wall; Medal adds a loop with a slot for a neck ribbon.",
+        options: [{ v: "base", text: "Standing base" }, { v: "plaque", text: "Wall plaque" }, { v: "medal", text: "Medal", title: "Hangs on a ribbon" }],
+      },
+      {
+        kind: "choice", key: "display.shape", shuffle: true, label: "Plaque shape", show: (p) => p.display.kind === "plaque",
+        help: "The outline of the backing board behind the figure.",
+        options: [{ v: "rounded", text: "Rounded" }, { v: "arch", text: "Arch" }, { v: "shield", text: "Shield" }, { v: "octagon", text: "Octagon" }],
+      },
+      { kind: "number", key: "display.margin", label: "Plaque margin", unit: "mm", min: 5, max: 80, step: 1, show: (p) => p.display.kind === "plaque", help: "Border of the backing board round the figure; the hanging holes sit in its top margin." },
+      { kind: "number", key: "display.ribbon", label: "Ribbon width", unit: "mm", min: 6, max: 50, step: 1, show: (p) => p.display.kind === "medal", help: "Width of the neck ribbon; the slot is cut 1 mm wider so it threads easily." },
       { kind: "choice", key: "mark.kind", shuffle: true, label: "Marks", options: [{ v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }], help: "Engrave fills the text and laurel; Score traces them." },
       noWeldField<TrophyParams>("mark.noWeld", (p) => p.mark.kind === "score", "text", ["score"]),
     ],
@@ -32,7 +45,7 @@ const sections: SectionSpec<TrophyParams>[] = [
     id: "emblem", title: "Emblem", open: true,
     help: "The shape at the top of the trophy.",
     fields: [
-      { kind: "choice", key: "emblem.kind", shuffle: true, label: "Emblem", rail: true, options: EMBLEMS.map((k) => ({ v: k, text: EMBLEM_NAMES[k] })), help: "A star, cup, shield, medal, flame or laurel wreath, any motif, or your own outline." },
+      { kind: "choice", key: "emblem.kind", shuffle: true, label: "Emblem", rail: true, options: EMBLEMS.map((k) => ({ v: k, text: EMBLEM_NAMES[k] })), help: "A star, cup, shield, medal, flame, laurel wreath or prize rosette, any motif, or your own outline." },
       { kind: "choice", key: "emblem.motif", shuffle: true, label: "Motif", rail: true, show: (p) => p.emblem.kind === "motif", options: MOTIF_OPTIONS.filter((o) => o.v !== "none"), help: "The motif used as the emblem: a built-in motif, your own picture (its details engraved or scored on it) or your own text." },
       ...motifArtFields<TrophyParams>("emblem.motif", "emblem.art", (p) => p.emblem.kind === "motif"),
       { kind: "text", key: "emblem.path", label: "SVG path", multiline: true, maxLength: 20000, placeholder: "M 0 0 L 100 0 L 50 90 Z", show: (p) => p.emblem.kind === "custom", help: "The d attribute of a closed SVG path; it is scaled to the emblem's size." },
@@ -65,7 +78,7 @@ const sections: SectionSpec<TrophyParams>[] = [
     ],
   },
   {
-    id: "base", title: "Base", open: false,
+    id: "base", title: "Base", open: false, show: onBase,
     help: "The stepped base the figure slots into.",
     fields: [
       { kind: "number", key: "base.tiers", label: "Tiers", unit: "", min: 1, max: 3, step: 1, int: true, help: "Layers stacked into the base; the bottom one closes the slot when there are two or three." },
@@ -75,6 +88,7 @@ const sections: SectionSpec<TrophyParams>[] = [
       { kind: "number", key: "base.step", label: "Step", unit: "mm", min: 0, max: 30, step: 0.5, show: (p) => p.base.tiers > 1, help: "How much each tier above is smaller on every side." },
       { kind: "number", key: "base.corner", label: "Corner radius", unit: "mm", min: 0, max: 40, step: 0.5, show: (p) => p.base.shape === "rounded", help: "Rounds the base's corners." },
       { kind: "number", key: "base.fit", label: "Slot clearance", unit: "mm", min: -0.2, max: 1, step: 0.05, help: "Added to the figure's thickness for the slot width; 0.05 to 0.15 mm gives a snug push fit." },
+      { kind: "toggle", key: "base.led", label: "LED light", help: "Adds a solid bottom plate and channel layers under the tiers with a pocket for an LED strip, so an acrylic figure glows from below." },
       { kind: "text", key: "base.text", label: "Base text", maxLength: 40, placeholder: "e.g. 2026", help: "A short line engraved on the top tier in front of the figure." },
     ],
   },
@@ -113,6 +127,7 @@ function scaleTrophy(p: TrophyParams, s: number): TrophyParams {
     emblem: { ...p.emblem, width: k(p.emblem.width), height: k(p.emblem.height), size: k(p.emblem.size) },
     plate: { ...p.plate, width: k(p.plate.width), nameSize: k(p.plate.nameSize), titleSize: k(p.plate.titleSize), pad: k(p.plate.pad) },
     stem: { width: k(p.stem.width), height: k(p.stem.height) },
+    display: { ...p.display, margin: k(p.display.margin) },
     base: { ...p.base, width: k(p.base.width), depth: k(p.base.depth), step: k(p.base.step) },
   };
 }
@@ -133,11 +148,12 @@ const TROPHY_BASE: GeneratorDef<TrophyParams> = {
   art,
   batch: (p) => (p.plate.on ? "plate.name" : "emblem.text"),
   fileName: (p) => namedFile("trophy", p.name, p.emblem.kind),
-  summary: (p) => `${EMBLEM_NAMES[p.emblem.kind]} trophy${p.plate.on && p.plate.name.trim() ? ` for ${p.plate.name.trim()}` : ""} · ${p.base.tiers}-tier base`,
+  summary: (p) => `${EMBLEM_NAMES[p.emblem.kind]} ${p.display.kind === "medal" ? "medal" : p.display.kind === "plaque" ? "plaque" : "trophy"}${p.plate.on && p.plate.name.trim() ? ` for ${p.plate.name.trim()}` : ""}${p.display.kind === "base" ? ` · ${p.base.tiers}-tier base${p.base.led ? ", LED" : ""}` : ""}`,
   help: {
     intro: [
       "The Trophy generator makes awards that stand up: an emblem (star, cup, shield, medal, flame, laurel wreath, any motif from the library or your own SVG outline), an optional stem and name plate with the award, the winner and the year, all in one upright piece that slots into a stepped base of one to three tiers.",
       "Cut it from one material, cut the figure from acrylic and the base from wood, or glue a mirror-acrylic emblem and name plate onto a wooden figure. The slot is the figure's own thickness plus a clearance you set, so mixed thicknesses still fit snugly.",
+      "Stand it in the base, light an acrylic figure from below with an LED base, glue it onto a wall plaque with hanging holes, or make it a medal with a loop for a neck ribbon.",
     ],
     tips: [
       "With Marks set to Score, No Weld traces each glyph's own outline, so overlapping script letters keep their edges.",
@@ -146,8 +162,10 @@ const TROPHY_BASE: GeneratorDef<TrophyParams> = {
       "Three tiers with a 5 to 8 mm step look like a turned plinth.",
       "Engrave the base text in front of the figure so it reads from the same side.",
       "Keep the figure no taller than about three times the base's depth so it does not tip.",
+      "For a glowing award, choose Mixed with clear acrylic and turn on LED light; a 10 mm strip or USB LED board fits the pocket.",
+      "Race and school medals: choose Medal, a 25 mm ribbon and 3 mm birch or mirror acrylic; batch the names for a whole team.",
     ],
-    keywords: ["trophy", "award", "plaque", "medal", "star award", "cup", "acrylic award", "sports", "employee of the month"],
+    keywords: ["trophy", "award", "plaque", "medal", "star award", "cup", "acrylic award", "sports", "employee of the month", "rosette", "led award", "wall plaque", "race medal", "ribbon"],
   },
 };
 
