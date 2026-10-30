@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Bookmark, Clock3, CreditCard, Crown, FolderOpen, LogOut, Mail, Settings, UserRound } from "lucide-react";
 import { avatarBackground, avatarInitials } from "@/lib/account/avatar";
+import { DESKTOP_SIGN_OUT } from "@/lib/account/signOutEvent";
 import { hasPro, effectivePlan } from "@/lib/plans";
+import { platform } from "@hingelab/platform";
 import { useAccount } from "./useAccount";
 
 /** A round avatar: the account's picture, or its initials on its own colour (also when the picture fails). */
@@ -85,9 +87,17 @@ export function UserMenu() {
           <Link role="menuitem" href="/invite"><Mail size={15} aria-hidden="true" />Invite friends</Link>
           <Link role="menuitem" href="/preferences"><Settings size={15} aria-hidden="true" />Preferences</Link>
           <hr />
-          <form className="user-signout" action="/auth/signout" method="post">
-            <button type="submit" role="menuitem"><LogOut size={15} aria-hidden="true" />Sign out</button>
-          </form>
+          {platform().kind === "web" ? (
+            <form className="user-signout" action="/auth/signout" method="post">
+              <button type="submit" role="menuitem"><LogOut size={15} aria-hidden="true" />Sign out</button>
+            </form>
+          ) : (
+            <div className="user-signout">
+              <button type="button" role="menuitem" onClick={() => { setOpen(false); window.dispatchEvent(new Event(DESKTOP_SIGN_OUT)); }}>
+                <LogOut size={15} aria-hidden="true" />Sign out
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
