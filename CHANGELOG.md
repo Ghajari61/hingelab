@@ -1,4 +1,4 @@
-## Unreleased
+## 1.31.0 — A clearer start and Leather Studio 3D
 
 - **Leather Studio 3D: the product as it will look.**
   - Leather parts show in a leather colour for the chosen leather, matte with a fine grain, instead of the wood look; linings and leatherboard have their own colours, and rivets, snaps, feet, D-rings, buckles and key rings show as metal.

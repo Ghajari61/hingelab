@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.30.4",
-    "pub_date": "2026-10-29T23:01:27.617Z",
-    "notes": "Hanging loops now avoid hairline strokes and sit near the balance point for straighter hanging.",
+    "version": "1.31.0",
+    "pub_date": "2026-10-30T03:46:14.614Z",
+    "notes": "Leather Studio now shows assembled products with leather materials and fold animation. New Start page, simpler settings, and clearer first-visit guidance.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.30.4_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmxBcUZ1V3V6Rk1VSm1QaVZ3ZkpvUjJxRFZrY2pWaHBNZnNuUmtWUHRCTmRLY2Q0ZUMzMWpFUkV2NTd5UWRJY245Q1cyZFRrdlhyS3luelhYdDJVYXdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzE0ODgxCWZpbGU6SGluZ2VMYWJfMS4zMC40X3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMwLjQKaFhsaVNPbGd1Ym0rZkszakFDSEh2czNzSnUrTzVLUTZGK2VrSTl3T2NucHNDeE05WXN3MEtSSVhLSFZtd3dlSEhyWVJNNmtURzJycDV1cXZiaXJQRHc9PQo=",
-        "size": 12750858,
-        "sha256": "1782c522c3c9160cd11f800d52446e36481c3c37d9b008e183debc8f675dbf08"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.31.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnBjaEpHYW1VV0IvNnlscERlMXlhQ1ZNVVJzaTV6Z0FTMXRtS05YVDYwUkQ4N2RmblRZMGZJNGkxT2ZzOWdweCtvalFWSDZsckwyVFdmMFMrQk02M0FNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzMxOTY3CWZpbGU6SGluZ2VMYWJfMS4zMS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMxLjAKZ0JXWWFLRXVKS2JaUGxuV3VsZk5kZlV0ZWZqVStiUjZJdDdlbXlXOVM1WnF5b21UUGxTd1IwMjhoOXZlNll2aUJhL2FlWHpIK0xiU2E1ZjNudXV5QVE9PQo=",
+        "size": 12800133,
+        "sha256": "b1b4a6631b6375910ccf5542358792e043c336d21d514459b6ea81e3191c5e13"
       }
     }
   }
