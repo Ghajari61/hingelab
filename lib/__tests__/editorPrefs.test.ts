@@ -18,7 +18,8 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("editor preferences", () => {
   it("fills in defaults and drops bad values", () => {
-    expect(normalizeEditorPrefs({})).toEqual(DEFAULT_EDITOR_PREFS);
+    // preferences saved before Simple existed keep every setting showing
+    expect(normalizeEditorPrefs({})).toEqual({ ...DEFAULT_EDITOR_PREFS, detail: "advanced" });
     const p = normalizeEditorPrefs({ decimals: 5, uiSize: "huge", shade: "wire", autosave: "no", confirmReset: false, quad: false, decimals2: 1 });
     expect(p.decimals).toBe(1);
     expect(p.uiSize).toBe("normal");
@@ -27,6 +28,14 @@ describe("editor preferences", () => {
     expect(p.confirmReset).toBe(false);
     expect(p.quad).toBe(false);
     expect(Object.keys(p).sort()).toEqual(Object.keys(DEFAULT_EDITOR_PREFS).sort());
+  });
+
+  it("starts a new visitor in Simple, and keeps a saved choice", () => {
+    vi.stubGlobal("localStorage", memoryStorage({}));
+    expect(normalizeEditorPrefs(undefined).detail).toBe("simple");
+    expect(normalizeEditorPrefs({ detail: "simple" }).detail).toBe("simple");
+    expect(normalizeEditorPrefs({ detail: "advanced" }).detail).toBe("advanced");
+    vi.unstubAllGlobals();
   });
 
   it("takes the 3D toolbar's old keys when there are no preferences yet", () => {

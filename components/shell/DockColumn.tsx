@@ -62,7 +62,7 @@ export function DockColumn({ children, onExport, exportLabel, alt = [], units, o
   }, [confirm]);
 
   return (
-    <div ref={col} className="dock-col" data-detail="advanced" data-collapsed={prefs.dockCollapsed || undefined} inert={inert || undefined}>
+    <div ref={col} className="dock-col" data-detail={prefs.detail} data-collapsed={prefs.dockCollapsed || undefined} inert={inert || undefined}>
       <div className="dock-resize" role="separator" aria-label="Settings panel width" aria-orientation="vertical"
         aria-valuemin={280} aria-valuemax={560} aria-valuenow={prefs.dockW || 340} tabIndex={prefs.dockCollapsed ? -1 : 0}
         onPointerDown={(e) => {
@@ -85,16 +85,20 @@ export function DockColumn({ children, onExport, exportLabel, alt = [], units, o
           aria-expanded={!prefs.dockCollapsed} aria-controls={bodyId} onClick={() => saveEditorPrefs({ dockCollapsed: !prefs.dockCollapsed })}>
           {prefs.dockCollapsed ? <PanelRightOpen size={16} aria-hidden /> : <PanelRightClose size={16} aria-hidden />}
         </button>
+        <span className="unit-toggle detail-toggle" role="group" aria-label="How many settings to show">
+          <button type="button" aria-pressed={prefs.detail === "simple"} title="The main settings only; fine-tuning (kerf, clearances, layers) keeps its values" onClick={() => saveEditorPrefs({ detail: "simple" })}>Simple</button>
+          <button type="button" aria-pressed={prefs.detail === "advanced"} title="Every setting, including kerf, clearances and export layers" onClick={() => saveEditorPrefs({ detail: "advanced" })}>All</button>
+        </span>
         <span className="unit-toggle" role="group" aria-label="Units">
           <button type="button" data-u="mm" aria-pressed={units === "mm"} onClick={() => onUnits("mm")}>mm</button>
           <button type="button" data-u="in" aria-pressed={units === "in"} onClick={() => onUnits("in")}>inch</button>
         </span>
         <div className="reset-all" ref={box}>
           <button
-            type="button" className="btn-ghost-sm" aria-haspopup={prefs.confirmReset ? "dialog" : undefined} aria-expanded={prefs.confirmReset ? confirm : undefined}
+            type="button" className="btn-ghost-sm" aria-label="Reset all" title="Reset all settings" aria-haspopup={prefs.confirmReset ? "dialog" : undefined} aria-expanded={prefs.confirmReset ? confirm : undefined}
             onClick={() => (prefs.confirmReset ? setConfirm((c) => !c) : onResetAll())}
           >
-            <RotateCcw size={14} aria-hidden />Reset all
+            <RotateCcw size={14} aria-hidden /><span className="reset-word">Reset</span><span className="reset-all-word"> all</span>
           </button>
           {confirm && (
             <div className="confirm-pop" role="dialog" aria-label="Reset all settings">

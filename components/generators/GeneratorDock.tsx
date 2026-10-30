@@ -35,7 +35,7 @@ export function numberField(f: NumberSpec<P>): BaseField {
 
 const MAT_FIELDS: BaseField[] = [
   { id: "T", label: "Thick", len: true, step: 0.05, min: 0.1, max: MAX_THICKNESS, mat: true },
-  { id: "K", label: "Kerf", len: true, step: 0.01, min: 0, max: MAX_KERF, mat: true },
+  { id: "K", label: "Kerf", advanced: true, len: true, step: 0.01, min: 0, max: MAX_KERF, mat: true },
 ];
 const KERF_Y_FIELD: BaseField = { id: "sheet.kerfY", advanced: true, label: "Kerf Y", len: true, step: 0.01, min: 0, max: MAX_KERF, mat: true, help: "Kerf across cuts that run left to right, for a machine that cuts wider on one axis." };
 const FEATURE_FIELD: BaseField = { id: "sheet.minFeature", advanced: true, label: "Min feature", len: true, step: 0.1, min: 0, max: MAX_FEATURE, mat: true, help: "The narrowest bar or tab your material holds; Checks warns about parts with thinner ones. 0 turns the check off." };
@@ -252,7 +252,7 @@ export function GeneratorDock({
   return (
     <aside className="dock" aria-label="Panels">
       {orderSections(def.id, def.sections).map((s) => ((s.show && !s.show(params)) || s.fields.every((f) => f.kind === "choice" && f.rail) ? null : (
-        <Sec key={s.id} step={genSectionStep(def.id, s.id, s.step)} title={s.title} startOpen={s.open ?? true} onReset={() => onResetSection(s.title, s.fields.map((f) => f.key))}>
+        <Sec key={s.id} step={genSectionStep(def.id, s.id, s.step)} title={s.title} startOpen={s.open ?? true} advanced={s.fields.every((f) => isAdvancedKey(def.id, f.key, f.advanced))} onReset={() => onResetSection(s.title, s.fields.map((f) => f.key))}>
           {body(s.fields as FieldSpec<P>[])}
         </Sec>
       )))}
@@ -286,7 +286,7 @@ export function GeneratorDock({
           </details>
         ) : null}
       </Sec>
-      <Sec step="export" title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers"])}>
+      <Sec step="export" title="Layers" startOpen advanced onReset={() => onResetSection("Layers", ["layers"])}>
         <LayersPanel layers={params.layers} labels={false} only={layerKeys} names={GEN_LAYER_NAMES} onVis={layerVis} onExp={layerExp} />
       </Sec>
       <Sec step="layout" title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "fit", "sheet", "job"])}>

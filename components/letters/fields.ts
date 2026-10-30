@@ -48,7 +48,7 @@ export const LETTER_FIELDS: LetterField[] = [
   { id: "baseRim", label: "Base rim", sec: "joints", len: true, step: 0.5, min: 0, max: 50 },
   { id: "lidGap", label: "Lid gap", sec: "joints", len: true, step: 0.05, min: 0, show: p => p.lid === "removable" },
   { id: "T", label: "Thick", sec: "mat", len: true, step: 0.1, min: 0.5, mat: true },
-  { id: "K", label: "Kerf", sec: "mat", len: true, step: 0.01, min: 0, mat: true },
+  { id: "K", label: "Kerf", sec: "mat", advanced: true, len: true, step: 0.01, min: 0, mat: true },
   { id: "bedW", label: "Bed W", sec: "sheet", len: true, step: 10, min: 50 },
   { id: "bedH", label: "Bed H", sec: "sheet", len: true, step: 10, min: 50 },
   { id: "gap", label: "Spacing", sec: "sheet", len: true, step: 0.5, min: 0 },

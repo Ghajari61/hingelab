@@ -184,7 +184,7 @@ export function PanelDock({
           current={{ T: params.T, kx: params.K, ky: params.Ky ?? params.K, minFeature: params.minFeature ?? 0 }}
         />
         <div className="grid2">{fields("secMat")}</div>
-        <CheckField
+        <div className="adv" data-advanced><CheckField
           label="Separate X and Y kerf" title="For a machine that cuts wider along one axis: cut a 20 mm square and measure it across both ways"
           checked={params.Ky != null} def={DEFAULTS.Ky != null}
           onChange={(on) => {
@@ -193,7 +193,7 @@ export function PanelDock({
             else delete next.Ky;
             onPatch(next);
           }}
-        />
+        /></div>
       </Sec>
       <Sec step="construction" title="Hinge Pattern" meta={patMeta} startOpen onReset={() => onResetSection("Hinge pattern", ["pattern", "cutStyle", "slotW", "slit", "bridge", "pitch", "overrun", "stretch"])}>
         <div className="rowlabel">Cut style<ResetMark label="Cut style" show={params.cutStyle !== DEFAULTS.cutStyle} to={DEFAULTS.cutStyle === "slot" ? "Slots" : "Single line"} onReset={() => onCutStyle(DEFAULTS.cutStyle)} /></div>
@@ -385,7 +385,7 @@ export function PanelDock({
         {textError && <p className="note warn">{textError}</p>}
         <p className="note">Engraved in the middle of the base, as filled vectors, so any laser program reads it. Long text shrinks to fit inside the walls. Put the engraved side down when you assemble.</p>
       </Sec>
-      <Sec step="export" title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
+      <Sec step="export" title="Layers" startOpen advanced onReset={() => onResetSection("Layers", ["layers", "labels"])}>
         <LayersPanel layers={params.layers} labels={params.labels} onVis={onVis} onExp={onExp} onLabels={onLabels} />
       </Sec>
       <Sec step="layout" title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "testStrip", "fit"])}>

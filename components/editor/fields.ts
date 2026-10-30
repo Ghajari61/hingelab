@@ -49,7 +49,7 @@ export const FIELDS: FieldDef[] = [
   { id: "sides", label: "Sides", sec: "secDims", step: 1, min: 3, max: 12, show: p => p.shape === "poly" },
   { id: "cylFlats", label: "Tab flats", sec: "secDims", advanced: true, step: 1, min: 3, max: 16, show: p => p.shape === "cyl" },
   { id: "T", label: "Thick", sec: "secMat", len: true, step: 0.1, min: 0.5, mat: true },
-  { id: "K", label: "Kerf", sec: "secMat", len: true, step: 0.01, min: 0, mat: true, lab: p => p.Ky != null ? "Kerf X" : "Kerf" },
+  { id: "K", label: "Kerf", sec: "secMat", advanced: true, len: true, step: 0.01, min: 0, mat: true, lab: p => p.Ky != null ? "Kerf X" : "Kerf" },
   { id: "Ky", label: "Kerf Y", sec: "secMat", advanced: true, len: true, step: 0.01, min: 0, max: 5, mat: true, show: p => p.Ky != null, unset: p => p.K },
   { id: "minFeature", label: "Min feature", sec: "secMat", advanced: true, len: true, step: 0.1, min: 0, max: 50, mat: true, unset: () => 0 },
   { id: "slotW", label: "Slot width", sec: "secHinge", advanced: true, len: true, step: 0.05, min: 0.2, show: p => p.cutStyle === "slot" || p.pattern === "honeycomb", lab: p => p.pattern === "honeycomb" ? "Cell width" : "Slot width" },
