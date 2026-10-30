@@ -69,3 +69,46 @@ describe("cake topper", () => {
     expect(TOPPER.pro!(mergeTopper({}), { parts: [], stats: [] })).toBeNull();
   });
 });
+
+describe("hoop and shaker toppers", () => {
+  const T = 3;
+  it("a hoop welds the letters across a ring into one piece", () => {
+    const out = build({ style: { kind: "hoop" }, plate: { shape: "circle" }, frame: { band: 5 } });
+    expect(out.parts).toHaveLength(1);
+    expect(onePiece(out.parts[0])).toBe(true);
+    expect(out.parts[0].holes.length).toBeGreaterThan(1);
+    // the words run past the ring, so the topper is as wide as the words
+    expect(out.info!.width).toBeGreaterThanOrEqual(out.info!.contentW - 0.5);
+  });
+
+  it("a shaker stacks the back, spacer rings and a clear window with the words", () => {
+    const p = mergeTopper({ T, style: { kind: "shaker", mark: "engrave" }, plate: { shape: "rounded", auto: true, pad: 10 }, frame: { band: 5, spacers: 2 }, mat: { mat2: "acrylic-clear" } });
+    const out = TOPPER.build(p, CTX) as TopperOutput;
+    const back = out.parts.find((x) => x.id === "topper")!, win = out.parts.find((x) => x.id === "window")!;
+    const spacers = out.parts.filter((x) => x.id.startsWith("spacer"));
+    expect(spacers).toHaveLength(2);
+    expect(win.material).toBe("second");
+    expect(win.engrave!.length).toBeGreaterThan(0);
+    expect(win.place!.z).toBeCloseTo(3 * T, 6);
+    const wb = bboxOf([win.outer]);
+    for (const s of spacers) {
+      expect(s.holes).toHaveLength(1);
+      const sb = bboxOf([s.outer]), hb = bboxOf([s.holes[0]]);
+      expect(sb.x1 - sb.x0).toBeCloseTo(wb.x1 - wb.x0, 4);
+      expect(hb.x0 - sb.x0).toBeCloseTo(5, 1);
+    }
+    // only the back carries the sticks
+    expect(bboxOf([back.outer]).y1).toBeGreaterThan(wb.y1 + 80);
+    expect(TOPPER.check(p, out).some((i) => i.code === "SHAKER_WINDOW")).toBe(false);
+  });
+
+  it("flags a thin frame and a window that is not clear, and the fixes clear them", () => {
+    for (const [raw, code] of [[{ style: { kind: "hoop" }, frame: { band: 2 } }, "FRAME_THIN"], [{ style: { kind: "shaker" }, frame: { band: 3 } }, "FRAME_THIN"], [{ style: { kind: "shaker" }, mat: { mat2: "acrylic-gold" } }, "SHAKER_WINDOW"], [{ style: { kind: "shaker" }, plate: { auto: false, width: 60, height: 40 } }, "PLATE_SMALL"]] as const) {
+      const p = mergeTopper(raw);
+      const i = TOPPER.check(p, TOPPER.build(p, CTX)).find((x) => x.code === code)!;
+      expect(i, code).toBeDefined();
+      const q = i.fixes[0].apply(p);
+      expect(TOPPER.check(q, TOPPER.build(q, CTX)).some((x) => x.code === code), code).toBe(false);
+    }
+  });
+});

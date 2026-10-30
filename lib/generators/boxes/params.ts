@@ -7,7 +7,7 @@ import { mergeInto } from "../util";
 import { FRET_NAMES, type FretKind } from "../fretwork";
 import type { Contour } from "../types";
 
-export type Design = "box" | "tray" | "drawer" | "hex" | "insert" | "money" | "stack" | "book" | "sign" | "frame" | "stand" | "keys" | "bird" | "card" | "coaster";
+export type Design = "box" | "tray" | "drawer" | "hex" | "insert" | "money" | "stack" | "book" | "sign" | "frame" | "stand" | "keys" | "bird" | "card" | "coaster" | "napkin" | "tissue";
 export type LidKind = "closed" | "open" | "liftoff" | "sliding" | "pin" | "inset";
 /** Lids a tray can take (a tray with a lid is a tea, card or jewellery box). */
 export type TrayLid = "none" | "liftoff" | "sliding" | "pin" | "inset";
@@ -25,8 +25,24 @@ import { PIERCE_SHAPES, cleanRepeat, type PierceMark, type PierceShape } from ".
 export const DESIGN_NAMES: Record<Design, string> = {
   box: "Box", tray: "Tray", drawer: "Drawer box", hex: "Hexagon box", insert: "Divider insert", money: "Money box", stack: "Stacking trays", book: "Book box",
   sign: "Desk sign", frame: "Photo frame", stand: "Phone stand", keys: "Key holder", bird: "Bird house",
-  card: "Business card holder", coaster: "Coaster holder",
+  card: "Business card holder", coaster: "Coaster holder", napkin: "Napkin holder", tissue: "Tissue box cover",
 };
+
+/** The outline of a napkin holder's two plates along their top edge. */
+export type NapkinShape = "rounded" | "arch" | "dip" | "wave";
+export const NAPKIN_SHAPES: Record<NapkinShape, string> = { rounded: "Rounded", arch: "Arch", dip: "Grip dip", wave: "Wave" };
+/** The opening in the top of a tissue box cover. */
+export type TissueOpening = "slot" | "oval" | "round";
+export const TISSUE_OPENINGS: Record<TissueOpening, string> = { slot: "Slot", oval: "Oval", round: "Round" };
+/**
+ * Clear acrylic in a box lid: a window cut in the lid with a pane glued under it, or the whole lid
+ * cut from clear acrylic (a second material).
+ */
+export type Glass = "none" | "window" | "clear";
+export const GLASS_NAMES: Record<Glass, string> = { none: "None", window: "Window and pane", clear: "Clear lid" };
+/** Lids that take a window with a pane under it, and lids that can be cut whole from acrylic. */
+export const WINDOW_LIDS: LidKind[] = ["closed", "liftoff", "pin", "inset"];
+export const CLEAR_LIDS: LidKind[] = ["sliding", "liftoff", "inset"];
 
 /** The side profile of a card holder, front to back. */
 export type CardProfile = "slant" | "wave" | "arch" | "scoop" | "step";
@@ -58,8 +74,14 @@ export interface BoxesParams extends GenBase {
     /** Fit of every joint (on top of the kerf). */
     fit: JointFit;
   };
-  box: { width: number; depth: number; height: number; lid: LidKind; clearance: number; notch: boolean; pin: number };
-  tray: { width: number; depth: number; height: number; cols: number; rows: number; dividers: number; lid: TrayLid };
+  box: {
+    width: number; depth: number; height: number; lid: LidKind; clearance: number; notch: boolean; pin: number;
+    /** Hand holes in the two side walls (not with a pin hinge, whose fittings sit there). */
+    handles: boolean;
+    /** Clear acrylic in the lid, the window's size (% of the lid face) and the pane's thickness, mm. */
+    glass: Glass; window: number; paneT: number;
+  };
+  tray: { width: number; depth: number; height: number; cols: number; rows: number; dividers: number; lid: TrayLid; handles: boolean };
   /** Text, a motif and a border engraved or scored on the lid (or the front of a money box). */
   engrave: { text: string; fontId: string; size: number; motif: string; motifSize: number; border: number; art: MotifArt; mark: "engrave" | "score" };
   drawer: { width: number; depth: number; height: number; drawers: number; pull: "hole" | "notch" | "knob"; clearance: number };
@@ -86,6 +108,17 @@ export interface BoxesParams extends GenBase {
     posts: number; postWidth: number; open: boolean; handle: boolean; push: boolean; wall: number;
     extra: number; clearance: number; set: boolean; thick: number; deco: CoasterDeco;
   };
+  /**
+   * A napkin holder: two upright plates with tabs through slots in a base. `width` and `height` are
+   * the plates', `gap` the room between them for the napkins and `margin` how far the base reaches
+   * past the plates.
+   */
+  napkin: { width: number; height: number; gap: number; shape: NapkinShape; corner: number; margin: number };
+  /**
+   * A cover that drops over a tissue box: four finger-jointed walls and a top with an opening, open
+   * underneath. Sizes are the tissue box's (inside sizes of the cover) unless Outside sizes is on.
+   */
+  tissue: { width: number; depth: number; height: number; opening: TissueOpening; openL: number; openW: number };
   /** A box shaped like a book: one cover piece bends round a living-hinge spine. Sizes are outside. */
   book: { width: number; height: number; thickness: number; over: number };
   /** A decorative pattern cut through the walls and lid (or the book's cover). */
@@ -116,8 +149,8 @@ export const BOXES_DEFAULTS: BoxesParams = {
   layers: clone(HINGE.layers),
   design: "box",
   joint: { finger: 10, outside: false, style: "fingers", fit: "standard" },
-  box: { width: 120, depth: 80, height: 60, lid: "closed", clearance: 0.3, notch: false, pin: 3 },
-  tray: { width: 240, depth: 160, height: 50, cols: 3, rows: 2, dividers: 85, lid: "none" },
+  box: { width: 120, depth: 80, height: 60, lid: "closed", clearance: 0.3, notch: false, pin: 3, handles: false, glass: "none", window: 70, paneT: 2 },
+  tray: { width: 240, depth: 160, height: 50, cols: 3, rows: 2, dividers: 85, lid: "none", handles: false },
   engrave: { text: "", fontId: "pacifico", size: 14, motif: "none", motifSize: 30, border: 0, art: { ...MOTIF_ART }, mark: "engrave" },
   drawer: { width: 160, depth: 120, height: 100, drawers: 2, pull: "hole", clearance: 0.5 },
   hex: { width: 100, height: 60, lid: "liftoff", clearance: 0.3 },
@@ -130,6 +163,8 @@ export const BOXES_DEFAULTS: BoxesParams = {
   keys: { width: 220, height: 90, corner: 10, hooks: 4, reach: 35, text: "KEYS", fontId: "fredoka", size: 18 },
   bird: { width: 120, depth: 120, height: 150, pitch: 40, hole: 32, perch: false, overhang: 20 },
   book: { width: 120, height: 160, thickness: 50, over: 3 },
+  napkin: { width: 190, height: 110, gap: 40, shape: "dip", corner: 10, margin: 12 },
+  tissue: { width: 250, depth: 130, height: 95, opening: "slot", openL: 140, openW: 36 },
   card: { cardW: 85, cardH: 55, portrait: false, bays: 1, tiered: false, depth: 30, front: 18, back: 40, profile: "wave", lip: "notch", crest: "flat", corner: 4 },
   coaster: { shape: "round", size: 100, corner: 12, count: 6, style: "posts", posts: 4, postWidth: 24, open: true, handle: true, push: true, wall: 8, extra: 8, clearance: 1.5, set: true, thick: 4, deco: "rings" },
   pierce: { pattern: "none", on: "both", cell: 16, bar: 3, shape: "full", size: 70, mark: "cut", motif: "heart", art: { ...MOTIF_ART }, grid: "auto", turn: 0 },
@@ -158,6 +193,25 @@ export function mergeBoxes(raw: unknown): BoxesParams {
   if (p.coaster.shape !== "square") p.coaster.shape = "round";
   if (!(p.coaster.style in COASTER_STYLES)) p.coaster.style = "posts";
   if (!(p.coaster.deco in COASTER_DECOS)) p.coaster.deco = "none";
+  const fin = (v: unknown, d: number, lo: number, hi: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
+  const D = BOXES_DEFAULTS;
+  p.box.handles = p.box.handles === true;
+  p.tray.handles = p.tray.handles === true;
+  if (!(p.box.glass in GLASS_NAMES)) p.box.glass = "none";
+  p.box.window = fin(p.box.window, D.box.window, 20, 95);
+  p.box.paneT = fin(p.box.paneT, D.box.paneT, 0.5, 6);
+  if (!(p.napkin.shape in NAPKIN_SHAPES)) p.napkin.shape = D.napkin.shape;
+  p.napkin.width = fin(p.napkin.width, D.napkin.width, 60, 400);
+  p.napkin.height = fin(p.napkin.height, D.napkin.height, 40, 300);
+  p.napkin.gap = fin(p.napkin.gap, D.napkin.gap, 5, 150);
+  p.napkin.corner = fin(p.napkin.corner, D.napkin.corner, 0, 60);
+  p.napkin.margin = fin(p.napkin.margin, D.napkin.margin, 4, 80);
+  if (!(p.tissue.opening in TISSUE_OPENINGS)) p.tissue.opening = D.tissue.opening;
+  p.tissue.width = fin(p.tissue.width, D.tissue.width, 60, 500);
+  p.tissue.depth = fin(p.tissue.depth, D.tissue.depth, 60, 500);
+  p.tissue.height = fin(p.tissue.height, D.tissue.height, 30, 400);
+  p.tissue.openL = fin(p.tissue.openL, D.tissue.openL, 15, 400);
+  p.tissue.openW = fin(p.tissue.openW, D.tissue.openW, 10, 300);
   return p;
 }
 

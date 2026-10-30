@@ -1,4 +1,5 @@
 import type { Issue } from "@/lib/issues";
+import { BRIDGE_MAX_SLOPE, gardenBridge } from "./accessory";
 import type { MiniOutput } from "./house";
 import { scaleOf, type MiniatureParams } from "./params";
 
@@ -64,6 +65,30 @@ export function checkMiniature(p: MiniatureParams, out: MiniOutput): I[] {
   if (p.design === "nook") {
     if ((info.sceneH ?? 999) < 90) issues.push({ code: "SCENE_LOW", level: "warn", message: `The scene is only ${(info.sceneH ?? 0).toFixed(0)} mm high; a taller nook leaves room for the buildings.`, fixes: [{ id: "taller", label: "Height 220 mm", safe: true, apply: (q) => ({ ...q, nook: { ...q.nook, height: Math.max(q.nook.height, 220) } }) }] });
     if (p.nook.width - 2 * T < 60) issues.push({ code: "NOOK_NARROW", level: "warn", message: "Less than 60 mm inside leaves little room for an alley or arches.", fixes: [{ id: "wider", label: "Width 100 mm", safe: true, apply: (q) => ({ ...q, nook: { ...q.nook, width: Math.max(q.nook.width, 100) } }) }] });
+  }
+  if (p.design === "accessory" && p.accessory.kind === "bridge") {
+    const slope = Number((info as { slope?: number }).slope ?? 0);
+    if (slope > BRIDGE_MAX_SLOPE) {
+      const deg = (v: number) => Math.round((Math.atan(v) * 180) / Math.PI);
+      // the tallest bridge, in 1 mm steps, whose ends are no steeper than about 27°
+      const lower = (q: MiniatureParams): MiniatureParams => {
+        const a = q.accessory, L = Math.min(600, Math.max(40, a.length)), W = Math.min(300, Math.max(3 * q.T + 10, a.width));
+        let h = Math.round(a.height);
+        while (h > 15 && gardenBridge(q.T, L, W, h).slope > 0.5) h--;
+        return { ...q, accessory: { ...a, height: h } };
+      };
+      const longer = (q: MiniatureParams): MiniatureParams => {
+        const a = q.accessory, W = Math.min(300, Math.max(3 * q.T + 10, a.width));
+        let L = Math.round(a.length);
+        while (L < 600 && gardenBridge(q.T, L, W, a.height).slope > 0.5) L += 5;
+        return { ...q, accessory: { ...a, length: L } };
+      };
+      issues.push({
+        code: "BRIDGE_STEEP", level: "warn",
+        message: `The bridge's ends rise at about ${deg(slope)}°; past ${deg(BRIDGE_MAX_SLOPE)}° figures slide off the planks and the planks sit high above the arch in their slots. A lower or longer bridge is gentler.`,
+        fixes: [{ id: "lower", label: "Lower the bridge", safe: true, apply: lower }, { id: "longer", label: "Make it longer", safe: true, apply: longer }],
+      });
+    }
   }
   if (p.design === "furniture") {
     const s = scaleOf(p.furniture), full = T * s;

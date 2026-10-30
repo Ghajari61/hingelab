@@ -141,4 +141,49 @@ export const TROPHY_PRESETS: GenPreset<TrophyParams>[] = [
       plate: { title: "In Gratitude", name: "Your Name", year: "2026", width: 120 }, base: { tiers: 1, shape: "rounded", width: 130, depth: 70 },
     },
   },
+  {
+    id: "led-glow-star", name: "Glowing star award", note: "A clear acrylic star lit from an LED base under two walnut tiers",
+    params: {
+      name: "Glowing star award", material: "walnut3", build: { kind: "mixed" }, emblem: { kind: "star", width: 110, height: 105, text: "1", fontId: "archivo-black", size: 30, laurel: true },
+      plate: { title: "Champion", name: "Sam Rivera", year: "2026", width: 100 }, base: { tiers: 2, width: 130, depth: 64, step: 6, fit: 0.05, led: true },
+      mat: { mat2: "acrylic-clear", T2: 3 },
+    },
+  },
+  {
+    id: "led-rosette", name: "LED rosette", note: "A first-place rosette in clear acrylic that glows on its base",
+    params: {
+      name: "First place rosette", material: "walnut3", build: { kind: "mixed" }, emblem: { kind: "rosette", width: 100, height: 120, text: "1st", fontId: "archivo-black", size: 20, laurel: false },
+      plate: { on: false }, stem: { height: 0 }, base: { tiers: 1, shape: "rounded", width: 110, depth: 60, fit: 0.05, led: true },
+      mat: { mat2: "acrylic-clear", T2: 3 },
+    },
+  },
+  {
+    id: "rosette-first", name: "Prize rosette", note: "A rosette with 1st and a name plate, on a two-tier base",
+    params: {
+      name: "Prize rosette award", emblem: { kind: "rosette", width: 100, height: 115, text: "1st", fontId: "anton", size: 20, laurel: false },
+      plate: { title: "Best in Show", name: "Bella", year: "2026", width: 95 }, base: { tiers: 2, width: 125, depth: 62 },
+    },
+  },
+  {
+    id: "wall-plaque-shield", name: "Wall plaque", note: "Gold mirror shield and name plate on an arched walnut plaque",
+    params: {
+      name: "Service wall plaque", material: "walnut3", build: { kind: "mixed" }, display: { kind: "plaque", shape: "arch", margin: 22 },
+      emblem: { kind: "shield", width: 100, height: 110, text: "10", fontId: "cinzel", size: 26, laurel: true },
+      plate: { title: "Years of Service", name: "Jordan Lee", year: "2016 – 2026", width: 110 }, mat: { mat2: "acrylic-gold", T2: 3 },
+    },
+  },
+  {
+    id: "race-medal", name: "Race medal", note: "A laurel medal with the distance, on a 25 mm ribbon",
+    params: {
+      name: "Race medal", display: { kind: "medal", ribbon: 25 }, emblem: { kind: "laurel", width: 75, height: 75, text: "5K", fontId: "anton", size: 18, laurel: false },
+      plate: { on: false }, stem: { height: 0 },
+    },
+  },
+  {
+    id: "sports-day-medal", name: "Sports day medal", note: "A star medal with the winner's name on a plate below",
+    params: {
+      name: "Sports day medal", display: { kind: "medal", ribbon: 22 }, emblem: { kind: "star", width: 80, height: 76, text: "1", fontId: "archivo-black", size: 20, laurel: false },
+      plate: { title: "Sports Day", name: "Mia", year: "2026", width: 60, titleSize: 6, nameSize: 7 }, stem: { height: 0 },
+    },
+  },
 ];

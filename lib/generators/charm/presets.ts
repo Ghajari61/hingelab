@@ -165,6 +165,38 @@ export const CHARM_PRESETS: GenPreset<CharmParams>[] = [
     id: "stocking-tags", name: "Stocking tags", note: "Tags with a hole for the ribbon, one per stocking",
     params: { name: "Stocking tags", kind: { kind: "gifttag" }, names: { list: FAMILY, fontId: "pacifico", size: 12 }, shape: { kind: "tag", width: 80, height: 40, margin: 4, frame: true }, hang: { kind: "hole", side: "left", hole: 4, wall: 3 } },
   },
+  // ---- bookmarks
+  {
+    id: "name-bookmarks", name: "Name bookmarks", note: "Tall rounded bookmarks, the name read along the length and a tassel hole at the top",
+    params: { name: "Name bookmarks", kind: { kind: "bookmark" }, names: { list: "Olivia\nNoah\nAva", fontId: "pacifico", size: 16, along: true }, shape: { kind: "rounded", width: 40, height: 150, margin: 4, frame: true }, accent: { kind: "star", place: "above", size: 10 }, hang: { kind: "hole", side: "top", hole: 4, wall: 3 } },
+  },
+  {
+    id: "teacher-bookmarks", name: "Teacher thank-you bookmarks", note: "Arched bookmarks with the teacher's name and Thank you along the length",
+    params: { name: "Teacher bookmarks", kind: { kind: "bookmark" }, names: { list: "Mrs Smith\nMr Jones", fontId: "fredoka", size: 12, sub: "Thank you", subSize: 55, along: true }, shape: { kind: "arch", width: 44, height: 150, margin: 4, frame: true }, hang: { kind: "hole", side: "top", hole: 4, wall: 3 } },
+  },
+  // ---- fridge magnets
+  {
+    id: "family-magnets", name: "Family name fridge magnets", note: "Rounded magnets with the name engraved and a hidden 10 mm magnet pocket in a back layer",
+    params: { name: "Family magnets", kind: { kind: "magnet" }, names: { list: FAMILY, fontId: "pacifico", size: 13 }, shape: { kind: "rounded", width: 70, height: 40, margin: 4, frame: true }, magnet: { diameter: 10, thickness: 2, count: 1, clearance: 0.2 } },
+  },
+  {
+    id: "new-home-magnet", name: "New home fridge magnet", note: "House-shaped magnet with the family name and year, two magnets so it does not turn",
+    params: { name: "New home magnet", kind: { kind: "magnet" }, names: { list: "The Jeongs", fontId: "archivo-black", size: 10, sub: "Est. 2026", subSize: 50 }, shape: { kind: "house", width: 80, height: 76, margin: 6, frame: true }, magnet: { diameter: 10, thickness: 2, count: 2, clearance: 0.2 } },
+  },
+  // ---- inlay and statement earrings
+  {
+    id: "inlay-keychains", name: "Inlay name keychains", note: "Names cut through the wood and inlaid flush in walnut over a backing",
+    params: { name: "Inlay keychains", kind: { kind: "keychain" }, names: { list: "Ruby\nOscar\nMila", fontId: "archivo-black", size: 11 }, style: { kind: "inlay" }, shape: { kind: "pill", width: 66, height: 26, margin: 3, frame: false }, hang: { kind: "hole", side: "left", hole: 5, wall: 3 }, mat: { mat2: "walnut-3", T2: 3 } },
+    pro: true,
+  },
+  {
+    id: "statement-earrings", name: "Two-tier statement earrings", note: "An arch with a teardrop hanging under it on a jump ring, in light 2 mm acrylic",
+    params: { name: "Statement earrings", kind: { kind: "earrings" }, material: "acr2", T: 2, K: 0.1, names: { list: "", fontId: "fredoka", size: 5 }, shape: { kind: "arch", width: 22, height: 24, margin: 2, frame: false }, hang: { kind: "hole", side: "top", hole: 1.8, wall: 1.8 }, dangle: { on: true, shape: "teardrop", size: 18, text: "", hole: 1.8 } },
+  },
+  {
+    id: "pet-id-tags", name: "Pet ID tags", note: "Small bone tags with the pet's name and a phone number, a hole for the collar ring",
+    params: { name: "Pet ID tags", kind: { kind: "keychain" }, names: { list: "Buddy\nLuna", fontId: "archivo-black", size: 9, sub: "07700 900123", subFontId: "fredoka", subSize: 45 }, shape: { kind: "bone", width: 50, height: 26, margin: 2.5, frame: false }, hang: { kind: "hole", side: "left", hole: 4, wall: 2.5 } },
+  },
   {
     id: "gift-tags", name: "Gift tags", note: "Labels that say who each present is for",
     params: { name: "Gift tags", kind: { kind: "gifttag" }, names: { list: "For Mia\nFor Leo\nFor Nan", fontId: "pacifico", size: 11 }, shape: { kind: "banner", width: 75, height: 35, margin: 5, frame: true }, accent: { kind: "gift", place: "left", size: 12 }, hang: { kind: "hole", side: "left", hole: 4, wall: 3 } },

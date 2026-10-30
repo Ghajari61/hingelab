@@ -57,15 +57,16 @@ const sections: SectionSpec<KeyrackParams>[] = [
     fields: [
       {
         kind: "choice", key: "hooks.style", label: "Hook type",
-        help: "Slot-in hooks cut from the same sheet, holes for wooden dowel pegs, or pilot holes for brass cup hooks.",
-        options: [{ v: "hook", text: "Slot-in hooks" }, { v: "peg", text: "Dowel pegs" }, { v: "screw", text: "Screw-in hooks" }],
-        apply: (p, v) => ({ ...p, hooks: { ...p.hooks, style: v as KeyrackParams["hooks"]["style"], hole: v === "screw" ? 3 : v === "peg" ? 8 : p.hooks.hole } }),
+        help: "Slot-in hooks cut from the same sheet, holes for wooden dowel pegs, pilot holes for brass cup hooks, or holes for disc magnets that hold key rings with no hooks at all.",
+        options: [{ v: "hook", text: "Slot-in hooks" }, { v: "peg", text: "Dowel pegs" }, { v: "screw", text: "Screw-in hooks" }, { v: "magnet", text: "Magnets" }],
+        apply: (p, v) => ({ ...p, hooks: { ...p.hooks, style: v as KeyrackParams["hooks"]["style"], hole: v === "screw" ? 3 : v === "peg" ? 8 : v === "magnet" ? 12 : p.hooks.hole } }),
       },
-      { kind: "choice", key: "hooks.profile", shuffle: true, label: "Hook shape", rail: true, show: hooked, options: [{ v: "round", text: "Rounded J" }, { v: "square", text: "Square" }, { v: "ball", text: "Ball end" }], help: "The side profile of each hook." },
+      { kind: "choice", key: "hooks.profile", shuffle: true, label: "Hook shape", rail: true, show: hooked, options: [{ v: "round", text: "Rounded J" }, { v: "square", text: "Square" }, { v: "ball", text: "Ball end" }, { v: "angled", text: "Angled peg" }, { v: "double", text: "Coat hook" }], help: "The side profile of each hook: a J, a square hook, a ball end, a Shaker-style peg rising to a ball, or a two-armed coat hook." },
       { kind: "number", key: "hooks.count", label: "Hooks", unit: "", min: 0, max: 16, step: 1, int: true, help: "How many hooks or holes, spread evenly along the row." },
       { kind: "number", key: "hooks.reach", label: "Reach", unit: "mm", min: 10, max: 120, step: 1, show: hooked, help: "How far each hook sticks out from the board." },
       { kind: "number", key: "hooks.size", label: "Hook height", unit: "mm", min: 6, max: 40, step: 1, show: hooked, help: "Height of each hook's arm; larger hooks are stronger." },
-      { kind: "number", key: "hooks.hole", label: "Hole diameter", unit: "mm", min: 2, max: 30, step: 0.5, show: (p) => !hooked(p), help: "The dowel diameter for pegs, or the pilot hole for screw-in hooks (2.5 to 3 mm)." },
+      { kind: "number", key: "hooks.hole", label: "Hole diameter", unit: "mm", min: 2, max: 30, step: 0.5, show: (p) => !hooked(p), help: "The dowel diameter for pegs, the pilot hole for screw-in hooks (2.5 to 3 mm), or the diameter of the disc magnets." },
+      { kind: "number", key: "hooks.magnetT", label: "Magnet thickness", unit: "mm", min: 1, max: 20, step: 0.5, show: (p) => p.hooks.style === "magnet", help: "Thickness of the disc magnets; match it to the board so they sit flush with the front." },
       { kind: "number", key: "hooks.y", label: "Row height", unit: "%", min: 10, max: 95, step: 1, help: "Where the row of hooks sits, from the top of the board." },
       { kind: "number", key: "hooks.margin", label: "End margin", unit: "mm", min: 5, max: 400, step: 1, help: "Distance from each end of the board to the first and last hook." },
       { kind: "text", key: "hooks.labels", label: "Names", multiline: true, maxLength: 400, placeholder: "One name per hook", help: "A name engraved above each hook, one per line, left to right." },
@@ -75,11 +76,17 @@ const sections: SectionSpec<KeyrackParams>[] = [
   },
   {
     id: "shelf", title: "Shelf", open: false,
-    help: "A small shelf along the top for post, phones or sunglasses.",
+    help: "A small shelf along the top for phones or sunglasses, or a mail pocket for letters.",
     fields: [
-      { kind: "toggle", key: "shelf.on", label: "Shelf", help: "Adds a shelf with two brackets that slot into the board." },
-      { kind: "number", key: "shelf.depth", label: "Shelf depth", unit: "mm", min: 30, max: 200, step: 1, show: (p) => p.shelf.on, help: "How far the shelf sticks out." },
-      { kind: "number", key: "shelf.at", label: "Shelf position", unit: "mm", min: 6, max: 300, step: 1, show: (p) => p.shelf.on, help: "Distance from the top of the board to the shelf." },
+      { kind: "toggle", key: "shelf.on", label: "Shelf", help: "Adds a shelf or a mail pocket that slots into the board." },
+      {
+        kind: "choice", key: "shelf.kind", label: "Kind", show: (p) => p.shelf.on,
+        help: "A shelf on two brackets, or a mail pocket: a bottom, two sides and a front, all slotted together, to hold letters upright.",
+        options: [{ v: "shelf", text: "Shelf" }, { v: "pocket", text: "Mail pocket" }],
+      },
+      { kind: "number", key: "shelf.depth", label: "Shelf depth", unit: "mm", min: 30, max: 200, step: 1, show: (p) => p.shelf.on, help: "How far the shelf or pocket sticks out; 40 to 60 mm holds a stack of letters." },
+      { kind: "number", key: "shelf.at", label: "Shelf position", unit: "mm", min: 6, max: 300, step: 1, show: (p) => p.shelf.on, help: "Distance from the top of the board to the shelf, or to the top of the pocket." },
+      { kind: "number", key: "shelf.height", label: "Pocket height", unit: "mm", min: 25, max: 300, step: 1, show: (p) => p.shelf.on && p.shelf.kind === "pocket", help: "Height of the pocket's front and sides." },
     ],
   },
   {
@@ -103,7 +110,7 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
   if (key === "hooks.profile") {
     const p = mergeKeyrack({ T: 3, hooks: { profile: v as HookProfile, reach: 34, size: 14 } });
     const h = hookProfile(p).outer;
-    const board: Contour = rect(-6, -10, 3, 44);
+    const board: Contour = rect(-6, -16, 3, 50);
     const [b, o] = fitArt([board, h], 36);
     return [{ d: b, fill: true }, { d: o, fill: true }];
   }
@@ -119,11 +126,11 @@ function scaleKeyrack(p: KeyrackParams, s: number): KeyrackParams {
     textForm: { ...p.textForm, circle: k(p.textForm.circle) },
     motif: { ...p.motif, size: k(p.motif.size), gap: k(p.motif.gap) },
     hooks: { ...p.hooks, margin: k(p.hooks.margin), labelSize: Math.max(3, k(p.hooks.labelSize)) },
-    shelf: { ...p.shelf, at: k(p.shelf.at), depth: k(p.shelf.depth) },
+    shelf: { ...p.shelf, at: k(p.shelf.at), depth: k(p.shelf.depth), height: k(p.shelf.height) },
   };
 }
 
-const HOOK_NAMES = { hook: "hooks", peg: "pegs", screw: "cup hooks" } as const;
+const HOOK_NAMES = { hook: "hooks", peg: "pegs", screw: "cup hooks", magnet: "magnets" } as const;
 
 const KEYRACK_BASE: GeneratorDef<KeyrackParams> = {
   id: "keyrack",
@@ -135,26 +142,28 @@ const KEYRACK_BASE: GeneratorDef<KeyrackParams> = {
   presets: KEYRACK_PRESETS,
   build: buildKeyrack,
   check: (p, out) => checkKeyrack(p, out as KeyrackOutput),
-  pro: (p) => (p.shelf.on ? "Key holders with a shelf need Pro." : p.text.mark === "raised" ? "Raised two-material lettering needs Pro." : null),
+  pro: (p) => (p.shelf.on ? `Key holders with a ${p.shelf.kind === "pocket" ? "mail pocket" : "shelf"} need Pro.` : p.text.mark === "raised" ? "Raised two-material lettering needs Pro." : null),
   fonts: (p) => [...(p.text.text.trim() ? [p.text.fontId] : []), ...(p.hooks.labels.trim() ? [p.hooks.labelFont] : []), ...motifFonts(p.motif.kind, p.motif.art)],
   scale: scaleKeyrack,
   art,
   batch: () => "text.text",
   fileName: (p) => namedFile("key-holder", p.name, `${Math.round(p.board.width)}mm`),
-  summary: (p) => `${SHAPE_NAMES[p.board.shape]} board ${p.board.width} × ${p.board.height} mm · ${p.hooks.count} ${HOOK_NAMES[p.hooks.style]}${p.shelf.on ? " · shelf" : ""}`,
+  summary: (p) => `${SHAPE_NAMES[p.board.shape]} board ${p.board.width} × ${p.board.height} mm · ${p.hooks.count} ${HOOK_NAMES[p.hooks.style]}${p.shelf.on ? (p.shelf.kind === "pocket" ? " · mail pocket" : " · shelf") : ""}`,
   help: {
     intro: [
       "The Key Holder generator makes a wall board for keys, leads, bags or mugs: any of 18 board shapes, text and a motif engraved, scored or raised in a second material, and a row of hooks.",
-      "Hooks are cut from the same sheet and slot through the board (rounded J, square or ball-end profiles), or the board gets holes for wooden dowel pegs or pilot holes for brass cup hooks. Names can be engraved above each hook, a shelf with brackets can be added on top, and keyhole slots hang it on two hidden screws.",
+      "Hooks are cut from the same sheet and slot through the board (rounded J, square, ball-end, angled Shaker peg or two-armed coat hook profiles), or the board gets holes for wooden dowel pegs, pilot holes for brass cup hooks, or holes for disc magnets on a strip glued behind. Names can be engraved above each hook, a shelf with brackets or a slotted mail pocket can be added on top, and keyhole slots hang it on two hidden screws.",
     ],
     tips: [
       "No Weld (under Text, for Score and Raised): raised letters are cut as separate glyph pieces in the second material, and scored letters keep each glyph's own outline, so joined script still reads.",
       "Cut hooks from 4 to 6 mm plywood for heavy bunches; 3 mm hooks suit single keys.",
       "Glue each hook from the back with wood glue and let it set before hanging keys.",
       "Mark the keyhole spacing on the wall with a strip of masking tape laid over the board.",
+      "Magnets: neodymium discs hold the steel key rings, not the keys; glue them flush with the front, as a magnet even 1 mm back holds much less.",
+      "A mail pocket 40 to 60 mm deep and 50 to 70 mm high holds letters upright; keep the hooks below its bottom so keys do not hang in front of it.",
       "For a two-tone look, engrave the text on walnut-veneer plywood or use raised mirror acrylic letters.",
     ],
-    keywords: ["key holder", "key rack", "key hanger", "hooks", "wall organiser", "peg rail", "mug rack"],
+    keywords: ["key holder", "key rack", "key hanger", "hooks", "wall organiser", "peg rail", "mug rack", "magnetic key holder", "mail organiser", "letter rack", "coat hooks", "shaker peg"],
   },
 };
 
@@ -164,4 +173,5 @@ export { KEYRACK_DEFAULTS };
 export const KEYRACK: GeneratorDef<KeyrackParams> = withPattern(KEYRACK_BASE, [
   { v: "board", text: "Board", match: byId("board") },
   { v: "shelf", text: "Shelf", match: byId("shelf") },
+  { v: "pocket", text: "Mail pocket front", match: byId("pocket-front") },
 ], { help: "A decorative pattern cut through the board (round the text and the hooks' slots) or the shelf, or engraved or scored." });

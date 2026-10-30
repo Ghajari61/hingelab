@@ -8,7 +8,7 @@ import { differenceShapes, intersectShapes, makeShape, offsetShapes, shapeContou
 import type { Shape } from "@/lib/letters/types";
 import { MATERIALS } from "@/lib/hinge/defaults";
 import { simplifyClosed } from "@/lib/parametric/slice/clean";
-import { bboxOf, circle, ellipse, rect, regularPolygon, TAU, transform } from "../geom";
+import { bboxOf, circle, distToContour, ellipse, pointInContour, rect, regularPolygon, TAU, transform } from "../geom";
 import { tagItem } from "../items";
 import { motif } from "../motifs";
 import { heartCurve, orient, shapeOutline, starPolygon } from "../shapes";
@@ -55,6 +55,9 @@ export interface ShadowBoxInfo {
   keyBorder?: number;
   /** Requested holes that could not be cut wholly inside their parts. */
   missingMounts?: number;
+  /** Stars cut in the back board's sky, and how many were asked for. */
+  stars?: number;
+  starsWanted?: number;
   /** The finger-jointed box, outside, mm. */
   boxW?: number;
   boxH?: number;
@@ -268,6 +271,44 @@ function ridgeLine(kind: Ridge, bumps: number, rand: () => number): Pt[] {
       }
       break;
     }
+    case "village": {
+      // Houses side by side on a low ground line: walls, a pitched roof, now and then a chimney.
+      const ground = -0.85;
+      let u = u0 - rand() / c;
+      out.push([u, ground]);
+      while (u < u1) {
+        const w = (0.42 + rand() * 0.4) / c, eave = -0.45 + rand() * 0.75, ridge = Math.min(1.15, eave + 0.3 + rand() * 0.35);
+        const mid = u + w / 2;
+        out.push([u, eave], [mid, ridge]);
+        if (rand() < 0.4) {
+          // A chimney on the right slope.
+          const a = mid + w * 0.18, b = a + w * 0.1, at = (x: number) => ridge - ((ridge - eave) * (x - mid)) / (w / 2);
+          out.push([a, at(a)], [a, Math.min(1.2, ridge + 0.05)], [b, Math.min(1.2, ridge + 0.05)], [b, at(b)]);
+        }
+        out.push([u + w, eave]);
+        u += w;
+        if (rand() < 0.35) { out.push([u, ground]); u += (0.05 + rand() * 0.12) / c; out.push([u, ground]); }
+      }
+      break;
+    }
+    case "castle": {
+      // Crenellated curtain walls between towers with pointed roofs.
+      let u = u0 - rand() / c;
+      while (u < u1) {
+        const tw = (0.16 + rand() * 0.08) / c, th = 0.15 + rand() * 0.45, roof = Math.min(1.2, th + 0.35 + rand() * 0.25);
+        out.push([u, th], [u + tw / 2, roof], [u + tw, th]);
+        u += tw;
+        const ww = (0.35 + rand() * 0.35) / c, wh = -0.6 + rand() * 0.35, m = Math.max(2, Math.round(ww * c * 9)), step = ww / m;
+        out.push([u, wh]);
+        for (let k = 0; k < m; k++) {
+          const a = u + k * step;
+          out.push([a + step * 0.25, wh], [a + step * 0.25, wh + 0.14], [a + step * 0.75, wh + 0.14], [a + step * 0.75, wh]);
+        }
+        u += ww;
+        out.push([u, wh]);
+      }
+      break;
+    }
     case "clouds": {
       // Overlapping round puffs on a low base line.
       const puffs: { u: number; r: number; h: number }[] = [];
@@ -474,6 +515,39 @@ function lightHole(p: ShadowBoxParams, w: Win): Contour[] {
 }
 
 /**
+ * Little stars scattered over the back board, seeded so they stay put: in a scene's sky (above the
+ * ridges, or below them when the scene hangs from the top), elsewhere over the whole window. Each
+ * keeps paper round it at least the narrowest bridge wide, clear of the window's edge, the light hole
+ * and the other stars; a window too small for them all takes fewer.
+ */
+export function starsIn(p: ShadowBoxParams, w: Win, win: Contour, avoid: Contour[]): Contour[] {
+  const g = p.design, n = Math.round(g.stars);
+  if (n <= 0) return [];
+  const rand = rng(g.seed * 7919 + 101), R = g.starSize / 2, gapMin = Math.max(1.5, g.web);
+  let y0 = w.y0, y1 = w.y0 + w.h;
+  if (g.pattern === "landscape") {
+    if (g.from === "bottom") y1 = w.y0 + w.h * 0.55;
+    else if (g.from === "top") y0 = w.y0 + w.h * 0.45;
+    else { y0 = w.y0 + w.h * 0.35; y1 = w.y0 + w.h * 0.65; }
+  }
+  const busy = avoid.map((c) => { const b = bboxOf([c]); return { x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2, r: Math.hypot(b.x1 - b.x0, b.y1 - b.y0) / 2 }; });
+  const placed: { x: number; y: number; r: number }[] = [];
+  // A fixed number of tries, so asking for fewer stars keeps the first ones where they were.
+  for (let t = 0; t < 9600 && placed.length < n; t++) {
+    const r = R * (0.6 + 0.4 * rand()), x = w.x0 + rand() * w.w, y = y0 + rand() * (y1 - y0);
+    if (!pointInContour([x, y], win) || distToContour([x, y], win) < r + gapMin + 1) continue;
+    if (busy.some((b) => Math.hypot(x - b.x, y - b.y) < b.r + r + gapMin + 2)) continue;
+    if (placed.some((q) => Math.hypot(x - q.x, y - q.y) < q.r + r + gapMin * 2)) continue;
+    placed.push({ x, y, r });
+  }
+  return placed.map(({ x, y, r }, i) => {
+    const kind = g.star === "mixed" ? (["star", "dot", "sparkle"] as const)[i % 3] : g.star;
+    const turn = rand() * TAU;
+    return kind === "dot" ? circle(x, y, r * 0.7, DOT_TOL) : kind === "sparkle" ? starPolygon(4, r, 0.32, x, y, turn) : starPolygon(5, r, 0.45, x, y, turn);
+  });
+}
+
+/**
  * The photo on the back board: it covers the window and a bleed round it (so no blank paper shows if
  * the layers sit a little off), zoomed from the middle and shifted by a share of the spare room. A
  * photo in a slot is a rectangular print slid in by hand, so it is only drawn on the 3D model.
@@ -651,6 +725,9 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
   const L = back ? N - 1 : N;
   const shapes: Shape[] = [];
   const moon = p.design.moon && !photo ? lightHole(p, w) : [];
+  // Stars go in the back board only: in a pattern layer the sky is already cut away.
+  const sky = !photo && p.stack.back ? starsIn(p, w, win.outer, moon) : [];
+  if (p.design.stars > 0 && !photo && p.stack.back) { info.stars = sky.length; info.starsWanted = Math.round(p.design.stars); }
   const missing: string[] = [];
   const text = textCut(p, w, winCs, ctx, missing);
   if (text && !text.loading) { info.textW = r1(text.width); info.textRoom = r1(text.room); info.textSize = r1(text.size); }
@@ -660,7 +737,7 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
   const words = text && !text.loading;
   const engraved = !!words && p.text.engrave && p.cutter.kind === "laser";
   const wordsOn = words ? textLayer(p, N, back, engraved) : -1;
-  if (back) shapes.push(moon.length ? layerOf(moon) : frameShape);
+  if (back) shapes.push(moon.length || sky.length ? layerOf([...moon, ...sky]) : frameShape);
   for (let i = 0; i < L; i++) {
     const cutWords = !engraved && wordsOn === shapes.length && text && !text.loading ? text : null, dropped = info.dropped;
     const extra = [...(i === 0 && !back ? moon : []), ...(cutWords ? cutWords.clear : [])];
@@ -745,6 +822,11 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
     drill((q) => q.id === "backboard", sc.clear);
     drill((q) => (rings.length ? q.id.startsWith("ring") : q.id === "layer1"), sc.pilot);
   }
+  if (p.box.hang === "ribbon") {
+    const at = bandPoint(band, -Math.PI / 2);
+    if (at) drill(() => true, [circle(at[0], at[1], p.box.ribbon / 2, DOT_TOL)]);
+    else info.missingMounts = (info.missingMounts ?? 0) + 1;
+  }
   const lowest = parts.find(banded);
   if (p.box.hang === "keyhole" && lowest) {
     const inCavity = lowest.id === "backboard" && rings.length > 0;
@@ -800,6 +882,7 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
       ...(p.box.walls ? [{ label: "Box", value: `${r0(info.boxW!)} × ${r0(info.boxH!)} × ${r0(boxD)} mm` }] : []),
       ...(info.bridges ? [{ label: "Bridges", value: String(info.bridges) }] : []),
       ...(info.pieces ? [{ label: "Loose pieces", value: String(info.pieces) }] : []),
+      ...(sky.length ? [{ label: "Stars", value: String(sky.length) }] : []),
     ],
     assembly: [
       blade
@@ -828,6 +911,8 @@ export function buildShadowBox(p: ShadowBoxParams, ctx?: BuildContext): ShadowBo
           : `The words stand on a paper bar across ${wordsOn === N - 1 ? "the front layer" : `Layer ${wordsOn + 1}`}: cut it from a contrasting card so they read clearly.`]
         : []),
       ...(p.design.moon ? ["For a lit box, put a battery LED strip or puck light behind the back layer's light hole."] : []),
+      ...(sky.length ? [`The ${sky.length} little stars are cut through the back board${p.design.moon ? " with the light hole" : ""}: they twinkle with a light behind them, or back them with gold or white card.`] : []),
+      ...(p.box.hang === "ribbon" && !info.missingMounts ? [`Thread a ribbon or string through the ${p.box.ribbon} mm hole at the top of the stack and tie a loop to hang it.`] : []),
       ...(p.box.walls
         ? [`Fit the four box walls together round the stack, finger joints interlocking (the top and bottom walls hold the corners), and glue them to each other and to the stack's edges; the walls stand ${r1(p.box.lip)} mm proud of the front layer.`]
         : p.box.back === "none" && !rings.length

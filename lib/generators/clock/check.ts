@@ -6,7 +6,7 @@
 import type { Fix, Issue } from "@/lib/issues";
 import { distToContour } from "../geom";
 import type { Contour, GenOutput } from "../types";
-import { centreLayers, clockGeometry, handNeck, markerDepth, numeral, type ClockOutput } from "./build";
+import { centreLayers, clockGeometry, handNeck, markerDepth, minuteShift, numeral, type ClockOutput } from "./build";
 import { MAX_STANDARD_HAND, MOVEMENTS, MOVEMENT_BOX, type ClockParams } from "./params";
 
 type CIssue = Issue<ClockParams>;
@@ -212,6 +212,54 @@ export function checkClock(p: ClockParams, out: GenOutput): CIssue[] {
         ],
       });
     }
+  }
+
+  // A teaching clock's minute numbers squeezed round a small face.
+  if (m.minuteNumbers) {
+    const r = Math.max(1, rIn - m.inset - m.minuteSize * 0.9);
+    const room = 2 * r * Math.sin(Math.PI / 12) - 2;
+    const wide = 2 * 0.68 * m.minuteSize;
+    if (wide > room) {
+      const size = Math.max(3, Math.floor(((m.minuteSize * room) / wide) * 2) / 2);
+      issues.push({
+        code: "MINUTE_NUMBERS_CROWDED", level: "warn",
+        message: "The minute numbers are too big for the face and run into each other.",
+        fixes: [{ id: "smaller-minutes", label: `Make the minute numbers ${size} mm`, safe: true, apply: (q) => withMarkers(q, { minuteSize: size }) }],
+      });
+    }
+    if (rIn - effInset - minuteShift(p) < 40) {
+      issues.push({
+        code: "MINUTE_NUMBERS_NO_ROOM", level: "warn",
+        message: "With the minute numbers round the outside there is little room left for the hour markers.",
+        fixes: [
+          { id: "bigger-face", label: `Make the face ${Math.ceil(f.size + 2 * (40 - (rIn - effInset - minuteShift(p))))} mm`, safe: true, apply: (q) => withFace(q, { size: Math.ceil(q.face.size + 2 * (40 - (rIn - effInset - minuteShift(p)))) }) },
+          { id: "no-minute-numbers", label: "Leave out the minute numbers", safe: false, apply: (q) => withMarkers(q, { minuteNumbers: false }) },
+        ],
+      });
+    }
+  }
+
+  // Raised markers under the sweep of the hands: the hour hand rides only a few millimetres above the face.
+  const raised = (out as ClockOutput).raised;
+  if (raised && h.style !== "none" && g.markersOn !== "ring" && h.minute > raised.inner - 2) {
+    const len = Math.max(20, Math.floor(raised.inner - 4));
+    issues.push({
+      code: "RAISED_UNDER_HANDS", level: p.mat.T2 > 3 ? "warn" : "info",
+      message: `The minute hand sweeps over the ${p.mat.T2} mm raised markers; check the hands clear them, as most movements hold the hour hand only about 3 to 5 mm above the face.`,
+      fixes: [
+        { id: "shorter-minute", label: `Shorten the minute hand to ${len} mm`, safe: true, apply: (q) => withHands(q, { minute: len, hour: Math.min(q.hands.hour, Math.round(len * 0.7)) }) },
+        ...(p.mat.T2 > 2 ? [{ id: "thinner", label: "Second material 2 mm", safe: false, apply: (q: ClockParams) => ({ ...q, mat: { ...q.mat, T2: 2 } }) }] : []),
+      ],
+    });
+  }
+
+  // A second hand cut from thick sheet is heavy for the movement's seconds wheel.
+  if (h.style !== "none" && h.second && p.T > 3) {
+    issues.push({
+      code: "SECOND_HAND_HEAVY", level: "info",
+      message: `A second hand cut from ${p.T} mm material is heavy and can stall the movement; cut it from 1.5 to 2 mm acrylic or veneer.`,
+      fixes: [{ id: "no-second", label: "Leave out the second hand", safe: false, apply: (q) => withHands(q, { second: false }) }],
+    });
   }
 
   if (out.missing?.length) {

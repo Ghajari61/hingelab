@@ -24,19 +24,19 @@ export type Grounds = "none" | "garden" | "street";
 export const GROUNDS_NAMES: Record<Grounds, string> = { none: "Just the base", garden: "Garden yard", street: "Street pavement" };
 export type TreeKind = "tree" | "pine" | "bush";
 export const TREE_NAMES: Record<TreeKind, string> = { tree: "Leafy tree", pine: "Pine tree", bush: "Bush" };
-export type AccessoryKind = "tree" | "pine" | "bush" | "lamp" | "column" | "fence" | "planter" | "fittest";
-export const ACCESSORY_NAMES: Record<AccessoryKind, string> = { tree: "Leafy tree", pine: "Pine tree", bush: "Bush", lamp: "Street lamp", column: "Column", fence: "Fence run", planter: "Planter box", fittest: "Joint fit test" };
+export type AccessoryKind = "tree" | "pine" | "bush" | "lamp" | "column" | "fence" | "planter" | "bridge" | "fairydoor" | "fittest";
+export const ACCESSORY_NAMES: Record<AccessoryKind, string> = { tree: "Leafy tree", pine: "Pine tree", bush: "Bush", lamp: "Street lamp", column: "Column", fence: "Fence run", planter: "Planter box", bridge: "Garden bridge", fairydoor: "Fairy door", fittest: "Joint fit test" };
 export { COLUMN_STYLES, FENCE_STYLES, RAIL_STYLES, type ColumnStyle, type FenceStyle, type RailStyle };
 
 export const ROOF_NAMES: Record<RoofKind, string> = { flat: "Flat", gable: "Gable", shed: "Shed", hip: "Hip", mansard: "Mansard", gambrel: "Gambrel" };
 
-export type NookScene = "alley" | "arches";
-export const NOOK_SCENES: Record<NookScene, string> = { alley: "Alley street", arches: "Arcade or library" };
+export type NookScene = "alley" | "arches" | "forest";
+export const NOOK_SCENES: Record<NookScene, string> = { alley: "Alley street", arches: "Arcade or library", forest: "Enchanted forest" };
 
-export type FurnitureKind = "chair" | "table" | "bed" | "bookshelf" | "cabinet" | "desk" | "dresser" | "bench" | "sofa" | "armchair" | "wardrobe" | "nightstand" | "fireplace" | "counter";
+export type FurnitureKind = "chair" | "table" | "bed" | "bookshelf" | "cabinet" | "desk" | "dresser" | "bench" | "sofa" | "armchair" | "wardrobe" | "nightstand" | "fireplace" | "counter" | "rocker";
 export const FURNITURE_NAMES: Record<FurnitureKind, string> = {
   chair: "Chair", table: "Table", bed: "Bed", bookshelf: "Bookshelf", cabinet: "Cabinet", desk: "Desk", dresser: "Dresser", bench: "Bench",
-  sofa: "Sofa", armchair: "Armchair", wardrobe: "Wardrobe", nightstand: "Nightstand", fireplace: "Fireplace", counter: "Kitchen counter",
+  sofa: "Sofa", armchair: "Armchair", wardrobe: "Wardrobe", nightstand: "Nightstand", fireplace: "Fireplace", counter: "Kitchen counter", rocker: "Rocking chair",
 };
 /** Typical full-size furniture, mm (width × depth × height): the starting size before the scale. */
 export const FURNITURE_REAL: Record<FurnitureKind, { width: number; depth: number; height: number }> = {
@@ -45,6 +45,8 @@ export const FURNITURE_REAL: Record<FurnitureKind, { width: number; depth: numbe
   dresser: { width: 900, depth: 450, height: 850 }, bench: { width: 1200, depth: 350, height: 450 },
   sofa: { width: 2000, depth: 900, height: 850 }, armchair: { width: 850, depth: 850, height: 900 }, wardrobe: { width: 1000, depth: 600, height: 2000 },
   nightstand: { width: 450, depth: 400, height: 550 }, fireplace: { width: 1400, depth: 400, height: 1150 }, counter: { width: 1800, depth: 600, height: 900 },
+  // the depth is the chair's own; the rockers reach past it front and back
+  rocker: { width: 550, depth: 600, height: 1050 },
 };
 export type Scale = "6" | "12" | "16" | "18" | "24" | "48" | "custom";
 export const SCALES: Record<Scale, string> = { "6": "1:6", "12": "1:12", "16": "1:16", "18": "1:18", "24": "1:24", "48": "1:48", custom: "Custom" };

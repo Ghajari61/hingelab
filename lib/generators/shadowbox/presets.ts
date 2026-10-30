@@ -201,6 +201,19 @@ export const SHADOWBOX_PRESETS: GenPreset<ShadowBoxParams>[] = [
     frame: { shape: "rect", width: 240, height: 180, corner: 0, border: 16 }, palette: "forest", layers: 6,
     extra: { ...PLY, stack: { back: false, spacer: "frames", per: 1 }, light: { on: true, depth: 12, cable: 6, diffuser: true, diffT: 3 }, box: { back: "screwed", hang: "keyhole", walls: true, lip: 3, pins: true, numbers: true } },
   }),
+  // Starry scenes: villages, castles and forests with little stars cut in the back board
+  preset("christmas-village", "Christmas village", "Rows of little houses under a crescent moon and thirty stars", land({ ridge: "village", count: 3, amp: 26, seed: 12, moon: true, hole: "moon", holeSize: 16, stars: 30, star: "mixed", starSize: 5 }), { frame: wide, palette: "night", layers: 8 }),
+  preset("castle-dreams", "Castle of dreams", "A castle with towers under a sky of stars, with a name on the front", land({ ridge: "castle", count: 2, amp: 30, seed: 5, moon: true, hole: "moonstar", holeSize: 18, stars: 24, star: "star", starSize: 6 }), { frame: { shape: "arch", width: 200, height: 251 }, palette: "lavender", layers: 8, extra: { text: { text: "Sweet dreams", fontId: "lobster", size: 20 } } }),
+  preset("starry-pines", "Starry pines", "Pine forest under forty twinkling dots", land({ ridge: "trees", count: 4, amp: 30, seed: 8, stars: 40, star: "dot", starSize: 4 }), { frame: { shape: "circle", width: 200, height: 200 }, palette: "night", layers: 8 }),
+  preset("twinkle-nursery", "Twinkle nursery", "Clouds, sparkles and a moon for a nursery wall", land({ ridge: "clouds", from: "top", count: 3, amp: 16, seed: 4, moon: true, hole: "moon", holeSize: 18, stars: 18, star: "sparkle", starSize: 7 }), { frame: "squircle", palette: "pastel", layers: 7, extra: { text: { text: "Twinkle", fontId: "pacifico", size: 22 } } }),
+  preset("village-lightbox", "Village light box", "Plywood village in a finger-jointed box, its stars lit by an LED strip", land({ ridge: "village", count: 3, amp: 26, seed: 31, stars: 36, star: "star", starSize: 5 }), {
+    frame: { shape: "rect", width: 240, height: 180, corner: 0, border: 16 }, palette: "night", layers: 6,
+    extra: { ...PLY, stack: { back: true, spacer: "frames", per: 1 }, light: { on: true, depth: 12, cable: 6, diffuser: true, diffT: 3 }, box: { back: "screwed", hang: "keyhole", walls: true, lip: 3, pins: true, numbers: true } },
+  }),
+  // Ornaments: small round stacks that hang from a ribbon
+  preset("snowflake-ornament", "Snowflake ornament", "A 90 mm six-leaf mandala in white card, hung from a ribbon", mandala({ count: 6, petal: "leaf", opening: "polygon", sides: 6 }), { frame: { shape: "circle", width: 90, height: 90, border: 9 }, palette: "snow", layers: 5, extra: { box: { hang: "ribbon", ribbon: 3.5 }, design: { web: 1.2 } } }),
+  preset("star-ornament", "Star ornament", "Five-point stars nested in a 90 mm bauble with a ribbon hole", tunnel({ opening: "star", sides: 5, inner: 45, min: 25, max: 120 }), { frame: { shape: "circle", width: 90, height: 90, border: 9 }, palette: "gold", layers: 5, extra: { box: { hang: "ribbon", ribbon: 3.5 } } }),
+  preset("village-ornament", "Village bauble", "A tiny snowy village under stars in a 100 mm bauble", land({ ridge: "village", count: 2, amp: 24, seed: 3, stars: 10, star: "dot", starSize: 3.5 }), { frame: { shape: "circle", width: 100, height: 100, border: 9 }, palette: "snow", reverse: true, layers: 5, extra: { box: { hang: "ribbon", ribbon: 3.5 } } }),
   preset("mandala-stand", "Mandala on feet", "A plywood mandala with a back board, standing in two feet", mandala({ count: 10, petal: "drop", min: 26, max: 104 }), {
     frame: { shape: "squircle", border: 14 }, palette: "kraft", layers: 6,
     extra: { ...PLY, stack: { spacer: "frames", per: 1 }, box: { back: "glued", hang: "stand", pins: true } },

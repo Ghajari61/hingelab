@@ -11,8 +11,9 @@ import { TEXT_FORM, TEXT_STYLE, cleanTextForm, cleanTextStyle, type TextForm, ty
 import { mergeInto } from "../util";
 
 export type Mark = "engrave" | "score" | "raised" | "none";
-export type HookStyle = "hook" | "peg" | "screw";
-export type HookProfile = "square" | "round" | "ball";
+export type HookStyle = "hook" | "peg" | "screw" | "magnet";
+export type HookProfile = "square" | "round" | "ball" | "angled" | "double";
+export type ShelfKind = "shelf" | "pocket";
 export type MotifSide = "left" | "right" | "both" | "above";
 export type Mount = "keyhole" | "holes" | "none";
 
@@ -34,13 +35,16 @@ export interface KeyrackParams extends GenBase {
     y: number;
     /** Margin at each end of the row, mm. */
     margin: number;
-    /** Peg (dowel) or screw hole diameter, mm. */
+    /** Peg (dowel), screw pilot or magnet hole diameter, mm. */
     hole: number;
+    /** Disc magnets: their thickness, mm (they sit in through holes, on a strip glued behind). */
+    magnetT: number;
     labels: string;
     labelFont: string;
     labelSize: number;
   };
-  shelf: { on: boolean; depth: number; at: number };
+  /** A shelf on brackets, or a mail pocket (bottom, sides and a front) for letters. */
+  shelf: { on: boolean; kind: ShelfKind; depth: number; at: number; /** Pocket height, mm. */ height: number };
   mount: { kind: Mount; y: number };
   mat: { mat2: string; T2: number };
 }
@@ -62,15 +66,16 @@ export const KEYRACK_DEFAULTS: KeyrackParams = {
   textStyle: { ...TEXT_STYLE },
   textForm: { ...TEXT_FORM },
   motif: { kind: "house", side: "left", size: 30, gap: 6, art: { ...MOTIF_ART } },
-  hooks: { count: 4, style: "hook", profile: "round", reach: 32, size: 16, y: 72, margin: 30, hole: 8, labels: "", labelFont: "fredoka", labelSize: 6 },
-  shelf: { on: false, depth: 70, at: 14 },
+  hooks: { count: 4, style: "hook", profile: "round", reach: 32, size: 16, y: 72, margin: 30, hole: 8, magnetT: 3, labels: "", labelFont: "fredoka", labelSize: 6 },
+  shelf: { on: false, kind: "shelf", depth: 70, at: 14, height: 60 },
   mount: { kind: "keyhole", y: 12 },
   mat: { mat2: "acrylic-gold", T2: 3 },
 };
 
 const MARKS: Mark[] = ["engrave", "score", "raised", "none"];
-const STYLES: HookStyle[] = ["hook", "peg", "screw"];
-const PROFILES: HookProfile[] = ["square", "round", "ball"];
+const STYLES: HookStyle[] = ["hook", "peg", "screw", "magnet"];
+const PROFILES: HookProfile[] = ["square", "round", "ball", "angled", "double"];
+const SHELVES: ShelfKind[] = ["shelf", "pocket"];
 const SIDES: MotifSide[] = ["left", "right", "both", "above"];
 const MOUNTS: Mount[] = ["keyhole", "holes", "none"];
 
@@ -86,6 +91,9 @@ export function mergeKeyrack(raw: unknown): KeyrackParams {
   if (!PROFILES.includes(p.hooks.profile)) p.hooks.profile = d.hooks.profile;
   if (!SIDES.includes(p.motif.side)) p.motif.side = d.motif.side;
   if (!MOUNTS.includes(p.mount.kind)) p.mount.kind = d.mount.kind;
+  if (!SHELVES.includes(p.shelf.kind)) p.shelf.kind = d.shelf.kind;
+  p.shelf.height = clamp(p.shelf.height || d.shelf.height, 25, 300);
+  p.hooks.magnetT = clamp(p.hooks.magnetT || d.hooks.magnetT, 1, 20);
   if (p.motif.kind !== "none" && !isMotifKind(p.motif.kind)) p.motif.kind = "none";
   p.motif.art = cleanMotifArt(p.motif.art);
   if (!(p.mat.mat2 in SECOND_MATERIALS)) p.mat.mat2 = d.mat.mat2;

@@ -2,9 +2,11 @@ import { cleanMark, cleanNoWeld } from "../textOps";
 import { DEFAULTS as HINGE, clone } from "@/lib/hinge/defaults";
 import { FIT_OFF } from "@/lib/fit/fitToSheets";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
+import { SECOND_MATERIALS } from "../material2";
 import { isObj, mergeInto } from "../util";
 
-export type FaceShape = "round" | "square" | "polygon" | "sunburst" | "gear" | "scallop" | "flower" | "heart" | "cloud" | "custom";
+export type FaceShape = "round" | "square" | "polygon" | "sunburst" | "gear" | "scallop" | "flower" | "heart" | "cloud" | "star" | "slice" | "custom";
+export const FACE_SHAPES: FaceShape[] = ["round", "square", "polygon", "sunburst", "gear", "scallop", "flower", "heart", "cloud", "star", "slice", "custom"];
 export type FaceLayers = "single" | "ring" | "stack";
 export type MarkerStyle = "ticks" | "dots" | "numerals" | "mixed" | "none";
 export type NumeralSet = "arabic" | "roman" | "roman-iv";
@@ -24,6 +26,8 @@ export interface Movement {
   minuteH: number;
   /** Thickest face the shaft's thread can clamp, mm. */
   maxDial: number;
+  /** Second hand: round hole for the thin seconds pin, mm. */
+  secondHole: number;
 }
 
 /**
@@ -31,9 +35,9 @@ export interface Movement {
  * Hand bushings vary between makers, so every size can be changed under Movement → Custom.
  */
 export const MOVEMENTS: Movement[] = [
-  { id: "m8-5", name: "Standard, short shaft (face up to 5 mm)", shaft: 8.4, hourHole: 5.2, minuteW: 3.6, minuteH: 2.4, maxDial: 5 },
-  { id: "m8-8", name: "Standard, medium shaft (face up to 8 mm)", shaft: 8.4, hourHole: 5.2, minuteW: 3.6, minuteH: 2.4, maxDial: 8 },
-  { id: "m8-13", name: "Standard, long shaft (face up to 13 mm)", shaft: 8.4, hourHole: 5.2, minuteW: 3.6, minuteH: 2.4, maxDial: 13 },
+  { id: "m8-5", name: "Standard, short shaft (face up to 5 mm)", shaft: 8.4, hourHole: 5.2, minuteW: 3.6, minuteH: 2.4, maxDial: 5, secondHole: 1 },
+  { id: "m8-8", name: "Standard, medium shaft (face up to 8 mm)", shaft: 8.4, hourHole: 5.2, minuteW: 3.6, minuteH: 2.4, maxDial: 8, secondHole: 1 },
+  { id: "m8-13", name: "Standard, long shaft (face up to 13 mm)", shaft: 8.4, hourHole: 5.2, minuteW: 3.6, minuteH: 2.4, maxDial: 13, secondHole: 1 },
 ];
 
 /** The movement's plastic box, mm (it sits behind the face, centred on the shaft). */
@@ -54,6 +58,11 @@ export interface ClockParams extends GenBase {
     layers: FaceLayers;
     ring: number;
     centre: number;
+    /** Star: number of points and the inner radius, % of the outer. */
+    points: number;
+    inner: number;
+    /** Wood slice: which irregular outline (each number gives another). */
+    seed: number;
   };
   markers: {
     style: MarkerStyle;
@@ -71,6 +80,11 @@ export interface ClockParams extends GenBase {
     mark: "engrave" | "score";
     /** Numerals turn to follow the dial (their tops point outward) instead of standing upright. */
     follow: boolean;
+    /** Hour markers (numerals, hour ticks, dots) cut from the second material and glued on. */
+    raised: boolean;
+    /** A teaching clock's ring of minute numbers (5, 10 … 60) outside the hour markers. */
+    minuteNumbers: boolean;
+    minuteSize: number;
   };
   /** A line of text bent along the dial, inside the markers. */
   inscription: {
@@ -90,10 +104,14 @@ export interface ClockParams extends GenBase {
     minute: number;
     width: number;
     tail: number;
+    /** A laser-cut second hand as well (as long as the minute hand). */
+    second: boolean;
   };
   movement: Movement;
   hanger: Hanger;
   stand: boolean;
+  /** Second material for raised markers. */
+  mat: { mat2: string; T2: number };
 }
 
 export const CLOCK_DEFAULTS: ClockParams = {
@@ -108,13 +126,14 @@ export const CLOCK_DEFAULTS: ClockParams = {
   sheet: { ...SHEET_DEFAULTS },
   job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
-  face: { shape: "round", size: 300, sides: 6, corner: 6, rays: 24, depth: 22, path: "", layers: "ring", ring: 46, centre: 60 },
-  markers: { style: "numerals", numerals: "roman", quarters: false, fontId: "archivo-black", size: 16, inset: 8, minutes: true, tickLength: 10, tickWidth: 3, dot: 8, cut: false, follow: false, mark: "engrave" },
+  face: { shape: "round", size: 300, sides: 6, corner: 6, rays: 24, depth: 22, path: "", layers: "ring", ring: 46, centre: 60, points: 5, inner: 55, seed: 1 },
+  markers: { style: "numerals", numerals: "roman", quarters: false, fontId: "archivo-black", size: 16, inset: 8, minutes: true, tickLength: 10, tickWidth: 3, dot: 8, cut: false, follow: false, mark: "engrave", raised: false, minuteNumbers: false, minuteSize: 7 },
   inscription: { text: "", at: "top", fontId: "archivo-black", size: 10, gap: 6, mark: "engrave", noWeld: false },
-  hands: { style: "spade", hour: 70, minute: 100, width: 10, tail: 20 },
+  hands: { style: "spade", hour: 70, minute: 100, width: 10, tail: 20, second: false },
   movement: { ...MOVEMENTS[0] },
   hanger: "keyhole",
   stand: false,
+  mat: { mat2: "acrylic-gold", T2: 3 },
 };
 
 export function mergeClock(raw: unknown): ClockParams {
@@ -127,5 +146,12 @@ export function mergeClock(raw: unknown): ClockParams {
   p.markers.mark = cleanMark(p.markers.mark, ["engrave", "score"] as const, "engrave");
   p.inscription.mark = cleanMark(p.inscription.mark, ["engrave", "score"] as const, "engrave");
   p.inscription.noWeld = cleanNoWeld(p.inscription.noWeld);
+  if (!FACE_SHAPES.includes(p.face.shape)) p.face.shape = "round";
+  p.face.points = Math.max(3, Math.min(16, Math.round(p.face.points) || 5));
+  p.face.inner = Math.max(30, Math.min(90, p.face.inner || 55));
+  p.face.seed = Math.max(1, Math.round(p.face.seed) || 1);
+  if (!(p.movement.secondHole > 0)) p.movement.secondHole = MOVEMENTS[0].secondHole;
+  if (!(p.mat.mat2 in SECOND_MATERIALS)) p.mat.mat2 = CLOCK_DEFAULTS.mat.mat2;
+  if (!(p.mat.T2 > 0)) p.mat.T2 = CLOCK_DEFAULTS.mat.T2;
   return p;
 }

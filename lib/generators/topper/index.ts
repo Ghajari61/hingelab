@@ -47,15 +47,15 @@ const sections: SectionSpec<TopperParams>[] = [
     fields: [
       {
         kind: "choice", key: "style.kind", shuffle: true, label: "Style", rail: true,
-        help: "Letters cuts the text itself; Outline cuts a silhouette with the text engraved; Layered glues mirror letters onto a backing; Plate engraves the text on a shape.",
-        options: [{ v: "letters", text: "Letters" }, { v: "outline", text: "Outline" }, { v: "layered", text: "Layered", title: "Two materials" }, { v: "plate", text: "Plate" }],
+        help: "Letters cuts the text itself; Outline cuts a silhouette with the text engraved; Layered glues mirror letters onto a backing; Plate engraves the text on a shape; Hoop runs the letters across a ring or other open frame; Shaker seals sprinkles between the back, spacers and a clear window.",
+        options: [{ v: "letters", text: "Letters" }, { v: "outline", text: "Outline" }, { v: "layered", text: "Layered", title: "Two materials" }, { v: "plate", text: "Plate" }, { v: "hoop", text: "Hoop", title: "Letters across a ring" }, { v: "shaker", text: "Shaker", title: "Sprinkles behind a clear window" }],
       },
       { kind: "toggle", key: "style.noWeld", label: "No Weld", show: (p) => p.style.kind === "letters" || p.style.kind === "layered", help: "Keep the original glyphs, dots and counters separate. Remembers the Weld value when switched off." },
       { kind: "choice", key: "style.operation", label: "Letters", show: (p) => p.style.kind === "letters" || p.style.kind === "layered", options: [{ v: "cut", text: "Cut" }, { v: "score", text: "Score" }], help: "Cut makes letter pieces. Score traces the original letters on a backing without cutting them out; a backing is added where needed." },
-      { kind: "number", key: "style.weld", label: "Weld", unit: "mm", min: 0.2, max: 4, step: 0.1, show: (p) => !p.style.noWeld && p.style.operation !== "score" && (p.style.kind === "letters" || p.style.kind === "layered"), help: "How much the letters grow so neighbours fuse into one piece; thicker welds are stronger." },
+      { kind: "number", key: "style.weld", label: "Weld", unit: "mm", min: 0.2, max: 4, step: 0.1, show: (p) => p.style.kind === "hoop" || (!p.style.noWeld && p.style.operation !== "score" && (p.style.kind === "letters" || p.style.kind === "layered")), help: "How much the letters grow so neighbours fuse into one piece; thicker welds are stronger." },
       { kind: "number", key: "style.border", label: "Border", unit: "mm", min: 1, max: 20, step: 0.5, show: (p) => p.style.kind === "outline" || p.style.kind === "layered" || (p.style.kind === "letters" && (p.style.noWeld || p.style.operation === "score")), help: "Width of the silhouette around the letters." },
       {
-        kind: "choice", key: "style.mark", shuffle: true, label: "Text on the face", show: (p) => p.style.kind === "outline" || p.style.kind === "plate",
+        kind: "choice", key: "style.mark", shuffle: true, label: "Text on the face", show: (p) => p.style.kind === "outline" || p.style.kind === "plate" || p.style.kind === "shaker",
         help: "Engrave fills the letters, Score traces their outlines (quick on a diode laser), None leaves a plain silhouette.",
         options: [{ v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }, { v: "none", text: "None" }],
       },
@@ -77,8 +77,8 @@ const sections: SectionSpec<TopperParams>[] = [
     ],
   },
   {
-    id: "plate", title: "Plate", open: true, show: (p) => main(p) && p.style.kind === "plate",
-    help: "The shape the text is engraved on.",
+    id: "plate", title: "Plate", open: true, show: (p) => main(p) && framed(p),
+    help: "The shape the text is engraved on, the hoop the letters cross, or the shaker's outline.",
     fields: [
       { kind: "choice", key: "plate.shape", shuffle: true, label: "Plate shape", rail: true, options: SHAPE_OPTIONS, help: "The outline of the plate." },
       { kind: "toggle", key: "plate.auto", label: "Fit to the text", help: "Sizes the plate around the text and motif; turn it off to set the size yourself." },
@@ -86,7 +86,9 @@ const sections: SectionSpec<TopperParams>[] = [
       { kind: "number", key: "plate.width", label: "Plate width", unit: "mm", min: 30, max: 600, step: 1, show: (p) => !p.plate.auto, help: "Width of the plate." },
       { kind: "number", key: "plate.height", label: "Plate height", unit: "mm", min: 20, max: 600, step: 1, show: (p) => !p.plate.auto, help: "Height of the plate." },
       { kind: "number", key: "plate.corner", label: "Corner radius", unit: "mm", min: 0, max: 40, step: 0.5, help: "Rounds the plate's corners." },
-      { kind: "toggle", key: "plate.frame", shuffle: true, label: "Scored frame", help: "Scores a line just inside the edge, like a frame." },
+      { kind: "toggle", key: "plate.frame", shuffle: true, label: "Scored frame", show: (p) => p.style.kind === "plate", help: "Scores a line just inside the edge, like a frame." },
+      { kind: "number", key: "frame.band", label: "Frame width", unit: "mm", min: 2, max: 20, step: 0.5, show: (p) => p.style.kind === "hoop" || p.style.kind === "shaker", help: "Width of the hoop's ring, or of the shaker's spacer walls; 4 to 6 mm is strong in 3 mm acrylic." },
+      { kind: "number", key: "frame.spacers", label: "Spacer layers", unit: "", min: 1, max: 4, step: 1, int: true, show: (p) => p.style.kind === "shaker", help: "Layers between the back and the window; two 3 mm layers leave room for sprinkles to tumble." },
     ],
   },
   {
@@ -117,8 +119,8 @@ const sections: SectionSpec<TopperParams>[] = [
     ],
   },
   {
-    id: "mat", title: "Second material", open: false, show: (p) => (main(p) && p.style.operation !== "score" && (p.style.kind === "layered" || (p.style.kind === "letters" && p.style.noWeld))) || (picks(p) && p.cupcake.layered),
-    help: "The material of the front layer in layered designs: mirror, glitter or coloured acrylic, or wood.",
+    id: "mat", title: "Second material", open: false, show: (p) => (main(p) && ((p.style.operation !== "score" && (p.style.kind === "layered" || (p.style.kind === "letters" && p.style.noWeld))) || p.style.kind === "shaker")) || (picks(p) && p.cupcake.layered),
+    help: "The material of the front layer in layered designs or a shaker's window: mirror, glitter, clear or coloured acrylic, or wood.",
     fields: material2Fields<TopperParams>("mat"),
   },
 ];
@@ -142,6 +144,15 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
     const sil = stadium(-4, 13, 35, 13, 38);
     if (v === "outline") { const [o, ...m] = fitArt([sil, ...HI], 38); return [{ d: o, fill: true }, ...m.map((d) => ({ d }))]; }
     if (v === "layered") { const [o, ...m] = fitArt([sil, ...HI], 38); return [{ d: o, fill: true }, { d: m.join(" "), fill: true }]; }
+    if (v === "hoop") {
+      const [o, i, ...m] = fitArt([circle(15.5, 13, 24, 0.2), circle(15.5, 13, 20.5, 0.2), ...HI], 38);
+      return [{ d: `${o} ${i}`, fill: true }, { d: m.join(" "), fill: true }];
+    }
+    if (v === "shaker") {
+      const dots = [[-2, 28], [4, 31], [12, 29], [21, 31], [28, 28], [34, 31], [8, 25], [30, 24]].map(([x, y]) => circle(x, y, 1.6, 0.2));
+      const [o, i, ...m] = fitArt([roundedRect(-10, -8, 51, 46, 8), roundedRect(-6, -4, 43, 38, 5), ...HI, ...dots], 38);
+      return [{ d: o }, { d: i }, { d: m.join(" "), fill: true }];
+    }
     const [o, ...m] = fitArt([roundedRect(-10, -8, 51, 42, 6), ...HI], 38);
     return [{ d: o, fill: true }, ...m.map((d) => ({ d }))];
   }
@@ -157,12 +168,14 @@ function scaleTopper(p: TopperParams, s: number): TopperParams {
     motif: { ...p.motif, size: k(p.motif.size), gap: k(p.motif.gap) },
     plate: { ...p.plate, width: k(p.plate.width), height: k(p.plate.height), pad: k(p.plate.pad) },
     sticks: { ...p.sticks, length: k(p.sticks.length) },
+    frame: { ...p.frame, band: k(p.frame.band) },
     cupcake: { ...p.cupcake, size: k(p.cupcake.size), textSize: k(p.cupcake.textSize), stick: k(p.cupcake.stick) },
   };
 }
 
 const KIT_NAMES = { topper: "Cake topper", cupcake: "Cupcake picks", set: "Party set" } as const;
-const STYLE_NAMES = { letters: "letters", outline: "outline", layered: "layered", plate: "plate" } as const;
+const STYLE_NAMES = { letters: "letters", outline: "outline", layered: "layered", plate: "plate", hoop: "hoop", shaker: "shaker" } as const;
+const framed = (p: TopperParams) => p.style.kind === "plate" || p.style.kind === "hoop" || p.style.kind === "shaker";
 
 const TOPPER_BASE: GeneratorDef<TopperParams> = {
   id: "topper",
@@ -189,6 +202,7 @@ const TOPPER_BASE: GeneratorDef<TopperParams> = {
   help: {
     intro: [
       "The Cake Topper generator turns a few words into a topper ready to cut: script letters welded into one piece, a silhouette with the text engraved, mirror letters layered on a backing, or text engraved on a shaped plate. Add a motif (balloons, rings, a crescent, stars and many more) and sticks with pointed tips.",
+      "A hoop topper runs the words across an open ring, heart or other frame, welded into one piece; a shaker topper seals sprinkles or beads between a back layer, spacer rings and a clear window engraved with the words.",
       "Cupcake picks come in sets: a disc, star, heart or any other shape, or the motif itself as a silhouette, each with an engraved or layered motif and a name from your list.",
       "Every topper is welded into a single piece, so nothing falls out of the sheet: touching letters are fused, and anything left apart is joined with a short bridge.",
     ],
@@ -198,8 +212,10 @@ const TOPPER_BASE: GeneratorDef<TopperParams> = {
       "Thin script letters are fragile: raise the weld to 1 to 1.5 mm, or switch to the Outline style.",
       "Cut sticks along the length of the sheet's grain when using wood, so they do not snap.",
       "Wash acrylic toppers before they touch food, or wrap the sticks in food-safe film.",
+      "For a shaker, cut the window from clear acrylic and fill it only a third full so the sprinkles move; seal the edge all round with acrylic cement.",
+      "A hoop looks best when the words run a little past the ring on both sides; script fonts weld to it cleanly.",
     ],
-    keywords: ["cake topper", "cupcake topper", "birthday", "wedding", "Mr & Mrs", "Eid", "acrylic", "mirror", "party"],
+    keywords: ["cake topper", "cupcake topper", "birthday", "wedding", "Mr & Mrs", "Eid", "acrylic", "mirror", "party", "hoop", "shaker", "sprinkles", "name and age"],
   },
 };
 

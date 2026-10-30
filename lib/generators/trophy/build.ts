@@ -2,7 +2,9 @@ import { markLetters } from "../textOps";
 import { MATERIALS } from "@/lib/hinge/defaults";
 import { differenceShapes, makeShape, offsetShapes, shapeContours, signedArea, unionShapes } from "@/lib/letters/polygon";
 import type { Shape } from "@/lib/letters/types";
-import { bboxOf, circle, customOutline, rect, regularPolygon, roundCorners, transform } from "../geom";
+import { bboxOf, circle, customOutline, distToContour, pointInContour, rect, regularPolygon, roundCorners, roundedRect, transform } from "../geom";
+import { topAt } from "../sign/build";
+import { ledChannel, ledChannels, ledPocket } from "../sign/led";
 import { tagMarks, type ItemBlock } from "../items";
 import { material2 } from "../material2";
 import { isMotifId, motif, type MotifRef } from "../motifs";
@@ -31,6 +33,13 @@ export interface TrophyInfo {
   tab: number;
   /** The custom path could not be read. */
   badPath: boolean;
+  /** Plaque: figure points outside the backer, and hanging holes that run into the figure. */
+  plaqueOut: number;
+  holesOnFigure: number;
+  /** Medal: width of the ribbon loop, mm. */
+  loopW: number;
+  /** LED base: the wall in front of and behind the LED pocket, mm (0 without one). */
+  ledWall: number;
 }
 
 export type TrophyOutput = GenOutput & { info?: TrophyInfo };
@@ -96,6 +105,19 @@ export function emblemShape(p: TrophyParams, badPath: { v: boolean }, own: Motif
       const marked = own ? (p.emblem.motif === "picture" ? cs : null) : isMotifId(p.emblem.motif) && !p.emblem.text.trim() ? cs.filter((c) => signedArea(c) < 0) : null;
       const detail = marked?.length ? move(marked, -b.x0, -b.y0) : undefined;
       return { shape: makeShape(transform(s.outer, { x: -b.x0, y: -b.y0 }), []), cx: (b.x1 - b.x0) / 2, cy: (b.y1 - b.y0) / 2, room: (b.x1 - b.x0) * 0.45, detail };
+    }
+    case "rosette": {
+      // a scalloped disc with two ribbon tails, like a prize rosette
+      const cs: Contour[] = [circle(50, 36, 30)];
+      for (let i = 0; i < 18; i++) {
+        const a = (i / 18) * 2 * Math.PI;
+        cs.push(circle(50 + 30 * Math.cos(a), 36 + 30 * Math.sin(a), 6.2));
+      }
+      const tail: Contour = [[34, 56], [50, 62], [38, 100], [30, 92], [21, 100]];
+      cs.push(tail, tail.map(([x, y]) => [100 - x, y] as Pt));
+      const raw = biggest(unionShapes(cs.map(orient))).outer;
+      const b = bboxOf([raw]);
+      return { shape: one([fitBox(raw, w, h)]), cx: w / 2, cy: ((36 - b.y0) / (b.y1 - b.y0)) * h, room: Math.min(w * 0.3, h * 0.25) };
     }
     case "custom": {
       const c = customOutline(p.emblem.path, w, h);
@@ -168,16 +190,35 @@ export function buildTrophy(p: TrophyParams, ctx: BuildContext): TrophyOutput {
   let shapes = emHoles.length ? differenceShapes(outerParts.map(orient), emHoles.map(orient)) : unionShapes(outerParts.map(orient));
   if (shapes.length > 1) shapes = bridgeIslands(shapes, stemW);
   let figure = biggest(shapes);
+  const disp = p.display.kind;
+  const onBase = disp === "base";
+
+  // Medal: a loop on top with a slot the ribbon threads through.
+  let loopW = 0;
+  if (disp === "medal") {
+    const rw = Math.max(6, p.display.ribbon), lh = 14;
+    loopW = rw + 12;
+    const top = topAt(figure.outer, FW / 2) ?? 0;
+    let d = 2;
+    while (d < EH / 3 && ![FW / 2 - 5, FW / 2 + 5].every((x) => pointInContour([x, top + d], figure.outer))) d += 1;
+    const y1 = top + d + 2;
+    const loop = orient(roundedRect(FW / 2 - loopW / 2, y1 - lh, loopW, lh, 5));
+    const slot = orient(rect(FW / 2 - (rw + 1) / 2, y1 - lh + 4, rw + 1, 4));
+    figure = biggest(differenceShapes([...shapeContours([figure]), loop], [slot]));
+  }
   const fb = bboxOf([figure.outer]);
   const footY = fb.y1;
 
   // Tabs into the base.
   const tiers = p.base.tiers;
-  const tabLen = tiers === 1 ? T : T * (tiers - 1);
   const bottomW = Math.max(p.base.width, 30);
   const topW = bottomW - 2 * (tiers - 1) * p.base.step;
+  const led = onBase && p.base.led;
+  const ch = led ? ledChannels(T) : 0;
+  // with an LED base every tier is slotted and the tabs reach down to the LEDs
+  const tabLen = led ? tiers * T : tiers === 1 ? T : T * (tiers - 1);
   const tabs = tabsUnder(figure.outer, FW, footY, Math.min(FW * 0.3, topW * 0.3), TAB_W);
-  figure = withSticks(figure, tabs.xs.map((x) => ({ x, length: tabLen, width: tabs.w, tip: 0 })));
+  if (onBase) figure = withSticks(figure, tabs.xs.map((x) => ({ x, length: tabLen, width: tabs.w, tip: 0 })));
   const foot = tabs.xs.length > 1 ? tabs.xs[1] - tabs.xs[0] + tabs.w : tabs.w;
 
   // Engraving.
@@ -226,54 +267,99 @@ export function buildTrophy(p: TrophyParams, ctx: BuildContext): TrophyOutput {
   const depth = Math.max(25, p.base.depth);
   const slotW = Tf + p.base.fit;
   const bx = (bottomW - FW) / 2;
-  for (let k = 0; k < tiers; k++) {
+  for (let k = 0; onBase && k < tiers; k++) {
     const inset = k * p.base.step;
     const w = bottomW - 2 * inset, d = depth - 2 * inset;
-    const slotted = tiers === 1 || k > 0;
+    const slotted = led || tiers === 1 || k > 0;
     const holes = slotted ? tabs.xs.map((x) => rect(x + bx - inset - tabs.w / 2 - p.base.fit / 2, d / 2 - slotW / 2, tabs.w + p.base.fit, slotW)) : [];
     const top = k === tiers - 1;
     const by = d / 2 + slotW / 2 + Math.max(4, (d / 2 - slotW / 2) * 0.45);
     const baseMarks = top && bt ? markOf(move(bt.contours, w / 2, by), [], glyphsOf(bt, w / 2, by)) : {};
-    parts.push({ id: `tier${k + 1}`, name: tiers > 1 ? `Base tier ${k + 1}` : "Base", outer: baseOutline(p.base.shape, w, d, p.base.corner), holes, ...baseMarks, place: { x: inset, y: inset, z: k * T } });
+    parts.push({ id: `tier${k + 1}`, name: tiers > 1 ? `Base tier ${k + 1}` : "Base", outer: baseOutline(p.base.shape, w, d, p.base.corner), holes, ...baseMarks, place: { x: inset, y: inset, z: (k + (led ? ch + 1 : 0)) * T } });
+  }
+  let ledWall = 0;
+  if (led) {
+    // under the tiers: a solid bottom plate and channel layers with a pocket for the LEDs below the slot
+    const outline = baseOutline(p.base.shape, bottomW, depth, p.base.corner);
+    const pocket = ledPocket(slotW);
+    const x0 = Math.min(...tabs.xs) + bx - tabs.w / 2, x1 = Math.max(...tabs.xs) + bx + tabs.w / 2;
+    parts.unshift({ id: "led-bottom", name: "LED base bottom", outer: outline, holes: [], place: { x: 0, y: 0, z: 0 } });
+    for (let k = 0; k < ch; k++) {
+      const c = ledChannel(outline, x0 - 1, x1 + 1, depth / 2, pocket, depth);
+      parts.splice(1 + k, 0, { id: `led-channel${k + 1}`, name: `LED channel${ch > 1 ? ` ${k + 1}` : ""}`, outer: c.outer, holes: c.holes, place: { x: 0, y: 0, z: (k + 1) * T } });
+    }
+    ledWall = (depth - pocket) / 2;
   }
 
-  // The figure, standing in the slot.
-  const lift = tiers * T;
-  const fz = depth / 2 - Tf / 2;
-  const fig: GenPart = { id: "figure", name: "Figure", outer: figure.outer, holes: figure.holes, ...markOf(faceMarks, blocks, faceGlyphs), place: { x: bx, y: -(footY + lift), z: fz, upright: true } };
+  // The figure, standing in the slot, glued on a plaque, or on its own as a medal.
+  const lift = onBase ? (tiers + (led ? ch + 1 : 0)) * T : 0;
+  let fz = depth / 2 - Tf / 2;
+  let figPlace = { x: bx, y: -(footY + lift), z: fz, upright: true };
+  let plaqueOut = 0, holesOnFigure = 0, BW = 0, BH = 0;
+  if (disp === "plaque") {
+    // a backer board round the figure, with two hanging holes in its top margin
+    const m = Math.max(5, p.display.margin), shape = p.display.shape;
+    const fh = fb.y1 - fb.y0;
+    const archTop = shape === "arch" ? FW * 0.16 : 0, shieldFoot = shape === "shield" ? fh * 0.3 : 0;
+    const k = shape === "octagon" ? 1.18 : 1;
+    BW = (FW + 2 * m) * k; BH = (fh + 2 * m) * k + archTop + shieldFoot;
+    const backer = orient(shapeOutline(shape, BW, BH, 8));
+    const fx = (BW - FW) / 2, fy = archTop + (BH - archTop - shieldFoot - fh) / 2 - fb.y0;
+    for (const [x, y] of figure.outer) if (!pointInContour([x + fx, y + fy], backer)) plaqueOut++;
+    const holes: Contour[] = [];
+    for (const x of [BW * 0.2, BW * 0.8]) {
+      const y = (topAt(backer, x) ?? 0) + Math.max(7, m * 0.45), r = 2.25;
+      holes.push(circle(x, y, r));
+      const local: Pt = [x - fx, y - fy];
+      if (pointInContour(local, figure.outer) || distToContour(local, figure.outer) < r + 1.5 || !pointInContour([x, y - r - 1], backer)) holesOnFigure++;
+    }
+    parts.push({ id: "backer", name: "Plaque", outer: backer, holes, place: { x: 0, y: -BH, z: 0, upright: true } });
+    fz = T;
+    figPlace = { x: fx, y: -BH + fy, z: fz, upright: true };
+  } else if (disp === "medal") {
+    fz = 0;
+    figPlace = { x: 0, y: -footY, z: 0, upright: true };
+  }
+  const fig: GenPart = { id: "figure", name: "Figure", outer: figure.outer, holes: figure.holes, ...markOf(faceMarks, blocks, faceGlyphs), place: figPlace };
   parts.unshift(mixed ? second(fig) : fig);
   if (layered) {
     const inset = Math.max(2, Math.min(EW, EH) * 0.05);
     const front = offsetShapes([makeShape(transform(em.shape.outer, { x: ex - eb.x0, y: -eb.y0 }), [])], -inset);
     if (front.length) {
       const f = biggest(front);
-      parts.splice(1, 0, second({ id: "emblem", name: "Emblem front", outer: f.outer, holes: emHoles, ...markOf(marks, blocks, markGlyphs), place: { x: bx, y: -(footY + lift), z: fz + T, upright: true } }));
+      parts.splice(1, 0, second({ id: "emblem", name: "Emblem front", outer: f.outer, holes: emHoles, ...markOf(marks, blocks, markGlyphs), place: { ...figPlace, z: fz + Tf } }));
     }
     if (plateH) {
       const pl = orient(shapeOutline("rounded", plateW - 6, plateH - 6, Math.max(0, p.plate.corner - 2)).map(([x, y]) => [x + FW / 2 - plateW / 2 + 3, y + plateTop + 3] as Pt));
-      parts.splice(2, 0, second({ id: "plate", name: "Name plate", outer: pl, holes: [], ...markOf(plateMarks, blocks, plateGlyphs), place: { x: bx, y: -(footY + lift), z: fz + T, upright: true } }));
+      parts.splice(2, 0, second({ id: "plate", name: "Name plate", outer: pl, holes: [], ...markOf(plateMarks, blocks, plateGlyphs), place: { ...figPlace, z: fz + Tf } }));
     }
   }
 
   const info: TrophyInfo = {
     FW, FH: footY, Tf, foot, top: topW, textW: et?.width ?? 0, room: em.room,
-    lineW, tip: footY / depth, tab: tabLen, badPath: bad.v,
+    lineW, tip: onBase ? footY / depth : 0, tab: onBase ? tabLen : 0, badPath: bad.v, plaqueOut, holesOnFigure, loopW, ledWall,
   };
   const anySecond = parts.some((pt) => pt.material === "second");
   const mat = MATERIALS[p.material]?.name ?? `Main material ${T} mm`;
   return {
     parts,
     stats: [
-      { label: "Figure", value: `${r0(FW)} × ${r0(footY)} mm` },
-      { label: "Base", value: `${r0(bottomW)} × ${r0(depth)} mm, ${tiers} tier${tiers > 1 ? "s" : ""}` },
-      { label: "Height", value: `${r0(footY + lift)} mm` },
+      { label: "Figure", value: `${r0(FW)} × ${r0(footY - Math.min(0, fb.y0))} mm` },
+      ...(onBase ? [
+        { label: "Base", value: `${r0(bottomW)} × ${r0(depth)} mm, ${tiers} tier${tiers > 1 ? "s" : ""}${led ? `, LED (${ch + 1} more layer${ch ? "s" : ""})` : ""}` },
+        { label: "Height", value: `${r0(footY + lift)} mm` },
+      ] : disp === "plaque" ? [{ label: "Plaque", value: `${r0(BW)} × ${r0(BH)} mm` }] : [{ label: "Ribbon slot", value: `${r0(Math.max(6, p.display.ribbon) + 1)} mm` }]),
       ...(anySecond ? [{ label: "Second material", value: `${m2.name} ${p.mat.T2} mm` }] : []),
     ],
     assembly: [
       ...(anySecond ? [`Cut the ${mat} sheets, then the ${m2.name} sheets.`] : []),
-      ...(tiers > 1 ? ["Glue the base tiers into a stepped block, largest at the bottom, keeping the slots lined up."] : []),
+      ...(onBase && led ? ["Glue the LED bottom plate and the channel layers in a stack, pockets lined up, and lay a 10 mm LED strip (or a USB LED board) in the pocket facing up, its cable out through the notch at the back."] : []),
+      ...(onBase && tiers > 1 ? [`Glue the base tiers into a stepped block, largest at the bottom, keeping the slots lined up${led ? ", on top of the LED layers" : ""}.`] : []),
       ...(layered ? ["Glue the emblem front and the name plate onto the figure with clear epoxy."] : []),
-      "Push the figure's tabs into the slot; if it is loose, add a drop of glue, and if it is tight, sand the tabs lightly.",
+      ...(onBase ? ["Push the figure's tabs into the slot; if it is loose, add a drop of glue, and if it is tight, sand the tabs lightly."] : []),
+      ...(onBase && led ? ["The tabs' ends sit on the LEDs; an acrylic figure glows along its edges and its engraving."] : []),
+      ...(disp === "plaque" ? ["Glue the figure onto the plaque with its margin even all round (clear epoxy for acrylic, wood glue for wood), then hang the plaque on two screws through the top holes."] : []),
+      ...(disp === "medal" ? [`Thread a ${r0(Math.max(6, p.display.ribbon))} mm ribbon through the slot in the loop and sew or staple its ends together.`] : []),
     ],
     info,
     missing: missing.length ? missing : undefined,

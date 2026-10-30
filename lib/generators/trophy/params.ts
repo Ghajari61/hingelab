@@ -7,10 +7,13 @@ import { SECOND_MATERIALS } from "../material2";
 import { JOB_EXTRAS, SHEET_DEFAULTS, type GenBase } from "../types";
 import { mergeInto } from "../util";
 
-export const EMBLEMS = ["star", "cup", "shield", "medal", "flame", "laurel", "motif", "custom"] as const;
+export const EMBLEMS = ["star", "cup", "shield", "medal", "flame", "laurel", "rosette", "motif", "custom"] as const;
 export type Emblem = (typeof EMBLEMS)[number];
 export type TrophyBuild = "single" | "mixed" | "layered";
 export type BaseShape = "rounded" | "circle" | "hexagon" | "octagon";
+/** How the award is shown: standing in a stepped base, glued on a wall plaque, or hung on a ribbon as a medal. */
+export type DisplayKind = "base" | "plaque" | "medal";
+export type PlaqueShape = "rounded" | "arch" | "shield" | "octagon";
 
 export interface TrophyParams extends GenBase {
   build: { kind: TrophyBuild };
@@ -46,7 +49,10 @@ export interface TrophyParams extends GenBase {
   };
   /** Stem between the emblem and the plate or base, mm. */
   stem: { width: number; height: number };
-  base: { tiers: number; shape: BaseShape; width: number; depth: number; step: number; corner: number; fit: number; text: string };
+  /** `led`: an LED strip under the slot lights an acrylic figure from below (layers of channel under the tiers). */
+  base: { tiers: number; shape: BaseShape; width: number; depth: number; step: number; corner: number; fit: number; text: string; led: boolean };
+  /** Plaque: the backer's shape and margin round the figure; medal: the ribbon's width. */
+  display: { kind: DisplayKind; shape: PlaqueShape; margin: number; ribbon: number };
   /** No Weld scores each glyph's own outline (overlapping script letters keep their edges). */
   mark: { kind: "engrave" | "score"; noWeld: boolean };
   mat: { mat2: string; T2: number };
@@ -68,13 +74,16 @@ export const TROPHY_DEFAULTS: TrophyParams = {
   emblem: { kind: "star", motif: "crown", art: { ...MOTIF_ART }, path: "", width: 110, height: 105, points: 5, text: "1", fontId: "archivo-black", size: 30, laurel: false },
   plate: { on: true, name: "Alex Morgan", title: "Player of the Year", year: "2026", fontId: "archivo-black", titleFont: "pacifico", nameSize: 9, titleSize: 8, width: 90, pad: 6, corner: 4 },
   stem: { width: 24, height: 12 },
-  base: { tiers: 2, shape: "rounded", width: 120, depth: 60, step: 6, corner: 6, fit: 0.1, text: "" },
+  base: { tiers: 2, shape: "rounded", width: 120, depth: 60, step: 6, corner: 6, fit: 0.1, text: "", led: false },
+  display: { kind: "base", shape: "rounded", margin: 20, ribbon: 25 },
   mark: { kind: "engrave", noWeld: false },
   mat: { mat2: "acrylic-gold", T2: 3 },
 };
 
 const BUILDS: TrophyBuild[] = ["single", "mixed", "layered"];
 const BASES: BaseShape[] = ["rounded", "circle", "hexagon", "octagon"];
+const DISPLAYS: DisplayKind[] = ["base", "plaque", "medal"];
+const PLAQUES: PlaqueShape[] = ["rounded", "arch", "shield", "octagon"];
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 export function mergeTrophy(raw: unknown): TrophyParams {
@@ -85,6 +94,9 @@ export function mergeTrophy(raw: unknown): TrophyParams {
   if (!isMotifKind(p.emblem.motif)) p.emblem.motif = d.emblem.motif;
   p.emblem.art = cleanMotifArt(p.emblem.art);
   if (!BASES.includes(p.base.shape)) p.base.shape = d.base.shape;
+  if (!DISPLAYS.includes(p.display.kind)) p.display.kind = d.display.kind;
+  if (!PLAQUES.includes(p.display.shape)) p.display.shape = d.display.shape;
+  p.base.led = p.base.led === true;
   if (p.mark.kind !== "engrave" && p.mark.kind !== "score") p.mark.kind = d.mark.kind;
   p.mark.noWeld = cleanNoWeld(p.mark.noWeld);
   if (!(p.mat.mat2 in SECOND_MATERIALS)) p.mat.mat2 = d.mat.mat2;

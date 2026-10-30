@@ -1,7 +1,7 @@
 import type { Issue } from "@/lib/issues";
 import type { BoxesOutput } from "./build";
 import { fingerCount } from "./joints";
-import type { BoxesParams } from "./params";
+import { CLEAR_LIDS, WINDOW_LIDS, type BoxesParams } from "./params";
 import { patternIssues } from "../pattern";
 
 /** Narrowest tray compartment that still takes fingers, mm. */
@@ -9,12 +9,14 @@ export const MIN_COMPARTMENT = 20;
 /** Closest hooks that still take a bunch of keys each, mm. */
 export const MIN_HOOK_SPACING = 30;
 
-const jointed = (p: BoxesParams) => ["box", "tray", "bird", "drawer", "money", "stack"].includes(p.design);
+const jointed = (p: BoxesParams) => ["box", "tray", "bird", "drawer", "money", "stack", "tissue"].includes(p.design);
+/** A napkin holder's plates may stand this many times the base's depth before it tips easily. */
+export const NAPKIN_TIP = 2.2;
 /** Lowest drawer that still holds something, mm inside. */
 export const MIN_DRAWER = 20;
 
 /** Where the engraving goes, in words. */
-const artFace = (p: BoxesParams) => (p.design === "money" || p.design === "card" ? "front" : p.design === "coaster" ? "coasters" : "lid");
+const artFace = (p: BoxesParams) => (["money", "card", "napkin", "tissue"].includes(p.design) || (p.design === "box" && p.box.glass === "window") ? "front" : p.design === "coaster" ? "coasters" : "lid");
 
 export function checkBoxes(p: BoxesParams, out: BoxesOutput): Issue<BoxesParams>[] {
   const issues: Issue<BoxesParams>[] = [];
@@ -154,6 +156,58 @@ export function checkBoxes(p: BoxesParams, out: BoxesOutput): Issue<BoxesParams>
       const hole = Math.max(20, Math.floor(room));
       issues.push({ code: "BIRD_HOLE", level: "warn", message: `A ${p.bird.hole} mm entrance is too wide for the front panel.`, fixes: [{ id: "hole", label: `Entrance ${hole} mm`, safe: true, apply: (q) => ({ ...q, bird: { ...q.bird, hole } }) }] });
     }
+  }
+
+  if (p.design === "napkin" && info.napkinBase && p.napkin.height > NAPKIN_TIP * info.napkinBase) {
+    const margin = Math.ceil((p.napkin.height / NAPKIN_TIP - p.napkin.gap - 2 * T) / 2);
+    issues.push({
+      code: "NAPKIN_TIPS", level: "warn",
+      message: `Plates ${p.napkin.height} mm tall on a base ${Math.round(info.napkinBase)} mm deep tip over easily when a napkin is pulled out.`,
+      fixes: [{ id: "base", label: `Base margin ${margin} mm`, safe: true, apply: (q) => ({ ...q, napkin: { ...q.napkin, margin: Math.max(q.napkin.margin, margin) } }) }],
+    });
+  }
+
+  if (p.design === "tissue" && info.openRoomL !== undefined && info.openRoomW !== undefined) {
+    const t = p.tissue, round = t.opening === "round";
+    const L = Math.floor(info.openRoomL), Wd = Math.floor(info.openRoomW);
+    if (t.openL > info.openRoomL + 0.01 || (!round && Math.min(t.openW, t.openL) > info.openRoomW + 0.01)) {
+      issues.push({
+        code: "TISSUE_OPENING", level: "warn",
+        message: "The opening reaches into the top's finger joints; keep at least 8 mm of wood round it.",
+        fixes: [{ id: "smaller", label: round ? `Opening ${L} mm` : `Opening ${Math.min(t.openL, L)} × ${Math.min(t.openW, Wd)} mm`, safe: true, apply: (q) => ({ ...q, tissue: { ...q.tissue, openL: Math.max(15, Math.min(q.tissue.openL, L)), openW: Math.max(10, Math.min(q.tissue.openW, Wd)) } }) }],
+      });
+    }
+  }
+
+  if (info.handles && !info.handles.cut && (p.design === "box" || p.design === "tray")) {
+    const key = p.design, h = info.handles;
+    const short = h.length < 40;
+    const height = Math.ceil(p[key].height + h.needH - h.wallH);
+    issues.push({
+      code: "HANDLE_ROOM", level: "warn",
+      message: short ? "The end walls are too short from front to back for a hand hole." : "The walls are too low for hand holes below the lid and above the bottom's joints.",
+      fixes: [
+        ...(short ? [] : [{ id: "taller", label: `Height ${height} mm`, safe: true, apply: (q: BoxesParams) => ({ ...q, [key]: { ...q[key], height: Math.max(q[key].height, height) } }) }]),
+        { id: "off", label: "No hand holes", safe: short, apply: (q: BoxesParams) => ({ ...q, [key]: { ...q[key], handles: false } }) },
+      ],
+    });
+  }
+
+  if (p.design === "box" && info.glassIgnored) {
+    const lid = p.box.lid;
+    const alt = p.box.glass === "window" && CLEAR_LIDS.includes(lid) ? "clear" as const : p.box.glass === "clear" && WINDOW_LIDS.includes(lid) ? "window" as const : "none" as const;
+    issues.push({
+      code: "GLASS_LID", level: "warn",
+      message: p.box.glass === "window" ? "This lid cannot take a window with a pane under it." : "This lid cannot be cut whole from acrylic.",
+      fixes: [{ id: alt, label: alt === "clear" ? "Cut the lid from clear acrylic" : alt === "window" ? "Window and pane" : "No clear lid", safe: true, apply: (q) => ({ ...q, box: { ...q.box, glass: alt } }) }],
+    });
+  } else if (p.design === "box" && p.box.glass === "window" && info.windowMin !== undefined && info.windowMin < 15) {
+    const clear = CLEAR_LIDS.includes(p.box.lid);
+    issues.push({
+      code: "WINDOW_SMALL", level: "warn",
+      message: "The lid is too small for a window with a pane under it, so none was cut.",
+      fixes: [{ id: clear ? "clear" : "none", label: clear ? "Cut the lid from clear acrylic" : "No clear lid", safe: true, apply: (q) => ({ ...q, box: { ...q.box, glass: clear ? "clear" as const : "none" as const } }) }],
+    });
   }
 
   if (out.missing?.length) {

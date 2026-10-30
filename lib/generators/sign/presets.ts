@@ -203,4 +203,47 @@ export const SIGN_PRESETS: GenPreset<SignParams>[] = [
       motif: { kind: "treeoflife", side: "above", size: 40, gap: 2 }, border: { kind: "none" }, mount: { kind: "hanging", hole: 4 },
     },
   },
+  {
+    id: "open-closed-flip", name: "Open / Closed flip sign", note: "OPEN on the front, CLOSED on a glued-on back board, on a cord",
+    params: {
+      name: "Open closed sign", board: { shape: "rounded", auto: true, pad: 18, corner: 10 }, text: { text: "OPEN", fontId: "bebas-neue", size: 44, spacing: 3 },
+      motif: { kind: "none" }, border: { kind: "engrave", inset: 6, width: 2 }, mount: { kind: "hanging", hole: 6 }, back: { kind: "other", text: "CLOSED" },
+    },
+  },
+  {
+    id: "two-sided-bakery", name: "Two-sided shop sign", note: "A hanging shop sign that reads the same from both sides",
+    params: {
+      name: "Bakery hanging sign", board: { shape: "arch", auto: true, pad: 20, corner: 8 }, text: { text: "BAKERY", fontId: "cinzel", size: 30, spacing: 2 },
+      motif: { kind: "cupcake", side: "above", size: 34, gap: 6 }, border: { kind: "score", inset: 6 }, mount: { kind: "hanging", hole: 6 }, back: { kind: "same" },
+    },
+  },
+  {
+    id: "led-name-light", name: "LED name night light", note: "A neon-look name on clear acrylic, lit from a walnut LED base",
+    params: {
+      name: "Name night light", material: "acr3", T: 3, K: 0.1, style: { kind: "neon", border: 6 }, text: { text: "Luna", fontId: "pacifico", size: 60, spacing: -1 },
+      motif: { kind: "star", side: "right", size: 30, gap: 2 }, mount: { kind: "led", depth: 60 }, mat: { mat2: "walnut-3", T2: 3 },
+    },
+  },
+  {
+    id: "led-shop-plaque", name: "Edge-lit shop plaque", note: "Engraved acrylic plaque glowing on an LED base, for a counter",
+    params: {
+      name: "Edge lit plaque", material: "acr3", T: 3, K: 0.1, style: { kind: "engraved" }, board: { shape: "rounded", auto: true, pad: 16, corner: 8 },
+      text: { text: "Studio Bloom", fontId: "playfair-display", size: 22 }, motif: { kind: "flower", side: "above", size: 30, gap: 6 }, border: { kind: "engrave", inset: 5, width: 1.5 },
+      mount: { kind: "led", depth: 60 }, mat: { mat2: "walnut-3", T2: 3 },
+    },
+  },
+  {
+    id: "reserved-feet", name: "Reserved table sign", note: "A small sign on two feet that lean it back, for restaurant tables",
+    params: {
+      name: "Reserved sign", board: { shape: "rounded", auto: true, pad: 12, corner: 6 }, text: { text: "Reserved", fontId: "playfair-display", size: 20 },
+      motif: { kind: "none" }, border: { kind: "score", inset: 4 }, mount: { kind: "feet", depth: 45, lean: 12 }, back: { kind: "same" },
+    },
+  },
+  {
+    id: "welcome-desk-feet", name: "Reception welcome", note: "A wide welcome sign on leaning feet for a front desk",
+    params: {
+      name: "Reception welcome", board: { shape: "rect", auto: true, pad: 18, corner: 4 }, text: { text: "Welcome", fontId: "pacifico", size: 40, spacing: -0.5 },
+      motif: { kind: "leaf", side: "both", size: 26, gap: 6 }, border: { kind: "engrave", inset: 6, width: 1.5 }, mount: { kind: "feet", depth: 60, lean: 14 },
+    },
+  },
 ];

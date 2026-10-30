@@ -1,5 +1,5 @@
 import { MATERIALS } from "@/lib/hinge/defaults";
-import { makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
+import { differenceShapes, makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import type { Shape } from "@/lib/letters/types";
 import { bboxOf, transform } from "../geom";
 import { tagMarks } from "../items";
@@ -8,7 +8,7 @@ import { motif, motifSize, type MotifRef } from "../motifs";
 import { motifRef } from "../motifRef";
 import { orient, shapeOutline, type ShapeKind } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
-import { textBlock, weld, letterShapes, letterTraces, withSticks, type StickSpec } from "../weld";
+import { bridgeIslands, textBlock, weld, letterShapes, letterTraces, withSticks, type StickSpec } from "../weld";
 import type { TopperParams } from "./params";
 
 export interface TopperInfo {
@@ -22,6 +22,8 @@ export interface TopperInfo {
   cupText: number;
   cupRoom: number;
   picks: number;
+  /** Hoop or shaker: the frame's band, mm (0 for other styles). */
+  band: number;
 }
 
 export type TopperOutput = GenOutput & { info?: TopperInfo };
@@ -81,7 +83,7 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
   const parts: GenPart[] = [];
   const m2 = material2(p.mat.mat2);
   const second = (pt: GenPart): GenPart => ({ ...pt, material: "second", color: m2.color, t: p.mat.T2 });
-  const info: TopperInfo = { width: 0, height: 0, contentW: 0, contentH: 0, cupText: 0, cupRoom: 0, picks: 0 };
+  const info: TopperInfo = { width: 0, height: 0, contentW: 0, contentH: 0, cupText: 0, cupRoom: 0, picks: 0, band: 0 };
   let loading = false;
   let right = 0;
 
@@ -104,6 +106,16 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
       const letterOptions = { noWeld: p.style.noWeld, border: Math.max(0.2, p.style.weld), minHole: 2, bridge: Math.max(2.5, p.style.weld * 2.5) };
       let faceMarks: Pick<GenPart, "engrave" | "score"> = {};
       const blocks = [{ item: "Text", cs: t.contours }, { item: "Motif", cs: mot }];
+      /** Layers glued on top of the back (shaker spacers and window). */
+      const extra: GenPart[] = [];
+      const round = ["circle", "star", "scalloped", "octagon", "hexagon", "heart", "diamond"].includes(p.plate.shape);
+      /** The plate's outline round the content, for plates and shakers. */
+      const plateOutline = () => {
+        const pw = p.plate.auto ? info.contentW + 2 * p.plate.pad : p.plate.width;
+        const ph = p.plate.auto ? info.contentH + 2 * p.plate.pad + (p.plate.shape === "arch" ? info.contentW * 0.12 : 0) : p.plate.height;
+        const oy = p.plate.shape === "arch" && p.plate.auto ? -info.contentW * 0.06 : 0;
+        return { pw, ph, outline: orient(transform(shapeOutline(p.plate.shape, pw, ph, p.plate.corner), { x: cx - pw / 2, y: (cb.y0 + cb.y1) / 2 - ph / 2 + oy })) };
+      };
       switch (p.style.kind) {
         case "letters":
           if (p.style.noWeld || p.style.operation === "score") {
@@ -121,11 +133,40 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
           if (p.style.operation === "score") faceMarks = { score: letterTraces(all, p.style.noWeld, glyphs) };
           else fronts = letterShapes(all, letterOptions, glyphs);
           break;
+        case "hoop": {
+          // a ring the letters run across, welded into one piece: narrower than the words so they cross it
+          const band = Math.max(1.5, p.frame.band);
+          info.band = band;
+          let pw: number, ph: number;
+          if (p.plate.auto) {
+            pw = Math.max(info.contentW * 0.8, info.contentH + 2 * p.plate.pad);
+            ph = round ? pw : Math.max(info.contentH + 2 * p.plate.pad, pw * 0.62);
+          } else { pw = p.plate.width; ph = p.plate.height; }
+          const outline = orient(transform(shapeOutline(p.plate.shape, pw, ph, p.plate.corner), { x: cx - pw / 2, y: (cb.y0 + cb.y1) / 2 - ph / 2 }));
+          const inner = offsetShapes([makeShape(outline, [])], -band);
+          const ring = inner.length ? differenceShapes([outline], shapeContours(inner)) : [makeShape(outline, [])];
+          const letters = weld(all, letterOptions);
+          let u = unionShapes([...shapeContours(ring), ...(letters ? shapeContours([letters]) : [])]);
+          if (u.length > 1) u = bridgeIslands(u, Math.max(2.5, p.style.weld * 2.5));
+          back = u.reduce((a, b) => (b.area > a.area ? b : a));
+          break;
+        }
+        case "shaker": {
+          // back (with the sticks), spacer rings that hold the sprinkles, and a clear window with the words
+          const band = Math.max(1.5, p.frame.band);
+          info.band = band;
+          const { outline } = plateOutline();
+          back = makeShape(outline, []);
+          const inner = offsetShapes([back], -band);
+          const ring = inner.length ? differenceShapes([outline], shapeContours(inner)) : [];
+          const sp = ring.length ? ring.reduce((a, b) => (b.area > a.area ? b : a)) : null;
+          const n = p.frame.spacers;
+          for (let k = 0; sp && k < n; k++) extra.push(partFrom(sp, { id: `spacer${k + 1}`, name: `Spacer${n > 1 ? ` ${k + 1}` : ""}`, place: { x: 0, y: 0, z: (k + 1) * p.T } }));
+          extra.push(second({ id: "window", name: "Window", outer: outline, holes: [], ...tagMarks(marks(p, all), blocks), place: { x: 0, y: 0, z: (n + 1) * p.T } }));
+          break;
+        }
         case "plate": {
-          const pw = p.plate.auto ? info.contentW + 2 * p.plate.pad : p.plate.width;
-          const ph = p.plate.auto ? info.contentH + 2 * p.plate.pad + (p.plate.shape === "arch" ? info.contentW * 0.12 : 0) : p.plate.height;
-          const oy = p.plate.shape === "arch" && p.plate.auto ? -info.contentW * 0.06 : 0;
-          const outline = orient(transform(shapeOutline(p.plate.shape, pw, ph, p.plate.corner), { x: cx - pw / 2, y: (cb.y0 + cb.y1) / 2 - ph / 2 + oy }));
+          const { outline, pw, ph } = plateOutline();
           back = makeShape(outline, []);
           faceMarks = tagMarks(marks(p, all), blocks);
           if (p.plate.frame) {
@@ -144,6 +185,7 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
         right = b.x1;
         parts.push(partFrom(back, { id: "topper", name: p.style.kind === "layered" ? "Back layer" : "Topper", ...faceMarks, place: { x: 0, y: 0, z: 0 } }));
         fronts.forEach((front, i) => parts.push(second(partFrom(front, { id: `front${i ? `-${i + 1}` : ""}`, name: `Front letters${fronts.length > 1 ? ` ${i + 1}` : ""}`, place: { x: 0, y: 0, z: p.T } }))));
+        parts.push(...extra);
       }
     }
   }
@@ -203,7 +245,11 @@ export function buildTopper(p: TopperParams, ctx: BuildContext): TopperOutput {
   const assembly = [
     ...(p.style.kind === "letters" && (p.style.noWeld || p.style.operation === "score") ? ["A silhouette backer carries the sticks; loose letters are glued to it, or their outlines are scored directly on it."] : []),
     ...(mixed ? [`Cut the ${MATERIALS[p.material]?.name ?? "main"} sheets, then the ${m2.name} sheets.`, "Glue each front layer onto its back with a thin line of clear epoxy or acrylic cement; press flat for an hour."] : []),
-    ...(p.style.mark === "engrave" && p.style.kind !== "letters" ? ["Engrave first, then cut without moving the sheet."] : []),
+    ...(p.kit.kind !== "cupcake" && p.style.kind === "shaker" ? [
+      `Glue the spacer${p.frame.spacers > 1 ? "s" : ""} onto the back layer, edges lined up, with acrylic cement or a thin bead of UV glue.`,
+      "Pour in sprinkles, beads or glitter to about a third full, then glue the window on top, sealing it all round so nothing leaks.",
+    ] : []),
+    ...(p.style.mark === "engrave" && p.style.kind !== "letters" && p.style.kind !== "hoop" ? ["Engrave first, then cut without moving the sheet."] : []),
     "Peel any masking, wipe the topper and slide the sticks straight down into the cake.",
   ];
   return {

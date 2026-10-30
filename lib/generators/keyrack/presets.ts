@@ -128,4 +128,34 @@ export const KEYRACK_PRESETS: GenPreset<KeyrackParams>[] = [
       motif: { kind: "anchor", side: "left", size: 30 }, hooks: { count: 5, profile: "ball" }, mount: { kind: "keyhole" },
     },
   },
+  {
+    id: "mail-pocket", name: "Keys and mail pocket", note: "A slotted mail pocket on top, the words below and four hooks", pro: true,
+    params: {
+      name: "Keys and mail pocket", board: { shape: "rounded", width: 300, height: 260, corner: 10 },
+      text: { text: "Mail & Keys", fontId: "pacifico", size: 22, y: 46 }, motif: { kind: "none" },
+      hooks: { count: 4, profile: "round", y: 80, margin: 45 },
+      shelf: { on: true, kind: "pocket", depth: 50, at: 14, height: 70 }, mount: { kind: "keyhole", y: 10 },
+    },
+  },
+  {
+    id: "magnetic-bar", name: "Magnetic key bar", note: "Five 12 mm disc magnets flush in a slim bar, no hooks to catch on",
+    params: {
+      name: "Magnetic key bar", board: { shape: "pill", width: 300, height: 80 }, text: { text: "" }, motif: { kind: "none" },
+      hooks: { count: 5, style: "magnet", hole: 12, magnetT: 3, y: 62, margin: 40 }, mount: { kind: "holes", y: 16 },
+    },
+  },
+  {
+    id: "coat-rack", name: "Coat rack", note: "A long board with five two-armed coat hooks",
+    params: {
+      name: "Coat rack", board: { shape: "rounded", width: 540, height: 120, corner: 10 }, text: { text: "" }, motif: { kind: "none" },
+      hooks: { count: 5, profile: "double", reach: 50, size: 20, y: 60, margin: 60 }, mount: { kind: "holes", y: 20 },
+    },
+  },
+  {
+    id: "shaker-pegs", name: "Shaker peg rail", note: "Angled pegs rising to a ball, for keys, bags and leads",
+    params: {
+      name: "Shaker peg rail", board: { shape: "pill", width: 480, height: 80 }, text: { text: "" }, motif: { kind: "none" },
+      hooks: { count: 5, profile: "angled", reach: 40, size: 16, y: 62, margin: 50 }, mount: { kind: "holes", y: 22 },
+    },
+  },
 ];

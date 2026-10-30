@@ -15,6 +15,11 @@ import { miniaturePlan } from "./steps";
 import { REGIONS, TRADITIONS, traditionOf, type RoofKind } from "./traditions";
 
 const is = (...d: MiniDesign[]) => (p: MiniatureParams) => d.includes(p.design);
+/** Sizes a piece starts from when it is picked, where the shared ones do not suit it (mm). */
+const ACCESSORY_START: Partial<Record<AccessoryKind, Partial<MiniatureParams["accessory"]>>> = {
+  bridge: { height: 45, width: 50, length: 170 },
+  fairydoor: { height: 100, width: 56 },
+};
 const opts = <K extends string>(names: Record<K, string>) => (Object.keys(names) as K[]).map((v) => ({ v, text: names[v] }));
 const LATTICES = (["lattice", "quatrefoil", "floral", "honeycomb", "stars", "circles", "leaves"] as FretKind[]).map((v) => ({ v, text: FRET_NAMES[v] }));
 const BUILT_IN_NAMES = new Set<string>([MINIATURE_DEFAULTS.name, ...Object.values(DESIGN_NAMES), ...MINIATURE_PRESETS.map((p) => p.params.name ?? "")]);
@@ -156,25 +161,28 @@ const sections: SectionSpec<MiniatureParams>[] = [
     id: "accessory", title: "Garden and street piece", open: true, show: is("accessory"),
     help: "A piece on its own for a diorama, a book nook or another house, made at the size given.",
     fields: [
-      { kind: "choice", key: "accessory.kind", label: "Piece", rail: true, help: "A leafy tree, a pine tree, a bush, a street lamp, a classical column, a run of fence, a planter box, or a joint fit test to cut before a big job.", options: opts(ACCESSORY_NAMES) },
-      { kind: "number", key: "accessory.height", show: (p) => p.accessory.kind !== "fittest", label: "Height", unit: "mm", min: 15, max: 400, step: 1, help: "Height of the piece." },
-      { kind: "number", key: "accessory.width", label: "Width", unit: "mm", min: 10, max: 300, step: 1, show: (p) => p.accessory.kind !== "fence" && p.accessory.kind !== "fittest", help: "Width of the tree, lamp or column, or depth of the planter." },
-      { kind: "number", key: "accessory.length", label: "Length", unit: "mm", min: 20, max: 600, step: 1, show: (p) => p.accessory.kind === "fence" || p.accessory.kind === "planter", help: "Length of the fence run or the planter." },
+      {
+        kind: "choice", key: "accessory.kind", label: "Piece", rail: true, help: "A leafy tree, a pine tree, a bush, a street lamp, a classical column, a run of fence, a planter box, an arched garden bridge, a layered fairy door, or a joint fit test to cut before a big job.", options: opts(ACCESSORY_NAMES),
+        apply: (p, v) => ({ ...p, accessory: { ...p.accessory, kind: v as AccessoryKind, ...(ACCESSORY_START[v as AccessoryKind] ?? {}) } }),
+      },
+      { kind: "number", key: "accessory.height", show: (p) => p.accessory.kind !== "fittest", label: "Height", unit: "mm", min: 15, max: 400, step: 1, help: "Height of the piece; for a bridge, of its rail at the middle." },
+      { kind: "number", key: "accessory.width", label: "Width", unit: "mm", min: 10, max: 300, step: 1, show: (p) => p.accessory.kind !== "fence" && p.accessory.kind !== "fittest", help: "Width of the tree, lamp, column or fairy door, the depth of the planter, or the bridge's width rail to rail." },
+      { kind: "number", key: "accessory.length", label: "Length", unit: "mm", min: 20, max: 600, step: 1, show: (p) => p.accessory.kind === "fence" || p.accessory.kind === "planter" || p.accessory.kind === "bridge", help: "Length of the fence run, the planter or the bridge." },
       { kind: "choice", key: "accessory.fence", label: "Fence", show: (p) => p.accessory.kind === "fence", help: "Picket fence, post and rail, lattice or a low stone wall.", options: opts(FENCE_STYLES) },
-      { kind: "toggle", key: "accessory.base", label: "Base", show: (p) => p.accessory.kind !== "planter" && p.accessory.kind !== "fittest", help: "A base it slots into, to stand on its own; leave it off to glue it into a scene." },
+      { kind: "toggle", key: "accessory.base", label: "Base", show: (p) => !["planter", "fittest", "bridge", "fairydoor"].includes(p.accessory.kind), help: "A base it slots into, to stand on its own; leave it off to glue it into a scene." },
     ],
   },
   {
     id: "nook", title: "Book nook", open: true, show: is("nook"),
     help: "A box that stands between books, open at the front, with a scene in layers of depth, a light box and a battery bay.",
     fields: [
-      { kind: "choice", key: "nook.scene", shuffle: true, label: "Scene", rail: true, help: "An alley between two facades, or arches receding between shelves of books.", options: opts(NOOK_SCENES) },
+      { kind: "choice", key: "nook.scene", shuffle: true, label: "Scene", rail: true, help: "An alley between two facades, arches receding between shelves of books, or layers of pines with a path through an enchanted forest.", options: opts(NOOK_SCENES) },
       { kind: "number", key: "nook.width", label: "Width", unit: "mm", min: 60, max: 250, step: 1, help: "Outside width: the gap it fills on the shelf." },
       { kind: "number", key: "nook.height", label: "Height", unit: "mm", min: 120, max: 400, step: 1, help: "Outside height; it should clear the shelf above." },
       { kind: "number", key: "nook.depth", label: "Depth", unit: "mm", min: 80, max: 350, step: 1, help: "Outside depth, back to front." },
-      { kind: "number", key: "nook.buildings", label: "Buildings", unit: "", min: 1, max: 5, step: 1, int: true, help: "Buildings along each side of the alley, or the number of arches." },
+      { kind: "number", key: "nook.buildings", label: "Buildings", unit: "", min: 1, max: 5, step: 1, int: true, help: "Buildings along each side of the alley, the number of arches, or the layers of trees in the forest." },
       { kind: "number", key: "nook.storeys", label: "Storeys", unit: "", min: 1, max: 6, step: 1, int: true, show: (p) => p.nook.scene === "alley", help: "Rows of windows on each building." },
-      { kind: "choice", key: "nook.opening", shuffle: true, label: "Opening shape", help: "The windows' and arches' shape.", options: opts(OPENING_SHAPES) },
+      { kind: "choice", key: "nook.opening", shuffle: true, label: "Opening shape", show: (p) => p.nook.scene !== "forest", help: "The windows' and arches' shape.", options: opts(OPENING_SHAPES) },
       { kind: "choice", key: "nook.panes", shuffle: true, label: "Panes", show: (p) => p.nook.scene === "alley", help: "What fills the windows.", options: opts(PANES) },
       { kind: "choice", key: "nook.lattice", label: "Lattice", show: (p) => p.nook.scene === "alley" && p.nook.panes === "lattice", help: "The pattern of the screens.", options: LATTICES },
       { kind: "choice", key: "nook.wall", shuffle: true, label: "Wall finish", show: (p) => p.nook.scene === "alley", help: "Scored finish on the facades.", options: opts(WALL_FINISHES) },
@@ -188,7 +196,7 @@ const sections: SectionSpec<MiniatureParams>[] = [
     help: "A piece at a dollhouse scale: enter its full size and pick the scale. The material and the joints keep their real size.",
     fields: [
       {
-        kind: "choice", key: "furniture.kind", label: "Piece", rail: true, help: "Chair, table, bed, bookshelf, cabinet, desk, dresser, bench, sofa, armchair, wardrobe, nightstand, fireplace or kitchen counter.", options: opts(FURNITURE_NAMES),
+        kind: "choice", key: "furniture.kind", label: "Piece", rail: true, help: "Chair, table, bed, bookshelf, cabinet, desk, dresser, bench, sofa, armchair, wardrobe, nightstand, fireplace, kitchen counter or rocking chair.", options: opts(FURNITURE_NAMES),
         apply: (p, v) => ({ ...p, furniture: { ...p.furniture, kind: v as FurnitureKind, ...FURNITURE_REAL[v as FurnitureKind] }, name: BUILT_IN_NAMES.has(p.name) ? FURNITURE_NAMES[v as FurnitureKind] : p.name }),
       },
       { kind: "choice", key: "furniture.scale", label: "Scale", help: "The common dollhouse scale is 1:12; 1:24 and 1:48 are smaller, and 1:6 suits fashion dolls.", options: opts(SCALES) },
@@ -237,6 +245,11 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
       case "fence": return solid([rect(0, 38, 48, 3), rect(0, 26, 48, 3), ...[0, 10, 20, 30, 40].map((x): Contour => [[x, 46], [x, 16], [x + 3.5, 12], [x + 7, 16], [x + 7, 46]])]);
       case "fittest": return solid([rect(0, 14, 48, 26), ...[5, 14, 23, 32, 41].map((x, i) => rect(x, 26 - i * 0.3, 7, 2 + i * 0.15).reverse() as Contour), rect(19, 0, 10, 18)]);
       case "planter": return solid([[[0, 18], [48, 18], [44, 44], [4, 44]], circle(14, 12, 7), circle(26, 8, 8), circle(37, 12, 7)]);
+      case "bridge": {
+        const arc = (r: number, z: number) => Array.from({ length: 13 }, (_, i): [number, number] => [24 - Math.cos((Math.PI * i) / 12) * r, z - Math.sin((Math.PI * i) / 12) * r * 0.5]);
+        return solid([[...arc(24, 30), ...arc(18, 34).reverse()], ...[6, 14, 22, 30, 38].map((x) => rect(x, 30 - Math.sin((Math.PI * x) / 48) * 11 - 10, 2, 9))]);
+      }
+      case "fairydoor": return solid([[[6, 46], [6, 18], [24, 2], [42, 18], [42, 46]], circle(24, 18, 5).reverse() as Contour, rect(30, 30, 3, 3).reverse() as Contour, rect(2, 44, 44, 2)]);
     }
   }
   if (key === "house.roof") {
@@ -254,6 +267,7 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
     switch (v as NookScene) {
       case "alley": return solid([[[0, 46], [0, 6], [8, 0], [14, 8], [14, 46]], [[34, 46], [34, 12], [40, 4], [48, 10], [48, 46]], rect(16, 26, 16, 20)]);
       case "arches": return solid([rect(0, 0, 48, 46), [[14, 46], [14, 20], [24, 6], [34, 20], [34, 46]].reverse() as Contour]);
+      case "forest": return solid([[[0, 46], [0, 22], [6, 10], [12, 22], [14, 16], [20, 4], [26, 18], [22, 46]], [[30, 46], [26, 18], [32, 6], [38, 18], [40, 14], [44, 2], [48, 16], [48, 46]], rect(0, 44, 48, 2)]);
     }
   }
   if (key === "furniture.kind") {
@@ -272,6 +286,7 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
       case "nightstand": return solid([rect(6, 16, 36, 4), rect(8, 20, 32, 12), rect(8, 33, 32, 9), rect(8, 42, 4, 4), rect(36, 42, 4, 4)]);
       case "fireplace": return solid([rect(0, 6, 48, 5), [[4, 11], [44, 11], [44, 44], [32, 44], [32, 26], [24, 18], [16, 26], [16, 44], [4, 44]]]);
       case "counter": return solid([rect(0, 14, 48, 4), rect(2, 18, 14, 26), rect(17, 18, 14, 26), rect(32, 18, 14, 26), rect(34, 8, 3, 6), rect(34, 8, 8, 2)]);
+      case "rocker": return solid([[[14, 0], [19, 0], [19, 22], [34, 22], [34, 38], [30, 38], [30, 28], [19, 28], [19, 38], [14, 38]], [[0, 38], [48, 38], [44, 43], [24, 45], [4, 43]]]);
     }
   }
   return [];
@@ -309,9 +324,9 @@ export const MINIATURE: GeneratorDef<MiniatureParams> = {
       "Dollhouses and buildings have one to six floors, rooms with doorways, stairs, an open front or a closed facade, and six roof shapes (flat, gable, shed, hip, mansard, gambrel). Windows come in square, round-arch, pointed-arch, horseshoe and round shapes with bars, grids, shoji grids or cut lattice screens, and walls and roofs can carry scored brick, stone, half-timbering, boards, shingles or tiles.",
       `Each design starts from an architectural tradition: ${TRADITIONS.length} traditions from ${Object.keys(REGIONS).length} world regions, from Persian courtyard houses and windcatchers to machiya, hanok, riads, havelis, chalets and Fachwerk. A tradition sets typical roofs, openings and finishes; the models are HingeLab's own simplified interpretations. Each tradition's short description has been compared with the sources listed for it in the Miniature Studio library (Britannica, UNESCO, heritage bodies, museums, universities and Wikipedia), and corrected where a source disagreed; no specialist has reviewed them yet, so each is marked "sourced", not "reviewed".`,
       "Houses can have a door leaf (plain, panelled, planked or glazed), a front step, a shopfront, a canopy porch or a veranda with railings on square posts, turned posts or classical columns, window boxes with flowers, scored pilasters, dormers standing on the front roof, a stair railing, balconies with doors, railings and brackets on every upper floor, and a brick chimney through the roof. The base can grow into a garden with a picket, post-and-rail, lattice or stone fence, a gate, a stepping-stone path, flower beds and trees, or into a pavement with a kerb and street lamps. The Country house and Town house themes set all of this in one go.",
-      "Book nooks stand between books on a shelf: an alley between two facades or arches receding between shelves of books, with a light box for an LED strip, a battery bay with a hatch, and an optional mirror at the back.",
-      "Garden and street pieces (leafy trees, pines, bushes, street lamps, classical columns, a fence run and a planter box) can also be made on their own. Trees and lamps are two halves slotted into each other, standing in a plus-shaped slot.",
-      "Miniature furniture (chair, table, bed, bookshelf, cabinet, desk, dresser, bench, sofa, armchair, wardrobe, nightstand, fireplace and kitchen counter) is entered at full size and divided by the scale (1:6 to 1:48 or your own). The sheet thickness, tabs, slots, fit and kerf keep their real size, so parts too small for their joints are made just wide enough, and the check says so.",
+      "Book nooks stand between books on a shelf: an alley between two facades, arches receding between shelves of books, or an enchanted forest of pine layers with a path through a clearing, with a light box for an LED strip, a battery bay with a hatch, and an optional mirror at the back.",
+      "Garden and street pieces (leafy trees, pines, bushes, street lamps, classical columns, a fence run, a planter box, an arched garden bridge and a layered fairy door) can also be made on their own. Trees and lamps are two halves slotted into each other, standing in a plus-shaped slot. The bridge's planks tab into its two arched side rails, each set level just above the arch; the fairy door is a back plate, a stone-scored frame round a planked door with a round window, and hinges, a knob and a step.",
+      "Miniature furniture (chair, table, bed, bookshelf, cabinet, desk, dresser, bench, sofa, armchair, wardrobe, nightstand, fireplace, kitchen counter and rocking chair) is entered at full size and divided by the scale (1:6 to 1:48 or your own). The sheet thickness, tabs, slots, fit and kerf keep their real size, so parts too small for their joints are made just wide enough, and the check says so.",
     ],
     tips: [
       "Measure the material with calipers and set Thick exactly: every tab and slot is made from it.",
@@ -320,7 +335,7 @@ export const MINIATURE: GeneratorDef<MiniatureParams> = {
       "For book nook lighting use only low-voltage LED kits made for book nooks or dollhouses.",
       "At small scales, 1.5 to 2 mm material looks closer to real furniture than 3 mm.",
     ],
-    keywords: ["dollhouse", "miniature", "book nook", "booknook", "architecture", "building", "house", "roof", "gable", "mansard", "gambrel", "hip roof", "windcatcher", "machiya", "hanok", "riad", "haveli", "chalet", "fachwerk", "tudor", "victorian", "furniture", "1:12", "1:24", "diorama", "porch", "veranda", "balcony", "railing", "fence", "picket fence", "gate", "garden", "chimney", "tree", "street lamp", "sofa", "wardrobe", "fireplace", "kitchen", "country house", "town house", "shopfront", "dormer", "column", "pilaster", "window box", "stair railing", "balustrade"],
+    keywords: ["dollhouse", "miniature", "book nook", "booknook", "architecture", "building", "house", "roof", "gable", "mansard", "gambrel", "hip roof", "windcatcher", "machiya", "hanok", "riad", "haveli", "chalet", "fachwerk", "tudor", "victorian", "furniture", "1:12", "1:24", "diorama", "porch", "veranda", "balcony", "railing", "fence", "picket fence", "gate", "garden", "chimney", "tree", "street lamp", "sofa", "wardrobe", "fireplace", "kitchen", "country house", "town house", "shopfront", "dormer", "column", "pilaster", "window box", "stair railing", "balustrade", "forest book nook", "fairy door", "garden bridge", "rocking chair", "fairy garden"],
   },
 };
 

@@ -2,9 +2,12 @@ import type { Issue } from "@/lib/issues";
 import { missingGlyphs } from "../common";
 import type { SignOutput } from "./build";
 import type { SignParams } from "./params";
+import { LED_WALL, LED_FIT, ledPocket } from "./led";
 
 /** Inlay letters narrower than this break or will not press in cleanly, mm. */
 export const MIN_INLAY = 2.5;
+/** A standing sign taller than this many times its depth tips over. */
+export const MAX_TIP = 4;
 
 export function checkSign(p: SignParams, out: SignOutput): Issue<SignParams>[] {
   const issues: Issue<SignParams>[] = [];
@@ -45,7 +48,7 @@ export function checkSign(p: SignParams, out: SignOutput): Issue<SignParams>[] {
       ],
     });
   }
-  if (word && p.mount.kind !== "none" && p.mount.kind !== "stand") {
+  if (word && p.mount.kind !== "none" && p.mount.kind !== "stand" && p.mount.kind !== "feet" && p.mount.kind !== "led") {
     issues.push({
       code: "WORD_MOUNT", level: "info",
       message: `A ${p.style.kind === "neon" ? "neon-look sign" : "cut-out word"} has no board to drill; hang it with adhesive pads or stand it on a base.`,
@@ -77,6 +80,39 @@ export function checkSign(p: SignParams, out: SignOutput): Issue<SignParams>[] {
       message: "Clear acrylic looks best engraved from the back: mirror the engraving and flip the sheet.",
       fixes: [{ id: "mirror", label: "Mirror the engraving", safe: true, apply: (q) => ({ ...q, style: { ...q.style, mirror: true } }) }],
     });
+  }
+  if (info.tip > MAX_TIP) {
+    const depth = Math.min(200, Math.ceil((info.tip * Math.max(30, p.mount.depth)) / (MAX_TIP * 0.95)));
+    const on = p.mount.kind === "feet" ? "feet are" : p.mount.kind === "led" ? "LED base is" : "base is";
+    issues.push({
+      code: "SIGN_TIPS", level: "warn",
+      message: `The sign is ${info.tip.toFixed(1)} times as tall as its ${on} deep and will tip over easily.`,
+      fixes: [{ id: "depth", label: `Depth ${depth} mm`, safe: true, apply: (q) => ({ ...q, mount: { ...q.mount, depth } }) }],
+    });
+  }
+  if (p.mount.kind === "led") {
+    if (info.ledWall > 0 && info.ledWall < LED_WALL) {
+      const depth = Math.ceil(ledPocket(p.T + LED_FIT) + 2 * LED_WALL + 2);
+      issues.push({
+        code: "LED_BASE_SHALLOW", level: "warn",
+        message: `The LED base leaves only ${info.ledWall.toFixed(1)} mm of wall round the LED pocket; it may crack or let light leak out.`,
+        fixes: [{ id: "depth", label: `Base depth ${depth} mm`, safe: true, apply: (q) => ({ ...q, mount: { ...q.mount, depth } }) }],
+      });
+    }
+    if (!p.material.startsWith("acr")) {
+      issues.push({
+        code: "LED_PANEL", level: "info",
+        message: "Edge lighting shines through clear acrylic only; cut the sign itself from clear acrylic.",
+        fixes: [{ id: "acrylic", label: "Clear acrylic 3 mm", safe: false, apply: (q) => ({ ...q, material: "acr3", T: 3, K: 0.1 }) }],
+      });
+    }
+    if (p.mat.mat2.startsWith("acrylic")) {
+      issues.push({
+        code: "LED_BASE_MATERIAL", level: "info",
+        message: "The LED base is cut from the second material; wood or MDF hides the LEDs and their lead best.",
+        fixes: [{ id: "walnut", label: "Walnut base", safe: true, apply: (q) => ({ ...q, mat: { ...q.mat, mat2: "walnut-3", T2: 3 } }) }],
+      });
+    }
   }
   return issues;
 }

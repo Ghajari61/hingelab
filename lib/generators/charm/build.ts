@@ -47,6 +47,8 @@ export interface CharmInfo {
   arm: number;
   /** Smallest words on a dangle, mm (Infinity: none). */
   dangleLetter: number;
+  /** Fridge magnets: the least material left round a magnet pocket, mm (Infinity: none). */
+  magnetWall: number;
 }
 
 export type CharmOutput = GenOutput & { info?: CharmInfo };
@@ -235,8 +237,8 @@ export function loopSpot(outer: Contour, holes: Contour[], side: "top" | "left",
   return { at: edge ?? at(0), reach: 0 };
 }
 
-/** Kinds that hang from a hole or loop (bag tags use their strap slot, markers their clip, cards stand). */
-export const hangs = (p: CharmParams) => p.kind.kind !== "drink" && p.kind.kind !== "placecard" && p.kind.kind !== "bagtag";
+/** Kinds that hang from a hole or loop (bag tags use their strap slot, markers their clip, cards stand, magnets stick). */
+export const hangs = (p: CharmParams) => p.kind.kind !== "drink" && p.kind.kind !== "placecard" && p.kind.kind !== "bagtag" && p.kind.kind !== "magnet";
 
 interface Hung { shape: Shape; hole: Contour | null; keep: Contour | null; wall: number }
 
@@ -293,10 +295,18 @@ function content(p: CharmParams, ctx: BuildContext, name: string, missing: strin
   const b = bboxOf(all), cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
   const sh = (cs: Contour[]) => move(cs, -cx, -cy);
   nameCs = sh(nameCs); subCs = sh(subCs); acc = sh(acc);
-  const glyphs = ("glyphs" in t && t.glyphs ? t.glyphs : []).map(sh);
-  const subGlyphs = ("glyphs" in s && s.glyphs ? s.glyphs : []).map(g => sh(move(g, 0, t.height / 2 + subH * 0.45 + s.height / 2)));
+  let glyphs = ("glyphs" in t && t.glyphs ? t.glyphs : []).map(sh);
+  let subGlyphs = ("glyphs" in s && s.glyphs ? s.glyphs : []).map(g => sh(move(g, 0, t.height / 2 + subH * 0.45 + s.height / 2)));
+  let w = b.x1 - b.x0, h = b.y1 - b.y0;
+  if (p.names.along && p.style.kind !== "letters") {
+    // Along the length: turned a quarter so the words read bottom to top (y runs down).
+    const turn = (cs: Contour[]) => cs.map((c) => c.map(([x, y]) => [y, -x] as Pt));
+    nameCs = turn(nameCs); subCs = turn(subCs); acc = turn(acc);
+    glyphs = glyphs.map(turn); subGlyphs = subGlyphs.map(turn);
+    [w, h] = [h, w];
+  }
   return {
-    c: { cs: [...nameCs, ...subCs, ...acc], blocks: [{ item: "Name", cs: nameCs }, { item: "Second line", cs: subCs }, { item: "Motif", cs: acc }], w: b.x1 - b.x0, h: b.y1 - b.y0, glyphs, subGlyphs },
+    c: { cs: [...nameCs, ...subCs, ...acc], blocks: [{ item: "Name", cs: nameCs }, { item: "Second line", cs: subCs }, { item: "Motif", cs: acc }], w, h, glyphs, subGlyphs },
     loading: false,
   };
 }
@@ -353,8 +363,36 @@ function withClip(p: CharmParams, blank: Shape): { shape: Shape; strain: number 
   return { shape: makeShape(s.outer, [...blank.holes, ...s.holes]), strain: (1.5 * c.ring * delta) / (L * L) };
 }
 
-/** Kinds that can carry a dangle under them. */
-export const dangles = (p: CharmParams) => p.dangle.on && (p.kind.kind === "ornament" || p.kind.kind === "keychain" || p.kind.kind === "gifttag");
+/** Kinds that can carry a dangle under them (earrings: a second tier, as statement earrings). */
+export const dangles = (p: CharmParams) => p.dangle.on && (p.kind.kind === "ornament" || p.kind.kind === "keychain" || p.kind.kind === "gifttag" || p.kind.kind === "earrings");
+
+/**
+ * Where a fridge magnet's pockets go: one in the middle of the piece, or two to four spread along its
+ * longer side, each kept inside the outline. Returns the centres and the least wall round them.
+ */
+export function magnetSpots(outer: Contour, n: number, r: number): { at: Pt[]; wall: number } {
+  const b = bboxOf([outer]), cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, wide = b.x1 - b.x0 >= b.y1 - b.y0;
+  const span = (wide ? b.x1 - b.x0 : b.y1 - b.y0) * (n > 1 ? 0.55 : 0);
+  const at: Pt[] = Array.from({ length: n }, (_, i) => {
+    const t = n > 1 ? -span / 2 + (span * i) / (n - 1) : 0;
+    let q: Pt = wide ? [cx + t, cy] : [cx, cy + t];
+    // nudge across the piece to the point with the most material round it (a heart's middle sits low)
+    let best = { q, c: pointInContour(q, outer) ? distToContour(q, outer) : -Infinity };
+    for (let k = -0.3; k <= 0.3001; k += 0.05) {
+      const c: Pt = wide ? [q[0], cy + k * (b.y1 - b.y0)] : [cx + k * (b.x1 - b.x0), q[1]];
+      const d = pointInContour(c, outer) ? distToContour(c, outer) : -Infinity;
+      if (d > best.c + 0.01) best = { q: c, c: d };
+    }
+    q = best.q;
+    return q;
+  });
+  let wall = Infinity;
+  for (let i = 0; i < at.length; i++) {
+    wall = Math.min(wall, (pointInContour(at[i], outer) ? distToContour(at[i], outer) : -distToContour(at[i], outer)) - r);
+    for (let j = i + 1; j < at.length; j++) wall = Math.min(wall, Math.hypot(at[i][0] - at[j][0], at[i][1] - at[j][1]) - 2 * r);
+  }
+  return { at, wall };
+}
 
 /** The small tag that hangs under a charm: its shape with a hole at the top and its words engraved. */
 function dangleTag(p: CharmParams, ctx: BuildContext, missing: string[]): { part: GenPart | null; wall: number; letter: number; loading: boolean } {
@@ -431,6 +469,7 @@ function cardHolder(p: CharmParams, outer: Contour, c: Content | null, id: strin
 
 const KIND_NAMES: Record<CharmParams["kind"]["kind"], string> = {
   ornament: "Ornament", keychain: "Keychain", earrings: "Earring", bagtag: "Bag tag", drink: "Drink marker", placecard: "Place card", gifttag: "Gift tag", cardholder: "Card holder",
+  bookmark: "Bookmark", magnet: "Magnet",
 };
 
 export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
@@ -441,7 +480,7 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
   if (names.length > 200) return { parts: [], stats: [], error: "At most 200 charms in one file; split the list." };
   const kind = p.kind.kind, letters = p.style.kind === "letters";
   const slotW = p.T + p.stand.clearance;
-  const info: CharmInfo = { count: 0, width: 0, height: 0, letter: Infinity, squeezed: [], wall: Infinity, grams: 0, clipStrain: 0, allowed: charmStrainLimit(p), card: 0, arm: Infinity, dangleLetter: Infinity };
+  const info: CharmInfo = { count: 0, width: 0, height: 0, letter: Infinity, squeezed: [], wall: Infinity, grams: 0, clipStrain: 0, allowed: charmStrainLimit(p), card: 0, arm: Infinity, dangleLetter: Infinity, magnetWall: Infinity };
   const m2 = material2(p.mat.mat2);
   const second = (pt: GenPart): GenPart => ({ ...pt, material: "second", color: m2.color, t: p.mat.T2 });
   const parts: GenPart[] = [];
@@ -562,6 +601,7 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
     let holes = card.holes;
     let fronts: Shape[] = [];
     let frontScore: Contour[] = [];
+    let inlays: Shape[] = [];
     if (cn.c) {
       // A character's name goes in its own area (the snowman's belly, the reindeer's muzzle), clear of its nose and buttons.
       if (char) for (const pc of char.pieces) { const g = largest(offsetShapes(unionShapes([orient(pc.c)]), 1.2)); if (g) keeps.push(g.outer); }
@@ -583,6 +623,14 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
             // unless stencil bridges are on.
             const outs = unionShapes(placed).map((s) => orientHole(s.outer));
             holes = [...holes, ...outs];
+            break;
+          }
+          case "inlay": {
+            // Inlay: the letters cut through the face, and the same letters cut from the second
+            // material to press into the holes (the kerf makes the fit); a backing closes them.
+            const ls = unionShapes(placed);
+            holes = [...holes, ...ls.map((s) => orientHole(s.outer))];
+            inlays = ls;
             break;
           }
           case "layered":
@@ -607,17 +655,33 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
     const b = bboxOf([card.outer]);
     info.width = Math.max(info.width, b.x1 - b.x0); info.height = Math.max(info.height, b.y1 - b.y0);
     const area = Math.abs(signedArea(card.outer)) - holes.reduce((s, h) => s + Math.abs(signedArea(h)), 0);
-    if (kind === "earrings") info.grams = Math.max(info.grams, (area * p.T * charmDensity(p)) / 1000);
+    const dangleArea = dangle ? Math.abs(signedArea(dangle.outer)) - dangle.holes.reduce((s, h) => s + Math.abs(signedArea(h)), 0) : 0;
+    if (kind === "earrings") info.grams = Math.max(info.grams, ((area + dangleArea) * p.T * charmDensity(p)) / 1000);
+    // Fridge magnets: a back layer of the same outline with a pocket cut through it for each magnet.
+    let back: GenPart | null = null;
+    if (kind === "magnet") {
+      const r = (p.magnet.diameter + p.magnet.clearance) / 2;
+      const ms = magnetSpots(card.outer, p.magnet.count, r);
+      info.magnetWall = Math.min(info.magnetWall, ms.wall);
+      back = { id: "", name: "", outer: card.outer, holes: [...card.holes, ...ms.at.map((q) => orientHole(circle(q[0], q[1], r)))] };
+    } else if (p.style.kind === "inlay") {
+      // the backing behind the inlaid letters keeps the hanging hole (and the dangle's)
+      back = { id: "", name: "", outer: card.outer, holes: card.holes };
+    }
 
+    const pls: { x: number; y: number; z: number }[] = [];
     for (let k = 0; k < pair; k++) {
       const side = pair > 1 ? (k === 0 ? " left" : " right") : "";
-      const pl = k === 0 ? placeAt : at(b.x1 - b.x0, b.y1 - b.y0);
+      const pl = k === 0 ? placeAt : at(b.x1 - b.x0, b.y1 - b.y0 + (dangle && p.hang.side !== "left" ? p.dangle.size + 8 : 0));
+      pls.push(pl);
       const pid = pair > 1 ? `${id}-${k === 0 ? "l" : "r"}` : id;
       const upright = kind === "placecard";
       // Standing cards: the frame's y runs down from height -place.y, so the bottom edge meets the floor.
       const place = upright ? { x: pl.x, y: -b.y1, z: pl.y, upright: true } : pl;
       parts.push({ id: pid, name: `${label}${side}`, outer: card.outer, holes, ...marks, ...(upright ? { upright: true } : {}), place });
       fronts.forEach((front, i) => parts.push(second({ id: `${pid}-front${i ? `-${i + 1}` : ""}`, name: `${label}${side} letters`, outer: front.outer, holes: front.holes, ...(frontScore.length ? { score: frontScore } : {}), place: upright ? { ...place, z: place.z + p.T } : { ...pl, z: p.T } })));
+      inlays.forEach((s, i) => parts.push(second({ id: `${pid}-inlay${i ? `-${i + 1}` : ""}`, name: `${label}${side} inlay${inlays.length > 1 ? ` ${i + 1}` : ""}`, outer: s.outer, holes: s.holes, place: { ...pl, z: 0 } })));
+      if (back) parts.push({ ...back, id: `${pid}-back`, name: `${label}${side} ${kind === "magnet" ? "magnet back" : "backing"}`, place: { ...pl, z: -p.T } });
     }
     if (char && p.shape.paint) {
       // The hat, nose and buttons cut on their own, to paint or cut in another colour and glue in place.
@@ -626,9 +690,14 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
     if (dangle) {
       const db = bboxOf([dangle.outer]);
       const right = p.hang.side === "left";
-      parts.push({ ...dangle, id: `${id}-dangle`, name: `${label} dangle`, place: right
-        ? { x: placeAt.x + b.x1 + 6 - db.x0, y: placeAt.y + (b.y0 + b.y1) / 2 - (db.y0 + db.y1) / 2, z: 0 }
-        : { x: placeAt.x + (b.x0 + b.x1) / 2 - (db.x0 + db.x1) / 2, y: placeAt.y + b.y1 + 6 - db.y0, z: 0 } });
+      // earrings: a dangle for each of the pair, under the cell the earring itself took
+      for (let k = 0; k < pair; k++) {
+        const pl = pls[k];
+        const sfx = pair > 1 ? (k === 0 ? "-l" : "-r") : "";
+        parts.push({ ...dangle, id: `${id}${sfx}-dangle`, name: `${label}${pair > 1 ? (k === 0 ? " left" : " right") : ""} dangle`, place: right
+          ? { x: pl.x + b.x1 + 6 - db.x0, y: pl.y + (b.y0 + b.y1) / 2 - (db.y0 + db.y1) / 2, z: 0 }
+          : { x: pl.x + (b.x0 + b.x1) / 2 - (db.x0 + db.x1) / 2, y: pl.y + b.y1 + 6 - db.y0, z: 0 } });
+      }
     }
     if (foot) {
       const fb = bboxOf([foot.outer]);
@@ -653,6 +722,8 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
     ...(kind === "placecard" ? [{ label: "Slots", value: `${r1(slotW)} mm for ${p.T} mm stock` }] : []),
     ...(kind === "cardholder" ? [{ label: "Card", value: `${p.card.width} × ${p.card.height} mm, ${info.card >= 0 ? `shows ${r1(info.card)} mm above the top` : `sits ${r1(-info.card)} mm inside (thumb notch)`}` }] : []),
     ...(dangles(p) ? [{ label: "Dangle", value: `${p.dangle.size} mm ${p.dangle.shape}${p.dangle.text.trim() ? ` “${p.dangle.text}”` : ""}` }] : []),
+    ...(kind === "magnet" && !letters ? [{ label: "Magnets", value: `${p.magnet.count} × Ø ${p.magnet.diameter} × ${p.magnet.thickness} mm each, pockets Ø ${r1(p.magnet.diameter + p.magnet.clearance)} mm` }] : []),
+    ...(p.style.kind === "inlay" ? [{ label: "Inlay", value: `${p.mat.T2} mm letters in ${p.T} mm holes${Math.abs(p.mat.T2 - p.T) < 0.05 ? ", flush" : p.mat.T2 > p.T ? `, ${r1(p.mat.T2 - p.T)} mm proud` : `, ${r1(p.T - p.mat.T2)} mm below the face`}` }] : []),
     { label: "Parts", value: String(parts.length) },
     ...(mixed ? [{ label: "Second material", value: `${m2.name} ${p.mat.T2} mm` }] : []),
   ];
@@ -660,7 +731,9 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
   if (p.style.noWeld && letters && !p.style.backing && p.style.operation !== "score") assembly.push("No Weld cuts loose letters and dots. Mount each piece separately, or add a backing to make one hanging charm.");
   if (p.style.operation === "score" && (letters || p.style.kind === "layered")) assembly.push("Score the letter outlines first, then cut the backing outline. There is no separate letter layer.");
   if (p.style.kind === "engrave" || p.style.kind === "score" || p.shape.frame) assembly.push("Engrave and score first, then cut, without moving the sheet.");
-  if (mixed) assembly.push(`Cut the ${MATERIALS[p.material]?.name ?? "main"} sheet, then the ${m2.name} sheet.`, "Glue each letters piece on its charm with a thin line of clear epoxy or acrylic cement; press flat for an hour.");
+  if (mixed) assembly.push(`Cut the ${MATERIALS[p.material]?.name ?? "main"} sheet, then the ${m2.name} sheet.`, p.style.kind === "inlay"
+    ? "Glue each face on its backing, lined up by the outline, then press the inlay letters into their holes; the kerf makes a tight fit, and a dot of wood glue on the backing holds the small pieces."
+    : "Glue each letters piece on its charm with a thin line of clear epoxy or acrylic cement; press flat for an hour.");
   if (p.style.kind === "cutout" && !p.textForm.stencil) assembly.push("The middles of letters such as O and A fall out of cut-through names; turn on stencil bridges in Text style to keep them.");
   switch (kind) {
     case "ornament": assembly.push("Thread a ribbon or ornament hook through the hole."); break;
@@ -670,6 +743,10 @@ export function buildCharm(p: CharmParams, ctx: BuildContext): CharmOutput {
     case "drink": assembly.push(`Press each marker sideways onto a glass stem; the opening flexes ${r1((p.clip.stem - p.clip.opening) / 2)} mm each side and grips.`); break;
     case "placecard": assembly.push("Slide each card's slot down onto its foot's slot, at right angles, until they sit flush."); break;
     case "gifttag": assembly.push("Tie the tag on with twine or ribbon through the hole."); break;
+    case "bookmark": assembly.push("Thread a tassel or a loop of ribbon through the hole; sand the edges smooth so they do not mark the pages."); break;
+    case "magnet": assembly.push(letters
+      ? `Glue a ${p.magnet.diameter} mm magnet on the back with epoxy or super glue.`
+      : `Glue a ${p.magnet.diameter} × ${p.magnet.thickness} mm magnet into each pocket of the magnet back with a dot of epoxy or super glue, then glue the face on top, lined up by the outline.`); break;
     case "cardholder": assembly.push("Glue the pocket layer on the back, keeping glue a few millimetres away from the pocket's edge so the card slides freely.", "Glue the front on the pocket layer, lined up by the outline, then the name across the front's lower edge.", "Slide the gift card in from the top."); break;
   }
   if (dangles(p)) assembly.push(`Join the dangle to the charm with a ${Math.max(5, Math.round(p.dangle.hole * 2))} mm jump ring through both holes.`);

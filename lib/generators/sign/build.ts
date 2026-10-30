@@ -1,7 +1,7 @@
 import { MATERIALS } from "@/lib/hinge/defaults";
 import { differenceShapes, dropSpecks, makeShape, offsetShapes, shapeContours, signedArea, unionShapes } from "@/lib/letters/polygon";
 import type { Shape } from "@/lib/letters/types";
-import { bboxOf, circle, pointInContour, rect, stadium, transform } from "../geom";
+import { bboxOf, circle, deg, pointInContour, rect, stadium, transform } from "../geom";
 import { tagByPlace, tagMarks, type ItemBlock } from "../items";
 import { material2 } from "../material2";
 import { motif, motifSize, type MotifRef } from "../motifs";
@@ -9,6 +9,8 @@ import { motifRef } from "../motifRef";
 import { orient, shapeOutline } from "../shapes";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
 import { bottomAt, distTo, mirrorX, textBlock, weld, letterShapes, letterTraces, withSticks } from "../weld";
+import { footProfile } from "../qr/build";
+import { LED_FIT, LED_WALL, ledChannel, ledChannels, ledPocket } from "./led";
 import type { SignParams } from "./params";
 
 export interface SignInfo {
@@ -28,6 +30,12 @@ export interface SignInfo {
   pieces: number;
   /** Mounting holes that overlap the text and motif's box. */
   onText: number;
+  /** Stand, feet or LED base: the sign's height over the depth it stands on (0 when it hangs). */
+  tip: number;
+  /** LED base: the wall in front of and behind the LED pocket, mm (0 without one). */
+  ledWall: number;
+  /** Boards glued together (2 with a back face). */
+  boards: number;
 }
 
 export type SignOutput = GenOutput & { info?: SignInfo };
@@ -37,7 +45,7 @@ const move = (cs: Contour[], dx: number, dy: number) => cs.map((c) => c.map(([x,
 const closed = (c: Contour): Contour => [...c, c[0]];
 
 /** Highest point of the outline at x (y down), or null when x misses it. */
-function topAt(c: Contour, x: number): number | null {
+export function topAt(c: Contour, x: number): number | null {
   let y: number | null = null;
   for (let i = 0, j = c.length - 1; i < c.length; j = i++) {
     const [x0, y0] = c[j], [x1, y1] = c[i];
@@ -97,21 +105,33 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
   const contentW = cb.x1 - cb.x0, contentH = cb.y1 - cb.y0;
   const ccx = (cb.x0 + cb.x1) / 2, ccy = (cb.y0 + cb.y1) / 2;
 
-  const info: SignInfo = { W: 0, H: 0, contentW, contentH, roomW: 0, roomH: 0, thinInlay: 0, outside: [], pieces: 0, onText: 0 };
+  const info: SignInfo = { W: 0, H: 0, contentW, contentH, roomW: 0, roomH: 0, thinInlay: 0, outside: [], pieces: 0, onText: 0, tip: 0, ledWall: 0, boards: 1 };
   const parts: GenPart[] = [];
   const holes: Contour[] = [];
   const engrave: Contour[] = [];
   const score: Contour[] = [];
   const stand = p.mount.kind === "stand";
+  const feet = p.mount.kind === "feet";
+  const led = p.mount.kind === "led";
+  /** Stands on something (a slotted base, two feet or an LED base) rather than hanging. */
+  const standing = stand || feet || led;
   const tabW = 20;
+  // A back board (engraved signs): glued behind the front, so slots and feet hold two boards.
+  const backOn = p.style.kind === "engraved" && p.back.kind !== "none" && !led;
+  const boards = backOn ? 2 : 1;
+  info.boards = boards;
+  const backText = backOn && p.back.kind === "other" && p.back.text.trim()
+    ? textBlock(ctx, p.back.text, p.text.fontId, p.text.size, { spacing: p.text.spacing, lead: p.text.lead, align: p.text.align, missing, style: { ...p.textStyle, ...p.textForm } })
+    : null;
+  if (backText?.loading) return { parts: [], stats: [], notice: "Loading the font." };
 
   // The board (or, for a word sign, the welded letters) in a frame starting at (0, 0).
   let outline: Contour;
   let boardHoles: Contour[] = [];
   let content: Contour[];
   let W: number, H: number;
-  const separateWord = p.style.kind === "word" && p.style.noWeld && p.style.operation !== "score" && !stand;
-  const wordBacker = p.style.kind === "word" && (p.style.operation === "score" || (p.style.noWeld && stand));
+  const separateWord = p.style.kind === "word" && p.style.noWeld && p.style.operation !== "score" && !standing;
+  const wordBacker = p.style.kind === "word" && (p.style.operation === "score" || (p.style.noWeld && standing));
   const glyphs = [...(t.glyphs ?? [t.contours]), ...(mot.length ? [mot] : [])];
   let looseWord: Shape[] = [];
   if (cutout) {
@@ -120,7 +140,7 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
       ? weld(all, { border: Math.max(2, p.style.border), solid: true, bridge: Math.max(4, p.style.border) })
       : weld(all, { border: Math.max(0.2, p.style.weld), minHole: 2, bridge: Math.max(2.5, p.style.weld * 2.5) });
     if (!s) return { parts: [], stats: [], error: "The letters are too thin to cut. Raise the weld." };
-    if (stand) {
+    if (standing) {
       const b = bboxOf([s.outer]);
       const bar = orient(rect(b.x0 - 4, b.y1 - Math.max(4, p.text.size * 0.12), b.x1 - b.x0 + 8, Math.max(8, p.text.size * 0.22)));
       const u = differenceShapes([orient(s.outer), bar], s.holes.map(orient));
@@ -135,14 +155,17 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
   } else {
     const auto = p.board.auto && all.length > 0;
     const arch = p.board.shape === "arch" ? 0.14 : 0;
-    W = auto ? contentW + 2 * p.board.pad : p.board.width;
-    H = auto ? contentH + 2 * p.board.pad + contentW * arch : p.board.height;
+    // a back face with its own words sizes the board for the larger of the two
+    const fw = backText ? Math.max(contentW, backText.width) : contentW, fh = backText ? Math.max(contentH, backText.height) : contentH;
+    info.contentW = fw; info.contentH = fh;
+    W = auto ? fw + 2 * p.board.pad : p.board.width;
+    H = auto ? fh + 2 * p.board.pad + fw * arch : p.board.height;
     if (auto && ["circle", "star", "scalloped", "octagon", "hexagon", "heart", "diamond", "shield"].includes(p.board.shape)) {
       const k = p.board.shape === "star" ? 1.9 : p.board.shape === "diamond" ? 1.6 : p.board.shape === "heart" ? 1.35 : 1.15;
       W = H = Math.max(W, H) * k;
     }
     outline = orient(shapeOutline(p.board.shape, W, H, p.board.corner));
-    const cy = H / 2 + (auto ? (contentW * arch) / 2 : 0) + (H * p.text.offset) / 100;
+    const cy = H / 2 + (auto ? (fw * arch) / 2 : 0) + (H * p.text.offset) / 100;
     content = move(all, W / 2 - ccx, cy - ccy);
   }
   const contentGlyphs = content.length && all.length ? glyphs.map(g => move(g, content[0][0][0] - all[0][0][0], content[0][0][1] - all[0][0][1])) : [];
@@ -157,6 +180,26 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
   const tabXs = square ? [W * 0.22, W * 0.78] : [W * 0.32, W * 0.68];
   if (stand) {
     const s = withSticks(makeShape(orient(outline), boardHoles.map(orient)), tabXs.map((x) => ({ x, length: T, width: tabW, tip: 0 })));
+    outline = s.outer;
+    boardHoles = s.holes;
+  }
+  // Feet: level pads where the feet hold the board, so a round or shaped bottom stands straight.
+  const padW = Math.max(10, 3 * T);
+  if (feet) {
+    const s = withSticks(makeShape(orient(outline), boardHoles.map(orient)), tabXs.map((x) => ({ x, length: 0, width: padW, tip: 0 })));
+    outline = s.outer;
+    boardHoles = s.holes;
+  }
+  // LED base: one wide tab as long as the top plate is thick, its edge right over the LEDs.
+  const T2 = p.mat.T2;
+  let ledTab = 0;
+  if (led) {
+    const lo = bottomAt(outline, W / 2) ?? H;
+    const flat = (w: number) => [W / 2 - w / 2, W / 2 + w / 2].every((x) => (bottomAt(outline, x) ?? -Infinity) >= lo - 3);
+    ledTab = Math.max(20, Math.min(W - 4, W * 0.7));
+    while (ledTab > 20 && !flat(ledTab)) ledTab -= 2;
+    const edge = Math.min(...[W / 2 - ledTab / 2, W / 2 + ledTab / 2].map((x) => bottomAt(outline, x) ?? lo));
+    const s = withSticks(makeShape(orient(outline), boardHoles.map(orient)), [{ x: W / 2, length: T2, width: ledTab, tip: 0, overlap: lo - edge + 2 }]);
     outline = s.outer;
     boardHoles = s.holes;
   }
@@ -208,9 +251,10 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
     }
   }
 
-  const depth = stand ? Math.max(30, p.mount.depth) : 0;
-  const z0 = stand ? depth / 2 - T / 2 : 0;
-  const lift = stand ? T : 0;
+  const depth = standing ? Math.max(30, p.mount.depth) : 0;
+  const z0 = stand ? depth / 2 - (boards * T) / 2 + (boards - 1) * T : 0;
+  const ledLayers = led ? ledChannels(T2) + 2 : 0;
+  const lift = stand ? T : led ? ledLayers * T2 : 0;
   const place = (z: number) => ({ x: 0, y: -H - lift, z, upright: true });
 
   switch (p.style.kind) {
@@ -220,6 +264,24 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
       if (p.style.mark === "engrave") engrave.push(...mc); else score.push(...mc.map(closed));
       tagMarks({ engrave, score }, blocks());
       parts.push({ id: "board", name: "Sign", outer: outline, holes: [...boardHoles, ...holes], engrave, score, place: place(z0) });
+      if (backOn) {
+        // Cut mirrored so it lines up when turned over and glued on; its marks read from behind.
+        let bm: Contour[] = [];
+        let item = "Text";
+        if (p.back.kind === "same") bm = markContours;
+        else if (backText && backText.contours.length) {
+          const cy = H / 2 + (p.board.auto && all.length && p.board.shape === "arch" ? (info.contentW * 0.14) / 2 : 0) + (H * p.text.offset) / 100;
+          bm = shapeContours(unionShapes(move(backText.contours, W / 2, cy)));
+          item = "Back text";
+        }
+        const be: Contour[] = [], bs: Contour[] = [];
+        if (p.border.kind === "score" && rimOut.length) bs.push(...shapeContours(rimOut).map(closed));
+        if (p.border.kind === "engrave") be.push(...shapeContours(rim));
+        if (p.style.mark === "engrave") be.push(...bm); else bs.push(...bm.map(closed));
+        tagMarks({ engrave: be, score: bs }, [{ item, cs: bm }]);
+        const backOutline = mirrorX([outline], W / 2)[0];
+        parts.push({ id: "back", name: "Back board", outer: backOutline, holes: mirrorX([...boardHoles, ...holes], W / 2), engrave: be, score: bs, place: { ...place(z0 - T), x: 0 } });
+      }
       break;
     }
     case "layered": {
@@ -272,7 +334,7 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
     case "inlay": {
       const letters = markShapes.length ? markShapes : [];
       const cutHoles = letters.map((s) => s.outer);
-      const hidden = mk === "keyhole" && !stand;
+      const hidden = mk === "keyhole" && !standing;
       if (hidden) info.onText = 0;
       parts.push({ id: "board", name: "Top board", outer: outline, holes: [...boardHoles, ...(hidden ? [] : holes), ...cutHoles], engrave, score, place: place(z0) });
       let n = 0, c = 0;
@@ -282,7 +344,7 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
         for (const h of s.holes) parts.push({ id: `counter${++c}`, name: `Counter ${c}`, outer: orient(h), holes: [], place: place(z0) });
       }
       info.pieces = n + c;
-      if (!stand) parts.push({ id: "backer", name: "Backer", outer: outline, holes: [...boardHoles, ...holes], place: place(z0 - T) });
+      if (!standing) parts.push({ id: "backer", name: "Backer", outer: outline, holes: [...boardHoles, ...holes], place: place(z0 - T) });
       break;
     }
   }
@@ -294,8 +356,43 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
 
   if (stand) {
     const ext = 12, BW = W + 2 * ext;
-    const slots = tabXs.map((x) => rect(x + ext - tabW / 2 - 0.1, depth / 2 - T / 2, tabW + 0.2, T));
+    const slots = tabXs.map((x) => rect(x + ext - tabW / 2 - 0.1, depth / 2 - (boards * T) / 2, tabW + 0.2, boards * T));
     parts.push({ id: "base", name: "Stand base", outer: orient(shapeOutline("rounded", BW, depth, 6)), holes: slots, place: { x: -ext, y: 0, z: 0 } });
+    info.tip = (H + T) / depth;
+  }
+  let footD = 0;
+  if (feet) {
+    // Two slotted feet, turned across the sign; the slot leans the sign back so it reads from a table.
+    const D = depth, Hs = bboxOf([outline]).y1, hF = Math.max(12, Math.min(32, Hs * 0.14));
+    const lean = p.mount.lean, at = D * 0.58, a = deg(lean);
+    const f = footProfile(D, hF, boards * T + 0.15, lean, at);
+    footD = D;
+    const back0 = at - (boards * T) / 2;
+    // every part keeps its offset from the front board (a back board -T, letters and a frame +T)
+    for (const pt of parts) pt.place = { x: 0, y: -(f.floor + Hs * Math.cos(a)), z: back0 + (boards - 1) * T + (pt.place?.z ?? 0) - Hs * Math.sin(a), upright: true, tilt: 90 - lean };
+    tabXs.forEach((x, k) => parts.push({ id: `foot${k + 1}`, name: `Foot ${k + 1}`, outer: f.outer, holes: [], place: { x: x + T / 2, y: -hF, z: 0, upright: true, yaw: 90 } }));
+    info.tip = (Hs * Math.cos(a)) / D;
+  }
+  let ledL = 0;
+  if (led) {
+    // Layers from the second material (wood hides the LEDs); the panel stands in the top plate's slot.
+    const slotW = T + LED_FIT, pocket = ledPocket(slotW);
+    const L = Math.max(ledTab + 2 * 20, W * 0.9);
+    ledL = L;
+    const ox = (W - L) / 2, x0 = W / 2 - ox - ledTab / 2, x1 = W / 2 - ox + ledTab / 2;
+    const plate = orient(shapeOutline("rounded", L, depth, Math.min(6, depth / 2 - 1)));
+    const ch = ledLayers - 2;
+    const zb = depth / 2 - T / 2;
+    for (const pt of parts) pt.place = { ...(pt.place ?? place(zb)), z: zb + (pt.place?.z ?? 0) - z0 };
+    const lp = (pt: GenPart, k: number): GenPart => second({ ...pt, place: { x: ox, y: 0, z: k * T2 } });
+    parts.push(lp({ id: "led-bottom", name: "LED base bottom", outer: plate, holes: [] }, 0));
+    for (let k = 0; k < ch; k++) {
+      const c = ledChannel(plate, x0 + 2, x1 - 2, depth / 2, pocket, depth);
+      parts.push(lp({ id: `led-channel${k + 1}`, name: `LED channel${ch > 1 ? ` ${k + 1}` : ""}`, outer: c.outer, holes: c.holes }, k + 1));
+    }
+    parts.push(lp({ id: "led-top", name: "LED base top", outer: plate, holes: [rect(x0 - LED_FIT / 2, depth / 2 - slotW / 2, ledTab + LED_FIT, slotW)] }, ch + 1));
+    info.ledWall = (depth - pocket) / 2;
+    info.tip = H / depth;
   }
 
   const mixed = parts.some((pt) => pt.material === "second");
@@ -304,6 +401,9 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
     { label: p.style.kind === "word" ? "Word" : "Sign", value: `${r0(W)} × ${r0(H)} mm` },
     ...(info.pieces ? [{ label: "Inlay pieces", value: String(info.pieces) }] : []),
     ...(mixed ? [{ label: "Second material", value: `${m2.name} ${p.mat.T2} mm` }] : []),
+    ...(feet ? [{ label: "Stand", value: `two feet ${r0(footD)} mm deep, leaning ${Math.round(p.mount.lean)}°` }] : []),
+    ...(led ? [{ label: "LED base", value: `${r0(ledL)} × ${r0(depth)} × ${(ledLayers * T2).toFixed(1)} mm, ${ledLayers} layers` }] : []),
+    ...(backOn ? [{ label: "Faces", value: p.back.kind === "same" ? "two, the same" : "two, different" }] : []),
     { label: "Parts", value: String(parts.length) },
   ];
   const assembly = [
@@ -315,7 +415,15 @@ export function buildSign(p: SignParams, ctx: BuildContext): SignOutput {
     ...(p.style.kind === "neon" ? ["Engrave the outlines on clear or frosted acrylic, then cut the outline without moving the sheet.", "Stand the sign in an LED base or light it from the edge; the engraved lines glow like neon tubes."] : []),
     ...(p.style.kind === "inlay" ? ["Glue the top board onto the backer, then press each inlay letter into its hole and each counter back into its letter. A drop of thin glue holds them; sand the face flush."] : []),
     ...(p.border.kind === "raised" ? ["Glue the frame around the edge."] : []),
-    ...(stand ? ["Push the sign's two tabs into the base's slots; a drop of glue makes it permanent."] : []),
+    ...(backOn ? [`Turn the back board over and glue it to the back of the sign, edges lined up${mk === "keyhole" || mk === "holes" || mk === "hanging" || mk === "standoff" ? " and holes matching" : ""}; clamp it flat while the glue sets.`] : []),
+    ...(backOn && p.back.kind === "other" ? ["Hang it on a cord or a hook and flip it to show the other face (for example OPEN and CLOSED)."] : []),
+    ...(stand ? [`Push the sign's two tabs into the base's slots${boards > 1 ? " (they take both boards)" : ""}; a drop of glue makes it permanent.`] : []),
+    ...(feet ? ["Slide the bottom of the sign into the slots of the two feet; they lean it back a little so it reads from a desk or a shelf."] : []),
+    ...(led ? [
+      "Glue the LED base layers in a stack: the bottom plate, the channel layers with their pockets lined up, then the top plate.",
+      "Lay a 10 mm LED strip (or a USB LED board) in the pocket, facing up, and lead its cable out through the notch at the back.",
+      "Push the panel's tab into the top slot; its bottom edge sits on the LEDs and the engraving lights up.",
+    ] : []),
     ...(mk === "keyhole" && !cutout ? ["Drive two screws into the wall at the keyhole spacing, leave the heads 3 mm proud, and hang the sign on them."] : []),
     ...(mk === "holes" && !cutout ? ["Screw the sign to the wall through the two holes."] : []),
     ...(mk === "hanging" && !cutout ? ["Thread a cord or chain through the two top holes to hang the sign."] : []),
