@@ -1,4 +1,4 @@
-## Unreleased
+## 1.32.0 — Layered keychains
 
 - **Layered keychains.** The Keychain generator has a new Construction setting with seven builds:
   - **Photo frame:** a back, a photo pocket that opens at the side, an optional clear acrylic cover and a front with a window. The window can follow the body's shape or be a circle, heart or rounded rectangle, and the name sits on a band under it. The stats give the size to trim the photo to.
