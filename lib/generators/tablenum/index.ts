@@ -89,6 +89,16 @@ const sections: SectionSpec<TablenumParams>[] = [
     ],
   },
   {
+    id: "qr", title: "QR code", open: false,
+    help: "A scannable code under the number, engraved on every plate: the menu, ordering or Wi-Fi page. Put {n} in the link and each table gets its own code with its number in it.",
+    fields: [
+      { kind: "toggle", key: "qr.on", label: "QR code", help: "Engrave a QR code under the number (also on raised and scored plates)." },
+      { kind: "text", key: "qr.url", label: "Link", placeholder: "yoursite.com/order?table={n}", show: (p) => p.qr.on, help: "The web address the code opens; {n} becomes each table's number, so orders and calls know the table." },
+      { kind: "number", key: "qr.size", label: "Code size", unit: "mm", min: 12, max: 200, step: 1, show: (p) => p.qr.on, help: "Width of the code; 30 to 40 mm scans easily from a seat." },
+      { kind: "choice", key: "qr.style", label: "Style", show: (p) => p.qr.on, help: "Square modules scan best; rounded and dots look softer.", options: [{ v: "square", text: "Square" }, { v: "rounded", text: "Rounded" }, { v: "dots", text: "Dots" }] },
+    ],
+  },
+  {
     id: "base", title: "Base", open: false, show: stand,
     help: "The block each plate stands in.",
     fields: [
@@ -192,7 +202,7 @@ const TABLENUM_BASE: GeneratorDef<TablenumParams> = {
       "For tent cards, use 3 mm plywood or MDF and bend slowly; acrylic will snap.",
       "A two-layer base hides the tab ends and lets the plates lift out for storage.",
     ],
-    keywords: ["table numbers", "wedding", "restaurant", "event", "tent card", "place card", "batch", "stand"],
+    keywords: ["table numbers", "wedding", "restaurant", "event", "tent card", "place card", "batch", "stand", "qr code", "menu"],
   },
 };
 

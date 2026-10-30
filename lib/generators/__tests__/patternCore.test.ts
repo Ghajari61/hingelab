@@ -47,7 +47,7 @@ describe("cut-out pattern: what stays solid", () => {
     const area = CODE_AREA.get(plate);
     expect(area).toBeDefined();
     const added = plate.holes.slice(plain.parts.find((p) => p.id === plate.id)!.holes.length);
-    for (const h of added) expect(h.some(([x, y]) => inside([[x, y]], area!))).toBe(false);
+    for (const h of added) expect(h.some(([x, y]) => area!.some((a) => inside([[x, y]], a)))).toBe(false);
   });
 });
 

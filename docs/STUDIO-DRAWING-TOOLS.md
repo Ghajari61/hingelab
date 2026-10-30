@@ -54,6 +54,7 @@ Status: **Yes**: in Studio. **New**: added in this release. **Not for laser**: d
 | PowerClip | Object ▸ Clipping Mask | Yes |
 | Weld, Trim, Intersect | Path ▸ Pathfinders (unite, trim, intersect, divide, crop) | Yes |
 | Bitmap trace | Trace Bitmap | Yes |
+| QR code (barcode tool) | File ▸ Insert QR Code (module styles and eye shapes) | New |
 
 ## Not done
 

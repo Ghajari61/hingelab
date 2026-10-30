@@ -1,12 +1,15 @@
 import { letterMarkField } from "../textOps";
-import { shapeContours } from "@/lib/letters/polygon";
+import { shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { arc, circle, deg, ellipse, rect, roundedRect, stadium } from "../geom";
 import type { Contour, GeneratorDef, SectionSpec } from "../types";
 import { fitArt, namedFile } from "../util";
 import { buildQr, moduleShapes, stencilHoles, type QrOutput, CODE_AREA } from "./build";
 import { checkQr } from "./check";
 import { CONTENT_NAMES, qrMatrix } from "./encode";
+import { EYE_BALL_NAMES, EYE_FRAME_NAMES, eyeContours, type EyeBall, type EyeFrame } from "./eyes";
+import { BADGE_KINDS, BADGE_NAMES, badgeContours, type BadgeKind } from "./icons";
 import { ECC_RECOVERY, QR_DEFAULTS, mergeQr, type ContentKind, type ModuleStyle, type QrParams } from "./params";
+import { CORNERED, PLATE_NAMES, PLATE_SHAPES, plateOutline, type PlateShape } from "./plates";
 import { QR_PRESETS } from "./presets";
 import { byId, withPattern } from "../pattern";
 
@@ -18,7 +21,7 @@ const OUTPUT_NAMES = { engrave: "engraved", cutout: "cut out", stencil: "stencil
 const sections: SectionSpec<QrParams>[] = [
   {
     id: "content", title: "Content", open: true,
-    help: "What the code holds: a web address, text, Wi-Fi login, contact card, email, text message or phone number.",
+    help: "What the code holds: a web address, text, Wi-Fi login, contact card, email, text message, phone number, WhatsApp chat, map location or calendar event.",
     fields: [
       {
         kind: "choice", key: "content.kind", label: "Content", rail: true,
@@ -48,6 +51,14 @@ const sections: SectionSpec<QrParams>[] = [
       { kind: "text", key: "content.smsTo", label: "Number", show: holds("sms"), help: "The phone number the text message goes to." },
       { kind: "text", key: "content.message", label: "Message", multiline: true, maxLength: 300, show: holds("sms"), help: "The message filled in for the sender." },
       { kind: "text", key: "content.tel", label: "Number to call", show: holds("phone"), help: "The phone number the code dials, with the country code if needed." },
+      { kind: "text", key: "content.waTo", label: "WhatsApp number", placeholder: "+1 555 0123", show: holds("whatsapp"), help: "The number the chat opens with, including the country code." },
+      { kind: "text", key: "content.waText", label: "Message", multiline: true, maxLength: 300, show: holds("whatsapp"), help: "A message filled in for the sender (they can change it before sending)." },
+      { kind: "text", key: "content.place", label: "Place", placeholder: "Address, or 51.5007, -0.1246", show: holds("map"), help: "An address or a place name, or latitude and longitude separated by a comma; the code opens it in a map." },
+      { kind: "text", key: "content.evTitle", label: "Event", show: holds("event"), help: "The event's name, as it appears in the calendar." },
+      { kind: "text", key: "content.evDate", label: "Date", placeholder: "2026-12-31", show: holds("event"), help: "The day of the event, written year-month-day." },
+      { kind: "text", key: "content.evStart", label: "Starts", placeholder: "19:30", show: holds("event"), help: "Start time (24-hour clock); leave it empty for an all-day event." },
+      { kind: "text", key: "content.evEnd", label: "Ends", placeholder: "22:30", show: (p) => p.content.kind === "event" && !!p.content.evStart.trim(), help: "End time on the same day." },
+      { kind: "text", key: "content.evPlace", label: "Where", show: holds("event"), help: "The venue or address, saved with the event." },
     ],
   },
   {
@@ -56,8 +67,21 @@ const sections: SectionSpec<QrParams>[] = [
     fields: [
       {
         kind: "choice", key: "code.style", shuffle: true, label: "Module style", rail: true,
-        help: "Square modules scan best; rounded, dots and connected look softer and still scan when the modules are large enough.",
-        options: [{ v: "square", text: "Square" }, { v: "rounded", text: "Rounded" }, { v: "dots", text: "Dots" }, { v: "connected", text: "Connected" }],
+        help: "Square modules scan best; the other styles look softer or more graphic and still scan when the modules are large enough.",
+        options: [
+          { v: "square", text: "Square" }, { v: "rounded", text: "Rounded" }, { v: "dots", text: "Dots" }, { v: "connected", text: "Connected" },
+          { v: "diamond", text: "Diamonds" }, { v: "tiny", text: "Small squares" }, { v: "vlines", text: "Vertical bars" }, { v: "hlines", text: "Horizontal bars" },
+        ],
+      },
+      {
+        kind: "choice", key: "code.eyeFrame", shuffle: true, label: "Eye frame", rail: true, show: (p) => p.output.kind !== "stencil",
+        help: "The shape of the three corner squares' outer ring. Match follows the module style. Scanners measure the eyes, so each shape keeps the ring, gap and centre the standard sizes.",
+        options: (Object.keys(EYE_FRAME_NAMES) as EyeFrame[]).map((v) => ({ v, text: EYE_FRAME_NAMES[v] })),
+      },
+      {
+        kind: "choice", key: "code.eyeBall", shuffle: true, label: "Eye centre", rail: true, show: (p) => p.output.kind !== "stencil",
+        help: "The shape of the solid centre of each corner square.",
+        options: (Object.keys(EYE_BALL_NAMES) as EyeBall[]).map((v) => ({ v, text: EYE_BALL_NAMES[v] })),
       },
       { kind: "number", key: "code.size", label: "Code size", unit: "mm", min: 10, max: 600, step: 1, help: "Width of the code itself, without the clear space around it." },
       {
@@ -66,7 +90,7 @@ const sections: SectionSpec<QrParams>[] = [
         options: (["L", "M", "Q", "H"] as const).map((v) => ({ v, text: v, title: `Recovers ${ECC_RECOVERY[v]} %` })),
       },
       { kind: "number", key: "code.quiet", label: "Quiet zone", unit: "", min: 0, max: 8, step: 1, int: true, help: "Clear space around the code, in modules; standard QR symbols need at least four clear modules on every side." },
-      { kind: "number", key: "code.dot", label: "Dot size", unit: "%", min: 50, max: 100, step: 1, show: (p) => p.code.style === "dots" || p.code.style === "connected", help: "Dot diameter as a share of a module; smaller dots look lighter but scan less well." },
+      { kind: "number", key: "code.dot", label: "Dot size", unit: "%", min: 50, max: 100, step: 1, show: (p) => !["square", "rounded"].includes(p.code.style), help: "Size of each dot, diamond, small square or bar as a share of a module; smaller looks lighter but scans less well." },
       { kind: "toggle", key: "code.invert", label: "Invert (light code)", show: outputs("engrave"), help: "Engraves the background instead of the modules, for materials that engrave lighter than they are (dark acrylic, anodised aluminium)." },
     ],
   },
@@ -86,9 +110,14 @@ const sections: SectionSpec<QrParams>[] = [
     id: "plate", title: "Plate", open: false,
     help: "The plate around the code: shape, border, corners and an optional frame.",
     fields: [
-      { kind: "choice", key: "plate.shape", shuffle: true, label: "Plate shape", help: "A rectangle around the code and label, or a circle (coasters, badges).", options: [{ v: "rect", text: "Rectangle" }, { v: "circle", text: "Circle" }] },
+      {
+        kind: "choice", key: "plate.shape", shuffle: true, label: "Plate shape", rail: true, show: (p) => p.stand.kind !== "tent",
+        help: "The outline round the code, label and picture: a rectangle, a circle (coasters, badges), sign shapes such as an arch or a speech bubble, a dog bone for pet tags, or a plant marker on a stake.",
+        options: PLATE_SHAPES.map((v) => ({ v, text: PLATE_NAMES[v] })),
+      },
+      { kind: "number", key: "plate.stake", label: "Stake length", unit: "mm", min: 30, max: 250, step: 5, show: (p) => p.plate.shape === "stake", help: "How far the pointed stake reaches below the plate, into the soil." },
       { kind: "number", key: "plate.padding", label: "Border", unit: "mm", min: 0, max: 60, step: 0.5, help: "Plate border outside the quiet zone and label." },
-      { kind: "number", key: "plate.corner", label: "Corner radius", unit: "mm", min: 0, max: 50, step: 0.5, show: (p) => p.plate.shape === "rect", help: "Rounds the plate's corners." },
+      { kind: "number", key: "plate.corner", label: "Corner radius", unit: "mm", min: 0, max: 50, step: 0.5, show: (p) => CORNERED.includes(p.plate.shape) || p.stand.kind === "tent", help: "Rounds the plate's corners." },
       { kind: "toggle", key: "plate.frame", shuffle: true, label: "Frame", show: (p) => p.output.kind !== "stencil", help: "A thin line around the plate, in its border." },
       { kind: "number", key: "plate.frameWidth", label: "Frame width", unit: "mm", min: 0.3, max: 5, step: 0.1, show: (p) => p.plate.frame && p.output.kind !== "stencil", help: "Width of the frame line." },
       {
@@ -129,10 +158,42 @@ const sections: SectionSpec<QrParams>[] = [
     ],
   },
   {
-    id: "keyring", title: "Keyring hole", open: false,
+    id: "badge", title: "Header picture", open: false,
+    help: "A picture above the code that says what it is for, like the icons on shop-counter and table signs.",
+    fields: [
+      {
+        kind: "choice", key: "badge.kind", label: "Picture", rail: true, shuffle: true,
+        help: "Five stars for a review sign, a menu or coffee cup for tables, Wi-Fi, a camera for photo sharing and social pages, a map pin, a payment card, the contactless tap waves (stick an NFC tag behind it), a chat bubble, a phone or a calendar.",
+        options: BADGE_KINDS.map((v) => ({ v, text: BADGE_NAMES[v] })),
+      },
+      { kind: "number", key: "badge.size", label: "Picture height", unit: "mm", min: 4, max: 80, step: 0.5, show: (p) => p.badge.kind !== "none", help: "Height of the picture; five stars are about five times as wide as they are tall." },
+    ],
+  },
+  {
+    id: "stand", title: "Stand or mount", open: false, show: (p) => p.output.kind !== "stencil",
+    help: "How the sign stands on a counter or table, or hangs on a wall.",
+    fields: [
+      {
+        kind: "choice", key: "stand.kind", label: "Stand", rail: true, show: (p) => p.output.kind !== "stencil",
+        help: "Flat; standing upright in a slotted base; leaning back on two slotted feet; a tent card folded on a living hinge with the code on both sides (engraved only); or holes to screw it to a wall or mount it on standoffs.",
+        options: [
+          { v: "none", text: "Flat" }, { v: "base", text: "Base" }, { v: "feet", text: "Feet" },
+          { v: "tent", text: "Tent", title: "Engraved plates" }, { v: "wall", text: "Wall" },
+        ],
+      },
+      { kind: "number", key: "stand.depth", label: "Depth", unit: "mm", min: 25, max: 200, step: 1, show: (p) => p.stand.kind === "base" || p.stand.kind === "feet", help: "Front-to-back depth of the base or feet; keep it at least a third of the sign's height so it does not tip." },
+      { kind: "number", key: "stand.layers", label: "Base layers", unit: "", min: 1, max: 3, step: 1, int: true, show: (p) => p.stand.kind === "base", help: "Layers glued into the base. With two or more the bottom one is solid, so the tabs sit in pockets and the base is heavier." },
+      { kind: "number", key: "stand.lean", label: "Lean", unit: "deg", min: 0, max: 25, step: 1, show: (p) => p.stand.kind === "feet", help: "How far the sign leans back in its feet; 10 to 15° faces a person sitting at a table." },
+      { kind: "number", key: "stand.band", label: "Hinge band", unit: "mm", min: 8, max: 60, step: 1, show: (p) => p.stand.kind === "tent", help: "Height of the living hinge between the two faces; a wider band bends more gently." },
+      { kind: "choice", key: "stand.holes", label: "Holes", show: (p) => p.stand.kind === "wall", help: "Two holes along the top to hang it, or four corner holes for standoffs.", options: [{ v: "two", text: "Two at the top" }, { v: "four", text: "Four corners" }] },
+      { kind: "number", key: "stand.holeD", label: "Hole diameter", unit: "mm", min: 2, max: 12, step: 0.5, show: (p) => p.stand.kind === "wall", help: "Small screws need about 4 mm; most sign standoffs need 5 to 6 mm." },
+    ],
+  },
+  {
+    id: "keyring", title: "Keyring hole", open: false, show: (p) => p.stand.kind !== "tent",
     help: "A hole to hang the plate on a keyring or hook.",
     fields: [
-      { kind: "choice", key: "keyring.kind", label: "Hole", help: "No hole, a rounded tab on top, or a hole in the top-left corner.", options: [{ v: "none", text: "None" }, { v: "top", text: "Tab on top" }, { v: "corner", text: "Corner", title: "Rectangular plates" }] },
+      { kind: "choice", key: "keyring.kind", label: "Hole", show: (p) => p.stand.kind !== "tent", help: "No hole, a rounded tab on top, or a hole in the top-left corner (on a rectangle it sits in a rounded ear).", options: [{ v: "none", text: "None" }, { v: "top", text: "Tab on top" }, { v: "corner", text: "Corner" }] },
       { kind: "number", key: "keyring.diameter", label: "Hole diameter", unit: "mm", min: 2, max: 12, step: 0.5, show: (p) => p.keyring.kind !== "none", help: "Diameter of the hole; 4 to 5 mm fits a split ring." },
     ],
   },
@@ -142,6 +203,22 @@ const sample = qrMatrix("HL", "L")!;
 
 /** Rail pictures: content icons, and the module styles and outputs drawn with the real geometry. */
 function art(key: string, v: string): { d: string; fill?: boolean }[] {
+  if (key === "code.eyeFrame" || key === "code.eyeBall") {
+    const f = (key === "code.eyeFrame" ? (v === "auto" ? "square" : v) : "square") as Exclude<EyeFrame, "auto">;
+    const b = (key === "code.eyeBall" ? (v === "auto" ? "square" : v) : "square") as Exclude<EyeBall, "auto">;
+    const cs = shapeContours(unionShapes(eyeContours(0, 0, 6, f, b), [], false, true));
+    return [{ d: fitArt([rect(-3, -3, 48, 48), ...cs], 36).slice(1).join(" "), fill: true }];
+  }
+  if (key === "badge.kind") {
+    if (v === "none") return [{ d: fitArt([[[-12, -12], [12, 12]], [[12, -12], [-12, 12]]], 18, [true, true]).join(" ") }];
+    const cs = badgeContours(v as BadgeKind, 30);
+    return [{ d: fitArt(cs, v === "stars" ? 40 : 32).join(" "), fill: true }];
+  }
+  if (key === "plate.shape") {
+    const o = plateOutline(v as PlateShape, 30, 30, 4, 4, 40).outline;
+    return [{ d: fitArt([o], 36).join(" ") }];
+  }
+  if (key === "stand.kind") return standArt(v);
   if (key === "code.style") {
     const cs = shapeContours(moduleShapes((r, c) => sample.dark[r][c], sample.n, 2, v as ModuleStyle, 85));
     return [{ d: fitArt([rect(0, 0, 42, 42), ...cs], 38).slice(1).join(" "), fill: true }];
@@ -167,6 +244,9 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
       vcard: { cs: [roundedRect(-22, -15, 44, 30, 3), circle(-10, -3, 5), [[-17, 9], [-3, 9]], [[3, -6], [16, -6]], [[3, 1], [16, 1]], [[3, 8], [12, 8]]], open: [false, false, true, true, true, true] },
       email: { cs: [rect(-22, -14, 44, 28), [[-22, -14], [0, 3], [22, -14]]], open: [false, true] },
       sms: { cs: [[[-20, -15], [20, -15], [20, 9], [-6, 9], [-14, 17], [-12, 9], [-20, 9]], circle(-9, -3, 2.2), circle(0, -3, 2.2), circle(9, -3, 2.2)] },
+      whatsapp: { cs: [circle(0, -2, 18), [[-14, 9], [-19, 19], [-7, 15]], arc(0, -2, 9, deg(140), deg(250))], open: [false, false, true] },
+      map: { cs: [[[0, 20], ...arc(0, -6, 14, deg(150), deg(390))], circle(0, -6, 5)] },
+      event: { cs: [roundedRect(-18, -14, 36, 32, 3), [[-18, -5], [18, -5]], [[-9, -19], [-9, -10]], [[9, -19], [9, -10]], rect(-12, 1, 6, 5), rect(-3, 1, 6, 5), rect(6, 1, 6, 5), rect(-12, 9, 6, 5)], open: [false, true, true, true] },
       phone: { cs: [roundedRect(-11, -20, 22, 40, 4), stadium(-4, -15, 4, -15, 2), circle(0, 14, 2.5)] },
     };
     const it = icon[v];
@@ -176,13 +256,30 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
   return [];
 }
 
+/** Stand pictures: the sign seen from the side (or flat, or on a wall). */
+function standArt(v: string): { d: string; fill?: boolean }[] {
+  const sign = (x: number, lean: number): Contour => { const a = (lean * Math.PI) / 180; return [[x, 30], [x + 3, 30], [x + 3 - 34 * Math.sin(a), 30 - 34 * Math.cos(a)], [x - 34 * Math.sin(a), 30 - 34 * Math.cos(a)]]; };
+  const line: Contour = [[-24, 31.5], [24, 31.5]];
+  const shapes: Record<string, { cs: Contour[]; open?: boolean[] }> = {
+    none: { cs: [rect(-22, 22, 44, 6), line], open: [false, true] },
+    base: { cs: [sign(-1.5, 0), roundedRect(-16, 24, 32, 6, 1.5), line], open: [false, false, true] },
+    feet: { cs: [sign(2, 12), roundedRect(-14, 23, 28, 7, 3), line], open: [false, false, true] },
+    tent: { cs: [[[-16, 30], [0, -4], [16, 30]], line], open: [true, true] },
+    wall: { cs: [rect(-20, -16, 4, 48), roundedRect(-14, -8, 26, 30, 2), circle(-1, -3, 1.6), circle(-1, 17, 1.6)] },
+  };
+  const it = shapes[v];
+  return it ? fitArt(it.cs, 34, it.open).map((d) => ({ d })) : [];
+}
+
 function scaleQr(p: QrParams, s: number): QrParams {
   const k = (v: number) => r1(v * s);
   return {
     ...p,
     code: { ...p.code, size: k(p.code.size) },
-    plate: { ...p.plate, padding: k(p.plate.padding), corner: k(p.plate.corner) },
+    plate: { ...p.plate, padding: k(p.plate.padding), corner: k(p.plate.corner), stake: k(p.plate.stake) },
     label: { ...p.label, size: Math.max(2, k(p.label.size)) },
+    badge: { ...p.badge, size: Math.max(3, k(p.badge.size)) },
+    stand: { ...p.stand, depth: Math.max(25, k(p.stand.depth)) },
   };
 }
 
@@ -204,19 +301,23 @@ const QR_BASE: GeneratorDef<QrParams> = {
   summary: (p) => `${CONTENT_NAMES[p.content.kind]}, ${p.code.size} mm, ${OUTPUT_NAMES[p.output.kind]}`,
   help: {
     intro: [
-      "The QR Code generator makes scannable plates: keychains, table signs, coasters, Wi-Fi cards, business cards and paint stencils. It encodes web addresses, text, Wi-Fi logins, contact cards, emails, text messages and phone numbers in the standard formats phones understand.",
-      "Choose how it is made: engraved; cut through a light top plate and glued on a dark backplate; or cut as a stencil whose holes are joined row by row with thin bridges between the rows, so no part of the stencil falls out.",
-      "Every design is checked: module size for the output, the clear space around the code, the size of a centre logo against the error correction, and stencil bridges.",
+      "The QR Code generator makes scannable plates and signs: keychains, pet tags, plant markers, table and counter signs, tent cards, coasters, Wi-Fi cards, business cards and paint stencils. It encodes web addresses, text, Wi-Fi logins, contact cards, emails, text messages, phone numbers, WhatsApp chats, map locations and calendar events in the standard formats phones understand.",
+      "Style the code the way online QR designers do: eight module styles, and the corner eyes' frame and centre in their own shapes. Add a header picture (review stars, a menu, Wi-Fi, a camera, a map pin, a payment card, the contactless tap sign…), a label, a centre logo and a frame, on a plate shaped as a rectangle, circle, arch, hexagon, shield, speech bubble, dog bone or plant stake.",
+      "Stand it up: tabs into a slotted base, two feet with slots that lean it back toward the reader, a tent card folded on a living hinge with the code on both sides, or holes for screws and standoffs. Choose how it is made: engraved; cut through a light top plate over a dark backplate; or cut as a stencil with bridges, so no part falls out.",
+      "Every design is checked: module size for the output, the clear space around the code, the size of a centre logo against the error correction, stencil bridges, holes near the code and stands that would tip over.",
     ],
     tips: [
       "On an engraved plate a plain label can be scored instead (Label mark); a bar label stays engraved, because its text is knocked out of the bar.",
       "Scan the screen before you cut: hold a phone up to the canvas; if it reads there, the plate will read too.",
-      "Contrast matters more than size: engrave dark and even, or use a black backplate under a light top plate.",
+      "Contrast matters more than size: engrave dark and even, or use a black backplate under a light top plate. Two-colour acrylic (a light skin over a dark core) gives the sharpest engraved codes.",
       "Keep modules at least 0.6 mm for engraving and 1.2 mm for cut-outs; a shorter web address makes fewer, larger modules.",
       "A centre logo needs error correction Q or H, and keep it under about a fifth of the code's width.",
+      "Mask wood before engraving a code: it keeps the light modules clean of smoke, which phones read as dark.",
+      "For a counter sign, a 50 to 70 mm code reads from an arm's length; for a wall sign, make the code about a tenth of the distance people scan from.",
+      "With the Tap picture, stick an NFC tag behind it and write the same link to it, so phones can tap as well as scan.",
       "For a stencil, spray light coats straight down and lift it straight up; the thin lines left by the bridges do not stop phones reading the code.",
     ],
-    keywords: ["qr", "qr code", "wifi", "vcard", "business card", "keychain", "stencil", "menu"],
+    keywords: ["qr", "qr code", "wifi", "vcard", "business card", "keychain", "stencil", "menu", "review sign", "table tent", "counter sign", "stand", "pet tag", "plant marker", "nfc", "whatsapp", "payment sign"],
   },
 };
 
@@ -228,5 +329,5 @@ export const QR: GeneratorDef<QrParams> = withPattern(QR_BASE, [
   { v: "back", text: "Backplate", match: byId("back") },
 ], {
   help: "A decorative pattern in the plate's border, round the code: on the plate, or on a layered plate's top or backplate (showing through the top's openings). The code and its quiet zone stay solid, so it still scans; widen the border for more room.",
-  keep: (_p, part) => { const a = CODE_AREA.get(part); return a ? [a] : []; },
+  keep: (_p, part) => CODE_AREA.get(part) ?? [],
 });

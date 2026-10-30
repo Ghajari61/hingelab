@@ -1,7 +1,8 @@
 import { MATERIALS } from "@/lib/hinge/defaults";
 import { differenceShapes, makeShape, offsetShapes, shapeContours, unionShapes } from "@/lib/letters/polygon";
 import { bboxOf, circle, rect, transform } from "../geom";
-import { tagMarks, type ItemBlock } from "../items";
+import { tagItem, tagMarks, type ItemBlock } from "../items";
+import { qrElement, qrText } from "../qr/element";
 import { material2 } from "../material2";
 import { motif, motifSize } from "../motifs";
 import { motifRef } from "../motifRef";
@@ -28,6 +29,9 @@ export interface TablenumInfo {
   tip: number;
   /** Length of the tabs below the plate, mm. */
   tab: number;
+  /** The menu code: module size, mm, and tables whose link was too long for a code (0 when off). */
+  qrModule: number;
+  qrFailed: number;
 }
 
 export type TablenumOutput = GenOutput & { info?: TablenumInfo };
@@ -78,6 +82,8 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
   // Which run of each table's contours is its label, number, name and motif (for the 3D view's items).
   const ranges: { item: string; from: number; to: number }[][] = [];
   const glyphsOf: Contour[][][] = [];
+  const qrOf: Contour[][] = [];
+  let qrModule = 0, qrFailed = 0;
   const blocks = tables.map(({ main, sub }) => {
     const nw = p.text.noWeld;
     const lab = p.text.label.trim() ? textBlock(ctx, p.text.label, p.text.labelFont, p.text.labelSize, { missing, noWeld: nw, style: { ...p.textStyle, ...p.textForm } }) : null;
@@ -120,6 +126,24 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
       cs = move(cs, -(bb.x0 + bb.x1) / 2, -(bb.y0 + bb.y1) / 2);
       groups = groups.map((g) => move(g, -(bb.x0 + bb.x1) / 2, -(bb.y0 + bb.y1) / 2));
     }
+    // the table's QR code under everything, a quiet zone of four modules clear of the text
+    let qrCs: Contour[] = [];
+    if (p.qr.on) {
+      const el = qrElement(qrText(p.qr.url, main), p.qr.size, 0, 0, p.qr.style);
+      if (!el) qrFailed++;
+      else {
+        qrModule = el.module;
+        const top = cs.length ? bboxOf(cs).y1 + Math.max(4 * el.module, 3) : 0;
+        qrCs = move(el.contours, 0, top + p.qr.size / 2);
+        if (cs.length) {
+          const all = bboxOf([...cs, ...qrCs]);
+          const dx = -(all.x0 + all.x1) / 2, dy = -(all.y0 + all.y1) / 2;
+          cs = move(cs, dx, dy); qrCs = move(qrCs, dx, dy);
+          groups = groups.map((g) => move(g, dx, dy));
+        }
+      }
+    }
+    qrOf.push(qrCs);
     ranges.push([...run, { item: "Motif", from: texts, to: cs.length }]);
     glyphsOf.push(groups);
     return cs;
@@ -128,7 +152,9 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
   if (loading) return { parts: [], stats: [], notice: "Loading the font." };
 
   let contentW = 0, contentH = 0;
-  for (const cs of blocks) {
+  // the QR code counts toward the room each table needs
+  const sized = blocks.map((b, i) => [...b, ...qrOf[i]]);
+  for (const cs of sized) {
     if (!cs.length) continue;
     const b = bboxOf(cs);
     contentW = Math.max(contentW, b.x1 - b.x0);
@@ -144,7 +170,7 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
     W = H = Math.max(W, H) * k;
   }
   const pad = Math.max(5, p.plate.pad * 0.6);
-  const info: TablenumInfo = { tables: tables.length, asked, W, H, contentW, contentH, roomW: W - 2 * pad, roomH: H - 2 * pad - (p.plate.auto ? 0 : H * arch * 0.5), names: 0, tip: 0, tab: 0 };
+  const info: TablenumInfo = { tables: tables.length, asked, W, H, contentW, contentH, roomW: W - 2 * pad, roomH: H - 2 * pad - (p.plate.auto ? 0 : H * arch * 0.5), names: 0, tip: 0, tab: 0, qrModule, qrFailed };
   if (p.batch.mode === "range") info.names = p.batch.names.split(/\r?\n/).filter((s) => s.trim()).length;
   const face = orient(shapeOutline(shape, W, H, p.plate.corner));
   const contentY = H / 2 + (p.plate.auto ? (W * arch) / 2 : 0);
@@ -198,7 +224,9 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
       const gFront = gs.map((g) => move(g, 0, H + band)), gBack = gs.map((g) => rot180(g, W / 2, H / 2));
       const bA = border.score ? { score: rot180(border.score, W / 2, H / 2) } : border.engrave ? { engrave: rot180(border.engrave, W / 2, H / 2) } : {};
       const bB = border.score ? { score: move(border.score, 0, H + band) } : border.engrave ? { engrave: move(border.engrave, 0, H + band) } : {};
-      const m = join(join(tagMarks(marks(front, gFront), items(front, i)), tagMarks(marks(back, gBack), items(back, i))), join(bA, bB));
+      const code = move(qrOf[i], W / 2, contentY);
+      const qrM = { engrave: [...tagItem(move(code, 0, H + band), "QR code"), ...tagItem(rot180(code, W / 2, H / 2), "QR code")] };
+      const m = join(join(join(tagMarks(marks(front, gFront), items(front, i)), tagMarks(marks(back, gBack), items(back, i))), join(bA, bB)), qrM);
       parts.push({ id: id("card"), name: `Tent card${tag}`, outer, holes: [], cuts: hingeSlits(W, H + 1, H + band - 1, p.hinge), ...m, place: { x: X, y: 0, z: 0 } });
       if (p.text.mark === "raised" && cs.length) {
         const f = raised(front, gFront), b = raised(back, gBack);
@@ -220,7 +248,7 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
     const lift = plaque ? 0 : layers * T;
     const z0 = plaque ? 0 : depth / 2 - (plates * T) / 2;
     const place = (z: number) => ({ x: X, y: -H - lift, z, upright: true });
-    const m = join(tagMarks(marks(cs, gs), items(cs, i)), border);
+    const m = join(join(tagMarks(marks(cs, gs), items(cs, i)), border), { engrave: tagItem(move(qrOf[i], W / 2, contentY), "QR code") });
     for (let k = 0; k < plates; k++) {
       const z = z0 + (plates === 2 ? (k ? 0 : T) : 0);
       parts.push({ id: id(k ? "back" : "plate"), name: `${k ? "Back" : "Plate"}${tag}`, outer, holes, ...m, place: place(z) });
@@ -249,6 +277,7 @@ export function buildTablenum(p: TablenumParams, ctx: BuildContext): TablenumOut
     stats: [
       { label: "Tables", value: tables.length > 1 ? `${tables.length} (${tables[0].main} to ${tables.at(-1)!.main})` : tables[0].main },
       { label: "Plate", value: `${r0(W)} × ${r0(H)} mm` },
+      ...(p.qr.on && qrModule ? [{ label: "QR code", value: `${r0(p.qr.size)} mm, ${qrModule.toFixed(2)} mm modules${/\{n\}/.test(p.qr.url) ? ", one per table" : ""}` }] : []),
       ...(p.build.kind === "stand" ? [{ label: "Base", value: `${r0(baseL)} × ${r0(depth)} mm, ${layers} layer${layers > 1 ? "s" : ""}` }] : []),
       ...(mixed ? [{ label: "Second material", value: `${m2.name} ${p.mat.T2} mm` }] : []),
       { label: "Parts", value: String(parts.length) },

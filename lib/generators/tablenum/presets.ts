@@ -138,4 +138,16 @@ export const TABLENUM_PRESETS: GenPreset<TablenumParams>[] = [
       text: { label: "Table", labelFont: "cinzel", fontId: "cinzel", size: 36 }, motif: { kind: "compass", place: "above", size: 26, gap: 4 }, border: { kind: "score", inset: 5 },
     },
   },
+  {
+    id: "qr-menu-tables", name: "Table numbers with menu QR", note: "Each table's own QR code (its number is in the link) under the number, in a slotted base",
+    params: {
+      name: "Menu QR table numbers",
+      plate: { shape: "rounded", pad: 12, corner: 8 },
+      text: { label: "Table", labelFont: "fredoka", labelSize: 12, fontId: "archivo-black", size: 44 },
+      border: { kind: "none" },
+      base: { layers: 2, depth: 70 },
+      batch: { from: 1, to: 12 },
+      qr: { on: true, url: "example.com/menu?table={n}", size: 36, style: "rounded" },
+    },
+  },
 ];

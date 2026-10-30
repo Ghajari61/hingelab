@@ -48,6 +48,8 @@ export interface TablenumParams extends GenBase {
   hinge: { band: number; slit: number; bridge: number; pitch: number };
   plaque: { holes: "none" | "top" | "two" };
   mat: { mat2: string; T2: number };
+  /** A QR code under the number, always engraved; {n} in the link is the table's number. */
+  qr: { on: boolean; url: string; size: number; style: "square" | "rounded" | "dots" };
 }
 
 export const TABLENUM_DEFAULTS: TablenumParams = {
@@ -74,6 +76,7 @@ export const TABLENUM_DEFAULTS: TablenumParams = {
   hinge: { band: 20, slit: 24, bridge: 3, pitch: 2 },
   plaque: { holes: "none" },
   mat: { mat2: "acrylic-gold", T2: 3 },
+  qr: { on: false, url: "example.com/menu?table={n}", size: 32, style: "square" },
 };
 
 const BUILDS: TableBuild[] = ["stand", "tent", "plaque"];
@@ -101,6 +104,9 @@ export function mergeTablenum(raw: unknown): TablenumParams {
   p.batch.to = clamp(Math.round(p.batch.to), 0, 999);
   p.batch.pad = clamp(Math.round(p.batch.pad), 0, 3);
   p.base.layers = clamp(Math.round(p.base.layers), 1, 3);
+  p.qr.on = p.qr.on === true;
+  if (!["square", "rounded", "dots"].includes(p.qr.style)) p.qr.style = d.qr.style;
+  p.qr.size = clamp(Number(p.qr.size) || d.qr.size, 12, 200);
   return p;
 }
 

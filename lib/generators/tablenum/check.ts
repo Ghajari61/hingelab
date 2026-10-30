@@ -19,6 +19,17 @@ export function checkTablenum(p: TablenumParams, out: TablenumOutput): Issue<Tab
       fixes: p.batch.mode === "range" ? [{ id: "cap", label: `Tables ${p.batch.from} to ${p.batch.from + MAX_TABLES - 1}`, safe: true, apply: (q) => ({ ...q, batch: { ...q.batch, to: q.batch.from + MAX_TABLES - 1 } }) }] : [],
     });
   }
+  if (p.qr.on && info.qrFailed) {
+    issues.push({ code: "QR_TOO_LONG", level: "error", message: `The QR link is empty or too long for a code on ${info.qrFailed} table${info.qrFailed === 1 ? "" : "s"}.`, fixes: [{ id: "off", label: "No QR code", safe: false, apply: (q) => ({ ...q, qr: { ...q.qr, on: false } }) }] });
+  }
+  if (p.qr.on && info.qrModule && info.qrModule < 0.6) {
+    const size = Math.min(200, Math.ceil((p.qr.size * 0.66) / info.qrModule));
+    issues.push({
+      code: "QR_SMALL", level: "warn",
+      message: `The QR code's modules are ${info.qrModule.toFixed(2)} mm; engraved codes need 0.6 mm or more to scan reliably.`,
+      fixes: [{ id: "bigger", label: `QR code ${size} mm`, safe: true, apply: (q) => ({ ...q, qr: { ...q.qr, size } }) }],
+    });
+  }
   if (p.batch.mode === "range" && info.names > 0 && info.names < info.tables) {
     issues.push({ code: "FEW_NAMES", level: "info", message: `${info.names} names for ${info.tables} tables; the rest have no second line.`, fixes: [] });
   }

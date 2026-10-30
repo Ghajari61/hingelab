@@ -4,6 +4,8 @@ import { TABLENUM } from "../tablenum";
 import { hingeSlits, type TablenumOutput } from "../tablenum/build";
 import { MAX_TABLES, formatNumber, mergeTablenum, tableList } from "../tablenum/params";
 import { CTX } from "./ctx";
+import { itemOf } from "../items";
+import { decodeContours } from "./qrDecode";
 
 const build = (raw: unknown) => TABLENUM.build(mergeTablenum(raw), CTX) as TablenumOutput;
 const issues = (raw: unknown) => { const p = mergeTablenum(raw); return TABLENUM.check(p, TABLENUM.build(p, CTX)); };
@@ -94,5 +96,41 @@ describe("table numbers", () => {
     const out = build({ batch: { from: 1, to: 2 }, text: { mark: "raised" } });
     expect(out.parts.filter((p) => p.material === "second")).toHaveLength(2);
     expect(TABLENUM.pro!(mergeTablenum({ text: { mark: "raised" } }), out)).toMatch(/Pro/);
+  });
+});
+
+describe("table numbers with a QR code", () => {
+  it("each table gets its own code with its number in the link, engraved under the number", () => {
+    const pr = TABLENUM.presets.find((x) => x.id === "qr-menu-tables")!;
+    const p = TABLENUM.merge(pr.params);
+    const out = TABLENUM.build(p, CTX) as TablenumOutput;
+    expect(out.error).toBeUndefined();
+    const plates = out.parts.filter((x) => x.id.startsWith("plate-"));
+    expect(plates.length).toBe(12);
+    for (const k of [0, 2, 11]) {
+      const code = (plates[k].engrave ?? []).filter((c) => itemOf(c) === "QR code");
+      expect(code.length).toBeGreaterThan(10);
+      expect(decodeContours(code, out.info!.qrModule)).toBe(`https://example.com/menu?table=${k + 1}`);
+      // under the number, inside the plate
+      const num = (plates[k].engrave ?? []).filter((c) => itemOf(c) === "Number");
+      if (num.length) expect(bboxOf(code).y0).toBeGreaterThan(bboxOf(num).y1);
+    }
+    expect(TABLENUM.check(p, out).filter((i) => i.level !== "info")).toEqual([]);
+  });
+
+  it("a tent card carries the code on both faces; raised numbers keep it engraved", () => {
+    const tent = TABLENUM.build(mergeTablenum({ build: { kind: "tent" }, batch: { from: 1, to: 1 }, qr: { on: true } }), CTX) as TablenumOutput;
+    expect((tent.parts[0].engrave ?? []).filter((c) => itemOf(c) === "QR code").length).toBeGreaterThan(20);
+    const raised = TABLENUM.build(mergeTablenum({ text: { mark: "raised" }, batch: { from: 1, to: 1 }, qr: { on: true } }), CTX) as TablenumOutput;
+    expect((raised.parts[0].engrave ?? []).filter((c) => itemOf(c) === "QR code").length).toBeGreaterThan(10);
+  });
+
+  it("tiny modules warn, and the fix makes the code bigger", () => {
+    const p = mergeTablenum({ qr: { on: true, size: 14, url: "example.com/a/very/long/menu/address?table={n}&lang=en" }, batch: { from: 1, to: 1 } });
+    const issues = TABLENUM.check(p, TABLENUM.build(p, CTX));
+    const small = issues.find((i) => i.code === "QR_SMALL")!;
+    expect(small).toBeDefined();
+    const q = small.fixes[0].apply(p);
+    expect(TABLENUM.check(q, TABLENUM.build(q, CTX)).map((i) => i.code)).not.toContain("QR_SMALL");
   });
 });
