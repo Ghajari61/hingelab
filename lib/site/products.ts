@@ -19,7 +19,8 @@ export interface SiteProduct {
   presets: number;
 }
 
-const FEATURED: Record<string, string> = {
+/** Each product's showcase design (its picture, and where the start page opens it). */
+export const FEATURED: Record<string, string> = {
   keychain: "name-rounded", hinge: "gift-box", letters: "hello-sign", parametric: "head-stack",
   clock: "wall-roman", puzzle: "kids-12", qr: "keychain", boxes: "organiser",
   topper: "happy-birthday", keyrack: "home-sweet-home", sign: "welcome-arch", tablenum: "wedding-arch", trophy: "star-award", shadowbox: "star-tunnel", paperbox: "tea-hinged", charm: "family-baubles", family: "family-crossword", miniature: "victorian-dollhouse", leather: "structured-handbag",

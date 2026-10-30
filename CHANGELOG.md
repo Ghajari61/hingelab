@@ -1,3 +1,11 @@
+## Unreleased
+
+- **A clearer first visit:**
+  - A new **Start** page (`/start`) asks "What would you like to make?" and lists every product by goal (gifts, events, home, boxes, leather and sculpture). Each card shows how easy the project is and opens the editor on a ready-made design, so nobody lands in an empty or advanced editor.
+  - The home page says plainly what is free (trying every design and the 3D preview, with no account) and what needs Pro (exporting). It offers the two ways in side by side: online in the browser, or the Windows app.
+  - "Start designing" in the header and every start button now lead to the Start page.
+  - The first-visit tour in the editor has four steps, now including the 3D check, with a link back to pick another project.
+
 ## 1.30.4 — Balanced hanging loops
 
 - **Hanging loops stand on solid material.** A monogram's loop no longer hangs off a hairline stroke (the thin diagonal of an M or N). The loop goes near the piece's balance point, so it hangs straight: on the top of the outline where the neck has solid material under it, otherwise where the centre line first meets solid material, or on a short stem down to it. Charms and other layouts use the same check, so a loop never lands on a spike or a thin serif end.
