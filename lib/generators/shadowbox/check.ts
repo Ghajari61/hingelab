@@ -69,7 +69,7 @@ export function checkShadowBox(p: ShadowBoxParams, out: ShadowBoxOutput): Issue<
         : [],
     });
   }
-  const solidBack = (p.stack.back && !p.design.moon) || !!p.photo.image;
+  const solidBack = (p.stack.back && !p.design.moon && !info.stars) || !!p.photo.image;
   if (p.light.on && solidBack) {
     issues.push({
       code: "LIGHT_BLOCKED", level: "warn",
@@ -82,7 +82,7 @@ export function checkShadowBox(p: ShadowBoxParams, out: ShadowBoxOutput): Issue<
       ],
     });
   }
-  const holes = [p.box.pins ? p.box.pin : 0, p.box.back === "screwed" ? p.box.screw : 0];
+  const holes = [p.box.pins ? p.box.pin : 0, p.box.back === "screwed" ? p.box.screw : 0, p.box.hang === "ribbon" ? p.box.ribbon : 0];
   const needBand = Math.max(...holes) + 2 * MIN_WALL;
   if (info.band !== undefined && Math.max(...holes) > 0 && info.band < needBand) {
     const border = Math.ceil(Math.max(p.frame.border, needBand));
@@ -106,6 +106,27 @@ export function checkShadowBox(p: ShadowBoxParams, out: ShadowBoxOutput): Issue<
       code: "BOX_THIN", level: "warn",
       message: `${p.box.walls ? "Finger-jointed walls" : "The feet"} need board at least ${MIN_BOX_T} mm thick to hold; at ${p.T} mm cut ${p.box.walls ? "them" : "the feet"} from thicker board, or leave ${p.box.walls ? "them" : "the feet"} out.`,
       fixes: [{ id: "off", label: p.box.walls ? "No box walls" : "No feet", safe: false, apply: (q) => ({ ...q, box: { ...q.box, ...(p.box.walls ? { walls: false } : { hang: "none" as const }) } }) }],
+    });
+  }
+  if (p.design.stars > 0 && !p.stack.back && !p.photo.image) {
+    issues.push({
+      code: "STARS_NO_BACK", level: "warn",
+      message: "The stars are cut in the back board, and this stack has none: its back layer is a pattern layer.",
+      fixes: [
+        { id: "back", label: "Add a plain back board", safe: true, apply: (q) => ({ ...q, stack: { ...q.stack, back: true } }) },
+        { id: "none", label: "No stars", safe: false, apply: (q) => ({ ...q, design: { ...q.design, stars: 0 } }) },
+      ],
+    });
+  }
+  if (info.starsWanted !== undefined && (info.stars ?? 0) < info.starsWanted) {
+    const stars = info.stars ?? 0, starSize = Math.max(1.5, Math.floor(p.design.starSize * 0.7 * 2) / 2);
+    issues.push({
+      code: "STARS_FEWER", level: "info",
+      message: `Only ${stars} of the ${info.starsWanted} stars fit the sky with paper round each one.`,
+      fixes: [
+        { id: "fewer", label: `${stars} stars`, safe: true, apply: (q) => ({ ...q, design: { ...q.design, stars } }) },
+        ...(starSize < p.design.starSize ? [{ id: "smaller", label: `Stars ${starSize} mm`, safe: false, apply: (q: ShadowBoxParams) => ({ ...q, design: { ...q.design, starSize } }) }] : []),
+      ],
     });
   }
   if (p.design.pattern === "picture") {
