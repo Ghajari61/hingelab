@@ -87,6 +87,9 @@ export interface HatchParams {
 
 export interface RotateCopiesParams { count: number; start: number; cx: number; cy: number; fuse: boolean }
 
+/** Symmetry (CorelDRAW's Symmetry drawing): `lines` mirror lines through a centre, the first at `angle` degrees; the artwork repeats in every wedge, mirrored in turn. */
+export interface SymmetryParams { lines: number; angle: number; cx: number; cy: number; fuse: boolean }
+
 export interface MirrorParams {
   axis: "vertical" | "horizontal" | "line";
   /** Vertical axis at x, horizontal axis at y (local mm). */
@@ -226,6 +229,7 @@ export interface EffectParamsMap {
   hatches: HatchParams;
   rotateCopies: RotateCopiesParams;
   mirror: MirrorParams;
+  symmetry: SymmetryParams;
   livingHinge: LivingHingeParams;
   patternAlongPath: PatternAlongPathParams;
   bend: BendParams;
@@ -324,11 +328,17 @@ export interface GeneratorNode extends NodeBase {
   cachedOutputHash?: string;
 }
 
+export type DimensionKind = "linear" | "horizontal" | "vertical" | "angular" | "radius" | "diameter";
+
 export interface DimensionNode extends NodeBase {
   type: "dimension";
-  kind: "linear" | "angular" | "radius";
+  /** linear (parallel to the points), horizontal, vertical: two points; angular: vertex and two arm points; radius, diameter: centre and rim. */
+  kind: DimensionKind;
   points: Vec[];
+  /** Distance of the dimension line from the measured points, mm (angular: the arc's radius, 0 = automatic). */
   offset: number;
+  /** A label of its own instead of the measured value. */
+  text?: string;
 }
 
 /**

@@ -14,6 +14,7 @@ import { EFFECT_META } from "@/lib/studio/effects/meta";
 import { defaultCutLayer, layerCode } from "@/lib/studio/cutLayers";
 import { isEmptyBox, shapeForBox, translate } from "@/lib/studio/geom";
 import { findNode, isEditable, locate, moveNode, selectionBox, topLevel } from "@/lib/studio/scene";
+import { DIMENSION_NAMES } from "@/lib/studio/dimension";
 import { currentRotation, currentShear, flipAt, moveRefTo, refAt, resizeTo, rotateTo, shearTo } from "@/lib/studio/transform";
 import { UNIT_LIST } from "@/lib/studio/units";
 import type { CutMode, Document, SceneNode, Units } from "@/lib/studio/types";
@@ -133,6 +134,14 @@ export function PropertiesPanel({ toast, handlers }: { toast: Toast; handlers: R
           <p className="pn-empty">Edit the shape in the control bar above the canvas. Reset section restores its default corners, points and sides.</p>
         </PanelSection>
       )}
+      {n?.type === "dimension" && (
+        <PanelSection title="Dimension" meta={DIMENSION_NAMES[n.kind]} testId="props-dimension">
+          <NumberInput label={n.kind === "angular" ? "Arc radius" : "Offset"} value={n.offset} length units={doc.units} min={-1000} max={1000} defaultValue={8}
+            onChange={(v, c) => live("Dimension Offset", (d) => { const m = findNode(d.root, n.id); if (m?.type === "dimension") m.offset = v; }, c)} testId="dim-offset" />
+          <DimensionLabel node={n} />
+          <p className="pn-empty">Dimensions sit on the Measurements layer, which is never sent to the laser.</p>
+        </PanelSection>
+      )}
       {n && (
         <PanelSection title="Object" testId="props-object">
           <RenameField node={n} />
@@ -191,6 +200,26 @@ function shapeBoxSize(n: Extract<SceneNode, { type: "shape" }>): { w: number; h:
     case "gear": { const d = s.module * (s.teeth + 2); return { w: d, h: d }; }
     default: return { w: s.w, h: s.h };
   }
+}
+
+/** A dimension's own label (empty shows the measured value); one undo step when it is left. */
+function DimensionLabel({ node }: { node: Extract<SceneNode, { type: "dimension" }> }) {
+  const api = useEditorApi();
+  const [v, setV] = useState(node.text ?? "");
+  const [for_, setFor] = useState(node.id);
+  if (for_ !== node.id) { setFor(node.id); setV(node.text ?? ""); }
+  const commit = () => {
+    const t = v.trim().slice(0, 60);
+    if (t === (node.text ?? "")) return;
+    api.getState().edit("Dimension Label", (d) => { const m = findNode(d.root, node.id); if (m?.type === "dimension") { if (t) m.text = t; else delete m.text; } });
+  };
+  return (
+    <div style={{ display: "grid" }}>
+      <label className="ui-label" htmlFor={`dl-${node.id}`}>Label</label>
+      <input id={`dl-${node.id}`} className="ui-text" value={v} placeholder="The measured value" maxLength={60} data-testid="dim-text"
+        onChange={(e) => setV(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
+    </div>
+  );
 }
 
 function RenameField({ node }: { node: SceneNode }) {

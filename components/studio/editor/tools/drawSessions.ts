@@ -10,6 +10,7 @@ import { recognise, threePointCurve, threePointEllipse, threePointRect, type Pla
 import { normBox, pathD, shapePaths, transformSubpaths } from "@/lib/studio/geom";
 import { addNode, isEditable } from "@/lib/studio/scene";
 import { cropToBox } from "@/lib/studio/toolOps";
+import { addDimensionOf, DIMENSION_NAMES, dimensionDrawing, offsetThrough } from "@/lib/studio/dimension";
 import type { PathNode, SceneNode, Subpath, Vec } from "@/lib/studio/types";
 import type { EditorState } from "../store";
 import type { ToolPointer, ToolSession } from "./brushTools";
@@ -144,5 +145,74 @@ export function startCrop(api: Api, e: ToolPointer, ctx: DrawCtx): ToolSession {
       };
     },
     outline: rectD,
+  };
+}
+
+/**
+ * The Dimension tool (CorelDRAW's Parallel, Horizontal/Vertical, Angular and Radius dimensions).
+ * Lengths: drag between the two points, then move and click where the dimension line goes (Enter
+ * keeps the line where it is). Angles: click the corner, then the first arm, then the second.
+ * Radius and diameter: drag from the centre to the edge.
+ */
+export function startDimension(api: Api, e: ToolPointer, ctx: DrawCtx): ToolSession {
+  const kind = api.getState().dimensionMode;
+  const a = ctx.snap(e.p);
+  const place = (pts: Vec[], offset: number) => {
+    const s = api.getState();
+    const id = newId();
+    s.edit(DIMENSION_NAMES[kind], (d) => { addDimensionOf(d, kind, pts, offset, () => id); }, { select: [id] });
+  };
+  const preview = (pts: Vec[], offset: number) => {
+    const g = dimensionDrawing({ kind, points: pts, offset });
+    return g ? pathD([...g.lines, ...g.arrows]) : pathD([{ closed: false, nodes: pts }]);
+  };
+  if (kind === "angular") {
+    // the corner is this click; the arms follow
+    const arm = (b: Vec): ToolSession => {
+      let c = b;
+      return {
+        move: (q) => { c = ctx.snap(q.p); },
+        up: (q) => {
+          c = ctx.snap(q.p);
+          if (dist(c, a) < 3 * ctx.px || dist(c, b) < 3 * ctx.px) { ctx.toast("Click the end of the second arm."); return arm(b); }
+          place([a, b, c], 0);
+        },
+        outline: () => preview([a, b, c], 0),
+      };
+    };
+    let b = a;
+    return {
+      move: (q) => { b = ctx.snap(q.p); },
+      up: (q) => {
+        b = ctx.snap(q.p);
+        if (dist(a, b) >= 3 * ctx.px) return arm(b);
+        // a click: wait for the first arm's click
+        let p = a;
+        return {
+          move: (r) => { p = ctx.snap(r.p); },
+          up: (r) => { p = ctx.snap(r.p); if (dist(a, p) < 3 * ctx.px) { ctx.toast("Click the end of the first arm."); return; } return arm(p); },
+          outline: () => pathD([{ closed: false, nodes: [a, p] }]),
+        };
+      },
+      outline: () => pathD([{ closed: false, nodes: [a, b] }]),
+    };
+  }
+  let b = a;
+  return {
+    move: (q) => { b = constrain(a, ctx.snap(q.p), q, ctx.snapAngle); },
+    up: (q) => {
+      b = constrain(a, ctx.snap(q.p), q, ctx.snapAngle);
+      if (dist(a, b) < 3 * ctx.px) { ctx.toast(kind === "radius" || kind === "diameter" ? "Drag from the centre to the edge." : "Drag from one point to the other, then click where the dimension line goes."); return; }
+      if (kind === "radius" || kind === "diameter") { place([a, b], 0); return; }
+      // the click that places the dimension line
+      let off = 8 * Math.sign(offsetThrough(kind, a, b, { x: (a.x + b.x) / 2 - (b.y - a.y), y: (a.y + b.y) / 2 + (b.x - a.x) })) || 8;
+      return {
+        move: (r) => { off = offsetThrough(kind, a, b, ctx.snap(r.p)); },
+        up: (r) => { off = offsetThrough(kind, a, b, ctx.snap(r.p)); place([a, b], off); },
+        enter: () => place([a, b], off),
+        outline: () => preview([a, b], off),
+      };
+    },
+    outline: () => preview([a, b], kind === "radius" || kind === "diameter" ? 0 : 0.0001),
   };
 }

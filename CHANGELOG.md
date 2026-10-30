@@ -1,5 +1,9 @@
 ## Unreleased
 
+- **Studio: three CorelDRAW-style tools** (built from scratch from public descriptions; no CorelDRAW code):
+  - **Dimension tool** (in the Measure group). Parallel, horizontal and vertical dimensions: drag between two points, then click where the dimension line goes. Angle: click the corner, then each arm. Radius and diameter: drag from the centre to the edge. Dimensions are drawn with extension lines, arrows and the value in mm or inches. The Properties panel sets the offset and an optional label of its own. They sit on the Measurements layer, which is never sent to the laser.
+  - **Symmetry** (Live Effect). 1 to 36 mirror lines through a centre you drag: the artwork repeats in every wedge, mirrored in turn, and stays editable, for mandalas and kaleidoscopes. It can be fused into one shape.
+  - **Print Merge** (File menu). Put field names in square brackets in the artwork's text, such as [Name]. Paste a table from a spreadsheet or load a CSV or text file, and each row makes a copy with its own values in a grid under the original.
 - **Undo and Redo work everywhere.** Ctrl+Z (and Ctrl+Y or Ctrl+Shift+Z for redo) did nothing while a number box, checkbox, drop-down or text field still had focus, for example right after typing a size and pressing Enter. They now undo the design from any control in the box, generator, letters and parametric editors, Studio and the AI designer, on the website and in the Windows app. A text field with fresh typing still undoes its own typing first. A change not yet recorded (text typed but not left) is undone as its own step instead of being skipped.
 
 ## 1.33.0 — Family word signs

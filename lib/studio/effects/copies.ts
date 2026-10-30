@@ -3,7 +3,7 @@
  * axis, optionally fused into one area (closed parts united; open parts kept as they are).
  */
 import { EPS, isEmptyBox, rotateAt, subpathsBox, transformSubpaths } from "../geom";
-import type { Mat, MirrorParams, RotateCopiesParams, Subpath } from "../types";
+import type { Mat, MirrorParams, RotateCopiesParams, Subpath, SymmetryParams } from "../types";
 import { openParts, uniteClosed } from "./clip";
 
 const fused = (sets: Subpath[][]): Subpath[] => [...uniteClosed(sets), ...sets.flatMap(openParts)];
@@ -45,4 +45,23 @@ export function applyMirror(subs: Subpath[], p: MirrorParams): Subpath[] {
 export function boxOf(subs: Subpath[]) {
   const b = subpathsBox(subs);
   return isEmptyBox(b) ? { minX: 0, minY: 0, maxX: 0, maxY: 0 } : b;
+}
+
+export const symmetryLines = (p: SymmetryParams) => Math.max(1, Math.min(36, Math.round(p.lines)));
+
+/**
+ * Symmetry: the dihedral group of `lines` mirror lines through (cx, cy). The artwork is turned by
+ * every 360 / lines degrees and each turn is also mirrored across the first line, so 2 × lines
+ * copies in all (one line: the artwork and its mirror image).
+ */
+export function applySymmetry(subs: Subpath[], p: SymmetryParams): Subpath[] {
+  const n = symmetryLines(p), a = (p.angle * Math.PI) / 180;
+  const m = mirrorMatrix(p.cx, p.cy, p.cx + Math.cos(a), p.cy + Math.sin(a));
+  const mirrored = m ? transformSubpaths(subs, m) : subs;
+  const copies: Subpath[][] = [];
+  for (let k = 0; k < n; k++) {
+    const r = rotateAt((360 * k) / n, p.cx, p.cy);
+    copies.push(transformSubpaths(subs, r), transformSubpaths(mirrored, r));
+  }
+  return p.fuse ? fused(copies) : copies.flat();
 }

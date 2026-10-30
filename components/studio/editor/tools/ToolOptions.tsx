@@ -13,7 +13,7 @@ import type { Document } from "@/lib/studio/types";
 import { useEditor, useEditorApi } from "../store";
 import { measureToItem } from "./brushTools";
 
-export const OPTION_TOOLS = new Set<ToolId>(["eraser", "measure", "fill", "calligraphy", "tweak", "spray", "connector"]);
+export const OPTION_TOOLS = new Set<ToolId>(["eraser", "measure", "fill", "calligraphy", "tweak", "spray", "connector", "dimension"]);
 
 /** Id of the preset whose values all match, or "" (custom). */
 function presetOf<T extends object>(cur: T, presets: { id: string; params: Partial<T> }[]): string {
@@ -27,6 +27,7 @@ export function ToolOptions({ tool, units, onResetToast }: { tool: ToolId; units
     eraserSize: useEditor((s) => s.eraserSize), eraserMode: useEditor((s) => s.eraserMode), measure: useEditor((s) => s.measure), fill: useEditor((s) => s.fill),
     calligraphy: useEditor((s) => s.calligraphy), tweak: useEditor((s) => s.tweak), spray: useEditor((s) => s.spray), selected: useEditor((s) => s.selection.length),
     connectorMode: useEditor((s) => s.connectorMode),
+    dimensionMode: useEditor((s) => s.dimensionMode),
   };
   const common = { units, onResetToast };
   const set = api.getState().set;
@@ -153,6 +154,23 @@ export function ToolOptions({ tool, units, onResetToast }: { tool: ToolId; units
       </div>
     );
     hint = "Drag from one object to another. The line follows them when they move; deleting either leaves a plain line.";
+  } else if (tool === "dimension") {
+    body = (
+      <div className="grp" data-testid="dimension-options">
+        <SegmentedControl label="Dimension" hideLabel value={st.dimensionMode} onChange={(dimensionMode) => set({ dimensionMode })}
+          options={[
+            { value: "linear", label: "Parallel", title: "Along the line between the two points" },
+            { value: "horizontal", label: "Horizontal" },
+            { value: "vertical", label: "Vertical" },
+            { value: "angular", label: "Angle" },
+            { value: "radius", label: "Radius" },
+            { value: "diameter", label: "Diameter" },
+          ]} />
+      </div>
+    );
+    hint = st.dimensionMode === "angular" ? "Click the corner, then the end of each arm."
+      : st.dimensionMode === "radius" || st.dimensionMode === "diameter" ? "Drag from the centre to the edge."
+        : "Drag between two points (they snap), then click where the dimension line goes; Enter keeps it where it is.";
   }
 
   return (

@@ -37,6 +37,7 @@ import { LiveEffectsPanel } from "./LiveEffectsPanel";
 import { InspectorPanel } from "./InspectorPanel";
 import { runPreflight } from "./preflightToast";
 import { CircularArrayDialog, GridArrayDialog, PathArrayDialog, StepRepeatDialog, TransformEachDialog } from "./ArrayDialogs";
+import { PrintMergeDialog } from "./PrintMergeDialog";
 import { ArrangeDialog, TiledClonesDialog, TransformDialog } from "./ParityDialogs";
 import { createEditorStore, EditorContext, useEditor, useEditorApi, type EditorState } from "./store";
 import { toolSlots } from "./tools";
@@ -488,6 +489,7 @@ function EditorShell({ opened }: { opened: Document }) {
       <StrokeToPathDialog open={dialog === "strokeToPath"} onClose={() => setDialog(null)} />
       <JoinNearbyDialog open={dialog === "joinNearby"} onClose={() => setDialog(null)} toast={toast} />
       <StepRepeatDialog open={dialog === "stepRepeat"} onClose={() => setDialog(null)} />
+      <PrintMergeDialog open={dialog === "printMerge"} onClose={() => setDialog(null)} />
       <TransformEachDialog open={dialog === "transformEach"} onClose={() => setDialog(null)} />
       <GridArrayDialog open={dialog === "gridArray"} onClose={() => setDialog(null)} />
       <CircularArrayDialog open={dialog === "circularArray"} onClose={() => setDialog(null)} />

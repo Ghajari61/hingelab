@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  AudioWaveform, Blend, Brush, ChevronDown, ChevronRight, ChevronUp, CopyPlus, Dices, Eye, EyeOff, Feather, FlipHorizontal2, Flower2, Grid2x2, Link2, Plus, RotateCcw, Route,
+  AudioWaveform, Blend, Brush, ChevronDown, ChevronRight, ChevronUp, CopyPlus, Dices, Eye, EyeOff, Feather, FlipHorizontal2, Flower2, Grid2x2, Link2, Plus, RotateCcw, Route, Snowflake,
   Rows3, RulerDimensionLine, Spline, SquareRoundCorner, SquareSquare, SquaresUnite, Tornado, Trash2, Unlink, X,
 } from "lucide-react";
 import { MATERIALS } from "@/lib/hinge/defaults";
@@ -19,7 +19,7 @@ import {
 import { bendGuide, envelopeCorners } from "@/lib/studio/effects/warp";
 import { findNode, isEditable, locate, topLevel } from "@/lib/studio/scene";
 import type {
-  BendParams, CornerMode, CornersParams, DistortParams, Document, EffectKind, EnvelopeParams, HatchParams, InterpolateParams, LinkedParams, LiveBooleanOp, LiveBooleanParams, LiveEffect,
+  BendParams, CornerMode, CornersParams, DistortParams, Document, EffectKind, EnvelopeParams, HatchParams, InterpolateParams, LinkedParams, LiveBooleanOp, LiveBooleanParams, LiveEffect, SymmetryParams,
   LivingHingeParams, Mat, MeasureSegmentsParams, MirrorParams, OffsetParams, PatternAlongPathParams, PatternMode, PowerStrokeParams, RotateCopiesParams, RoughenParams,
   SceneNode, TaperStrokeParams, Units, Vec,
 } from "@/lib/studio/types";
@@ -41,6 +41,7 @@ export const EFFECT_ICONS: Record<EffectKind, (size?: number) => ReactNode> = {
   hatches: (s = 16) => <Rows3 size={s} strokeWidth={1.5} />,
   rotateCopies: (s = 16) => <Flower2 size={s} strokeWidth={1.5} />,
   mirror: (s = 16) => <FlipHorizontal2 size={s} strokeWidth={1.5} />,
+  symmetry: (s = 16) => <Snowflake size={s} strokeWidth={1.5} />,
   livingHinge: (s = 16) => <HingeIcon size={s} />,
   patternAlongPath: (s = 16) => <Route size={s} strokeWidth={1.5} />,
   bend: (s = 16) => <Spline size={s} strokeWidth={1.5} />,
@@ -545,6 +546,24 @@ function Params({ node, world, effect, index, units, anchors, set, num, doc, oth
           {!f.plain && <p className="fx-note">The object is rotated or scaled: the centre is in its own coordinates.</p>}
           <div className="pn-btns"><button type="button" className="ui-btn" onClick={centre} data-testid="fx-rotate-centre">Centre on object</button></div>
           <Check label="Fuse copies into one shape" checked={p.fuse} onChange={(fuse) => set<RotateCopiesParams>("Fuse Copies", { fuse })()} testId="fx-rotate-fuse" />
+        </>
+      );
+    }
+    case "symmetry": {
+      const p = effect.params as SymmetryParams;
+      const centre = () => { const b = boxOf(input()); set<SymmetryParams>("Centre on Object", { cx: (b.minX + b.maxX) / 2, cy: (b.minY + b.maxY) / 2 })(); };
+      return (
+        <>
+          <div className="pn-grid">
+            <NumberInput label="Mirror lines" value={p.lines} integer min={1} max={36} defaultValue={6} onChange={num("Mirror Lines", "lines")} testId="fx-symmetry-lines" />
+            <NumberInput label="Angle" value={p.angle} suffix="°" min={-360} max={360} defaultValue={90} onChange={num("Symmetry Angle", "angle")} testId="fx-symmetry-angle" />
+          </div>
+          <NumberInput label="Centre X" value={f.x(p.cx)} length units={units} onChange={(v, c) => set<SymmetryParams>("Centre", { cx: f.fromX(v) })(c)} />
+          <NumberInput label="Centre Y" value={f.y(p.cy)} length units={units} onChange={(v, c) => set<SymmetryParams>("Centre", { cy: f.fromY(v) })(c)} />
+          {!f.plain && <p className="fx-note">The object is rotated or scaled: the centre is in its own coordinates.</p>}
+          <div className="pn-btns"><button type="button" className="ui-btn" onClick={centre}>Centre on object</button></div>
+          <Check label="Fuse into one shape" checked={p.fuse} onChange={(fuse) => set<SymmetryParams>("Fuse Symmetry", { fuse })()} testId="fx-symmetry-fuse" />
+          <p className="fx-note">Edit the original and every copy follows. Drag the pink centre on the canvas.</p>
         </>
       );
     }

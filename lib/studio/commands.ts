@@ -30,7 +30,7 @@ export const TOOL_IDS = [
   "grid", "spiral", "text", "rotate", "scale", "reflect", "hand", "zoom",
   "lasso", "magicWand", "curvature", "scissors", "knife", "eraser", "shear", "shapeBuilder", "eyedropper", "measure",
   "fill", "calligraphy", "tweak", "spray", "connector",
-  "rect3", "ellipse3", "curve3", "smartDraw", "crop", "segmentDelete",
+  "rect3", "ellipse3", "curve3", "smartDraw", "crop", "segmentDelete", "dimension",
 ] as const;
 export type ToolId = (typeof TOOL_IDS)[number];
 
@@ -78,6 +78,7 @@ export const TOOL_INFO: Record<ToolId, { label: string; description: string; key
   curve3: { label: "3-Point Curve", description: "Drag from the start to the end, then move to bend the curve through the pointer and click.", keywords: "arc bend curve three point corel" },
   smartDraw: { label: "Smart Drawing", description: "Sketch freehand: lines, polylines, triangles, rectangles, polygons and ellipses become clean shapes; anything else is smoothed.", keywords: "shape recognition sketch recognise corel smart" },
   crop: { label: "Crop", description: "Drag a rectangle around what to keep, then click inside it (or press Enter) to crop. Click outside or Esc cancels. Works on the selection, or everything.", keywords: "crop trim cut away outside corel" },
+  dimension: { label: "Dimension", description: "Parallel, horizontal or vertical: drag between two points, then click where the dimension line goes. Angular: click the corner, then the two arms. Radius or diameter: drag from the centre to the edge. Dimensions are never sent to the laser.", keywords: "dimension parallel horizontal vertical angular radius diameter drafting annotate corel" },
   segmentDelete: { label: "Virtual Segment Delete", description: "Click a piece of a path between the points where it crosses other paths to delete just that piece.", keywords: "virtual segment delete trim intersection corel" },
 };
 
@@ -122,6 +123,7 @@ export const COMMANDS: CommandDef[] = [
   c("file.new", "New…", "File", "Ctrl+Alt+N", undefined, "Open the start screen to create a project. (Ctrl+N belongs to the browser.)"),
   c("file.open", "Open…", "File", "Ctrl+O"),
   c("file.import", "Import…", "File", "Ctrl+I", undefined, "Place an SVG or DXF drawing (its colours go onto cut layers) or a PNG, JPEG or WebP picture to trace.", "svg dxf png jpg jpeg webp image picture import place drawing vector file inkscape illustrator corel autocad"),
+  c("file.printMerge", "Print Merge…", "File", undefined, undefined, "Fill [Field] names in the selected artwork's text from a table: one copy per record, for name tags, numbered parts and personalised batches", "print merge mail merge csv spreadsheet names batch personalise serial numbers variable data corel"),
   c("file.templates", "New from Template…", "File", undefined, undefined, "Browse ready-made projects and open one as a new project.", "template gallery library example project"),
   c("file.close", "Close", "File", "Ctrl+Alt+W"),
   c("file.save", "Save", "File", "Ctrl+S"),
@@ -361,7 +363,7 @@ export type MenuEntry = string | "-" | { label: string; items: MenuEntry[] };
 export interface MenuDef { id: string; label: string; items: MenuEntry[] }
 
 export const MENUS: MenuDef[] = [
-  { id: "file", label: "File", items: ["file.new", "file.templates", "file.open", "file.import", "-", "file.close", "file.save", "file.saveCopy", "file.saveComputer", "file.rename", "file.revert", "-", "file.documentSetup", "-", "file.exit"] },
+  { id: "file", label: "File", items: ["file.new", "file.templates", "file.open", "file.import", "-", "file.close", "file.save", "file.saveCopy", "file.saveComputer", "file.rename", "file.revert", "-", "file.documentSetup", "file.printMerge", "-", "file.exit"] },
   { id: "edit", label: "Edit", items: [
     "edit.undo", "edit.redo", "-", "edit.cut", "edit.copy", "edit.paste", "edit.pasteFront", "edit.pasteBack", "edit.pasteInPlace", "edit.pasteStyle",
     { label: "Paste Size", items: ["edit.pasteSize.both", "edit.pasteSize.width", "edit.pasteSize.height", "-", "edit.pasteSize.bothSep", "edit.pasteSize.widthSep", "edit.pasteSize.heightSep"] }, "-",

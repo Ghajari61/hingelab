@@ -546,11 +546,16 @@ export function nodeBasePaths(n: SceneNode): Subpath[] {
     case "text": return n.outline ?? [];
     case "image": return rectPath(n.w, n.h, [0, 0, 0, 0], "round");
     case "group": return n.children.filter((c) => !c.hidden).flatMap((c) => transformSubpaths(nodePaths(c), c.transform));
-    case "dimension": return n.points.length > 1 ? [{ closed: false, nodes: n.points.map((p) => ({ x: p.x, y: p.y })) }] : [];
+    case "dimension": return dimensionPathsOf(n);
     case "generator": return generatorPaths(n);
     case "clone": return n.cache ?? [];
   }
 }
+
+type DimensionPathsFn = (n: Extract<SceneNode, { type: "dimension" }>) => Subpath[];
+let dimensionPathsOf: DimensionPathsFn = (n) => (n.points.length > 1 ? [{ closed: false, nodes: n.points.map((p) => ({ x: p.x, y: p.y })) }] : []);
+/** dimension.ts draws the extension lines and arrows; registered here so geom.ts does not import it (it imports geom). */
+export function setDimensionPaths(fn: DimensionPathsFn) { dimensionPathsOf = fn; }
 
 type GeneratorPathsFn = (n: Extract<SceneNode, { type: "generator" }>) => Subpath[];
 let generatorPaths: GeneratorPathsFn = () => [];
