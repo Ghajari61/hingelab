@@ -129,7 +129,7 @@ export function ProjectsHome({ projects, products, localOnly = [], limit = Infin
         {visible.length + local.length === 0 ? (
         <div className="boxes-empty">
             <p>{projects.length || drafts.length ? "No matching projects. Try another search or clear the filters." : "No projects yet. Start a design, or open a project file (.oclc) you saved earlier."}</p>
-            <Link href="/app/editor/local">Start a design</Link>
+            <Link href="/start">Start a design</Link>
         </div>
       ) : (
         <ul className="boxes-grid">

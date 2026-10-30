@@ -16,7 +16,7 @@ export function SiteHeader({ sections = true }: { sections?: boolean }) {
         {configured && (user
           ? <Link href="/app" className="site-link">My designs</Link>
           : <Link href="/login" className="site-link">Sign in</Link>)}
-        <Link href="/app/editor/local" className="btn-primary site-open"><span>Open <span className="site-open-the">the </span>editor</span></Link>
+        <Link href="/start" className="btn-primary site-open"><span>Start <span className="site-open-the">designing</span></span></Link>
       </div>
     </header>
   );

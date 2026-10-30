@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Award, Baby, Box, Cake, CheckCircle2, Clock, Download, FileDown, Gift, GraduationCap, Hash, Heart, KeyRound, Layers, LayoutGrid, Moon, Package, Puzzle, QrCode, Ruler, ScanLine, Shapes, ShieldCheck, Signpost, Sparkles, SquareStack, TreePine, Trophy, Type, Wand2, Wrench, type LucideIcon, Tag, House, ShoppingBag } from "lucide-react";
+import { ArrowRight, Award, Baby, Box, Cake, CheckCircle2, Clock, Download, FileDown, Gift, Globe, GraduationCap, Hash, Heart, KeyRound, Layers, LayoutGrid, MonitorDown, Moon, Package, Puzzle, QrCode, Ruler, ScanLine, Shapes, ShieldCheck, Signpost, Sparkles, SquareStack, TreePine, Trophy, Type, Wand2, Wrench, type LucideIcon, Tag, House, ShoppingBag } from "lucide-react";
 import { sceneSVG } from "@/components/editor/scene3d";
 import { CutSheet } from "@/components/site/CutSheet";
 import { DownloadNote } from "@/components/site/DownloadNote";
@@ -18,6 +18,7 @@ import { SITE_DESCRIPTION } from "@/lib/site/config";
 import { motif, MOTIF_NAMES, type MotifId } from "@/lib/generators/motifs";
 import { collectionBySlug } from "@/lib/site/collections";
 import "./landing.css";
+import "./start/start.css";
 
 
 /** Detailed motifs shown on the landing page, drawn from the same geometry the generators cut. */
@@ -59,9 +60,9 @@ const OCCASIONS: { name: string; icon: LucideIcon; preset: string }[] = [
 ];
 
 const STEPS = [
-  { icon: LayoutGrid, title: "Pick a design", text: "Start from one of the ready-made designs or a blank generator: boxes, cake toppers, signs, table numbers, trophies, clocks, puzzles and more." },
+  { icon: LayoutGrid, title: "Pick what to make", text: "Choose a project and start from a ready-made design: boxes, cake toppers, signs, table numbers, trophies, clocks, puzzles and more." },
   { icon: Wand2, title: "Make it yours", text: "Type your text, choose a font and a shape, and set the sizes. Checks flag anything that will not cut or fit, with a one-click fix." },
-  { icon: Download, title: "Cut it", text: "Download one SVG or DXF with cuts, scores and engraving on their own layers, kerf already compensated, nested on your sheet." },
+  { icon: Download, title: "Check it and cut it", text: "See it assembled in 3D, then download one SVG or DXF with cuts, scores and engraving on their own layers, kerf compensated and nested on your sheet." },
 ];
 
 const FEATURES: { icon: LucideIcon; title: string; text: string }[] = [
@@ -122,19 +123,19 @@ export default async function HomePage() {
         <section className="hero">
           <div className="hero-copy">
             <p className="hero-eyebrow"><Sparkles size={14} aria-hidden="true" />{products.length} generators · {presets}+ ready-made designs</p>
-            <h1>Design free in your browser. <span className="grad">Export with Pro.</span></h1>
+            <h1>Laser-cut designs, <span className="grad">ready in minutes.</span></h1>
             <p className="hero-lead">
-              Boxes, cake toppers, signs, table numbers, trophies, clocks and puzzles. Pick a design, type your text, and download a file
-              your laser cuts right the first time.
+              Boxes, cake toppers, signs, table numbers, trophies, clocks, puzzles and more. Pick what you want to make, type your text,
+              check it in 3D, and download a file your laser cuts right the first time.
             </p>
             <div className="hero-actions">
-              <Link href="/app/editor/local" className="btn-primary btn-lg">Start designing free<ArrowRight size={18} aria-hidden="true" /></Link>
-              <a href="#desktop" className="btn-ghost btn-lg"><Download size={18} aria-hidden="true" />Windows app</a>
+              <Link href="/start" className="btn-primary btn-lg">Try it online, free<ArrowRight size={18} aria-hidden="true" /></Link>
+              <a href="#desktop" className="btn-ghost btn-lg"><Download size={18} aria-hidden="true" />Download for Windows</a>
             </div>
             <ul className="hero-points">
-              <li><CheckCircle2 size={16} aria-hidden="true" />No account needed</li>
-              <li><CheckCircle2 size={16} aria-hidden="true" />SVG and DXF</li>
-              <li><CheckCircle2 size={16} aria-hidden="true" />Kerf compensated</li>
+              <li><CheckCircle2 size={16} aria-hidden="true" />Try every design free, no account</li>
+              <li><CheckCircle2 size={16} aria-hidden="true" />3D preview before you cut</li>
+              <li><CheckCircle2 size={16} aria-hidden="true" />SVG and DXF export with Pro</li>
             </ul>
           </div>
           <div className="mosaic" aria-hidden="true">
@@ -151,6 +152,46 @@ export default async function HomePage() {
         <section className="works" aria-label="Works with">
           <span>Works with</span>
           <b>LightBurn</b><b>xTool Creative Space</b><b>Glowforge</b><b>Inkscape</b><b>RDWorks</b><b>AutoCAD (DXF)</b>
+        </section>
+
+        <section id="how" className="band">
+          <div className="band-head"><h2>How it works</h2></div>
+          <ol className="landing-steps">
+            {STEPS.map((s, i) => (
+              <li key={s.title}>
+                <span className="step-ico" aria-hidden="true"><s.icon size={22} /></span>
+                <span className="step-n">Step {i + 1}</span>
+                <h3>{s.title}</h3>
+                <p>{s.text}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section id="ways" className="band start-ways home-ways" aria-labelledby="ways-h">
+          <h2 id="ways-h">Try it online, or install it</h2>
+          <div className="ways">
+            <div className="way">
+              <span className="way-ico"><Globe size={22} aria-hidden="true" /></span>
+              <h3>Online, in your browser</h3>
+              <ul>
+                <li><CheckCircle2 size={15} aria-hidden="true" />Nothing to install: pick what to make and start</li>
+                <li><CheckCircle2 size={15} aria-hidden="true" />Every generator and the 3D preview, free to try</li>
+                <li><CheckCircle2 size={15} aria-hidden="true" />Downloading cut files needs Pro</li>
+              </ul>
+              <Link href="/start" className="btn-primary btn-lg">Try it online<ArrowRight size={18} aria-hidden="true" /></Link>
+            </div>
+            <div className="way">
+              <span className="way-ico"><MonitorDown size={22} aria-hidden="true" /></span>
+              <h3>Windows app</h3>
+              <ul>
+                <li><CheckCircle2 size={15} aria-hidden="true" />The same editors in their own window, working offline</li>
+                <li><CheckCircle2 size={15} aria-hidden="true" />Exports go straight to your job folder</li>
+                <li><CheckCircle2 size={15} aria-hidden="true" />Sign in with your HingeLab account</li>
+              </ul>
+              <a href="#desktop" className="btn-ghost btn-lg"><Download size={18} aria-hidden="true" />Get the Windows app</a>
+            </div>
+          </div>
         </section>
 
         <section id="products" className="band">
@@ -231,20 +272,6 @@ export default async function HomePage() {
               </li>
             ))}
           </ul>
-        </section>
-
-        <section id="how" className="band">
-          <div className="band-head"><h2>How it works</h2></div>
-          <ol className="landing-steps">
-            {STEPS.map((s, i) => (
-              <li key={s.title}>
-                <span className="step-ico" aria-hidden="true"><s.icon size={22} /></span>
-                <span className="step-n">Step {i + 1}</span>
-                <h3>{s.title}</h3>
-                <p>{s.text}</p>
-              </li>
-            ))}
-          </ol>
         </section>
 
         <section id="features" className="band">
@@ -371,7 +398,7 @@ export default async function HomePage() {
           <div className="final-card">
             <h2>Your next project is a few clicks away</h2>
             <p>Open the editor, pick a design and download a file your laser cuts right the first time.</p>
-            <Link href="/app/editor/local" className="btn-primary btn-lg">Start designing free<ArrowRight size={18} aria-hidden="true" /></Link>
+            <Link href="/start" className="btn-primary btn-lg">Start designing free<ArrowRight size={18} aria-hidden="true" /></Link>
           </div>
         </section>
       </main>
@@ -387,7 +414,7 @@ function priceCards(): PriceCard[] {
     {
       id: "free", badge: "To try it", quiet: true, name: "Free", monthly: 0, yearly: 0, alt: "No account needed",
       features: ["Preview designs in the browser", "Rounded + Straight hinges", "Letters and parametric preview", `Batches of ${BATCH_FREE} (preview)`, "No save or download"],
-      cta: "Start free", href: "/app/editor/local",
+      cta: "Start free", href: "/start",
     },
     {
       id: "pro", badge: "Most popular", popular: true, name: "Pro", monthly: PRICES.monthly, yearly: PRICES.yearly,
