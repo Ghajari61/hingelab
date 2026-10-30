@@ -5,9 +5,9 @@
  * dimension line, turned to read from below or the right.
  */
 import { newId } from "./doc";
-import { apply, invert, setDimensionPaths } from "./geom";
+import { apply, flatten, invert, nodePaths, setDimensionPaths, transformSubpaths } from "./geom";
+import { walk } from "./scene";
 import { ensureMeasureLayer } from "./measure";
-import type { IdFactory } from "./scene";
 import type { DimensionKind, DimensionNode, Document, Subpath, Vec } from "./types";
 
 /** Arrow length, extension-line gap and overshoot, label height, mm. */
@@ -20,9 +20,9 @@ export interface DimensionDrawing {
   arrows: Subpath[];
   /** The measured value: mm for lengths, degrees for angles. */
   value: number;
-  unit: "length" | "angle";
+  unit: "length" | "angle" | "note";
   prefix: string;
-  label: { at: Vec; angle: number };
+  label: { at: Vec; angle: number; anchor?: "start" | "middle" | "end" };
 }
 
 const sub = (a: Vec, b: Vec): Vec => ({ x: a.x - b.x, y: a.y - b.y });
@@ -105,6 +105,13 @@ export function dimensionDrawing(n: Pick<DimensionNode, "kind" | "points" | "off
       const tm = t0 + sweep / 2, at = { x: a.x + (r + DIM.text * 0.9) * Math.cos(tm), y: a.y + (r + DIM.text * 0.9) * Math.sin(tm) };
       return { lines, arrows, value: (Math.abs(sweep) * 180) / Math.PI, unit: "angle", prefix: "", label: { at, angle: readable((tm * 180) / Math.PI + 90) } };
     }
+    case "callout": {
+      // a leader from the arrow's tip through its bend; the note sits past the end, level
+      const pts = c ? [a, b, c] : [a, b];
+      const z = pts[pts.length - 1], y = pts[pts.length - 2];
+      const right = z.x >= y.x;
+      return { lines: [line(...pts)], arrows: [arrow(a, sub(a, b))], value: 0, unit: "note", prefix: "", label: { at: { x: z.x + (right ? 1 : -1) * DIM.text * 0.4, y: z.y }, angle: 0, anchor: right ? "start" : "end" } };
+    }
     case "radius":
     case "diameter": {
       const d = sub(b, a), r = len(d);
@@ -122,6 +129,7 @@ export function dimensionDrawing(n: Pick<DimensionNode, "kind" | "points" | "off
 /** The label as text: lengths in the document's units, angles in degrees. */
 export function dimensionText(d: DimensionDrawing, units: string, text?: string): string {
   if (text?.trim()) return text.trim();
+  if (d.unit === "note") return "Note";
   if (d.unit === "angle") return `${Math.round(d.value * 10) / 10}°`;
   const v = units === "in" ? d.value / 25.4 : d.value;
   const s = units === "in" ? (Math.round(v * 1000) / 1000).toString() : (Math.round(v * 10) / 10).toString();
@@ -135,7 +143,7 @@ export function dimensionPaths(n: DimensionNode): Subpath[] {
 }
 
 /** A new dimension of `kind` through world points, on the measurements layer (never sent to the laser). */
-export function addDimensionOf(doc: Document, kind: DimensionKind, pts: Vec[], offset: number, id: IdFactory = newId): string {
+export function addDimensionOf(doc: Document, kind: DimensionKind, pts: Vec[], offset: number, id: () => string = newId): string {
   const layer = ensureMeasureLayer(doc);
   const inv = invert(doc.root.transform);
   const node: DimensionNode = { id: id(), type: "dimension", name: DIMENSION_NAMES[kind], transform: [1, 0, 0, 1, 0, 0], layer, kind, points: pts.map((p) => apply(inv, p)), offset };
@@ -144,7 +152,36 @@ export function addDimensionOf(doc: Document, kind: DimensionKind, pts: Vec[], o
 }
 
 export const DIMENSION_NAMES: Record<DimensionKind, string> = {
-  linear: "Parallel dimension", horizontal: "Horizontal dimension", vertical: "Vertical dimension", angular: "Angular dimension", radius: "Radius dimension", diameter: "Diameter dimension",
+  callout: "Callout", linear: "Parallel dimension", horizontal: "Horizontal dimension", vertical: "Vertical dimension", angular: "Angular dimension", radius: "Radius dimension", diameter: "Diameter dimension",
+};
+
+/**
+ * The segment of a visible path nearest `p` (world mm, within `tol`): its end nodes, for the
+ * Segment dimension. Curved segments measure node to node, as the straight distance.
+ */
+export function segmentAt(doc: Document, p: Vec, tol: number): [Vec, Vec] | null {
+  let best: [Vec, Vec] | null = null, bd = tol;
+  walk(doc.root, (l) => {
+    if (l.node.hidden) return "skip";
+    if (l.node.type !== "path" && l.node.type !== "shape") return;
+    for (const s of transformSubpaths(nodePaths(l.node), l.world)) {
+      const n = s.nodes.length, count = s.closed ? n : n - 1;
+      for (let k = 0; k < count; k++) {
+        const a = s.nodes[k], b = s.nodes[(k + 1) % n];
+        const pts = flatten({ closed: false, nodes: [{ x: a.x, y: a.y, ...(a.o ? { o: a.o } : {}) }, { x: b.x, y: b.y, ...(b.i ? { i: b.i } : {}) }] }, 0.05);
+        for (let j = 1; j < pts.length; j++) {
+          const d = segDist(pts[j - 1], pts[j], p);
+          if (d < bd) { bd = d; best = [{ x: a.x, y: a.y }, { x: b.x, y: b.y }]; }
+        }
+      }
+    }
+  });
+  return best;
+}
+const segDist = (a: Vec, b: Vec, p: Vec) => {
+  const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+  const t = l2 < 1e-12 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2));
+  return Math.hypot(a.x + t * dx - p.x, a.y + t * dy - p.y);
 };
 
 /** Offset of the dimension line that puts it through `p` (for the click that places it). */

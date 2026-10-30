@@ -1,3 +1,18 @@
+## Unreleased
+
+- **Studio: the rest of a full vector suite's laser tools** (written for HingeLab, under HingeLab's own names; see docs/STUDIO-DRAWING-TOOLS.md for the full comparison):
+  - **Shape Library:** 34 ready shapes in five groups (basic, arrows, flowchart, banners, callouts), drawn by dragging, and live until expanded.
+  - **Burst Lines:** comic-style speed rays. Set the rays, the inner radius, the ray width, the variation and a seed.
+  - **Crossed stars:** the Star's Cross setting joins every n points, as in a pentagram or {7/3}.
+  - **Spline:** click control points for a smooth curve that does not pass through them. Click the first point to close it; double-click or Enter to finish.
+  - **Smooth paths:** a Tweak brush that evens out jagged outlines.
+  - **Dimension:** a Segment mode (click a path's segment to measure it node to node) and Callout (a note with a two-part leader line).
+  - **Rounded connectors:** right-angled routes with rounded bends.
+  - **Solid Shadow** (Live Effect): a solid shadow swept behind the shape. It can be the shape plus a shadow piece to cut from a second colour, one fused outline, or the shadow alone.
+  - **Depth** (Live Effect): an extrusion drawn as lines (side edges and back face, optionally in perspective, hidden lines dropped) for engraving or scoring.
+  - **Eyedropper:** Shift+click also copies the source's Live Effects.
+  - The Symmetry effect is now called **Kaleidoscope**, and Print Merge is now **Fill from Table**.
+
 ## 1.34.0 — Studio tools and reliable undo
 
 - **Studio: three CorelDRAW-style tools** (built from scratch from public descriptions; no CorelDRAW code):

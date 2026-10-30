@@ -215,3 +215,28 @@ export function recognise(raw: Vec[], o: RecogniseOptions): Recognised | null {
 function ellipseOf(e: { rx: number; ry: number; deg: number; c: Vec }, o: RecogniseOptions): Recognised {
   return { kind: "ellipse", name: e.rx === e.ry ? "Circle" : "Ellipse", placed: place(shapeForBox("ellipse", 2 * e.rx, 2 * e.ry, o.ellipse), e.c, e.deg) };
 }
+
+/**
+ * A uniform cubic B-spline over control points, as Bézier segments (the Spline tool). Open
+ * splines start and end on their first and last points; closed ones loop through every point.
+ */
+export function bSpline(ctrl: Vec[], closed: boolean): Subpath {
+  const P = closed ? ctrl : [ctrl[0], ctrl[0], ...ctrl, ctrl[ctrl.length - 1], ctrl[ctrl.length - 1]];
+  const n = P.length;
+  if (ctrl.length < 2) return { closed: false, nodes: ctrl.map((p) => ({ x: p.x, y: p.y })) };
+  const at = (k: number) => P[closed ? ((k % n) + n) % n : k];
+  const segs = closed ? n : n - 3;
+  const nodes: Subpath["nodes"] = [];
+  for (let s = 0; s < segs; s++) {
+    const p0 = at(s), p1 = at(s + 1), p2 = at(s + 2), p3 = at(s + 3);
+    const b0 = { x: (p0.x + 4 * p1.x + p2.x) / 6, y: (p0.y + 4 * p1.y + p2.y) / 6 };
+    const b1 = { x: (2 * p1.x + p2.x) / 3, y: (2 * p1.y + p2.y) / 3 };
+    const b2 = { x: (p1.x + 2 * p2.x) / 3, y: (p1.y + 2 * p2.y) / 3 };
+    const b3 = { x: (p1.x + 4 * p2.x + p3.x) / 6, y: (p1.y + 4 * p2.y + p3.y) / 6 };
+    if (s === 0) nodes.push({ x: b0.x, y: b0.y, o: b1 });
+    else nodes[nodes.length - 1].o = b1;
+    if (closed && s === segs - 1) nodes[0].i = b2;
+    else nodes.push({ x: b3.x, y: b3.y, i: b2 });
+  }
+  return { closed, nodes };
+}

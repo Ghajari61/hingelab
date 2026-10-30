@@ -436,6 +436,7 @@ export function shapePaths(p: ShapeParams): Subpath[] {
     case "ellipse": return new PathBuilder().arc(0, 0, Math.abs(p.rx), Math.abs(p.ry), 0, 360).close().done();
     case "polygon": return [roundedPolygon(regularPoints(Math.max(3, Math.round(p.sides)), p.r), p.round)];
     case "star": {
+      if ((p.skip ?? 0) >= 2 && p.points >= 5) return crossedStarOf(p.points, p.skip!, p.r);
       const n = Math.max(3, Math.round(p.points));
       const inner = Math.max(0.02, Math.min(0.98, p.inner));
       const pts = Array.from({ length: n * 2 }, (_, k) => {
@@ -488,7 +489,17 @@ export function shapePaths(p: ShapeParams): Subpath[] {
       });
       return [catmullRom(pts, false)];
     }
+    case "library": return libraryPathsOf(p.id, p.w, p.h);
+    case "burst": return burstPathsOf(p.rays, p.r, p.inner, p.width, p.jitter, p.seed);
   }
+}
+
+// shapeLibrary.ts draws these; registered so geom.ts does not import it (it imports geom)
+let libraryPathsOf: (id: string, w: number, h: number) => Subpath[] = () => [];
+let burstPathsOf: (rays: number, r: number, inner: number, width: number, jitter: number, seed: number) => Subpath[] = () => [];
+let crossedStarOf: (n: number, skip: number, r: number) => Subpath[] = () => [];
+export function setShapeLibrary(f: { library: typeof libraryPathsOf; burst: typeof burstPathsOf; crossed: typeof crossedStarOf }) {
+  libraryPathsOf = f.library; burstPathsOf = f.burst; crossedStarOf = f.crossed;
 }
 
 /** Default parameters for a shape drawn at w × h (the drag box of the shape tools). */
@@ -499,7 +510,7 @@ export function shapeForBox(kind: ShapeParams["kind"], w: number, h: number, pre
     case "rect": return { kind, w: W, h: H, r: same?.kind === "rect" ? same.r : [0, 0, 0, 0], corner: same?.kind === "rect" ? same.corner : "round" };
     case "ellipse": return { kind, rx: W / 2, ry: H / 2 };
     case "polygon": return { kind, sides: same?.kind === "polygon" ? same.sides : 6, r: R, round: same?.kind === "polygon" ? same.round : 0 };
-    case "star": return { kind, points: same?.kind === "star" ? same.points : 5, r: R, inner: same?.kind === "star" ? same.inner : 0.5, round: same?.kind === "star" ? same.round : 0 };
+    case "star": return { kind, points: same?.kind === "star" ? same.points : 5, r: R, inner: same?.kind === "star" ? same.inner : 0.5, round: same?.kind === "star" ? same.round : 0, skip: same?.kind === "star" ? same.skip ?? 0 : 0 };
     case "arc": return { kind, r: R, start: -90, sweep: same?.kind === "arc" ? same.sweep : 270, pie: same?.kind === "arc" ? same.pie : true };
     case "slot": return { kind, w: W, h: H };
     case "gear": return { kind, teeth: same?.kind === "gear" ? same.teeth : 20, module: Math.max(0.2, (2 * R) / ((same?.kind === "gear" ? same.teeth : 20) + 2)), pressure: 20, bore: R * 0.3 };
@@ -508,6 +519,8 @@ export function shapeForBox(kind: ShapeParams["kind"], w: number, h: number, pre
     case "heart": return { kind, w: W, h: H };
     case "grid": return { kind, w: W, h: H, cols: same?.kind === "grid" ? same.cols : 4, rows: same?.kind === "grid" ? same.rows : 3 };
     case "spiral": return { kind, turns: same?.kind === "spiral" ? same.turns : 4, r: R, inner: 0 };
+    case "library": return { kind, id: same?.kind === "library" ? same.id : "hexagram", w: W, h: H };
+    case "burst": return { kind, rays: same?.kind === "burst" ? same.rays : 36, r: R, inner: R * (same?.kind === "burst" ? same.inner / Math.max(1e-6, same.r) : 0.55), width: same?.kind === "burst" ? same.width : 0.5, jitter: same?.kind === "burst" ? same.jitter : 0.35, seed: same?.kind === "burst" ? same.seed : 1 };
   }
 }
 

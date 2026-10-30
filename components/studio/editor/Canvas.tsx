@@ -34,13 +34,13 @@ import {
 import { rotationCentre, selectionKey, useEditor, useEditorApi, type AnchorRef, type EraserMode } from "./store";
 import { TextEditor } from "./TextEditor";
 import { fillClick, measureToItem, startCalligraphy, startSpray, startTweak, type ToolPointer, type ToolSession } from "./tools/brushTools";
-import { startCrop, startDimension, startSmartDraw, startThreePoint, type DrawCtx } from "./tools/drawSessions";
+import { startCrop, startDimension, startSpline, startSmartDraw, startThreePoint, type DrawCtx } from "./tools/drawSessions";
 import { MeasureOverlay } from "./tools/MeasureOverlay";
 import { useImageUrls } from "./assetUrls";
 
 export { PX_PER_MM };
 const RULER = 20;
-const SHAPE_TOOLS = new Set<ToolId>(["rect", "ellipse", "polygon", "star", "arc", "slot", "gear", "arrow", "bubble", "heart", "grid", "spiral"]);
+const SHAPE_TOOLS = new Set<ToolId>(["rect", "ellipse", "polygon", "star", "arc", "slot", "gear", "arrow", "bubble", "heart", "grid", "spiral", "library", "burst"]);
 
 type Handle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 const HANDLES: Handle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
@@ -879,6 +879,7 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
       case "smartDraw": drag.current = { kind: "session", session: startSmartDraw(api, toolPointer(e, p), drawCtx()) }; return;
       case "crop": drag.current = { kind: "session", session: startCrop(api, toolPointer(e, p), drawCtx()) }; rerender(); return;
       case "dimension": drag.current = { kind: "session", session: startDimension(api, toolPointer(e, p), drawCtx()) }; rerender(); return;
+      case "spline": drag.current = { kind: "session", session: startSpline(api, toolPointer(e, p), drawCtx()) }; rerender(); return;
       case "segmentDelete": {
         let out: string[] | null = null;
         s.edit("Virtual Segment Delete", (d) => { out = deleteVirtualSegment(d, p, 6 / s.view.zoom); });
@@ -917,6 +918,10 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
             const deep = (m: SceneNode) => { m.layer = src.layer; if (m.type === "group") m.children.forEach(deep); };
             deep(n);
             if (n.type === "text" && src.type === "text") { n.font = src.font; n.size = src.size; n.tracking = src.tracking; n.lineHeight = src.lineHeight; }
+            // Shift: the attributes too — the Live Effects stack (corners, offsets, shadows…) copied over
+            if (e.shiftKey && "effects" in src && src.effects?.length && (n.type === "path" || n.type === "shape" || n.type === "text" || n.type === "clone")) {
+              n.effects = src.effects.map((fx) => ({ ...structuredClone(fx), id: newId() }));
+            }
           }));
         }
         onToast(`${layerCode(src.layer)} · ${s.doc.cutLayers[src.layer]?.name ?? ""}${ids.length ? ` applied to ${ids.length} object${ids.length === 1 ? "" : "s"}` : " is now the layer for new objects"}`);
@@ -1555,7 +1560,7 @@ export function Canvas({ onContextMenu, apiRef, onToast, snapAngle = 15 }: {
         <g key={n.id} transform={matStr(n.transform)} data-id={own ? n.id : undefined} opacity={dim}>
           <path d={pathD(g.lines)} fill="none" stroke={col} strokeWidth={1} vectorEffect="non-scaling-stroke" />
           {g.arrows.length > 0 && <path d={pathD(g.arrows)} fill={col} stroke="none" />}
-          <text x={g.label.at.x} y={g.label.at.y} fontSize={DIM.text / k} textAnchor="middle" dominantBaseline="middle" fill={col} fontFamily="var(--font-num)"
+          <text x={g.label.at.x} y={g.label.at.y} fontSize={DIM.text / k} textAnchor={g.label.anchor ?? "middle"} dominantBaseline="middle" fill={col} fontFamily="var(--font-num)"
             transform={`rotate(${g.label.angle} ${g.label.at.x} ${g.label.at.y})`} data-testid={own ? "dimension-label" : undefined}>{dimensionText(shown, doc.units, n.text)}</text>
         </g>
       );

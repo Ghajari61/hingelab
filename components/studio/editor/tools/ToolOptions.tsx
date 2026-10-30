@@ -150,7 +150,7 @@ export function ToolOptions({ tool, units, onResetToast }: { tool: ToolId; units
             const s = api.getState();
             if (s.selection.length) s.edit("Connector Routing", (d) => { setConnectorMode(d, s.selection, connectorMode); });
           }}
-          options={[{ value: "straight", label: "Straight" }, { value: "orthogonal", label: "Right-angled", title: "Horizontal and vertical runs only" }]} />
+          options={[{ value: "straight", label: "Straight" }, { value: "orthogonal", label: "Right-angled", title: "Horizontal and vertical runs only" }, { value: "rounded", label: "Rounded", title: "Right-angled with rounded bends" }]} />
       </div>
     );
     hint = "Drag from one object to another. The line follows them when they move; deleting either leaves a plain line.";
@@ -165,10 +165,14 @@ export function ToolOptions({ tool, units, onResetToast }: { tool: ToolId; units
             { value: "angular", label: "Angle" },
             { value: "radius", label: "Radius" },
             { value: "diameter", label: "Diameter" },
+            { value: "segment", label: "Segment", title: "Click a segment of a path to measure it node to node" },
+            { value: "callout", label: "Callout", title: "A note with a two-part leader line" },
           ]} />
       </div>
     );
-    hint = st.dimensionMode === "angular" ? "Click the corner, then the end of each arm."
+    hint = st.dimensionMode === "segment" ? "Click a segment of a path or shape, then click where the dimension line goes."
+      : st.dimensionMode === "callout" ? "Click what the note points at, then the bend, then the end; type the note in Properties."
+      : st.dimensionMode === "angular" ? "Click the corner, then the end of each arm."
       : st.dimensionMode === "radius" || st.dimensionMode === "diameter" ? "Drag from the centre to the edge."
         : "Drag between two points (they snap), then click where the dimension line goes; Enter keeps it where it is.";
   }

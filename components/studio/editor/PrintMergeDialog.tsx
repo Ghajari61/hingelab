@@ -9,7 +9,7 @@ import { useEditor, useEditorApi } from "./store";
 const SAMPLE = "Name\tYear\nOlivia\t2026\nNoah\t2026\nAva\t2027";
 
 /**
- * Print Merge: the fields in the selected artwork's text ([Name], [Year]…) filled from a table,
+ * Fill from Table: the fields in the selected artwork's text ([Name], [Year]…) filled from a table,
  * one copy per record in a grid under the original.
  */
 export function PrintMergeDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -19,7 +19,7 @@ export function PrintMergeDialog({ open, onClose }: { open: boolean; onClose: ()
   const [o, setO] = useState({ columns: 4, gapX: 4, gapY: 4 });
   const [show, setShow] = useState(true);
   const file = useRef<HTMLInputElement>(null);
-  const lp = useLivePreview(open, "Print Merge");
+  const lp = useLivePreview(open, "Fill from Table");
   // the fields the artwork uses, read once when the dialog opens (the preview changes the document)
   const [used, setUsed] = useState<string[]>([]);
   useEffect(() => {
@@ -39,7 +39,7 @@ export function PrintMergeDialog({ open, onClose }: { open: boolean; onClose: ()
   };
   const load = async (f: File | undefined) => { if (f) setRaw(await f.text()); };
   return (
-    <Dialog open={open} title="Print Merge" onClose={onClose} testId="print-merge-dialog"
+    <Dialog open={open} title="Fill from Table" onClose={onClose} testId="print-merge-dialog"
       footer={<Footer onCancel={onClose} onOk={ok} okLabel={`Merge ${data.records.length} cop${data.records.length === 1 ? "y" : "ies"}`} preview={show} setPreview={setShow} />}>
       <p className="dlg-note">
         Type field names in square brackets in the artwork&apos;s text, such as <b>[Name]</b>. Each row below makes one copy with its own values, laid out under the original.

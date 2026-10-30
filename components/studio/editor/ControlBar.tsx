@@ -15,6 +15,7 @@ import { currentRotation, moveRefTo, refAt, resizeTo, rotateTo } from "@/lib/stu
 import type { CornerType, Document, ShapeKind, ShapeParams, TextNode } from "@/lib/studio/types";
 import { IconButton, NumberInput, SegmentedControl, Select, Slider } from "@/components/ui";
 import { TOOL_INFO } from "@/lib/studio/commands";
+import { SHAPE_LIBRARY } from "@/lib/studio/shapeLibrary";
 import { DEFAULT_TEXT, useEditor, useEditorApi, type TextDefaults } from "./store";
 import type { Handler } from "./commandHandlers";
 import { OPTION_TOOLS, ToolOptions } from "./tools/ToolOptions";
@@ -27,7 +28,8 @@ const SHAPE_FIELDS: Record<ShapeKind, FieldSpec[]> = {
   rect: [{ key: "w", label: "W", length: true, min: 0.01, max: 1e4 }, { key: "h", label: "H", length: true, min: 0.01, max: 1e4 }, { key: "r", label: "Radius", length: true, min: 0, max: 1e4, def: 0 }],
   ellipse: [{ key: "rx", label: "W", length: true, min: 0.01, max: 1e4, scale: 2 }, { key: "ry", label: "H", length: true, min: 0.01, max: 1e4, scale: 2 }],
   polygon: [{ key: "sides", label: "Sides", integer: true, min: 3, max: 64, def: 6 }, { key: "r", label: "Radius", length: true, min: 0.01, max: 1e4 }, { key: "round", label: "Corners", length: true, min: 0, max: 1e4, def: 0 }],
-  star: [{ key: "points", label: "Points", integer: true, min: 3, max: 64, def: 5 }, { key: "r", label: "Radius", length: true, min: 0.01, max: 1e4 }, { key: "inner", label: "Inner", min: 2, max: 98, suffix: "%", def: 50, scale: 100 }, { key: "round", label: "Corners", length: true, min: 0, max: 1e4, def: 0 }],
+  star: [{ key: "points", label: "Points", integer: true, min: 3, max: 64, def: 5 }, { key: "r", label: "Radius", length: true, min: 0.01, max: 1e4 }, { key: "inner", label: "Inner", min: 2, max: 98, suffix: "%", def: 50, scale: 100 }, { key: "round", label: "Corners", length: true, min: 0, max: 1e4, def: 0 },
+    { key: "skip", label: "Cross", integer: true, min: 0, max: 31, def: 0 }],
   arc: [{ key: "r", label: "Radius", length: true, min: 0.01, max: 1e4 }, { key: "start", label: "Start", min: -360, max: 360, suffix: "°", def: -90 }, { key: "sweep", label: "Sweep", min: 1, max: 360, suffix: "°", def: 270 }],
   slot: [{ key: "w", label: "W", length: true, min: 0.01, max: 1e4 }, { key: "h", label: "H", length: true, min: 0.01, max: 1e4 }],
   gear: [{ key: "teeth", label: "Teeth", integer: true, min: 6, max: 200, def: 20 }, { key: "module", label: "Module", length: true, min: 0.1, max: 50, step: 0.1 }, { key: "pressure", label: "Pressure", min: 14.5, max: 30, suffix: "°", def: 20 }, { key: "bore", label: "Bore", length: true, min: 0, max: 1e4 }],
@@ -35,6 +37,9 @@ const SHAPE_FIELDS: Record<ShapeKind, FieldSpec[]> = {
   bubble: [{ key: "w", label: "W", length: true, min: 0.01, max: 1e4 }, { key: "h", label: "H", length: true, min: 0.01, max: 1e4 }, { key: "r", label: "Radius", length: true, min: 0, max: 1e4 }, { key: "tail", label: "Tail", length: true, min: 0, max: 1e4 }],
   heart: [{ key: "w", label: "W", length: true, min: 0.01, max: 1e4 }, { key: "h", label: "H", length: true, min: 0.01, max: 1e4 }],
   grid: [{ key: "w", label: "W", length: true, min: 0.01, max: 1e4 }, { key: "h", label: "H", length: true, min: 0.01, max: 1e4 }, { key: "cols", label: "Columns", integer: true, min: 1, max: 100, def: 4 }, { key: "rows", label: "Rows", integer: true, min: 1, max: 100, def: 3 }],
+  library: [{ key: "w", label: "W", length: true, min: 0.01, max: 1e4 }, { key: "h", label: "H", length: true, min: 0.01, max: 1e4 }],
+  burst: [{ key: "rays", label: "Rays", integer: true, min: 3, max: 240, def: 36 }, { key: "r", label: "Radius", length: true, min: 0.01, max: 1e4 }, { key: "inner", label: "Inner", length: true, min: 0, max: 1e4 },
+    { key: "width", label: "Ray width", min: 5, max: 95, suffix: "%", def: 50, scale: 100 }, { key: "jitter", label: "Variation", min: 0, max: 100, suffix: "%", def: 35, scale: 100 }, { key: "seed", label: "Seed", integer: true, min: 1, max: 9999, def: 1 }],
   spiral: [{ key: "turns", label: "Turns", min: 0.5, max: 50, step: 0.5, def: 4 }, { key: "r", label: "Radius", length: true, min: 0.01, max: 1e4 }, { key: "inner", label: "Inner", length: true, min: 0, max: 1e4, def: 0 }],
 };
 
@@ -209,7 +214,7 @@ export function ControlBar({ onResetToast, handlers }: { onResetToast: (m: strin
           {act("object.back", "Send to back", <SendToBack size={15} />)}
           {act(ids.length > 1 ? "object.group" : "object.ungroup", ids.length > 1 ? "Group" : "Ungroup", ids.length > 1 ? <Group size={15} /> : <Ungroup size={15} />)}
         </div>
-        {single?.type === "shape" && <ShapeFields shape={single.shape} only="noSize" {...common} onChange={(f, v, c) => live(`Edit ${nodeLabel("shape", single.shape.kind)}`, (d) => { const n = findNode(d.root, single.id); if (n?.type === "shape") writeField(n.shape, f, v); }, c)} onCorner={(corner) => api.getState().edit("Corner Type", (d) => { const n = findNode(d.root, single.id); if (n?.type === "shape" && n.shape.kind === "rect") n.shape.corner = corner; })} onPie={(pie) => api.getState().edit("Arc Type", (d) => { const n = findNode(d.root, single.id); if (n?.type === "shape" && n.shape.kind === "arc") n.shape.pie = pie; })} />}
+        {single?.type === "shape" && <ShapeFields shape={single.shape} only="noSize" {...common} onChange={(f, v, c) => live(`Edit ${nodeLabel("shape", single.shape.kind)}`, (d) => { const n = findNode(d.root, single.id); if (n?.type === "shape") writeField(n.shape, f, v); }, c)} onCorner={(corner) => api.getState().edit("Corner Type", (d) => { const n = findNode(d.root, single.id); if (n?.type === "shape" && n.shape.kind === "rect") n.shape.corner = corner; })} onPie={(pie) => api.getState().edit("Arc Type", (d) => { const n = findNode(d.root, single.id); if (n?.type === "shape" && n.shape.kind === "arc") n.shape.pie = pie; })} onLibrary={(id) => api.getState().edit("Library Shape", (d) => { const n = findNode(d.root, single.id); if (n?.type === "shape" && n.shape.kind === "library") n.shape.id = id; })} />}
         {single?.type === "text" && <TextFields t={single} {...common} onChange={(label, patch, c) => live(label, (d) => { const n = findNode(d.root, single.id); if (n?.type === "text") Object.assign(n, patch); }, c)} />}
         {single?.type === "text" && single.onPath && (
           <div className="grp sep" data-testid="path-text-fields">
@@ -222,7 +227,7 @@ export function ControlBar({ onResetToast, handlers }: { onResetToast: (m: strin
           <div className="grp sep" data-testid="connector-fields">
             <SegmentedControl label="Connector routing" hideLabel value={single.connector.mode}
               onChange={(mode) => api.getState().edit("Connector Routing", (d) => { setConnectorMode(d, [single.id], mode); })}
-              options={[{ value: "straight", label: "Straight" }, { value: "orthogonal", label: "Right-angled", title: "Horizontal and vertical runs only" }]} />
+              options={[{ value: "straight", label: "Straight" }, { value: "orthogonal", label: "Right-angled", title: "Horizontal and vertical runs only" }, { value: "rounded", label: "Rounded", title: "Right-angled with rounded bends" }]} />
           </div>
         )}
       </div>
@@ -236,7 +241,7 @@ export function ControlBar({ onResetToast, handlers }: { onResetToast: (m: strin
     return (
       <div className="st-control" aria-label="Control bar" data-testid="control-bar">
         <div className="grp"><span className="lbl">{TOOL_INFO[tool].label}</span></div>
-        <ShapeFields shape={p} only="params" {...common} onChange={(f, v) => setP((q) => writeField(q, f, v))} onCorner={(corner) => setP((q) => { if (q.kind === "rect") q.corner = corner; })} onPie={(pie) => setP((q) => { if (q.kind === "arc") q.pie = pie; })} />
+        <ShapeFields shape={p} only="params" {...common} onChange={(f, v) => setP((q) => writeField(q, f, v))} onCorner={(corner) => setP((q) => { if (q.kind === "rect") q.corner = corner; })} onPie={(pie) => setP((q) => { if (q.kind === "arc") q.pie = pie; })} onLibrary={(id) => setP((q) => { if (q.kind === "library") q.id = id; })} />
         <div className="grp"><span className="hint">{TOOL_INFO[tool].description}</span></div>
       </div>
     );
@@ -275,19 +280,23 @@ export function ControlBar({ onResetToast, handlers }: { onResetToast: (m: strin
 }
 
 export function nodeLabel(type: string, kind?: string): string {
-  if (type === "shape" && kind) return { rect: "Rectangle", ellipse: "Ellipse", polygon: "Polygon", star: "Star", arc: "Arc", slot: "Slot", gear: "Gear", arrow: "Arrow", bubble: "Speech Bubble", heart: "Heart", grid: "Grid", spiral: "Spiral" }[kind] ?? "Shape";
+  if (type === "shape" && kind) return { rect: "Rectangle", ellipse: "Ellipse", polygon: "Polygon", star: "Star", arc: "Arc", slot: "Slot", gear: "Gear", arrow: "Arrow", bubble: "Speech Bubble", heart: "Heart", grid: "Grid", spiral: "Spiral", library: "Library Shape", burst: "Burst Lines" }[kind] ?? "Shape";
   return { path: "Path", text: "Text", group: "Group", image: "Image", generator: "Generator", dimension: "Dimension", shape: "Shape", clone: "Clone" }[type] ?? type;
 }
 
-function ShapeFields({ shape, only, units, onResetToast, onChange, onCorner, onPie }: {
+function ShapeFields({ shape, only, units, onResetToast, onChange, onCorner, onPie, onLibrary }: {
   shape: ShapeParams; only?: "params" | "noSize"; units: Document["units"]; onResetToast: (m: string) => void;
-  onChange: (f: FieldSpec, v: number, commit: boolean) => void; onCorner: (c: CornerType) => void; onPie: (pie: boolean) => void;
+  onChange: (f: FieldSpec, v: number, commit: boolean) => void; onCorner: (c: CornerType) => void; onPie: (pie: boolean) => void; onLibrary: (id: string) => void;
 }) {
   const fields = SHAPE_FIELDS[shape.kind].filter((f) =>
     only === "noSize" ? f.label !== "W" && f.label !== "H" : !only || f.def !== undefined || f.key === "module");
-  if (!fields.length && shape.kind !== "rect" && shape.kind !== "arc") return null;
+  if (!fields.length && shape.kind !== "rect" && shape.kind !== "arc" && shape.kind !== "library") return null;
   return (
     <div className="grp" data-testid="shape-fields">
+      {shape.kind === "library" && (
+        <Select label="Shape" hideLabel value={shape.id} onChange={onLibrary} testId="library-shape"
+          options={SHAPE_LIBRARY.map((s) => ({ value: s.id, label: `${s.group} · ${s.label}` }))} />
+      )}
       {fields.map((f) => (
         <NumberInput key={f.key} label={f.label} value={readField(shape, f)} length={f.length} integer={f.integer} min={f.min} max={f.max} step={f.step ?? 1}
           suffix={f.suffix} defaultValue={f.def} units={units} onResetToast={onResetToast} onChange={(v, c) => onChange(f, v, c)} testId={`shape-${f.key}`} />

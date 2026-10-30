@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  AudioWaveform, Blend, Brush, ChevronDown, ChevronRight, ChevronUp, CopyPlus, Dices, Eye, EyeOff, Feather, FlipHorizontal2, Flower2, Grid2x2, Link2, Plus, RotateCcw, Route, Snowflake,
+  AudioWaveform, Blend, Brush, ChevronDown, ChevronRight, ChevronUp, CopyPlus, Dices, Eye, EyeOff, Feather, FlipHorizontal2, Flower2, Grid2x2, Link2, Plus, RotateCcw, Route, Snowflake, Layers2, Box,
   Rows3, RulerDimensionLine, Spline, SquareRoundCorner, SquareSquare, SquaresUnite, Tornado, Trash2, Unlink, X,
 } from "lucide-react";
 import { MATERIALS } from "@/lib/hinge/defaults";
@@ -19,7 +19,7 @@ import {
 import { bendGuide, envelopeCorners } from "@/lib/studio/effects/warp";
 import { findNode, isEditable, locate, topLevel } from "@/lib/studio/scene";
 import type {
-  BendParams, CornerMode, CornersParams, DistortParams, Document, EffectKind, EnvelopeParams, HatchParams, InterpolateParams, LinkedParams, LiveBooleanOp, LiveBooleanParams, LiveEffect, SymmetryParams,
+  BendParams, CornerMode, CornersParams, DistortParams, Document, EffectKind, EnvelopeParams, HatchParams, InterpolateParams, LinkedParams, LiveBooleanOp, LiveBooleanParams, LiveEffect, SymmetryParams, BlockShadowParams, DepthParams,
   LivingHingeParams, Mat, MeasureSegmentsParams, MirrorParams, OffsetParams, PatternAlongPathParams, PatternMode, PowerStrokeParams, RotateCopiesParams, RoughenParams,
   SceneNode, TaperStrokeParams, Units, Vec,
 } from "@/lib/studio/types";
@@ -42,6 +42,8 @@ export const EFFECT_ICONS: Record<EffectKind, (size?: number) => ReactNode> = {
   rotateCopies: (s = 16) => <Flower2 size={s} strokeWidth={1.5} />,
   mirror: (s = 16) => <FlipHorizontal2 size={s} strokeWidth={1.5} />,
   symmetry: (s = 16) => <Snowflake size={s} strokeWidth={1.5} />,
+  blockShadow: (s = 16) => <Layers2 size={s} strokeWidth={1.5} />,
+  depth: (s = 16) => <Box size={s} strokeWidth={1.5} />,
   livingHinge: (s = 16) => <HingeIcon size={s} />,
   patternAlongPath: (s = 16) => <Route size={s} strokeWidth={1.5} />,
   bend: (s = 16) => <Spline size={s} strokeWidth={1.5} />,
@@ -546,6 +548,34 @@ function Params({ node, world, effect, index, units, anchors, set, num, doc, oth
           {!f.plain && <p className="fx-note">The object is rotated or scaled: the centre is in its own coordinates.</p>}
           <div className="pn-btns"><button type="button" className="ui-btn" onClick={centre} data-testid="fx-rotate-centre">Centre on object</button></div>
           <Check label="Fuse copies into one shape" checked={p.fuse} onChange={(fuse) => set<RotateCopiesParams>("Fuse Copies", { fuse })()} testId="fx-rotate-fuse" />
+        </>
+      );
+    }
+    case "blockShadow": {
+      const p = effect.params as BlockShadowParams;
+      return (
+        <>
+          <div className="pn-grid">
+            <NumberInput label="Depth" value={p.depth} length units={units} min={0} max={1000} defaultValue={3} onChange={(v, c) => set<BlockShadowParams>("Shadow Depth", { depth: v })(c)} testId="fx-shadow-depth" />
+            <NumberInput label="Direction" value={p.angle} suffix="°" min={-360} max={360} defaultValue={45} onChange={num("Shadow Direction", "angle")} testId="fx-shadow-angle" />
+          </div>
+          <SegmentedControl label="Output" value={p.output} full onChange={(output) => set<BlockShadowParams>("Shadow Output", { output })()}
+            options={[{ value: "separate", label: "Shape + shadow" }, { value: "fused", label: "One outline" }, { value: "shadow", label: "Shadow only" }]} />
+          <p className="fx-note">0° points right, 90° down. Shape + shadow gives two pieces: cut the shadow from a second colour and glue it behind.</p>
+        </>
+      );
+    }
+    case "depth": {
+      const p = effect.params as DepthParams;
+      return (
+        <>
+          <div className="pn-grid">
+            <NumberInput label="Depth" value={p.depth} length units={units} min={0} max={1000} defaultValue={10} onChange={(v, c) => set<DepthParams>("Depth", { depth: v })(c)} testId="fx-depth-depth" />
+            <NumberInput label="Direction" value={p.angle} suffix="°" min={-360} max={360} defaultValue={-45} onChange={num("Depth Direction", "angle")} />
+          </div>
+          <NumberInput label="Back size" value={Math.round(p.scale * 100)} suffix="%" min={5} max={100} defaultValue={100} onChange={(v, c) => set<DepthParams>("Perspective", { scale: v / 100 })(c)} />
+          <Check label="Hide lines behind the front" checked={p.hidden} onChange={(hidden) => set<DepthParams>("Hidden Lines", { hidden })()} testId="fx-depth-hidden" />
+          <p className="fx-note">The side edges and back face are open lines: put them on a score or engrave layer.</p>
         </>
       );
     }

@@ -6,12 +6,12 @@
 import type { StoreApi } from "zustand";
 import { TOOL_INFO } from "@/lib/studio/commands";
 import { newId } from "@/lib/studio/doc";
-import { recognise, threePointCurve, threePointEllipse, threePointRect, type PlacedShape } from "@/lib/studio/drawTools";
+import { bSpline, recognise, threePointCurve, threePointEllipse, threePointRect, type PlacedShape } from "@/lib/studio/drawTools";
 import { normBox, pathD, shapePaths, transformSubpaths } from "@/lib/studio/geom";
 import { addNode, isEditable } from "@/lib/studio/scene";
 import { cropToBox } from "@/lib/studio/toolOps";
-import { addDimensionOf, DIMENSION_NAMES, dimensionDrawing, offsetThrough } from "@/lib/studio/dimension";
-import type { PathNode, SceneNode, Subpath, Vec } from "@/lib/studio/types";
+import { addDimensionOf, DIMENSION_NAMES, dimensionDrawing, offsetThrough, segmentAt } from "@/lib/studio/dimension";
+import type { DimensionKind, PathNode, SceneNode, Subpath, Vec } from "@/lib/studio/types";
 import type { EditorState } from "../store";
 import type { ToolPointer, ToolSession } from "./brushTools";
 
@@ -155,7 +155,8 @@ export function startCrop(api: Api, e: ToolPointer, ctx: DrawCtx): ToolSession {
  * Radius and diameter: drag from the centre to the edge.
  */
 export function startDimension(api: Api, e: ToolPointer, ctx: DrawCtx): ToolSession {
-  const kind = api.getState().dimensionMode;
+  const mode = api.getState().dimensionMode as DimensionKind | "segment";
+  const kind: DimensionKind = mode === "segment" ? "linear" : mode;
   const a = ctx.snap(e.p);
   const place = (pts: Vec[], offset: number) => {
     const s = api.getState();
@@ -166,6 +167,42 @@ export function startDimension(api: Api, e: ToolPointer, ctx: DrawCtx): ToolSess
     const g = dimensionDrawing({ kind, points: pts, offset });
     return g ? pathD([...g.lines, ...g.arrows]) : pathD([{ closed: false, nodes: pts }]);
   };
+  const placing = (p0: Vec, p1: Vec): ToolSession => {
+    let off = 8;
+    return {
+      move: (r) => { off = offsetThrough(kind, p0, p1, ctx.snap(r.p)); },
+      up: (r) => { off = offsetThrough(kind, p0, p1, ctx.snap(r.p)); place([p0, p1], off); },
+      enter: () => place([p0, p1], off),
+      outline: () => preview([p0, p1], off),
+    };
+  };
+  if (mode === "segment") {
+    // click a segment: it is measured node to node, then the click places the line
+    const seg = segmentAt(api.getState().doc, e.p, 6 * ctx.px);
+    return {
+      move: () => {},
+      up: () => { if (!seg) { ctx.toast("Click on a segment of a path or shape."); return; } return placing(seg[0], seg[1]); },
+      outline: () => (seg ? pathD([{ closed: false, nodes: seg }]) : null),
+    };
+  }
+  if (kind === "callout") {
+    // the arrow's tip here; the bend and the end follow
+    const end = (b: Vec): ToolSession => {
+      let c = b;
+      return {
+        move: (q) => { c = ctx.snap(q.p); },
+        up: (q) => { c = ctx.snap(q.p); place(dist(b, c) < 3 * ctx.px ? [a, b] : [a, b, c], 0); },
+        enter: () => place([a, b], 0),
+        outline: () => preview([a, b, c], 0),
+      };
+    };
+    let b = a;
+    return {
+      move: (q) => { b = ctx.snap(q.p); },
+      up: (q) => { b = ctx.snap(q.p); if (dist(a, b) < 3 * ctx.px) { let p = a; return { move: (r) => { p = ctx.snap(r.p); }, up: (r) => { p = ctx.snap(r.p); return dist(a, p) < 3 * ctx.px ? undefined : end(p); }, outline: () => preview([a, p], 0) }; } return end(b); },
+      outline: () => preview([a, b], 0),
+    };
+  }
   if (kind === "angular") {
     // the corner is this click; the arms follow
     const arm = (b: Vec): ToolSession => {
@@ -215,4 +252,32 @@ export function startDimension(api: Api, e: ToolPointer, ctx: DrawCtx): ToolSess
     },
     outline: () => preview([a, b], kind === "radius" || kind === "diameter" ? 0 : 0.0001),
   };
+}
+
+/** The Spline tool: each click adds a control point; double-click or Enter finishes, a click on the first point closes. */
+export function startSpline(api: Api, e: ToolPointer, ctx: DrawCtx): ToolSession {
+  const pts: Vec[] = [ctx.snap(e.p)];
+  let hover = pts[0], last = { t: e.t, p: e.p };
+  const finish = (closed: boolean) => {
+    const ctrl = pts;
+    if (ctrl.length < (closed ? 3 : 2)) { ctx.toast("Click at least two points (three to close)."); return; }
+    const s = api.getState();
+    const node: SceneNode = { id: newId(), type: "path", transform: [1, 0, 0, 1, 0, 0], layer: s.currentLayer, subpaths: [bSpline(ctrl, closed)] };
+    s.edit(TOOL_INFO.spline.label, (d) => addNode(d, node), { select: [node.id] });
+  };
+  const waiting = (): ToolSession => ({
+    move: (q) => { hover = ctx.snap(q.p); },
+    up: (q) => {
+      const p = ctx.snap(q.p);
+      // a double-click finishes; a click on the first point closes
+      if (q.t - last.t < 350 && dist(q.p, last.p) < 4 * ctx.px) { finish(false); return; }
+      last = { t: q.t, p: q.p };
+      if (pts.length >= 3 && dist(p, pts[0]) < 6 * ctx.px) { finish(true); return; }
+      pts.push(p);
+      return waiting();
+    },
+    enter: () => finish(false),
+    outline: () => pathD([bSpline([...pts, hover], false), { closed: false, nodes: [...pts, hover] }]),
+  });
+  return { move: (q) => { hover = ctx.snap(q.p); }, up: () => waiting(), outline: () => pathD([{ closed: false, nodes: [...pts, hover] }]) };
 }

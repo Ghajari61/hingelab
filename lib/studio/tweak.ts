@@ -8,7 +8,7 @@ import { boxCenter, flatten, insertAnchor, invert, isEmptyBox, nodeBasePaths, no
 import { expandNodes, isEditable, locate, topLevel, transformNodesEach, walk } from "./scene";
 import type { Document, Mat, PathNode, Subpath, Vec } from "./types";
 
-export type TweakMode = "move" | "moveInOut" | "jitter" | "scale" | "rotate" | "push" | "shrinkGrow" | "attract" | "roughen" | "twirl";
+export type TweakMode = "move" | "moveInOut" | "jitter" | "scale" | "rotate" | "push" | "shrinkGrow" | "attract" | "roughen" | "twirl" | "smooth";
 
 export const TWEAK_MODES: { id: TweakMode; label: string; nodes: boolean; hint: string }[] = [
   { id: "move", label: "Move objects", nodes: false, hint: "Drag to move objects under the brush." },
@@ -20,6 +20,7 @@ export const TWEAK_MODES: { id: TweakMode; label: string; nodes: boolean; hint: 
   { id: "shrinkGrow", label: "Shrink / grow paths", nodes: true, hint: "Outlines under the brush move inwards; Alt moves them out." },
   { id: "attract", label: "Attract / repel nodes", nodes: true, hint: "Nodes under the brush gather to its centre; Alt spreads them out." },
   { id: "roughen", label: "Roughen paths", nodes: true, hint: "Outlines under the brush get rough and organic." },
+  { id: "smooth", label: "Smooth paths", nodes: true, hint: "Brush over a jagged outline to even it out: bumps and kinks under the brush relax." },
   { id: "twirl", label: "Twirl paths", nodes: true, hint: "Outlines under the brush swirl clockwise as you move; Alt swirls them the other way." },
 ];
 
@@ -89,13 +90,16 @@ export function tweakSubpaths(subs: Subpath[], mode: TweakMode, b: TweakBrush): 
   let changed = false;
   const res = subs.map((s0) => {
     if (!s0.nodes.some((a) => Math.hypot(a.x - b.c.x, a.y - b.c.y) < b.r) && !segments(s0).some((g) => near(g.p0, g.p3, b))) return s0;
-    const s = mode === "push" && Math.hypot(b.delta.x, b.delta.y) < 1e-12 ? s0 : refine(s0, b);
+    const s = (mode === "push" && Math.hypot(b.delta.x, b.delta.y) < 1e-12) || mode === "smooth" ? s0 : refine(s0, b);
     const n = s.nodes.length;
     const orient = s.closed ? Math.sign(polygonArea(s.nodes)) || 1 : 1;
     const nodes = s.nodes.map((a, k) => {
       const prev = s.nodes[s.closed ? (k - 1 + n) % n : Math.max(0, k - 1)], next = s.nodes[s.closed ? (k + 1) % n : Math.min(n - 1, k + 1)];
       const tx = next.x - prev.x, ty = next.y - prev.y, tl = Math.hypot(tx, ty) || 1;
-      const d = nodeShift(mode, a, { x: (orient * ty) / tl, y: (-orient * tx) / tl }, b);
+      // smoothing pulls each node towards the middle of its neighbours (an open path keeps its ends)
+      const ends = !s.closed && (k === 0 || k === n - 1);
+      const w = mode === "smooth" && !ends ? weight(a, b) : 0;
+      const d = mode === "smooth" ? { x: ((prev.x + next.x) / 2 - a.x) * w * 0.5, y: ((prev.y + next.y) / 2 - a.y) * w * 0.5 } : nodeShift(mode, a, { x: (orient * ty) / tl, y: (-orient * tx) / tl }, b);
       if (!d.x && !d.y) return a;
       changed = true;
       return { ...a, x: a.x + d.x, y: a.y + d.y, ...(a.i ? { i: { x: a.i.x + d.x, y: a.i.y + d.y } } : {}), ...(a.o ? { o: { x: a.o.x + d.x, y: a.o.y + d.y } } : {}) };

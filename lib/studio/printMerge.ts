@@ -1,5 +1,5 @@
 /**
- * Print Merge (as in CorelDRAW): text in the artwork holds field names in square brackets,
+ * Fill from Table (a print merge): text in the artwork holds field names in square brackets,
  * [Name] or [Table], and a table of records (pasted from a spreadsheet, or a CSV or text file)
  * fills them. Each record makes a copy of the artwork with its own values, laid out in a grid
  * under the original, ready to nest and cut. The original keeps its field names.

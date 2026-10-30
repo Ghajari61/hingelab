@@ -136,8 +136,8 @@ export function PropertiesPanel({ toast, handlers }: { toast: Toast; handlers: R
       )}
       {n?.type === "dimension" && (
         <PanelSection title="Dimension" meta={DIMENSION_NAMES[n.kind]} testId="props-dimension">
-          <NumberInput label={n.kind === "angular" ? "Arc radius" : "Offset"} value={n.offset} length units={doc.units} min={-1000} max={1000} defaultValue={8}
-            onChange={(v, c) => live("Dimension Offset", (d) => { const m = findNode(d.root, n.id); if (m?.type === "dimension") m.offset = v; }, c)} testId="dim-offset" />
+          {!["callout", "radius", "diameter"].includes(n.kind) && <NumberInput label={n.kind === "angular" ? "Arc radius" : "Offset"} value={n.offset} length units={doc.units} min={-1000} max={1000} defaultValue={8}
+            onChange={(v, c) => live("Dimension Offset", (d) => { const m = findNode(d.root, n.id); if (m?.type === "dimension") m.offset = v; }, c)} testId="dim-offset" />}
           <DimensionLabel node={n} />
           <p className="pn-empty">Dimensions sit on the Measurements layer, which is never sent to the laser.</p>
         </PanelSection>
@@ -196,7 +196,7 @@ function shapeBoxSize(n: Extract<SceneNode, { type: "shape" }>): { w: number; h:
   const s = n.shape;
   switch (s.kind) {
     case "ellipse": return { w: s.rx * 2, h: s.ry * 2 };
-    case "polygon": case "star": case "arc": case "spiral": return { w: s.r * 2, h: s.r * 2 };
+    case "polygon": case "star": case "arc": case "spiral": case "burst": return { w: s.r * 2, h: s.r * 2 };
     case "gear": { const d = s.module * (s.teeth + 2); return { w: d, h: d }; }
     default: return { w: s.w, h: s.h };
   }

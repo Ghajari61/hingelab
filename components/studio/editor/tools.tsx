@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import {
   ArrowRight, ChartPie, Circle, Cog, Crop, Eraser, Feather, Grid3x3, Hand, Heart, Hexagon, Lasso, MessageSquare, MousePointer, MousePointer2, PaintBucket, Pencil, PenTool, Pill, Pipette,
-  RotateCw, Ruler, RulerDimensionLine, Scaling, Scissors, Shell, Slash, Slice, Spline, SprayCan, Square, Star, Type, WandSparkles, ZoomIn,
+  RotateCw, Ruler, RulerDimensionLine, Scaling, Scissors, Shapes, Shell, Slash, Slice, Spline, SprayCan, Square, Star, Sun, Type, Waypoints, WandSparkles, ZoomIn,
 } from "lucide-react";
 import { TOOL_INFO, type ToolId } from "@/lib/studio/commands";
 import type { ToolDef, ToolSlot } from "@/components/ui";
@@ -37,14 +37,14 @@ export const TOOL_ICONS: Record<ToolId, ReactNode> = {
   knife: <Slice size={18} />, eraser: <Eraser size={18} />, shear: <Shear />, shapeBuilder: <ShapeBuilder />, eyedropper: <Pipette size={18} />,
   measure: <RulerDimensionLine size={18} />, fill: <PaintBucket size={18} />, calligraphy: <Feather size={18} />, tweak: <Tweak />, spray: <SprayCan size={18} />,
   connector: <Connector />, rect3: <Rect3 />, ellipse3: <Ellipse3 />, curve3: <Curve3 />, smartDraw: <SmartDraw />, crop: <Crop size={18} />,
-  segmentDelete: <SegmentDelete />, dimension: <Ruler size={18} />,
+  segmentDelete: <SegmentDelete />, dimension: <Ruler size={18} />, library: <Shapes size={18} />, burst: <Sun size={18} />, spline: <Waypoints size={18} />,
 };
 
 const GROUPS: (ToolId | { group: string; tools: ToolId[] } | "-")[] = [
   "select", "direct", "magicWand", "lasso", "-",
-  { group: "Pen", tools: ["pen", "curvature", "curve3"] }, "text",
+  { group: "Pen", tools: ["pen", "curvature", "curve3", "spline"] }, "text",
   { group: "Line", tools: ["line", "connector"] },
-  { group: "Shapes", tools: ["rect", "rect3", "ellipse", "ellipse3", "polygon", "star", "arc", "slot", "gear", "arrow", "bubble", "heart", "grid", "spiral"] },
+  { group: "Shapes", tools: ["rect", "rect3", "ellipse", "ellipse3", "polygon", "star", "arc", "slot", "gear", "arrow", "bubble", "heart", "grid", "spiral", "library", "burst"] },
   { group: "Pencil", tools: ["pencil", "smartDraw", "calligraphy"] }, { group: "Eraser", tools: ["eraser", "crop", "knife", "segmentDelete", "scissors"] }, "-",
   { group: "Rotate", tools: ["rotate", "reflect"] }, { group: "Scale", tools: ["scale", "shear"] }, { group: "Tweak", tools: ["tweak", "spray"] },
   { group: "Shape Builder", tools: ["shapeBuilder", "fill"] }, { group: "Eyedropper", tools: ["eyedropper", "measure", "dimension"] }, "-",
