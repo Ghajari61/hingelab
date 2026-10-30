@@ -313,7 +313,8 @@ export function generatorScene(out: GenOutput, T: number, explode = 0, fold = 1,
         if (p.color) {
           // A contrasting material (gold mirror acrylic and the like) keeps its own colour in every look.
           (mesh.material as THREE.Material).dispose();
-          mesh.material = p.texture === "leather" ? leatherOf(p.color) : p.matte
+          mesh.material = p.clear ? new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.08, metalness: 0, transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide })
+            : p.texture === "leather" ? leatherOf(p.color) : p.matte
             ? new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.92, metalness: 0, side: THREE.DoubleSide })
             : new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.28, metalness: 0.55, side: THREE.DoubleSide });
           mesh.userData.keepMaterial = true;

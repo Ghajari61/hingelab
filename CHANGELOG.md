@@ -1,3 +1,16 @@
+## Unreleased
+
+- **Layered keychains.** The Keychain generator has a new Construction setting with seven builds:
+  - **Photo frame:** a back, a photo pocket that opens at the side, an optional clear acrylic cover and a front with a window. The window can follow the body's shape or be a circle, heart or rounded rectangle, and the name sits on a band under it. The stats give the size to trim the photo to.
+  - **Shaker:** walls round a space for beads or glitter, a clear front and a frame over its edge. The name is engraved on the back and shows through.
+  - **Spinner:** a disc with the name turns freely between two rims, a fidget keyring.
+  - **Swivel locket:** the cover swings open on the ring hole to show a photo or a note. In 3D it opens on the Fold slider.
+  - **Two-tone outline:** an acrylic front on a bigger wood backing, with the name engraved, scored or raised.
+  - **Layered scene:** mountains and hills glued on a sky that carries the name.
+  - Every layer carries the ring hole, so the layers line up and the ring holds them all. Clear and coloured acrylic come from the second material and are laid out on their own sheets.
+  - Clear parts are drawn see-through in 3D and in thumbnails.
+  - 12 new presets, and tests for each build.
+
 ## 1.31.1 — Clearer upgrade preview
 
 - **Clearer design preview in the Upgrade dialog:** the cut file shown there now has its lines drawn at a readable width and its parts lightly tinted, so the design is easy to see at that size. The downloaded file is unchanged.

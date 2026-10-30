@@ -177,6 +177,8 @@ export interface GenPart {
   color?: string;
   /** The preview colour is paper or card, without a shine. */
   matte?: boolean;
+  /** Clear (acrylic or glass): drawn see-through in previews. */
+  clear?: boolean;
   /** The preview's surface: "leather" adds a fine grain to a matte colour. */
   texture?: "leather";
 }
