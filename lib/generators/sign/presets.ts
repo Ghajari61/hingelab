@@ -220,14 +220,14 @@ export const SIGN_PRESETS: GenPreset<SignParams>[] = [
   {
     id: "led-name-light", name: "LED name night light", note: "A neon-look name on clear acrylic, lit from a walnut LED base",
     params: {
-      name: "Name night light", material: "acr3", T: 3, K: 0.1, style: { kind: "neon", mirror: true, border: 6 }, text: { text: "Luna", fontId: "pacifico", size: 60, spacing: -1 },
+      name: "Name night light", material: "acr3", T: 3, K: 0.1, style: { kind: "neon", border: 6 }, text: { text: "Luna", fontId: "pacifico", size: 60, spacing: -1 },
       motif: { kind: "star", side: "right", size: 30, gap: 2 }, mount: { kind: "led", depth: 60 }, mat: { mat2: "walnut-3", T2: 3 },
     },
   },
   {
-    id: "led-shop-plaque", name: "Edge-lit shop plaque", note: "Back-engraved acrylic plaque on an LED base for a counter",
+    id: "led-shop-plaque", name: "Edge-lit shop plaque", note: "Engraved acrylic plaque glowing on an LED base, for a counter",
     params: {
-      name: "Edge lit plaque", material: "acr3", T: 3, K: 0.1, style: { kind: "engraved", mirror: true }, board: { shape: "rounded", auto: true, pad: 16, corner: 8 },
+      name: "Edge lit plaque", material: "acr3", T: 3, K: 0.1, style: { kind: "engraved" }, board: { shape: "rounded", auto: true, pad: 16, corner: 8 },
       text: { text: "Studio Bloom", fontId: "playfair-display", size: 22 }, motif: { kind: "flower", side: "above", size: 30, gap: 6 }, border: { kind: "engrave", inset: 5, width: 1.5 },
       mount: { kind: "led", depth: 60 }, mat: { mat2: "walnut-3", T2: 3 },
     },
