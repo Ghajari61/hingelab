@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.31.0",
-    "pub_date": "2026-10-30T03:46:14.614Z",
-    "notes": "Leather Studio now shows assembled products with leather materials and fold animation. New Start page, simpler settings, and clearer first-visit guidance.",
+    "version": "1.31.1",
+    "pub_date": "2026-10-30T04:15:55.962Z",
+    "notes": "The Pro upgrade dialog now shows a clearer cut-file preview, with readable lines and lightly tinted parts.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.31.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnBjaEpHYW1VV0IvNnlscERlMXlhQ1ZNVVJzaTV6Z0FTMXRtS05YVDYwUkQ4N2RmblRZMGZJNGkxT2ZzOWdweCtvalFWSDZsckwyVFdmMFMrQk02M0FNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzMxOTY3CWZpbGU6SGluZ2VMYWJfMS4zMS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMxLjAKZ0JXWWFLRXVKS2JaUGxuV3VsZk5kZlV0ZWZqVStiUjZJdDdlbXlXOVM1WnF5b21UUGxTd1IwMjhoOXZlNll2aUJhL2FlWHpIK0xiU2E1ZjNudXV5QVE9PQo=",
-        "size": 12800133,
-        "sha256": "b1b4a6631b6375910ccf5542358792e043c336d21d514459b6ea81e3191c5e13"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.31.1_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnR6RHlPTTNOcTQ5K3FBbUNxZ2JVT2lmdUgxa3FhR0g5Qkp4aVJKb0xOU2VKWkMxc2xncWJvck51TUV4KzdhK2hONkRLc1h3YkZaVjZmOUhCL2hYTFF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzMzNzQ3CWZpbGU6SGluZ2VMYWJfMS4zMS4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMxLjEKZVpFREdlU3VzOTVFR3hNb3pmOWNDSDNPVFJWVlhKaFpRZUlCUUlyRkZoNVlHTkgvMFlxUkxqRFRGR2FiK2VyWU1kdjYwbEw4V0xWMEZ0L3dITDcxQmc9PQo=",
+        "size": 12799640,
+        "sha256": "4ba967637471261bb932e82cefd487a151627504ad9a124ac4290077012812e5"
       }
     }
   }

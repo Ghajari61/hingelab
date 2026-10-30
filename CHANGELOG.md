@@ -1,4 +1,4 @@
-## Unreleased
+## 1.31.1 — Clearer upgrade preview
 
 - **Clearer design preview in the Upgrade dialog:** the cut file shown there now has its lines drawn at a readable width and its parts lightly tinted, so the design is easy to see at that size. The downloaded file is unchanged.
 
