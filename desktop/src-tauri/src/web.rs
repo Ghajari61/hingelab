@@ -122,6 +122,17 @@ pub fn classify(base: &Url, url: &Url) -> Nav {
     }
 }
 
+/// The website's own sign-out (its account menu posts here).
+fn is_sign_out(url: &Url) -> bool {
+    url.path() == "/auth/signout"
+}
+
+/// Asks the app's UI to sign the app out (as its own Sign out does): the session here and on the
+/// server, and the website view.
+fn sign_out_from_web<R: Runtime>(app: &AppHandle<R>) {
+    tell_main(app, "web-sign-out", ());
+}
+
 fn is_sign_in_page(url: &Url) -> bool {
     matches!(url.path(), "/login" | "/signup")
 }
@@ -231,6 +242,12 @@ fn builder(app: &AppHandle, start: Url, base: Url) -> WebviewBuilder<tauri::Wry>
     let dl_app = app.clone();
     WebviewBuilder::new(LABEL, WebviewUrl::External(start))
         .on_navigation(move |url| match classify(&nav_base, url) {
+            // Sign out in the website's menu signs the app out: otherwise the view, landing on the
+            // sign-in page, would be signed straight back in with the app's session.
+            Nav::Inside if is_sign_out(url) => {
+                sign_out_from_web(&nav_app);
+                false
+            }
             Nav::Inside if is_sign_in_page(url) && nav_app.try_state::<AppState>().is_some_and(|s| mark_sign_in(&s)) => {
                 resign(&nav_app, url.clone());
                 false
@@ -433,6 +450,8 @@ mod tests {
         assert_eq!(classify(&b, &u("javascript:alert(1)")), Nav::Block);
         assert_eq!(classify(&b, &u("tauri://localhost/")), Nav::Block);
         assert!(is_sign_in_page(&u("https://hingelab.vercel.app/login?next=%2Fapp")));
+        assert!(is_sign_out(&u("https://hingelab.vercel.app/auth/signout")));
+        assert!(!is_sign_out(&u("https://hingelab.vercel.app/auth/callback?code=x")));
         assert_eq!(local_part(&u("https://hingelab.vercel.app/app?x=1")), "/app?x=1");
         assert_eq!(next_of(&u("https://hingelab.vercel.app/app/ai#open=eyJw")), "/app/ai#open=eyJw");
         assert_eq!(next_of(&u("https://hingelab.vercel.app/app?x=1")), "/app?x=1");
