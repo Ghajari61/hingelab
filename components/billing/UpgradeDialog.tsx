@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { previewSvg } from "@/lib/billing/previewSvg";
 import { ArrowRight, Check, Scissors, ShieldCheck, Sparkles, X } from "lucide-react";
 import { PRICES, PRO_BENEFITS } from "@/lib/plans";
 
@@ -27,7 +28,7 @@ export function UpgradeDialog({ reason, signedIn, onClose, preview }: {
 }) {
   const previewSrc = useMemo(() => {
     const svg = preview?.();
-    return svg && svg.length < MAX_PREVIEW ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : null;
+    return svg && svg.length < MAX_PREVIEW ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(previewSvg(svg))}` : null;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- drawn once, when the dialog opens
   }, []);
   const [busy, setBusy] = useState<"month" | "year" | null>(null);
