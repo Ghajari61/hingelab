@@ -8,7 +8,7 @@ const KEY = "hingelab-onboarded-v1";
 
 const STEPS = [
   { icon: LayoutGrid, title: "Start from a ready-made design", text: "Every card in the design list is a ready design you can change: pick one to load it. To make something else, use the product menu at the top." },
-  { icon: SlidersHorizontal, title: "Make it yours", text: "Change the size, text and pattern in the settings; the sheet updates as you type. Anything that would not cut well shows below the settings, often with a one-click fix." },
+  { icon: SlidersHorizontal, title: "Make it yours", text: "Change the size, text and pattern in the settings; the sheet updates as you type. Simple shows the main settings; switch to All for kerf and fine-tuning. Anything that would not cut well shows below the settings, often with a one-click fix." },
   { icon: Box, title: "Check it in 3D", text: "Switch to 3D view at the top of the sheet to see the finished piece assembled, or exploded into its parts, before you cut anything." },
   { icon: Download, title: "Export at true size", text: "Export writes SVG, DXF, PDF or LightBurn in millimetres, with the cut, score and engrave colours your laser software knows. Designing and previewing are free; exporting needs Pro." },
 ];

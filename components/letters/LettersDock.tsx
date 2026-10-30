@@ -235,7 +235,7 @@ export function LettersDock({
           <p className="note">Tabs on the walls fit slots in the base{params.lid === "fixed" ? " and the lid" : ""}. Slot play loosens or tightens that fit; Base rim moves the slots in from the plate edge.</p>
         </Sec>
       )}
-      <Sec step="export" title="Layers" startOpen onReset={() => onResetSection("Layers", ["layers", "labels"])}>
+      <Sec step="export" title="Layers" startOpen advanced onReset={() => onResetSection("Layers", ["layers", "labels"])}>
         <LayersPanel layers={params.layers} labels={params.labels} only={hinge ? undefined : ["outline", "slots", "labels"]} onVis={layerVis} onExp={layerExp} onLabels={(on) => onPatch({ labels: on }, true)} />
       </Sec>
       <Sec step="layout" title="Sheet" meta={sheet.meta} onReset={() => onResetSection("Sheet", ["bedW", "bedH", "gap", "fit"])}>

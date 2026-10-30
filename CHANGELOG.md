@@ -5,6 +5,7 @@
   - The home page says plainly what is free (trying every design and the 3D preview, with no account) and what needs Pro (exporting). It offers the two ways in side by side: online in the browser, or the Windows app.
   - "Start designing" in the header and every start button now lead to the Start page.
   - The first-visit tour in the editor has four steps, now including the 3D check, with a link back to pick another project.
+- **Simple and All settings:** the settings panel has a Simple / All switch. New visitors start in Simple, which shows the main settings and hides fine-tuning: kerf, Kerf Y, minimum feature, separate X and Y kerf, clearances, hinge slot details and export layers. Their values still apply. Anyone who has used the editor before keeps every setting showing, and the choice is remembered.
 
 ## 1.30.4 — Balanced hanging loops
 
