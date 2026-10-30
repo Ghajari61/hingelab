@@ -251,6 +251,41 @@
   "objects": 1,
   "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
  },
+ "popup-easter-egg-basket": {
+  "w": 600,
+  "h": 400,
+  "sheets": 1,
+  "objects": 3,
+  "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
+ },
+ "popup-yalda-pomegranate-bowl": {
+  "w": 600,
+  "h": 400,
+  "sheets": 1,
+  "objects": 5,
+  "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
+ },
+ "popup-cloud-nursery-tray": {
+  "w": 600,
+  "h": 400,
+  "sheets": 1,
+  "objects": 3,
+  "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
+ },
+ "popup-crenellated-fruit-bowl": {
+  "w": 600,
+  "h": 400,
+  "sheets": 1,
+  "objects": 5,
+  "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
+ },
+ "popup-drop-catch-all": {
+  "w": 600,
+  "h": 400,
+  "sheets": 1,
+  "objects": 3,
+  "pro": "Pop-up downloads require Pro. Free includes preview of circle and rounded-square bowls."
+ },
  "hinge-notebook-cover": {
   "w": 360,
   "h": 240,

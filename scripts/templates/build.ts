@@ -298,11 +298,18 @@ function importedTemplate(t: Template): Out {
 
 // ---------- run ----------
 
-rmSync(join(PUB, "files"), { recursive: true, force: true });
-rmSync(join(PUB, "thumbs"), { recursive: true, force: true });
-const built: Record<string, TemplateBuilt> = {};
+// TEMPLATES_ONLY=id,id rebuilds just those templates and keeps the rest (no archive needed).
+const ONLY = process.env.TEMPLATES_ONLY?.split(",").map((s) => s.trim()).filter(Boolean);
+const builtPath = join(root, "lib", "templates", "built.json");
+if (!ONLY) {
+  rmSync(join(PUB, "files"), { recursive: true, force: true });
+  rmSync(join(PUB, "thumbs"), { recursive: true, force: true });
+}
+const built: Record<string, TemplateBuilt> = ONLY ? JSON.parse(readFileSync(builtPath, "utf8")) : {};
 let total = 0;
 for (const t of TEMPLATES) {
+  if (ONLY && !ONLY.includes(t.id)) continue;
+  if (ONLY) rmSync(join(PUB, "files", t.id), { recursive: true, force: true });
   if (t.product && TEMPLATE_PRESETS[t.id]?.product !== t.product) throw new Error(`${t.id}: product ${t.product} has no matching settings`);
   if (t.source === "editor" && !t.product) throw new Error(`${t.id}: an "editor" template needs a product`);
   const out = t.source === "studio" ? studioTemplate(t) : t.product === "hinge" ? hingeTemplate(t) : t.product ? generatorTemplate(t) : importedTemplate(t);
@@ -321,5 +328,7 @@ for (const t of TEMPLATES) {
   built[t.id] = out.built;
   console.log(`${t.id.padEnd(22)} ${out.built.sheets} sheet(s) ${out.built.w}×${out.built.h} mm, ${out.built.objects} objects, ${(out.thumb.length / 1024).toFixed(1)} kB thumb, ${(bytes / 1024).toFixed(1)} kB total`);
 }
-writeFileSync(join(root, "lib", "templates", "built.json"), JSON.stringify(built, null, 1) + "\n");
+// in catalogue order, whichever templates were rebuilt
+const ordered = Object.fromEntries(TEMPLATES.filter((t) => built[t.id]).map((t) => [t.id, built[t.id]]));
+writeFileSync(builtPath, JSON.stringify(ordered, null, 1) + "\n");
 console.log(`${TEMPLATES.length} templates, ${(total / 1024).toFixed(0)} kB`);
