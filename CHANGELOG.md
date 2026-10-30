@@ -490,3 +490,7 @@ Decisions D193-D196 in `DECISIONS.md`; checks in `docs/SMOKE-TEST.md`.
 ## 1.1.0
 
 The unified app: see `CHANGELOG-REDESIGN.md`.
+## 1.35.1 — Sign out from the editor menu
+
+- **Desktop sign-out:** Sign out in the editor's account menu now signs out the whole Windows app, as it does from the app shell.
+

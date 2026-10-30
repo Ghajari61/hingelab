@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.35.0",
-    "pub_date": "2026-10-30T19:04:14.352Z",
-    "notes": "Studio adds shape library, spline and smoothing tools, burst lines, crossed stars, rounded connectors, callout dimensions, solid shadow and depth effects. Undo/Redo works throughout.",
+    "version": "1.35.1",
+    "pub_date": "2026-10-30T19:35:36.855Z",
+    "notes": "Sign out in the editor account menu now signs the whole Windows app out.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.35.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmhPdnliV3pqUk5vdDlMbUxUa2VtMlZzYnRTNjBrbHArc2hrM0I2RE0rY1p5Y0hPbDJvdlA0cDZ0MGNkemNaNGV4ZzJFVWZQREFhZEo1Um44ZXpDL1FJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzg3MDQ1CWZpbGU6SGluZ2VMYWJfMS4zNS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjM1LjAKTjh1dXV3SElwRnptajBsUnZma1Uzd3JRdTNXMEdPSDl1NDk1bk1jV1lMVTdYNE9BSnNaNk9XVTZic0NUdkpHckZhMHVKWWJLdWl4a0hKZDJ2dXppQXc9PQo=",
-        "size": 12837600,
-        "sha256": "a789217457f9a9da89aca5724a840e51978dd3a3a2bedc51540b9f8bcf976e53"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.35.1_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmhLYVd2UGpWeVRLR1htRURpV3R3UXRhQzByNG5rbUhSYkRQMzJxYlpmREk3dXM2OVlwc1dlbnNQbnNVQ0IwdXRua25wM1U0ai9BUGRpaTU4eGlOVGdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzg4OTI3CWZpbGU6SGluZ2VMYWJfMS4zNS4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjM1LjEKZEc1ZzVzdHdSaEdSazZRYzVWSEdKSk9uRnZsc1VSL2hnUEF0Umt4NW5QdjdTekQrT1NlR2ltN1hOanY2bjJrZlZ2TVN2cFJ5Wk9QRUY4dHhDankrQnc9PQo=",
+        "size": 12839127,
+        "sha256": "3dc57555f7184dbc79a3cd97e6a833b9c52f7b860905fde620ad13a7eca7fae3"
       }
     }
   }
