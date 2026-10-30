@@ -3,8 +3,9 @@ import type { GeneratorDef, SectionSpec } from "../types";
 import { SHAPE_KINDS, SHAPE_NAMES, shapeArt } from "../shapes";
 import { MOTIF_IDS, MOTIF_NAMES } from "../motifs";
 import { namedFile } from "../util";
-import { buildKeychain } from "./build";
-import { mergeKeychain, type KeychainParams } from "./params";
+import { buildKeychain, BUILD_NAMES } from "./build";
+import { material2, material2Fields } from "../material2";
+import { BUILDS, mergeKeychain, type KeychainParams } from "./params";
 import { KEYCHAIN_PRESETS } from "./presets";
 const sections:SectionSpec<KeychainParams>[]=[
  {id:"body",step:"dimensions",title:"Shape & size",open:true,help:"The keychain body; the reinforced ring tab extends beyond these dimensions.",fields:[
@@ -13,6 +14,22 @@ const sections:SectionSpec<KeychainParams>[]=[
   {kind:"number",key:"height",label:"Body height",unit:"mm",min:20,max:120,step:1,help:"Height without the ring tab."},
   {kind:"number",key:"corner",label:"Corner radius",unit:"mm",min:0,max:30,step:.5,help:"Corner rounding for shapes that support it."},
   {kind:"number",key:"margin",label:"Content margin",unit:"mm",min:1.5,max:8,step:.5,help:"Minimum space from content to the body edge. Text automatically shrinks to fit."},
+ ]},
+ {id:"build",title:"Construction",open:true,help:"One layer, or several glued layers: a photo frame, a shaker with beads inside, a disc that spins, a cover that swings open, a two-tone outline or a layered landscape.",fields:[
+  {kind:"choice",key:"build",label:"Build",options:BUILDS.map(v=>({v,text:BUILD_NAMES[v]})),
+   apply:(p,v)=>{const q=structuredClone(p);q.build=v as KeychainParams["build"];
+     // a clear cover for photos and shakers, a contrasting acrylic for the outline
+     if(v==="outline"&&q.stack.mat2==="acrylic-clear")q.stack.mat2="acrylic-black";
+     if((v==="frame"||v==="shaker")&&q.stack.mat2!=="acrylic-clear"){q.stack.mat2="acrylic-clear";q.stack.T2=material2("acrylic-clear").T;}
+     if(v!=="flat"&&q.width<45){q.width=Math.max(q.width,v==="frame"||v==="locket"?50:48);q.height=Math.max(q.height,v==="frame"||v==="spinner"||v==="locket"?50:36);}
+     return q;},
+   help:"Photo frame: a window and a pocket for a photo. Shaker: a clear front over a space for beads. Spinner: a disc turning freely between two rims. Swivel locket: a cover that swings open on the ring. Two-tone outline: a front on a bigger backing. Layered scene: mountains and hills on the sky."},
+  {kind:"number",key:"stack.frame",label:"Frame width",unit:"mm",min:2.5,max:15,step:.5,show:p=>["frame","shaker","spinner","locket","scene"].includes(p.build),help:"The solid rim round the window, pocket or disc."},
+  {kind:"choice",key:"stack.window",label:"Window shape",options:[{v:"match",text:"Same as the body"},{v:"circle",text:"Circle"},{v:"heart",text:"Heart"},{v:"rounded",text:"Rounded rectangle"}],show:p=>p.build==="frame",help:"The opening that shows the photo."},
+  {kind:"toggle",key:"stack.cover",label:"Clear cover",show:p=>p.build==="frame",help:"A clear acrylic layer over the photo, cut from the second material."},
+  {kind:"number",key:"stack.depth",label:"Shaker depth (layers)",unit:"",min:1,max:4,step:1,show:p=>p.build==="shaker",help:"How many wall layers make the space for the beads."},
+  {kind:"number",key:"stack.border",label:"Outline width",unit:"mm",min:1.5,max:8,step:.5,show:p=>p.build==="outline",help:"How far the backing shows round the front."},
+  ...material2Fields<KeychainParams>("stack",p=>p.build==="outline"||((p.build==="frame")&&p.stack.cover)||p.build==="shaker"),
  ]},
  {id:"text",title:"Name & lettering",open:true,help:"Text becomes vector paths, with automatic fitting inside the chosen shape.",fields:[
   {kind:"text",key:"text.name",label:"Name",maxLength:80,placeholder:"Your name",help:"Name, initials or a short message. Use Job options for a list of names."},
@@ -37,7 +54,7 @@ export const KEYCHAIN:GeneratorDef<KeychainParams>={
  id:"keychain",name:"Keychain",version:1,defaults:()=>mergeKeychain({}),merge:mergeKeychain,sections,presets:KEYCHAIN_PRESETS,
  build:buildKeychain,check:()=>[],fonts:p=>p.text.name.trim()||p.text.subtitle.trim()?[p.text.fontId]:[],batch:()=>"text.name",
  art:(key,value)=>key==="shape"?shapeArt(value as KeychainParams["shape"]):[],
- fileName:p=>namedFile("keychain",p.name,p.shape),summary:p=>`${SHAPE_NAMES[p.shape]} · ${p.width} × ${p.height} mm · ${p.style}`,
+ fileName:p=>namedFile("keychain",p.name,p.shape),summary:p=>`${SHAPE_NAMES[p.shape]} · ${p.width} × ${p.height} mm · ${p.build==="flat"?p.style:BUILD_NAMES[p.build]}`,
  help:{intro:["Create personalized laser-cut keychains with names, motifs and a reinforced ring tab. Text is exported as vector paths, not installed-font text."],tips:[
-      "No Weld (with Raised letters): every glyph, dot and counter is cut as its own raised piece instead of fusing where letters touch.","Measure the wire on your split ring and test a sample before a production run.","Use Job options to generate a batch of names or repeat copies on a sheet.","For raised lettering, glue every small detail over its scored guide. Choose engraving for very small text.","Body size excludes the ring tab. The preview and SVG include the complete outline."],keywords:["keychain","keyring","name tag","pet tag","bag charm"]},
+      "No Weld (with Raised letters): every glyph, dot and counter is cut as its own raised piece instead of fusing where letters touch.","Measure the wire on your split ring and test a sample before a production run.","Use Job options to generate a batch of names or repeat copies on a sheet.","For raised lettering, glue every small detail over its scored guide. Choose engraving for very small text.","Layered builds: glue the layers in order, lined up on the ring hole. Photo frames, shakers and outlines can use clear or coloured acrylic as the second material.","Body size excludes the ring tab. The preview and SVG include the complete outline."],keywords:["keychain","keyring","name tag","pet tag","bag charm","photo keychain","shaker keychain","spinner","locket","layered keychain"]},
 };

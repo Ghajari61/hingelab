@@ -133,7 +133,7 @@ export function projectedSVG(out: GenOutput, T: number, w: number, h: number): s
     const fill = shade(base, 0.86 + 0.16 * d.light);
     if (d.p.soft) { s += `<path d="${d.face.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${fill}" stroke="${fill}" stroke-width="${sw}" stroke-linejoin="round"/>`; continue; }
     if (d.band.length) s += `<path d="${d.band.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${shade(base, 0.78)}" fill-rule="evenodd" stroke="${EDGE}" stroke-width="${sw}" stroke-linejoin="round"/>`;
-    s += `<path d="${d.face.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${fill}" fill-rule="evenodd" stroke="${EDGE}" stroke-width="${sw}" stroke-linejoin="round"/>`;
+    s += `<path d="${d.face.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${fill}"${d.p.clear ? ` fill-opacity="0.35"` : ""} fill-rule="evenodd" stroke="${EDGE}" stroke-width="${sw}" stroke-linejoin="round"/>`;
     if (d.cuts.length) s += `<path d="${d.cuts.map((c) => thumbD(c, false, tol)).join(" ")}" fill="none" stroke="${EDGE}" stroke-width="${sw}"/>`;
     if (d.engrave.length) s += `<path d="${d.engrave.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${INK}" fill-rule="evenodd"/>`;
     if (d.score.length) s += scorePath(d.score, tol, sw);
@@ -161,14 +161,15 @@ export function assembledSVG(out: GenOutput, T: number, w = 300, h = 200): strin
     for (let i = drawn.length - 1; i >= 0; i--) {
       const own = shapeContours(unionShapes(drawn[i].f.cs, [], true));
       shown[i] = cover.length ? shapeContours(differenceShapes(own, cover)) : own;
-      cover = shapeContours(unionShapes([...cover, ...own]));
+      // a clear layer hides nothing under it
+      if (!drawn[i].p.clear) cover = shapeContours(unionShapes([...cover, ...own]));
     }
   }
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${vb.join(" ")}">`;
   drawn.forEach(({ p, f }, i) => {
     const hand = /hand/i.test(p.name);
     const fill = p.color ?? (hand || (p.tone ?? 1) < 0.6 ? "#5A4130" : WOODS[i % WOODS.length]);
-    if (shown[i].length) s += `<path d="${shown[i].map((c) => thumbD(c, true, tol)).join(" ")}" fill="${fill}" fill-rule="evenodd" stroke="${EDGE}" stroke-width="${sw}"/>`;
+    if (shown[i].length) s += `<path d="${shown[i].map((c) => thumbD(c, true, tol)).join(" ")}" fill="${fill}"${p.clear ? ` fill-opacity="0.35"` : ""} fill-rule="evenodd" stroke="${EDGE}" stroke-width="${sw}"/>`;
     if (f.cuts.length) s += `<path d="${f.cuts.map((c) => thumbD(c, false, tol)).join(" ")}" fill="none" stroke="${EDGE}" stroke-width="${sw}" stroke-linejoin="round"/>`;
     if (f.engrave.length) s += `<path d="${f.engrave.map((c) => thumbD(c, true, tol)).join(" ")}" fill="${INK}" fill-rule="evenodd"/>`;
     if (f.score.length) s += scorePath(f.score, tol, sw);
