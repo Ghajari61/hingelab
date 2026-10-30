@@ -9,6 +9,7 @@ import type { ToolId } from "@/lib/studio/commands";
 import { FILL_DEFAULTS, type FillOptions } from "@/lib/studio/fillArea";
 import type { MeasureResult } from "@/lib/studio/measure";
 import "@/lib/studio/dimension";
+import "@/lib/studio/shapeLibrary";
 import { SPRAY_DEFAULTS, type SprayParams } from "@/lib/studio/spray";
 import { TWEAK_DEFAULTS, type TweakParams } from "@/lib/studio/tweak";
 import { commit, emptyHistory, jumpTo, redo, seal, undo, type History } from "@/lib/studio/history";
@@ -84,7 +85,7 @@ export interface EditorState {
   /** Routing for new connectors. */
   connectorMode: ConnectorMode;
   /** The Dimension tool's kind. */
-  dimensionMode: DimensionKind;
+  dimensionMode: DimensionKind | "segment";
   /** What Align lines objects up with; the key object is the last one clicked. */
   alignTo: AlignTo;
   /** Distribute Spacing gap in mm, or null for equal gaps between the outer objects. */

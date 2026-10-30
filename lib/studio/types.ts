@@ -54,7 +54,7 @@ export interface PathNode extends NodeBase {
   connector?: Connector;
 }
 
-export type ConnectorMode = "straight" | "orthogonal";
+export type ConnectorMode = "straight" | "orthogonal" | "rounded";
 export interface Connector { from: string; to: string; mode: ConnectorMode }
 
 // ---------- Live Effects ----------
@@ -86,6 +86,11 @@ export interface HatchParams {
 }
 
 export interface RotateCopiesParams { count: number; start: number; cx: number; cy: number; fuse: boolean }
+
+/** Solid Shadow: the shape swept `depth` mm towards `angle` (degrees, 0 = right, 90 = down). */
+export interface BlockShadowParams { angle: number; depth: number; /** separate: shape + shadow piece; fused: one outline; shadow: the shadow piece alone */ output: "separate" | "fused" | "shadow" }
+/** Depth (extrusion): a back face `depth` mm towards `angle`, shrunk to `scale` for perspective, joined by side edges; `hidden` drops lines behind the front. */
+export interface DepthParams { angle: number; depth: number; scale: number; hidden: boolean }
 
 /** Symmetry (CorelDRAW's Symmetry drawing): `lines` mirror lines through a centre, the first at `angle` degrees; the artwork repeats in every wedge, mirrored in turn. */
 export interface SymmetryParams { lines: number; angle: number; cx: number; cy: number; fuse: boolean }
@@ -230,6 +235,8 @@ export interface EffectParamsMap {
   rotateCopies: RotateCopiesParams;
   mirror: MirrorParams;
   symmetry: SymmetryParams;
+  blockShadow: BlockShadowParams;
+  depth: DepthParams;
   livingHinge: LivingHingeParams;
   patternAlongPath: PatternAlongPathParams;
   bend: BendParams;
@@ -254,7 +261,7 @@ export type ShapeParams =
   | { kind: "rect"; w: number; h: number; r: [number, number, number, number]; corner: CornerType }
   | { kind: "ellipse"; rx: number; ry: number }
   | { kind: "polygon"; sides: number; r: number; round: number }
-  | { kind: "star"; points: number; r: number; inner: number; round: number }
+  | { kind: "star"; points: number; r: number; inner: number; round: number; /** Crossed star: join every `skip` points (2 or more); 0 for a plain star. */ skip?: number }
   | { kind: "arc"; r: number; start: number; sweep: number; pie: boolean }
   | { kind: "slot"; w: number; h: number }
   | { kind: "gear"; teeth: number; module: number; pressure: number; bore: number }
@@ -262,7 +269,11 @@ export type ShapeParams =
   | { kind: "bubble"; w: number; h: number; r: number; tail: number }
   | { kind: "heart"; w: number; h: number }
   | { kind: "grid"; w: number; h: number; cols: number; rows: number }
-  | { kind: "spiral"; turns: number; r: number; inner: number };
+  | { kind: "spiral"; turns: number; r: number; inner: number }
+  /** A ready shape from the Shape Library (shapeLibrary.ts), drawn into its box. */
+  | { kind: "library"; id: string; w: number; h: number }
+  /** Burst Lines: rays between an inner and outer radius; `width` 0–1 of each ray's slot; `jitter` 0–1. */
+  | { kind: "burst"; rays: number; r: number; inner: number; width: number; jitter: number; seed: number };
 
 export type ShapeKind = ShapeParams["kind"];
 
@@ -328,7 +339,7 @@ export interface GeneratorNode extends NodeBase {
   cachedOutputHash?: string;
 }
 
-export type DimensionKind = "linear" | "horizontal" | "vertical" | "angular" | "radius" | "diameter";
+export type DimensionKind = "linear" | "horizontal" | "vertical" | "angular" | "radius" | "diameter" | "callout";
 
 export interface DimensionNode extends NodeBase {
   type: "dimension";

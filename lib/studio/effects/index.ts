@@ -11,6 +11,7 @@ import type { EffectKind, EffectParamsMap, LiveEffect, Mat, SceneNode, Subpath, 
 import { applyCorners } from "./corners";
 import { applyDistort } from "./distort";
 import { applyMirror, applyRotateCopies, applySymmetry, boxOf } from "./copies";
+import { applyBlockShadow, applyDepth } from "./shadow";
 import { applyHatches } from "./hatches";
 import { applyInterpolate } from "./interpolate";
 import { applyLiveBoolean } from "./liveBoolean";
@@ -111,6 +112,24 @@ export const EFFECTS: { [K in EffectKind]: EffectDef<K> } = {
         return { closed: false, nodes: [{ x: p.cx - r * Math.cos(a), y: p.cy - r * Math.sin(a) }, { x: p.cx + r * Math.cos(a), y: p.cy + r * Math.sin(a) }] };
       });
     },
+  },
+  blockShadow: {
+    ...EFFECT_META.blockShadow,
+    defaults: (input) => { const b = boxOf(input); return { angle: 45, depth: Math.max(1, Math.round(Math.min(b.maxX - b.minX, b.maxY - b.minY) * 0.08 * 10) / 10), output: "separate" }; },
+    presets: [
+      { name: "Down right 3 mm", params: { angle: 45, depth: 3 } },
+      { name: "Straight down 5 mm", params: { angle: 90, depth: 5 } },
+    ],
+    apply: (subs, p) => applyBlockShadow(subs, p),
+  },
+  depth: {
+    ...EFFECT_META.depth,
+    defaults: (input) => { const b = boxOf(input); return { angle: -45, depth: Math.max(2, Math.round(Math.min(b.maxX - b.minX, b.maxY - b.minY) * 0.25)), scale: 1, hidden: true }; },
+    presets: [
+      { name: "Isometric", params: { angle: -30, scale: 1 } },
+      { name: "Perspective", params: { angle: -90, scale: 0.6 } },
+    ],
+    apply: (subs, p) => applyDepth(subs, p),
   },
   livingHinge: {
     ...EFFECT_META.livingHinge,

@@ -69,6 +69,25 @@ const centre = (b: Box): Vec => ({ x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY
 /** Centres closer than this (mm) across a right-angled route count as lined up: one straight run instead of a tiny jog. */
 const ALIGNED = 1e-3;
 
+/** A right-angled route with its bends rounded (radius `r`, smaller where the runs are short), as one open path. */
+export function roundedRoute(pts: Vec[], r: number): Subpath {
+  if (pts.length < 3) return { closed: false, nodes: pts.map((p) => ({ x: p.x, y: p.y })) };
+  const nodes: Subpath["nodes"] = [{ x: pts[0].x, y: pts[0].y }];
+  const K = 0.5523;
+  for (let k = 1; k < pts.length - 1; k++) {
+    const p = pts[k], a = pts[k - 1], b = pts[k + 1];
+    const la = Math.hypot(p.x - a.x, p.y - a.y), lb = Math.hypot(b.x - p.x, b.y - p.y);
+    const rr = Math.min(r, la / 2, lb / 2);
+    if (rr < 1e-6) { nodes.push({ x: p.x, y: p.y }); continue; }
+    const ua = { x: (p.x - a.x) / la, y: (p.y - a.y) / la }, ub = { x: (b.x - p.x) / lb, y: (b.y - p.y) / lb };
+    const s = { x: p.x - ua.x * rr, y: p.y - ua.y * rr }, e = { x: p.x + ub.x * rr, y: p.y + ub.y * rr };
+    nodes.push({ x: s.x, y: s.y, o: { x: s.x + ua.x * rr * K, y: s.y + ua.y * rr * K } }, { x: e.x, y: e.y, i: { x: e.x - ub.x * rr * K, y: e.y - ub.y * rr * K } });
+  }
+  const z = pts[pts.length - 1];
+  nodes.push({ x: z.x, y: z.y });
+  return { closed: false, nodes };
+}
+
 /**
  * The connector between two objects' world outlines as a polyline (world space). Orthogonal routes
  * use horizontal and vertical runs only: a Z through the middle of the gap when the boxes overlap
@@ -80,7 +99,7 @@ export function connectorRoute(from: Subpath[], to: Subpath[], mode: ConnectorMo
   if (!A || !B) return null;
   const a = centre(A.box), b = centre(B.box);
   let pts: Vec[] = [a, b];
-  if (mode === "orthogonal") {
+  if (mode === "orthogonal" || mode === "rounded") {
     const xo = A.box.minX < B.box.maxX && B.box.minX < A.box.maxX, yo = A.box.minY < B.box.maxY && B.box.minY < A.box.maxY;
     if (xo && !yo) {
       const my = A.box.maxY <= B.box.minY ? (A.box.maxY + B.box.minY) / 2 : (B.box.maxY + A.box.minY) / 2;

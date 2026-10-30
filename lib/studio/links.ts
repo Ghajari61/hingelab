@@ -13,7 +13,7 @@ import { produce } from "immer";
 import { newId } from "./doc";
 import { I, invert, mul, nodePaths, transformSubpaths } from "./geom";
 import { LINK_SPACE } from "./effects/meta";
-import { connectorRoute } from "./connectors";
+import { connectorRoute, roundedRoute } from "./connectors";
 import { findNode, locate, removeNodes, topLevel, type IdFactory } from "./scene";
 import type { CloneNode, Document, GroupNode, LinkedParams, LiveEffect, Mat, PathNode, SceneNode, Subpath, TextNode } from "./types";
 
@@ -182,7 +182,8 @@ function plan(doc: Document): Action[] | null {
     const pts = connectorRoute(transformSubpaths(nodePaths(a), aw), transformSubpaths(nodePaths(b), bw), mode);
     if (!pts) continue;
     const inv = invert(cw);
-    const geo: Subpath[] = [{ closed: false, nodes: pts.map((p) => ({ x: inv[0] * p.x + inv[2] * p.y + inv[4], y: inv[1] * p.x + inv[3] * p.y + inv[5] })) }];
+    const local = pts.map((p) => ({ x: inv[0] * p.x + inv[2] * p.y + inv[4], y: inv[1] * p.x + inv[3] * p.y + inv[5] }));
+    const geo: Subpath[] = [mode === "rounded" ? roundedRoute(local, 4) : { closed: false, nodes: local }];
     if (sameSubs(c.subpaths, geo)) { madeRoute.set(c.subpaths, { a, b, key }); continue; }
     madeRoute.set(geo, { a, b, key });
     out.push({ id: c.id, route: geo });
