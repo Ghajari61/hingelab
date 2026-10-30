@@ -139,4 +139,55 @@ export const CLOCK_PRESETS: GenPreset<ClockParams>[] = [
       markers: { style: "numerals", numerals: "arabic", fontId: "playfair-display", size: 22 }, hands: { style: "classic", hour: 75, minute: 115, width: 14, tail: 16 },
     },
   },
+  {
+    id: "teaching-clock", name: "Teaching clock", note: "Minute numbers round the outside, big hour numbers, for learning the time",
+    params: {
+      name: "Teaching clock",
+      face: { size: 320, layers: "single" },
+      markers: { style: "numerals", numerals: "arabic", fontId: "fredoka", size: 24, inset: 6, minutes: true, tickLength: 8, tickWidth: 2, minuteNumbers: true, minuteSize: 9 },
+      hands: { style: "arrow", hour: 60, minute: 88, width: 14, tail: 14 },
+      hanger: "none",
+    },
+  },
+  {
+    id: "wood-slice", name: "Wood slice", note: "Irregular bark-edged round with twelve ticks",
+    params: {
+      name: "Wood slice clock",
+      face: { shape: "slice", size: 300, seed: 7, layers: "single" },
+      markers: { style: "ticks", minutes: false, tickLength: 14, tickWidth: 4, inset: 14 },
+      hands: { style: "leaf", hour: 62, minute: 90, width: 12, tail: 16 },
+      hanger: "none",
+    },
+  },
+  {
+    id: "mirror-numerals", name: "Mirror numerals", note: "Gold mirror acrylic numerals glued onto a wood face",
+    params: {
+      name: "Mirror numeral clock",
+      face: { size: 320, layers: "single" },
+      markers: { style: "numerals", numerals: "arabic", fontId: "archivo-black", size: 26, inset: 10, minutes: false, raised: true },
+      hands: { style: "baton", hour: 60, minute: 82, width: 7, tail: 14 },
+      mat: { mat2: "acrylic-gold", T2: 3 },
+      hanger: "none",
+    },
+  },
+  {
+    id: "star-clock", name: "Star clock", note: "Five-point star with round dots and pointer hands",
+    params: {
+      name: "Star clock",
+      face: { shape: "star", size: 380, points: 5, inner: 62, corner: 8, layers: "single" },
+      markers: { style: "dots", dot: 9, inset: 10, minutes: false },
+      hands: { style: "classic", hour: 55, minute: 75, width: 14, tail: 12 },
+      hanger: "none",
+    },
+  },
+  {
+    id: "station-seconds", name: "Station clock with seconds", note: "Bold ticks, slim baton hands and a second hand",
+    params: {
+      name: "Station seconds clock",
+      face: { size: 300, layers: "single" },
+      markers: { style: "ticks", minutes: true, tickLength: 14, tickWidth: 4, inset: 8 },
+      hands: { style: "baton", hour: 72, minute: 105, width: 8, tail: 18, second: true },
+      hanger: "none",
+    },
+  },
 ];

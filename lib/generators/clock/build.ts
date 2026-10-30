@@ -1,8 +1,10 @@
 import { markLetters } from "../textOps";
 /**
- * Clock geometry: a face (round, square, polygon, sunburst, gear, scalloped, flower, heart, cloud or a custom outline),
- * optionally layered (back plate + ring, + centre disc), hour markers, hands with holes for a
- * standard quartz movement, a keyhole hanger and a slot-in desk stand. mm, y down, centre (0, 0).
+ * Clock geometry: a face (round, square, polygon, sunburst, gear, scalloped, flower, heart, cloud,
+ * star, wood slice or a custom outline), optionally layered (back plate + ring, + centre disc), hour
+ * markers (engraved, scored, cut through or raised in a second material), a teaching clock's minute
+ * numbers, hands (and a second hand) with holes for a standard quartz movement, a keyhole hanger and
+ * a slot-in desk stand. mm, y down, centre (0, 0).
  */
 import { intersectShapes, makeShape, offsetShapes, unionShapes } from "@/lib/letters/polygon";
 import type { Shape } from "@/lib/letters/types";
@@ -11,9 +13,12 @@ import {
   roundedRect, signedArea, stadium, transform,
 } from "../geom";
 import { tagItem } from "../items";
+import { material2 } from "../material2";
+import { weld } from "../weld";
 import { shapeOutline } from "../shapes";
 import { arcSpan, bendAround } from "../textPath";
 import type { BuildContext, Contour, GenOutput, GenPart, Pt } from "../types";
+import { MATERIALS } from "@/lib/hinge/defaults";
 import { MOVEMENT_BOX, type ClockParams } from "./params";
 
 const ROMAN = ["XII", "I", "II", "III", "IIII", "V", "VI", "VII", "VIII", "IX", "X", "XI"];
@@ -75,9 +80,44 @@ export function faceOutline(p: ClockParams): Contour | null {
     }
     case "heart": return transform(shapeOutline("heart", f.size, f.size * 0.9), { x: -R, y: -f.size * 0.42 });
     case "cloud": return transform(shapeOutline("cloud", f.size, f.size * 0.7), { x: -R, y: -f.size * 0.38 });
+    case "star": {
+      const n = Math.max(3, Math.round(f.points)), ri = (R * f.inner) / 100, pts: Contour = [];
+      for (let i = 0; i < 2 * n; i++) {
+        const a = -Math.PI / 2 + (Math.PI * i) / n, r = i % 2 ? ri : R;
+        pts.push([r * Math.cos(a), r * Math.sin(a)]);
+      }
+      return roundCorners(pts, f.corner);
+    }
+    case "slice": return sliceOutline(R, f.seed);
     case "custom": return f.path.trim() ? customOutline(f.path, f.size, f.size) : null;
     default: return circle(0, 0, R);
   }
+}
+
+/**
+ * A wood slice: a round with an irregular, bark-like edge (a few seeded waves plus fine ripples),
+ * scaled so its widest reach is R. Each seed gives another slice.
+ */
+export function sliceOutline(R: number, seed: number): Contour {
+  let a = (Math.floor(seed) * 2654435761 + 97) >>> 0;
+  const rand = () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const waves = [2, 3, 5, 9, 17, 29].map((k, i) => ({ k, amp: [0.045, 0.03, 0.018, 0.01, 0.006, 0.004][i] * (0.6 + 0.8 * rand()), ph: rand() * TAU }));
+  const sx = 1 - 0.08 * rand();
+  const n = Math.max(240, Math.round(R * 2));
+  const pts: Contour = [];
+  for (let i = 0; i < n; i++) {
+    const t = (TAU * i) / n;
+    let r = 1;
+    for (const w of waves) r += w.amp * Math.sin(w.k * t + w.ph);
+    pts.push([r * Math.cos(t) * sx, r * Math.sin(t)]);
+  }
+  const reach = Math.max(...pts.map(([x, y]) => Math.hypot(x, y)));
+  return pts.map(([x, y]) => [(x * R) / reach, (y * R) / reach] as Pt);
 }
 
 /**
@@ -163,8 +203,12 @@ function markerEdge(p: ClockParams, outline: Contour, a: number): number {
   const f = p.face;
   if (f.shape === "sunburst" || f.shape === "gear" || f.shape === "scallop") return f.size / 2 - f.depth;
   if (f.shape === "flower") return f.size / 2 - Math.min(f.depth, f.size * 0.225);
+  if (f.shape === "star") return (f.size / 2) * (f.inner / 100) * Math.cos(Math.PI / Math.max(3, Math.round(f.points)));
   return edgeDistance(outline, a);
 }
+
+/** How far in the minute numbers (a teaching clock's outer ring) push the other markers, mm. */
+export const minuteShift = (p: ClockParams) => (p.markers.minuteNumbers ? p.markers.minuteSize * 1.8 : 0);
 
 /** Radial depth of the marker band (ticks, dots or numerals), mm. */
 export function markerDepth(p: ClockParams): number {
@@ -173,13 +217,15 @@ export function markerDepth(p: ClockParams): number {
   const dot = m.style === "dots" ? m.dot * 1.4 : 0;
   const num = m.style === "numerals" || m.style === "mixed" ? m.size * 1.3 : 0;
   const min = m.minutes ? m.tickLength * 0.45 : 0;
-  return Math.max(tick, dot, num, min);
+  return Math.max(tick, dot, num, min) + minuteShift(p);
 }
 
 const rot = (c: Contour, a: number) => transform(c, { rot: a });
 
 interface Markers {
   engrave: Contour[]; score: Contour[]; holes: Contour[]; missing: string[]; loading: boolean;
+  /** Hour markers to cut from the second material, one group per marker. */
+  raised: Contour[][];
   /** The smallest numeral height used, mm: below the set size when a numeral had to shrink to fit its band. */
   numeralSize?: number;
 }
@@ -202,8 +248,8 @@ function markerAnchor(p: ClockParams, outline: Contour, clear: Contour | null, a
 }
 
 function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext, clear: Contour | null = null, band: Contour | null = null): Markers {
-  const m = p.markers, res: Markers = { engrave: [], score: [], holes: [], missing: [], loading: false };
-  if (m.style === "none" && !m.minutes) return res;
+  const m = p.markers, res: Markers = { engrave: [], score: [], holes: [], missing: [], loading: false, raised: [] };
+  if (m.style === "none" && !m.minutes && !m.minuteNumbers) return res;
   let item = "Ticks";
   // scored markers: each tick, dot and numeral traced on its own (they never overlap one another)
   const scoring = m.mark === "score";
@@ -225,8 +271,11 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext, clear
     }
     return cs;
   };
-  const put = (c: Contour, a: number) => { const [q] = pull([c], a); if (m.cut) res.holes.push(tagItem([q], item)[0]); else mark([q], item); };
-  const anchor = (a: number) => markerAnchor(p, outline, clear, a);
+  // raised hour markers (numerals, hour ticks, dots) become pieces of the second material
+  const put = (c: Contour, a: number) => { const [q] = pull([c], a); if (m.raised) res.raised.push([q]); else if (m.cut) res.holes.push(tagItem([q], item)[0]); else mark([q], item); };
+  // a teaching clock's minute numbers take the outer band; every other marker moves in by their depth
+  const shift = minuteShift(p);
+  const anchor = (a: number) => markerAnchor(p, outline, clear, a) - shift;
   const numeralHours = m.style === "numerals" ? (m.quarters ? [0, 3, 6, 9] : [...Array(12).keys()]) : m.style === "mixed" ? [0, 3, 6, 9] : [];
   const tickHours = m.style === "ticks" ? [...Array(12).keys()] : m.style === "mixed" ? [1, 2, 4, 5, 7, 8, 10, 11] : m.style === "numerals" && m.quarters ? [1, 2, 4, 5, 7, 8, 10, 11] : [];
   const dotHours = m.style === "dots" ? [...Array(12).keys()] : [];
@@ -266,6 +315,8 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext, clear
       const r = r0 + (i % 2 ? -1 : 1) * Math.ceil(i / 2) * 0.5;
       // never under the hands' hub (the nut and the hands' bosses)
       if (r < hub + g.extent * k * 0.5) continue;
+      // never out into the minute numbers' band
+      if (shift && r + g.extent * k * 0.5 > anchor(g.a) + 1e-6) continue;
       if (move([g.hull], k, r, g.dir)[0].every(onBand)) return r;
     }
     return null;
@@ -307,12 +358,17 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext, clear
     return boxes.some((n) => b.x1 > n.x0 && b.x0 < n.x1 && b.y1 > n.y0 && b.y0 < n.y1
       && n.cs.some((g) => c.some((q) => pointInContour(q, g)) || contourGap(c, g) < gap));
   };
-  const tick = (c: Contour, a: number) => { const [q] = pull([c], a); if (hitsNumeral(q)) return; if (m.cut) res.holes.push(tagItem([q], item)[0]); else mark([q], item); };
+  const tick = (c: Contour, a: number, hour = false) => {
+    const [q] = pull([c], a);
+    if (hitsNumeral(q)) return;
+    if (hour && m.raised) res.raised.push([q]);
+    else if (m.cut) res.holes.push(tagItem([q], item)[0]); else mark([q], item);
+  };
 
   for (const h of tickHours) {
     const a = h * 30, r = anchor(a), q = h % 3 === 0 && m.style === "ticks";
     const w = m.tickWidth * (q ? 1.6 : 1), l = m.tickLength * (q ? 1.25 : 1);
-    tick(rot(rect(-w / 2, -r, w, l), a), a);
+    tick(rot(rect(-w / 2, -r, w, l), a), a, true);
   }
   for (const h of dotHours) {
     item = "Dots";
@@ -329,7 +385,24 @@ function buildMarkers(p: ClockParams, outline: Contour, ctx: BuildContext, clear
     }
   }
   // a numeral is scored as one shape (its glyphs welded), engraved as before
-  for (const placed of numerals) mark(placed, "Numerals", [placed]);
+  for (const placed of numerals) {
+    if (m.raised) res.raised.push(placed);
+    else mark(placed, "Numerals", [placed]);
+  }
+  // The teaching clock's minute numbers (5, 10 … 60), upright (or following the dial) in the outer band.
+  if (m.minuteNumbers) {
+    if (!ctx.text) res.loading = true;
+    else for (let i = 1; i <= 12; i++) {
+      const s = String(i * 5), shape = ctx.text(s, m.fontId, m.minuteSize);
+      if (!shape) { res.loading = true; continue; }
+      for (const c of shape.missing) if (!res.missing.includes(c)) res.missing.push(c);
+      const a = (i % 12) * 30, dir = dirOf(a);
+      const extent = m.follow ? shape.height : Math.abs(shape.width * dir[0]) + Math.abs(shape.height * dir[1]);
+      const r = markerAnchor(p, outline, clear, a) - extent / 2;
+      const placed = pull(move(shape.contours.map((c) => (m.follow ? rot(c, a) : c)), 1, r, dir), a);
+      mark(placed, "Minute numbers", [placed]);
+    }
+  }
   return res;
 }
 
@@ -341,7 +414,7 @@ export function buildInscription(p: ClockParams, outline: Contour, ringInner: Co
   const ins = p.inscription;
   if (!ins.text.trim()) return null;
   const a = ins.at === "top" ? 0 : 180;
-  const marked = !(p.markers.style === "none" && !p.markers.minutes);
+  const marked = !(p.markers.style === "none" && !p.markers.minutes && !p.markers.minuteNumbers);
   // inside the markers (wherever they sit), or inside the face's edge when there are none
   let R = (marked ? markerAnchor(p, outline, clear, a) - markerDepth(p) : markerEdge(p, outline, a)) - ins.gap - ins.size * 0.6;
   if (ringInner) R = Math.min(R, edgeDistance(ringInner, a) - 2 - ins.size * 0.6);
@@ -394,6 +467,16 @@ export function handOutline(style: ClockParams["hands"]["style"], L: number, w: 
   }
 }
 
+/** The second hand: a slim needle as long as `L`, with a disc counterweight on its tail. */
+export function secondHandOutline(L: number, w: number, tail: number, holeD: number): Contour {
+  const hub = circle(0, 0, Math.max(holeD / 2 + 2, w * 1.1), 0.02);
+  const t = Math.max(6, tail);
+  return largestOuter([hub, roundedRect(-w / 2, -L, w, L + t, w * 0.45), circle(0, t, Math.max(3, w * 1.6), 0.02)]);
+}
+
+/** Width of the second hand's needle, mm: thin, but never under 2 mm (it would burn away). */
+export const secondWidth = (p: ClockParams) => Math.max(2, Math.round(p.hands.width * 0.3 * 2) / 2);
+
 /** Narrowest part of a hand's arm, mm (what breaks first). */
 export function handNeck(style: ClockParams["hands"]["style"], w: number): number {
   return style === "spade" || style === "arrow" ? w * 0.3 : style === "leaf" ? w * 0.3 : style === "classic" ? w * 0.2 : w;
@@ -417,6 +500,9 @@ export interface ClockGeometry {
   inscription: Inscription | null;
   /** Height the smallest numeral had to shrink to, to fit its band (unset when none did), mm. */
   numeralSize?: number;
+  /** Raised markers: how many pieces, and the nearest any comes to the centre, mm. */
+  raisedCount: number;
+  raisedInner: number;
 }
 
 /**
@@ -495,11 +581,29 @@ export function clockGeometry(p: ClockParams, ctx: BuildContext = {}): (ClockGeo
       parts.push({ id: "centre", name: "Centre disc", outer: circle(0, 0, f.centre / 2), holes: [circle(0, 0, mv.shaft / 2, 0.01)], place: placeAt(T) });
     }
   }
+  // Raised hour markers: each numeral, tick or dot cut from the second material, with a light
+  // scored outline on the layer it sits on to glue it to.
+  let raisedCount = 0, raisedInner = Infinity;
+  if (markers.raised.length) {
+    const m2 = material2(p.mat.mat2);
+    const on = parts.find((q) => q.id === (markersOn === "ring" ? "ring" : markersOn === "back" ? "back" : "face"))!;
+    const guides: Contour[] = [];
+    markers.raised.forEach((g) => {
+      const s = weld(g, { border: 0.6, minHole: 2 });
+      if (!s) return;
+      raisedCount++;
+      for (const q of s.outer) raisedInner = Math.min(raisedInner, Math.hypot(q[0], q[1]));
+      guides.push([...s.outer, s.outer[0]]);
+      parts.push({ id: `marker-${raisedCount}`, name: `Raised marker ${raisedCount}`, outer: s.outer, holes: s.holes, material: "second", color: m2.color, t: p.mat.T2, place: placeAt((markersOn === "ring" ? T : 0) + T) });
+    });
+    on.score = [...(on.score ?? []), ...tagItem(guides, "Marker guides")];
+  }
   const handZ = (layered ? 2 * T : T) + 0.5;
   if (p.hands.style !== "none") {
     const h = p.hands;
     parts.push({ id: "hour", name: "Hour hand", outer: handOutline(h.style, h.hour, h.width * 1.25, h.tail * 0.8, mv.hourHole), holes: [circle(0, 0, mv.hourHole / 2, 0.01)], place: { ...placeAt(handZ), rot: 305 } });
     parts.push({ id: "minute", name: "Minute hand", outer: handOutline(h.style, h.minute, h.width, h.tail, mv.minuteW), holes: [doubleFlat(mv.minuteW, mv.minuteH)], place: { ...placeAt(handZ + T + 0.5), rot: 60 } });
+    if (h.second) parts.push({ id: "second", name: "Second hand", outer: secondHandOutline(h.minute, secondWidth(p), h.tail, mv.secondHole), holes: [circle(0, 0, mv.secondHole / 2, 0.01)], place: { ...placeAt(handZ + 2 * (T + 0.5)), rot: 180 } });
   }
   if (p.stand) {
     const bw = Math.max(tabW + 50, f.size * 0.55), bd = Math.max(60, Math.min(110, f.size * 0.3)), clr = 0.1;
@@ -509,11 +613,11 @@ export function clockGeometry(p: ClockParams, ctx: BuildContext = {}): (ClockGeo
     });
   }
   const missing = [...markers.missing, ...(inscription?.missing ?? []).filter((c) => !markers.missing.includes(c))];
-  return { parts, outline, ringInner, markersOn, straddle, keyholeFits, hangerHidden, missing, loading: markers.loading || !!inscription?.loading, inscription, numeralSize: markers.numeralSize };
+  return { parts, outline, ringInner, markersOn, straddle, keyholeFits, hangerHidden, missing, loading: markers.loading || !!inscription?.loading, inscription, numeralSize: markers.numeralSize, raisedCount, raisedInner: raisedCount ? raisedInner : 0 };
 }
 
 /** The build output plus where the inscription ended up (for the checks). */
-export type ClockOutput = GenOutput & { inscription?: { R: number; span: number; size: number }; numeralSize?: number };
+export type ClockOutput = GenOutput & { inscription?: { R: number; span: number; size: number }; numeralSize?: number; raised?: { count: number; inner: number } };
 
 export function buildClock(p: ClockParams, ctx: BuildContext): ClockOutput {
   const g = clockGeometry(p, ctx);
@@ -522,7 +626,8 @@ export function buildClock(p: ClockParams, ctx: BuildContext): ClockOutput {
   const assembly = [
     p.face.layers === "single" ? "Engrave and cut the face." : `Glue the ring${p.face.layers === "stack" ? " and the centre disc" : ""} onto the back plate, lining up the outlines.`,
     `Push the movement's shaft through the centre hole from the back and tighten its nut (face ${thick} mm at the centre, the movement takes up to ${p.movement.maxDial} mm).`,
-    ...(p.hands.style !== "none" ? ["Press the hour hand on at 12, then the minute hand at 12, then the second hand if the movement has one."] : []),
+    ...(g.raisedCount ? [`Glue the ${g.raisedCount} raised markers onto their scored outlines (a dot of clear glue or thin double-sided tape each).`] : []),
+    ...(p.hands.style !== "none" ? [p.hands.second ? "Press the hour hand on at 12, then the minute hand at 12, then the second hand gently onto its pin." : "Press the hour hand on at 12, then the minute hand at 12, then the second hand if the movement has one."] : []),
     ...(p.stand ? ["Push the tab under the face into the slot in the stand base; a drop of glue keeps it upright."] : []),
     ...(p.hanger === "keyhole" ? ["Hang the clock on a screw through the keyhole on the back."] : []),
   ];
@@ -532,12 +637,17 @@ export function buildClock(p: ClockParams, ctx: BuildContext): ClockOutput {
       { label: "Face", value: `${p.face.size} mm ${p.face.shape}` },
       { label: "Parts", value: String(g.parts.length) },
       { label: "At the centre", value: `${thick} mm (movement up to ${p.movement.maxDial} mm)` },
-      ...(p.hands.style !== "none" ? [{ label: "Hands", value: `hour ${p.hands.hour} mm, minute ${p.hands.minute} mm` }] : []),
+      ...(p.hands.style !== "none" ? [{ label: "Hands", value: `hour ${p.hands.hour} mm, minute ${p.hands.minute} mm${p.hands.second ? ", second hand" : ""}` }] : []),
+      ...(g.raisedCount ? [{ label: "Raised markers", value: `${g.raisedCount} in ${material2(p.mat.mat2).name.toLowerCase()} ${p.mat.T2} mm` }] : []),
     ],
     assembly,
     notice: g.loading ? "Loading the font…" : undefined,
     missing: g.missing,
     inscription: g.inscription && !g.inscription.loading ? { R: g.inscription.R, span: g.inscription.span, size: g.inscription.size } : undefined,
     ...(g.numeralSize !== undefined ? { numeralSize: g.numeralSize } : {}),
+    ...(g.raisedCount ? {
+      raised: { count: g.raisedCount, inner: g.raisedInner },
+      materials: { main: MATERIALS[p.material]?.name ?? `Main material ${p.T} mm`, second: `${material2(p.mat.mat2).name} ${p.mat.T2} mm`, secondK: material2(p.mat.mat2).K },
+    } : {}),
   };
 }
