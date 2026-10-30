@@ -1,4 +1,4 @@
-## Unreleased
+## 1.35.0 — Expanded Studio drawing tools
 
 - **Studio: the rest of a full vector suite's laser tools** (written for HingeLab, under HingeLab's own names; see docs/STUDIO-DRAWING-TOOLS.md for the full comparison):
   - **Shape Library:** 34 ready shapes in five groups (basic, arrows, flowchart, banners, callouts), drawn by dragging, and live until expanded.

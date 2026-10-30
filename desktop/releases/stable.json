@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.34.0",
-    "pub_date": "2026-10-30T18:07:03.235Z",
-    "notes": "Studio adds a Dimension tool, Symmetry live effect and Print Merge. Undo and Redo now work across controls and editors.",
+    "version": "1.35.0",
+    "pub_date": "2026-10-30T19:04:14.352Z",
+    "notes": "Studio adds shape library, spline and smoothing tools, burst lines, crossed stars, rounded connectors, callout dimensions, solid shadow and depth effects. Undo/Redo works throughout.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.34.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnFXRTRHUnF2T25DTEtHWTZKRU56UWoyK240ZjEwd29iaDgyV00zWW45aU56SWxhc1F6dEd4UDBNbmwzcisycmtoTnFpQ1c4bVloY1BSWG1HOW1tZHdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzgzNjEzCWZpbGU6SGluZ2VMYWJfMS4zNC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjM0LjAKQy9nKy9SaGgzQ2ZCejFiU2lVZytYbXFEd1c1a000L1hueW9qZmpMUXJWU2VXK0pReDhnelUyTWd2bEp5NVpzM1RjUXZDd1JZR0lLS3l6UjRvMjllQWc9PQo=",
-        "size": 12839336,
-        "sha256": "384e21e6be08ea0e616a5dba8ecb03440be3575b8e792376b50d3d9d28fff737"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.35.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmhPdnliV3pqUk5vdDlMbUxUa2VtMlZzYnRTNjBrbHArc2hrM0I2RE0rY1p5Y0hPbDJvdlA0cDZ0MGNkemNaNGV4ZzJFVWZQREFhZEo1Um44ZXpDL1FJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzg3MDQ1CWZpbGU6SGluZ2VMYWJfMS4zNS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjM1LjAKTjh1dXV3SElwRnptajBsUnZma1Uzd3JRdTNXMEdPSDl1NDk1bk1jV1lMVTdYNE9BSnNaNk9XVTZic0NUdkpHckZhMHVKWWJLdWl4a0hKZDJ2dXppQXc9PQo=",
+        "size": 12837600,
+        "sha256": "a789217457f9a9da89aca5724a840e51978dd3a3a2bedc51540b9f8bcf976e53"
       }
     }
   }
