@@ -1,5 +1,6 @@
 ## Unreleased
 
+- **Desktop app: Sign out works from the account menu.** In the Windows app, Sign out in the avatar menu signed the website view out, but the app's own session signed it straight back in, so nothing seemed to happen. It now signs the whole app out, the same as the app's own Sign out. This reaches the app with the next desktop release.
 - **No side scroll bar in the editor:** the settings column's header (the Simple / All, units and Reset buttons) was a few pixels wider than its column. The whole window scrolled sideways and a scroll bar sat under the status bar. The header now wraps instead, and the editor fills the window to the bottom.
 
 ## 1.32.0 — Layered keychains

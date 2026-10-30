@@ -280,6 +280,12 @@ export function App() {
   const started = useRef(false);
   const openLast = useRef(local.openLast);
   openLast.current = local.openLast;
+  // Sign out in the website view's account menu signs the whole app out.
+  useEffect(() => {
+    const off = listen("web-sign-out", () => signedOut(null));
+    return () => { void off.then((f) => f()); };
+  }, [signedOut]);
+
   useEffect(() => {
     if (!canOpen) return;
     const take = () => void ipc.takeOpenRequest().then((p) => { if (p) void openRef.current(p); }).catch(() => {});
