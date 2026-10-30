@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.32.1",
-    "pub_date": "2026-10-30T14:37:13.971Z",
-    "notes": "Windows sign-out now signs the entire desktop app out. The editor settings header wraps to remove horizontal scrolling and fill the window.",
+    "version": "1.33.0",
+    "pub_date": "2026-10-30T15:26:12.350Z",
+    "notes": "Family Names adds a framed layered word sign: cut-out headline word, retained letter centres, frame and script names across it. Includes font, size, frame and material options plus four presets.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.32.1_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm1sd0I3Mk1MUk52SmdEU0UwYWNJUkRYeDRNc1N5V094Qmcvd1YwaloxMzVqd3V2WU44RlMyOVg1YkJxMzlRL2N4anZ5czVQNStkNkNRRmpGRmZpYXdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzcxMDIzCWZpbGU6SGluZ2VMYWJfMS4zMi4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMyLjEKZHVrV0UyV2RSYk1WdkNFaWhMSUs3Sjd5cmFMaHoybzRwV250aHBaQlVBUWczOWlQNDg3ZFVvVmZvai9JVjlWZ2IzWlgzbzVScXo0cktHMUZBa1ZkQkE9PQo=",
-        "size": 12819222,
-        "sha256": "dc69d72ba853389bae0a0916b02fe664a2a386b60c363476b1928572dbf269fc"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.33.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnFsUzdmd25FVlE2VTIzVlBxMHVzYkJpSVVaQmpWSUNZVnlkQm1rVFdaWmowZFdFUkE3TVpvYjE1WlNyUktGRlE5YUg4MjhDMlZVbTJhVGdEZXN3dmcwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzczOTYyCWZpbGU6SGluZ2VMYWJfMS4zMy4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMzLjAKeWJWRURGZFQzYXJrOHNEeVpmYXhkT0hFc2VqT0VkZi9TSWs0Z05Rb3N2eEoxNEtsSUVQalFiK29zODVKcmFDYlJuM1FCRWlUNmR0REN2cEhCWGtNREE9PQo=",
+        "size": 12835141,
+        "sha256": "d4d49b65cc7d130e8bc319d18f70cc88d6ea5a3cc37060fc2037e1928e695353"
       }
     }
   }
