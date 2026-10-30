@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.35.1",
-    "pub_date": "2026-10-30T19:35:36.855Z",
-    "notes": "Sign out in the editor account menu now signs the whole Windows app out.",
+    "version": "1.36.0",
+    "pub_date": "2026-10-30T22:43:57.575Z",
+    "notes": "QR designer adds styled codes, decorative icon and header art, shaped signs and stands. QR codes can be added to table numbers and Studio designs.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.35.1_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmhLYVd2UGpWeVRLR1htRURpV3R3UXRhQzByNG5rbUhSYkRQMzJxYlpmREk3dXM2OVlwc1dlbnNQbnNVQ0IwdXRua25wM1U0ai9BUGRpaTU4eGlOVGdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzg4OTI3CWZpbGU6SGluZ2VMYWJfMS4zNS4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjM1LjEKZEc1ZzVzdHdSaEdSazZRYzVWSEdKSk9uRnZsc1VSL2hnUEF0Umt4NW5QdjdTekQrT1NlR2ltN1hOanY2bjJrZlZ2TVN2cFJ5Wk9QRUY4dHhDankrQnc9PQo=",
-        "size": 12839127,
-        "sha256": "3dc57555f7184dbc79a3cd97e6a833b9c52f7b860905fde620ad13a7eca7fae3"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.36.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmdNR1BMaUJsWTdsZ0tRRDNGTHkrLzY4bmlPdXQzZWhuTU9INjVpZm5CeUIyeUdYTnZ0bGhtenZnTy9mOGZRYVo3VmMyV3ByODRLNnJ0VW9kdnBVOFFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNDAwMjI4CWZpbGU6SGluZ2VMYWJfMS4zNi4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjM2LjAKMnJrNG5VKzl6MTJmS1dvUGpzU0ZSLzQvUnlqaXE4d0pJU2NjVm01d0xWajZKdHltUnI1S1NsZHdGWEtXYkJ6Q3JhN1Rwb2tlZlJuVHdpR0RhR0p3QXc9PQo=",
+        "size": 13011857,
+        "sha256": "a96b559086120761d02d74c3833d37a18792c960adfef42f03d5218d6e97d4d2"
       }
     }
   }

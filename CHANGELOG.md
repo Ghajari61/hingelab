@@ -494,3 +494,7 @@ The unified app: see `CHANGELOG-REDESIGN.md`.
 
 - **Desktop sign-out:** Sign out in the editor's account menu now signs out the whole Windows app, as it does from the app shell.
 
+## 1.36.0 — QR signs and stands
+
+- **QR Code generator:** new designer styles, shaped signs, header pictures, decorative icons and stands. QR codes can also be added to Table Numbers and in Studio. Added scanability checks for generated designs.
+
