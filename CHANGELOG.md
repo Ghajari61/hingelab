@@ -1,4 +1,4 @@
-## Unreleased
+## 1.34.0 — Studio tools and reliable undo
 
 - **Studio: three CorelDRAW-style tools** (built from scratch from public descriptions; no CorelDRAW code):
   - **Dimension tool** (in the Measure group). Parallel, horizontal and vertical dimensions: drag between two points, then click where the dimension line goes. Angle: click the corner, then each arm. Radius and diameter: drag from the centre to the edge. Dimensions are drawn with extension lines, arrows and the value in mm or inches. The Properties panel sets the offset and an optional label of its own. They sit on the Measurements layer, which is never sent to the laser.

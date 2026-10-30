@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.33.0",
-    "pub_date": "2026-10-30T15:26:12.350Z",
-    "notes": "Family Names adds a framed layered word sign: cut-out headline word, retained letter centres, frame and script names across it. Includes font, size, frame and material options plus four presets.",
+    "version": "1.34.0",
+    "pub_date": "2026-10-30T18:07:03.235Z",
+    "notes": "Studio adds a Dimension tool, Symmetry live effect and Print Merge. Undo and Redo now work across controls and editors.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.33.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnFsUzdmd25FVlE2VTIzVlBxMHVzYkJpSVVaQmpWSUNZVnlkQm1rVFdaWmowZFdFUkE3TVpvYjE1WlNyUktGRlE5YUg4MjhDMlZVbTJhVGdEZXN3dmcwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzczOTYyCWZpbGU6SGluZ2VMYWJfMS4zMy4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMzLjAKeWJWRURGZFQzYXJrOHNEeVpmYXhkT0hFc2VqT0VkZi9TSWs0Z05Rb3N2eEoxNEtsSUVQalFiK29zODVKcmFDYlJuM1FCRWlUNmR0REN2cEhCWGtNREE9PQo=",
-        "size": 12835141,
-        "sha256": "d4d49b65cc7d130e8bc319d18f70cc88d6ea5a3cc37060fc2037e1928e695353"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.34.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnFXRTRHUnF2T25DTEtHWTZKRU56UWoyK240ZjEwd29iaDgyV00zWW45aU56SWxhc1F6dEd4UDBNbmwzcisycmtoTnFpQ1c4bVloY1BSWG1HOW1tZHdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzgzNjEzCWZpbGU6SGluZ2VMYWJfMS4zNC4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjM0LjAKQy9nKy9SaGgzQ2ZCejFiU2lVZytYbXFEd1c1a000L1hueW9qZmpMUXJWU2VXK0pReDhnelUyTWd2bEp5NVpzM1RjUXZDd1JZR0lLS3l6UjRvMjllQWc9PQo=",
+        "size": 12839336,
+        "sha256": "384e21e6be08ea0e616a5dba8ecb03440be3575b8e792376b50d3d9d28fff737"
       }
     }
   }
