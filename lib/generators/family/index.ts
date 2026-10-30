@@ -118,7 +118,7 @@ const sections: SectionSpec<FamilyParams>[] = [
     id: "word", title: "Word sign", open: true, show: is("word"),
     help: "A framed sign: a big word cut out of the face so the back shows through, and the names in script across it, joined by hearts. Type the names on one line, separated by spaces.",
     fields: [
-      { kind: "text", key: "word.text", label: "Word", maxLength: 16, placeholder: "MOM", help: "The big word behind the names: MOM, LOVE, DOG MOM, a family name." },
+      { kind: "text", key: "word.text", label: "Word", maxLength: 16, placeholder: "A short word", help: "The big word behind the names: MOM, LOVE, DOG MOM, a family name." },
       { kind: "font", key: "word.font", label: "Word font", sample: (p) => p.word.text || "MOM", help: "The typeface of the big word; a bold serif or slab reads best." },
       { kind: "number", key: "word.width", label: "Sign width", unit: "mm", min: 120, max: 900, step: 5, help: "Width of the whole sign; the height follows the word." },
       { kind: "number", key: "word.nameSize", label: "Names size", unit: "%", min: 15, max: 80, step: 1, help: "How big the names are, as a share of the big word's height. They spread across most of the word, and a long list of names shrinks to fit." },
