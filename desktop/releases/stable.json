@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.32.0",
-    "pub_date": "2026-10-30T06:31:58.229Z",
-    "notes": "Keychain now supports seven layered constructions: photo frame, shaker, spinner, swivel locket, two-tone outline and layered scenes, with matching 3D previews and 12 presets.",
+    "version": "1.32.1",
+    "pub_date": "2026-10-30T14:37:13.971Z",
+    "notes": "Windows sign-out now signs the entire desktop app out. The editor settings header wraps to remove horizontal scrolling and fill the window.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.32.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnE5d2oxcG0yaE5rRktyU1FQdld4blZWNnRmUCtmcjdRNFV3U3JCV3FHMGMrUDZTLzA0M3FJa29YbDdveVNwT09udjlrVmdrZHgyWmU5MUExNWxmZndnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzQxOTA4CWZpbGU6SGluZ2VMYWJfMS4zMi4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMyLjAKeWsrM3BIcE1DRDJUMlkwUUsyWlcyN29YQmV3aFM2c2tmUVZPaDFtTXpGWG02UlFjSWR4NEluSmk3bmYzcEhSSkRCcjdYb3FNUjlvNW5yZ0JyODRDRHc9PQo=",
-        "size": 12822288,
-        "sha256": "d4d766cb3492a405cc2a3bfcbe60df7acb8557433965137f5cac9d5bc3355616"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.32.1_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWm1sd0I3Mk1MUk52SmdEU0UwYWNJUkRYeDRNc1N5V094Qmcvd1YwaloxMzVqd3V2WU44RlMyOVg1YkJxMzlRL2N4anZ5czVQNStkNkNRRmpGRmZpYXdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMzcxMDIzCWZpbGU6SGluZ2VMYWJfMS4zMi4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjMyLjEKZHVrV0UyV2RSYk1WdkNFaWhMSUs3Sjd5cmFMaHoybzRwV250aHBaQlVBUWczOWlQNDg3ZFVvVmZvai9JVjlWZ2IzWlgzbzVScXo0cktHMUZBa1ZkQkE9PQo=",
+        "size": 12819222,
+        "sha256": "dc69d72ba853389bae0a0916b02fe664a2a386b60c363476b1928572dbf269fc"
       }
     }
   }
