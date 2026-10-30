@@ -9,6 +9,10 @@
  *   and above the roofline the sky is cut out, leaving a rail along the top.
  * - Arcade or library: arched frames across the box, each smaller than the one in front (a forced
  *   perspective), with scored shelves of books either side of the arch.
+ * - Enchanted forest: layers of pine silhouettes across the box, a path through a clearing in the
+ *   middle of each; the trees grow and the clearing widens toward the front, so every layer behind
+ *   shows through the one in front (a forced perspective). Each layer keeps a rail along the top
+ *   and a strip along the floor, so it stays one piece between its tabs.
  * - The light box sits between the ceiling and the top; slots in the ceiling let an LED strip light
  *   the compartments behind the facades (or the space round the arches). A cable hole is in the back.
  * - The battery bay sits under the scene floor, reached through a hatch in the back.
@@ -19,7 +23,8 @@
  */
 import { rect, circle } from "../geom";
 import type { Contour, GenPart, Pt } from "../types";
-import { clamp, clipScore, openingHoles, openingShape, r1, tabbedFrame, wallFinish, type Divider, type FlatMember, type UprightMember } from "./kit";
+import { differenceShapes } from "@/lib/letters/polygon";
+import { clamp, clipScore, openingHoles, openingShape, r1, tabbedFrame, wallFinish, wound, type Divider, type FlatMember, type UprightMember } from "./kit";
 import { NOT_A_HOUSE, type MiniOutput } from "./house";
 import { NOOK_SCENES, type MiniatureParams } from "./params";
 import { traditionOf } from "./traditions";
@@ -109,6 +114,35 @@ export function buildNook(p: MiniatureParams): MiniOutput {
       const lines = clipScore(wallFinish(n.wall, ya, yb, zs, zc), outline, holes);
       dividers.push({ id: `facade-${side}`, name: `Facade (${side})`, x, outline, z0: zs, z1: zc, holes, score: lines, face: side === "left" ? "+x" : "-x" });
     }
+  } else if (n.scene === "forest") {
+    const k = clamp(Math.round(n.buildings), 2, 5);
+    const span = D - 6 - backFace, rail = 5, side = 2.5;
+    compartments = [[T + 1, T + 7], [T + Wc - 7, T + Wc - 1]];
+    /** The sky and the path cut out of one layer: everything above its pines and the clearing between them. */
+    const treeline = (i: number, s: number): Contour[] => {
+      const xL = T + side, xR = T + Wc - side, xc = T + Wc / 2, zr = zc - rail;
+      const cw = Wc * (0.1 + 0.1 * (s - 0.62) / 0.38), zv = zs + sceneH * (0.1 + 0.08 * s);
+      const top = Math.min(zr - 4, zs + sceneH * (0.42 + 0.4 * s));
+      // a pine: three stacked tiers, each a triangle, the lower ones wider; neighbours overlap
+      const pine = (x: number, hw: number, th: number): Contour[] => [[0, hw, 0.62], [0.3, 0.74 * hw, 0.84], [0.56, 0.5 * hw, 1]].map(([v, b, apex]): Contour => [[x - b, zv + v * th], [x + b, zv + v * th], [x, zv + apex * th]]);
+      const trees = (a: number, b: number, seed: number): Contour[] => {
+        const nt = Math.max(1, Math.round((b - a) / Math.max(12, Wc * 0.17)));
+        const pitch = (b - a) / nt;
+        return Array.from({ length: nt }, (_, j) => pine(a + pitch * (j + 0.5), pitch * 0.8, (top - zv) * (0.7 + 0.3 * vary(j + seed)))).flat();
+      };
+      const path = Math.max(3, cw * 0.55);
+      const ground: Contour[] = [
+        [[xL - 1, zs], [xc - path, zs], [xc - cw, zv + 0.01], [xL - 1, zv + 0.01]],
+        [[xc + path, zs], [xR + 1, zs], [xR + 1, zv + 0.01], [xc + cw, zv + 0.01]],
+      ];
+      const sky = rect(xL, zs + 1.5, xR - xL, zr - zs - 1.5);
+      return differenceShapes([sky], [...ground, ...trees(xL, xc - cw, i), ...trees(xc + cw, xR, i + 3)].map(wound))
+        .filter((q) => q.area > 4).map((q) => q.outer);
+    };
+    for (let i = 0; i < k; i++) {
+      const y = backFace + 2 + (span * i) / k, s = 0.62 + (0.38 * (i + 1)) / k;
+      ups.push({ id: `trees${i + 1}`, name: `Tree layer ${i + 1}`, y, z0: zs, z1: zc, holes: treeline(i, s).map((c) => frontOf(c, zc)) });
+    }
   } else {
     // arched frames receding toward the back, each a little smaller than the one in front
     const k = clamp(Math.round(n.buildings), 2, 5);
@@ -149,7 +183,7 @@ export function buildNook(p: MiniatureParams): MiniOutput {
     ],
     assembly: [
       "Push the bottom, floors, ceiling, top and back wall into one side, then press the other side on.",
-      n.scene === "alley" ? "Stand both facades in their slots before the ceiling goes in, and the far facade between them." : "Slide the arches in from the front, the smallest at the back.",
+      n.scene === "alley" ? "Stand both facades in their slots before the ceiling goes in, and the far facade between them." : n.scene === "forest" ? "Slide the tree layers in from the front, the lowest trees at the back; paint them darker toward the front for depth." : "Slide the arches in from the front, the smallest at the back.",
       ...(n.mirror ? ["Stand a 2 mm acrylic mirror in the gap behind the mirror frame before the ceiling goes in. How deep it looks depends on the mirror and the light."] : []),
       ...(n.light ? ["Lay a USB or battery LED strip on the ceiling, lighting down through its slots, and lead the cable out through the hole in the back."] : []),
       ...(n.battery ? ["The battery holder goes in the bay; close the hatch with two small magnets or a strip of tape."] : []),

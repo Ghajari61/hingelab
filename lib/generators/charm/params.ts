@@ -13,9 +13,13 @@ import { TEXT_FORM, TEXT_STYLE, cleanTextForm, cleanTextStyle, type TextForm, ty
 import { mergeInto } from "../util";
 import { isCharacter, type CharacterKind, type HatKind } from "./characters";
 
-export type CharmKind = "ornament" | "keychain" | "earrings" | "bagtag" | "drink" | "placecard" | "gifttag" | "cardholder";
-/** How the name shows: engraved or scored on a blank, cut through it, glued on in a second material, or the welded name is the charm. */
-export type CharmStyle = "engrave" | "score" | "cutout" | "layered" | "letters";
+export type CharmKind = "ornament" | "keychain" | "earrings" | "bagtag" | "drink" | "placecard" | "gifttag" | "cardholder" | "bookmark" | "magnet";
+/**
+ * How the name shows: engraved or scored on a blank, cut through it, glued on in a second material,
+ * inlaid flush in a second material (cut through the face, the letters pressed into the holes, a
+ * backing behind), or the welded name is the charm.
+ */
+export type CharmStyle = "engrave" | "score" | "cutout" | "layered" | "inlay" | "letters";
 /** Charm outlines: the shared shapes, a few charm shapes, or a motif's silhouette. */
 export type CharmShape = ShapeKind | "teardrop" | "bauble" | "bone" | "motif" | CharacterKind;
 export type HangKind = "hole" | "loop" | "none";
@@ -38,6 +42,8 @@ export interface CharmParams extends GenBase {
     subSize: number;
     /** Copies of each name. */
     copies: number;
+    /** Turns the words to read along the charm's length, bottom to top (bookmarks, tall tags). */
+    along: boolean;
   };
   textStyle: TextStyle;
   textForm: TextForm;
@@ -84,11 +90,13 @@ export interface CharmParams extends GenBase {
   card: { width: number; height: number; clearance: number; lip: number };
   /** A small tag hanging under the charm on a jump ring, with its own words (a year). */
   dangle: { on: boolean; shape: string; size: number; text: string; hole: number };
+  /** Fridge magnets: round magnets set in pockets cut through a back layer, covered by the face. */
+  magnet: { diameter: number; thickness: number; count: number; clearance: number };
   mat: { mat2: string; T2: number };
 }
 
-export const CHARM_KINDS: CharmKind[] = ["ornament", "keychain", "earrings", "bagtag", "drink", "placecard", "gifttag", "cardholder"];
-export const CHARM_STYLES: CharmStyle[] = ["engrave", "score", "cutout", "layered", "letters"];
+export const CHARM_KINDS: CharmKind[] = ["ornament", "keychain", "earrings", "bagtag", "drink", "placecard", "gifttag", "cardholder", "bookmark", "magnet"];
+export const CHARM_STYLES: CharmStyle[] = ["engrave", "score", "cutout", "layered", "inlay", "letters"];
 export const CHARM_SHAPE_EXTRA = ["teardrop", "bauble", "bone", "motif"] as const;
 const HANGS: HangKind[] = ["hole", "loop", "none"];
 const SIDES: HangSide[] = ["top", "left"];
@@ -107,7 +115,7 @@ export const CHARM_DEFAULTS: CharmParams = {
   job: { ...JOB_EXTRAS },
   layers: clone(HINGE.layers),
   kind: { kind: "ornament" },
-  names: { list: "Olivia\nNoah\nAva\nLiam", fontId: "pacifico", size: 14, spacing: 0, sub: "", subFontId: "fredoka", subSize: 45, copies: 1 },
+  names: { list: "Olivia\nNoah\nAva\nLiam", fontId: "pacifico", size: 14, spacing: 0, sub: "", subFontId: "fredoka", subSize: 45, copies: 1, along: false },
   textStyle: { ...TEXT_STYLE },
   textForm: { ...TEXT_FORM },
   style: { kind: "engrave", weld: 0.8, noWeld: false, operation: "cut", backing: 0 },
@@ -119,6 +127,7 @@ export const CHARM_DEFAULTS: CharmParams = {
   strap: { length: 22, width: 5 },
   card: { width: 85.6, height: 54, clearance: 1, lip: 5 },
   dangle: { on: false, shape: "heart", size: 24, text: "2026", hole: 3 },
+  magnet: { diameter: 10, thickness: 2, count: 1, clearance: 0.2 },
   mat: { mat2: "acrylic-gold", T2: 3 },
 };
 
@@ -132,6 +141,9 @@ export const KIND_START: Record<CharmKind, { shape: Partial<CharmParams["shape"]
   placecard: { shape: { kind: "banner", width: 95, height: 40, margin: 5 }, hang: { kind: "none", side: "top", hole: 3, wall: 2 }, size: 14 },
   gifttag: { shape: { kind: "tag", width: 75, height: 40, margin: 4 }, hang: { kind: "hole", side: "left", hole: 4, wall: 3 }, size: 12 },
   cardholder: { shape: { kind: "rounded", width: 106, height: 78, margin: 4 }, hang: { kind: "hole", side: "top", hole: 4, wall: 3 }, size: 16 },
+  // a 40 × 150 mm strip (about 1.5 × 6 in), a tassel hole at the top, the name along its length
+  bookmark: { shape: { kind: "rounded", width: 40, height: 150, margin: 4 }, hang: { kind: "hole", side: "top", hole: 4, wall: 3 }, size: 14 },
+  magnet: { shape: { kind: "rounded", width: 70, height: 50, margin: 4 }, hang: { kind: "none", side: "top", hole: 4, wall: 3 }, size: 12 },
 };
 
 export const isCharmShape = (v: unknown): v is CharmShape => isShapeKind(v) || isCharacter(v) || (CHARM_SHAPE_EXTRA as readonly string[]).includes(v as string);
@@ -173,6 +185,9 @@ export function mergeCharm(raw: unknown): CharmParams {
   p.card.clearance = clamp(p.card.clearance, 0, 5); p.card.lip = clamp(p.card.lip, 1.5, 20);
   if (!isCharmShape(p.dangle.shape) || p.dangle.shape === "motif") p.dangle.shape = d.dangle.shape;
   p.dangle.size = clamp(p.dangle.size, 10, 80); p.dangle.hole = clamp(p.dangle.hole, 1.5, 8); p.dangle.text = p.dangle.text.slice(0, 12);
+  p.magnet.diameter = clamp(p.magnet.diameter, 3, 40); p.magnet.thickness = clamp(p.magnet.thickness, 0.5, 10);
+  p.magnet.count = clamp(Math.round(p.magnet.count), 1, 4); p.magnet.clearance = clamp(p.magnet.clearance, 0, 1);
+  p.names.along = p.names.along === true;
   p.style.noWeld = p.style.noWeld === true;
   p.style.operation = p.style.operation === "score" ? "score" : "cut";
   return p;

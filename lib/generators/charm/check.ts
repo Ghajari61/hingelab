@@ -6,13 +6,17 @@ import type { CharmParams } from "./params";
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
 /** Smallest letters that still read once cut or engraved, mm. */
-export const MIN_LETTER = { engrave: 3, score: 4, cutout: 5, layered: 4, letters: 4 } as const;
+export const MIN_LETTER = { engrave: 3, score: 4, cutout: 5, layered: 4, inlay: 5, letters: 4 } as const;
 /** Least material round a hole that survives a ring pulling on it, mm. */
 export const minWall = (p: CharmParams) => (p.kind.kind === "earrings" ? 1.5 : /acr|mirror|leather/.test(p.material) ? 2 : 2.5);
 /** Smallest hole a split ring threads through, mm. */
 export const SPLIT_RING_HOLE = 3.5;
 /** Earrings heavier than this pull on the ear, g. */
 export const HEAVY_EARRING = 5;
+/** Least material round a magnet pocket, mm: thinner walls crack when the magnet is pressed in. */
+export const MAGNET_WALL = 1.5;
+/** Bookmarks thicker than this push the book's pages apart and strain its spine, mm. */
+export const THICK_BOOKMARK = 3;
 
 export function checkCharm(p: CharmParams, out: CharmOutput): Issue<CharmParams>[] {
   const issues: Issue<CharmParams>[] = [];
@@ -115,6 +119,37 @@ export function checkCharm(p: CharmParams, out: CharmOutput): Issue<CharmParams>
       });
     }
     if (p.T < 0.9) issues.push({ code: "CARD_THIN_SPACER", level: "warn", message: `The pocket layer is ${p.T} mm, thinner than a gift card (0.76 mm) with room to slide.`, fixes: [] });
+  }
+  if (kind === "magnet" && p.style.kind !== "letters") {
+    const m = p.magnet;
+    if (m.thickness > p.T + 0.05) {
+      issues.push({
+        code: "CHARM_MAGNET_PROUD", level: "warn",
+        message: `The magnets are ${m.thickness} mm thick but the pockets are only ${p.T} mm deep, so they stand proud of the back and the magnet rocks on the fridge.`,
+        fixes: [{ id: "thin", label: `Use ${p.T} mm thick magnets`, safe: true, apply: (q) => ({ ...q, magnet: { ...q.magnet, thickness: q.T } }) }],
+      });
+    }
+    if (Number.isFinite(info.magnetWall) && info.magnetWall < MAGNET_WALL - 0.05) {
+      const fewer = m.count > 1;
+      issues.push({
+        code: "CHARM_MAGNET_WALL", level: "warn",
+        message: `Only ${r1(Math.max(0, info.magnetWall))} mm of material is left round a magnet pocket${fewer ? " or between two of them" : ""}; under ${MAGNET_WALL} mm the back cracks when the magnet is pressed in.`,
+        fixes: [
+          { id: "grow", label: "Make the piece 20 % bigger", safe: true, apply: (q) => grow(q, 1.2) },
+          ...(fewer ? [{ id: "fewer", label: "One magnet fewer", safe: true, apply: (q: CharmParams) => ({ ...q, magnet: { ...q.magnet, count: Math.max(1, q.magnet.count - 1) } }) }] : []),
+        ],
+      });
+    }
+  }
+  if (p.style.kind === "inlay" && Math.abs(p.mat.T2 - p.T) > 0.05) {
+    issues.push({
+      code: "CHARM_INLAY_DEPTH", level: "info",
+      message: `The inlay letters are ${p.mat.T2} mm thick in ${p.T} mm holes, so they ${p.mat.T2 > p.T ? "stand proud of" : "sit below"} the face; the same thickness makes them flush.`,
+      fixes: [{ id: "flush", label: `Letters ${p.T} mm thick`, safe: true, apply: (q) => ({ ...q, mat: { ...q.mat, T2: q.T } }) }],
+    });
+  }
+  if (kind === "bookmark" && p.T > THICK_BOOKMARK) {
+    issues.push({ code: "CHARM_THICK_BOOKMARK", level: "info", message: `A ${p.T} mm bookmark pushes the pages apart; 1.5 to 3 mm wood, acrylic or leather sits better in a book.`, fixes: [] });
   }
   if (kind === "placecard" && p.stand.clearance < 0) {
     issues.push({ code: "CHARM_TIGHT_SLOT", level: "info", message: "The slots are narrower than the stock: the card and foot press together tightly and may split thin wood.", fixes: [{ id: "fit", label: "Clearance 0.1 mm", safe: true, apply: (q) => ({ ...q, stand: { ...q.stand, clearance: 0.1 } }) }] });

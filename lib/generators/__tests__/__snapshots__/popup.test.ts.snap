@@ -4,7 +4,15 @@ exports[`Pop-up preset cut files > Bell Pendant 1`] = `"7a1abb0cb01e0254b68576ac
 
 exports[`Pop-up preset cut files > Bread Basket with Handles 1`] = `"707cc794ade767f3665bc5d6a2387bcffa8dcf51c72022135073acce934f8042"`;
 
+exports[`Pop-up preset cut files > Cloud Nursery Tray 1`] = `"7ae45765bf9232464d4a561d112469c80db7e917dd1c965cd2b495bcb48cbbab"`;
+
+exports[`Pop-up preset cut files > Crenellated Fruit Bowl 1`] = `"b35ebecb8e97ca0f80bf622de3128439ec284bac0bfe1b4513caf5d9b93a381d"`;
+
 exports[`Pop-up preset cut files > Cupcake Tower (3 tiers) 1`] = `"ac5efbd21a29610d13dbc114db0a5b312ebac268bab805ea3623e02694767a94"`;
+
+exports[`Pop-up preset cut files > Drop Catch-all Tray 1`] = `"bd6fcf63cf145247296d2abfdadc1bac60e1b74cf9ea6e0aff1e5512e5ef269b"`;
+
+exports[`Pop-up preset cut files > Easter Egg Basket 1`] = `"abbd7f768aead1691a007ad2451ba8b472abe7fae1a70a6ba734d0a26d4aee09"`;
 
 exports[`Pop-up preset cut files > Eid Sweets Bowl 1`] = `"dbccec10ea191c9fa10d5f5ef2c964b9799ae5e95c910758e106985de7415ec8"`;
 
@@ -71,3 +79,5 @@ exports[`Pop-up preset cut files > Two-Tier Fruit Stand 1`] = `"62460ee76b336569
 exports[`Pop-up preset cut files > Vase Sleeve 1`] = `"223e8ca4a0a0654c129fec29bc12c29ee3e2b201fe8f0d5987484ce3ffb243d4"`;
 
 exports[`Pop-up preset cut files > Wedding Favour Bowl (names, batch) 1`] = `"d7b74f7dd0e38c6e0f4058faddf89d593fa4a218d77d33094a0e5063059fe37e"`;
+
+exports[`Pop-up preset cut files > Yalda Pomegranate Bowl 1`] = `"541584dbb07009bdf181143879976391c663fdf74646f094d5fb10a14de0b744"`;

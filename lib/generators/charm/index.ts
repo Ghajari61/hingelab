@@ -22,6 +22,7 @@ const MOTIF_SHAPES = MOTIF_OPTIONS.filter((o) => o.v !== "none");
 
 export const KIND_NAMES: Record<CharmKind, string> = {
   ornament: "Ornaments", keychain: "Keychains", earrings: "Earrings", bagtag: "Bag tags", drink: "Drink markers", placecard: "Place cards", gifttag: "Gift tags", cardholder: "Gift card holders",
+  bookmark: "Bookmarks", magnet: "Fridge magnets",
 };
 
 const SHAPE_OPTIONS = [
@@ -33,7 +34,7 @@ const SHAPE_OPTIONS = [
 /** Picking a kind starts from the size, hanging and shape that suit it; names and style stay. */
 function startKind(p: CharmParams, v: string): CharmParams {
   const k = v as CharmKind, s = KIND_START[k];
-  return mergeCharm({ ...p, kind: { kind: k }, shape: { ...p.shape, ...s.shape }, hang: { ...p.hang, ...s.hang }, names: { ...p.names, size: s.size },
+  return mergeCharm({ ...p, kind: { kind: k }, shape: { ...p.shape, ...s.shape }, hang: { ...p.hang, ...s.hang }, names: { ...p.names, size: s.size, along: k === "bookmark" },
     style: k === "keychain" || p.style.kind !== "letters" ? p.style : { ...p.style, kind: "engrave" } });
 }
 
@@ -44,7 +45,7 @@ const sections: SectionSpec<CharmParams>[] = [
     fields: [
       {
         kind: "choice", key: "kind.kind", label: "Make", rail: true, apply: startKind,
-        help: "Ornaments, keychains, earrings, bag tags, drink markers that clip on a glass, place cards that stand, gift tags, or gift card holder ornaments.",
+        help: "Ornaments, keychains, earrings, bag tags, drink markers that clip on a glass, place cards that stand, gift tags, gift card holder ornaments, bookmarks with a tassel hole, or fridge magnets with pockets for the magnets.",
         options: (Object.keys(KIND_NAMES) as CharmKind[]).map((v) => ({ v, text: KIND_NAMES[v] })),
       },
     ],
@@ -61,6 +62,7 @@ const sections: SectionSpec<CharmParams>[] = [
       { kind: "font", key: "names.subFontId", label: "Second line font", sample: (p) => p.names.sub || "2026", show: (p) => blanked(p) && !!p.names.sub.trim(), help: "The typeface of the second line." },
       { kind: "number", key: "names.subSize", label: "Second line size", unit: "%", min: 20, max: 100, step: 1, show: (p) => blanked(p) && !!p.names.sub.trim(), help: "Height of the second line as a share of the names'." },
       { kind: "number", key: "names.copies", label: "Copies of each", unit: "", min: 1, max: 50, step: 1, int: true, help: "How many of each name to cut, for sets and spares." },
+      { kind: "toggle", key: "names.along", label: "Along the length", show: blanked, help: "Turns the words a quarter so they read bottom to top along a tall charm, as on a bookmark." },
     ],
   },
   textStyleSection<CharmParams>(),
@@ -70,8 +72,8 @@ const sections: SectionSpec<CharmParams>[] = [
     fields: [
       {
         kind: "choice", key: "style.kind", shuffle: true, label: "Style", rail: true,
-        help: "Engrave fills the letters, Score traces them, Cut-out cuts them through, Layered glues them on in a second material, Letters makes the welded name the charm.",
-        options: [{ v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }, { v: "cutout", text: "Cut-out" }, { v: "layered", text: "Layered", title: "Two materials" }, { v: "letters", text: "Letters", title: "The name is the charm" }],
+        help: "Engrave fills the letters, Score traces them, Cut-out cuts them through, Layered glues them on in a second material, Inlay presses them flush into the face in a second material over a backing, Letters makes the welded name the charm.",
+        options: [{ v: "engrave", text: "Engrave" }, { v: "score", text: "Score" }, { v: "cutout", text: "Cut-out" }, { v: "layered", text: "Layered", title: "Two materials" }, { v: "inlay", text: "Inlay", title: "Flush letters in a second material" }, { v: "letters", text: "Letters", title: "The name is the charm" }],
       },
       { kind: "toggle", key: "style.noWeld", label: "No Weld", show: (p) => p.style.kind === "letters" || p.style.kind === "layered", help: "Keep the original glyphs, dots and counters separate. Remembers the Weld value when switched off." },
       { kind: "choice", key: "style.operation", label: "Letters", show: (p) => p.style.kind === "letters" || p.style.kind === "layered", options: [{ v: "cut", text: "Cut" }, { v: "score", text: "Score" }], help: "Cut makes letter pieces. Score traces the original letters on a backing without cutting them out; a backing is added where needed." },
@@ -106,7 +108,7 @@ const sections: SectionSpec<CharmParams>[] = [
     ],
   },
   {
-    id: "hang", title: "Hanging", open: true, show: (p) => p.kind.kind !== "drink" && p.kind.kind !== "placecard",
+    id: "hang", title: "Hanging", open: true, show: (p) => p.kind.kind !== "drink" && p.kind.kind !== "placecard" && p.kind.kind !== "magnet",
     help: "A hole inside the charm, or a loop on its edge, with enough material round it not to tear.",
     fields: [
       { kind: "choice", key: "hang.kind", label: "Hang by", help: "A hole inside the charm, a loop added on its edge (keeps the whole face for the name), or nothing.", options: [{ v: "hole", text: "Hole" }, { v: "loop", text: "Loop" }, { v: "none", text: "None" }] },
@@ -151,10 +153,20 @@ const sections: SectionSpec<CharmParams>[] = [
     ],
   },
   {
-    id: "dangle", title: "Dangle", open: false, show: (p) => ["ornament", "keychain", "gifttag"].includes(p.kind.kind),
-    help: "A small tag hanging under the charm on a jump ring, with its own words such as the year.",
+    id: "magnet", title: "Magnets", open: true, show: (p) => p.kind.kind === "magnet" && p.style.kind !== "letters",
+    help: "Round magnets sit in pockets cut through a back layer of the same outline; the face glued on top hides them.",
     fields: [
-      { kind: "toggle", key: "dangle.on", label: "Dangle", help: "Adds a small tag under each charm, joined by a jump ring." },
+      { kind: "number", key: "magnet.diameter", label: "Magnet diameter", unit: "mm", min: 3, max: 40, step: 0.5, help: "Diameter of each round magnet; 10 to 12 mm discs hold a fridge magnet and a photo." },
+      { kind: "number", key: "magnet.thickness", label: "Magnet thickness", unit: "mm", min: 0.5, max: 10, step: 0.5, help: "Thickness of the magnets; no more than the stock, so they sit flush in their pockets." },
+      { kind: "number", key: "magnet.count", label: "Magnets", unit: "", min: 1, max: 4, step: 1, int: true, help: "Magnets in each piece; two or more spread along a long piece stop it turning." },
+      { kind: "number", key: "magnet.clearance", label: "Pocket clearance", unit: "mm", min: 0, max: 1, step: 0.05, help: "Added to the magnet's diameter for its pocket; 0.2 mm lets it drop in with a dot of glue." },
+    ],
+  },
+  {
+    id: "dangle", title: "Dangle", open: false, show: (p) => ["ornament", "keychain", "gifttag", "earrings"].includes(p.kind.kind),
+    help: "A small tag hanging under the charm on a jump ring, with its own words such as the year, or a second tier under each earring.",
+    fields: [
+      { kind: "toggle", key: "dangle.on", label: "Dangle", help: "Adds a small tag under each charm (under each earring of a pair), joined by a jump ring." },
       { kind: "choice", key: "dangle.shape", label: "Dangle shape", show: (p) => p.dangle.on, options: [{ v: "heart", text: "Heart" }, { v: "star", text: "Star" }, { v: "circle", text: "Circle" }, { v: "teardrop", text: "Teardrop" }, { v: "tag", text: "Tag" }, { v: "house", text: "House" }, { v: "diamond", text: "Diamond" }], help: "The shape of the little tag." },
       { kind: "number", key: "dangle.size", label: "Dangle size", unit: "mm", min: 10, max: 80, step: 0.5, show: (p) => p.dangle.on, help: "Width of the little tag." },
       { kind: "text", key: "dangle.text", label: "Dangle words", maxLength: 12, show: (p) => p.dangle.on, placeholder: "A year or a date", help: "Words engraved on the little tag, such as the year." },
@@ -162,8 +174,8 @@ const sections: SectionSpec<CharmParams>[] = [
     ],
   },
   {
-    id: "mat", title: "Second material", open: false, show: (p) => p.style.kind === "layered" || p.kind.kind === "cardholder" || (p.style.kind === "letters" && p.style.backing > 0),
-    help: "The material of the glued-on letters: mirror, glitter or coloured acrylic, or wood.",
+    id: "mat", title: "Second material", open: false, show: (p) => p.style.kind === "layered" || p.style.kind === "inlay" || p.kind.kind === "cardholder" || (p.style.kind === "letters" && p.style.backing > 0),
+    help: "The material of the glued-on or inlaid letters: mirror, glitter or coloured acrylic, or wood.",
     fields: material2Fields<CharmParams>("mat"),
   },
 ];
@@ -193,6 +205,8 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
       placecard: [roundedRect(0, 6, 44, 20, 3), rect(16, 26, 12, 6)],
       gifttag: [[[8, 6], [44, 6], [44, 32], [8, 32], [0, 19]], hole(8, 19)],
       cardholder: [roundedRect(0, 4, 44, 32, 4), roundedRect(6, 0, 32, 22, 1).slice().reverse(), rect(10, 26, 24, 4)],
+      bookmark: [roundedRect(14, 0, 16, 46, 3), hole(22, 5, 2), rect(19.5, 12, 5, 28).slice().reverse(), rect(21, 46, 2, 2)],
+      magnet: [roundedRect(0, 8, 44, 30, 4), circle(14, 23, 5, 0.2).slice().reverse(), circle(30, 23, 5, 0.2).slice().reverse()],
     };
     return [{ d: fitArt(pics[v] ?? [], 38).join(" "), fill: true }];
   }
@@ -203,6 +217,7 @@ function art(key: string, v: string): { d: string; fill?: boolean }[] {
     if (v === "engrave") return [{ d: o, fill: true }, { d: m.join(" ") }];
     if (v === "score") return [{ d: o }, { d: m.join(" ") }];
     if (v === "cutout") return [{ d: [o, ...m].join(" "), fill: true }];
+    if (v === "inlay") return [{ d: [o, ...m].join(" ") }, { d: m.join(" "), fill: true }];
     return [{ d: o, fill: true }, { d: m.join(" "), fill: true }];
   }
   return [];
@@ -223,7 +238,7 @@ export const CHARM: GeneratorDef<CharmParams> = {
   presets: CHARM_PRESETS,
   build: buildCharm,
   check: (p, out) => checkCharm(p, out as CharmOutput),
-  pro: (p) => (p.kind.kind === "cardholder" ? "Gift card holders (four layers) need Pro." : p.style.kind === "layered" || (p.style.kind === "letters" && p.style.backing > 0) ? "Layered charms (two materials) need Pro." : null),
+  pro: (p) => (p.kind.kind === "cardholder" ? "Gift card holders (four layers) need Pro." : p.style.kind === "inlay" ? "Inlay charms (two materials) need Pro." : p.style.kind === "layered" || (p.style.kind === "letters" && p.style.backing > 0) ? "Layered charms (two materials) need Pro." : null),
   fonts: (p) => [
     ...(p.names.list.trim() ? [p.names.fontId] : []),
     ...(p.names.sub.trim() && p.style.kind !== "letters" ? [p.names.subFontId] : []),
@@ -244,6 +259,7 @@ export const CHARM: GeneratorDef<CharmParams> = {
       "Name Charms makes small personalised pieces by the dozen from one list of names: Christmas ornaments, keychains, earrings, school and luggage tags, drink markers that clip on a glass, place cards that stand on their own foot, and gift or stocking tags.",
       "Each line of the list becomes one charm. The name is fitted inside the charm, clear of the edge and of the hanging hole, and shrinks to fit a long name. Engrave it, score it, cut it through, glue it on in mirror acrylic, or make the welded name itself the charm.",
       "The hole keeps enough material round it not to tear (it moves inwards on stars and hearts until it has it), or hangs from a loop on the edge. Drink markers check that their clip flexes over the stem without snapping; place card slots are sized to your stock.",
+      "Bookmarks read along their length with a tassel hole at the top. Fridge magnets get a back layer with a pocket for each round magnet, so the magnet sits flush and hidden. Inlay cuts the name through the face and the same letters from a second material to press in flush over a backing. Earrings can carry a second tier on a jump ring.",
     ],
     tips: [
       "Keep at least 2.5 mm of wood (2 mm of acrylic) round a hole for a split ring; earrings get by with 1.5 mm.",
@@ -251,8 +267,10 @@ export const CHARM: GeneratorDef<CharmParams> = {
       "Engrave with masking tape on wood, then peel it, so the smoke does not stain the face.",
       "Seal wooden earrings and ornaments with a clear coat; it also deepens the engraving.",
       "For drink markers, acrylic grips well with an opening about three quarters of the stem; wood needs a thinner ring to flex.",
+      "For an inlay, cut both materials at the same thickness with the same kerf setting; the kerf alone makes the letters press in tight.",
+      "Magnet pockets as deep as the stock hide the magnet; 10 × 2 mm neodymium discs hold a light wooden magnet.",
     ],
-    keywords: ["name ornament", "christmas ornament", "keychain", "name keychain", "earrings", "bag tag", "luggage tag", "wine charm", "drink marker", "place card", "gift tag", "stocking tag", "personalised"],
+    keywords: ["name ornament", "christmas ornament", "keychain", "name keychain", "earrings", "bag tag", "luggage tag", "wine charm", "drink marker", "place card", "gift tag", "stocking tag", "personalised", "bookmark", "fridge magnet", "inlay", "statement earrings", "pet tag"],
   },
 };
 

@@ -963,5 +963,84 @@ export const POPUP_PRESETS:PopupPreset[] = [
         "depth": 110
       }
     }
+  },
+  {
+    "id": "easter-egg-basket",
+    "name": "Easter Egg Basket",
+    "note": "Seasonal · An egg-shaped basket on profile ribs with an Easter egg engraved in the centre; prototype before use.",
+    "category": "Seasonal",
+    "tags": ["Seasonal", "basket", "Easter", "pop-up"],
+    "pro": true,
+    "params": {
+      "name": "Easter Egg Basket",
+      "outline": { "shape": "egg", "width": 230, "height": 290 },
+      "rings": { "width": 12, "center": 60 },
+      "profile": { "kind": "bell", "depth": 45 },
+      "support": { "ribs": 2 },
+      "engraving": { "motif": "eggs" }
+    }
+  },
+  {
+    "id": "yalda-pomegranate-bowl",
+    "name": "Yalda Pomegranate Bowl",
+    "note": "Seasonal · Twelve pomegranates engraved round the rim and Yalda in the centre, for the longest night; prototype before use.",
+    "category": "Seasonal",
+    "tags": ["Seasonal", "bowl", "Yalda", "pop-up"],
+    "pro": true,
+    "params": {
+      "name": "Yalda Pomegranate Bowl",
+      "outline": { "shape": "circle", "width": 260 },
+      "rings": { "width": 12, "center": 70, "rim": 18 },
+      "profile": { "kind": "bell", "depth": 40 },
+      "support": { "ribs": 3 },
+      "engraving": { "text": "یلدا", "size": 12, "motif": "pomegranates", "fill": true }
+    }
+  },
+  {
+    "id": "cloud-nursery-tray",
+    "name": "Cloud Nursery Tray",
+    "note": "Kids · A shallow cloud-shaped tray for a nursery shelf, stars engraved in the centre; prototype before use.",
+    "category": "Kids",
+    "tags": ["Kids", "tray", "pop-up"],
+    "pro": true,
+    "params": {
+      "name": "Cloud Nursery Tray",
+      "outline": { "shape": "cloud", "width": 280, "height": 200 },
+      "rings": { "width": 12, "center": 50, "rim": 14 },
+      "profile": { "kind": "flat-bottom", "depth": 24 },
+      "support": { "ribs": 2 },
+      "engraving": { "motif": "stars" }
+    }
+  },
+  {
+    "id": "crenellated-fruit-bowl",
+    "name": "Crenellated Fruit Bowl",
+    "note": "Kitchen & dining · Rings with a soft square-wave edge, like the battlements of a castle; prototype before use.",
+    "category": "Kitchen & dining",
+    "tags": ["Kitchen & dining", "bowl", "pop-up"],
+    "pro": true,
+    "params": {
+      "name": "Crenellated Fruit Bowl",
+      "outline": { "shape": "circle", "width": 260 },
+      "pattern": { "edge": "square", "amplitude": 1.5, "frequency": 24 },
+      "rings": { "width": 13, "center": 60 },
+      "profile": { "kind": "bell", "depth": 45 },
+      "support": { "ribs": 3 }
+    }
+  },
+  {
+    "id": "drop-catch-all",
+    "name": "Drop Catch-all Tray",
+    "note": "Home · A drop-shaped valet tray for keys and rings on profile ribs; prototype before use.",
+    "category": "Home",
+    "tags": ["Home", "tray", "pop-up"],
+    "pro": true,
+    "params": {
+      "name": "Drop Catch-all Tray",
+      "outline": { "shape": "drop", "width": 210, "height": 270 },
+      "rings": { "width": 12, "center": 50 },
+      "profile": { "kind": "flat-bottom", "depth": 26 },
+      "support": { "ribs": 2 }
+    }
   }
 ];
