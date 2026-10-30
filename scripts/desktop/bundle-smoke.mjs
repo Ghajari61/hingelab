@@ -35,6 +35,7 @@ const STUB = () => {
   const prefs = { exportDir: null, lastDir: null, openAfterExport: false, projectDir: null, recentFiles: [], homeDir: null, recentMax: 12 };
   let cb = 0;
   window.__smokeCalls = [];
+  window.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener: () => {} };
   window.__TAURI_INTERNALS__ = {
     metadata: { currentWindow: { label: "main" }, currentWebview: { windowLabel: "main", label: "main" } },
     transformCallback: () => ++cb,
@@ -91,6 +92,29 @@ for (const [name, path, ready] of PAGES) {
   if (csp.length) problems.push(`${name}: CSP`);
   await context.close();
 }
+// Sign out from the account menu in the editor's top bar signs the whole app out
+// (the shared menu must not post to /auth/signout, which only the website has).
+{
+  const context = await browser.newContext({ viewport: { width: 1400, height: 860 } });
+  await context.addInitScript(STUB);
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(`pageerror: ${String(e).slice(0, 240)}`));
+  await page.goto(base + "/#/editor/hinge");
+  let ok = false;
+  try {
+    await page.waitForSelector("svg#stage path", { timeout: 60000 });
+    await page.click(".user-menu .avatar", { timeout: 15000 });
+    await page.getByRole("menuitem", { name: "Sign out" }).click();
+    await page.waitForSelector(".signin", { timeout: 10000 });
+    ok = (await page.evaluate(() => window.__smokeCalls.includes("sign_out"))) && !errors.length;
+  } catch (e) { errors.push(String(e).slice(0, 240)); }
+  console.log(`${ok ? "  ok" : "FAIL"}  Sign out from the account menu`);
+  for (const e of errors.slice(0, 4)) console.log(`        ${e}`);
+  if (!ok) problems.push("account menu sign out");
+  await context.close();
+}
+
 await browser.close();
 server.close();
 if (problems.length) { console.log(`\n${problems.length} problem(s).`); process.exit(1); }

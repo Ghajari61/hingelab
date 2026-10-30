@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { platform } from "@hingelab/platform";
 import { matchRoute, productHref } from "@hingelab/app/routes";
+import { DESKTOP_SIGN_OUT } from "@/lib/account/signOutEvent";
 import { AI_START_KEY } from "@/lib/ai/types";
 import { Sidebar, SignIn, Toasts, UpdateDialog, UpdateRequired, useModalOpen, type Route, type Toast } from "./components/Chrome";
 import { Crash } from "./components/Crash";
@@ -283,7 +284,10 @@ export function App() {
   // Sign out in the website view's account menu signs the whole app out.
   useEffect(() => {
     const off = listen("web-sign-out", () => signedOut(null));
-    return () => { void off.then((f) => f()); };
+    // …and Sign out in the app's own account menu (the editor's top bar).
+    const fromMenu = () => signedOut(null);
+    window.addEventListener(DESKTOP_SIGN_OUT, fromMenu);
+    return () => { void off.then((f) => f()); window.removeEventListener(DESKTOP_SIGN_OUT, fromMenu); };
   }, [signedOut]);
 
   useEffect(() => {
