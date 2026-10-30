@@ -1,6 +1,7 @@
 "use client";
 
 import { fabFromParametric } from "@/lib/fab/adapters";
+import { releaseField, undoKey } from "@/lib/ui/undoKeys";
 import { platform } from "@hingelab/platform";
 import { useShortcutKey } from "@/components/shell/useShortcutKey";
 import { keepSetup } from "@/lib/prefs/editor";
@@ -559,8 +560,9 @@ export default function ParametricEditor({ onProduct, onHome, start, cloud = nul
       if (mod) {
         const k = e.key.toLowerCase();
         const va = api.current;
-        if (k === "z" && !inField) { e.preventDefault(); e.shiftKey ? va.doRedo() : va.doUndo(); }
-        else if (k === "y" && !inField) { e.preventDefault(); va.doRedo(); }
+        const u = undoKey(e);
+        if (u) { e.preventDefault(); releaseField(); if (u === "undo") va.doUndo(); else va.doRedo(); }
+        else if (k === "z" || k === "y") { /* the text field undoes its own typing */ }
         else if (k === "s") { e.preventDefault(); if (e.shiftKey) va.saveProjectAs(); else va.saveProject(); }
         else if (k === "o") { e.preventDefault(); va.openProject(); }
         else if (k === "i" && !e.shiftKey) { e.preventDefault(); va.importPick(); }

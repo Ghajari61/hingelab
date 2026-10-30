@@ -1,6 +1,7 @@
 "use client";
 
 import { platform } from "@hingelab/platform";
+import { releaseField, undoKey } from "@/lib/ui/undoKeys";
 import { useShortcutKey } from "@/components/shell/useShortcutKey";
 import { Dices } from "lucide-react";
 
@@ -395,8 +396,9 @@ export default function EditorApp({ onProduct, onHome, start, cloud = null }: {
       if (mod) {
         const k = e.key.toLowerCase();
         const va = api.current;
-        if (k === "z" && !inField) { e.preventDefault(); e.shiftKey ? va.doRedo() : va.doUndo(); }
-        else if (k === "y" && !inField) { e.preventDefault(); va.doRedo(); }
+        const u = undoKey(e);
+        if (u) { e.preventDefault(); releaseField(); if (u === "undo") va.doUndo(); else va.doRedo(); }
+        else if (k === "z" || k === "y") { /* the text field undoes its own typing */ }
         else if (k === "s") { e.preventDefault(); if (e.shiftKey) va.saveProjectAs(); else va.saveProject(); }
         else if (k === "o") { e.preventDefault(); va.openProject(); }
         else if (k === "i" && !e.shiftKey) { e.preventDefault(); va.importPick(); }

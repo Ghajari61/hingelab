@@ -13,6 +13,7 @@ import { generatorHref, generatorMeta } from "@/lib/generators/catalog";
 import { bindingsFor, COMMAND_BY_ID, isSingleKey, MENUS, type MenuEntry, type ToolId } from "@/lib/studio/commands";
 import { loadKeymap, saveKeymap, type Keymap } from "@/lib/studio/keymap";
 import { isTypingTarget, matches } from "@/lib/studio/keys";
+import { fieldUndoes, releaseField } from "@/lib/ui/undoKeys";
 import { isLocalId, loadLocalProject, newLocalId, saveLocalProject, touchLocalProject } from "@/lib/studio/localStore";
 import { cleanName } from "@/lib/studio/naming";
 import { DEFAULT_PREFS } from "@/lib/studio/prefs";
@@ -346,7 +347,10 @@ function EditorShell({ opened }: { opened: Document }) {
         const k = keys.find((x) => matches(e, x, mac));
         if (!k) continue;
         if (view3dRef.current && !KEYS_IN_3D.has(id)) return;
-        if (typing && (isSingleKey(k) || !WHILE_TYPING.has(id))) return;
+        const undoing = id === "edit.undo" || id === "edit.redo";
+        // Undo and Redo work from any control; a text field with fresh typing undoes that first
+        if (undoing && typing) { if (fieldUndoes(e.target)) return; releaseField(); }
+        else if (typing && (isSingleKey(k) || !WHILE_TYPING.has(id))) return;
         if (/^(shift\+)?tab$/i.test(k)) {
           const a = document.activeElement;
           if (a && a !== document.body && !a.closest?.(".st-stage")) return;

@@ -1,3 +1,7 @@
+## Unreleased
+
+- **Undo and Redo work everywhere.** Ctrl+Z (and Ctrl+Y or Ctrl+Shift+Z for redo) did nothing while a number box, checkbox, drop-down or text field still had focus, for example right after typing a size and pressing Enter. They now undo the design from any control in the box, generator, letters and parametric editors, Studio and the AI designer, on the website and in the Windows app. A text field with fresh typing still undoes its own typing first. A change not yet recorded (text typed but not left) is undone as its own step instead of being skipped.
+
 ## 1.33.0 — Family word signs
 
 - **Names over a word (Family Names).** A new layout makes a framed layered sign. A big word (MOM, LOVE, DOG MOM, a family name) is cut out of the face so the back panel shows through, and the middles of letters such as O are kept as pieces. A frame lies round the edge, and the names in script, joined by hearts, are glued across the word. Type the names on one line, separated by spaces. You can set the word, its font, the sign width, the names size, the frame, the margin and the corner radius. The names can be cut from a second material (mirror, glitter or coloured acrylic). Four presets: MOM with the kids' names, LOVE, DOG MOM and Mr & Mrs.

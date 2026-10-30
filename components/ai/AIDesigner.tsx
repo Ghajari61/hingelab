@@ -1,6 +1,7 @@
 "use client";
 
 import { platform } from "@hingelab/platform";
+import { releaseField, undoKey } from "@/lib/ui/undoKeys";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ArrowUp, Check, Download, ImagePlus, Info, Layers, Library, Loader2, PenTool, Redo2, RotateCcw, ScanEye, Sparkles, Undo2, Wand2, X } from "lucide-react";
@@ -219,11 +220,11 @@ export function AIDesigner({ plan, curator = false }: { plan: Plan; curator?: bo
   keys.current = { undoEdit, redoEdit };
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
-      if (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
-      const k = e.key.toLowerCase();
-      if (k === "z" && !e.shiftKey) { e.preventDefault(); keys.current.undoEdit(); }
-      else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); keys.current.redoEdit(); }
+      const u = undoKey(e);
+      if (!u) return;
+      e.preventDefault();
+      releaseField();
+      if (u === "undo") keys.current.undoEdit(); else keys.current.redoEdit();
     };
     window.addEventListener("keydown", down);
     return () => window.removeEventListener("keydown", down);
