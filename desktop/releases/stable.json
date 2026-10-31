@@ -2,15 +2,15 @@
   "channel": "stable",
   "minimumVersion": "1.0.0",
   "latest": {
-    "version": "1.36.0",
-    "pub_date": "2026-10-30T22:43:57.575Z",
-    "notes": "QR designer adds styled codes, decorative icon and header art, shaped signs and stands. QR codes can be added to table numbers and Studio designs.",
+    "version": "1.37.0",
+    "pub_date": "2026-10-31T05:51:08.283Z",
+    "notes": "New presets and options across boxes, pop-ups, clocks, puzzles, signs, charms and miniatures. Book boxes add magnet or ribbon closures, and product icons are refreshed.",
     "platforms": {
       "windows-x86_64": {
-        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.36.0_x64-setup.exe",
-        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWmdNR1BMaUJsWTdsZ0tRRDNGTHkrLzY4bmlPdXQzZWhuTU9INjVpZm5CeUIyeUdYTnZ0bGhtenZnTy9mOGZRYVo3VmMyV3ByODRLNnJ0VW9kdnBVOFFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNDAwMjI4CWZpbGU6SGluZ2VMYWJfMS4zNi4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjM2LjAKMnJrNG5VKzl6MTJmS1dvUGpzU0ZSLzQvUnlqaXE4d0pJU2NjVm01d0xWajZKdHltUnI1S1NsZHdGWEtXYkJ6Q3JhN1Rwb2tlZlJuVHdpR0RhR0p3QXc9PQo=",
-        "size": 13011857,
-        "sha256": "a96b559086120761d02d74c3833d37a18792c960adfef42f03d5218d6e97d4d2"
+        "url": "https://hingelab.vercel.app/downloads/HingeLab_1.37.0_x64-setup.exe",
+        "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdVQzYmFzSVpJWnJGc0QvbDJCUTAyY2ZqbGUwam1QNTNHNWl3OGhCVTh4ZjRDV1htb2NlWmZnU1dGcldOcVR2a29TK1JadnBPamJGVFdVMEZMR01Td0JSU09VSUJGS3c0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNDI1ODU4CWZpbGU6SGluZ2VMYWJfMS4zNy4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjoxLjM3LjAKbytXKzlEcDVtNnFDMUJlcE5BMDBoS2RldE80N1JZTWJUMzMwL2FRR0krOUtlUkk2M0NjVGh3U2dvdjZvSGY3QUE5cHZZTmJzT25pQlJ6TTYxY1NTQlE9PQo=",
+        "size": 13325017,
+        "sha256": "fbd57f14590b991975c826e0bb551b3e841ea021e1ebc22116880978de0db118"
       }
     }
   }

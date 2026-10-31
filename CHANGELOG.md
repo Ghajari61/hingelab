@@ -498,3 +498,11 @@ The unified app: see `CHANGELOG-REDESIGN.md`.
 
 - **QR Code generator:** new designer styles, shaped signs, header pictures, decorative icons and stands. QR codes can also be added to Table Numbers and in Studio. Added scanability checks for generated designs.
 
+## 1.37.0 — Generator collection upgrade
+
+- **Boxes and Shadow Box:** serving trays, napkin holders, tissue covers, hand holes, clear lids, layered star scenes and new ornament designs. Book boxes can use hidden magnets, a ribbon tie or no closure.
+- **Craft and home designs:** new bookmarks, magnets, inlay keychains, two-tier earrings, fairy doors, bridges, forest nooks and rocking chairs; new egg, drop, cloud and Yalda pop-up designs.
+- **Signs and keepsakes:** LED name and shop signs, two-sided and flip signs, leaning feet, plaques, medals, hoops and shaker designs.
+- **Clock, Puzzle and Key Holder:** new functional layouts and presets, including teaching clocks, mirrored numerals, dovetail puzzles, toddler knobs, magnetic key racks and mail pockets.
+- **Product icons:** refreshed two-tone drawings across the product chooser.
+
