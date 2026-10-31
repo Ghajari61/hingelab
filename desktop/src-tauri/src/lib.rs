@@ -8,6 +8,7 @@ mod error;
 mod files;
 mod projects;
 mod shared;
+mod splash;
 mod store;
 mod web;
 
@@ -351,6 +352,7 @@ pub fn run() {
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(tauri_plugin_window_state::StateFlags::all() & !tauri_plugin_window_state::StateFlags::VISIBLE)
+                .with_denylist(&[splash::LABEL])
                 .build(),
         )
         .plugin(tauri_plugin_dialog::init())
@@ -363,6 +365,10 @@ pub fn run() {
             let cwd = std::env::current_dir().unwrap_or_default();
             let launch = Files { pending_open: projects::project_arg(std::env::args(), &cwd), ..Files::default() };
             app.manage(AppState { api: Api::new(&version), version, files: Mutex::new(launch), prefs: Mutex::new(files::load_prefs(&prefs_dir)), prefs_dir, web: web::WebState::default() });
+            app.manage(splash::SplashState::default());
+            // The splash plays while the main window loads hidden; without it the main window
+            // shows as soon as its page has loaded, as before.
+            let has_splash = splash::open(app.handle(), navigation_allowed);
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("HingeLab")
                 .inner_size(1360.0, 860.0)
@@ -370,9 +376,9 @@ pub fn run() {
                 .center()
                 .visible(false)
                 .on_navigation(navigation_allowed)
-                .on_page_load(|w, p| {
-                    if p.event() == PageLoadEvent::Finished {
-                        let _ = w.show();
+                .on_page_load(move |w, p| {
+                    if p.event() == PageLoadEvent::Finished && (!has_splash || !splash::exists(w.app_handle())) {
+                        splash::show_main(w.app_handle());
                     }
                 })
                 .build()?;
@@ -415,7 +421,11 @@ pub fn run() {
             shared::api_request,
             shared::save_file,
             shared::open_file,
-            shared::open_external
+            shared::open_external,
+            splash::app_ready,
+            splash::splash_progress,
+            splash::splash_state,
+            splash::splash_done
         ])
         .run(tauri::generate_context!())
         .expect("error while running HingeLab");

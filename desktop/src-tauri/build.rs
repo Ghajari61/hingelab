@@ -24,6 +24,10 @@ const COMMANDS: &[&str] = &[
     "save_file",
     "open_file",
     "open_external",
+    "app_ready",
+    "splash_progress",
+    "splash_state",
+    "splash_done",
 ];
 
 fn main() {

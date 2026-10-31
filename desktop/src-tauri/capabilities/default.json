@@ -32,6 +32,8 @@
     "allow-api-request",
     "allow-save-file",
     "allow-open-file",
-    "allow-open-external"
+    "allow-open-external",
+    "allow-app-ready",
+    "allow-splash-progress"
   ]
 }

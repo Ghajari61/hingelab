@@ -54,6 +54,7 @@ const STUB = () => {
         case "plugin:event|unlisten": return null;
         case "plugin:window|set_title": return null;
         case "api_request": return { status: 503, contentType: "application/json", body: btoa("{}"), base64: true };
+        case "splash_state": return { ready: true, status: "" };
         default: return null;
       }
     },
@@ -112,6 +113,28 @@ for (const [name, path, ready] of PAGES) {
   console.log(`${ok ? "  ok" : "FAIL"}  Sign out from the account menu`);
   for (const e of errors.slice(0, 4)) console.log(`        ${e}`);
   if (!ok) problems.push("account menu sign out");
+  await context.close();
+}
+
+// The splash window's page: it renders under the CSP (WebGL, or the CSS title without it), finishes
+// once the app is ready and asks to show the main window (splash_done).
+{
+  const context = await browser.newContext({ viewport: { width: 820, height: 480 } });
+  await context.addInitScript(STUB);
+  const page = await context.newPage();
+  const errors = [];
+  page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 240)); });
+  page.on("pageerror", (e) => errors.push(`pageerror: ${String(e).slice(0, 240)}`));
+  await page.goto(base + "/splash.html");
+  let ok = false;
+  try {
+    await page.waitForSelector(".hl-splash canvas, .hl-splash-css", { timeout: 15000 });
+    await page.waitForFunction(() => window.__smokeCalls.includes("splash_done"), null, { timeout: 15000 });
+    ok = !errors.length;
+  } catch (e) { errors.push(String(e).slice(0, 240)); }
+  console.log(`${ok ? "  ok" : "FAIL"}  Splash window plays and hands over to the app`);
+  for (const e of errors.slice(0, 4)) console.log(`        ${e}`);
+  if (!ok) problems.push("splash");
   await context.close();
 }
 
