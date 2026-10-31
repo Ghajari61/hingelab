@@ -1,11 +1,12 @@
 "use client";
 
+import { ProductIcon } from "@/components/icons/ProductIcon";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Box, Cake, Check, ChevronDown, Clock, Hash, House, KeyRound, Layers, Package, Puzzle, QrCode, Ruler, Shapes, ShoppingBag, Signpost, SquareStack, Tag, Trophy, Type } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import type { Params } from "@/lib/hinge";
 import { DEFAULTS } from "@/lib/hinge/defaults";
 import { HINGE_VARIANTS, hingeVariantOf, type HingeVariant } from "@/lib/hinge/presets";
-import { GENERATOR_IDS, LEGACY_GENERATOR_IDS, GENERATOR_INFO, isGeneratorId, type GeneratorId, type GeneratorInfo } from "@/lib/generators/ids";
+import { GENERATOR_IDS, LEGACY_GENERATOR_IDS, GENERATOR_INFO, isGeneratorId, type GeneratorId } from "@/lib/generators/ids";
 import { canUsePattern, canUseShape, type Plan } from "@/lib/plans";
 import type { GalleryGroup } from "@/components/shell/GalleryRail";
 import { RandomMark } from "./ResetMark";
@@ -18,28 +19,11 @@ export type Product = CoreProduct | GeneratorId;
 export const CORE_PRODUCTS: CoreProduct[] = ["hinge", "letters", "parametric"];
 export const ALL_PRODUCTS: Product[] = [...CORE_PRODUCTS, ...GENERATOR_IDS];
 
-const GEN_ICON: Record<GeneratorInfo["icon"], ReactNode> = {
-  clock: <Clock size={16} aria-hidden />,
-  puzzle: <Puzzle size={16} aria-hidden />,
-  qr: <QrCode size={16} aria-hidden />,
-  box: <Box size={16} aria-hidden />,
-  cake: <Cake size={16} aria-hidden />,
-  key: <KeyRound size={16} aria-hidden />,
-  sign: <Signpost size={16} aria-hidden />,
-  hash: <Hash size={16} aria-hidden />,
-  trophy: <Trophy size={16} aria-hidden />,
-  layers: <SquareStack size={16} aria-hidden />,
-  ruler: <Ruler size={16} aria-hidden />,
-  tag: <Tag size={16} aria-hidden />,
-  house: <House size={16} aria-hidden />,
-  bag: <ShoppingBag size={16} aria-hidden />,
-};
-
 export const PRODUCT_INFO: Record<Product, { name: string; icon: ReactNode }> = {
-  hinge: { name: "Hinge Box", icon: <Package size={16} aria-hidden /> },
-  letters: { name: "Letters", icon: <Type size={16} aria-hidden /> },
-  parametric: { name: "Parametric", icon: <Layers size={16} aria-hidden /> },
-  ...(Object.fromEntries([...GENERATOR_IDS, ...LEGACY_GENERATOR_IDS].map((id) => [id, { name: GENERATOR_INFO[id].name, icon: GEN_ICON[GENERATOR_INFO[id].icon] }])) as Record<GeneratorId, { name: string; icon: ReactNode }>),
+  hinge: { name: "Hinge Box", icon: <ProductIcon id="hinge" /> },
+  letters: { name: "Letters", icon: <ProductIcon id="letters" /> },
+  parametric: { name: "Parametric", icon: <ProductIcon id="parametric" /> },
+  ...(Object.fromEntries([...GENERATOR_IDS, ...LEGACY_GENERATOR_IDS].map((id) => [id, { name: GENERATOR_INFO[id].name, icon: <ProductIcon id={id} /> }])) as Record<GeneratorId, { name: string; icon: ReactNode }>),
 };
 
 /** A ready-made design's picture for each product (public/presets), shown in the product picker. */

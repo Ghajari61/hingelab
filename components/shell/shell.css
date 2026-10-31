@@ -21,6 +21,7 @@
 .pp-pic img { width: 100%; height: 112px; object-fit: contain; padding: 12px 22px; box-sizing: border-box; filter: drop-shadow(0 5px 4px rgb(55 35 15 / 14%)); }
 .pp-icon { position: absolute; top: 7px; left: 7px; z-index: 1; display: grid; place-items: center; width: 27px; height: 27px; border-radius: 9px; color: var(--accent); background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 15%, var(--line)); }
 .pp-icon svg { width: 16px; height: 16px; stroke-width: 1.7; }
+.pp-icon .pi { width: 21px; height: 21px; }
 .pp-selected { position: absolute; right: 7px; top: 7px; display: grid; place-items: center; width: 21px; height: 21px; border-radius: 50%; color: var(--panel); background: var(--accent); }
 .pp-name { display: flex; align-items: center; padding: 0 4px; font-size: 13px; font-weight: 650; }
 .pp-tile small { padding: 0 4px; font-size: 12px; line-height: 16px; color: var(--fg-dim); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -205,7 +206,8 @@ details.sec > summary:hover .sec-rst, .sec-rst:focus-visible { opacity: 1; }
 .gen-tile .pic { grid-column: 1 / -1; display: grid; place-items: center; aspect-ratio: 2 / 1; margin: -6px -6px 8px; border-radius: 10px; overflow: hidden; background: var(--canvas-bg); }
 .gen-tile .pic img { width: 100%; height: 100%; object-fit: contain; padding: 6px; transition: transform var(--dur-med) var(--ease-out); }
 .gen-tile:hover .pic img { transform: scale(1.05); }
-.gen-tile .ico { grid-row: span 2; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--brand-grad); color: #fff; box-shadow: 0 6px 14px -6px rgba(91, 75, 219, .7); }
+.gen-tile .ico { grid-row: span 2; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(160deg, #fff9ef, #f6e6cc); border: 1px solid #ecd6b2; box-shadow: 0 6px 14px -8px rgba(122, 78, 34, .55); }
+.gen-tile .ico .pi { width: 28px; height: 28px; }
 .gen-tile .nm { font-size: 15px; font-weight: 650; }
 .gen-tile .bl { font-size: 13px; color: var(--fg-dim); line-height: 1.4; }
 .gen-tile .go { grid-column: 2; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--accent); }
@@ -444,3 +446,4 @@ details.sec > summary:hover .sec-rst, .sec-rst:focus-visible { opacity: 1; }
 .dock-head .detail-toggle button { padding: 3px 9px; }
 .dock-head .reset-all .btn-ghost-sm { white-space: nowrap; }
 .dock-col[data-detail] .dock-head .reset-all-word { display: none; }
+.gallery-head > .pi { width: 22px; height: 22px; flex: none; }

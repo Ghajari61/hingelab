@@ -35,6 +35,8 @@
 .gen-card .name { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
 .gen-card .blurb { color: var(--text-secondary); font-size: var(--text-small); line-height: 1.35; }
 .gen-card .chips { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; }
+/* badges sit on the picture: a solid backing keeps them readable on any preview */
+.gen-card .chips .ui-badge { background: var(--surface-raised); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
 .gen-card .chip { font-size: 10px; padding: 1px 7px; border-radius: 9px; background: var(--surface-raised); color: var(--text-secondary); border: 1px solid var(--line); }
 .gen-card.blank { border-style: dashed; background: color-mix(in srgb, var(--surface-panel) 70%, var(--accent-soft)); }
 .gen-card.blank .name { color: var(--accent-hi); }
