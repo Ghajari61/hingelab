@@ -22,6 +22,9 @@ import { patternTile, patternUnit } from "../pattern";
 const litres = (mm3: number) => (mm3 >= 1e6 ? `${(mm3 / 1e6).toFixed(2)} L` : `${Math.round(mm3 / 1e3)} ml`);
 
 export interface BoxesInfo {
+  /** Book box: magnets asked for with no room for their towers. */
+  bookMagnetRoom?: boolean;
+  bookMagnets?: number;
   /** Outside size of the finished piece, mm. */
   size: [number, number, number];
   /** Narrowest compartment (trays), mm. */

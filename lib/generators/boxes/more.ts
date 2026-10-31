@@ -22,6 +22,9 @@ import { labelBox, labelFrame, pierce, pierceCuts, pierceLid, pierceWallIds, pie
 type Place = NonNullable<GenPart["place"]>;
 export interface V2Info {
   size: [number, number, number];
+  /** Book box: magnet pairs placed, and magnets asked for with no room for them. */
+  bookMagnets?: number;
+  bookMagnetRoom?: boolean;
   compartment?: number;
   minEdge?: number;
   textWidth?: number;

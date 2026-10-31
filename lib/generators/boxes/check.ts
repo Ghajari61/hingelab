@@ -167,6 +167,25 @@ export function checkBoxes(p: BoxesParams, out: BoxesOutput): Issue<BoxesParams>
     });
   }
 
+  if (p.design === "book" && p.book.close === "magnet") {
+    if (info.bookMagnetRoom) {
+      issues.push({
+        code: "BOOK_MAGNET_ROOM", level: "warn",
+        message: "The book is too thin for the magnet towers inside it, so nothing keeps the cover shut.",
+        fixes: [
+          { id: "thicker", label: `Thickness ${Math.ceil(6 * T + 8)} mm`, safe: false, apply: (q) => ({ ...q, book: { ...q.book, thickness: Math.max(q.book.thickness, Math.ceil(6 * T + 8)) } }) },
+          { id: "ribbon", label: "Ribbon tie", safe: true, apply: (q) => ({ ...q, book: { ...q.book, close: "ribbon" as const } }) },
+        ],
+      });
+    } else if (p.book.magnetT > T + 1e-6) {
+      issues.push({
+        code: "BOOK_MAGNET_THICK", level: "warn",
+        message: `A ${p.book.magnetT} mm magnet is thicker than the ${T} mm pocket patch under the cover, so the cover will not close flat; use magnets ${T} mm thick or thinner.`,
+        fixes: [{ id: "thin", label: `${T >= 2 ? 2 : T} mm magnets`, safe: false, apply: (q) => ({ ...q, book: { ...q.book, magnetT: T >= 2 ? 2 : T } }) }],
+      });
+    }
+  }
+
   if (p.design === "tissue" && info.openRoomL !== undefined && info.openRoomW !== undefined) {
     const t = p.tissue, round = t.opening === "round";
     const L = Math.floor(info.openRoomL), Wd = Math.floor(info.openRoomW);

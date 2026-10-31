@@ -72,11 +72,11 @@ describe("Boxes: patterns and the book box", () => {
   it("builds the book box: one cover with a hinge spine, three walls, and 3D pieces", () => {
     const { p, out } = build("book-box");
     const cover = out.parts.find((q) => q.id === "cover")!;
-    expect(out.parts.map((q) => q.id)).toEqual(["cover", "head", "tail", "fore"]);
+    expect(out.parts.map((q) => q.id)).toEqual(["cover", "head", "tail", "fore", "magnet-cap1", "magnet-fin1-1", "magnet-fin1-2", "magnet-patch1"]);
     expect(cover.cuts!.length).toBeGreaterThan(20);
     // back cover, the spine bent in 16 strips, front cover
     expect(cover.views3d).toHaveLength(18);
-    const tabs = out.parts.filter((q) => q.id !== "cover").reduce((n, q) => n + q.outer.filter(([, y]) => y > p.book.thickness - 2 * p.T + 1e-6).length / 2, 0);
+    const tabs = out.parts.filter((q) => ["head", "tail", "fore"].includes(q.id)).reduce((n, q) => n + q.outer.filter(([, y]) => y > p.book.thickness - 2 * p.T + 1e-6).length / 2, 0);
     const slots = cover.holes.filter((h) => h.length === 4).length;
     expect(slots).toBe(tabs);
     const a = arrangeGenerator(BOXES, p, CTX);
