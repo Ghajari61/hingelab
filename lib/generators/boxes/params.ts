@@ -7,6 +7,7 @@ import { mergeInto } from "../util";
 import { FRET_NAMES, type FretKind } from "../fretwork";
 import type { Contour } from "../types";
 
+export type BookClose = "magnet" | "ribbon" | "none";
 export type Design = "box" | "tray" | "drawer" | "hex" | "insert" | "money" | "stack" | "book" | "sign" | "frame" | "stand" | "keys" | "bird" | "card" | "coaster" | "napkin" | "tissue";
 export type LidKind = "closed" | "open" | "liftoff" | "sliding" | "pin" | "inset";
 /** Lids a tray can take (a tray with a lid is a tea, card or jewellery box). */
@@ -120,7 +121,18 @@ export interface BoxesParams extends GenBase {
    */
   tissue: { width: number; depth: number; height: number; opening: TissueOpening; openL: number; openW: number };
   /** A box shaped like a book: one cover piece bends round a living-hinge spine. Sizes are outside. */
-  book: { width: number; height: number; thickness: number; over: number };
+  book: {
+    width: number; height: number; thickness: number; over: number;
+    /**
+     * What keeps the front cover shut (a living-hinge spine springs it open a little): magnets in
+     * towers inside the fore edge with a pocket patch under the cover, a ribbon tie, or nothing.
+     */
+    close: BookClose;
+    /** Disc magnet diameter and thickness, mm, and how many pairs (1 or 2). */
+    magnetD: number; magnetT: number; magnets: number;
+    /** Ribbon width, mm. */
+    ribbon: number;
+  };
   /** A decorative pattern cut through the walls and lid (or the book's cover). */
   pierce: {
     pattern: FretKind; on: PierceOn; cell: number; bar: number; shape: PierceShape; size: number; mark: PierceMark;
@@ -162,7 +174,7 @@ export const BOXES_DEFAULTS: BoxesParams = {
   stand: { width: 75, angle: 65, slot: 14, lip: 10, height: 95 },
   keys: { width: 220, height: 90, corner: 10, hooks: 4, reach: 35, text: "KEYS", fontId: "fredoka", size: 18 },
   bird: { width: 120, depth: 120, height: 150, pitch: 40, hole: 32, perch: false, overhang: 20 },
-  book: { width: 120, height: 160, thickness: 50, over: 3 },
+  book: { width: 120, height: 160, thickness: 50, over: 3, close: "magnet", magnetD: 6, magnetT: 2, magnets: 1, ribbon: 10 },
   napkin: { width: 190, height: 110, gap: 40, shape: "dip", corner: 10, margin: 12 },
   tissue: { width: 250, depth: 130, height: 95, opening: "slot", openL: 140, openW: 36 },
   card: { cardW: 85, cardH: 55, portrait: false, bays: 1, tiered: false, depth: 30, front: 18, back: 40, profile: "wave", lip: "notch", crest: "flat", corner: 4 },
@@ -200,6 +212,11 @@ export function mergeBoxes(raw: unknown): BoxesParams {
   if (!(p.box.glass in GLASS_NAMES)) p.box.glass = "none";
   p.box.window = fin(p.box.window, D.box.window, 20, 95);
   p.box.paneT = fin(p.box.paneT, D.box.paneT, 0.5, 6);
+  if (!["magnet", "ribbon", "none"].includes(p.book.close)) p.book.close = D.book.close;
+  p.book.magnetD = fin(p.book.magnetD, D.book.magnetD, 3, 20);
+  p.book.magnetT = fin(p.book.magnetT, D.book.magnetT, 0.5, 10);
+  p.book.magnets = Math.round(fin(p.book.magnets, D.book.magnets, 1, 2));
+  p.book.ribbon = fin(p.book.ribbon, D.book.ribbon, 3, 40);
   if (!(p.napkin.shape in NAPKIN_SHAPES)) p.napkin.shape = D.napkin.shape;
   p.napkin.width = fin(p.napkin.width, D.napkin.width, 60, 400);
   p.napkin.height = fin(p.napkin.height, D.napkin.height, 40, 300);

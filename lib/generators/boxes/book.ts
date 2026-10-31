@@ -66,8 +66,24 @@ export function buildBook(p: BoxesParams, ctx: BuildContext): V2Output {
   const foreS = tabsOn(0, Hc - 2 * over, tabW);
   for (const s of foreS) holes.push(rect(bx(fore - T / 2) - (T + clr) / 2, over + s - (tabW + clr) / 2, T + clr, tabW + clr));
 
+  const fx = Lc + Ls;
+  // ---- what keeps it shut
+  const close = bk.close;
+  const md = Math.max(3, bk.magnetD), mT = Math.max(0.5, bk.magnetT);
+  /** Magnet towers: a cap with the magnet on two fins, flush under a pocket patch glued inside the front cover. */
+  const s = Math.max(14, md + 2 * T + 6), finBody = h - 2 * T;
+  const magnets = close === "magnet" && finBody >= 6 && fore - T - s > r + 2;
+  const towerYs = magnets ? (bk.magnets >= 2 ? [0.25, 0.75] : [0.5]).map((f) => over + T + (Hc - 2 * over - 2 * T) * f) : [];
+  // ribbon tie: a slot in each cover just inside the fore-edge wall; a ribbon glued inside each
+  // cover comes out through its slot and the two tie in a bow at the fore edge
+  const rw = Math.max(3, bk.ribbon) + 1, rs = 2, ru = fore - T - 6;
+  if (close === "ribbon") {
+    holes.push(rect(bx(ru) - rs / 2, Hc / 2 - rw / 2, rs, rw));
+    holes.push(rect(fx + ru - r - rs / 2, Hc / 2 - rw / 2, rs, rw));
+  }
+
   // ---- the front cover: the pattern round a framed title
-  const fx = Lc + Ls, art = lidArt(p, ctx), engrave: Contour[] = [];
+  const art = lidArt(p, ctx), engrave: Contour[] = [];
   const cx = fx + Lc / 2, cy = Hc / 2;
   const keep: KeepOut[] = [];
   if (art.cs.length) {
@@ -118,6 +134,24 @@ export function buildBook(p: BoxesParams, ctx: BuildContext): V2Output {
     { id: "tail", name: "Tail wall", outer: head(), holes: [], place: wall(0, Dk - T, Hc - over - T) },
     { id: "fore", name: "Fore-edge wall", outer: foreWall(), holes: [], place: wall(fore, Dk - T, over, 90) },
   ];
+  // magnet towers (plan x from the spine, y from the head; z up from the back cover's outside)
+  const towers: GenPart[] = [];
+  const hole = (cx: number, cy: number, d: number): Contour => {
+    const n = 40, out: Contour = [];
+    for (let i = 0; i < n; i++) { const a = (-2 * Math.PI * i) / n; out.push([cx + (d / 2) * Math.cos(a), cy + (d / 2) * Math.sin(a)]); }
+    return out;
+  };
+  const tw = Math.max(5, s * 0.45), tx0 = fore - T - s;
+  const finAt = [1, s - 1 - T];
+  towerYs.forEach((yc, k) => {
+    const y0 = yc - s / 2, n = towerYs.length > 1 ? ` ${k + 1}` : "";
+    const slots = finAt.map((f) => rect((s - tw) / 2 - clr / 2, f - clr / 2, tw + clr, T + clr));
+    towers.push({ id: `magnet-cap${k + 1}`, name: `Magnet cap${n}`, outer: rect(0, 0, s, s), holes: [hole(s / 2, s / 2, md + 0.2), ...slots], place: flat(tx0, y0, Dk - 3 * T) });
+    const fin: Contour = [[0, T], [(s - tw) / 2, T], [(s - tw) / 2, 0], [(s + tw) / 2, 0], [(s + tw) / 2, T], [s, T], [s, T + finBody], [0, T + finBody]];
+    finAt.forEach((f, j) => towers.push({ id: `magnet-fin${k + 1}-${j + 1}`, name: `Magnet fin${n}${j ? " B" : " A"}`, outer: fin, holes: [], place: wall(tx0, Dk - 2 * T, y0 + f) }));
+    towers.push({ id: `magnet-patch${k + 1}`, name: `Magnet patch (under the front cover)${n}`, outer: rect(0, 0, s, s), holes: [hole(s / 2, s / 2, md + 0.2)], place: flat(tx0, y0, Dk - 2 * T) });
+  });
+
   let wallHoles = 0;
   if (pierceWalls(p)) {
     const ids = pierceWallIds(p, walls.map((w) => w.id));
@@ -126,20 +160,26 @@ export function buildBook(p: BoxesParams, ctx: BuildContext): V2Output {
 
   const insideW = fore - 2 * T, insideH = Hc - 2 * over - 2 * T;
   return {
-    parts: [cover, ...walls],
+    parts: [cover, ...walls, ...towers],
     stats: [
       { label: "Book", value: `${r1(W)} × ${r1(Hc)} × ${r1(Dk)} mm` },
       { label: "Inside", value: `${r1(insideW)} × ${r1(insideH)} × ${r1(h)} mm` },
       { label: "Spine", value: `${nc} hinge cuts over ${r1(Ls)} mm` },
+      { label: "Closure", value: magnets ? `${towerYs.length} pair${towerYs.length > 1 ? "s" : ""} of ${r1(md)} × ${r1(mT)} mm magnets` : close === "ribbon" ? `Ribbon tie, ${r1(bk.ribbon)} mm` : close === "magnet" ? "No room for magnets" : "None" },
       ...(pierced(p) ? [{ label: "Pattern", value: `${coverHoles} holes in the front cover${wallHoles ? `, ${wallHoles} in the walls` : ""}` }] : []),
     ],
     assembly: [
       "Push the head, tail and fore-edge walls' tabs into the slots in the back cover; glue the corners where the fore-edge wall meets the head and tail.",
       "Bend the spine slowly round the rounded ends of the head and tail walls; the hinge cuts face out.",
-      "Close the front cover over the walls. It opens like a book; add a small magnet at the fore edge to keep it shut.",
+      ...(magnets ? [
+        `Magnets: glue the two fins of each tower into their cap's slots, push a ${r1(md)} × ${r1(mT)} mm disc magnet into the cap's hole flush with its top, and glue the tower to the back cover against the fore-edge wall.`,
+        "Put the matching magnet in each pocket patch, poles facing so the pair attracts (test before gluing), and glue the patch under the front cover right over its tower with the cover closed.",
+      ] : []),
+      ...(close === "ribbon" ? [`Ribbon: thread a ${r1(bk.ribbon)} mm ribbon out through each cover's slot from inside, glue its end inside the cover, and tie the two ends in a bow at the fore edge.`] : []),
+      `Close the front cover over the walls. It opens like a book${magnets ? "; the magnets hold it shut" : close === "ribbon" ? "; the ribbon ties it shut" : ". The spine springs it open slightly, so add a catch (Closure) if it should stay shut"}.`,
     ],
     notice: art.loading ? "Loading the font." : undefined,
     missing: art.missing,
-    info: { size: [W, Hc, Dk], ...(art.cs.length ? { textWidth: art.w, textRoom: Lc - 12, artHeight: art.h, artRoom: Hc - 12 } : {}) },
+    info: { size: [W, Hc, Dk], bookMagnets: towerYs.length, bookMagnetRoom: close === "magnet" && !magnets, ...(art.cs.length ? { textWidth: art.w, textRoom: Lc - 12, artHeight: art.h, artRoom: Hc - 12 } : {}) },
   };
 }

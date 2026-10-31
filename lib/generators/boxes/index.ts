@@ -158,6 +158,15 @@ const sections: SectionSpec<BoxesParams>[] = [
       { kind: "number", key: "book.height", label: "Height", unit: "mm", min: 60, max: 600, step: 1, help: "Outside height of the book, head to tail." },
       { kind: "number", key: "book.thickness", label: "Thickness", unit: "mm", min: 15, max: 200, step: 1, help: "Thickness of the closed book; the spine is a half circle this wide." },
       { kind: "number", key: "book.over", label: "Cover overhang", unit: "mm", min: 0, max: 15, step: 0.5, help: "How far the covers reach past the walls inside, as on a real book." },
+      {
+        kind: "choice", key: "book.close", label: "Closure",
+        help: "What keeps the front cover shut, because a living-hinge spine springs it open a little: hidden magnets, a ribbon tie, or nothing.",
+        options: [{ v: "magnet", text: "Magnets" }, { v: "ribbon", text: "Ribbon tie" }, { v: "none", text: "None" }],
+      },
+      { kind: "number", key: "book.magnetD", label: "Magnet diameter", unit: "mm", min: 3, max: 20, step: 0.5, show: (p) => p.book.close === "magnet", help: "Diameter of the disc magnets; 6 to 8 mm discs hold a small book box shut." },
+      { kind: "number", key: "book.magnetT", label: "Magnet thickness", unit: "mm", min: 0.5, max: 10, step: 0.5, show: (p) => p.book.close === "magnet", help: "Thickness of the magnets; no thicker than the material, so the one under the cover sits inside its patch." },
+      { kind: "number", key: "book.magnets", label: "Magnet pairs", unit: "", min: 1, max: 2, step: 1, int: true, show: (p) => p.book.close === "magnet", help: "One pair in the middle of the fore edge, or two pairs near the head and tail for a big book." },
+      { kind: "number", key: "book.ribbon", label: "Ribbon width", unit: "mm", min: 3, max: 40, step: 1, show: (p) => p.book.close === "ribbon", help: "Width of the ribbon; its slots are cut 1 mm wider." },
     ],
   },
   {
