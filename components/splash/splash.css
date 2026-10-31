@@ -1,0 +1,27 @@
+/* The 3D title uses Cinzel Bold outlines; the CSS fallback the font itself (bundled with the app). */
+@font-face { font-family: "HL Splash Cinzel"; src: url("/fonts/Cinzel-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+
+/* Start-up splash. Transparent: no backdrop of its own, only the title and the pieces. */
+.hl-splash { position: fixed; inset: 0; z-index: 2147483000; pointer-events: none; background: transparent; display: grid; place-items: center; }
+.hl-splash.window { position: absolute; }
+.hl-splash-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: transparent; }
+/* over a page the composition stays a centred piece, not a full-screen takeover */
+.hl-splash.overlay .hl-splash-canvas { position: relative; inset: auto; width: min(820px, 92vw); height: auto; aspect-ratio: 820 / 480; }
+.hl-splash.overlay .hl-splash-status { bottom: auto; top: calc(50% + min(150px, 17vw)); }
+.hl-splash.leaving { opacity: 0; transform: scale(.94); transition: opacity .4s ease, transform .4s ease; }
+
+/* Without WebGL: the title in CSS, gold and graphite, rising and catching a light sweep. */
+.hl-splash-css { font-family: "HL Splash Cinzel", "Cinzel", "Times New Roman", serif; font-weight: 700; font-size: clamp(44px, 11vw, 128px); letter-spacing: .02em; line-height: 1; animation: hl-rise 0.9s cubic-bezier(.2,.7,.2,1) both; filter: drop-shadow(0 10px 18px rgba(20, 14, 6, .35)); }
+.hl-splash-css .hinge { background: linear-gradient(100deg, #9c7a3f 0%, #f3dca6 30%, #c9a160 50%, #fff1c9 60%, #b8904f 80%); background-size: 260% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: hl-sheen 2.6s ease-in-out 0.6s both; }
+.hl-splash-css .lab { color: #2b2e34; -webkit-text-stroke: 1.5px #d8b26e; paint-order: stroke fill; }
+.hl-splash-css.still, .hl-splash-css.still .hinge { animation: hl-fade .4s ease both; }
+@keyframes hl-rise { from { opacity: 0; transform: translateY(14px) scale(.96); letter-spacing: .1em; } to { opacity: 1; transform: none; } }
+@keyframes hl-sheen { from { background-position: 100% 0; } to { background-position: 0% 0; } }
+@keyframes hl-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Holding (the app is still starting): the real step, small, under the title. */
+.hl-splash-status { position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; font: 500 13px/1.2 system-ui, sans-serif; letter-spacing: .04em; color: #d9bd88; text-shadow: 0 1px 3px rgba(0, 0, 0, .55); white-space: nowrap; animation: hl-fade .3s ease both; }
+.hl-splash-status .bar { width: 40px; height: 2px; border-radius: 1px; background: linear-gradient(90deg, transparent, #e2c286, transparent); background-size: 200% 100%; animation: hl-run 1.2s linear infinite; }
+@keyframes hl-run { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .hl-splash-status .bar { animation: none; background: #e2c286; } .hl-splash.leaving { transition: opacity .2s ease; transform: none; } }
+.hl-splash.overlay .hl-splash-css { font-size: clamp(36px, 7vw, 84px); }

@@ -93,9 +93,19 @@ export function App() {
     }
   }, [fatal, toast]);
 
+  // The splash window (if any) waits for the first screen; it shows the real step meanwhile.
+  useEffect(() => {
+    if (phase === "boot") return;
+    void invoke("splash_progress", { text: phase === "ready" ? "Opening your workspace" : "Ready" }).catch(() => {});
+    // two frames: the first screen has been drawn
+    const id = requestAnimationFrame(() => requestAnimationFrame(() => void invoke("app_ready").catch(() => {})));
+    return () => cancelAnimationFrame(id);
+  }, [phase]);
+
   // Start-up: version, session, then the account in the background (a cached copy shows at once).
   useEffect(() => {
     void (async () => {
+      void invoke("splash_progress", { text: "Checking your sign-in" }).catch(() => {});
       setVersion(await getVersion().catch(() => ""));
       try {
         const info = await ipc.appInfo();

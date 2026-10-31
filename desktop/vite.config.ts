@@ -94,6 +94,8 @@ export default defineConfig(({ mode }) => ({
     // Tauri's CSP has no 'unsafe-eval' and no inline scripts.
     modulePreload: { polyfill: false },
     rollupOptions: {
+      // the app's window, and the start-up splash window (its own small page)
+      input: { main: resolve(__dirname, "index.html"), splash: resolve(__dirname, "splash.html") },
       onwarn(w, warn) {
         // "use client" marks the website's client components; it means nothing here.
         if (w.code === "MODULE_LEVEL_DIRECTIVE") return;

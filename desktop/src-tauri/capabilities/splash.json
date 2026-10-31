@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "splash",
+  "description": "The start-up splash window: it listens for the app's ready and progress events, reads what it missed, and says when its fade begins. Nothing else.",
+  "webviews": ["splash"],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-splash-state",
+    "allow-splash-done"
+  ]
+}
