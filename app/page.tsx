@@ -1,6 +1,7 @@
+import { ProductIcon, type ProductIconId } from "@/components/icons/ProductIcon";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Award, Baby, Box, Cake, CheckCircle2, Clock, Download, FileDown, Gift, Globe, GraduationCap, Hash, Heart, KeyRound, Layers, LayoutGrid, MonitorDown, Moon, Package, Puzzle, QrCode, Ruler, ScanLine, Shapes, ShieldCheck, Signpost, Sparkles, SquareStack, TreePine, Trophy, Type, Wand2, Wrench, type LucideIcon, Tag, House, ShoppingBag } from "lucide-react";
+import { ArrowRight, Award, Baby, Cake, CheckCircle2, Download, FileDown, Gift, Globe, GraduationCap, Heart, Layers, LayoutGrid, MonitorDown, Moon, Ruler, ScanLine, ShieldCheck, Sparkles, TreePine, Wand2, Wrench, type LucideIcon } from "lucide-react";
 import { sceneSVG } from "@/components/editor/scene3d";
 import { CutSheet } from "@/components/site/CutSheet";
 import { DownloadNote } from "@/components/site/DownloadNote";
@@ -12,14 +13,13 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { Pricing, type PriceCard } from "@/components/site/Pricing";
 import { BATCH_FREE, BATCH_PRO, BUSINESS_SEATS, LICENSES, PLAN_ROWS, PRICES, PRO_BENEFITS } from "@/lib/plans";
 import { desktopRelease } from "@/lib/site/release";
-import { siteProducts, totalPresets, type SiteIcon } from "@/lib/site/products";
+import { siteProducts, totalPresets } from "@/lib/site/products";
 import { GALLERY, heroParams, isProSample, sheetFor } from "@/lib/site/samples";
 import { SITE_DESCRIPTION } from "@/lib/site/config";
 import { motif, MOTIF_NAMES, type MotifId } from "@/lib/generators/motifs";
 import { collectionBySlug } from "@/lib/site/collections";
 import "./landing.css";
 import "./start/start.css";
-
 
 /** Detailed motifs shown on the landing page, drawn from the same geometry the generators cut. */
 const SHOWCASE: { id: MotifId; preset: string }[] = [
@@ -41,11 +41,6 @@ export const metadata: Metadata = {
   title: { absolute: "HingeLab: laser-cut generators for boxes, toppers, signs and more" },
   description: SITE_DESCRIPTION,
   alternates: { canonical: "/" },
-};
-
-const ICON: Record<SiteIcon, LucideIcon> = {
-  hinge: Package, letters: Type, parametric: Layers, clock: Clock, puzzle: Puzzle, qr: QrCode, box: Box,
-  cake: Cake, key: KeyRound, sign: Signpost, hash: Hash, trophy: Trophy, layers: SquareStack, ruler: Ruler, tag: Tag, house: House, bag: ShoppingBag,
 };
 
 const OCCASIONS: { name: string; icon: LucideIcon; preset: string }[] = [
@@ -201,7 +196,6 @@ export default async function HomePage() {
           </div>
           <ul className="products">
             {products.map((p) => {
-              const I = ICON[p.icon] ?? Shapes;
               return (
                 <li key={p.id}>
                   <Link href={p.href} className="product">
@@ -210,7 +204,7 @@ export default async function HomePage() {
                       <img src={p.picture} alt="" width={300} height={200} loading="lazy" />
                     </span>
                     <span className="p-body">
-                      <span className="p-title"><span className="p-ico"><I size={16} aria-hidden="true" /></span>{p.name}</span>
+                      <span className="p-title"><span className="p-ico"><ProductIcon id={p.id as ProductIconId} size={18} /></span>{p.name}</span>
                       <span className="p-blurb">{p.blurb}</span>
                       <span className="p-meta">{p.presets} designs<ArrowRight size={14} aria-hidden="true" /></span>
                     </span>
